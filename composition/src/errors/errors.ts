@@ -1509,9 +1509,9 @@ export function allExternalFieldInstancesError(
   subgraphNamesByFieldName: Map<string, Array<string>>,
 ): Error {
   let message =
-    `The Object "${typeName}" is invalid because the following Field definition` +
+    `The Object "${typeName}" is invalid because the following field definition` +
     (subgraphNamesByFieldName.size > 1 ? 's are' : ' is') +
-    ` declared "@external" on all instances of that Field:\n`;
+    ` declared "@external" on all instances of that field:\n`;
   for (const [fieldName, subgraphNames] of subgraphNamesByFieldName) {
     message +=
       ` "${fieldName}" in subgraph` +
@@ -1545,7 +1545,7 @@ export function nonExternalConditionalFieldError(
   fieldSetDirective: FieldSetDirective,
 ): Error {
   return new Error(
-    `The Field "${originCoords}" in subgraph "${subgraphName}" defines a "@${fieldSetDirective}" directive` +
+    `The field "${originCoords}" in subgraph "${subgraphName}" defines a "@${fieldSetDirective}" directive` +
       ` with the following field set:\n "${fieldSet}".` +
       `\nHowever, neither the field "${targetCoords}" nor any of its field set ancestors are declared @external.` +
       `\nConsequently, "${targetCoords}" is already provided by subgraph "${subgraphName}" and should not form part of` +
@@ -1561,7 +1561,7 @@ export function incompatibleFederatedFieldNamedTypeError(
   for (const [namedTypeName, subgraphNames] of subgraphNamesByNamedTypeName) {
     const names = [...subgraphNames];
     instances.push(
-      ` The Named Type "${namedTypeName}" is returned by the following subgraph` +
+      ` The named type "${namedTypeName}" is returned by the following subgraph` +
         (names.length > 1 ? `s` : ``) +
         `: "` +
         names.join(QUOTATION_JOIN) +
@@ -1569,15 +1569,15 @@ export function incompatibleFederatedFieldNamedTypeError(
     );
   }
   return new Error(
-    `Each instance of a shared Field must resolve identically across subgraphs.\n` +
-      `The Field "${fieldCoordinates}" could not be federated due to incompatible types across subgraphs.\n` +
+    `Each instance of a shared field must resolve identically across subgraphs.\n` +
+      `The field "${fieldCoordinates}" could not be federated due to incompatible types across subgraphs.\n` +
       `The discrepancies are as follows:\n` +
       instances.join(`\n`),
   );
 }
 
 export function unknownNamedTypeErrorMessage(fieldCoordinates: string, namedTypeName: string): string {
-  return `The Field "${fieldCoordinates}" returns the unknown named type "${namedTypeName}".`;
+  return `The field "${fieldCoordinates}" returns the unknown named type "${namedTypeName}".`;
 }
 
 export function unknownNamedTypeError(fieldCoordinates: string, namedTypeName: string): Error {
@@ -1586,7 +1586,7 @@ export function unknownNamedTypeError(fieldCoordinates: string, namedTypeName: s
 
 export function unknownFieldDataError(fieldCoordinates: string): Error {
   return new Error(
-    `Could not find FieldData for Field "${fieldCoordinates}"\n.` +
+    `Could not find FieldData for field "${fieldCoordinates}"\n.` +
       `This should never happen. Please report this issue on GitHub.`,
   );
 }
@@ -1600,7 +1600,7 @@ export function unexpectedNonCompositeOutputTypeError(namedTypeName: string, act
 
 export function invalidExternalDirectiveError(fieldCoords: string): Error {
   return new Error(
-    `The Object Field "${fieldCoords}" is invalidly declared "@external". An Object Field should only` +
+    `The Object field "${fieldCoords}" is invalidly declared "@external". An Object field should only` +
       ` be declared "@external" if it is part of a "@key", "@provides", or "@requires" field set, or the field is` +
       ` necessary to satisfy an Interface implementation. In the case that none of these conditions is true, the` +
       ` "@external" directive should be removed.`,

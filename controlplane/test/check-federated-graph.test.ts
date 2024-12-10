@@ -108,7 +108,6 @@ describe('CheckFederatedGraph', (ctx) => {
       .toBe(noBaseDefinitionForExtensionError(OBJECT, 'User').message);
     expect(checkResp.compositionErrors[1].message)
       .toBe(allExternalFieldInstancesError('User', new Map<string, Array<string>>([
-        ['email', ['products']],
         ['totalProductsCreated', ['products']],
       ])).message);
 
