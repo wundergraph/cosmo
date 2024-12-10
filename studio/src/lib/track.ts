@@ -1,8 +1,10 @@
-// Koala integration. This will be available if koala script is embedded though CUSTOM_HEAD_SCRIPTS env
+// Tracking. This will be available if the following scripts are embedded though CUSTOM_HEAD_SCRIPTS
+// Koala, Reo
 
 declare global {
   interface Window {
     ko: any;
+    Reo: any;
   }
 }
 
@@ -14,7 +16,7 @@ const resetKoala = () => {
   window.ko?.reset;
 };
 
-const identifyKoala = ({
+const identify = ({
   email,
   id,
   organizationId,
@@ -33,6 +35,10 @@ const identifyKoala = ({
     return;
   }
 
+  if (process.env.NODE_ENV !== "production") {
+    return;
+  }
+
   window.ko?.identify(email, {
     id,
     $account: {
@@ -42,6 +48,11 @@ const identifyKoala = ({
       plan,
     },
   });
+
+  window.Reo?.identify({
+    username: email,
+    type: "email",
+  });
 };
 
-export { resetKoala, identifyKoala };
+export { resetKoala, identify };

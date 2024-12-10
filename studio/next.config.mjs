@@ -64,7 +64,7 @@ const lightweightCspHeader = `
   };
    script-src 'report-sample' 'self' 'unsafe-inline' ${
      allowUnsafeEval ? "'unsafe-eval'" : ""
-   } https://*.wundergraph.com https://js.stripe.com https://maps.googleapis.com https://plausible.io https://wundergraph.com ${
+   } https://*.wundergraph.com https://js.stripe.com https://maps.googleapis.com https://plausible.io https://wundergraph.com https://static.reo.dev ${
      isPreview ? "https://vercel.live https://vercel.com" : ""
    };
   manifest-src 'self';
