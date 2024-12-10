@@ -117,11 +117,13 @@ export const PlanView = () => {
 
   const [formattedPlan, setFormattedPlan] = useState<string | null>(null);
   useEffect(() => {
-    if (plan) {
-      const printer = new PlanPrinter();
-      const prettyPrintedQueryPlan = printer.print(plan);
-      setFormattedPlan(prettyPrintedQueryPlan);
-    }
+    (async () => {
+      if (plan) {
+        const printer = new PlanPrinter();
+        const prettyPrintedQueryPlan = await printer.print(plan);
+        setFormattedPlan(prettyPrintedQueryPlan);
+      }
+    })();
   }, [plan]);
 
   const [view, setView] = useState<'tree' | 'text'>('tree');

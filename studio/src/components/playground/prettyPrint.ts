@@ -1,4 +1,6 @@
 import { parse, print } from "graphql";
+import graphQLPlugin from "prettier/plugins/graphql";
+import * as prettier from "prettier/standalone";
 import {
   QueryPlan,
   QueryPlanFetchNode,
@@ -7,23 +9,26 @@ import {
 } from "./types";
 
 export class PlanPrinter {
-  depth: number = 0;
-  buf: string[] = [];
+  private depth: number = 0;
+  private buf: string[] = [];
 
-  print(plan: QueryPlan): string {
+  async print(plan: QueryPlan): Promise<string> {
     this.buf = [];
     this.printText("QueryPlan {");
     if (plan.trigger) {
       this.depth++;
-      this.printFetchInfo(plan.trigger);
+      await this.printFetchInfo(plan.trigger);
       this.depth--;
     }
-    this.printPlanNode(plan, true);
+    await this.printPlanNode(plan, true);
     this.printText("}");
     return this.buf.join("\n");
   }
 
-  private printPlanNode(plan: QueryPlanFetchTypeNode, increaseDepth: boolean) {
+  private async printPlanNode(
+    plan: QueryPlanFetchTypeNode,
+    increaseDepth: boolean,
+  ) {
     if (increaseDepth) {
       this.depth++;
     }
@@ -31,23 +36,25 @@ export class PlanPrinter {
     switch (plan.kind) {
       case "Single":
       case "Trigger":
-        this.printFetchInfo(plan.fetch!);
+        await this.printFetchInfo(plan.fetch!);
         break;
       case "Sequence":
         const manyChildren = (plan.children?.length || 0) > 1;
         if (manyChildren) {
           this.printText("Sequence {");
         }
-        plan.children?.forEach((child) =>
-          this.printPlanNode(child, manyChildren),
-        );
+        for (const child of plan.children ?? []) {
+          await this.printPlanNode(child, manyChildren);
+        }
         if (manyChildren) {
           this.printText("}");
         }
         break;
       case "Parallel":
         this.printText("Parallel {");
-        plan.children?.forEach((child) => this.printPlanNode(child, true));
+        for (const child of plan.children ?? []) {
+          await this.printPlanNode(child, true);
+        }
         this.printText("}");
         break;
     }
@@ -57,7 +64,7 @@ export class PlanPrinter {
     }
   }
 
-  private printFetchInfo(fetch: QueryPlanFetchNode) {
+  private async printFetchInfo(fetch: QueryPlanFetchNode) {
     const nested = fetch.path?.includes(".");
 
     if (nested) {
@@ -80,7 +87,15 @@ export class PlanPrinter {
     }
 
     if (fetch.query) {
-      this.printQuery(print(parse(fetch.query)));
+      const query = print(parse(fetch.query));
+      const formatted = await prettier.format(query, {
+        parser: "graphql",
+        plugins: [graphQLPlugin],
+        printWidth: 80,
+        tabWidth: 4,
+        useTabs: false,
+      });
+      this.printQuery(formatted.trim());
     }
 
     this.depth--;
