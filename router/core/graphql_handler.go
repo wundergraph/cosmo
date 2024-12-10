@@ -198,8 +198,10 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		h.websocketStats.ConnectionsInc()
-		defer h.websocketStats.ConnectionsDec()
+		if !ctx.ExecutionOptions.SkipLoader {
+			h.websocketStats.ConnectionsInc()
+			defer h.websocketStats.ConnectionsDec()
+		}
 
 		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, writer)
 		requestContext.dataSourceNames = getSubgraphNames(p.Response.Response.DataSources)

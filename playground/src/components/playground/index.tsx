@@ -611,17 +611,6 @@ export const Playground = (input: {
       try {
         const parsed = parse(debouncedQuery);
 
-        const isSubscription =
-          parsed.definitions[0]?.kind === Kind.OPERATION_DEFINITION &&
-          parsed.definitions[0].operation === OperationTypeNode.SUBSCRIPTION;
-
-        // Disable for subscription
-        if (isSubscription) {
-          setPlanError('Query plan is currently unavailable for subscriptions');
-          setPlan(undefined);
-          return;
-        }
-
         const errors = validate(schema, parsed);
         if (errors.length > 0) {
           setPlanError('Invalid query');
@@ -684,6 +673,7 @@ export const Playground = (input: {
       >
         <TraceContext.Provider
           value={{
+            query,
             headers,
             response,
             subgraphs: [],
