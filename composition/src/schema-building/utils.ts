@@ -27,11 +27,11 @@ import {
   EnumDefinitionData,
   EnumValueData,
   ExtensionType,
+  ExternalData,
   FieldData,
   InputObjectDefinitionData,
   InputValueData,
   NodeData,
-  ObjectDefinitionData,
   ParentDefinitionData,
   PersistedDirectiveDefinitionData,
   PersistedDirectivesData,
@@ -484,16 +484,14 @@ export function addFieldDataByNode(
 ): FieldData {
   const name = node.name.value;
   const fieldPath = `${originalParentTypeName}.${name}`;
-  const isNodeExternalOrShareableResult = isNodeExternalOrShareable(
-    node,
-    !isSubgraphVersionTwo,
-    directivesByDirectiveName,
-  );
+  const { isExternal, isShareable } = isNodeExternalOrShareable(node, !isSubgraphVersionTwo, directivesByDirectiveName);
   const fieldData: FieldData = {
     argumentDataByArgumentName: argumentDataByArgumentName,
-    isExternalBySubgraphName: new Map<string, boolean>([[subgraphName, isNodeExternalOrShareableResult.isExternal]]),
+    isExternalBySubgraphName: new Map<string, ExternalData>([
+      [subgraphName, { isExternal, isTrueExternal: isExternal }],
+    ]),
     isInaccessible: directivesByDirectiveName.has(INACCESSIBLE),
-    isShareableBySubgraphName: new Map<string, boolean>([[subgraphName, isNodeExternalOrShareableResult.isShareable]]),
+    isShareableBySubgraphName: new Map<string, boolean>([[subgraphName, isShareable]]),
     node: getMutableFieldNode(node, fieldPath, errors),
     name,
     namedTypeName: getTypeNodeNamedTypeName(node.type),
@@ -857,10 +855,7 @@ export function isParentDataRootType(parentData: ParentDefinitionData): boolean 
 }
 
 export function isParentDataInterfaceType(parentData: ParentDefinitionData): boolean {
-  if (parentData.kind === Kind.INTERFACE_TYPE_DEFINITION) {
-    return true;
-  }
-  return false;
+  return parentData.kind === Kind.INTERFACE_TYPE_DEFINITION;
 }
 
 export function setParentDataExtensionType(existingData: ParentDefinitionData, incomingData: ParentDefinitionData) {
@@ -1218,7 +1213,7 @@ export function validateExternalAndShareable(fieldData: FieldData, invalidFieldN
      * 1. the field is external
      * 2. the field is overridden by another subgraph (in which case it has not been upserted)
      */
-    if (fieldData.isExternalBySubgraphName.get(subgraphName)) {
+    if (fieldData.isExternalBySubgraphName.get(subgraphName)?.isTrueExternal) {
       externalFieldSubgraphNames.push(subgraphName);
       continue;
     }

@@ -48,10 +48,15 @@ export type EnumValueData = {
   description?: StringValueNode;
 };
 
+export type ExternalData = {
+  isExternal: boolean;
+  isTrueExternal: boolean;
+};
+
 export type FieldData = {
   argumentDataByArgumentName: Map<string, InputValueData>;
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
-  isExternalBySubgraphName: Map<string, boolean>;
+  isExternalBySubgraphName: Map<string, ExternalData>;
   isInaccessible: boolean;
   isShareableBySubgraphName: Map<string, boolean>;
   name: string;
