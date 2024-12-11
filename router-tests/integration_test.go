@@ -528,7 +528,7 @@ func TestOperationSelection(t *testing.T) {
 			})
 		})
 
-		t.Run("multiple named operations B", func(t *testing.T) {
+		t.Run("multiple named operations C", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
