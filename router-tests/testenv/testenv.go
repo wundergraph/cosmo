@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -342,12 +343,66 @@ func setupKafkaServers(t testing.TB) (*KafkaData, error) {
 	return kafkaData, nil
 }
 
+var assignedPorts []int
+var freePorts []int
+
+func getFreePort() int {
+	if len(freePorts) == 0 {
+	outerLoop:
+		for i := 0; i < 10; i++ {
+			newPorts, err := freeport.GetFreePorts(50)
+			if err == nil {
+				for _, port := range newPorts {
+					var matched bool
+					for _, assignedPort := range assignedPorts {
+						if port == assignedPort {
+							matched = true
+							break
+						}
+					}
+					if !matched {
+						freePorts = append(freePorts, port)
+					}
+				}
+				if len(freePorts) > 0 {
+					break outerLoop
+				}
+			}
+			// wait for some port to free up
+			time.Sleep(time.Second)
+		}
+	}
+
+	freePort := freePorts[0]
+	freePorts = freePorts[1:]
+	assignedPorts = append(assignedPorts, freePort)
+
+	return freePort
+}
+
+func unlockFreePort(port int) {
+	i, found := slices.BinarySearch(assignedPorts, port)
+	if found {
+		assignedPorts = append(assignedPorts[:i], assignedPorts[i+1:]...)
+	}
+}
+
 func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	// Ensure that only one test environment is created at a time
 	// We use freeport to get a free port for NATS and the Router
 	// If we don't lock here, two parallel tests might get the same port
 	envCreateMux.Lock()
-	defer envCreateMux.Unlock()
+	pubSubPrefix := strconv.FormatUint(rand.Uint64(), 16)
+	routerPort := getFreePort()
+	if routerPort == 0 {
+		t.Fatalf("could not get free port for router")
+	}
+	envCreateMux.Unlock()
+	defer func() {
+		envCreateMux.Lock()
+		unlockFreePort(routerPort)
+		envCreateMux.Unlock()
+	}()
 
 	ctx, cancel := context.WithCancelCause(context.Background())
 
@@ -397,7 +452,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		}
 	}
 
-	pubSubPrefix := strconv.FormatUint(rand.Uint64(), 16)
 	getPubSubName := GetPubSubNameFn(pubSubPrefix)
 
 	employees := &Subgraph{
@@ -533,11 +587,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	cdn := setupCDNServer()
-
-	routerPort, err := freeport.GetFreePort()
-	if err != nil {
-		t.Fatalf("could not get free port: %s", err)
-	}
 
 	listenerAddr := fmt.Sprintf("localhost:%d", routerPort)
 
