@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.151.0](https://github.com/wundergraph/cosmo/compare/router@0.150.0...router@0.151.0) (2024-12-11)
+
+### Features
+
+* add error message on invalid JSON in edfs message ([#1415](https://github.com/wundergraph/cosmo/issues/1415)) ([9d181e9](https://github.com/wundergraph/cosmo/commit/9d181e92be3cf332ce45b63c833e4f710c27f542)) (@alepane21)
+* ensure consistent hash for operations ([#1367](https://github.com/wundergraph/cosmo/issues/1367)) ([9e516e4](https://github.com/wundergraph/cosmo/commit/9e516e4eff01d166a7a282eb562aead23aa6b6dd)) (@StarpTech)
+
 # [0.150.0](https://github.com/wundergraph/cosmo/compare/router@0.149.0...router@0.150.0) (2024-12-10)
 
 ### Features
