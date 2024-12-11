@@ -877,7 +877,7 @@ func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bo
 		operationID:              o.parsedOperation.InternalID,
 		normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 		operationType:            o.parsedOperation.Type,
-		operationDefinitionRef:   0,
+		operationDefinitionRef:   o.operationDefinitionRef,
 	}
 
 	if isApq {
