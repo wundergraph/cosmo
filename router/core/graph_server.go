@@ -1009,6 +1009,11 @@ func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig
 					break
 				}
 			}
+
+			_, ok = s.pubSubProviders.nats[providerID]
+			if !ok && !datasourceConfiguration.CustomEvents.DontVerify {
+				return fmt.Errorf("failed to find Nats provider with ID \"%s\"", providerID)
+			}
 		}
 
 		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetKafka() {
@@ -1036,6 +1041,11 @@ func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig
 
 					break
 				}
+			}
+
+			_, ok = s.pubSubProviders.kafka[providerID]
+			if !ok && !datasourceConfiguration.CustomEvents.DontVerify {
+				return fmt.Errorf("failed to find Kafka provider with ID \"%s\"", providerID)
 			}
 		}
 
