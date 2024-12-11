@@ -455,8 +455,11 @@ type operationContext struct {
 	name string
 	// opType is the type of the operation (query, mutation, subscription)
 	opType OperationType
-	// Hash is the hash of the operation
+	// hash is the hash of the operation with the normalized content and variables. Used for analytics.
 	hash uint64
+	// internalHash is the hash of the operation with normalized content. Used for engine / executor caching.
+	// we can't use the hash for this due to engine limitations in handling variables with the normalized representation
+	internalHash uint64
 	// Content is the content of the operation
 	content    string
 	variables  *astjson.Value
