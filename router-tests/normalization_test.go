@@ -150,10 +150,10 @@ func TestNormalization(t *testing.T) {
 				Name:          "Inline value with User ID 3",
 				OperationHash: "2190801858633811792",
 				Query: `{
-    "query": "query Employee{\n  employee(id: 1) {\n    id\n} \n}",
+    "query": "query Employee{\n  employee(id: 3) {\n    id\n} \n}",
     "operationName": "Employee"
 }`,
-				Output:        `{"data": {"employee": {"id": 1}}}`,
+				Output:        `{"data": {"employee": {"id": 3}}}`,
 				OperationName: "Employee",
 			},
 		}
