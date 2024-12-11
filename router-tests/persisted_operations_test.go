@@ -109,6 +109,7 @@ func TestPersistedNormalizationCacheWithMultiOperationDocument(t *testing.T) {
 				Header:        header,
 			})
 			require.NoError(t, err)
+			require.Equal(t, `{"data":{"a":{"id":1,"details":{"pets":null}}}}`, res.Body)
 			require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 			require.Equal(t, "MISS", res.Response.Header.Get(core.ExecutionPlanCacheHeader))
 
@@ -120,6 +121,7 @@ func TestPersistedNormalizationCacheWithMultiOperationDocument(t *testing.T) {
 				Header:        header,
 			})
 			require.NoError(t, err)
+			require.Equal(t, `{"data":{"a":{"id":1,"details":{"pets":null}}}}`, res.Body)
 			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 			require.Equal(t, "HIT", res.Response.Header.Get(core.ExecutionPlanCacheHeader))
 
@@ -132,6 +134,7 @@ func TestPersistedNormalizationCacheWithMultiOperationDocument(t *testing.T) {
 				Header:        header,
 			})
 			require.NoError(t, err)
+			require.Equal(t, `{"data":{"b":{"id":1,"details":{"pets":null}}}}`, res.Body)
 			require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 			require.Equal(t, "MISS", res.Response.Header.Get(core.ExecutionPlanCacheHeader))
 
@@ -144,6 +147,7 @@ func TestPersistedNormalizationCacheWithMultiOperationDocument(t *testing.T) {
 				Header:        header,
 			})
 			require.NoError(t, err)
+			require.Equal(t, `{"data":{"b":{"id":1,"details":{"pets":null}}}}`, res.Body)
 			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 			require.Equal(t, "HIT", res.Response.Header.Get(core.ExecutionPlanCacheHeader))
 		})
