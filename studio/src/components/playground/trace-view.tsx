@@ -1,4 +1,6 @@
 import { cn } from "@/lib/utils";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { Kind, OperationTypeNode, parse } from "graphql";
 import {
   createContext,
   useCallback,
@@ -599,6 +601,7 @@ const Trace = ({
 
 export const TraceView = () => {
   const {
+    query,
     response: activeResponse,
     subgraphs,
     headers: activeHeader,
@@ -642,9 +645,33 @@ export const TraceView = () => {
     }
   }, [headers, activeResponse]);
 
+  const isSubscription = useMemo(() => {
+    try {
+      const parsed = parse(query ?? "");
+
+      const isSubscription =
+        parsed.definitions[0]?.kind === Kind.OPERATION_DEFINITION &&
+        parsed.definitions[0].operation === OperationTypeNode.SUBSCRIPTION;
+
+      return isSubscription;
+    } catch {
+      return false;
+    }
+  }, [query]);
+
   const hasTrace = hasTraceHeader && hasTraceInResponse;
 
   const [view, setView] = useState<"tree" | "waterfall">("tree");
+
+  if (isSubscription) {
+    return (
+      <EmptyState
+        icon={<ExclamationTriangleIcon />}
+        title="Unsupported"
+        description="Advanced Request Tracing is not supported for subscriptions"
+      />
+    );
+  }
 
   if (!hasTrace) {
     return (
