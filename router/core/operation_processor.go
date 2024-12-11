@@ -832,7 +832,9 @@ func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bo
 	o.parsedOperation.InternalID = entry.operationID
 	o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
 	o.parsedOperation.Type = entry.operationType
-	o.operationDefinitionRef = entry.operationDefinitionRef
+	//  We will always only have a single operation definition in the document
+	// Because we removed the unused operations during normalization
+	o.operationDefinitionRef = 0
 	err = o.setAndParseOperationDoc()
 	if err != nil {
 		return false, err
