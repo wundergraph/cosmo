@@ -4,13 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"net"
-	"net/http"
-	"strings"
-
 	"github.com/hashicorp/go-multierror"
+	"github.com/wundergraph/astjson"
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
@@ -20,6 +17,8 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+	"net"
+	"net/http"
 )
 
 type errorType int
@@ -79,7 +78,8 @@ func getErrorType(err error) errorType {
 	if errors.As(err, &invalidWsSubprotocolErr) {
 		return errorTypeInvalidWsSubprotocol
 	}
-	if strings.HasPrefix(err.Error(), "cannot parse JSON:") {
+	var jsonParseErr *astjson.ParseError
+	if errors.As(err, &jsonParseErr) {
 		return errorTypeEDFSInvalidMessage
 	}
 	return errorTypeUnknown
