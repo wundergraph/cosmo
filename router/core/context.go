@@ -10,6 +10,7 @@ import (
 
 	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
@@ -137,6 +138,94 @@ var metricAttrsPool = sync.Pool{
 	},
 }
 
+// The filter can include elements, which are not part of the context, but it should be possible
+// to also configure them in the same way as the context fields.
+const (
+	filterKeyOperationName       = ContextFieldOperationName
+	filterKeyOperationHash       = ContextFieldOperationHash
+	filterKeyRouterConfigVersion = "router_config_version"
+)
+
+type attributeKeyMap map[attribute.Key]string
+
+// attributeFilter resolves attributes from the requestContext based on the configured custom attributes
+type attributeFilter struct {
+	enabled bool
+
+	// lookupMap contains the default key names, which can be mapped to a new name with custom attributes.
+	// These keys are used to identify high cardinality attributes and map to the corresponding fields in the
+	// request context.
+	lookupMap attributeKeyMap
+	// attr is the list of configured custom attributes that can are used to be resolved from the context and
+	// to potentially remap the key to a new name
+	attr []config.CustomAttribute
+}
+
+func newAttributeFilter(enabled bool, attr []config.CustomAttribute) attributeFilter {
+	// Any attributes that are in this map, will be resolved only if they are configured in the `attr` list.
+	// This is to avoid adding high cardinality attributes by default as it can be expensive for the metric backend.
+	set := attributeKeyMap{
+		otel.WgOperationName:       filterKeyOperationName,
+		otel.WgOperationHash:       filterKeyOperationHash,
+		otel.WgRouterConfigVersion: filterKeyRouterConfigVersion,
+	}
+
+	return attributeFilter{
+		enabled:   enabled,
+		attr:      attr,
+		lookupMap: set,
+	}
+}
+
+func (r *attributeFilter) filterAttributes(attributes []attribute.KeyValue) []attribute.KeyValue {
+	if !r.enabled {
+		return attributes
+	}
+
+	result := make([]attribute.KeyValue, 0, len(attributes))
+
+	for _, attr := range attributes {
+		// check if the attribute is defined in the set of default keys
+		contextField, exists := r.lookupMap[attr.Key]
+		if !exists {
+			// if the attribute is not in the default set, we don't expect it to generate high cardinality
+			// and can safely add it to the result
+			result = append(result, attr)
+			continue
+		}
+
+		// if the attribute is in the map, we need to check if we want it to be added
+		if resolvedAttr := r.filterAttribute(attr, contextField); resolvedAttr.Valid() {
+			result = append(result, resolvedAttr)
+		}
+	}
+
+	return result
+}
+
+func (r *attributeFilter) filterAttribute(attr attribute.KeyValue, contextField string) attribute.KeyValue {
+	for _, a := range r.attr {
+		if a.ValueFrom == nil || a.ValueFrom.ContextField != contextField {
+			continue
+		}
+
+		val := attr.Value.AsString()
+		if val == "" {
+			val = a.Default
+		}
+
+		var key string
+		if key = a.Key; key == "" {
+			// if the key should not be remapped we fall back to the default key name
+			key = string(attr.Key)
+		}
+
+		return attribute.String(key, val)
+
+	}
+	return attribute.KeyValue{}
+}
+
 type requestTelemetryAttributes struct {
 	// traceAttrs are the base attributes for traces only
 	traceAttrs []attribute.KeyValue
@@ -146,6 +235,10 @@ type requestTelemetryAttributes struct {
 	metricSetAttrs map[string]string
 	// metricSliceAttrs are the attributes for metrics that are string slices and needs to be exploded for prometheus
 	metricSliceAttrs []attribute.KeyValue
+	// filter applies the high cardinality filter to the attributes. Attributes which are not contained in the
+	// high cardinality filter will be added as is. Attributes that are in the filter will be resolved from the
+	// request context and potentially remapped to a new key.
+	filter attributeFilter
 
 	// metricsEnabled indicates if metrics are enabled. If false, no metrics attributes will be added
 	metricsEnabled bool
@@ -197,11 +290,8 @@ func (r *requestTelemetryAttributes) addCustomMetricStringAttr(key string, value
 }
 
 func (r *requestTelemetryAttributes) addCommonAttribute(vals ...attribute.KeyValue) {
-	if !r.metricsEnabled && !r.traceEnabled {
-		return
-	}
-	r.metricAttrs = append(r.metricAttrs, vals...)
-	r.traceAttrs = append(r.traceAttrs, vals...)
+	r.addMetricAttribute(vals...)
+	r.addCommonTraceAttribute(vals...)
 }
 
 func (r *requestTelemetryAttributes) addCommonTraceAttribute(vals ...attribute.KeyValue) {
@@ -215,7 +305,8 @@ func (r *requestTelemetryAttributes) addMetricAttribute(vals ...attribute.KeyVal
 	if !r.metricsEnabled {
 		return
 	}
-	r.metricAttrs = append(r.metricAttrs, vals...)
+
+	r.metricAttrs = append(r.metricAttrs, r.filter.filterAttributes(vals)...)
 }
 
 // requestContext is the default implementation of RequestContext
@@ -593,6 +684,8 @@ type requestContextOptions struct {
 	metricSetAttributes map[string]string
 	metricsEnabled      bool
 	traceEnabled        bool
+	filterEnabled       bool
+	includedAttributes  []config.CustomAttribute
 	w                   http.ResponseWriter
 	r                   *http.Request
 }
@@ -608,6 +701,7 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 			metricSetAttrs: opts.metricSetAttributes,
 			metricsEnabled: opts.metricsEnabled,
 			traceEnabled:   opts.traceEnabled,
+			filter:         newAttributeFilter(opts.filterEnabled, opts.includedAttributes),
 		},
 		subgraphResolver: subgraphResolverFromContext(opts.r.Context()),
 	}

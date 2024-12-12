@@ -268,6 +268,12 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 			continue
 		}
 
+		if !c.UseCloudExporter && isCloudExporter(exp) {
+			// If the default cloud exporter is configured, we cannot set custom attributes.
+			c.Attributes = nil
+			c.UseCloudExporter = true
+		}
+
 		exporter, err := createOTELExporter(log, exp)
 		if err != nil {
 			log.Error("creating OTEL metrics exporter", zap.Error(err))
@@ -287,6 +293,19 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 	otel.SetMeterProvider(mp)
 
 	return mp, nil
+}
+
+// isCloudExporter checks if the provided is the default cloud exporter.
+func isCloudExporter(exp *OpenTelemetryExporter) bool {
+	u, err := parseURL(exp.Endpoint)
+	if err != nil {
+		return false
+	}
+	defaultEndpoint, err := url.Parse(otelconfig.DefaultEndpoint())
+	if err != nil {
+		return false
+	}
+	return u.Host == defaultEndpoint.Host
 }
 
 func getResource(ctx context.Context, serviceInstanceID string, c *Config) (*resource.Resource, error) {
@@ -398,7 +417,6 @@ func defaultOtlpMetricOptions(ctx context.Context, serviceInstanceID string, c *
 	var view sdkmetric.View = func(i sdkmetric.Instrument) (sdkmetric.Stream, bool) {
 		// In a custom View function, we need to explicitly copy the name, description, and unit.
 		s := sdkmetric.Stream{Name: i.Name, Description: i.Description, Unit: i.Unit}
-
 		// Filter out metrics that match the excludeMetrics regexes
 		for _, re := range c.OpenTelemetry.ExcludeMetrics {
 			if re.MatchString(i.Name) {

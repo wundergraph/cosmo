@@ -550,10 +550,13 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	httpRouter := chi.NewRouter()
 
-	baseOtelAttributes := append(
-		[]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)},
-		s.baseOtelAttributes...,
-	)
+	baseOtelAttributes := append([]attribute.KeyValue{}, s.baseOtelAttributes...)
+	if s.metricConfig.UseCloudExporter {
+		baseOtelAttributes = append(
+			[]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)},
+			s.baseOtelAttributes...,
+		)
+	}
 
 	if featureFlagName != "" {
 		baseOtelAttributes = append(baseOtelAttributes, otel.WgFeatureFlag.String(featureFlagName))
@@ -630,6 +633,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				metricSetAttributes: b,
 				metricsEnabled:      metricsEnabled,
 				traceEnabled:        traceEnabled,
+				filterEnabled:       !s.metricConfig.UseCloudExporter,
+				includedAttributes:  s.metricConfig.Attributes,
 				w:                   w,
 				r:                   r,
 			})
@@ -687,6 +692,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			reqContext := getRequestContext(r.Context())
 
 			reqContext.telemetry.addCommonTraceAttribute(baseOtelAttributes...)
+			reqContext.telemetry.addCommonTraceAttribute(otel.WgRouterConfigVersion.String(routerConfigVersion))
 
 			if commonAttrRequestMapper != nil {
 				reqContext.telemetry.addCommonAttribute(commonAttrRequestMapper(r)...)
