@@ -1703,6 +1703,9 @@ func WithClientHeader(cfg config.ClientHeader) Option {
 
 func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 	return func(r *Router) {
+		if cfg.Workers <= 0 {
+			cfg.Workers = 1
+		}
 		r.cacheWarmup = cfg
 	}
 }

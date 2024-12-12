@@ -13,7 +13,6 @@ import (
 )
 
 func TestCacheWarmup(t *testing.T) {
-	t.Skip("skipping until metric renaming done")
 	t.Parallel()
 
 	t.Run("cache warmup disabled", func(t *testing.T) {
@@ -40,8 +39,8 @@ func TestCacheWarmup(t *testing.T) {
 				QueryNormalizationHits:   4,
 				ValidationMisses:         3,
 				ValidationHits:           4,
-				ExecutionMisses:          3,
-				ExecutionHits:            4,
+				PlanMisses:               3,
+				PlanHits:                 4,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -77,8 +76,8 @@ func TestCacheWarmup(t *testing.T) {
 				QueryNormalizationHits:   0,
 				ValidationMisses:         2,
 				ValidationHits:           0,
-				ExecutionMisses:          1,
-				ExecutionHits:            0,
+				PlanMisses:               1,
+				PlanHits:                 0,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -102,8 +101,8 @@ func TestCacheWarmup(t *testing.T) {
 				QueryNormalizationHits:   5,
 				ValidationMisses:         3,
 				ValidationHits:           5,
-				ExecutionMisses:          3,
-				ExecutionHits:            5,
+				PlanMisses:               3,
+				PlanHits:                 5,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -155,8 +154,8 @@ func TestCacheWarmup(t *testing.T) {
 				QueryNormalizationHits:   1,
 				ValidationMisses:         1,
 				ValidationHits:           1,
-				ExecutionMisses:          1,
-				ExecutionHits:            1,
+				PlanMisses:               1,
+				PlanHits:                 1,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -181,8 +180,8 @@ func TestCacheWarmup(t *testing.T) {
 				QueryNormalizationHits:   1,
 				ValidationMisses:         1,
 				ValidationHits:           1,
-				ExecutionMisses:          1,
-				ExecutionHits:            1,
+				PlanMisses:               1,
+				PlanHits:                 1,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -203,12 +202,12 @@ func TestCacheWarmup(t *testing.T) {
 				}),
 			},
 			AssertCacheMetrics: &testenv.CacheMetricsAssertion{
-				QueryNormalizationMisses: 1,
-				QueryNormalizationHits:   1,
-				ValidationMisses:         1,
-				ValidationHits:           1,
-				ExecutionMisses:          1,
-				ExecutionHits:            1,
+				PersistedQueryNormalizationHits:   1,
+				PersistedQueryNormalizationMisses: 1,
+				ValidationMisses:                  1,
+				ValidationHits:                    1,
+				PlanMisses:                        1,
+				PlanHits:                          1,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
@@ -233,12 +232,12 @@ func TestCacheWarmup(t *testing.T) {
 				}),
 			},
 			AssertCacheMetrics: &testenv.CacheMetricsAssertion{
-				QueryNormalizationMisses: 0,
-				QueryNormalizationHits:   0,
-				ValidationMisses:         1,
-				ValidationHits:           0,
-				ExecutionMisses:          1,
-				ExecutionHits:            0,
+				PersistedQueryNormalizationHits:   0,
+				PersistedQueryNormalizationMisses: 2,
+				ValidationMisses:                  1,
+				ValidationHits:                    0,
+				PlanMisses:                        1,
+				PlanHits:                          0,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
@@ -265,12 +264,53 @@ func TestCacheWarmup(t *testing.T) {
 				}),
 			},
 			AssertCacheMetrics: &testenv.CacheMetricsAssertion{
-				QueryNormalizationMisses: 1,
+				QueryNormalizationMisses: 3,
 				QueryNormalizationHits:   2,
-				ValidationMisses:         1,
+				ValidationMisses:         3,
 				ValidationHits:           2,
-				ExecutionMisses:          1,
-				ExecutionHits:            2,
+				PlanMisses:               3,
+				PlanHits:                 2,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.Equal(t, employeesIDData, res.Body)
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+		})
+	})
+
+	t.Run("cache warmup with operation hash cache", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			CustomMetricAttributes: []config.CustomAttribute{
+				{
+					Key: "sha256",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldOperationSha256,
+					},
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled:  true,
+					Source:   "filesystem",
+					Path:     "testenv/testdata/cache_warmup",
+					Workers:  2,
+					Throttle: time.Millisecond * 10,
+				}),
+			},
+			AssertCacheMetrics: &testenv.CacheMetricsAssertion{
+				QueryNormalizationMisses: 3,
+				QueryNormalizationHits:   2,
+				ValidationMisses:         3,
+				ValidationHits:           2,
+				QueryHashMisses:          3,
+				QueryHashHits:            2,
+				PlanMisses:               3,
+				PlanHits:                 2,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{

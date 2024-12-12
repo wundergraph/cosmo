@@ -149,9 +149,9 @@ func assertCacheMetrics(t testing.TB, env *Environment, expected CacheMetricsAss
 					case cacheType == "validation" && hm == "misses":
 						actual.ValidationMisses = dp.Value
 					case cacheType == "plan" && hm == "hits":
-						actual.ExecutionHits = dp.Value
+						actual.PlanHits = dp.Value
 					case cacheType == "plan" && hm == "misses":
-						actual.ExecutionMisses = dp.Value
+						actual.PlanMisses = dp.Value
 					case cacheType == "query_hash" && hm == "misses":
 						actual.QueryHashMisses = dp.Value
 					case cacheType == "query_hash" && hm == "hits":
@@ -232,8 +232,8 @@ type CacheMetricsAssertion struct {
 	PersistedQueryNormalizationHits   int64
 	ValidationMisses                  int64
 	ValidationHits                    int64
-	ExecutionMisses                   int64
-	ExecutionHits                     int64
+	PlanMisses                        int64
+	PlanHits                          int64
 	QueryHashMisses                   int64
 	QueryHashHits                     int64
 }

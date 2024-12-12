@@ -773,6 +773,7 @@ func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bo
 
 	cacheKey, ok := o.loadPersistedOperationCacheKey(clientName, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
 	if !ok {
+		_, _ = o.cache.persistedOperationNormalizationCache.Get(0) // register cache miss
 		return false, nil
 	}
 

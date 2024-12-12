@@ -73,21 +73,14 @@ func (w *cacheWarmup) run(ctx context.Context) error {
 		WGRequestToken: "",
 	}
 
-	for _, item := range items {
+	chunks := make([][]*CacheWarmupItem, w.workers)
+	for i, item := range items {
 		if item.Client == nil {
 			item.Client = defaultClientInfo
 		}
-	}
 
-	// split operations into chunks for workers
-	chunkSize := len(items) / w.workers
-	chunks := make([][]*CacheWarmupItem, 0, w.workers)
-	for i := 0; i < len(items); i += chunkSize {
-		end := i + chunkSize
-		if end > len(items) {
-			end = len(items)
-		}
-		chunks = append(chunks, items[i:end])
+		nextWorker := i % w.workers
+		chunks[nextWorker] = append(chunks[nextWorker], item)
 	}
 
 	sg := &sync.WaitGroup{}
