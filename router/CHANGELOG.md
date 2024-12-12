@@ -4,6 +4,14 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.151.1](https://github.com/wundergraph/cosmo/compare/router@0.151.0...router@0.151.1) (2024-12-12)
+
+### Bug Fixes
+
+* **APQ:** set normalization cache hit stat correctly ([#1435](https://github.com/wundergraph/cosmo/issues/1435)) ([8a6b0d7](https://github.com/wundergraph/cosmo/commit/8a6b0d7fab8c6e8c17990f911b27ec8f084451f4)) (@StarpTech)
+* panic when normalizing multi operation documents ([#1433](https://github.com/wundergraph/cosmo/issues/1433)) ([a017b71](https://github.com/wundergraph/cosmo/commit/a017b71529b82c828f03aac4ac5a3760b81391d5)) (@StarpTech)
+* **router:** add missing telemetry config ([#1436](https://github.com/wundergraph/cosmo/issues/1436)) ([be6d144](https://github.com/wundergraph/cosmo/commit/be6d144a73dccebfe5a39de16135e166033e8590)) (@Noroth)
+
 # [0.151.0](https://github.com/wundergraph/cosmo/compare/router@0.150.0...router@0.151.0) (2024-12-11)
 
 ### Features

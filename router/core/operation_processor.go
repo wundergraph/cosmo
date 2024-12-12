@@ -824,6 +824,7 @@ func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bo
 		return false, nil
 	}
 	o.parsedOperation.PersistedOperationCacheHit = true
+	o.parsedOperation.NormalizationCacheHit = true
 	o.parsedOperation.InternalID = entry.operationID
 	o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
 	o.parsedOperation.Type = entry.operationType
