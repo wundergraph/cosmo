@@ -135,7 +135,7 @@ func NewStore(opts ...Option) (Store, error) {
 	}
 
 	if err := setCardinalityLimit(h.cardinalityLimit); err != nil {
-		h.logger.Warn("failed to set cardinality limit", zap.Error(err))
+		h.logger.Warn("Failed to set cardinality limit", zap.Error(err))
 	}
 
 	h.baseAttributesOpt = otelmetric.WithAttributes(h.baseAttributes...)
