@@ -17,11 +17,6 @@ func TestTimeoutTransport(t *testing.T) {
 
 	var (
 		testSubgraphKey = "test"
-		transportOpts   = &SubgraphTransportOptions{
-			SubgraphMap: map[string]*TransportTimeoutOptions{
-				testSubgraphKey: {},
-			},
-		}
 	)
 
 	t.Run("applies request timeout", func(t *testing.T) {
@@ -39,7 +34,13 @@ func TestTimeoutTransport(t *testing.T) {
 				subgraphResolver: NewSubgraphResolver([]Subgraph{{Name: testSubgraphKey, UrlString: fastServer.URL}}),
 			}
 
-			transportOpts.SubgraphMap[testSubgraphKey].RequestTimeout = 10 * time.Millisecond
+			transportOpts := &SubgraphTransportOptions{
+				SubgraphMap: map[string]*TransportTimeoutOptions{
+					testSubgraphKey: {
+						RequestTimeout: 10 * time.Millisecond,
+					},
+				},
+			}
 
 			req := httptest.NewRequest("GET", fastServer.URL, nil)
 			req = req.WithContext(withRequestContext(req.Context(), rqCtx))
@@ -59,6 +60,14 @@ func TestTimeoutTransport(t *testing.T) {
 		t.Run("Slow response exceeding timeout", func(t *testing.T) {
 			t.Parallel()
 
+			transportOpts := &SubgraphTransportOptions{
+				SubgraphMap: map[string]*TransportTimeoutOptions{
+					testSubgraphKey: {
+						RequestTimeout: 10 * time.Millisecond,
+					},
+				},
+			}
+
 			slowServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				time.Sleep(20 * time.Millisecond) // Slow response
@@ -69,7 +78,6 @@ func TestTimeoutTransport(t *testing.T) {
 			rqCtx := &requestContext{
 				subgraphResolver: NewSubgraphResolver([]Subgraph{{Name: testSubgraphKey, UrlString: slowServer.URL}}),
 			}
-			transportOpts.SubgraphMap[testSubgraphKey].RequestTimeout = 10 * time.Millisecond
 
 			req := httptest.NewRequest("GET", slowServer.URL, nil)
 			req = req.WithContext(withRequestContext(req.Context(), rqCtx))
@@ -83,7 +91,7 @@ func TestTimeoutTransport(t *testing.T) {
 
 			resp, err := timeoutTransport.RoundTrip(req)
 			require.NotNil(t, err)
-			require.ErrorAs(t, err, &context.DeadlineExceeded)
+			require.ErrorIs(t, err, context.DeadlineExceeded)
 			require.Nil(t, resp) // No response due to timeout
 		})
 	})
@@ -91,7 +99,13 @@ func TestTimeoutTransport(t *testing.T) {
 	t.Run("ResponseHeaderTimeout exceeded", func(t *testing.T) {
 		t.Parallel()
 
-		transportOpts.SubgraphMap[testSubgraphKey].ResponseHeaderTimeout = 3 * time.Millisecond
+		transportOpts := &SubgraphTransportOptions{
+			SubgraphMap: map[string]*TransportTimeoutOptions{
+				testSubgraphKey: {
+					ResponseHeaderTimeout: 3 * time.Millisecond,
+				},
+			},
+		}
 
 		headerTimeoutServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			time.Sleep(5 * time.Millisecond) // Delayed header response
@@ -115,12 +129,20 @@ func TestTimeoutTransport(t *testing.T) {
 
 		resp, err := timeoutTransport.RoundTrip(req)
 		require.NotNil(t, err)
-		require.ErrorAs(t, err, &context.DeadlineExceeded)
+		require.ErrorContains(t, err, "timeout awaiting response headers")
 		require.Nil(t, resp)
 	})
 
 	t.Run("TLSHandshakeTimeout exceeded", func(t *testing.T) {
 		t.Parallel()
+
+		transportOpts := &SubgraphTransportOptions{
+			SubgraphMap: map[string]*TransportTimeoutOptions{
+				testSubgraphKey: {
+					TLSHandshakeTimeout: 2 * time.Millisecond,
+				},
+			},
+		}
 
 		tlsServer := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
@@ -128,8 +150,6 @@ func TestTimeoutTransport(t *testing.T) {
 		tlsServer.TLS = &tls.Config{}
 		tlsServer.StartTLS()
 		defer tlsServer.Close()
-
-		transportOpts.SubgraphMap[testSubgraphKey].TLSHandshakeTimeout = 2 * time.Millisecond
 
 		rqCtx := &requestContext{
 			subgraphResolver: NewSubgraphResolver([]Subgraph{{Name: "test", UrlString: tlsServer.URL}}),
@@ -148,14 +168,20 @@ func TestTimeoutTransport(t *testing.T) {
 		resp, err := timeoutTransport.RoundTrip(req)
 		require.NotNil(t, err)
 		require.Contains(t, err.Error(), "TLS handshake timeout")
-		require.ErrorAs(t, err, &os.ErrDeadlineExceeded)
 		require.Nil(t, resp)
 	})
 
 	t.Run("DialTimeout exceeded", func(t *testing.T) {
 		t.Parallel()
 
-		transportOpts.SubgraphMap[testSubgraphKey].DialTimeout = 1 * time.Millisecond
+		transportOpts := &SubgraphTransportOptions{
+			SubgraphMap: map[string]*TransportTimeoutOptions{
+				testSubgraphKey: {
+					DialTimeout: 1 * time.Millisecond,
+				},
+			},
+		}
+
 		unreachableServerURL := "http://192.0.2.1" // Reserved IP address unlikely to respond
 
 		rqCtx := &requestContext{
