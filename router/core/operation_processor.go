@@ -797,11 +797,6 @@ func (o *OperationKit) NormalizeVariables() error {
 
 	o.kit.normalizedOperation.Reset()
 
-	// Reset the operation name to the original name and print the operation again
-	// to get the final normalized form of the operation
-
-	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
-
 	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
 		return err
