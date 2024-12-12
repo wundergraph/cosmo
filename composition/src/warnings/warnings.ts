@@ -58,13 +58,13 @@ export function externalInterfaceFieldsWarning(
   return new Warning({
     message:
       versionOneWarningPropagationMessage(subgraphName) +
-      `The Interface "${typeName}" is invalid because the following Field definition` +
+      `The Interface "${typeName}" is invalid because the following field definition` +
       (fieldNames.length > 1 ? 's are' : ' is') +
       ` declared "@external":\n "` +
       fieldNames.join(QUOTATION_JOIN) +
       `"\n` +
-      `Interface Fields should not be declared "@external". This is because Interface Fields do not resolve directly,` +
-      ` but the "@external" directive relates to whether a Field instance can be resolved` +
+      `Interface fields should not be declared "@external". This is because Interface fields do not resolve directly,` +
+      ` but the "@external" directive relates to whether a field instance can be resolved` +
       ` by the subgraph in which it is defined.`,
     subgraph: {
       name: subgraphName,
@@ -82,11 +82,11 @@ export function nonExternalConditionalFieldWarning(
   return new Warning({
     message:
       versionOneWarningPropagationMessage(subgraphName) +
-      `The Field "${originCoords}" in subgraph "${subgraphName}" defines a "@${fieldSetDirective}" directive with the following` +
-      ` field set:\n "${fieldSet}".` +
-      `\nHowever, neither the Field "${targetCoords}" nor any of its field set ancestors are declared @external.` +
-      `\nConsequently, "${targetCoords}" is already provided by subgraph "${subgraphName}" and should not form part of` +
-      ` a "@${fieldSetDirective}" directive field set.`,
+      `The field "${originCoords}" in subgraph "${subgraphName}" defines a "@${fieldSetDirective}" directive with` +
+      ` the following field set:\n "${fieldSet}".` +
+      `\nHowever, neither the field "${targetCoords}" nor any of its field set ancestors are declared @external.` +
+      `\nConsequently, "${targetCoords}" is already provided by subgraph "${subgraphName}" and should not form part` +
+      ` of a "@${fieldSetDirective}" directive field set.`,
     subgraph: {
       name: subgraphName,
     },
@@ -109,8 +109,8 @@ export function invalidExternalFieldWarning(fieldCoords: string, subgraphName: s
   return new Warning({
     message:
       versionOneWarningPropagationMessage(subgraphName) +
-      ` The Object Field "${fieldCoords}" is invalidly declared "@external". An Object Field should only` +
-      ` be declared "@external" if it is part of a "@key", "@provides", or "@requires" FieldSet, or the Field is` +
+      ` The Object field "${fieldCoords}" is invalidly declared "@external". An Object field should only` +
+      ` be declared "@external" if it is part of a "@key", "@provides", or "@requires" field set, or the field is` +
       ` necessary to satisfy an Interface implementation. In the case that none of these conditions is true, the` +
       ` "@external" directive should be removed.`,
     subgraph: {
@@ -122,9 +122,30 @@ export function invalidExternalFieldWarning(fieldCoords: string, subgraphName: s
 export function requiresDefinedOnNonEntityFieldWarning(fieldCoords: string, subgraphName: string): Warning {
   return new Warning({
     message:
-      ` The Object Field "${fieldCoords}" defines a "@requires" directive, but the Object is not an entity.` +
-      ' Consequently, the "@requires" FieldSet cannot be satisfied because there is no entity resolver with which to' +
-      ' provide the required Fields.',
+      ` The Object field "${fieldCoords}" defines a "@requires" directive, but the Object is not an entity.` +
+      ' Consequently, the "@requires" field set cannot be satisfied because there is no entity resolver with which to' +
+      ' provide the required fields.',
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function externalEntityExtensionKeyFieldWarning(
+  entityName: string,
+  fieldSet: string,
+  externalFieldCoordinates: Array<string>,
+  subgraphName: string,
+): Warning {
+  return new Warning({
+    message:
+      `The entity extension "${entityName}" defined in subgraph "${subgraphName}" defines a "@key" directive` +
+      ` with the field set "${fieldSet}".\nThe following field coordinates that form part of that field set are` +
+      ` declared "@external":\n "` +
+      externalFieldCoordinates.join(QUOTATION_JOIN) +
+      `"\nPlease note fields that form part of` +
+      ` entity extension "@key" field sets are always provided in that subgraph. Any such "@external" declarations` +
+      ` are unnecessary relics of Federation Version 1 syntax and are effectively ignored.`,
     subgraph: {
       name: subgraphName,
     },
