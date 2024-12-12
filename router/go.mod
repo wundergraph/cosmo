@@ -37,7 +37,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.133
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.134
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0
@@ -72,7 +72,7 @@ require (
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.3
-	github.com/wundergraph/astjson v0.0.0-20241108124845-44485579ffa5
+	github.com/wundergraph/astjson v0.0.0-20241210135722-15ca0ac078f8
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
 	golang.org/x/text v0.19.0
 )

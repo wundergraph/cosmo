@@ -233,8 +233,10 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 	}
 
 	tp := sdktrace.NewTracerProvider(opts...)
-	// Set the global TraceProvider to the SDK tracer provider.
-	otel.SetTracerProvider(tp)
+	// Don't use the global trace provider in tests
+	if config.MemoryExporter == nil {
+		otel.SetTracerProvider(tp)
+	}
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
 		config.Logger.Error("otel error", zap.Error(err))
 	}))

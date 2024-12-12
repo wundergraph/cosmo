@@ -27,7 +27,7 @@ require (
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
 	github.com/wundergraph/cosmo/demo v0.0.0-20241210060746-91245ea676ff
 	github.com/wundergraph/cosmo/router v0.0.0-20241210060746-91245ea676ff
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.133
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.134
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
@@ -138,7 +138,7 @@ require (
 	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
 	github.com/urfave/cli/v2 v2.27.2 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.16 // indirect
-	github.com/wundergraph/astjson v0.0.0-20241108124845-44485579ffa5 // indirect
+	github.com/wundergraph/astjson v0.0.0-20241210135722-15ca0ac078f8 // indirect
 	github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 // indirect
