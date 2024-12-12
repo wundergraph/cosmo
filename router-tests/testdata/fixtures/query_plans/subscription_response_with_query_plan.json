@@ -1,0 +1,17 @@
+{
+  "data": null,
+  "extensions": {
+    "queryPlan": {
+      "version": "1",
+      "kind": "Sequence",
+      "trigger": {
+        "kind": "Trigger",
+        "path": "currentTime",
+        "subgraphName": "employees",
+        "subgraphId": "0",
+        "fetchId": 0,
+        "query": "subscription{currentTime {unixTime}}"
+      }
+    }
+  }
+}

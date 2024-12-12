@@ -855,7 +855,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
-		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger),
+		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger, s.tracerProvider),
 	}
 
 	if s.redisClient != nil {
