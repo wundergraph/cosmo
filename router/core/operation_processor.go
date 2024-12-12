@@ -757,6 +757,13 @@ func (o *OperationKit) NormalizeVariables() error {
 		}
 	}
 
+	// Assuming the user sends a multi-operation document
+	// During normalization, we removed the unused operations from the document
+	// This will always lead to operation definitions of a length of 1 even when multiple operations are sent
+	if o.parsedOperation.NormalizationCacheHit {
+		o.operationDefinitionRef = 0
+	}
+
 	// Print the operation without the operation name to get the pure normalized form
 	// Afterward we can calculate the operation ID that is used as a stable identifier for analytics
 
@@ -790,11 +797,6 @@ func (o *OperationKit) NormalizeVariables() error {
 
 	o.kit.normalizedOperation.Reset()
 
-	// Reset the operation name to the original name and print the operation again
-	// to get the final normalized form of the operation
-
-	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
-
 	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
 		return err
@@ -825,7 +827,9 @@ func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bo
 	o.parsedOperation.InternalID = entry.operationID
 	o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
 	o.parsedOperation.Type = entry.operationType
-	o.operationDefinitionRef = entry.operationDefinitionRef
+	//  We will always only have a single operation definition in the document
+	// Because we removed the unused operations during normalization
+	o.operationDefinitionRef = 0
 	err = o.setAndParseOperationDoc()
 	if err != nil {
 		return false, err
