@@ -353,6 +353,90 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 	})
 }
 
+func TestAPQNormalizationCacheWithMultiOperationDocument(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Should identify correct document after removing unused operations during normalization", func(t *testing.T) {
+
+		document := `query A {
+  a: employee(id: 1) {
+    id
+    details {
+      pets {
+        name
+      }
+    }
+  }
+}
+query B ($id: Int!) {
+  b: employee(id: $id) {
+    id
+    details {
+      pets {
+        name
+      }
+    }
+  }
+}`
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				// This ensures that no CDN client for persistent operations is created, so we can verify that
+				// APQ alone (without persistent operation support setup) works as expected.
+				core.WithGraphApiToken(""),
+			},
+			ApqConfig: config.AutomaticPersistedQueriesConfig{
+				Enabled: true,
+				Cache: config.AutomaticPersistedQueriesCacheConfig{
+					Size: 1024 * 1024,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				OperationName: []byte(`"A"`),
+				Query:         document,
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+				Header:        header,
+			})
+			require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+			require.Equal(t, `{"data":{"a":{"id":1,"details":{"pets":null}}}}`, res.Body)
+
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				OperationName: []byte(`"A"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+				Header:        header,
+			})
+			require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+			require.Equal(t, `{"data":{"a":{"id":1,"details":{"pets":null}}}}`, res.Body)
+
+			// Now we send a request for operation with the name B
+
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				OperationName: []byte(`"B"`),
+				Query:         document,
+				Variables:     []byte(`{"id": 3}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+				Header:        header,
+			})
+			require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+			require.Equal(t, `{"data":{"b":{"id":3,"details":{"pets":[{"name":"Snappy"}]}}}}`, res.Body)
+
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				OperationName: []byte(`"B"`),
+				Variables:     []byte(`{"id": 3}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+				Header:        header,
+			})
+			require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+			require.Equal(t, `{"data":{"b":{"id":3,"details":{"pets":[{"name":"Snappy"}]}}}}`, res.Body)
+		})
+	})
+
+}
+
 func BenchmarkAutomaticPersistedQueriesCacheEnabled(b *testing.B) {
 	expected := `{"data":{"employees":[{"details":{"forename":"Jens","location":{"key":{"name":"Germany"}},"maritalStatus":"MARRIED","middlename":"","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Neuse"}},{"details":{"forename":"Dustin","location":{"key":{"name":"Germany"}},"maritalStatus":"ENGAGED","middlename":"Klaus","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Deus"}},{"details":{"forename":"Stefan","location":{"key":{"name":"America"}},"maritalStatus":"ENGAGED","middlename":"","nationality":"AMERICAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"REPTILE","gender":"UNKNOWN","name":"Snappy","__typename":"Alligator","dangerous":"yes"}],"surname":"Avram"}},{"details":{"forename":"Björn","location":{"key":{"name":"Germany"}},"maritalStatus":"MARRIED","middlename":"Volker","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Abby","__typename":"Dog","breed":"GOLDEN_RETRIEVER"},{"class":"MAMMAL","gender":"MALE","name":"Survivor","__typename":"Pony"}],"surname":"Schwenzer"}},{"details":{"forename":"Sergiy","location":{"key":{"name":"Ukraine"}},"maritalStatus":"ENGAGED","middlename":"","nationality":"UKRAINIAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Blotch","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Grayone","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Rusty","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"FEMALE","name":"Manya","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"MALE","name":"Peach","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Panda","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"FEMALE","name":"Mommy","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"FEMALE","name":"Terry","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"FEMALE","name":"Tilda","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"MALE","name":"Vasya","__typename":"Cat","type":"HOME"}],"surname":"Petrunin"}},{"details":{"forename":"Suvij","location":{"key":{"name":"India"}},"maritalStatus":null,"middlename":"","nationality":"INDIAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Surya"}},{"details":{"forename":"Nithin","location":{"key":{"name":"India"}},"maritalStatus":null,"middlename":"","nationality":"INDIAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Kumar"}},{"details":{"forename":"Eelco","location":{"key":{"name":"Netherlands"}},"maritalStatus":null,"middlename":"","nationality":"DUTCH","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"UNKNOWN","name":"Vanson","__typename":"Mouse"}],"surname":"Wiersma"}},{"details":{"forename":"Alexandra","location":{"key":{"name":"Germany"}},"maritalStatus":"MARRIED","middlename":"","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Neuse"}},{"details":{"forename":"David","location":{"key":{"name":"England"}},"maritalStatus":"MARRIED","middlename":null,"nationality":"ENGLISH","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Pepper","__typename":"Cat","type":"HOME"}],"surname":"Stutt"}}]}}`
 
