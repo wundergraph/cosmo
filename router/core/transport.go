@@ -339,7 +339,9 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 }
 
 func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport http.RoundTripper) http.RoundTripper {
-	baseTransport = NewTimeoutTransport(t.subgraphTransportOptions, baseTransport, t.logger, t.proxy)
+	if t.subgraphTransportOptions != nil && t.subgraphTransportOptions.SubgraphMap != nil && len(t.subgraphTransportOptions.SubgraphMap) > 0 {
+		baseTransport = NewTimeoutTransport(t.subgraphTransportOptions, baseTransport, t.logger, t.proxy)
+	}
 
 	if t.localhostFallbackInsideDocker && docker.Inside() {
 		baseTransport = docker.NewLocalhostFallbackRoundTripper(baseTransport)
