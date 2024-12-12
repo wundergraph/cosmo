@@ -71,7 +71,8 @@ func TestTimeoutTransport(t *testing.T) {
 			}
 			transportOpts.SubgraphMap[testSubgraphKey].RequestTimeout = 10 * time.Millisecond
 
-			req := httptest.NewRequestWithContext(withRequestContext(context.Background(), rqCtx), "GET", slowServer.URL, nil)
+			req := httptest.NewRequest("GET", slowServer.URL, nil)
+			req = req.WithContext(withRequestContext(req.Context(), rqCtx))
 
 			timeoutTransport := NewTimeoutTransport(
 				transportOpts,
