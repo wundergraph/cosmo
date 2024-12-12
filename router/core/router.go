@@ -1757,7 +1757,7 @@ func WithHostName(hostName string) Option {
 
 type ProxyFunc func(req *http.Request) (*url.URL, error)
 
-func newHTTPTransport(opts *SubgraphTransportOptions, proxy ProxyFunc) *http.Transport {
+func newHTTPTransport(opts TransportTimeoutOptions, proxy ProxyFunc) *http.Transport {
 	dialer := &net.Dialer{
 		Timeout:   opts.DialTimeout,
 		KeepAlive: opts.KeepAliveProbeInterval,

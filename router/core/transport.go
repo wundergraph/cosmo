@@ -67,6 +67,7 @@ func NewCustomTransport(
 	ct := &CustomTransport{
 		metricStore: metricStore,
 	}
+
 	if retryOptions.Enabled {
 		ct.roundTripper = retrytransport.NewRetryHTTPTransport(roundTripper, retryOptions, logger)
 	} else {
@@ -306,6 +307,7 @@ type TransportFactory struct {
 	metricStore                   metric.Store
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
+	proxy                         ProxyFunc
 }
 
 var _ ApiTransportFactory = TransportFactory{}
@@ -314,6 +316,7 @@ type TransportOptions struct {
 	PreHandlers                   []TransportPreHandler
 	PostHandlers                  []TransportPostHandler
 	SubgraphTransportOptions      *SubgraphTransportOptions
+	Proxy                         ProxyFunc
 	RetryOptions                  retrytransport.RetryOptions
 	LocalhostFallbackInsideDocker bool
 	MetricStore                   metric.Store
@@ -331,15 +334,19 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		metricStore:                   opts.MetricStore,
 		logger:                        opts.Logger,
 		tracerProvider:                opts.TracerProvider,
+		proxy:                         opts.Proxy,
 	}
 }
 
-func (t TransportFactory) RoundTripper(enableSingleFlight bool, transport http.RoundTripper) http.RoundTripper {
+func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport http.RoundTripper) http.RoundTripper {
+	baseTransport = NewTimeoutTransport(t.subgraphTransportOptions, baseTransport, t.logger, t.proxy)
+
 	if t.localhostFallbackInsideDocker && docker.Inside() {
-		transport = docker.NewLocalhostFallbackRoundTripper(transport)
+		baseTransport = docker.NewLocalhostFallbackRoundTripper(baseTransport)
 	}
+
 	traceTransport := trace.NewTransport(
-		transport,
+		baseTransport,
 		[]otelhttp.Option{
 			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
 			otelhttp.WithSpanOptions(otrace.WithAttributes(otel.EngineTransportAttribute)),
