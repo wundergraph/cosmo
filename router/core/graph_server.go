@@ -331,6 +331,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (err error) {
 			NumCounters:        cacheSize * 10,
 			IgnoreInternalCost: true,
 			BufferItems:        64,
+			Metrics:            true,
 		}
 
 		s.persistedOperationCache, _ = ristretto.NewCache[uint64, NormalizationCacheEntry](persistedOperationCacheConfig)
@@ -833,6 +834,34 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		ApolloCompatibilityFlags:            s.apolloCompatibilityFlags,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
+
+	if s.Config.cacheWarmup != nil && s.Config.cacheWarmup.Enabled {
+		warmupConfig := &CacheWarmupConfig{
+			OperationProcessor: operationProcessor,
+			OperationPlanner:   operationPlanner,
+			ComplexityLimits:   s.securityConfiguration.ComplexityLimits,
+			RouterSchema:       executor.RouterSchema,
+			Workers:            s.Config.cacheWarmup.Workers,
+			Throttle:           s.Config.cacheWarmup.Throttle,
+			Log:                s.logger,
+		}
+		switch s.Config.cacheWarmup.Source {
+		case "filesystem":
+			warmupConfig.Source = NewFileSystemSource(&FileSystemSourceConfig{
+				RootPath: s.Config.cacheWarmup.Path,
+			})
+		case "s3":
+			return nil, fmt.Errorf("s3 cache warmup is not supported yet")
+		case "cdn":
+			return nil, fmt.Errorf("cdn cache warmup is not supported yet")
+		default:
+			return nil, fmt.Errorf("invalid cache warmup source: %s, valid sources are: filesystem, s3, cdn", s.Config.cacheWarmup.Source)
+		}
+		err = WarmupCaches(ctx, warmupConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to warmup caches: %w", err)
+		}
+	}
 
 	authorizerOptions := &CosmoAuthorizerOptions{
 		FieldConfigurations:           engineConfig.FieldConfigurations,

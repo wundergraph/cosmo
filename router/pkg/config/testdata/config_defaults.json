@@ -199,6 +199,13 @@
       "Kafka": null
     }
   },
+  "CacheWarmup": {
+    "Enabled": false,
+    "Source": "filesystem",
+    "Path": "",
+    "Workers": 1,
+    "Throttle": 0
+  },
   "RouterConfigPath": "",
   "RouterRegistration": true,
   "OverrideRoutingURL": {

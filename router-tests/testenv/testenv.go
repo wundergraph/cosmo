@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
 	"go.uber.org/zap/zaptest/observer"
 
@@ -86,6 +87,9 @@ func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	}
 	t.Cleanup(env.Shutdown)
 	f(t, env)
+	if cfg.AssertCacheMetrics != nil {
+		assertCacheMetrics(t, env, *cfg.AssertCacheMetrics)
+	}
 }
 
 func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
@@ -98,6 +102,66 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 	b.Cleanup(env.Shutdown)
 	b.StartTimer()
 	f(b, env)
+	if cfg.AssertCacheMetrics != nil {
+		assertCacheMetrics(b, env, *cfg.AssertCacheMetrics)
+	}
+}
+
+func assertCacheMetrics(t testing.TB, env *Environment, expected CacheMetricsAssertion) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+	defer cancel()
+	rm := metricdata.ResourceMetrics{}
+	err := env.metricReader.Collect(ctx, &rm)
+	require.NoError(t, err)
+	actual := CacheMetricsAssertion{}
+	for _, sm := range rm.ScopeMetrics {
+		if sm.Scope.Name != "cosmo.router.cache" {
+			continue
+		}
+		for _, m := range sm.Metrics {
+			if m.Name != "router.graphql.cache.requests.stats" {
+				continue
+			}
+			if data, ok := m.Data.(metricdata.Sum[int64]); ok {
+				for _, dp := range data.DataPoints {
+					ct, ok := dp.Attributes.Value("cache_type")
+					if !ok {
+						continue
+					}
+					tp, ok := dp.Attributes.Value("type")
+					if !ok {
+						continue
+					}
+					cacheType := ct.AsString()
+					hm := tp.AsString()
+					switch {
+					case cacheType == "persisted_query_normalization" && hm == "hits":
+						actual.PersistedQueryNormalizationHits = dp.Value
+					case cacheType == "persisted_query_normalization" && hm == "misses":
+						actual.PersistedQueryNormalizationMisses = dp.Value
+					case cacheType == "query_normalization" && hm == "hits":
+						actual.QueryNormalizationHits = dp.Value
+					case cacheType == "query_normalization" && hm == "misses":
+						actual.QueryNormalizationMisses = dp.Value
+					case cacheType == "validation" && hm == "hits":
+						actual.ValidationHits = dp.Value
+					case cacheType == "validation" && hm == "misses":
+						actual.ValidationMisses = dp.Value
+					case cacheType == "plan" && hm == "hits":
+						actual.ExecutionHits = dp.Value
+					case cacheType == "plan" && hm == "misses":
+						actual.ExecutionMisses = dp.Value
+					case cacheType == "query_hash" && hm == "misses":
+						actual.QueryHashMisses = dp.Value
+					case cacheType == "query_hash" && hm == "hits":
+						actual.QueryHashHits = dp.Value
+					}
+				}
+			}
+		}
+	}
+	require.Equal(t, expected, actual)
 }
 
 type RouterConfig struct {
@@ -158,6 +222,20 @@ type Config struct {
 	EnableKafka                        bool
 	SubgraphAccessLogsEnabled          bool
 	SubgraphAccessLogFields            []config.CustomAttribute
+	AssertCacheMetrics                 *CacheMetricsAssertion
+}
+
+type CacheMetricsAssertion struct {
+	QueryNormalizationMisses          int64
+	QueryNormalizationHits            int64
+	PersistedQueryNormalizationMisses int64
+	PersistedQueryNormalizationHits   int64
+	ValidationMisses                  int64
+	ValidationHits                    int64
+	ExecutionMisses                   int64
+	ExecutionHits                     int64
+	QueryHashMisses                   int64
+	QueryHashHits                     int64
 }
 
 type SubgraphsConfig struct {
@@ -251,8 +329,31 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	// Ensure that only one test environment is created at a time
 	// We use freeport to get a free port for NATS and the Router
 	// If we don't lock here, two parallel tests might get the same port
-	envCreateMux.Lock()
-	defer envCreateMux.Unlock()
+	if cfg.EnableNats {
+		envCreateMux.Lock()
+		defer envCreateMux.Unlock()
+	}
+
+	var (
+		metricReader *metric.ManualReader
+	)
+
+	if cfg.AssertCacheMetrics != nil {
+		metricReader = metric.NewManualReader()
+		cfg.MetricReader = metricReader
+		cfg.MetricOptions.EnableOTLPRouterCache = true
+		if cfg.ModifyRouterConfig == nil {
+			cfg.ModifyRouterConfig = func(cfg *nodev1.RouterConfig) {
+				cfg.FeatureFlagConfigs = nil
+			}
+		} else {
+			old := cfg.ModifyRouterConfig
+			cfg.ModifyRouterConfig = func(cfg *nodev1.RouterConfig) {
+				old(cfg)
+				cfg.FeatureFlagConfigs = nil
+			}
+		}
+	}
 
 	ctx, cancel := context.WithCancelCause(context.Background())
 
@@ -577,6 +678,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		shutdownDelay:           cfg.ShutdownDelay,
 		shutdown:                atomic.NewBool(false),
 		logObserver:             logObserver,
+		metricReader:            metricReader,
 		Servers: []*httptest.Server{
 			employeesServer,
 			familyServer,
@@ -928,6 +1030,8 @@ type Environment struct {
 
 	routerConfigVersionMain string
 	routerConfigVersionMyFF string
+
+	metricReader *metric.ManualReader
 }
 
 func (e *Environment) RouterConfigVersionMain() string {

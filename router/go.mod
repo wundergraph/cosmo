@@ -147,3 +147,7 @@ require (
 // Use what is best for your personal workflow. See CONTRIBUTING.md for more information
 
 //replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+
+replace (
+	github.com/wundergraph/astjson => ../../astjson
+)

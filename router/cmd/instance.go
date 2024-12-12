@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"net/http"
 	"os"
+
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/dustin/go-humanize"
@@ -170,6 +171,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithEvents(cfg.Events),
 		core.WithRateLimitConfig(&cfg.RateLimit),
 		core.WithClientHeader(cfg.ClientHeader),
+		core.WithCacheWarmupConfig(&cfg.CacheWarmup),
 	}
 
 	// HTTP_PROXY, HTTPS_PROXY and NO_PROXY

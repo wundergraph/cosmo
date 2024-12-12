@@ -6,13 +6,14 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
@@ -214,6 +215,7 @@ type (
 		webSocketConfiguration   *config.WebSocketConfiguration
 		subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 		clientHeader             config.ClientHeader
+		cacheWarmup              *config.CacheWarmupConfiguration
 	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
@@ -1696,6 +1698,12 @@ func WithStorageProviders(cfg config.StorageProviders) Option {
 func WithClientHeader(cfg config.ClientHeader) Option {
 	return func(r *Router) {
 		r.clientHeader = cfg
+	}
+}
+
+func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
+	return func(r *Router) {
+		r.cacheWarmup = cfg
 	}
 }
 
