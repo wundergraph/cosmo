@@ -72,8 +72,8 @@ require (
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.3
-	go.uber.org/ratelimit v0.3.1
 	github.com/wundergraph/astjson v0.0.0-20241210135722-15ca0ac078f8
+	go.uber.org/ratelimit v0.3.1
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
 	golang.org/x/text v0.19.0
 )
