@@ -119,7 +119,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,

@@ -115,29 +115,29 @@ func TestCacheWarmup(t *testing.T) {
 			})
 			require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
 			res, err := xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
-				Query: `query { employees { id details { forename surname } isAvailable } }`,
+				Query: `query { employees { id details { forename surname } } }`,
 			}, map[string]string{
 				"graphql-client-name":    "test",
 				"graphql-client-version": "1.0.0",
 			})
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"isAvailable":false},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"isAvailable":false},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"isAvailable":false},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"isAvailable":false},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"isAvailable":false},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"isAvailable":false},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"isAvailable":false},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"isAvailable":false},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"isAvailable":false},{"id":12,"details":{"forename":"David","surname":"Stutt"},"isAvailable":false}]}}`, res.Body)
+			require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
 			res, err = xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
-				Query: `query { employees { id details { forename surname } isAvailable } }`,
+				Query: `query { employees { id details { forename surname } } }`,
 			}, map[string]string{
 				"graphql-client-name":    "test",
 				"graphql-client-version": "1.0.0",
 			})
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"isAvailable":false},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"isAvailable":false},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"isAvailable":false},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"isAvailable":false},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"isAvailable":false},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"isAvailable":false},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"isAvailable":false},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"isAvailable":false},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"isAvailable":false},{"id":12,"details":{"forename":"David","surname":"Stutt"},"isAvailable":false}]}}`, res.Body)
+			require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
 			res, err = xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
-				Query: `query { employees { id details { forename surname } isAvailable } }`,
+				Query: `query { employees { id details { forename surname } } }`,
 			}, map[string]string{
 				"graphql-client-name":    "test",
 				"graphql-client-version": "1.0.1",
 			})
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"isAvailable":false},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"isAvailable":false},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"isAvailable":false},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"isAvailable":false},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"isAvailable":false},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"isAvailable":false},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"isAvailable":false},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"isAvailable":false},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"isAvailable":false},{"id":12,"details":{"forename":"David","surname":"Stutt"},"isAvailable":false}]}}`, res.Body)
+			require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
 		})
 	})
 	t.Run("cache warmup json with variables", func(t *testing.T) {
