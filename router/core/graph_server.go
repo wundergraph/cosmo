@@ -550,27 +550,23 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	httpRouter := chi.NewRouter()
 
-	baseOtelAttributes := append([]attribute.KeyValue{}, s.baseOtelAttributes...)
-	if s.metricConfig.UseCloudExporter {
-		baseOtelAttributes = append(
-			[]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)},
-			s.baseOtelAttributes...,
-		)
-	}
+	baseOtelAttributes := append([]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)}, s.baseOtelAttributes...)
 
 	if featureFlagName != "" {
 		baseOtelAttributes = append(baseOtelAttributes, otel.WgFeatureFlag.String(featureFlagName))
 	}
 
 	metricsEnabled := s.metricConfig.IsEnabled()
-	traceEnabled := s.traceConfig.Enabled
 
+	// We might want to remap or exclude known attributes based on the configuration for metrics
+	mapper := newAttributeMapper(!s.metricConfig.UseCloudExporter, s.metricConfig.Attributes)
+	baseMetricAttributes := mapper.mapAttributes(baseOtelAttributes)
 	// Prometheus metricStore rely on OTLP metricStore
 	if metricsEnabled {
 		m, err := rmetric.NewStore(
 			rmetric.WithPromMeterProvider(s.promMeterProvider),
 			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
-			rmetric.WithBaseAttributes(baseOtelAttributes),
+			rmetric.WithBaseAttributes(baseMetricAttributes),
 			rmetric.WithLogger(s.logger),
 			rmetric.WithProcessStartTime(s.processStartTime),
 			rmetric.WithCardinalityLimit(rmetric.DefaultCardinalityLimit),
@@ -597,7 +593,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return nil, err
 	}
 
-	if err = gm.configureCacheMetrics(s, baseOtelAttributes); err != nil {
+	if err = gm.configureCacheMetrics(s, baseMetricAttributes); err != nil {
 		return nil, err
 	}
 
@@ -632,7 +628,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				requestLogger:       requestLogger,
 				metricSetAttributes: b,
 				metricsEnabled:      metricsEnabled,
-				traceEnabled:        traceEnabled,
+				traceEnabled:        s.traceConfig.Enabled,
 				filterEnabled:       !s.metricConfig.UseCloudExporter,
 				includedAttributes:  s.metricConfig.Attributes,
 				w:                   w,
