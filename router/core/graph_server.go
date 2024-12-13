@@ -525,6 +525,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			rmetric.WithBaseAttributes(baseOtelAttributes),
 			rmetric.WithLogger(s.logger),
 			rmetric.WithProcessStartTime(s.processStartTime),
+			rmetric.WithCardinalityLimit(rmetric.DefaultCardinalityLimit),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create metric handler: %w", err)
