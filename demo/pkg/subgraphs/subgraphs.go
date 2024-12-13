@@ -225,8 +225,8 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 	}
 
 	natsPubSubByProviderID := map[string]pubsub_datasource.NatsPubSub{
-		"default": natsPubsub.NewConnector(zap.NewNop(), defaultConnection, defaultJetStream).New(ctx),
-		"my-nats": natsPubsub.NewConnector(zap.NewNop(), myNatsConnection, myNatsJetStream).New(ctx),
+		"default": natsPubsub.NewConnector(zap.NewNop(), defaultConnection, defaultJetStream, "test").New(ctx),
+		"my-nats": natsPubsub.NewConnector(zap.NewNop(), myNatsConnection, myNatsJetStream, "test").New(ctx),
 	}
 
 	_, err = defaultJetStream.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
