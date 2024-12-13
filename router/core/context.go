@@ -148,8 +148,8 @@ const (
 
 type attributeKeyMap map[attribute.Key]string
 
-// attributeFilter resolves attributes from the requestContext based on the configured custom attributes
-type attributeFilter struct {
+// attributeMapper resolves attributes from the requestContext based on the configured custom attributes
+type attributeMapper struct {
 	enabled bool
 
 	// lookupMap contains the default key names, which can be mapped to a new name with custom attributes.
@@ -161,7 +161,7 @@ type attributeFilter struct {
 	attr []config.CustomAttribute
 }
 
-func newAttributeFilter(enabled bool, attr []config.CustomAttribute) attributeFilter {
+func newAttributeMapper(enabled bool, attr []config.CustomAttribute) attributeMapper {
 	// Any attributes that are in this map, will be resolved only if they are configured in the `attr` list.
 	// This is to avoid adding high cardinality attributes by default as it can be expensive for the metric backend.
 	set := attributeKeyMap{
@@ -170,14 +170,14 @@ func newAttributeFilter(enabled bool, attr []config.CustomAttribute) attributeFi
 		otel.WgRouterConfigVersion: filterKeyRouterConfigVersion,
 	}
 
-	return attributeFilter{
+	return attributeMapper{
 		enabled:   enabled,
 		attr:      attr,
 		lookupMap: set,
 	}
 }
 
-func (r *attributeFilter) filterAttributes(attributes []attribute.KeyValue) []attribute.KeyValue {
+func (r *attributeMapper) mapAttributes(attributes []attribute.KeyValue) []attribute.KeyValue {
 	if !r.enabled {
 		return attributes
 	}
@@ -195,7 +195,7 @@ func (r *attributeFilter) filterAttributes(attributes []attribute.KeyValue) []at
 		}
 
 		// if the attribute is in the map, we need to check if we want it to be added
-		if resolvedAttr := r.filterAttribute(attr, contextField); resolvedAttr.Valid() {
+		if resolvedAttr := r.mapAttribute(attr, contextField); resolvedAttr.Valid() {
 			result = append(result, resolvedAttr)
 		}
 	}
@@ -203,7 +203,7 @@ func (r *attributeFilter) filterAttributes(attributes []attribute.KeyValue) []at
 	return result
 }
 
-func (r *attributeFilter) filterAttribute(attr attribute.KeyValue, contextField string) attribute.KeyValue {
+func (r *attributeMapper) mapAttribute(attr attribute.KeyValue, contextField string) attribute.KeyValue {
 	for _, a := range r.attr {
 		if a.ValueFrom == nil || a.ValueFrom.ContextField != contextField {
 			continue
@@ -238,7 +238,7 @@ type requestTelemetryAttributes struct {
 	// filter applies the high cardinality filter to the attributes. Attributes which are not contained in the
 	// high cardinality filter will be added as is. Attributes that are in the filter will be resolved from the
 	// request context and potentially remapped to a new key.
-	filter attributeFilter
+	filter attributeMapper
 
 	// metricsEnabled indicates if metrics are enabled. If false, no metrics attributes will be added
 	metricsEnabled bool
@@ -306,7 +306,7 @@ func (r *requestTelemetryAttributes) addMetricAttribute(vals ...attribute.KeyVal
 		return
 	}
 
-	r.metricAttrs = append(r.metricAttrs, r.filter.filterAttributes(vals)...)
+	r.metricAttrs = append(r.metricAttrs, r.filter.mapAttributes(vals)...)
 }
 
 // requestContext is the default implementation of RequestContext
@@ -701,7 +701,7 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 			metricSetAttrs: opts.metricSetAttributes,
 			metricsEnabled: opts.metricsEnabled,
 			traceEnabled:   opts.traceEnabled,
-			filter:         newAttributeFilter(opts.filterEnabled, opts.includedAttributes),
+			filter:         newAttributeMapper(opts.filterEnabled, opts.includedAttributes),
 		},
 		subgraphResolver: subgraphResolverFromContext(opts.r.Context()),
 	}
