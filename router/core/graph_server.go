@@ -89,6 +89,7 @@ type (
 		graphMuxList     []*graphMux
 		graphMuxListLock sync.Mutex
 		runtimeMetrics   *rmetric.RuntimeMetrics
+		listenAddr       string
 	}
 )
 
@@ -106,6 +107,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		baseRouterConfigVersion: routerConfig.GetVersion(),
 		inFlightRequests:        &atomic.Uint64{},
 		graphMuxList:            make([]*graphMux, 0, 1),
+		listenAddr:              r.listenAddr,
 		pubSubProviders: &EnginePubSubProviders{
 			nats:  map[string]pubsub_datasource.NatsPubSub{},
 			kafka: map[string]pubsub_datasource.KafkaPubSub{},
@@ -1004,7 +1006,7 @@ func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig
 						return err
 					}
 
-					s.pubSubProviders.nats[providerID] = pubsubNats.NewConnector(s.logger, natsConnection, js).New(ctx)
+					s.pubSubProviders.nats[providerID] = pubsubNats.NewConnector(s.logger, natsConnection, js, s.listenAddr).New(ctx)
 
 					break
 				}
