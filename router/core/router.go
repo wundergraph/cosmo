@@ -216,6 +216,7 @@ type (
 		subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 		clientHeader             config.ClientHeader
 		cacheWarmup              *config.CacheWarmupConfiguration
+		multipartHeartbeatInterval time.Duration
 	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
@@ -514,7 +515,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	for _, source := range r.eventsConfig.Providers.Nats {
-		r.logger.Info("Nats Event source enabled", zap.String("provider_id", source.ID), zap.String("url", source.URL))
+		r.logger.Info("Nats Event source enabled", zap.String("provider_id", source.ID))
 	}
 	for _, source := range r.eventsConfig.Providers.Kafka {
 		r.logger.Info("Kafka Event source enabled", zap.String("provider_id", source.ID), zap.Strings("brokers", source.Brokers))
@@ -1316,6 +1317,13 @@ func WithTracing(cfg *rtrace.Config) Option {
 func WithCors(corsOpts *cors.Config) Option {
 	return func(r *Router) {
 		r.corsOptions = corsOpts
+	}
+}
+
+// WithMultipartHeartbeatInterval sets the interval for the engine to send heartbeats for multipart subscriptions.
+func WithMultipartHeartbeatInterval(interval time.Duration) Option {
+	return func(r *Router) {
+		r.multipartHeartbeatInterval = interval
 	}
 }
 

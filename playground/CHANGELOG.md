@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.8.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.0...@wundergraph/playground@0.8.1) (2024-12-11)
+
+### Bug Fixes
+
+* tailwind entry point for newer Node.js versions ([#1432](https://github.com/wundergraph/cosmo/issues/1432)) ([ddcf279](https://github.com/wundergraph/cosmo/commit/ddcf279c612dff7edea84ec75be59a6bf23f0204)) (@StarpTech)
+
+# [0.8.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.7.4...@wundergraph/playground@0.8.0) (2024-12-10)
+
+### Features
+
+* query plan for subscriptions ([#1425](https://github.com/wundergraph/cosmo/issues/1425)) ([fc88e1b](https://github.com/wundergraph/cosmo/commit/fc88e1b3620a019acb5976b19787a91a79916b7a)) (@thisisnithin)
+
+## [0.7.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.7.3...@wundergraph/playground@0.7.4) (2024-12-06)
+
+### Bug Fixes
+
+* update packages to address vulnerabilities ([#1411](https://github.com/wundergraph/cosmo/issues/1411)) ([7e84900](https://github.com/wundergraph/cosmo/commit/7e84900ed705164d69c99afcf5a698b3298fb6ad)) (@JivusAyrus)
+
 ## [0.7.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.7.2...@wundergraph/playground@0.7.3) (2024-12-03)
 
 ### Bug Fixes

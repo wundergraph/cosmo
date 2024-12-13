@@ -198,8 +198,10 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		h.websocketStats.ConnectionsInc()
-		defer h.websocketStats.ConnectionsDec()
+		if !ctx.ExecutionOptions.SkipLoader {
+			h.websocketStats.ConnectionsInc()
+			defer h.websocketStats.ConnectionsDec()
+		}
 
 		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, writer)
 		requestContext.dataSourceNames = getSubgraphNames(p.Response.Response.DataSources)
@@ -349,6 +351,11 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		}
 	case errorTypeInvalidWsSubprotocol:
 		response.Errors[0].Message = fmt.Sprintf("Invalid Subprotocol error: %s or configure the subprotocol to be used using `wgc subgraph update` command.", err.Error())
+		if isHttpResponseWriter {
+			httpWriter.WriteHeader(http.StatusInternalServerError)
+		}
+	case errorTypeEDFSInvalidMessage:
+		response.Errors[0].Message = "Invalid message received"
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusInternalServerError)
 		}

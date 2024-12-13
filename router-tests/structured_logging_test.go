@@ -64,11 +64,11 @@ func TestRouterStartLogs(t *testing.T) {
 		},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 		logEntries := xEnv.Observer().All()
-		require.Len(t, logEntries, 11)
+		require.Len(t, logEntries, 13)
 		natsLogs := xEnv.Observer().FilterMessageSnippet("Nats Event source enabled").All()
 		require.Len(t, natsLogs, 4)
 		providerIDFields := xEnv.Observer().FilterField(zap.String("provider_id", "default")).All()
-		require.Len(t, providerIDFields, 1)
+		require.Len(t, providerIDFields, 2)
 		kafkaLogs := xEnv.Observer().FilterMessageSnippet("Kafka Event source enabled").All()
 		require.Len(t, kafkaLogs, 2)
 		playgroundLog := xEnv.Observer().FilterMessage("Serving GraphQL playground")
@@ -188,7 +188,7 @@ func TestAccessLogsFileOutput(t *testing.T) {
 				}
 				additionalExpectedKeys1 := []string{
 					"time", "hostname", "pid", "latency",
-					"user_agent", "config_version", "request_id", "trace_id",
+					"user_agent", "config_version", "request_id", "trace_id", "url",
 				}
 				checkValues(t, logEntry, expectedValues1, additionalExpectedKeys1)
 			})
@@ -328,6 +328,13 @@ func TestAccessLogs(t *testing.T) {
 						ContextField: core.ContextFieldOperationValidationTime,
 					},
 				},
+				{
+					Key:     "request_error",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldRequestError,
+					},
+				},
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -351,7 +358,7 @@ func TestAccessLogs(t *testing.T) {
 				"query":            "",
 				"ip":               "[REDACTED]",
 				"service_name":     "service-name",                                                     // From header
-				"operation_hash":   "14226210703439426856",                                             // From context
+				"operation_hash":   "1163600561566987607",                                              // From context
 				"operation_sha256": "c13e0fafb0a3a72e74c19df743fedee690fe133554a17a9408747585a0d1b423", // From context
 				"operation_name":   "employees",                                                        // From context
 				"operation_type":   "query",                                                            // From context
@@ -530,6 +537,13 @@ func TestAccessLogs(t *testing.T) {
 						ContextField: core.ContextFieldOperationValidationTime,
 					},
 				},
+				{
+					Key:     "request_error",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldRequestError,
+					},
+				},
 			},
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
@@ -567,6 +581,7 @@ func TestAccessLogs(t *testing.T) {
 				"user_agent":    "Go-http-client/1.1",
 				"service_name":  "service-name", // From header
 				"error_message": "unexpected token - got: EOF want one of: [RBRACE IDENT SPREAD]",
+				"request_error": true,
 			}
 			additionalExpectedKeys := []string{
 				"latency",
@@ -641,6 +656,13 @@ func TestAccessLogs(t *testing.T) {
 						ContextField: core.ContextFieldOperationValidationTime,
 					},
 				},
+				{
+					Key:     "request_error",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldRequestError,
+					},
+				},
 			},
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
@@ -680,7 +702,8 @@ func TestAccessLogs(t *testing.T) {
 				"operation_type": "query",        // From context
 				"operation_name": "employees",    // From context
 				"error_message":  "field: notExists not defined on type: Query",
-				"operation_hash": "10501571900000980785",
+				"operation_hash": "3291586836053813139",
+				"request_error":  true,
 			}
 			additionalExpectedKeys := []string{
 				"latency",
@@ -757,6 +780,13 @@ func TestAccessLogs(t *testing.T) {
 						ContextField: core.ContextFieldOperationValidationTime,
 					},
 				},
+				{
+					Key:     "request_error",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldRequestError,
+					},
+				},
 			},
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
@@ -802,11 +832,12 @@ func TestAccessLogs(t *testing.T) {
 				"ip":             "[REDACTED]",
 				"user_agent":     "Go-http-client/1.1",
 				"error":          "implement me",
-				"service_name":   "service-name",         // From header
-				"operation_hash": "14226210703439426856", // From context
-				"operation_name": "employees",            // From context
-				"operation_type": "query",                // From context
+				"service_name":   "service-name",        // From header
+				"operation_hash": "1163600561566987607", // From context
+				"operation_name": "employees",           // From context
+				"operation_type": "query",               // From context
 				"error_message":  "implement me",
+				"request_error":  true,
 			}
 			additionalExpectedKeys := []string{
 				"latency",
@@ -885,6 +916,13 @@ func TestAccessLogs(t *testing.T) {
 						ContextField: core.ContextFieldOperationValidationTime,
 					},
 				},
+				{
+					Key:     "request_error",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldRequestError,
+					},
+				},
 			},
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
@@ -931,11 +969,12 @@ func TestAccessLogs(t *testing.T) {
 				"ip":             "[REDACTED]",
 				"user_agent":     "Go-http-client/1.1",
 				"error":          "implement me",
-				"service_name":   "service-name",         // From header
-				"operation_hash": "14226210703439426856", // From context
-				"operation_name": "employees",            // From context
-				"operation_type": "query",                // From context
+				"service_name":   "service-name",        // From header
+				"operation_hash": "1163600561566987607", // From context
+				"operation_name": "employees",           // From context
+				"operation_type": "query",               // From context
 				"error_message":  "implement me",
+				"request_error":  true,
 			}
 			additionalExpectedKeys := []string{
 				"latency",
@@ -971,6 +1010,13 @@ func TestAccessLogs(t *testing.T) {
 					Default: "",
 					ValueFrom: &config.CustomDynamicAttribute{
 						ContextField: core.ContextFieldGraphQLErrorServices,
+					},
+				},
+				{
+					Key:     "request_error",
+					Default: "",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldRequestError,
 					},
 				},
 			},
@@ -1013,6 +1059,7 @@ func TestAccessLogs(t *testing.T) {
 				"user_agent":    "Go-http-client/1.1",
 				"error_codes":   []interface{}{"UNAUTHORIZED"},
 				"service_names": []interface{}{"products"},
+				"request_error": true,
 			}
 			additionalExpectedKeys := []string{
 				"latency",
@@ -1059,7 +1106,7 @@ func TestAccessLogs(t *testing.T) {
 				additionalExpectedKeys := []string{
 					"user_agent", "latency", "config_version", "request_id", "pid", "hostname",
 				}
-				checkValues(t, requestContext, expectedValues, append(additionalExpectedKeys, "trace_id"))
+				checkValues(t, requestContext, expectedValues, append(additionalExpectedKeys, "trace_id", "url"))
 
 				requestContext1 := requestLog.All()[1].ContextMap()
 				expectedValues1 := map[string]interface{}{
@@ -1109,7 +1156,7 @@ func TestAccessLogs(t *testing.T) {
 				additionalExpectedKeys := []string{
 					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "trace_id",
 				}
-				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+				checkValues(t, requestContext, expectedValues, append(additionalExpectedKeys, "url"))
 
 				requestContext1 := requestLog.All()[1].ContextMap()
 				expectedValues1 := map[string]interface{}{
@@ -1212,7 +1259,7 @@ func TestAccessLogs(t *testing.T) {
 					"ip":            "[REDACTED]",
 				}
 				additionalExpectedKeys := []string{
-					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "trace_id",
+					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "trace_id", "url",
 				}
 				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 
@@ -1225,7 +1272,7 @@ func TestAccessLogs(t *testing.T) {
 					"query":            "",
 					"ip":               "[REDACTED]",
 					"service_name":     "service-name",                                                     // From header
-					"operation_hash":   "14226210703439426856",                                             // From context
+					"operation_hash":   "1163600561566987607",                                              // From context
 					"operation_sha256": "c13e0fafb0a3a72e74c19df743fedee690fe133554a17a9408747585a0d1b423", // From context
 					"operation_name":   "employees",                                                        // From context
 					"operation_type":   "query",                                                            // From context
@@ -1335,6 +1382,13 @@ func TestAccessLogs(t *testing.T) {
 							ContextField: core.ContextFieldOperationNormalizationTime,
 						},
 					},
+					{
+						Key:     "request_error",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldRequestError,
+						},
+					},
 				},
 				LogObservation: testenv.LogObservationConfig{
 					Enabled:  true,
@@ -1384,13 +1438,13 @@ func TestAccessLogs(t *testing.T) {
 					"ip":               "[REDACTED]",
 					"service_name":     "service-name",                                                     // From request header
 					"response_header":  "my-response-value",                                                // From response header
-					"operation_hash":   "14226210703439426856",                                             // From context
+					"operation_hash":   "1163600561566987607",                                              // From context
 					"operation_sha256": "c13e0fafb0a3a72e74c19df743fedee690fe133554a17a9408747585a0d1b423", // From context
 					"operation_name":   "employees",                                                        // From context
 					"operation_type":   "query",                                                            // From context
 				}
 				additionalExpectedKeys := []string{
-					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "normalized_time", "parsed_time", "planned_time", "validation_time", "trace_id",
+					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "normalized_time", "parsed_time", "planned_time", "validation_time", "trace_id", "url",
 				}
 				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 
@@ -1420,6 +1474,15 @@ func TestAccessLogs(t *testing.T) {
 
 			testenv.Run(t, &testenv.Config{
 				SubgraphAccessLogsEnabled: true,
+				AccessLogFields: []config.CustomAttribute{
+					{
+						Key:     "request_error",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldRequestError,
+						},
+					},
+				},
 				SubgraphAccessLogFields: []config.CustomAttribute{
 					{
 						Key:     "service_name",
@@ -1505,6 +1568,13 @@ func TestAccessLogs(t *testing.T) {
 							ContextField: core.ContextFieldOperationNormalizationTime,
 						},
 					},
+					{
+						Key:     "request_error",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldRequestError,
+						},
+					},
 				},
 				LogObservation: testenv.LogObservationConfig{
 					Enabled:  true,
@@ -1555,43 +1625,45 @@ func TestAccessLogs(t *testing.T) {
 					"query":            "", // http query is empty
 					"ip":               "[REDACTED]",
 					"service_name":     "service-name",                                                     // From request header
-					"operation_hash":   "16884868987896027258",                                             // From context
+					"operation_hash":   "13939103824696605913",                                             // From context
 					"operation_sha256": "049efe2ebbdf2e4845e69f69cb7965963b118612a6247ab6d91b1961ea0158dc", // From context
 					"operation_name":   "employees",                                                        // From context
 					"operation_type":   "query",                                                            // From context
 				}
 				additionalExpectedKeys := []string{
-					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "normalized_time", "parsed_time", "planned_time", "validation_time", "trace_id",
+					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "normalized_time", "parsed_time", "planned_time", "validation_time", "trace_id", "url",
 				}
 				checkValues(t, employeeContext, employeeSubgraphVals, additionalExpectedKeys)
 
 				productContext := requestLog.All()[1].ContextMap()
 				productSubgraphVals := map[string]interface{}{
-					"log_type":         "client/subgraph",
-					"subgraph_name":    "products",
-					"subgraph_id":      "3",
-					"status":           int64(403),
-					"method":           "POST",
-					"path":             "/graphql",
-					"query":            "", // http query is empty
-					"ip":               "[REDACTED]",
-					"service_name":     "service-name",                                                     // From request header
-					"error":            "Failed to fetch from Subgraph 'products' at Path: 'employees'.",   // From context
-					"operation_hash":   "16884868987896027258",                                             // From context
-					"operation_sha256": "049efe2ebbdf2e4845e69f69cb7965963b118612a6247ab6d91b1961ea0158dc", // From context
-					"operation_name":   "employees",                                                        // From context
-					"operation_type":   "query",                                                            // From context
+					"log_type":               "client/subgraph",
+					"subgraph_name":          "products",
+					"subgraph_id":            "3",
+					"status":                 int64(403),
+					"method":                 "POST",
+					"path":                   "/graphql",
+					"query":                  "", // http query is empty
+					"ip":                     "[REDACTED]",
+					"service_name":           "service-name",                                                     // From request header
+					"response_error_message": "Failed to fetch from Subgraph 'products' at Path: 'employees'.",   // From context
+					"operation_hash":         "13939103824696605913",                                             // From context
+					"operation_sha256":       "049efe2ebbdf2e4845e69f69cb7965963b118612a6247ab6d91b1961ea0158dc", // From context
+					"operation_name":         "employees",                                                        // From context
+					"operation_type":         "query",                                                            // From context
+					"request_error":          true,                                                               // From context
 				}
 				checkValues(t, productContext, productSubgraphVals, additionalExpectedKeys)
 
 				graphContext := requestLog.All()[2].ContextMap()
 				graphVals := map[string]interface{}{
-					"log_type": "request",
-					"status":   int64(200),
-					"method":   "POST",
-					"path":     "/graphql",
-					"query":    "",
-					"ip":       "[REDACTED]",
+					"log_type":      "request",
+					"status":        int64(200),
+					"method":        "POST",
+					"path":          "/graphql",
+					"query":         "",
+					"ip":            "[REDACTED]",
+					"request_error": true, // From context
 				}
 				graphKeys := []string{
 					"user_agent",
@@ -1736,13 +1808,13 @@ func TestAccessLogs(t *testing.T) {
 					"ip":                       "[REDACTED]",
 					"service_name":             "service-name",                                                     // From request header
 					"operation_persisted_hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f", // From context
-					"operation_hash":           "14226210703439426856",                                             // From context
+					"operation_hash":           "1163600561566987607",                                              // From context
 					"operation_sha256":         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // From context
 					"operation_name":           "Employees",                                                        // From context
 					"operation_type":           "query",                                                            // From context
 				}
 				additionalExpectedKeys := []string{
-					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "normalized_time", "parsed_time", "planned_time", "validation_time", "trace_id",
+					"user_agent", "latency", "config_version", "request_id", "pid", "hostname", "normalized_time", "parsed_time", "planned_time", "validation_time", "trace_id", "url",
 				}
 				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 

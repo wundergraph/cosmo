@@ -564,6 +564,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			rmetric.WithBaseAttributes(baseOtelAttributes),
 			rmetric.WithLogger(s.logger),
 			rmetric.WithProcessStartTime(s.processStartTime),
+			rmetric.WithCardinalityLimit(rmetric.DefaultCardinalityLimit),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create metric handler: %w", err)
@@ -821,6 +822,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			PubSubProviders:          s.pubSubProviders,
 			Reporter:                 s.websocketStats,
 			ApolloCompatibilityFlags: s.apolloCompatibilityFlags,
+			HeartbeatInterval:        s.multipartHeartbeatInterval,
 		},
 	)
 	if err != nil {
@@ -893,7 +895,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
-		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger),
+		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger, s.tracerProvider),
 	}
 
 	if s.redisClient != nil {
