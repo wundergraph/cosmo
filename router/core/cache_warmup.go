@@ -256,11 +256,12 @@ func (w *cacheWarmup) processOperation(ctx context.Context, item *CacheWarmupIte
 	}
 
 	opContext := &operationContext{
-		clientInfo: item.Client,
-		name:       k.parsedOperation.Request.OperationName,
-		opType:     k.parsedOperation.Type,
-		hash:       k.parsedOperation.ID,
-		content:    k.parsedOperation.NormalizedRepresentation,
+		clientInfo:   item.Client,
+		name:         k.parsedOperation.Request.OperationName,
+		opType:       k.parsedOperation.Type,
+		hash:         k.parsedOperation.ID,
+		content:      k.parsedOperation.NormalizedRepresentation,
+		internalHash: k.parsedOperation.InternalID,
 	}
 
 	opContext.variables, err = astjson.ParseBytes(k.parsedOperation.Request.Variables)

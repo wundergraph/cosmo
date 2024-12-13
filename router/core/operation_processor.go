@@ -974,12 +974,12 @@ func (o *OperationKit) Validate(skipLoader bool) (cacheHit bool, err error) {
 				statusCode: http.StatusOK,
 			}
 		}
-		if o.cache != nil && o.cache.validationCache != nil {
-			var valid bool
-			valid, cacheHit = o.cache.validationCache.Get(o.parsedOperation.InternalID)
-			if valid {
-				return
-			}
+	}
+	if o.cache != nil && o.cache.validationCache != nil {
+		var valid bool
+		valid, cacheHit = o.cache.validationCache.Get(o.parsedOperation.InternalID)
+		if valid {
+			return
 		}
 	}
 	report := &operationreport.Report{}

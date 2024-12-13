@@ -321,6 +321,7 @@ func TestCacheWarmup(t *testing.T) {
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
+			require.Equal(t, employeesIDData, res.Body)
 		})
 	})
 }
