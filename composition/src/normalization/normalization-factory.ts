@@ -50,6 +50,7 @@ import {
   BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
   BASE_DIRECTIVE_DEFINITIONS,
   BASE_SCALARS,
+  EDFS_NATS_STREAM_CONFIGURATION_DEFINITION,
   EVENT_DRIVEN_DIRECTIVE_DEFINITIONS_BY_DIRECTIVE_NAME,
   FIELD_SET_SCALAR_DEFINITION,
   SCOPE_SCALAR_DEFINITION,
@@ -108,6 +109,8 @@ import {
   invalidEventSubjectsItemErrorMessage,
   invalidExternalDirectiveError,
   invalidImplementedTypeError,
+  invalidIntegerTypeValue,
+  invalidIntegerValue,
   invalidInterfaceImplementationError,
   invalidKeyDirectiveArgumentErrorMessage,
   invalidKeyDirectivesError,
@@ -194,12 +197,15 @@ import {
   SUCCESS,
   TOPIC,
   TOPICS,
+  CONSUMER_INACTIVE_THRESHOLD,
 } from '../utils/string-constants';
 import { buildASTSchema } from '../buildASTSchema/buildASTSchema';
 import { ConfigurationData, EventConfiguration, NatsEventType } from '../router-configuration/router-configuration';
 import { printTypeNode } from '@graphql-tools/merge';
 import { InternalSubgraph, recordSubgraphName, Subgraph } from '../subgraph/subgraph';
 import {
+  consumerInactiveThresholdValueShouldBePositiveWarning,
+  consumerInactiveThresholdValueShouldNotBeTooBigWarning,
   externalInterfaceFieldsWarning,
   invalidExternalFieldWarning,
   invalidOverrideTargetSubgraphNameWarning,
@@ -250,6 +256,7 @@ import {
 import { InvalidRootTypeFieldEventsDirectiveData } from '../errors/utils';
 import { Graph } from '../resolvability-graph/graph';
 import { NamedTypeNode, UnionTypeDefinitionNode, UnionTypeExtensionNode } from 'graphql/index';
+import { DEFAULT_CONSUMER_INACTIVE_THRESHOLD, MAX_INT32 } from '../utils/integer-constants';
 
 export type NormalizationResult = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -334,9 +341,9 @@ export class NormalizationFactory {
   keyFieldSetDataByTypeName = new Map<string, KeyFieldSetData>();
   keyFieldNamesByParentTypeName = new Map<string, Set<string>>();
   operationTypeNodeByTypeName = new Map<string, OperationTypeNode>();
+  originalParentTypeName = '';
   originalTypeNameByRenamedTypeName = new Map<string, string>();
   parentDefinitionDataByTypeName = new Map<string, ParentDefinitionData>();
-  originalParentTypeName = '';
   parentsWithChildArguments = new Set<string>();
   overridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
   invalidOrScopesHostPaths = new Set<string>();
@@ -345,6 +352,7 @@ export class NormalizationFactory {
   referencedTypeNames = new Set<string>();
   renamedParentTypeName = '';
   subgraphName: string;
+  usesEdfsNatsStreamConfiguration: boolean = false;
   warnings: Warning[] = [];
 
   constructor(internalGraph: Graph, subgraphName?: string) {
@@ -1308,6 +1316,7 @@ export class NormalizationFactory {
   ): EventConfiguration | undefined {
     const subjects: string[] = [];
     let providerId = DEFAULT_EDFS_PROVIDER_ID;
+    let consumerInactiveThreshold = DEFAULT_CONSUMER_INACTIVE_THRESHOLD;
     let consumerName = '';
     let streamName = '';
     for (const argumentNode of directive.arguments || []) {
@@ -1336,14 +1345,16 @@ export class NormalizationFactory {
           break;
         }
         case STREAM_CONFIGURATION: {
+          this.usesEdfsNatsStreamConfiguration = true;
           if (argumentNode.value.kind !== Kind.OBJECT || argumentNode.value.fields.length < 1) {
             errorMessages.push(invalidNatsStreamInputErrorMessage);
             continue;
           }
           let isValid = true;
           const invalidFieldNames = new Set<string>();
+          const allowedFieldNames = new Set(STREAM_CONFIGURATION_FIELD_NAMES);
           const missingRequiredFieldNames = new Set<string>([CONSUMER_NAME, STREAM_NAME]);
-          const duplicateRequiredFieldNames = new Set<string>();
+          const duplicateFieldNames = new Set<string>();
           const invalidRequiredFieldNames = new Set<string>();
           for (const field of argumentNode.value.fields) {
             const fieldName = field.name.value;
@@ -1352,24 +1363,53 @@ export class NormalizationFactory {
               isValid = false;
               continue;
             }
-            if (missingRequiredFieldNames.has(fieldName)) {
-              missingRequiredFieldNames.delete(fieldName);
+            if (allowedFieldNames.has(fieldName)) {
+              allowedFieldNames.delete(fieldName);
             } else {
-              duplicateRequiredFieldNames.add(fieldName);
+              duplicateFieldNames.add(fieldName);
               isValid = false;
               continue;
             }
-            if (field.value.kind !== Kind.STRING || field.value.value.length < 1) {
-              invalidRequiredFieldNames.add(fieldName);
-              isValid = false;
-              continue;
+            if (missingRequiredFieldNames.has(fieldName)) {
+              missingRequiredFieldNames.delete(fieldName);
             }
             switch (fieldName) {
               case CONSUMER_NAME:
+                if (field.value.kind != Kind.STRING || field.value.value.length < 1) {
+                  invalidRequiredFieldNames.add(fieldName);
+                  isValid = false;
+                  continue;
+                }
                 consumerName = field.value.value;
                 break;
               case STREAM_NAME:
+                if (field.value.kind != Kind.STRING || field.value.value.length < 1) {
+                  invalidRequiredFieldNames.add(fieldName);
+                  isValid = false;
+                  continue;
+                }
                 streamName = field.value.value;
+                break;
+              case CONSUMER_INACTIVE_THRESHOLD:
+                if (field.value.kind != Kind.INT) {
+                  errorMessages.push(
+                    invalidIntegerTypeValue('edfs__NatsStreamConfiguration(consumerInactiveThreshold: ...)'),
+                  );
+                  isValid = false;
+                  continue;
+                }
+
+                try {
+                  consumerInactiveThreshold = parseInt(field.value.value, 10);
+                } catch (e) {
+                  errorMessages.push(
+                    invalidIntegerValue(
+                      field.value.value,
+                      'edfs__NatsStreamConfiguration(consumerInactiveThreshold: ...)',
+                    ),
+                  );
+                  isValid = false;
+                }
                 break;
             }
           }
@@ -1377,7 +1417,7 @@ export class NormalizationFactory {
             errorMessages.push(
               invalidNatsStreamInputFieldsErrorMessage(
                 [...missingRequiredFieldNames],
-                [...duplicateRequiredFieldNames],
+                [...duplicateFieldNames],
                 [...invalidRequiredFieldNames],
                 [...invalidFieldNames],
               ),
@@ -1389,13 +1429,28 @@ export class NormalizationFactory {
     if (errorMessages.length > 0) {
       return;
     }
+    if (consumerInactiveThreshold < 0) {
+      this.warnings.push(consumerInactiveThresholdValueShouldBePositiveWarning(this.subgraphName));
+      consumerInactiveThreshold = DEFAULT_CONSUMER_INACTIVE_THRESHOLD;
+    } else if (consumerInactiveThreshold > MAX_INT32) {
+      this.warnings.push(consumerInactiveThresholdValueShouldNotBeTooBigWarning(this.subgraphName));
+      consumerInactiveThreshold = 0;
+    }
     return {
       fieldName: this.childName,
       providerId,
       providerType: PROVIDER_TYPE_NATS,
       subjects,
       type: SUBSCRIBE,
-      ...(consumerName && streamName ? { streamConfiguration: { consumerName: consumerName, streamName } } : {}),
+      ...(consumerName && streamName
+        ? {
+            streamConfiguration: {
+              consumerInactiveThreshold: consumerInactiveThreshold,
+              consumerName: consumerName,
+              streamName,
+            },
+          }
+        : {}),
     };
   }
 
@@ -1646,7 +1701,7 @@ export class NormalizationFactory {
     return requiredInputValueNames.size < 1;
   }
 
-  validateEventDrivenSubgraph() {
+  validateEventDrivenSubgraph(definitions: Array<DefinitionNode>) {
     const errorMessages: string[] = [];
     const invalidEventsDirectiveDataByRootFieldPath = new Map<string, InvalidRootTypeFieldEventsDirectiveData>();
     const invalidResponseTypeStringByRootFieldPath = new Map<string, string>();
@@ -1691,11 +1746,17 @@ export class NormalizationFactory {
     }
     if (this.edfsDirectiveReferences.has(EDFS_NATS_SUBSCRIBE)) {
       const streamConfigurationInputData = this.parentDefinitionDataByTypeName.get(EDFS_NATS_STREAM_CONFIGURATION);
-      if (!streamConfigurationInputData) {
-        errorMessages.push(undefinedNatsStreamConfigurationInputErrorMessage);
-      } else if (!this.isNatsStreamConfigurationInputObjectValid(streamConfigurationInputData)) {
+      if (
+        streamConfigurationInputData &&
+        this.usesEdfsNatsStreamConfiguration &&
+        !this.isNatsStreamConfigurationInputObjectValid(streamConfigurationInputData)
+      ) {
         errorMessages.push(invalidNatsStreamConfigurationDefinitionErrorMessage);
       }
+
+      // always add the correct definition to the schema regardless
+      this.parentDefinitionDataByTypeName.delete(EDFS_NATS_STREAM_CONFIGURATION);
+      definitions.push(EDFS_NATS_STREAM_CONFIGURATION_DEFINITION);
     }
 
     if (invalidEventsDirectiveDataByRootFieldPath.size > 0) {
@@ -2101,7 +2162,7 @@ export class NormalizationFactory {
     }
     this.isSubgraphEventDrivenGraph = this.edfsDirectiveReferences.size > 0;
     if (this.isSubgraphEventDrivenGraph) {
-      this.validateEventDrivenSubgraph();
+      this.validateEventDrivenSubgraph(definitions);
     }
     for (const fieldCoords of this.unvalidatedExternalFieldCoords) {
       if (this.isSubgraphVersionTwo) {

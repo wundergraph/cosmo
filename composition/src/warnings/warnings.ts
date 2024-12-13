@@ -1,5 +1,6 @@
 import { QUOTATION_JOIN } from '../utils/string-constants';
 import { FieldSetDirective } from '../schema-building/utils';
+import { DEFAULT_CONSUMER_INACTIVE_THRESHOLD } from '../utils/integer-constants';
 
 export type WarningSubgraphData = {
   name: string;
@@ -125,6 +126,30 @@ export function requiresDefinedOnNonEntityFieldWarning(fieldCoords: string, subg
       ` The Object Field "${fieldCoords}" defines a "@requires" directive, but the Object is not an entity.` +
       ' Consequently, the "@requires" FieldSet cannot be satisfied because there is no entity resolver with which to' +
       ' provide the required Fields.',
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function consumerInactiveThresholdValueShouldBePositiveWarning(subgraphName: string): Warning {
+  return new Warning({
+    message:
+      `The "consumerInactiveThreshold" argument of type "Int" should be positive and smaller than 2 147 483 647.\n` +
+      `The value has been set to ` +
+      DEFAULT_CONSUMER_INACTIVE_THRESHOLD +
+      `.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function consumerInactiveThresholdValueShouldNotBeTooBigWarning(subgraphName: string): Warning {
+  return new Warning({
+    message:
+      `The "consumerInactiveThreshold" argument of type "Int" should be positive and smaller than 2 147 483 647.\n` +
+      `The value has been set to 0, that is equivalent to keep the consumer active forever.`,
     subgraph: {
       name: subgraphName,
     },
