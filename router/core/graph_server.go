@@ -846,13 +846,14 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	if s.Config.cacheWarmup != nil && s.Config.cacheWarmup.Enabled {
 		warmupConfig := &CacheWarmupConfig{
+			Log:                s.logger,
 			OperationProcessor: operationProcessor,
 			OperationPlanner:   operationPlanner,
 			ComplexityLimits:   s.securityConfiguration.ComplexityLimits,
 			RouterSchema:       executor.RouterSchema,
 			Workers:            s.Config.cacheWarmup.Workers,
-			Throttle:           s.Config.cacheWarmup.Throttle,
-			Log:                s.logger,
+			ItemsPerSecond:     s.Config.cacheWarmup.ItemsPerSecond,
+			Timeout:            s.Config.cacheWarmup.Timeout,
 		}
 		switch s.Config.cacheWarmup.Source {
 		case "filesystem":

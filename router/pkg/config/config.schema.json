@@ -1663,15 +1663,20 @@
           "workers": {
             "type": "integer",
             "description": "The number of workers for the cache warmup to run in parallel. Higher numbers decrease the time to warm up the cache but increase the load on the system.",
-            "default": 1
+            "default": 8
           },
-          "throttle": {
+          "items_per_second": {
+            "type": "integer",
+            "description": "The number of cache warmup items to process per second. Higher numbers decrease the time to warm up the cache but increase the load on the system.",
+            "default": 50
+          },
+          "timeout": {
             "type": "string",
+            "description": "The timeout for warming up the cache. This can be used to limit the amount of time cache warming will block deploying a new config. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+            "default": "30s",
             "duration": {
-              "minimum": "0s"
-            },
-            "description": "Throttle can be used to make each worker wait the specified duration before starting the next warmup item. This can be useful to reduce the load on the system.",
-            "default": "0s"
+              "minimum": "1s"
+            }
           },
           "if": {
             "properties": {

@@ -2,13 +2,14 @@ package core
 
 import (
 	"context"
-	"sync"
+	"errors"
 	"time"
 
 	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/ratelimit"
 	"go.uber.org/zap"
 )
 
@@ -29,10 +30,11 @@ type CacheWarmupConfig struct {
 	RouterSchema       *ast.Document
 	Source             CacheWarmupSource
 	Workers            int
-	Throttle           time.Duration
+	ItemsPerSecond     int
+	Timeout            time.Duration
 }
 
-func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) error {
+func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 	w := &cacheWarmup{
 		log:                cfg.Log,
 		operationProcessor: cfg.OperationProcessor,
@@ -41,12 +43,44 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) error {
 		routerSchema:       cfg.RouterSchema,
 		source:             cfg.Source,
 		workers:            cfg.Workers,
-		throttle:           cfg.Throttle,
+		itemsPerSecond:     cfg.ItemsPerSecond,
+		timeout:            cfg.Timeout,
 	}
 	if cfg.Workers < 1 {
-		cfg.Workers = 1
+		w.workers = 4
 	}
-	return w.run(ctx)
+	if cfg.ItemsPerSecond < 1 {
+		w.itemsPerSecond = 100
+	}
+	if cfg.Timeout <= 0 {
+		w.timeout = time.Second * 30
+	}
+	cfg.Log.Info("Cache warmup - start",
+		zap.Int("workers", cfg.Workers),
+		zap.Int("itemsPerSecond", cfg.ItemsPerSecond),
+		zap.Duration("timeout", cfg.Timeout),
+	)
+	start := time.Now()
+	completed, err := w.run(ctx)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			cfg.Log.Error("Cache warmup - timeout",
+				zap.Error(err),
+				zap.Int("processedItems", completed),
+			)
+			return err
+		}
+		cfg.Log.Error("Cache warmup - error",
+			zap.Error(err),
+			zap.Int("processedItems", completed),
+		)
+		return err
+	}
+	cfg.Log.Info("Cache warmup - completed",
+		zap.Int("processedItems", completed),
+		zap.Duration("duration", time.Since(start)),
+	)
+	return nil
 }
 
 type cacheWarmup struct {
@@ -57,59 +91,100 @@ type cacheWarmup struct {
 	routerSchema       *ast.Document
 	source             CacheWarmupSource
 	workers            int
-	throttle           time.Duration
+	itemsPerSecond     int
+	timeout            time.Duration
 }
 
-func (w *cacheWarmup) run(ctx context.Context) error {
+func (w *cacheWarmup) run(ctx context.Context) (int, error) {
+
+	ctx, cancel := context.WithTimeout(ctx, w.timeout)
+	defer cancel()
 
 	items, err := w.source.LoadItems(ctx, w.log)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	defaultClientInfo := &ClientInfo{
-		Name:           "",
-		Version:        "",
-		WGRequestToken: "",
+	if len(items) == 0 {
+		w.log.Info("Cache warmup - no items to process")
+		return 0, nil
 	}
 
-	chunks := make([][]*CacheWarmupItem, w.workers)
+	w.log.Info("Cache warmup - items loaded, starting processing",
+		zap.Int("items", len(items)),
+	)
+
+	defaultClientInfo := &ClientInfo{}
+
+	done := ctx.Done()
+	index := make(chan int, len(items))
+	defer close(index)
+	itemCompleted := make(chan struct{})
+
 	for i, item := range items {
 		if item.Client == nil {
 			item.Client = defaultClientInfo
 		}
-
-		nextWorker := i % w.workers
-		chunks[nextWorker] = append(chunks[nextWorker], item)
+		index <- i
 	}
 
-	sg := &sync.WaitGroup{}
-	sg.Add(w.workers)
+	var (
+		rl ratelimit.Limiter
+	)
+
+	if w.itemsPerSecond > 0 {
+		rl = ratelimit.New(w.itemsPerSecond)
+	} else {
+		rl = ratelimit.NewUnlimited()
+	}
+
 	for i := 0; i < w.workers; i++ {
 		go func(i int) {
-			defer sg.Done()
-			for _, item := range chunks[i] {
-				err := w.processOperation(ctx, item)
-				if err != nil {
-					w.log.Error("cache warmup process operation failed, skipping",
-						zap.Error(err),
-						zap.String("clientName", item.Client.Name),
-						zap.String("clientVersion", item.Client.Version),
-						zap.String("query", item.Request.Query),
-						zap.String("operationName", item.Request.OperationName),
-					)
-				}
-				if w.throttle > 0 {
-					time.Sleep(w.throttle)
-				}
-				if ctx.Err() != nil {
+			for {
+				select {
+				case <-done:
 					return
+				case idx, ok := <-index:
+					if !ok {
+						return
+					}
+					rl.Take()
+					item := items[idx]
+					err := w.processOperation(ctx, item)
+					if err != nil {
+						w.log.Error("Failed to process operation, skipping",
+							zap.Error(err),
+							zap.String("clientName", item.Client.Name),
+							zap.String("clientVersion", item.Client.Version),
+							zap.String("query", item.Request.Query),
+							zap.String("operationName", item.Request.OperationName),
+						)
+					}
+					select {
+					case <-done:
+						return
+					case itemCompleted <- struct{}{}:
+					}
 				}
 			}
 		}(i)
 	}
 
-	return nil
+	for i := 0; i < len(items); i++ {
+		select {
+		case <-done:
+			return i, ctx.Err()
+		case <-itemCompleted:
+			processed := i + 1
+			if processed%100 == 0 {
+				w.log.Info("Cache warmup - processed items",
+					zap.Int("processedItems", processed),
+				)
+			}
+		}
+	}
+
+	return len(items), nil
 }
 
 func (w *cacheWarmup) processOperation(ctx context.Context, item *CacheWarmupItem) error {
@@ -118,7 +193,7 @@ func (w *cacheWarmup) processOperation(ctx context.Context, item *CacheWarmupIte
 		isAPQ bool
 	)
 
-	k, err := w.operationProcessor.NewKit()
+	k, err := w.operationProcessor.NewIndependentKit()
 	if err != nil {
 		return err
 	}

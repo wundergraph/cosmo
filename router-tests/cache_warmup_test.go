@@ -10,6 +10,7 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"go.uber.org/zap"
 )
 
 func TestCacheWarmup(t *testing.T) {
@@ -253,35 +254,35 @@ func TestCacheWarmup(t *testing.T) {
 	})
 	t.Run("cache warmup workers throttle", func(t *testing.T) {
 		t.Parallel()
+		logger, err := zap.NewDevelopment()
+		require.NoError(t, err)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
+				core.WithLogger(logger),
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
-					Enabled:  true,
-					Source:   "filesystem",
-					Path:     "testenv/testdata/cache_warmup",
-					Workers:  2,
-					Throttle: time.Millisecond * 10,
+					Enabled:        true,
+					Source:         "filesystem",
+					Path:           "testenv/testdata/cache_warmup_rate_limit",
+					Workers:        4,
+					ItemsPerSecond: 10,
+					Timeout:        time.Second * 5,
 				}),
 			},
 			AssertCacheMetrics: &testenv.CacheMetricsAssertion{
-				QueryNormalizationMisses: 3,
-				QueryNormalizationHits:   2,
-				ValidationMisses:         3,
-				ValidationHits:           2,
-				PlanMisses:               3,
-				PlanHits:                 2,
+				QueryNormalizationMisses: 10,
+				QueryNormalizationHits:   1,
+				ValidationMisses:         10,
+				ValidationHits:           1,
+				PlanMisses:               10,
+				PlanHits:                 1,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
+				Query: `query { a: employees { id } }`,
 			})
-			require.Equal(t, employeesIDData, res.Body)
-			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
-			})
+			require.Equal(t, `{"data":{"a":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 		})
 	})
-
 	t.Run("cache warmup with operation hash cache", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
@@ -295,11 +296,11 @@ func TestCacheWarmup(t *testing.T) {
 			},
 			RouterOptions: []core.Option{
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
-					Enabled:  true,
-					Source:   "filesystem",
-					Path:     "testenv/testdata/cache_warmup",
-					Workers:  2,
-					Throttle: time.Millisecond * 10,
+					Enabled:        true,
+					Source:         "filesystem",
+					Path:           "testenv/testdata/cache_warmup",
+					Workers:        2,
+					ItemsPerSecond: 100,
 				}),
 			},
 			AssertCacheMetrics: &testenv.CacheMetricsAssertion{

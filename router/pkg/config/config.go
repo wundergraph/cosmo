@@ -738,11 +738,12 @@ type ApolloCompatibilityReplaceInvalidVarErrors struct {
 }
 
 type CacheWarmupConfiguration struct {
-	Enabled  bool          `yaml:"enabled" envDefault:"false" env:"CACHE_WARMUP_ENABLED"`
-	Source   string        `yaml:"source" envDefault:"filesystem" env:"CACHE_WARMUP_SOURCE"`
-	Path     string        `yaml:"path" env:"CACHE_WARMUP_PATH"`
-	Workers  int           `yaml:"workers" envDefault:"1" env:"CACHE_WARMUP_WORKERS"`
-	Throttle time.Duration `yaml:"throttle" envDefault:"0s" env:"CACHE_WARMUP_THROTTLE"`
+	Enabled        bool          `yaml:"enabled" envDefault:"false" env:"CACHE_WARMUP_ENABLED"`
+	Source         string        `yaml:"source" envDefault:"filesystem" env:"CACHE_WARMUP_SOURCE"`
+	Path           string        `yaml:"path" env:"CACHE_WARMUP_PATH"`
+	Workers        int           `yaml:"workers" envDefault:"8" env:"CACHE_WARMUP_WORKERS"`
+	ItemsPerSecond int           `yaml:"items_per_second" envDefault:"50" env:"CACHE_WARMUP_ITEMS_PER_SECOND"`
+	Timeout        time.Duration `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
 }
 
 type Config struct {

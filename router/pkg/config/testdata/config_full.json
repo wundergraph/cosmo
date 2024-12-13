@@ -374,8 +374,9 @@
     "Enabled": false,
     "Source": "filesystem",
     "Path": "",
-    "Workers": 1,
-    "Throttle": 0
+    "Workers": 8,
+    "ItemsPerSecond": 50,
+    "Timeout": 30000000000
   },
   "RouterConfigPath": "latest.json",
   "RouterRegistration": true,
