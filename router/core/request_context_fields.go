@@ -69,21 +69,20 @@ func NewDurationLogField(val time.Duration, attribute config.CustomAttribute) za
 }
 
 func AccessLogsFieldHandler(attributes []config.CustomAttribute, err any, request *http.Request, responseHeader *http.Header) []zapcore.Field {
-	if request == nil {
-		return nil
-	}
-
-	reqContext := getRequestContext(request.Context())
-
 	resFields := make([]zapcore.Field, 0, len(attributes))
-	resFields = append(resFields, logging.WithRequestID(middleware.GetReqID(request.Context())))
+
+	var reqContext *requestContext
+	if request != nil {
+		reqContext = getRequestContext(request.Context())
+		resFields = append(resFields, logging.WithRequestID(middleware.GetReqID(request.Context())))
+	}
 
 	for _, field := range attributes {
 		if field.ValueFrom != nil && field.ValueFrom.ResponseHeader != "" && responseHeader != nil {
 			resFields = append(resFields, NewStringLogField(responseHeader.Get(field.ValueFrom.ResponseHeader), field))
-		} else if field.ValueFrom != nil && field.ValueFrom.RequestHeader != "" {
+		} else if field.ValueFrom != nil && field.ValueFrom.RequestHeader != "" && request != nil {
 			resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
-		} else if field.ValueFrom != nil && field.ValueFrom.ContextField != "" && reqContext != nil && reqContext.operation != nil {
+		} else if field.ValueFrom != nil && field.ValueFrom.ContextField != "" {
 			if v := GetLogFieldFromCustomAttribute(field, reqContext, err); v != zap.Skip() {
 				resFields = append(resFields, v)
 			}
@@ -112,7 +111,17 @@ func GetLogFieldFromCustomAttribute(field config.CustomAttribute, req *requestCo
 }
 
 func getCustomDynamicAttributeValue(attribute *config.CustomDynamicAttribute, reqContext *requestContext, err any) interface{} {
-	if attribute.ContextField == "" {
+	if attribute == nil || attribute.ContextField == "" {
+		return ""
+	}
+
+	if reqContext == nil {
+		// If the request context is nil, we can only return the error state.
+		if attribute.ContextField == ContextFieldRequestError {
+			return err != nil
+		} else if attribute.ContextField == ContextFieldResponseErrorMessage && err != nil {
+			return fmt.Sprintf("%v", err)
+		}
 		return ""
 	}
 

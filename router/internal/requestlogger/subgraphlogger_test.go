@@ -1,6 +1,7 @@
 package requestlogger_test
 
 import (
+	"errors"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
@@ -40,7 +41,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			"query":    "",
 			"ip":       "",
 		}
-		additionalExpectedKeys := []string{"user_agent", "hostname", "pid"}
+		additionalExpectedKeys := []string{"user_agent", "hostname", "pid", "url"}
 		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
 
@@ -69,7 +70,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			"query":    "",
 			"ip":       "my-test",
 		}
-		additionalExpectedKeys := []string{"user_agent", "hostname", "pid"}
+		additionalExpectedKeys := []string{"user_agent", "hostname", "pid", "url"}
 		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
 
@@ -103,7 +104,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			"query":    "",
 			"ip":       "[REDACTED]",
 		}
-		additionalExpectedKeys := []string{"user_agent", "hostname", "pid"}
+		additionalExpectedKeys := []string{"user_agent", "hostname", "pid", "url"}
 		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
 
@@ -137,7 +138,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			"query":    "",
 			"ip":       "6d792d74657374e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 		}
-		additionalExpectedKeys := []string{"user_agent", "hostname", "pid"}
+		additionalExpectedKeys := []string{"user_agent", "hostname", "pid", "url"}
 		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
 
@@ -187,7 +188,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			"test":          "test-value",
 			"test-response": "test-response-value",
 		}
-		additionalExpectedKeys := []string{"user_agent", "request_id", "hostname", "pid"}
+		additionalExpectedKeys := []string{"user_agent", "request_id", "hostname", "pid", "url"}
 		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
 
@@ -211,12 +212,24 @@ func TestSubgraphAccessLogger(t *testing.T) {
 						ResponseHeader: "test-response-header",
 					},
 				},
+				{
+					Key: "request-error",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldRequestError,
+					},
+				},
+				{
+					Key: "request-error-msg",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldResponseErrorMessage,
+					},
+				},
 			},
 		})
 
 		subgraphLogger.WriteLog("subgraph error", subgraphLogger.GetRequestFields(&resolve.ResponseInfo{
 			StatusCode: 200,
-			Err:        nil,
+			Err:        errors.New("my-test-error"),
 			Request:    nil,
 			ResponseHeaders: map[string][]string{
 				"Test-Response-Header": {"test-response-value"},
@@ -226,7 +239,10 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
 		expectedValues := map[string]interface{}{
-			"log_type": "client/subgraph",
+			"log_type":          "client/subgraph",
+			"request-error":     true,
+			"request-error-msg": "my-test-error",
+			"test-response":     "test-response-value",
 		}
 		additionalExpectedKeys := []string{"hostname", "pid"}
 		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
