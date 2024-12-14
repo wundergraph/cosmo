@@ -21,7 +21,7 @@ func TestPersistedOperationNotFound(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}`),
 		})
-		require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
 	})
 }
 
@@ -205,7 +205,7 @@ func TestPersistedOperationsCache(t *testing.T) {
 			Variables:     []byte(`{"withAligators": false,"withCats": true,"skipDogs": false,"skipMouses": true}`),
 		})
 		require.NoError(t, err)
-		require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
 		require.Equal(t, "", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		require.Equal(t, "", res.Response.Header.Get(core.ExecutionPlanCacheHeader))
 	}
