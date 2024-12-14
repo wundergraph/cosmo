@@ -141,10 +141,14 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 			zap.Int("status", responseInfo.StatusCode),
 			zap.Duration("latency", latency),
 		}
-		if responseInfo.Request != nil && responseInfo.Request.URL != nil {
-			fields = append(fields, zap.String("url", responseInfo.Request.URL.String()))
+		path := ds.Name
+		if responseInfo.Request != nil {
+			fields = append(fields, f.accessLogger.GetRequestFields(responseInfo, fields)...)
+			if responseInfo.Request.URL != nil {
+				path = responseInfo.Request.URL.Path
+			}
 		}
-		f.accessLogger.WriteRequestLog(responseInfo, fields)
+		f.accessLogger.WriteLog(path, fields)
 	}
 
 	if responseInfo.Err != nil {
