@@ -69,6 +69,10 @@ func NewDurationLogField(val time.Duration, attribute config.CustomAttribute) za
 }
 
 func AccessLogsFieldHandler(attributes []config.CustomAttribute, err any, request *http.Request, responseHeader *http.Header) []zapcore.Field {
+	if request == nil {
+		return nil
+	}
+
 	reqContext := getRequestContext(request.Context())
 
 	resFields := make([]zapcore.Field, 0, len(attributes))
