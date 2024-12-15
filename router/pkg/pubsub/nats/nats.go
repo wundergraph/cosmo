@@ -91,9 +91,10 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 
 	if event.StreamConfiguration != nil {
 		consumerConfig := jetstream.ConsumerConfig{
-			Durable:        p.getDurableConsumerName(event.StreamConfiguration.Consumer, event.Subjects), // Durable consumers are not removed automatically regardless of the InactiveThreshold
+			Durable:        p.getDurableConsumerName(event.StreamConfiguration.Consumer, event.Subjects),
 			FilterSubjects: event.Subjects,
 		}
+		// Durable consumers are removed automatically only if the InactiveThreshold value is set
 		if event.StreamConfiguration.ConsumerInactiveThreshold > 0 {
 			consumerConfig.InactiveThreshold = time.Duration(event.StreamConfiguration.ConsumerInactiveThreshold) * time.Second
 		}
