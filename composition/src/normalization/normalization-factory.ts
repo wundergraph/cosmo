@@ -205,7 +205,7 @@ import { printTypeNode } from '@graphql-tools/merge';
 import { InternalSubgraph, recordSubgraphName, Subgraph } from '../subgraph/subgraph';
 import {
   consumerInactiveThresholdValueShouldBePositiveWarning,
-  consumerInactiveThresholdValueShouldNotBeTooBigWarning,
+  maxConsumerInactiveThresholdExceededWarning,
   externalInterfaceFieldsWarning,
   invalidExternalFieldWarning,
   invalidOverrideTargetSubgraphNameWarning,
@@ -1433,7 +1433,7 @@ export class NormalizationFactory {
       this.warnings.push(consumerInactiveThresholdValueShouldBePositiveWarning(this.subgraphName));
       consumerInactiveThreshold = DEFAULT_CONSUMER_INACTIVE_THRESHOLD;
     } else if (consumerInactiveThreshold > MAX_INT32) {
-      this.warnings.push(consumerInactiveThresholdValueShouldNotBeTooBigWarning(this.subgraphName));
+      this.warnings.push(maxConsumerInactiveThresholdExceededWarning(this.subgraphName));
       consumerInactiveThreshold = 0;
     }
     return {

@@ -1051,7 +1051,7 @@ export function invalidRootTypeFieldResponseTypesEventDrivenErrorMessage(
 
 export const invalidNatsStreamInputErrorMessage =
   `The "streamConfiguration" argument must be a valid input object with the following form:\n` +
-  `  input edfs__NatsStreamConfiguration {\n    consumerInactiveThreshold: Int!\n    consumerName: String!\n    streamName: String!\n  }`;
+  `  input edfs__NatsStreamConfiguration {\n    consumerInactiveThreshold: Int! = 30\n    consumerName: String!\n    streamName: String!\n  }`;
 
 export function invalidIntegerValue(value: string, host: string): string {
   return `The value "${value}" passed to "${host}" is not an integer.`;

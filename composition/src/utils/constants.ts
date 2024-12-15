@@ -745,7 +745,7 @@ export const SCOPE_SCALAR_DEFINITION: MutableScalarNode = {
 
 /*
  * input edfs__NatsStreamConfiguration {
- *   consumerInactiveThreshold : Int! = DEFAULT_CONSUMER_INACTIVE_THRESHOLD
+ *   consumerInactiveThreshold : Int! = 30
  *   consumerName: String!
  *   streamName: String!
  * }
