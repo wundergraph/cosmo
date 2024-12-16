@@ -32,6 +32,7 @@ type CacheWarmupConfig struct {
 	Workers            int
 	ItemsPerSecond     int
 	Timeout            time.Duration
+	TrackSchemaUsage   bool
 }
 
 func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
@@ -45,6 +46,7 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 		workers:            cfg.Workers,
 		itemsPerSecond:     cfg.ItemsPerSecond,
 		timeout:            cfg.Timeout,
+		trackSchemaUsage:   cfg.TrackSchemaUsage,
 	}
 	if cfg.Workers < 1 {
 		w.workers = 4
@@ -93,6 +95,7 @@ type cacheWarmup struct {
 	workers            int
 	itemsPerSecond     int
 	timeout            time.Duration
+	trackSchemaUsage   bool
 }
 
 func (w *cacheWarmup) run(ctx context.Context) (int, error) {
@@ -251,7 +254,7 @@ func (w *cacheWarmup) processOperation(ctx context.Context, item *CacheWarmupIte
 			IncludeQueryPlanInResponse: false,
 			SendHeartbeat:              false,
 		},
-		TrackSchemaUsageInfo: true,
+		TrackSchemaUsageInfo: w.trackSchemaUsage,
 	}
 
 	opContext := &operationContext{

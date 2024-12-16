@@ -856,6 +856,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			Workers:            s.Config.cacheWarmup.Workers,
 			ItemsPerSecond:     s.Config.cacheWarmup.ItemsPerSecond,
 			Timeout:            s.Config.cacheWarmup.Timeout,
+			TrackSchemaUsage:   s.graphqlMetricsConfig.Enabled,
 		}
 		switch s.Config.cacheWarmup.Source {
 		case "filesystem":
