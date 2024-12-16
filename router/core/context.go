@@ -138,7 +138,7 @@ var metricAttrsPool = sync.Pool{
 	},
 }
 
-// The filter can include elements, which are not part of the context, but it should be possible
+// The mapper can include elements, which are not part of the context, but it should be possible
 // to also configure them in the same way as the context fields.
 const (
 	filterKeyOperationName       = ContextFieldOperationName
@@ -237,10 +237,11 @@ type requestTelemetryAttributes struct {
 	metricSetAttrs map[string]string
 	// metricSliceAttrs are the attributes for metrics that are string slices and needs to be exploded for prometheus
 	metricSliceAttrs []attribute.KeyValue
-	// filter applies the high cardinality filter to the attributes. Attributes which are not contained in the
-	// high cardinality filter will be added as is. Attributes that are in the filter will be resolved from the
-	// request context and potentially remapped to a new key.
-	filter attributeMapper
+	// mapper is an attribute mapper for context attributes.
+	// It is used to identify attributes that should not be included by default  but can be included if they are
+	// configured in the custom attributes list. The mapper will potentially filter out attributes or include them.
+	// It will also remap the key if configured.
+	mapper attributeMapper
 
 	// metricsEnabled indicates if metrics are enabled. If false, no metrics attributes will be added
 	metricsEnabled bool
@@ -308,7 +309,7 @@ func (r *requestTelemetryAttributes) addMetricAttribute(vals ...attribute.KeyVal
 		return
 	}
 
-	r.metricAttrs = append(r.metricAttrs, r.filter.mapAttributes(vals)...)
+	r.metricAttrs = append(r.metricAttrs, r.mapper.mapAttributes(vals)...)
 }
 
 // requestContext is the default implementation of RequestContext
@@ -703,7 +704,7 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 			metricSetAttrs: opts.metricSetAttributes,
 			metricsEnabled: opts.metricsEnabled,
 			traceEnabled:   opts.traceEnabled,
-			filter:         newAttributeMapper(opts.filterEnabled, opts.includedAttributes),
+			mapper:         newAttributeMapper(opts.filterEnabled, opts.includedAttributes),
 		},
 		subgraphResolver: subgraphResolverFromContext(opts.r.Context()),
 	}
