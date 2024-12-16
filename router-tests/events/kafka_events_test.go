@@ -1029,7 +1029,6 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			KafkaSeeds:  seeds,
 			EnableKafka: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 

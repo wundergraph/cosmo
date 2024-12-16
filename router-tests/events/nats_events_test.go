@@ -1466,25 +1466,25 @@ func TestNatsEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
-			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{asas`)) // Empty message
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{asas`)) // Empty message
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 			xEnv.WaitForMessagesSent(1, time.Second*10)
 
-			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 			xEnv.WaitForMessagesSent(2, time.Second*10)
 
-			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"__typename":"Employee","update":{"name":"foo"}}`)) // Missing id
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","update":{"name":"foo"}}`)) // Missing id
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 			xEnv.WaitForMessagesSent(3, time.Second*10)
 
-			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
