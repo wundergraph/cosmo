@@ -43,19 +43,22 @@ func NewSubgraphAccessLogger(logger *zap.Logger, opts SubgraphOptions) *Subgraph
 	}
 }
 
-func (h *SubgraphAccessLogger) WriteRequestLog(respInfo *resolve.ResponseInfo, subgraphFields []zap.Field) {
+func (h *SubgraphAccessLogger) RequestFields(respInfo *resolve.ResponseInfo, subgraphFields []zap.Field) []zap.Field {
 	if respInfo == nil {
-		return
+		return []zap.Field{}
 	}
 
-	path := respInfo.Request.URL.Path
 	fields := h.accessLogger.getRequestFields(respInfo.Request)
+	if respInfo.Request != nil && respInfo.Request.URL != nil {
+		fields = append(fields, zap.String("url", respInfo.Request.URL.String()))
+	}
 	if h.accessLogger.fieldsHandler != nil {
 		fields = append(fields, h.accessLogger.fieldsHandler(h.accessLogger.attributes, respInfo.Err, respInfo.Request, &respInfo.ResponseHeaders)...)
 	}
 
-	if len(subgraphFields) > 0 {
-		fields = append(fields, subgraphFields...)
-	}
-	h.logger.Info(path, fields...)
+	return fields
+}
+
+func (h *SubgraphAccessLogger) Info(message string, fields []zap.Field) {
+	h.logger.Info(message, fields...)
 }

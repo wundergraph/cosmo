@@ -1,6 +1,7 @@
 package requestlogger_test
 
 import (
+	"errors"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
@@ -24,12 +25,12 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		subgraphLogger := requestlogger.NewSubgraphAccessLogger(l, requestlogger.SubgraphOptions{})
 		req, err := http.NewRequest("POST", "http://localhost:3002/graphql", nil)
 		require.NoError(t, err)
-		subgraphLogger.WriteRequestLog(&resolve.ResponseInfo{
+		subgraphLogger.Info("", subgraphLogger.RequestFields(&resolve.ResponseInfo{
 			StatusCode:      200,
 			Err:             nil,
 			Request:         req,
 			ResponseHeaders: nil,
-		}, nil)
+		}, nil))
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
@@ -40,7 +41,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			"query":    "",
 			"ip":       "",
 		}
-		additionalExpectedKeys := []string{"user_agent", "hostname", "pid"}
+		additionalExpectedKeys := []string{"user_agent", "hostname", "pid", "url"}
 		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
 
@@ -53,12 +54,12 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		req, err := http.NewRequest("POST", "http://localhost:3002/graphql", nil)
 		req.RemoteAddr = "my-test"
 		require.NoError(t, err)
-		subgraphLogger.WriteRequestLog(&resolve.ResponseInfo{
+		subgraphLogger.Info("", subgraphLogger.RequestFields(&resolve.ResponseInfo{
 			StatusCode:      200,
 			Err:             nil,
 			Request:         req,
 			ResponseHeaders: nil,
-		}, nil)
+		}, nil))
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
@@ -69,7 +70,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			"query":    "",
 			"ip":       "my-test",
 		}
-		additionalExpectedKeys := []string{"user_agent", "hostname", "pid"}
+		additionalExpectedKeys := []string{"user_agent", "hostname", "pid", "url"}
 		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
 
@@ -87,12 +88,12 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		req, err := http.NewRequest("POST", "http://localhost:3002/graphql", nil)
 		req.RemoteAddr = "my-test"
 		require.NoError(t, err)
-		subgraphLogger.WriteRequestLog(&resolve.ResponseInfo{
+		subgraphLogger.Info("", subgraphLogger.RequestFields(&resolve.ResponseInfo{
 			StatusCode:      200,
 			Err:             nil,
 			Request:         req,
 			ResponseHeaders: nil,
-		}, nil)
+		}, nil))
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
@@ -103,7 +104,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			"query":    "",
 			"ip":       "[REDACTED]",
 		}
-		additionalExpectedKeys := []string{"user_agent", "hostname", "pid"}
+		additionalExpectedKeys := []string{"user_agent", "hostname", "pid", "url"}
 		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
 
@@ -121,12 +122,12 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		req, err := http.NewRequest("POST", "http://localhost:3002/graphql", nil)
 		req.RemoteAddr = "my-test"
 		require.NoError(t, err)
-		subgraphLogger.WriteRequestLog(&resolve.ResponseInfo{
+		subgraphLogger.Info("", subgraphLogger.RequestFields(&resolve.ResponseInfo{
 			StatusCode:      200,
 			Err:             nil,
 			Request:         req,
 			ResponseHeaders: nil,
-		}, nil)
+		}, nil))
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
@@ -137,7 +138,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			"query":    "",
 			"ip":       "6d792d74657374e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 		}
-		additionalExpectedKeys := []string{"user_agent", "hostname", "pid"}
+		additionalExpectedKeys := []string{"user_agent", "hostname", "pid", "url"}
 		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
 
@@ -167,14 +168,14 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		req.Header.Add("test-header", "test-value")
 
 		require.NoError(t, err)
-		subgraphLogger.WriteRequestLog(&resolve.ResponseInfo{
+		subgraphLogger.Info("", subgraphLogger.RequestFields(&resolve.ResponseInfo{
 			StatusCode: 200,
 			Err:        nil,
 			Request:    req,
 			ResponseHeaders: map[string][]string{
 				"Test-Response-Header": {"test-response-value"},
 			},
-		}, nil)
+		}, nil))
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
@@ -187,7 +188,63 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			"test":          "test-value",
 			"test-response": "test-response-value",
 		}
-		additionalExpectedKeys := []string{"user_agent", "request_id", "hostname", "pid"}
+		additionalExpectedKeys := []string{"user_agent", "request_id", "hostname", "pid", "url"}
+		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+	})
+
+	t.Run("can handle a null request", func(t *testing.T) {
+		var zCore zapcore.Core
+		zCore, logObserver := observer.New(zapcore.InfoLevel)
+		l := logging.NewZapLoggerWithCore(zCore, true)
+
+		subgraphLogger := requestlogger.NewSubgraphAccessLogger(l, requestlogger.SubgraphOptions{
+			FieldsHandler: core.AccessLogsFieldHandler,
+			Attributes: []config.CustomAttribute{
+				{
+					Key: "test",
+					ValueFrom: &config.CustomDynamicAttribute{
+						RequestHeader: "test-header",
+					},
+				},
+				{
+					Key: "test-response",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ResponseHeader: "test-response-header",
+					},
+				},
+				{
+					Key: "request-error",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldRequestError,
+					},
+				},
+				{
+					Key: "request-error-msg",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldResponseErrorMessage,
+					},
+				},
+			},
+		})
+
+		subgraphLogger.Info("subgraph error", subgraphLogger.RequestFields(&resolve.ResponseInfo{
+			StatusCode: 200,
+			Err:        errors.New("my-test-error"),
+			Request:    nil,
+			ResponseHeaders: map[string][]string{
+				"Test-Response-Header": {"test-response-value"},
+			},
+		}, nil))
+
+		require.Equal(t, 1, logObserver.Len())
+		requestContext := logObserver.All()[0].ContextMap()
+		expectedValues := map[string]interface{}{
+			"log_type":          "client/subgraph",
+			"request-error":     true,
+			"request-error-msg": "my-test-error",
+			"test-response":     "test-response-value",
+		}
+		additionalExpectedKeys := []string{"hostname", "pid"}
 		checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 	})
 }
