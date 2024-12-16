@@ -12,7 +12,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 	"io"
-	"os"
 	"sync"
 	"time"
 )
@@ -24,39 +23,43 @@ var (
 )
 
 type connector struct {
-	conn       *nats.Conn
-	logger     *zap.Logger
-	js         jetstream.JetStream
-	listenAddr string
+	conn             *nats.Conn
+	logger           *zap.Logger
+	js               jetstream.JetStream
+	hostName         string
+	routerListenAddr string
 }
 
-func NewConnector(logger *zap.Logger, conn *nats.Conn, js jetstream.JetStream, listenAddr string) pubsub_datasource.NatsConnector {
+func NewConnector(logger *zap.Logger, conn *nats.Conn, js jetstream.JetStream, hostName string, routerListenAddr string) pubsub_datasource.NatsConnector {
 	return &connector{
-		conn:       conn,
-		logger:     logger,
-		js:         js,
-		listenAddr: listenAddr,
+		conn:             conn,
+		logger:           logger,
+		js:               js,
+		hostName:         hostName,
+		routerListenAddr: routerListenAddr,
 	}
 }
 
 func (c *connector) New(ctx context.Context) pubsub_datasource.NatsPubSub {
 	return &natsPubSub{
-		ctx:        ctx,
-		conn:       c.conn,
-		js:         c.js,
-		logger:     c.logger.With(zap.String("pubsub", "nats")),
-		closeWg:    sync.WaitGroup{},
-		listenAddr: c.listenAddr,
+		ctx:              ctx,
+		conn:             c.conn,
+		js:               c.js,
+		logger:           c.logger.With(zap.String("pubsub", "nats")),
+		closeWg:          sync.WaitGroup{},
+		hostName:         c.hostName,
+		routerListenAddr: c.routerListenAddr,
 	}
 }
 
 type natsPubSub struct {
-	ctx        context.Context
-	conn       *nats.Conn
-	logger     *zap.Logger
-	js         jetstream.JetStream
-	closeWg    sync.WaitGroup
-	listenAddr string
+	ctx              context.Context
+	conn             *nats.Conn
+	logger           *zap.Logger
+	js               jetstream.JetStream
+	closeWg          sync.WaitGroup
+	hostName         string
+	routerListenAddr string
 }
 
 // getInstanceIdentifier returns an identifier for the current instance.
@@ -64,22 +67,27 @@ type natsPubSub struct {
 // of what a unique instance is from the perspective of the client that has started a subscription to this instance
 // and want to restart the subscription after a failure on the client or router side.
 func (p *natsPubSub) getInstanceIdentifier() string {
-	hostName, _ := os.Hostname()
-
-	return fmt.Sprintf("%s-%s", hostName, p.listenAddr)
+	return fmt.Sprintf("%s-%s", p.hostName, p.routerListenAddr)
 }
 
 // getDurableConsumerName returns the durable consumer name based on the given subjects and the instance id
 // we need to make sure that the durable consumer name is unique for each instance and subjects to prevent
 // multiple routers from changing the same consumer, which would lead to message loss and wrong messages delivered
 // to the subscribers
-func (p *natsPubSub) getDurableConsumerName(durableName string, subjects []string) string {
+func (p *natsPubSub) getDurableConsumerName(durableName string, subjects []string) (string, error) {
 	subjHash := xxhash.New()
-	subjHash.WriteString(p.getInstanceIdentifier())
-	for _, subject := range subjects {
-		subjHash.WriteString(subject)
+	_, err := subjHash.WriteString(p.getInstanceIdentifier())
+	if err != nil {
+		return "", err
 	}
-	return fmt.Sprintf("%s-%x", durableName, subjHash.Sum64())
+	for _, subject := range subjects {
+		_, err = subjHash.WriteString(subject)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return fmt.Sprintf("%s-%x", durableName, subjHash.Sum64()), nil
 }
 
 func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.NatsSubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
@@ -90,8 +98,12 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 	)
 
 	if event.StreamConfiguration != nil {
+		durableConsumerName, err := p.getDurableConsumerName(event.StreamConfiguration.Consumer, event.Subjects)
+		if err != nil {
+			return err
+		}
 		consumerConfig := jetstream.ConsumerConfig{
-			Durable:        p.getDurableConsumerName(event.StreamConfiguration.Consumer, event.Subjects),
+			Durable:        durableConsumerName,
 			FilterSubjects: event.Subjects,
 		}
 		// Durable consumers are removed automatically only if the InactiveThreshold value is set
