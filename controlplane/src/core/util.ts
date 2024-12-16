@@ -3,7 +3,7 @@ import { S3ClientConfig } from '@aws-sdk/client-s3';
 import { HandlerContext } from '@connectrpc/connect';
 import {
   GraphQLSubscriptionProtocol,
-  GraphQLWebsocketSubprotocol
+  GraphQLWebsocketSubprotocol,
 } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { AxiosError } from 'axios';
