@@ -378,6 +378,385 @@ func TestOperationCacheTelemetry(t *testing.T) {
 		})
 	})
 
+	t.Run("Validate operation cache telemetry for persisted and non persisted operations", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
+			ModifyRouterConfig: func(config *nodev1.RouterConfig) {
+				config.FeatureFlagConfigs = nil
+			},
+			MetricOptions: testenv.MetricOptions{
+				EnableOTLPRouterCache: true,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			// miss
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { id } }`,
+			})
+
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			// hit
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { id } }`,
+			})
+
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			// miss
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { tag } }`,
+			})
+
+			require.JSONEq(t, employeesTagData, res.Body)
+
+			// Persisted query is already in the plan and validation cache because the same query content was used in the previous request
+			// hit and normalization miss
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"Employees"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+
+			// This wasn't cache before
+			// miss and normalization miss
+			expected := `{"data":{"employees":[{"details":{"forename":"Jens","hasChildren":true,"location":{"key":{"name":"Germany"}},"maritalStatus":"MARRIED","middlename":"","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Neuse"}},{"details":{"forename":"Dustin","hasChildren":false,"location":{"key":{"name":"Germany"}},"maritalStatus":"ENGAGED","middlename":"Klaus","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Deus"}},{"details":{"forename":"Stefan","hasChildren":false,"location":{"key":{"name":"America"}},"maritalStatus":"ENGAGED","middlename":"","nationality":"AMERICAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"REPTILE","gender":"UNKNOWN","name":"Snappy","__typename":"Alligator","dangerous":"yes"}],"surname":"Avram"}},{"details":{"forename":"Björn","hasChildren":true,"location":{"key":{"name":"Germany"}},"maritalStatus":"MARRIED","middlename":"Volker","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Abby","__typename":"Dog","breed":"GOLDEN_RETRIEVER"},{"class":"MAMMAL","gender":"MALE","name":"Survivor","__typename":"Pony"}],"surname":"Schwenzer"}},{"details":{"forename":"Sergiy","hasChildren":false,"location":{"key":{"name":"Ukraine"}},"maritalStatus":"ENGAGED","middlename":"","nationality":"UKRAINIAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Blotch","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Grayone","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Rusty","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"FEMALE","name":"Manya","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"MALE","name":"Peach","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Panda","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"FEMALE","name":"Mommy","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"FEMALE","name":"Terry","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"FEMALE","name":"Tilda","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"MALE","name":"Vasya","__typename":"Cat","type":"HOME"}],"surname":"Petrunin"}},{"details":{"forename":"Suvij","hasChildren":false,"location":{"key":{"name":"India"}},"maritalStatus":null,"middlename":"","nationality":"INDIAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Surya"}},{"details":{"forename":"Nithin","hasChildren":false,"location":{"key":{"name":"India"}},"maritalStatus":null,"middlename":"","nationality":"INDIAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Kumar"}},{"details":{"forename":"Eelco","hasChildren":false,"location":{"key":{"name":"Netherlands"}},"maritalStatus":null,"middlename":"","nationality":"DUTCH","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"UNKNOWN","name":"Vanson","__typename":"Mouse"}],"surname":"Wiersma"}},{"details":{"forename":"Alexandra","hasChildren":true,"location":{"key":{"name":"Germany"}},"maritalStatus":"MARRIED","middlename":"","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Neuse"}},{"details":{"forename":"David","hasChildren":false,"location":{"key":{"name":"England"}},"maritalStatus":"MARRIED","middlename":null,"nationality":"ENGLISH","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Pepper","__typename":"Cat","type":"HOME"}],"surname":"Stutt"}}]}}`
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"Employees"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "1167510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, expected, res.Body)
+
+			// hit and normalization hit
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"Employees"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "1167510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, expected, res.Body)
+
+			rm := metricdata.ResourceMetrics{}
+			err = metricReader.Collect(context.Background(), &rm)
+
+			require.NoError(t, err)
+			require.Len(t, rm.ScopeMetrics, 2)
+
+			cacheScope := getMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
+			require.NotNil(t, cacheScope)
+
+			require.Len(t, cacheScope.Metrics, 4)
+
+			baseAttributes := []attribute.KeyValue{
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgRouterVersion.String("dev"),
+			}
+
+			hitStatMetrics := metricdata.Metrics{
+				Name:        "router.graphql.cache.requests.stats",
+				Description: "Cache stats related to cache requests. Tracks cache hits and misses. Can be used to calculate the ratio",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "plan"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 3,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "plan"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 3,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 1,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 3,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 3,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 1,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 2,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, hitStatMetrics, *getMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
+
+			keyStatMetrics := metricdata.Metrics{
+				Name:        "router.graphql.cache.keys.stats",
+				Description: "Cache stats for Keys. Tracks added, updated and evicted keys. Can be used to get the total number of items",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "plan"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 3,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "plan"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "plan"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 3,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, keyStatMetrics, *getMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
+
+			costStatsMetrics := metricdata.Metrics{
+				Name:        "router.graphql.cache.cost.stats",
+				Description: "Cache stats for Cost. Tracks the cost of the cache operations. Can be used to calculate the cost of the cache operations",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "plan"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 3,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "plan"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 3,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, costStatsMetrics, *getMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
+
+			maxCostMetrics := metricdata.Metrics{
+				Name:        "router.graphql.cache.cost.max",
+				Description: "Tracks the maximum configured cost for a cache. Useful to investigate differences between the number of keys and the current cost",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "plan"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "query_normalization"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "validation"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+							)...),
+							Value: 1024,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, maxCostMetrics, *getMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
+		})
+	})
+
 	t.Run("Validate operation cache telemetry when prometheus is also enabled", func(t *testing.T) {
 		t.Parallel()
 		metricReader := metric.NewManualReader()
