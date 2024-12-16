@@ -153,17 +153,19 @@ type attributeMapper struct {
 	enabled bool
 
 	// lookupMap contains the default key names, which can be mapped to a new name with custom attributes.
-	// These keys are used to identify high cardinality attributes and map to the corresponding fields in the
-	// request context.
+	// These keys are used to identify attributes, which should not be included by default and map to the
+	// corresponding fields in the request context.
 	lookupMap attributeKeyMap
-	// attr is the list of configured custom attributes that can are used to be resolved from the context and
-	// to potentially remap the key to a new name
+	// attr is the list of configured custom context attributes. This list indicates whether attributes are
+	// added to the metrics and potentially remapped to a new key. Only attributes from the lookupMap are taken
+	// into account.
 	attr []config.CustomAttribute
 }
 
 func newAttributeMapper(enabled bool, attr []config.CustomAttribute) attributeMapper {
 	// Any attributes that are in this map, will be resolved only if they are configured in the `attr` list.
-	// This is to avoid adding high cardinality attributes by default as it can be expensive for the metric backend.
+	// This is to avoid adding certain attributes which might cause higher cardinality to the metrics
+	// by default as it can be expensive for the metric backend.
 	set := attributeKeyMap{
 		otel.WgOperationName:       filterKeyOperationName,
 		otel.WgOperationHash:       filterKeyOperationHash,
