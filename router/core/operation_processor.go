@@ -44,8 +44,11 @@ var (
 
 type ParsedOperation struct {
 	// ID represents a unique-ish ID for the operation calculated by hashing
-	// its normalized representation and its variables
+	// its normalized representation
 	ID uint64
+	// InternalID is the internal ID of the operation calculated by hashing
+	// its normalized representation with the original operation name and normalized variables
+	InternalID uint64
 	// Sha256Hash is the sha256 hash of the original operation query sent by the client
 	Sha256Hash string
 	// Type is a string representing the operation type. One of
@@ -631,7 +634,7 @@ func (o *OperationKit) normalizePersistedOperation(clientName string, isApq bool
 	}
 
 	// Generate the operation ID
-	o.parsedOperation.ID = o.kit.keyGen.Sum64()
+	o.parsedOperation.InternalID = o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()
 
 	// Print the operation with the original operation name
@@ -656,6 +659,7 @@ type NormalizationCacheEntry struct {
 	operationID              uint64
 	normalizedRepresentation string
 	operationType            string
+	operationDefinitionRef   int
 }
 
 type ComplexityCacheEntry struct {
@@ -673,7 +677,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 		entry, ok := o.cache.normalizationCache.Get(cacheKey)
 		if ok {
 			o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
-			o.parsedOperation.ID = entry.operationID
+			o.parsedOperation.InternalID = entry.operationID
 			o.parsedOperation.Type = entry.operationType
 			o.parsedOperation.NormalizationCacheHit = true
 			err = o.setAndParseOperationDoc()
@@ -704,7 +708,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	}
 
 	// Generate the operation ID
-	o.parsedOperation.ID = o.kit.keyGen.Sum64()
+	o.parsedOperation.InternalID = o.kit.keyGen.Sum64()
 
 	// Print the operation with the original operation name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
@@ -718,7 +722,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 
 	if o.cache != nil && o.cache.normalizationCache != nil {
 		entry := NormalizationCacheEntry{
-			operationID:              o.parsedOperation.ID,
+			operationID:              o.parsedOperation.InternalID,
 			normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 			operationType:            o.parsedOperation.Type,
 		}
@@ -744,6 +748,7 @@ func (o *OperationKit) setAndParseOperationDoc() error {
 
 func (o *OperationKit) NormalizeVariables() error {
 	before := len(o.kit.doc.Input.Variables) + len(o.kit.doc.Input.RawBytes)
+
 	report := &operationreport.Report{}
 	o.kit.variablesNormalizer.NormalizeOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
 	if report.HasErrors() {
@@ -751,17 +756,55 @@ func (o *OperationKit) NormalizeVariables() error {
 			report: report,
 		}
 	}
+
+	// Assuming the user sends a multi-operation document
+	// During normalization, we removed the unused operations from the document
+	// This will always lead to operation definitions of a length of 1 even when multiple operations are sent
+	if o.parsedOperation.NormalizationCacheHit {
+		o.operationDefinitionRef = 0
+	}
+
+	// Print the operation without the operation name to get the pure normalized form
+	// Afterward we can calculate the operation ID that is used as a stable identifier for analytics
+
+	o.kit.normalizedOperation.Reset()
+	// store the original name of the operation
+	nameRef := o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name
+
+	staticNameRef := o.kit.doc.Input.AppendInputBytes([]byte(""))
+	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = staticNameRef
+
+	err := o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
+	if err != nil {
+		return err
+	}
+	// Reset the doc with the original name
+	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = nameRef
+
+	o.kit.keyGen.Reset()
+	_, err = o.kit.keyGen.WriteString(o.kit.normalizedOperation.String())
+	if err != nil {
+		return err
+	}
+
+	o.parsedOperation.ID = o.kit.keyGen.Sum64()
+
+	// If the normalized form of the operation didn't change, we don't need to print it again
 	after := len(o.kit.doc.Input.Variables) + len(o.kit.doc.Input.RawBytes)
 	if after == before {
 		return nil
 	}
+
 	o.kit.normalizedOperation.Reset()
-	err := o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
+
+	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
-		return errors.WithStack(fmt.Errorf("normalizeVariables: %w", err))
+		return err
 	}
+
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
+
 	return nil
 }
 
@@ -781,9 +824,13 @@ func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bo
 		return false, nil
 	}
 	o.parsedOperation.PersistedOperationCacheHit = true
-	o.parsedOperation.ID = entry.operationID
+	o.parsedOperation.NormalizationCacheHit = true
+	o.parsedOperation.InternalID = entry.operationID
 	o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
 	o.parsedOperation.Type = entry.operationType
+	//  We will always only have a single operation definition in the document
+	// Because we removed the unused operations during normalization
+	o.operationDefinitionRef = 0
 	err = o.setAndParseOperationDoc()
 	if err != nil {
 		return false, err
@@ -825,9 +872,10 @@ func (o *OperationKit) persistedOperationCacheKeyHasTtl(clientName string) (bool
 func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bool, skipIncludeVariableNames []string) {
 	cacheKey := o.generatePersistedOperationCacheKey(clientName, skipIncludeVariableNames)
 	entry := NormalizationCacheEntry{
-		operationID:              o.parsedOperation.ID,
+		operationID:              o.parsedOperation.InternalID,
 		normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 		operationType:            o.parsedOperation.Type,
+		operationDefinitionRef:   o.operationDefinitionRef,
 	}
 
 	if isApq {
@@ -914,7 +962,7 @@ func (o *OperationKit) Validate(skipLoader bool) (cacheHit bool, err error) {
 		}
 		if o.cache != nil && o.cache.validationCache != nil {
 			var valid bool
-			valid, cacheHit = o.cache.validationCache.Get(o.parsedOperation.ID)
+			valid, cacheHit = o.cache.validationCache.Get(o.parsedOperation.InternalID)
 			if valid {
 				return
 			}
@@ -924,7 +972,7 @@ func (o *OperationKit) Validate(skipLoader bool) (cacheHit bool, err error) {
 	o.kit.operationValidator.Validate(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
 	if o.cache != nil && o.cache.validationCache != nil {
 		valid := !report.HasErrors()
-		o.cache.validationCache.Set(o.parsedOperation.ID, valid, 1)
+		o.cache.validationCache.Set(o.parsedOperation.InternalID, valid, 1)
 	}
 	if report.HasErrors() {
 		return cacheHit, &reportError{
@@ -937,7 +985,7 @@ func (o *OperationKit) Validate(skipLoader bool) (cacheHit bool, err error) {
 // ValidateQueryComplexity validates that the query complexity is within the limits set in the configuration
 func (o *OperationKit) ValidateQueryComplexity(complexityLimitConfig *config.ComplexityLimits, operation, definition *ast.Document, isPersisted bool) (bool, ComplexityCacheEntry, error) {
 	if o.cache != nil && o.cache.complexityCache != nil {
-		if cachedComplexity, ok := o.cache.complexityCache.Get(o.parsedOperation.ID); ok {
+		if cachedComplexity, ok := o.cache.complexityCache.Get(o.parsedOperation.InternalID); ok {
 			return ok, cachedComplexity, o.runComplexityComparisons(complexityLimitConfig, cachedComplexity, isPersisted)
 		}
 	}
@@ -957,7 +1005,7 @@ func (o *OperationKit) ValidateQueryComplexity(complexityLimitConfig *config.Com
 	}
 
 	if o.cache != nil && o.cache.complexityCache != nil {
-		o.cache.complexityCache.Set(o.parsedOperation.ID, cacheResult, 1)
+		o.cache.complexityCache.Set(o.parsedOperation.InternalID, cacheResult, 1)
 	}
 
 	return false, cacheResult, o.runComplexityComparisons(complexityLimitConfig, cacheResult, isPersisted)
@@ -1114,8 +1162,8 @@ func (p *OperationProcessor) freeKit(kit *parseKit) {
 	p.parseKitSemaphore <- kit.i
 }
 
-func (p *OperationProcessor) ReadBody(buf *bytes.Buffer, r io.Reader) ([]byte, error) {
-	if _, err := io.Copy(buf, r); err != nil {
+func (p *OperationProcessor) ReadBody(reader io.Reader, buf *bytes.Buffer) ([]byte, error) {
+	if _, err := io.Copy(buf, reader); err != nil {
 		// Set when http.MaxBytesReader is used before
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
