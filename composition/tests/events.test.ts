@@ -614,6 +614,20 @@ describe('events Configuration tests', () => {
     );
   });
 
+  test('that an error is returned if a NATS request subject uses streamConfiguration and there is a wrong definition of edfs__NatsStreamConfiguration', () => {
+    const { errors } = normalizeSubgraph(subgraphAN.definitions, subgraphAN.name);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
+      invalidEventDrivenGraphError([invalidNatsStreamConfigurationDefinitionErrorMessage]),
+    );
+  });
+
+  test('that no error is returned if a NATS request subject is without streamConfiguration and there is a wrong definition of edfs__NatsStreamConfiguration', () => {
+    const { errors } = normalizeSubgraph(subgraphAO.definitions, subgraphAO.name);
+    expect(errors).toBeUndefined();
+  });
+
   test('that an error is returned if a NATS publish subject references a valid argument and an invalid one', () => {
     const { errors } = normalizeSubgraph(subgraphAI.definitions, subgraphAI.name);
     expect(errors).toBeDefined();
@@ -1677,6 +1691,51 @@ const subgraphAM: Subgraph = {
 
     type edfs__PublishResult {
       success: Boolean!
+    }
+  `),
+};
+
+const subgraphAN: Subgraph = {
+  name: 'subgraph-an',
+  url: '',
+  definitions: parse(`
+    type Subscription {
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(
+        subjects: ["entities.{{ args.id }}"],
+        streamConfiguration: {consumerName: "consumer", streamName: "streamName"}
+      )
+    }
+
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    input edfs__NatsStreamConfiguration {
+      consumerInactiveThreshold: String!
+      consumerName: String!
+      streamName: String!
+    }
+  `),
+};
+
+const subgraphAO: Subgraph = {
+  name: 'subgraph-ao',
+  url: '',
+  definitions: parse(`
+    type Subscription {
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(
+        subjects: ["entities.{{ args.id }}"],
+      )
+    }
+
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    input edfs__NatsStreamConfiguration {
+      consumerInactiveThreshold: String!
+      consumerName: String!
+      streamName: String!
     }
   `),
 };
