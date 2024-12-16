@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"io"
 	"mime"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 )
 
 type MultipartParser struct {
@@ -114,7 +115,7 @@ func (p *MultipartParser) Parse(r *http.Request, buf *bytes.Buffer) ([]byte, []h
 		}
 	}
 
-	body, err = p.operationProcessor.ReadBody(buf, strings.NewReader(strings.Join(p.form.Value["operations"], "")))
+	body, err = p.operationProcessor.ReadBody(strings.NewReader(strings.Join(p.form.Value["operations"], "")), buf)
 	if err != nil {
 		return body, p.files, err
 	}
