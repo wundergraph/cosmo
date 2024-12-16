@@ -1179,8 +1179,8 @@ func (p *OperationProcessor) freeKit(kit *parseKit) {
 	p.parseKitSemaphore <- kit.i
 }
 
-func (p *OperationProcessor) ReadBody(buf *bytes.Buffer, r io.Reader) ([]byte, error) {
-	if _, err := io.Copy(buf, r); err != nil {
+func (p *OperationProcessor) ReadBody(reader io.Reader, buf *bytes.Buffer) ([]byte, error) {
+	if _, err := io.Copy(buf, reader); err != nil {
 		// Set when http.MaxBytesReader is used before
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
