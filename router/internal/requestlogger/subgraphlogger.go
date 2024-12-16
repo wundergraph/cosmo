@@ -43,7 +43,7 @@ func NewSubgraphAccessLogger(logger *zap.Logger, opts SubgraphOptions) *Subgraph
 	}
 }
 
-func (h *SubgraphAccessLogger) GetRequestFields(respInfo *resolve.ResponseInfo, subgraphFields []zap.Field) []zap.Field {
+func (h *SubgraphAccessLogger) RequestFields(respInfo *resolve.ResponseInfo, subgraphFields []zap.Field) []zap.Field {
 	if respInfo == nil {
 		return []zap.Field{}
 	}
@@ -59,6 +59,6 @@ func (h *SubgraphAccessLogger) GetRequestFields(respInfo *resolve.ResponseInfo, 
 	return fields
 }
 
-func (h *SubgraphAccessLogger) WriteLog(message string, fields []zap.Field) {
+func (h *SubgraphAccessLogger) Info(message string, fields ...zap.Field) {
 	h.logger.Info(message, fields...)
 }

@@ -25,12 +25,12 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		subgraphLogger := requestlogger.NewSubgraphAccessLogger(l, requestlogger.SubgraphOptions{})
 		req, err := http.NewRequest("POST", "http://localhost:3002/graphql", nil)
 		require.NoError(t, err)
-		subgraphLogger.WriteLog("", subgraphLogger.GetRequestFields(&resolve.ResponseInfo{
+		subgraphLogger.Info("", subgraphLogger.RequestFields(&resolve.ResponseInfo{
 			StatusCode:      200,
 			Err:             nil,
 			Request:         req,
 			ResponseHeaders: nil,
-		}, nil))
+		}, nil)...)
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
@@ -54,12 +54,12 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		req, err := http.NewRequest("POST", "http://localhost:3002/graphql", nil)
 		req.RemoteAddr = "my-test"
 		require.NoError(t, err)
-		subgraphLogger.WriteLog("", subgraphLogger.GetRequestFields(&resolve.ResponseInfo{
+		subgraphLogger.Info("", subgraphLogger.RequestFields(&resolve.ResponseInfo{
 			StatusCode:      200,
 			Err:             nil,
 			Request:         req,
 			ResponseHeaders: nil,
-		}, nil))
+		}, nil)...)
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
@@ -88,12 +88,12 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		req, err := http.NewRequest("POST", "http://localhost:3002/graphql", nil)
 		req.RemoteAddr = "my-test"
 		require.NoError(t, err)
-		subgraphLogger.WriteLog("", subgraphLogger.GetRequestFields(&resolve.ResponseInfo{
+		subgraphLogger.Info("", subgraphLogger.RequestFields(&resolve.ResponseInfo{
 			StatusCode:      200,
 			Err:             nil,
 			Request:         req,
 			ResponseHeaders: nil,
-		}, nil))
+		}, nil)...)
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
@@ -122,12 +122,12 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		req, err := http.NewRequest("POST", "http://localhost:3002/graphql", nil)
 		req.RemoteAddr = "my-test"
 		require.NoError(t, err)
-		subgraphLogger.WriteLog("", subgraphLogger.GetRequestFields(&resolve.ResponseInfo{
+		subgraphLogger.Info("", subgraphLogger.RequestFields(&resolve.ResponseInfo{
 			StatusCode:      200,
 			Err:             nil,
 			Request:         req,
 			ResponseHeaders: nil,
-		}, nil))
+		}, nil)...)
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
@@ -168,14 +168,14 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		req.Header.Add("test-header", "test-value")
 
 		require.NoError(t, err)
-		subgraphLogger.WriteLog("", subgraphLogger.GetRequestFields(&resolve.ResponseInfo{
+		subgraphLogger.Info("", subgraphLogger.RequestFields(&resolve.ResponseInfo{
 			StatusCode: 200,
 			Err:        nil,
 			Request:    req,
 			ResponseHeaders: map[string][]string{
 				"Test-Response-Header": {"test-response-value"},
 			},
-		}, nil))
+		}, nil)...)
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
@@ -227,14 +227,14 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			},
 		})
 
-		subgraphLogger.WriteLog("subgraph error", subgraphLogger.GetRequestFields(&resolve.ResponseInfo{
+		subgraphLogger.Info("subgraph error", subgraphLogger.RequestFields(&resolve.ResponseInfo{
 			StatusCode: 200,
 			Err:        errors.New("my-test-error"),
 			Request:    nil,
 			ResponseHeaders: map[string][]string{
 				"Test-Response-Header": {"test-response-value"},
 			},
-		}, nil))
+		}, nil)...)
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()

@@ -143,12 +143,12 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		}
 		path := ds.Name
 		if responseInfo.Request != nil {
-			fields = append(fields, f.accessLogger.GetRequestFields(responseInfo, fields)...)
+			fields = append(fields, f.accessLogger.RequestFields(responseInfo, fields)...)
 			if responseInfo.Request.URL != nil {
 				path = responseInfo.Request.URL.Path
 			}
 		}
-		f.accessLogger.WriteLog(path, fields)
+		f.accessLogger.Info(path, fields...)
 	}
 
 	if responseInfo.Err != nil {
