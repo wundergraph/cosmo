@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.152.0](https://github.com/wundergraph/cosmo/compare/router@0.151.1...router@0.152.0) (2024-12-16)
+
+### Bug Fixes
+
+* **router:** ensure subgraph access logs handles null requests/errors ([#1445](https://github.com/wundergraph/cosmo/issues/1445)) ([909967e](https://github.com/wundergraph/cosmo/commit/909967eb02e66f859c9aeae0818675756166a215)) (@df-wg)
+
+### Features
+
+* implement otel cardinality limit ([#1423](https://github.com/wundergraph/cosmo/issues/1423)) ([c31c563](https://github.com/wundergraph/cosmo/commit/c31c563d3cd82b6da3c3bba7cbfdb4674077ba7c)) (@Noroth)
+
 ## [0.151.1](https://github.com/wundergraph/cosmo/compare/router@0.151.0...router@0.151.1) (2024-12-12)
 
 ### Bug Fixes
