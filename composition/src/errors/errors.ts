@@ -1055,7 +1055,7 @@ export const invalidNatsStreamInputErrorMessage =
 
 export function invalidArgumentValueErrorMessage(hostCoords: string, kind: Kind, value?: string): string {
   return (
-    `The value ` + (value ? `"${value}" ` : ``) + `passed to "${hostCoords}" is not type ${kindToTypeString(kind)}.`
+    `The value ` + (value ? `"${value}" ` : ``) + `passed to "${hostCoords}" is not type "${kindToTypeString(kind)}".`
   );
 }
 
