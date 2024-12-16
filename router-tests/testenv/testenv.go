@@ -21,8 +21,10 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -266,14 +268,14 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 		return setupNatsData(t)
 	}
 
-	natsPort, err := freeport.GetFreePort()
-	if err != nil {
-		t.Fatalf("could not get free port: %s", err)
+	natsPort := getFreePort()
+	if natsPort == 0 {
+		t.Fatalf("could not get free port for nats")
 	}
 
 	// create dir in tmp for nats server
 	natsDir := filepath.Join(os.TempDir(), fmt.Sprintf("nats-%s", uuid.New()))
-	err = os.MkdirAll(natsDir, os.ModePerm)
+	err := os.MkdirAll(natsDir, os.ModePerm)
 	if err != nil {
 		t.Fatalf("could not create nats dir: %s", err)
 	}
@@ -343,10 +345,13 @@ func setupKafkaServers(t testing.TB) (*KafkaData, error) {
 	return kafkaData, nil
 }
 
+var portMux sync.Mutex
 var assignedPorts []int
 var freePorts []int
 
 func getFreePort() int {
+	portMux.Lock()
+	defer portMux.Unlock()
 	if len(freePorts) == 0 {
 	outerLoop:
 		for i := 0; i < 10; i++ {
@@ -381,6 +386,8 @@ func getFreePort() int {
 }
 
 func unlockFreePort(port int) {
+	portMux.Lock()
+	defer portMux.Unlock()
 	i, found := slices.BinarySearch(assignedPorts, port)
 	if found {
 		assignedPorts = append(assignedPorts[:i], assignedPorts[i+1:]...)
@@ -921,8 +928,8 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	var prometheusConfig rmetric.PrometheusConfig
 
 	if testConfig.PrometheusRegistry != nil {
-		port, err := freeport.GetFreePort()
-		if err != nil {
+		port := getFreePort()
+		if port == 0 {
 			return nil, fmt.Errorf("could not get free port: %w", err)
 		}
 		prometheusConfig = rmetric.PrometheusConfig{
@@ -1016,7 +1023,12 @@ func testTokenClaims() jwt.MapClaims {
 }
 
 func setupCDNServer() *httptest.Server {
-	cdnFileServer := http.FileServer(http.Dir(filepath.Join("testenv", "testdata", "cdn")))
+	_, filePath, _, ok := runtime.Caller(0)
+	if !ok {
+		panic("Failed to get current file path")
+	}
+	baseCdnFile := filepath.Join(path.Dir(filePath), "testdata", "cdn")
+	cdnFileServer := http.FileServer(http.Dir(baseCdnFile))
 	var cdnRequestLog []string
 	cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
@@ -1046,6 +1058,7 @@ func setupCDNServer() *httptest.Server {
 		}
 		cdnFileServer.ServeHTTP(w, r)
 	}))
+
 	return cdnServer
 }
 

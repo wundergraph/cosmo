@@ -14,7 +14,10 @@ import (
 
 // FindConsultancyByUpc is the resolver for the findConsultancyByUpc field.
 func (r *entityResolver) FindConsultancyByUpc(ctx context.Context, upc string) (*model.Consultancy, error) {
-	return consultancy, nil
+	// should make a copy to avoid data race in concurrent environment
+	// the entity can be modified by PopulateConsultancyRequires, as an example
+	newConsultancy := *consultancy
+	return &newConsultancy, nil
 }
 
 // FindCosmoByUpc is the resolver for the findCosmoByUpc field.

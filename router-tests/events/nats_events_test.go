@@ -1,4 +1,4 @@
-package integration_test
+package events_test
 
 import (
 	"bufio"
@@ -293,8 +293,8 @@ func TestNatsEvents(t *testing.T) {
 				EnableNats: true,
 				TLSConfig: &core.TlsConfig{
 					Enabled:  true,
-					CertFile: "testdata/tls/cert.pem",
-					KeyFile:  "testdata/tls/key.pem",
+					CertFile: "../testdata/tls/cert.pem",
+					KeyFile:  "../testdata/tls/key.pem",
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 

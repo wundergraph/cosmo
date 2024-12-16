@@ -1,12 +1,7 @@
-package integration
+package telemetry
 
 import (
 	"context"
-	"net/http"
-	"regexp"
-	"runtime"
-	"testing"
-
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -17,7 +12,12 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.19.0"
 	"go.opentelemetry.io/otel/trace"
+	"net/http"
+	"regexp"
+	"runtime"
+	"testing"
 
+	integration "github.com/wundergraph/cosmo/router-tests"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -27,7 +27,7 @@ import (
 )
 
 func TestOperationCacheTelemetry(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	const (
 		// The base cost to store any item in the cache with the current configuration
@@ -37,7 +37,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 	)
 
 	t.Run("Validate operation cache telemetry based on default cache size configurations without feature flags", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 		metricReader := metric.NewManualReader()
 
 		testenv.Run(t, &testenv.Config{
@@ -319,7 +319,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 	})
 
 	t.Run("Validate operation cache telemetry when prometheus is also enabled", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 		metricReader := metric.NewManualReader()
 
 		testenv.Run(t, &testenv.Config{
@@ -602,7 +602,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 	})
 
 	t.Run("Validate key and cost eviction metrics with small validation cache size without feature flags", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 		metricReader := metric.NewManualReader()
 
 		testenv.Run(t, &testenv.Config{
@@ -887,7 +887,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 	})
 
 	t.Run("Validate operation cache telemetry for default configuration including feature flags", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 		metricReader := metric.NewManualReader()
 
 		testenv.Run(t, &testenv.Config{
@@ -1403,12 +1403,12 @@ func TestOperationCacheTelemetry(t *testing.T) {
 }
 
 func TestRuntimeTelemetry(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
 
 	t.Run("Trace unnamed GraphQL operation and validate all runtime metrics / including a feature graph", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		metricReader := metric.NewManualReader()
 		exporter := tracetest.NewInMemoryExporter(t)
@@ -1776,12 +1776,12 @@ func TestRuntimeTelemetry(t *testing.T) {
 }
 
 func TestTelemetry(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
 
 	t.Run("Trace unnamed GraphQL operation and validate all metrics and spans", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		metricReader := metric.NewManualReader()
 		exporter := tracetest.NewInMemoryExporter(t)
@@ -2459,7 +2459,7 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Trace persisted operation", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		metricReader := metric.NewManualReader()
 		exporter := tracetest.NewInMemoryExporter(t)
@@ -2517,7 +2517,7 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Custom span and resource attributes are attached to all metrics and spans / from header", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		metricReader := metric.NewManualReader()
 		exporter := tracetest.NewInMemoryExporter(t)
@@ -2921,7 +2921,7 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Custom span and resource attributes are attached to all metrics and spans / static", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		metricReader := metric.NewManualReader()
 		exporter := tracetest.NewInMemoryExporter(t)
@@ -3323,7 +3323,7 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Requesting a feature flags will emit different router config version and add the feature flag attribute", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		metricReader := metric.NewManualReader()
 		exporter := tracetest.NewInMemoryExporter(t)
@@ -3687,7 +3687,7 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Spans are sampled because parent based sampling is disabled and ratio based sampler is set 1 (always)", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
 
@@ -3755,7 +3755,7 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Spans are sampled because parent based sampler is enabled by default and parent span sample flag is set", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
 
@@ -3822,7 +3822,7 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Spans are not sampled because parent based sampler is enabled by default and parent span sample flag is not set", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
 
@@ -3844,7 +3844,7 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Client TraceID is respected with parent based sampler", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
 
@@ -3867,7 +3867,7 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Trace named operation with parent-child relationship", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
 
@@ -3935,7 +3935,7 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Origin connectivity issue is traced", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
 		testenv.Run(t, &testenv.Config{
@@ -3979,7 +3979,7 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Subgraph error produces a span event per GraphQL error", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
 
@@ -4084,7 +4084,7 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Operation parsing errors are tracked", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
 		testenv.Run(t, &testenv.Config{
@@ -4132,7 +4132,7 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Operation normalization errors are tracked", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
 		testenv.Run(t, &testenv.Config{
@@ -4181,7 +4181,7 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Datadog Propagation", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		var (
 			datadogTraceId = "9532127138774266268"
@@ -4192,7 +4192,7 @@ func TestTelemetry(t *testing.T) {
 		)
 
 		t.Run("Datadog headers are propagated if enabled", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			exporter := tracetest.NewInMemoryExporter(t)
 
@@ -4223,7 +4223,7 @@ func TestTelemetry(t *testing.T) {
 		})
 
 		t.Run("Datadog headers correctly recognize sampling bit", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			exporter := tracetest.NewInMemoryExporter(t)
 
@@ -4254,7 +4254,7 @@ func TestTelemetry(t *testing.T) {
 		})
 
 		t.Run("Correctly pass along Datadog headers", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			exporter := tracetest.NewInMemoryExporter(t)
 
@@ -4291,7 +4291,7 @@ func TestTelemetry(t *testing.T) {
 		})
 
 		t.Run("Doesn't propagate headers in datadog format if datadog config is not set", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			exporter := tracetest.NewInMemoryExporter(t)
 
@@ -4323,7 +4323,7 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Trace ID Response header", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
 		customTraceHeader := "trace-id"
@@ -4347,7 +4347,7 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Trace ID Response header with default header name", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
 
@@ -4370,7 +4370,7 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Custom client name and client version headers", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
 
@@ -4410,7 +4410,7 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Excluded metrics and attributes should not be exported", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		var (
 			rmFull     metricdata.ResourceMetrics
@@ -4512,10 +4512,10 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Custom Metric Attributes", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		t.Run("Custom attributes are added to all metrics / subgraph error", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			exporter := tracetest.NewInMemoryExporter(t)
 			metricReader := metric.NewManualReader()
@@ -5056,7 +5056,7 @@ func TestTelemetry(t *testing.T) {
 		})
 
 		t.Run("Should emit subgraph error metric when subgraph request failed / connection issue", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			exporter := tracetest.NewInMemoryExporter(t)
 			metricReader := metric.NewManualReader()
@@ -5116,7 +5116,7 @@ func TestTelemetry(t *testing.T) {
 		})
 
 		t.Run("Tracing is not affected by custom metric attributes", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			metricReader := metric.NewManualReader()
 			exporter := tracetest.NewInMemoryExporter(t)
@@ -5201,9 +5201,9 @@ func TestTelemetry(t *testing.T) {
 	})
 
 	t.Run("Complexity Cache Metrics", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 		t.Run("total fields caches success and failure runs", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			metricReader := metric.NewManualReader()
 			exporter := tracetest.NewInMemoryExporter(t)
@@ -5229,7 +5229,7 @@ func TestTelemetry(t *testing.T) {
 				require.Equal(t, 400, failedRes.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"The total number of fields 2 exceeds the limit allowed (1)"}]}`, failedRes.Body)
 
-				testSpan := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryTotalFields.Int(2))
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
@@ -5240,7 +5240,7 @@ func TestTelemetry(t *testing.T) {
 				require.Equal(t, 400, failedRes2.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"The total number of fields 2 exceeds the limit allowed (1)"}]}`, failedRes2.Body)
 
-				testSpan2 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan2 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryTotalFields.Int(2))
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 				exporter.Reset()
@@ -5249,7 +5249,7 @@ func TestTelemetry(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, successRes.Body)
-				testSpan3 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan3 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryTotalFields.Int(1))
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
@@ -5258,14 +5258,14 @@ func TestTelemetry(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, successRes2.Body)
-				testSpan4 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan4 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryTotalFields.Int(1))
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 			})
 		})
 
 		t.Run("root fields caches success and failure runs", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			metricReader := metric.NewManualReader()
 			exporter := tracetest.NewInMemoryExporter(t)
@@ -5291,7 +5291,7 @@ func TestTelemetry(t *testing.T) {
 				require.Equal(t, 400, failedRes.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"The number of root fields 3 exceeds the root field limit allowed (2)"}]}`, failedRes.Body)
 
-				testSpan := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryRootFields.Int(3))
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
@@ -5302,7 +5302,7 @@ func TestTelemetry(t *testing.T) {
 				require.Equal(t, 400, failedRes2.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"The number of root fields 3 exceeds the root field limit allowed (2)"}]}`, failedRes2.Body)
 
-				testSpan2 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan2 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryRootFields.Int(3))
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 				exporter.Reset()
@@ -5311,7 +5311,7 @@ func TestTelemetry(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, successRes.Body)
-				testSpan3 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan3 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryRootFields.Int(1))
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
@@ -5320,14 +5320,14 @@ func TestTelemetry(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, successRes2.Body)
-				testSpan4 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan4 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryRootFields.Int(1))
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 			})
 		})
 
 		t.Run("root fields caches success and failure runs", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			metricReader := metric.NewManualReader()
 			exporter := tracetest.NewInMemoryExporter(t)
@@ -5353,7 +5353,7 @@ func TestTelemetry(t *testing.T) {
 				require.Equal(t, 400, failedRes.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"The number of root field aliases 2 exceeds the root field aliases limit allowed (1)"}]}`, failedRes.Body)
 
-				testSpan := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryRootFieldAliases.Int(2))
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
@@ -5364,7 +5364,7 @@ func TestTelemetry(t *testing.T) {
 				require.Equal(t, 400, failedRes2.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"The number of root field aliases 2 exceeds the root field aliases limit allowed (1)"}]}`, failedRes2.Body)
 
-				testSpan2 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan2 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryRootFieldAliases.Int(2))
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 				exporter.Reset()
@@ -5373,7 +5373,7 @@ func TestTelemetry(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, successRes.Body)
-				testSpan3 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan3 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryRootFieldAliases.Int(0))
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
@@ -5382,7 +5382,7 @@ func TestTelemetry(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, successRes2.Body)
-				testSpan4 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan4 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryRootFieldAliases.Int(0))
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 			})

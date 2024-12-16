@@ -14,8 +14,6 @@ type PersistedOperation struct {
 	Body    string `json:"body"`
 }
 
-var PoNotFoundErr *PersistentOperationNotFoundError
-
 type PersistentOperationNotFoundError struct {
 	ClientName string
 	Sha256Hash string
@@ -84,6 +82,7 @@ func (c client) PersistedOperation(ctx context.Context, clientName string, sha25
 	}
 
 	content, _, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash)
+	var PoNotFoundErr *PersistentOperationNotFoundError
 	if errors.As(err, &PoNotFoundErr) && c.apqClient != nil {
 		// This could well be the first time a client is requesting an APQ operation and the query is attached to the request. Return without error here, and we'll verify the operation later.
 		return content, true, nil

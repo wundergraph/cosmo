@@ -1,4 +1,4 @@
-package integration_test
+package events_test
 
 import (
 	"bufio"
@@ -41,6 +41,7 @@ func TestKafkaEvents(t *testing.T) {
 		t.Skip("skipping test in short mode.")
 	}
 	t.Run("subscribe async", func(t *testing.T) {
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -99,6 +100,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("message and resolve errors should not abort the subscription", func(t *testing.T) {
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -181,6 +183,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("every subscriber gets the message", func(t *testing.T) {
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -245,6 +248,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe to multiple topics through a single directive", func(t *testing.T) {
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -334,6 +338,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe async netPoll disabled", func(t *testing.T) {
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -396,6 +401,8 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("multipart", func(t *testing.T) {
+		t.Parallel()
+
 		assertLineEquals := func(reader *bufio.Reader, expected string) {
 			line, _, err := reader.ReadLine()
 			require.NoError(t, err)
@@ -411,6 +418,8 @@ func TestKafkaEvents(t *testing.T) {
 		var multipartHeartbeatInterval = 500 * time.Millisecond
 
 		t.Run("subscribe sync", func(t *testing.T) {
+			t.Parallel()
+
 			topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 			testenv.Run(t, &testenv.Config{
@@ -461,6 +470,7 @@ func TestKafkaEvents(t *testing.T) {
 		})
 
 		t.Run("subscribe sync with block", func(t *testing.T) {
+			t.Parallel()
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
@@ -491,6 +501,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe sync sse legacy method works", func(t *testing.T) {
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -549,6 +560,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe sync sse", func(t *testing.T) {
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -607,6 +619,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe sync sse with block", func(t *testing.T) {
+		t.Parallel()
 
 		subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
@@ -647,6 +660,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe async with filter", func(t *testing.T) {
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -753,6 +767,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe async with filter and multiple list field arguments", func(t *testing.T) {
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -848,6 +863,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe async with filter and nested list argument", func(t *testing.T) {
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -943,6 +959,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe async with filter non-matching filter and nested list argument", func(t *testing.T) {
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
