@@ -708,7 +708,6 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	)
 
 	planOptions := PlanOptions{
-		Protocol:             OperationProtocolHTTP,
 		ClientInfo:           requestContext.operation.clientInfo,
 		TraceOptions:         requestContext.operation.traceOptions,
 		ExecutionOptions:     requestContext.operation.executionOptions,

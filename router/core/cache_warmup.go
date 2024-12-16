@@ -242,7 +242,6 @@ func (w *cacheWarmup) processOperation(ctx context.Context, item *CacheWarmupIte
 	}
 
 	planOptions := PlanOptions{
-		Protocol:   OperationProtocolHTTP,
 		ClientInfo: item.Client,
 		TraceOptions: resolve.TraceOptions{
 			Enable: false,
