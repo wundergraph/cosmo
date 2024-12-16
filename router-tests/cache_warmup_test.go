@@ -249,7 +249,7 @@ func TestCacheWarmup(t *testing.T) {
 				Header:        header,
 			})
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
 		})
 	})
 	t.Run("cache warmup workers throttle", func(t *testing.T) {
