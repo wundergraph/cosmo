@@ -96,6 +96,7 @@ import {
   expectedEntityError,
   externalInterfaceFieldsError,
   invalidArgumentsError,
+  invalidArgumentValueErrorMessage,
   invalidDirectiveArgumentTypeErrorMessage,
   invalidDirectiveError,
   invalidEdfsDirectiveName,
@@ -109,8 +110,6 @@ import {
   invalidEventSubjectsItemErrorMessage,
   invalidExternalDirectiveError,
   invalidImplementedTypeError,
-  invalidIntegerTypeValue,
-  invalidIntegerValue,
   invalidInterfaceImplementationError,
   invalidKeyDirectiveArgumentErrorMessage,
   invalidKeyDirectivesError,
@@ -204,8 +203,7 @@ import { ConfigurationData, EventConfiguration, NatsEventType } from '../router-
 import { printTypeNode } from '@graphql-tools/merge';
 import { InternalSubgraph, recordSubgraphName, Subgraph } from '../subgraph/subgraph';
 import {
-  consumerInactiveThresholdValueShouldBePositiveWarning,
-  maxConsumerInactiveThresholdExceededWarning,
+  consumerInactiveThresholdInvalidValueWarning,
   externalInterfaceFieldsWarning,
   invalidExternalFieldWarning,
   invalidOverrideTargetSubgraphNameWarning,
@@ -1393,7 +1391,10 @@ export class NormalizationFactory {
               case CONSUMER_INACTIVE_THRESHOLD:
                 if (field.value.kind != Kind.INT) {
                   errorMessages.push(
-                    invalidIntegerTypeValue('edfs__NatsStreamConfiguration(consumerInactiveThreshold: ...)'),
+                    invalidArgumentValueErrorMessage(
+                      'edfs__NatsStreamConfiguration(consumerInactiveThreshold: ...)',
+                      Kind.INT,
+                    ),
                   );
                   isValid = false;
                   continue;
@@ -1403,9 +1404,10 @@ export class NormalizationFactory {
                   consumerInactiveThreshold = parseInt(field.value.value, 10);
                 } catch (e) {
                   errorMessages.push(
-                    invalidIntegerValue(
-                      field.value.value,
+                    invalidArgumentValueErrorMessage(
                       'edfs__NatsStreamConfiguration(consumerInactiveThreshold: ...)',
+                      Kind.INT,
+                      field.value.value,
                     ),
                   );
                   isValid = false;
@@ -1430,11 +1432,21 @@ export class NormalizationFactory {
       return;
     }
     if (consumerInactiveThreshold < 0) {
-      this.warnings.push(consumerInactiveThresholdValueShouldBePositiveWarning(this.subgraphName));
       consumerInactiveThreshold = DEFAULT_CONSUMER_INACTIVE_THRESHOLD;
+      this.warnings.push(
+        consumerInactiveThresholdInvalidValueWarning(
+          this.subgraphName,
+          `The value has been set to ${DEFAULT_CONSUMER_INACTIVE_THRESHOLD}.`,
+        ),
+      );
     } else if (consumerInactiveThreshold > MAX_INT32) {
-      this.warnings.push(maxConsumerInactiveThresholdExceededWarning(this.subgraphName));
       consumerInactiveThreshold = 0;
+      this.warnings.push(
+        consumerInactiveThresholdInvalidValueWarning(
+          this.subgraphName,
+          'The value has been set to 0. This means the consumer will remain indefinitely active until its manual deletion.',
+        ),
+      );
     }
     return {
       fieldName: this.childName,

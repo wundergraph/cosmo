@@ -132,24 +132,14 @@ export function requiresDefinedOnNonEntityFieldWarning(fieldCoords: string, subg
   });
 }
 
-export function consumerInactiveThresholdValueShouldBePositiveWarning(subgraphName: string): Warning {
+export function consumerInactiveThresholdInvalidValueWarning(
+  subgraphName: string,
+  additionalMsg: string = '',
+): Warning {
   return new Warning({
     message:
-      `The "consumerInactiveThreshold" argument of type "Int" should be positive and smaller than 2,147,483,647.\n` +
-      `The value has been set to ` +
-      DEFAULT_CONSUMER_INACTIVE_THRESHOLD +
-      `.`,
-    subgraph: {
-      name: subgraphName,
-    },
-  });
-}
-
-export function maxConsumerInactiveThresholdExceededWarning(subgraphName: string): Warning {
-  return new Warning({
-    message:
-      `The "consumerInactiveThreshold" argument of type "Int" should be positive and smaller than 2 147 483 647.\n` +
-      `The value has been set to 0. This means the consumer will remain indefinitely active until its manual deletion.`,
+      `The "consumerInactiveThreshold" argument of type "Int" should be positive and smaller than 2 147 483 648.` +
+      + additionalMsg ? `\n${additionalMsg}` : '',
     subgraph: {
       name: subgraphName,
     },
