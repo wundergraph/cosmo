@@ -95,7 +95,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("type", "hits"),
 							)...),
 							Value: 1,
@@ -103,7 +103,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
@@ -111,7 +111,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("type", "hits"),
 							)...),
 							Value: 1,
@@ -140,6 +140,22 @@ func TestOperationCacheTelemetry(t *testing.T) {
 							)...),
 							Value: 2,
 						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 0,
+						},
 					},
 				},
 			}
@@ -155,7 +171,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: 2,
@@ -163,7 +179,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -171,14 +187,14 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
 						},
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: 2,
@@ -186,7 +202,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -194,7 +210,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -218,6 +234,29 @@ func TestOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
 								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -237,7 +276,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: baseCost * 2,
@@ -245,14 +284,14 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
 						},
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: baseCost * 2,
@@ -260,7 +299,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -276,6 +315,21 @@ func TestOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
 								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -293,20 +347,26 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 							)...),
 							Value: 1024,
 						},
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 							)...),
 							Value: 1024,
 						},
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
 								attribute.String("cache_type", "validation"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 							)...),
 							Value: 1024,
 						},
@@ -378,7 +438,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("type", "hits"),
 							)...),
 							Value: 1,
@@ -386,7 +446,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
@@ -394,7 +454,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("type", "hits"),
 							)...),
 							Value: 1,
@@ -402,7 +462,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
@@ -422,6 +482,22 @@ func TestOperationCacheTelemetry(t *testing.T) {
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 0,
 						},
 					},
 				},
@@ -438,7 +514,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: 2,
@@ -446,7 +522,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -454,14 +530,14 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
 						},
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: 2,
@@ -469,7 +545,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -477,7 +553,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -501,6 +577,29 @@ func TestOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
 								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -520,7 +619,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: baseCost * 2,
@@ -528,14 +627,14 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
 						},
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: baseCost * 2,
@@ -543,7 +642,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -559,6 +658,21 @@ func TestOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
 								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -576,20 +690,26 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 							)...),
 							Value: 1024,
 						},
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 							)...),
 							Value: 1024,
 						},
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
 								attribute.String("cache_type", "validation"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 							)...),
 							Value: 1024,
 						},
@@ -663,7 +783,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("type", "hits"),
 							)...),
 							Value: 1,
@@ -671,7 +791,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
@@ -679,7 +799,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("type", "hits"),
 							)...),
 							Value: 1,
@@ -687,7 +807,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
@@ -707,6 +827,22 @@ func TestOperationCacheTelemetry(t *testing.T) {
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 0,
 						},
 					},
 				},
@@ -723,7 +859,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: 2,
@@ -731,7 +867,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -739,14 +875,14 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
 						},
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: 2,
@@ -754,7 +890,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -762,7 +898,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -786,6 +922,30 @@ func TestOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
 								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -805,7 +965,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: baseCost * 2,
@@ -813,14 +973,14 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
 						},
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: baseCost * 2,
@@ -828,7 +988,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -847,6 +1007,21 @@ func TestOperationCacheTelemetry(t *testing.T) {
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: baseCost,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
 						},
 					},
 				},
@@ -861,14 +1036,14 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 							)...),
 							Value: 1024,
 						},
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 							)...),
 							Value: 1024,
 						},
@@ -877,6 +1052,12 @@ func TestOperationCacheTelemetry(t *testing.T) {
 								attribute.String("cache_type", "validation"),
 							)...),
 							Value: baseCost,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+							)...),
+							Value: 1024,
 						},
 					},
 				},
@@ -977,14 +1158,14 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("type", "hits"),
 							)...),
 							Value: 1,
 						},
 						{
 							Attributes: attribute.NewSet(append(mainAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
@@ -992,7 +1173,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("type", "hits"),
 							)...),
 							Value: 1,
@@ -1000,10 +1181,26 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 0,
 						},
 						{
 							Attributes: attribute.NewSet(append(
@@ -1025,7 +1222,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("type", "hits"),
 							)...),
 							Value: 1,
@@ -1033,7 +1230,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
@@ -1041,7 +1238,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("type", "hits"),
 							)...),
 							Value: 1,
@@ -1049,10 +1246,26 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 0,
 						},
 						{
 							Attributes: attribute.NewSet(append(
@@ -1086,7 +1299,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: 2,
@@ -1094,7 +1307,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -1102,7 +1315,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -1110,7 +1323,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: 2,
@@ -1118,7 +1331,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -1126,7 +1339,31 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -1160,7 +1397,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: 2,
@@ -1168,7 +1405,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -1176,7 +1413,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -1184,7 +1421,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: 2,
@@ -1192,7 +1429,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -1200,7 +1437,31 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -1245,7 +1506,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: baseCost * 2,
@@ -1253,7 +1514,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -1261,7 +1522,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: baseCost * 2,
@@ -1269,7 +1530,23 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -1294,7 +1571,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: baseCost * 2,
@@ -1302,7 +1579,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -1310,7 +1587,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: baseCost * 2,
@@ -1318,7 +1595,23 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -1353,14 +1646,21 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 							)...),
 							Value: 1024,
 						},
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 							)...),
 							Value: 1024,
 						},
@@ -1375,14 +1675,21 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 							)...),
 							Value: 1024,
 						},
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 							)...),
 							Value: 1024,
 						},
