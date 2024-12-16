@@ -19,6 +19,7 @@ import {
   formatWebsocketSubprotocol,
   getLogger,
   handleError,
+  isValidGraphName,
 } from '../../util.js';
 
 export function createMonograph(
@@ -93,6 +94,18 @@ export function createMonograph(
             code: EnumStatusCode.ERR,
             details: `Graph URL is not a valid URL`,
           },
+        };
+      }
+
+      if (!isValidGraphName(req.name)) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_INVALID_NAME,
+            details: `The name of the monograph is invalid. Name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between.`,
+          },
+          compositionErrors: [],
+          deploymentErrors: [],
+          compositionWarnings: [],
         };
       }
 

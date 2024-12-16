@@ -2,17 +2,16 @@ import { randomFill } from 'node:crypto';
 import { S3ClientConfig } from '@aws-sdk/client-s3';
 import { HandlerContext } from '@connectrpc/connect';
 import {
-  EnumStatusCode,
   GraphQLSubscriptionProtocol,
-  GraphQLWebsocketSubprotocol,
+  GraphQLWebsocketSubprotocol
 } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
+import { AxiosError } from 'axios';
+import { isNetworkError, isRetryableError } from 'axios-retry';
 import { formatISO, subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
 import { parse, visit } from 'graphql';
 import { uid } from 'uid/secure';
-import { AxiosError } from 'axios';
-import { isNetworkError, isRetryableError } from 'axios-retry';
 import { MemberRole, WebsocketSubprotocol } from '../db/models.js';
 import { AuthContext, DateRange, Label, ResponseMessage, S3StorageOptions } from '../types/index.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
@@ -22,6 +21,7 @@ const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
 const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
 const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
 const schemaTagRegex = /^(?![/-])[\d/A-Za-z-]+(?<![/-])$/;
+const graphNameRegex = /^[\dA-Za-z]+(?:[./@_-][\dA-Za-z]+)*$/;
 
 /**
  * Wraps a function with a try/catch block and logs any errors that occur.
@@ -283,6 +283,10 @@ export const getHighestPriorityRole = ({ userRoles }: { userRoles: string[] }) =
 
 export const isValidNamespaceName = (name: string): boolean => {
   return namespaceRegex.test(name);
+};
+
+export const isValidGraphName = (name: string): boolean => {
+  return graphNameRegex.test(name);
 };
 
 export const isValidOrganizationSlug = (slug: string): boolean => {

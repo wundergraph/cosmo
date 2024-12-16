@@ -20,6 +20,7 @@ import {
   formatWebsocketSubprotocol,
   getLogger,
   handleError,
+  isValidGraphName,
   isValidLabels,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
@@ -258,6 +259,18 @@ export function publishFederatedSubgraph(
             compositionWarnings: [],
           };
         }
+      }
+
+      if (!isValidGraphName(req.name)) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_INVALID_NAME,
+            details: `The name of the subgraph is invalid. Name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between.`,
+          },
+          compositionErrors: [],
+          deploymentErrors: [],
+          compositionWarnings: [],
+        };
       }
 
       // Create the subgraph if it doesn't exist
