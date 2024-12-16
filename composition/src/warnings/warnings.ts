@@ -138,7 +138,7 @@ export function consumerInactiveThresholdInvalidValueWarning(
 ): Warning {
   return new Warning({
     message:
-      `The "consumerInactiveThreshold" argument of type "Int" should be positive and smaller than 2 147 483 648.` +
+      `The "consumerInactiveThreshold" argument of type "Int" should be positive and smaller than 2,147,483,648.` +
       + additionalMsg ? `\n${additionalMsg}` : '',
     subgraph: {
       name: subgraphName,

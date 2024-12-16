@@ -1054,7 +1054,7 @@ export const invalidNatsStreamInputErrorMessage =
   `  input edfs__NatsStreamConfiguration {\n    consumerInactiveThreshold: Int! = 30\n    consumerName: String!\n    streamName: String!\n  }`;
 
 export function invalidArgumentValueErrorMessage(hostCoords: string, kind: Kind, value?: string): string {
-  return `The value ` + (value ? `"${value}" ` : ``) + `passed to "${hostCoords}" is not a ${kindToTypeString(kind)}.`;
+  return `The value ` + (value ? `"${value}" ` : ``) + `passed to "${hostCoords}" is not type ${kindToTypeString(kind)}.`;
 }
 
 export function invalidNatsStreamInputFieldsErrorMessage(
