@@ -30,7 +30,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			Err:             nil,
 			Request:         req,
 			ResponseHeaders: nil,
-		}, nil)...)
+		}, nil))
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
@@ -59,7 +59,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			Err:             nil,
 			Request:         req,
 			ResponseHeaders: nil,
-		}, nil)...)
+		}, nil))
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
@@ -93,7 +93,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			Err:             nil,
 			Request:         req,
 			ResponseHeaders: nil,
-		}, nil)...)
+		}, nil))
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
@@ -127,7 +127,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			Err:             nil,
 			Request:         req,
 			ResponseHeaders: nil,
-		}, nil)...)
+		}, nil))
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
@@ -175,7 +175,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			ResponseHeaders: map[string][]string{
 				"Test-Response-Header": {"test-response-value"},
 			},
-		}, nil)...)
+		}, nil))
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
@@ -234,7 +234,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 			ResponseHeaders: map[string][]string{
 				"Test-Response-Header": {"test-response-value"},
 			},
-		}, nil)...)
+		}, nil))
 
 		require.Equal(t, 1, logObserver.Len())
 		requestContext := logObserver.All()[0].ContextMap()
