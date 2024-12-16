@@ -1147,7 +1147,7 @@ func (e *Environment) makeGraphQLRequest(request *http.Request) (*TestResponse, 
 }
 
 func (e *Environment) MakeGraphQLRequest(request GraphQLRequest) (*TestResponse, error) {
-	return e.MakeGraphQLRequestWithContext(e.Context, request)
+	return e.MakeGraphQLRequestWithContext(context.Background(), request)
 }
 
 func (e *Environment) MakeGraphQLRequestAsMultipartForm(request GraphQLRequest) (*TestResponse, error) {
