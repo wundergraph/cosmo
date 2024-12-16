@@ -59,7 +59,7 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 	}
 	cfg.Log.Info("Cache warmup - start",
 		zap.Int("workers", cfg.Workers),
-		zap.Int("itemsPerSecond", cfg.ItemsPerSecond),
+		zap.Int("items_per_second", cfg.ItemsPerSecond),
 		zap.Duration("timeout", cfg.Timeout),
 	)
 	start := time.Now()
@@ -68,18 +68,18 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 		if errors.Is(err, context.DeadlineExceeded) {
 			cfg.Log.Error("Cache warmup - timeout",
 				zap.Error(err),
-				zap.Int("processedItems", completed),
+				zap.Int("processed_items", completed),
 			)
 			return err
 		}
 		cfg.Log.Error("Cache warmup - error",
 			zap.Error(err),
-			zap.Int("processedItems", completed),
+			zap.Int("processed_items", completed),
 		)
 		return err
 	}
 	cfg.Log.Info("Cache warmup - completed",
-		zap.Int("processedItems", completed),
+		zap.Int("processed_items", completed),
 		zap.Duration("duration", time.Since(start)),
 	)
 	return nil
@@ -157,10 +157,10 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 					if err != nil {
 						w.log.Error("Failed to process operation, skipping",
 							zap.Error(err),
-							zap.String("clientName", item.Client.Name),
-							zap.String("clientVersion", item.Client.Version),
+							zap.String("client_name", item.Client.Name),
+							zap.String("client_version", item.Client.Version),
 							zap.String("query", item.Request.Query),
-							zap.String("operationName", item.Request.OperationName),
+							zap.String("operation_name", item.Request.OperationName),
 						)
 					}
 					select {
@@ -181,7 +181,7 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 			processed := i + 1
 			if processed%100 == 0 {
 				w.log.Info("Cache warmup - processed items",
-					zap.Int("processedItems", processed),
+					zap.Int("processed_items", processed),
 				)
 			}
 		}
