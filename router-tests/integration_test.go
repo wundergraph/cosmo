@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -394,7 +395,7 @@ func TestConcurrentBodyRead(t *testing.T) {
 		for i := 0; i < goRoutines; i++ {
 			go func() {
 				wg.Done()
-				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				res, err := xEnv.MakeGraphQLRequestWithContext(context.Background(), testenv.GraphQLRequest{
 					Query: bigEmployeesQuery,
 				})
 				require.NoError(t, err)
