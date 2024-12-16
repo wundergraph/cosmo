@@ -7420,6 +7420,555 @@ func TestTelemetry(t *testing.T) {
 			})
 		})
 
+		t.Run("should not remap high cardinality fields when using cloud exporter but include custom metric attributes", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+			metricReader := metric.NewManualReader()
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				MetricReader:  metricReader,
+				CustomMetricAttributes: []config.CustomAttribute{
+					{
+						Key:       "my_operation_name", // must not be remapped
+						ValueFrom: &config.CustomDynamicAttribute{ContextField: "operation_name"},
+					},
+					{
+						Key:       "my_operation_hash", // must not be remapped
+						ValueFrom: &config.CustomDynamicAttribute{ContextField: "operation_hash"},
+					},
+					{
+						Key: "from_header",
+						ValueFrom: &config.CustomDynamicAttribute{
+							RequestHeader: "x-custom-header",
+						},
+					},
+					{
+						Key: "sha256",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationSha256,
+						},
+					},
+					{
+						Key: "error_codes",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldGraphQLErrorCodes,
+						},
+					},
+					{
+						Key: "error_services",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldGraphQLErrorServices,
+						},
+					},
+					{
+						Key: "services",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationServices,
+						},
+					},
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Products: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header().Set("Content-Type", "application/json")
+								w.WriteHeader(http.StatusForbidden)
+								_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","path": ["foo"],"extensions":{"code":"UNAUTHORIZED"}},{"message":"MyErrorMessage","path": ["bar"],"extensions":{"code":"YOUR_ERROR_CODE"}}]}`))
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Header: map[string][]string{
+						"x-custom-header": {"custom-value"},
+					},
+					Query: `query myQuery { employees { id details { forename surname } notes } }`,
+				})
+				require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees'.","extensions":{"errors":[{"message":"Unauthorized","path":["foo"],"extensions":{"code":"UNAUTHORIZED"}},{"message":"MyErrorMessage","path":["bar"],"extensions":{"code":"YOUR_ERROR_CODE"}}],"statusCode":403}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
+
+				/**
+				* Traces
+				 */
+
+				sn := exporter.GetSpans().Snapshots()
+				require.Len(t, sn, 11, "expected 11 spans, got %d", len(sn))
+
+				// No additional attributes are added to the spans
+
+				/**
+				* Metrics
+				 */
+				rm := metricdata.ResourceMetrics{}
+				err := metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
+
+				require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
+				require.Equal(t, 7, len(rm.ScopeMetrics[0].Metrics), "expected 7 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+
+				httpRequestsMetric := metricdata.Metrics{
+					Name:        "router.http.requests",
+					Description: "Total number of requests",
+					Unit:        "",
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									attribute.String("from_header", "custom-value"),
+									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
+									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									semconv.HTTPStatusCode(403),
+									otel.WgRequestError.Bool(true),
+									otel.WgClientName.String("unknown"),
+									otel.WgClientVersion.String("missing"),
+									otel.WgFederatedGraphID.String("graph"),
+									otel.WgOperationHash.String("13939103824696605913"),
+									otel.WgOperationName.String("myQuery"),
+									otel.WgOperationProtocol.String("http"),
+									otel.WgOperationType.String("query"),
+									otel.WgRouterClusterName.String(""),
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+									otel.WgRouterVersion.String("dev"),
+									otel.WgSubgraphID.String("3"),
+									otel.WgSubgraphName.String("products"),
+								),
+								Value: 1,
+							},
+							{
+								Attributes: attribute.NewSet(
+									attribute.String("from_header", "custom-value"),
+									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									semconv.HTTPStatusCode(200),
+									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
+									attribute.StringSlice("services", []string{"employees", "products"}),
+									attribute.StringSlice("error_services", []string{"products"}),
+									otel.WgRequestError.Bool(true),
+									otel.WgClientName.String("unknown"),
+									otel.WgClientVersion.String("missing"),
+									otel.WgFederatedGraphID.String("graph"),
+									otel.WgOperationHash.String("13939103824696605913"),
+									otel.WgOperationName.String("myQuery"),
+									otel.WgOperationProtocol.String("http"),
+									otel.WgOperationType.String("query"),
+									otel.WgRouterClusterName.String(""),
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+									otel.WgRouterVersion.String("dev"),
+								),
+								Value: 1,
+							},
+							{
+								Attributes: attribute.NewSet(
+									attribute.String("from_header", "custom-value"),
+									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									semconv.HTTPStatusCode(200),
+									otel.WgClientName.String("unknown"),
+									otel.WgClientVersion.String("missing"),
+									otel.WgFederatedGraphID.String("graph"),
+									otel.WgOperationHash.String("13939103824696605913"),
+									otel.WgOperationName.String("myQuery"),
+									otel.WgOperationProtocol.String("http"),
+									otel.WgOperationType.String("query"),
+									otel.WgRouterClusterName.String(""),
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+									otel.WgRouterVersion.String("dev"),
+									otel.WgSubgraphID.String("0"),
+									otel.WgSubgraphName.String("employees"),
+								),
+								Value: 1,
+							},
+						},
+					},
+				}
+
+				requestDurationMetric := metricdata.Metrics{
+					Name:        "router.http.request.duration_milliseconds",
+					Description: "Server latency in milliseconds",
+					Unit:        "ms",
+					Data: metricdata.Histogram[float64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.HistogramDataPoint[float64]{
+							{
+								Attributes: attribute.NewSet(
+									attribute.String("from_header", "custom-value"),
+									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
+									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									otel.WgRequestError.Bool(true),
+									semconv.HTTPStatusCode(403),
+									otel.WgClientName.String("unknown"),
+									otel.WgClientVersion.String("missing"),
+									otel.WgFederatedGraphID.String("graph"),
+									otel.WgOperationHash.String("13939103824696605913"),
+									otel.WgOperationName.String("myQuery"),
+									otel.WgOperationProtocol.String("http"),
+									otel.WgOperationType.String("query"),
+									otel.WgRouterClusterName.String(""),
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+									otel.WgRouterVersion.String("dev"),
+									otel.WgSubgraphID.String("3"),
+									otel.WgSubgraphName.String("products"),
+								),
+								Sum: 0,
+							},
+							{
+								Attributes: attribute.NewSet(
+									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
+									attribute.StringSlice("error_services", []string{"products"}),
+									attribute.String("from_header", "custom-value"),
+									semconv.HTTPStatusCode(200),
+									attribute.StringSlice("services", []string{"employees", "products"}),
+									otel.WgRequestError.Bool(true),
+									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									otel.WgClientName.String("unknown"),
+									otel.WgClientVersion.String("missing"),
+									otel.WgFederatedGraphID.String("graph"),
+									otel.WgOperationHash.String("13939103824696605913"),
+									otel.WgOperationName.String("myQuery"),
+									otel.WgOperationProtocol.String("http"),
+									otel.WgOperationType.String("query"),
+									otel.WgRouterClusterName.String(""),
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+									otel.WgRouterVersion.String("dev"),
+								),
+								Sum: 0,
+							},
+							{
+								Attributes: attribute.NewSet(
+									attribute.String("from_header", "custom-value"),
+									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									semconv.HTTPStatusCode(200),
+									otel.WgClientName.String("unknown"),
+									otel.WgClientVersion.String("missing"),
+									otel.WgFederatedGraphID.String("graph"),
+									otel.WgOperationHash.String("13939103824696605913"),
+									otel.WgOperationName.String("myQuery"),
+									otel.WgOperationProtocol.String("http"),
+									otel.WgOperationType.String("query"),
+									otel.WgRouterClusterName.String(""),
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+									otel.WgRouterVersion.String("dev"),
+									otel.WgSubgraphID.String("0"),
+									otel.WgSubgraphName.String("employees"),
+								),
+								Sum: 0,
+							},
+						},
+					},
+				}
+
+				requestContentLengthMetric := metricdata.Metrics{
+					Name:        "router.http.request.content_length",
+					Description: "Total number of request bytes",
+					Unit:        "bytes",
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									attribute.String("from_header", "custom-value"),
+									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									otel.WgClientName.String("unknown"),
+									otel.WgClientVersion.String("missing"),
+									otel.WgFederatedGraphID.String("graph"),
+									otel.WgOperationHash.String("13939103824696605913"),
+									otel.WgOperationName.String("myQuery"),
+									otel.WgOperationProtocol.String("http"),
+									otel.WgOperationType.String("query"),
+									otel.WgRouterClusterName.String(""),
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+									otel.WgRouterVersion.String("dev"),
+									otel.WgSubgraphID.String("3"),
+									otel.WgSubgraphName.String("products"),
+								),
+								Value: 494,
+							},
+							{
+								Attributes: attribute.NewSet(
+									attribute.String("from_header", "custom-value"),
+									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
+									attribute.StringSlice("services", []string{"employees", "products"}),
+									attribute.StringSlice("error_services", []string{"products"}),
+									semconv.HTTPStatusCode(200),
+									otel.WgClientName.String("unknown"),
+									otel.WgClientVersion.String("missing"),
+									otel.WgFederatedGraphID.String("graph"),
+									otel.WgOperationHash.String("13939103824696605913"),
+									otel.WgOperationName.String("myQuery"),
+									otel.WgOperationProtocol.String("http"),
+									otel.WgOperationType.String("query"),
+									otel.WgRouterClusterName.String(""),
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+									otel.WgRouterVersion.String("dev"),
+								),
+								Value: 81,
+							},
+							{
+								Attributes: attribute.NewSet(
+									attribute.String("from_header", "custom-value"),
+									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									otel.WgClientName.String("unknown"),
+									otel.WgClientVersion.String("missing"),
+									otel.WgFederatedGraphID.String("graph"),
+									otel.WgOperationHash.String("13939103824696605913"),
+									otel.WgOperationName.String("myQuery"),
+									otel.WgOperationProtocol.String("http"),
+									otel.WgOperationType.String("query"),
+									otel.WgRouterClusterName.String(""),
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+									otel.WgRouterVersion.String("dev"),
+									otel.WgSubgraphID.String("0"),
+									otel.WgSubgraphName.String("employees"),
+								),
+								Value: 66,
+							},
+						},
+					},
+				}
+
+				responseContentLengthMetric := metricdata.Metrics{
+					Name:        "router.http.response.content_length",
+					Description: "Total number of response bytes",
+					Unit:        "bytes",
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									attribute.String("from_header", "custom-value"),
+									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									semconv.HTTPStatusCode(200),
+									otel.WgClientName.String("unknown"),
+									otel.WgClientVersion.String("missing"),
+									otel.WgFederatedGraphID.String("graph"),
+									otel.WgOperationHash.String("13939103824696605913"),
+									otel.WgOperationName.String("myQuery"),
+									otel.WgOperationProtocol.String("http"),
+									otel.WgOperationType.String("query"),
+									otel.WgRouterClusterName.String(""),
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+									otel.WgRouterVersion.String("dev"),
+									otel.WgSubgraphID.String("0"),
+									otel.WgSubgraphName.String("employees"),
+								),
+								Value: 863,
+							},
+							{
+								Attributes: attribute.NewSet(
+									attribute.String("from_header", "custom-value"),
+									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									semconv.HTTPStatusCode(403),
+									otel.WgClientName.String("unknown"),
+									otel.WgClientVersion.String("missing"),
+									otel.WgFederatedGraphID.String("graph"),
+									otel.WgOperationHash.String("13939103824696605913"),
+									otel.WgOperationName.String("myQuery"),
+									otel.WgOperationProtocol.String("http"),
+									otel.WgOperationType.String("query"),
+									otel.WgRouterClusterName.String(""),
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+									otel.WgRouterVersion.String("dev"),
+									otel.WgSubgraphID.String("3"),
+									otel.WgSubgraphName.String("products"),
+								),
+								Value: 177,
+							},
+							{
+								Attributes: attribute.NewSet(
+									attribute.String("from_header", "custom-value"),
+									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
+									attribute.StringSlice("services", []string{"employees", "products"}),
+									attribute.StringSlice("error_services", []string{"products"}),
+									semconv.HTTPStatusCode(200),
+									otel.WgClientName.String("unknown"),
+									otel.WgClientVersion.String("missing"),
+									otel.WgFederatedGraphID.String("graph"),
+									otel.WgOperationHash.String("13939103824696605913"),
+									otel.WgOperationName.String("myQuery"),
+									otel.WgOperationProtocol.String("http"),
+									otel.WgOperationType.String("query"),
+									otel.WgRouterClusterName.String(""),
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+									otel.WgRouterVersion.String("dev"),
+								),
+								Value: 1046,
+							},
+						},
+					},
+				}
+
+				requestInFlightMetric := metricdata.Metrics{
+					Name:        "router.http.requests.in_flight",
+					Description: "Number of requests in flight",
+					Unit:        "",
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									attribute.String("from_header", "custom-value"),
+									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									otel.WgClientName.String("unknown"),
+									otel.WgClientVersion.String("missing"),
+									otel.WgFederatedGraphID.String("graph"),
+									otel.WgOperationHash.String("13939103824696605913"),
+									otel.WgOperationName.String("myQuery"),
+									otel.WgOperationProtocol.String("http"),
+									otel.WgOperationType.String("query"),
+									otel.WgRouterClusterName.String(""),
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+									otel.WgRouterVersion.String("dev"),
+									otel.WgSubgraphID.String("0"),
+									otel.WgSubgraphName.String("employees"),
+								),
+								Value: 0,
+							},
+							{
+								Attributes: attribute.NewSet(
+									attribute.String("from_header", "custom-value"),
+									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									otel.WgClientName.String("unknown"),
+									otel.WgClientVersion.String("missing"),
+									otel.WgFederatedGraphID.String("graph"),
+									otel.WgOperationHash.String("13939103824696605913"),
+									otel.WgOperationName.String("myQuery"),
+									otel.WgOperationProtocol.String("http"),
+									otel.WgOperationType.String("query"),
+									otel.WgRouterClusterName.String(""),
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+									otel.WgRouterVersion.String("dev"),
+									otel.WgSubgraphID.String("3"),
+									otel.WgSubgraphName.String("products"),
+								),
+								Value: 0,
+							},
+							{
+								Attributes: attribute.NewSet(
+									attribute.String("from_header", "custom-value"),
+									otel.WgClientName.String("unknown"),
+									otel.WgClientVersion.String("missing"),
+									otel.WgFederatedGraphID.String("graph"),
+									otel.WgOperationProtocol.String("http"),
+									otel.WgRouterClusterName.String(""),
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+									otel.WgRouterVersion.String("dev"),
+								),
+								Value: 0,
+							},
+						},
+					},
+				}
+
+				operationPlanningTimeMetric := metricdata.Metrics{
+					Name:        "router.graphql.operation.planning_time",
+					Description: "Operation planning time in milliseconds",
+					Unit:        "ms",
+					Data: metricdata.Histogram[float64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.HistogramDataPoint[float64]{
+							{
+								Attributes: attribute.NewSet(
+									attribute.String("from_header", "custom-value"),
+									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									otel.WgEnginePlanCacheHit.Bool(false),
+									otel.WgClientName.String("unknown"),
+									otel.WgClientVersion.String("missing"),
+									otel.WgFederatedGraphID.String("graph"),
+									otel.WgOperationHash.String("13939103824696605913"),
+									otel.WgOperationName.String("myQuery"),
+									otel.WgOperationProtocol.String("http"),
+									otel.WgOperationType.String("query"),
+									otel.WgRouterClusterName.String(""),
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+									otel.WgRouterVersion.String("dev"),
+								),
+								Sum: 0,
+							},
+						},
+					},
+				}
+
+				failedRequestsMetric := metricdata.Metrics{
+					Name:        "router.http.requests.error",
+					Description: "Total number of failed requests",
+					Unit:        "",
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									attribute.String("from_header", "custom-value"),
+									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
+									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									semconv.HTTPStatusCode(403),
+									otel.WgClientName.String("unknown"),
+									otel.WgClientVersion.String("missing"),
+									otel.WgFederatedGraphID.String("graph"),
+									otel.WgOperationHash.String("13939103824696605913"),
+									otel.WgOperationName.String("myQuery"),
+									otel.WgOperationProtocol.String("http"),
+									otel.WgOperationType.String("query"),
+									otel.WgRouterClusterName.String(""),
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+									otel.WgRouterVersion.String("dev"),
+									otel.WgSubgraphID.String("3"),
+									otel.WgSubgraphName.String("products"),
+								),
+								Value: 1,
+							},
+							{
+								Attributes: attribute.NewSet(
+									attribute.String("from_header", "custom-value"),
+									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
+									semconv.HTTPStatusCode(200),
+									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
+									attribute.StringSlice("services", []string{"employees", "products"}),
+									attribute.StringSlice("error_services", []string{"products"}),
+									otel.WgClientName.String("unknown"),
+									otel.WgClientVersion.String("missing"),
+									otel.WgFederatedGraphID.String("graph"),
+									otel.WgOperationHash.String("13939103824696605913"),
+									otel.WgOperationName.String("myQuery"),
+									otel.WgOperationProtocol.String("http"),
+									otel.WgOperationType.String("query"),
+									otel.WgRouterClusterName.String(""),
+									otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+									otel.WgRouterVersion.String("dev"),
+								),
+								Value: 1,
+							},
+						},
+					},
+				}
+
+				want := metricdata.ScopeMetrics{
+					Scope: instrumentation.Scope{
+						Name:      "cosmo.router",
+						SchemaURL: "",
+						Version:   "0.0.1",
+					},
+					Metrics: []metricdata.Metrics{
+						httpRequestsMetric,
+						requestDurationMetric,
+						requestContentLengthMetric,
+						responseContentLengthMetric,
+						requestInFlightMetric,
+						operationPlanningTimeMetric,
+						failedRequestsMetric,
+					},
+				}
+
+				metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			})
+		})
+
 		t.Run("Should emit subgraph error metric when subgraph request failed / connection issue", func(t *testing.T) {
 			t.Parallel()
 

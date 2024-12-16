@@ -269,8 +269,6 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 		}
 
 		if !c.UseCloudExporter && isCloudExporter(exp) {
-			// If the default cloud exporter is configured, we cannot set custom attributes.
-			c.Attributes = nil
 			c.UseCloudExporter = true
 		}
 
