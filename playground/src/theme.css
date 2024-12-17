@@ -260,3 +260,7 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
 .graphiql-tabs {
   @apply z-10;
 }
+
+.graphiql-container .CodeMirror-cursor {
+  border-left: 2px solid gray !important;
+}
