@@ -360,6 +360,8 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
 			})
 
+			require.NoError(t, err)
+
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
 			rm := metricdata.ResourceMetrics{}
