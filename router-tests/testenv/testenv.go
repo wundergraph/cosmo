@@ -193,11 +193,10 @@ type LogObservationConfig struct {
 }
 
 var (
-	envCreateMux sync.Mutex
-	kafkaMux     sync.Mutex
-	natsMux      sync.Mutex
-	kafkaData    *KafkaData
-	natsServer   *natsserver.Server
+	kafkaMux   sync.Mutex
+	natsMux    sync.Mutex
+	kafkaData  *KafkaData
+	natsServer *natsserver.Server
 )
 
 type KafkaData struct {
