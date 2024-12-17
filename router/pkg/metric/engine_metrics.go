@@ -87,6 +87,9 @@ func setupInstruments(m otelmetric.Meter) (*engineInstruments, error) {
 
 	messagesSent, err := m.Int64ObservableCounter(engineMessagesSentKey,
 		otelmetric.WithDescription("Number of subscription updates in the engine."))
+	if err != nil {
+		return nil, err
+	}
 
 	return &engineInstruments{
 		connectionCount:   connectionCount,
