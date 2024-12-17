@@ -13,6 +13,7 @@ import {
   BOOLEAN_SCALAR,
   COMPOSE_DIRECTIVE,
   CONDITION,
+  CONSUMER_INACTIVE_THRESHOLD,
   CONSUMER_NAME,
   DEFAULT_EDFS_PROVIDER_ID,
   DEPRECATED,
@@ -35,6 +36,7 @@ import {
   INACCESSIBLE,
   INPUT_FIELD_DEFINITION_UPPER,
   INPUT_OBJECT_UPPER,
+  INT_SCALAR,
   INTERFACE_OBJECT,
   INTERFACE_UPPER,
   KEY,
@@ -72,6 +74,7 @@ import {
   VALUES,
 } from './string-constants';
 import { MutableDirectiveDefinitionNode, MutableInputObjectNode, MutableScalarNode } from '../schema-building/ast';
+import { DEFAULT_CONSUMER_INACTIVE_THRESHOLD } from './integer-constants';
 
 export const BASE_SCALARS = new Set<string>([
   '_Any',
@@ -742,6 +745,7 @@ export const SCOPE_SCALAR_DEFINITION: MutableScalarNode = {
 
 /*
  * input edfs__NatsStreamConfiguration {
+ *   consumerInactiveThreshold : Int! = 30
  *   consumerName: String!
  *   streamName: String!
  * }
@@ -764,6 +768,18 @@ export const EDFS_NATS_STREAM_CONFIGURATION_DEFINITION: MutableInputObjectNode =
       type: {
         kind: Kind.NON_NULL_TYPE,
         type: stringToNamedTypeNode(STRING_SCALAR),
+      },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(CONSUMER_INACTIVE_THRESHOLD),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(INT_SCALAR),
+      },
+      defaultValue: {
+        kind: Kind.INT,
+        value: DEFAULT_CONSUMER_INACTIVE_THRESHOLD.toString(),
       },
     },
   ],
@@ -796,6 +812,7 @@ export const baseDirectives = `
   scalar openfed__FieldSet
   scalar openfed__Scope
   input edfs__NatsStreamConfiguration {
+    consumerInactiveThreshold: Int! = ${DEFAULT_CONSUMER_INACTIVE_THRESHOLD}
     consumerName: String!
     streamName: String!
   }
