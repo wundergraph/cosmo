@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.33.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.32.9...@wundergraph/cosmo-shared@0.33.0) (2024-12-17)
+
+### Features
+
+* edfs nats create bespoke consumer ([#1443](https://github.com/wundergraph/cosmo/issues/1443)) ([af97af7](https://github.com/wundergraph/cosmo/commit/af97af71af0eb2de20dd5a0e0bc8cc454f1b0e38)) (@alepane21)
+
 ## [0.32.9](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.32.8...@wundergraph/cosmo-shared@0.32.9) (2024-12-06)
 
 ### Bug Fixes
