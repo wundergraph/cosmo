@@ -178,6 +178,33 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 
+		t.Run("works with unresponsive subgraph", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: global(config.ResponseHeaderRuleAlgorithmLastWrite, customHeader, ""),
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header().Set(customHeader, employeeVal)
+								handler.ServeHTTP(w, r)
+							})
+						},
+					},
+					Hobbies: testenv.SubgraphConfig{
+						CloseOnStart: true,
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				ch := strings.Join(res.Response.Header.Values(customHeader), ",")
+				require.Equal(t, employeeVal, ch)
+				require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'hobbies' at Path 'employee'."}],"data":{"employee":{"id":1,"hobbies":null}}}`, res.Body)
+			})
+		})
+
 		t.Run("local last write wins", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{

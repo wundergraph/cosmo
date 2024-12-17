@@ -174,6 +174,22 @@ func TestPropagateHeaderRule(t *testing.T) {
 		assert.Equal(t, "test1", updatedClientReq.Header.Get("X-Test-1"))
 
 	})
+
+	t.Run("Should handle nil resonses", func(t *testing.T) {
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			All: &config.GlobalHeaderRule{},
+		})
+		assert.Nil(t, err)
+
+		rr := httptest.NewRecorder()
+		resp := ht.OnOriginResponse(nil, &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver(nil),
+		})
+		require.Nil(t, resp)
+	})
 }
 
 func TestRenamePropagateHeaderRule(t *testing.T) {
