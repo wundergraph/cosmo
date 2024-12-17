@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.8.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.1...@wundergraph/playground@0.8.2) (2024-12-17)
+
+### Bug Fixes
+
+* router playground cursor visibility ([#1451](https://github.com/wundergraph/cosmo/issues/1451)) ([73b82da](https://github.com/wundergraph/cosmo/commit/73b82dafff85e9ba4ead8bccaa180e70fdf7f6ce)) (@thisisnithin)
+
 ## [0.8.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.0...@wundergraph/playground@0.8.1) (2024-12-11)
 
 ### Bug Fixes
