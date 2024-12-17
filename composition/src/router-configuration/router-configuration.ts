@@ -3,6 +3,7 @@ export type NatsEventType = 'subscribe' | 'publish' | 'request';
 export type KafkaEventType = 'subscribe' | 'publish';
 
 export type StreamConfiguration = {
+  consumerInactiveThreshold: number;
   consumerName: string;
   streamName: string;
 };

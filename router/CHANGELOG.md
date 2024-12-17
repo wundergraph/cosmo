@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.153.2](https://github.com/wundergraph/cosmo/compare/router@0.153.1...router@0.153.2) (2024-12-17)
+
+### Bug Fixes
+
+* router playground cursor visibility ([#1451](https://github.com/wundergraph/cosmo/issues/1451)) ([73b82da](https://github.com/wundergraph/cosmo/commit/73b82dafff85e9ba4ead8bccaa180e70fdf7f6ce)) (@thisisnithin)
+
+## [0.153.1](https://github.com/wundergraph/cosmo/compare/router@0.153.0...router@0.153.1) (2024-12-17)
+
+### Bug Fixes
+
+* **router:** ensure subgraph timeouts/nil responses are handled correctly ([#1449](https://github.com/wundergraph/cosmo/issues/1449)) ([5402152](https://github.com/wundergraph/cosmo/commit/540215241eeecf8630e092c1864d50443e71967d)) (@df-wg)
+
+# [0.153.0](https://github.com/wundergraph/cosmo/compare/router@0.152.1...router@0.153.0) (2024-12-17)
+
+### Features
+
+* edfs nats create bespoke consumer ([#1443](https://github.com/wundergraph/cosmo/issues/1443)) ([af97af7](https://github.com/wundergraph/cosmo/commit/af97af71af0eb2de20dd5a0e0bc8cc454f1b0e38)) (@alepane21)
+
 ## [0.152.1](https://github.com/wundergraph/cosmo/compare/router@0.152.0...router@0.152.1) (2024-12-16)
 
 ### Bug Fixes
