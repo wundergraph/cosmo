@@ -32,6 +32,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 	"go.uber.org/atomic"
@@ -51,7 +52,7 @@ type WebsocketMiddlewareOptions struct {
 	Metrics            RouterMetrics
 	AccessController   *AccessController
 	Logger             *zap.Logger
-	Stats              WebSocketsStatistics
+	Stats              statistics.EngineStatistics
 	ReadTimeout        time.Duration
 
 	EnableNetPoll         bool
@@ -206,7 +207,7 @@ type WebsocketHandler struct {
 	handlerSem    *semaphore.Weighted
 	connectionIDs atomic.Int64
 
-	stats      WebSocketsStatistics
+	stats      statistics.EngineStatistics
 	attributes []attribute.KeyValue
 
 	readTimeout time.Duration
@@ -549,14 +550,14 @@ type websocketResponseWriter struct {
 	buf             bytes.Buffer
 	writtenBytes    int
 	logger          *zap.Logger
-	stats           WebSocketsStatistics
+	stats           statistics.EngineStatistics
 	propagateErrors bool
 }
 
 var _ http.ResponseWriter = (*websocketResponseWriter)(nil)
 var _ resolve.SubscriptionResponseWriter = (*websocketResponseWriter)(nil)
 
-func newWebsocketResponseWriter(id string, protocol wsproto.Proto, propagateErrors bool, logger *zap.Logger, stats WebSocketsStatistics) *websocketResponseWriter {
+func newWebsocketResponseWriter(id string, protocol wsproto.Proto, propagateErrors bool, logger *zap.Logger, stats statistics.EngineStatistics) *websocketResponseWriter {
 	return &websocketResponseWriter{
 		id:              id,
 		protocol:        protocol,
@@ -644,7 +645,7 @@ type WebSocketConnectionHandlerOptions struct {
 	Connection            *wsConnectionWrapper
 	Protocol              wsproto.Proto
 	Logger                *zap.Logger
-	Stats                 WebSocketsStatistics
+	Stats                 statistics.EngineStatistics
 	PlanOptions           PlanOptions
 	ConnectionID          int64
 	ClientInfo            *ClientInfo
@@ -680,7 +681,7 @@ type WebSocketConnectionHandler struct {
 	connectionID    int64
 	subscriptionIDs atomic.Int64
 	subscriptions   sync.Map
-	stats           WebSocketsStatistics
+	stats           statistics.EngineStatistics
 
 	attributes []attribute.KeyValue
 

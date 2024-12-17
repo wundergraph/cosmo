@@ -13,7 +13,6 @@ import (
 
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/klauspost/compress/gzip"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
 
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto"
@@ -42,11 +41,13 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/health"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
@@ -76,7 +77,7 @@ type (
 		context                 context.Context
 		cancelFunc              context.CancelFunc
 		pubSubProviders         *EnginePubSubProviders
-		websocketStats          WebSocketsStatistics
+		engineStats             statistics.EngineStatistics
 		playgroundHandler       func(http.Handler) http.Handler
 		publicKey               *ecdsa.PublicKey
 		executionTransport      *http.Transport
@@ -86,10 +87,12 @@ type (
 		mux                     *chi.Mux
 		// inFlightRequests is used to track the number of requests currently being processed
 		// does not include websocket (hijacked) connections
-		inFlightRequests *atomic.Uint64
-		graphMuxList     []*graphMux
-		graphMuxListLock sync.Mutex
-		runtimeMetrics   *rmetric.RuntimeMetrics
+		inFlightRequests        *atomic.Uint64
+		graphMuxList            []*graphMux
+		graphMuxListLock        sync.Mutex
+		runtimeMetrics          *rmetric.RuntimeMetrics
+		otlpEngineMetrics       *rmetric.EngineMetrics
+		prometheusEngineMetrics *rmetric.EngineMetrics
 		hostName         string
 		routerListenAddr string
 	}
@@ -103,7 +106,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		context:                 ctx,
 		cancelFunc:              cancel,
 		Config:                  &r.Config,
-		websocketStats:          r.WebsocketStats,
+		engineStats:             r.EngineStats,
 		executionTransport:      newHTTPTransport(r.subgraphTransportOptions.TransportTimeoutOptions, proxy),
 		executionTransportProxy: proxy,
 		playgroundHandler:       r.playgroundHandler,
@@ -148,6 +151,10 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		if err := s.runtimeMetrics.Start(); err != nil {
 			return nil, err
 		}
+	}
+
+	if err := s.setupEngineStatistics(); err != nil {
+		return nil, fmt.Errorf("failed to setup engine statistics: %w", err)
 	}
 
 	if s.registrationInfo != nil {
@@ -286,6 +293,39 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 		// Fall back to the base composition
 		baseMux.ServeHTTP(w, r)
 	}, nil
+}
+
+func (s *graphServer) setupEngineStatistics() (err error) {
+	baseAttributes := append([]attribute.KeyValue{
+		otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion)}, s.baseOtelAttributes...)
+
+	if s.metricConfig.OpenTelemetry.EngineStats {
+		s.otlpEngineMetrics, err = rmetric.NewEngineMetrics(
+			s.logger,
+			baseAttributes,
+			s.otlpMeterProvider,
+			s.engineStats,
+		)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	if s.metricConfig.Prometheus.EngineStats {
+		s.prometheusEngineMetrics, err = rmetric.NewEngineMetrics(
+			s.logger,
+			baseAttributes,
+			s.promMeterProvider,
+			s.engineStats,
+		)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 type graphMux struct {
@@ -817,7 +857,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			Subgraphs:                configSubgraphs,
 			RouterEngineConfig:       routerEngineConfig,
 			PubSubProviders:          s.pubSubProviders,
-			Reporter:                 s.websocketStats,
+			Reporter:                 s.engineStats,
 			ApolloCompatibilityFlags: s.apolloCompatibilityFlags,
 			HeartbeatInterval:        s.multipartHeartbeatInterval,
 		},
@@ -859,7 +899,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		EnablePersistedOperationCacheResponseHeader: s.engineExecutionConfiguration.Debug.EnablePersistedOperationsCacheResponseHeader,
 		EnableNormalizationCacheResponseHeader:      s.engineExecutionConfiguration.Debug.EnableNormalizationCacheResponseHeader,
 		EnableResponseHeaderPropagation:             s.headerRules != nil,
-		WebSocketStats:                              s.websocketStats,
+		WebSocketStats:                              s.engineStats,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
@@ -921,7 +961,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			Metrics:                metrics,
 			AccessController:       s.accessController,
 			Logger:                 s.logger,
-			Stats:                  s.websocketStats,
+			Stats:                  s.engineStats,
 			ReadTimeout:            s.engineExecutionConfiguration.WebSocketClientReadTimeout,
 			EnableNetPoll:          s.engineExecutionConfiguration.EnableNetPoll,
 			NetPollTimeout:         s.engineExecutionConfiguration.WebSocketClientPollTimeout,
@@ -1112,6 +1152,20 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	if s.runtimeMetrics != nil {
 		if err := s.runtimeMetrics.Shutdown(); err != nil {
 			s.logger.Error("Failed to shutdown runtime metrics", zap.Error(err))
+			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
+	if s.otlpEngineMetrics != nil {
+		if err := s.otlpEngineMetrics.Shutdown(); err != nil {
+			s.logger.Error("Failed to shutdown OTLP engine metrics", zap.Error(err))
+			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
+	if s.prometheusEngineMetrics != nil {
+		if err := s.prometheusEngineMetrics.Shutdown(); err != nil {
+			s.logger.Error("Failed to shutdown Prometheus engine metrics", zap.Error(err))
 			finalErr = errors.Join(finalErr, err)
 		}
 	}
