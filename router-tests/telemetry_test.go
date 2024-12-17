@@ -342,6 +342,108 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 			})
 		})
 	})
+
+	t.Run("Should contain only base attributes in metrics", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
+			MetricOptions: testenv.MetricOptions{
+				EnableOTLPEngineStats: true,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+			})
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+			rm := metricdata.ResourceMetrics{}
+			err = metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			baseAttributes := []attribute.KeyValue{
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgRouterVersion.String("dev"),
+			}
+
+			engineScope := getMetricScopeByName(rm.ScopeMetrics, "cosmo.router.engine")
+			connectionMetrics := metricdata.Metrics{
+				Name:        "router.engine.connections",
+				Description: "Number of connections in the engine. Contains both websocket and http connections",
+
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(baseAttributes...),
+							Value:      1,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, connectionMetrics, *getMetricByName(engineScope, "router.engine.connections"), metricdatatest.IgnoreTimestamp())
+
+			subscriptionMetrics := metricdata.Metrics{
+				Name:        "router.engine.subscriptions",
+				Description: "Number of subscriptions in the engine.",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(baseAttributes...),
+							Value:      1,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, subscriptionMetrics, *getMetricByName(engineScope, "router.engine.subscriptions"), metricdatatest.IgnoreTimestamp())
+
+			triggerMetrics := metricdata.Metrics{
+				Name:        "router.engine.triggers",
+				Description: "Number of triggers in the engine.",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(baseAttributes...),
+							Value:      1,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, triggerMetrics, *getMetricByName(engineScope, "router.engine.triggers"), metricdatatest.IgnoreTimestamp())
+
+			messagesSentMetrics := metricdata.Metrics{
+				Name:        "router.engine.messages.sent",
+				Description: "Number of subscription updates in the engine.",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(baseAttributes...),
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, messagesSentMetrics, *getMetricByName(engineScope, "router.engine.messages.sent"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+		})
+	})
 }
 
 func TestOperationCacheTelemetry(t *testing.T) {

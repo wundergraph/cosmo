@@ -122,10 +122,10 @@ func (e *EngineMetrics) registerObservers(stats statistics.EngineStatistics) err
 func (e *EngineMetrics) observeInstruments(o otelmetric.Observer, stats statistics.EngineStatistics) {
 	report := stats.GetReport()
 
-	o.ObserveInt64(e.instruments.connectionCount, int64(report.Connections))
-	o.ObserveInt64(e.instruments.subscriptionCount, int64(report.Subscriptions))
-	o.ObserveInt64(e.instruments.triggerCount, int64(report.Triggers))
-	o.ObserveInt64(e.instruments.messagesSent, int64(report.MessagesSent))
+	o.ObserveInt64(e.instruments.connectionCount, int64(report.Connections), otelmetric.WithAttributes(e.baseAttributes...))
+	o.ObserveInt64(e.instruments.subscriptionCount, int64(report.Subscriptions), otelmetric.WithAttributes(e.baseAttributes...))
+	o.ObserveInt64(e.instruments.triggerCount, int64(report.Triggers), otelmetric.WithAttributes(e.baseAttributes...))
+	o.ObserveInt64(e.instruments.messagesSent, int64(report.MessagesSent), otelmetric.WithAttributes(e.baseAttributes...))
 }
 
 func (e *EngineMetrics) Shutdown() error {
