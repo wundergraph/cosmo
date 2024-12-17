@@ -395,21 +395,11 @@ func unlockFreePort(port int) {
 }
 
 func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
-	// Ensure that only one test environment is created at a time
-	// We use freeport to get a free port for NATS and the Router
-	// If we don't lock here, two parallel tests might get the same port
-	envCreateMux.Lock()
 	pubSubPrefix := strconv.FormatUint(rand.Uint64(), 16)
 	routerPort := getFreePort()
 	if routerPort == 0 {
 		t.Fatalf("could not get free port for router")
 	}
-	envCreateMux.Unlock()
-	defer func() {
-		envCreateMux.Lock()
-		unlockFreePort(routerPort)
-		envCreateMux.Unlock()
-	}()
 
 	ctx, cancel := context.WithCancelCause(context.Background())
 
@@ -739,6 +729,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		shutdown:                atomic.NewBool(false),
 		logObserver:             logObserver,
 		getPubSubName:           getPubSubName,
+		routerPort:              routerPort,
 		Servers: []*httptest.Server{
 			employeesServer,
 			familyServer,
@@ -1091,6 +1082,7 @@ type Environment struct {
 	KafkaClient           *kgo.Client
 	logObserver           *observer.ObservedLogs
 	getPubSubName         func(name string) string
+	routerPort            int
 
 	shutdownDelay       time.Duration
 	extraURLQueryValues url.Values
@@ -1168,6 +1160,8 @@ func (e *Environment) Shutdown() {
 		//	e.NatsConnectionMyNats.Close()
 		//	e.NatsData.Server.Shutdown()
 	}
+
+	unlockFreePort(e.routerPort)
 
 	// Close Kafka
 	//if e.cfg.EnableKafka {
