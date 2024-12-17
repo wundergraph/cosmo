@@ -268,7 +268,7 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 		return setupNatsData(t)
 	}
 
-	natsPort := getFreePort()
+	natsPort := getFreePort(t)
 	if natsPort == 0 {
 		t.Fatalf("could not get free port for nats")
 	}
@@ -345,42 +345,46 @@ func setupKafkaServers(t testing.TB) (*KafkaData, error) {
 	return kafkaData, nil
 }
 
-var portMux sync.Mutex
+const reservedPorts = 200
+
+var portMux sync.RWMutex
 var assignedPorts []int
 var freePorts []int
 
-func getFreePort() int {
+func getFreePort(t testing.TB) int {
 	portMux.Lock()
-	defer portMux.Unlock()
-	if len(freePorts) == 0 {
-	outerLoop:
+	if len(freePorts) == 0 && len(assignedPorts) == 0 {
+		var getPortsErr error
+		freePorts, getPortsErr = freeport.GetFreePorts(reservedPorts)
+		if getPortsErr != nil {
+			t.Fatalf("could not get free ports: %s", getPortsErr.Error())
+		}
+	}
+	localAssignedPortLen := len(assignedPorts)
+	portMux.Unlock()
+
+	if localAssignedPortLen == reservedPorts {
 		for i := 0; i < 10; i++ {
-			newPorts, err := freeport.GetFreePorts(50)
-			if err == nil {
-				for _, port := range newPorts {
-					var matched bool
-					for _, assignedPort := range assignedPorts {
-						if port == assignedPort {
-							matched = true
-							break
-						}
-					}
-					if !matched {
-						freePorts = append(freePorts, port)
-					}
-				}
-				if len(freePorts) > 0 {
-					break outerLoop
-				}
+			t.Log("waiting 0.2s for a port to free up")
+			time.Sleep(200 * time.Millisecond)
+			portMux.RLock()
+			localFreePorts := freePorts
+			portMux.RUnlock()
+			if len(localFreePorts) > 0 {
+				break
 			}
-			// wait for some port to free up
-			time.Sleep(time.Second)
 		}
 	}
 
+	portMux.Lock()
+	if len(freePorts) == 0 {
+		t.Fatalf("no free ports available")
+		return 0
+	}
 	freePort := freePorts[0]
 	freePorts = freePorts[1:]
 	assignedPorts = append(assignedPorts, freePort)
+	portMux.Unlock()
 
 	return freePort
 }
@@ -391,12 +395,13 @@ func unlockFreePort(port int) {
 	i, found := slices.BinarySearch(assignedPorts, port)
 	if found {
 		assignedPorts = append(assignedPorts[:i], assignedPorts[i+1:]...)
+		freePorts = append(freePorts, port)
 	}
 }
 
 func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	pubSubPrefix := strconv.FormatUint(rand.Uint64(), 16)
-	routerPort := getFreePort()
+	routerPort := getFreePort(t)
 	if routerPort == 0 {
 		t.Fatalf("could not get free port for router")
 	}
@@ -621,7 +626,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.AccessLogger = cfg.Logger
 	}
 
-	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdn, natsSetup)
+	rr, err := configureRouter(t, listenerAddr, cfg, &routerConfig, cdn, natsSetup)
 	if err != nil {
 		return nil, err
 	}
@@ -759,7 +764,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	return e, nil
 }
 
-func configureRouter(listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsData *NatsData) (*core.Router, error) {
+func configureRouter(t testing.TB, listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsData *NatsData) (*core.Router, error) {
 	cfg := config.Config{
 		Graph: config.Graph{},
 		CDN: config.CDNConfiguration{
@@ -783,9 +788,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifyCDNConfig(&cfg.CDN)
 	}
 
-	t := jwt.New(jwt.SigningMethodHS256)
-	t.Claims = testTokenClaims()
-	graphApiToken, err := t.SignedString([]byte("hunter2"))
+	jwtToken := jwt.New(jwt.SigningMethodHS256)
+	jwtToken.Claims = testTokenClaims()
+	graphApiToken, err := jwtToken.SignedString([]byte("hunter2"))
 	if err != nil {
 		return nil, err
 	}
@@ -919,7 +924,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	var prometheusConfig rmetric.PrometheusConfig
 
 	if testConfig.PrometheusRegistry != nil {
-		port := getFreePort()
+		port := getFreePort(t)
 		if port == 0 {
 			return nil, fmt.Errorf("could not get free port: %w", err)
 		}
