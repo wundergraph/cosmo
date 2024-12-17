@@ -175,6 +175,7 @@ export function configurationDatasToDataSourceConfiguration(
               ...(event.streamConfiguration
                 ? {
                     streamConfiguration: new NatsStreamConfiguration({
+                      consumerInactiveThreshold: event.streamConfiguration.consumerInactiveThreshold,
                       consumerName: event.streamConfiguration.consumerName,
                       streamName: event.streamConfiguration.streamName,
                     }),

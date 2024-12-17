@@ -395,8 +395,9 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				var streamConfiguration *pubsub_datasource.NatsStreamConfiguration
 				if eventConfiguration.StreamConfiguration != nil {
 					streamConfiguration = &pubsub_datasource.NatsStreamConfiguration{
-						Consumer:   eventConfiguration.StreamConfiguration.GetConsumerName(),
-						StreamName: eventConfiguration.StreamConfiguration.GetStreamName(),
+						Consumer:                  eventConfiguration.StreamConfiguration.GetConsumerName(),
+						StreamName:                eventConfiguration.StreamConfiguration.GetStreamName(),
+						ConsumerInactiveThreshold: eventConfiguration.StreamConfiguration.GetConsumerInactiveThreshold(),
 					}
 				}
 
