@@ -278,12 +278,10 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 	natsData := &NatsData{
 		Connections: make([]*nats.Conn, 0, length),
 	}
-	natsPort, free, err := GetFreePort()
+	natsPort, err := GetFreePort()
 	if err != nil {
 		t.Fatalf("could not get free port: %s", err)
 	}
-
-	t.Cleanup(free)
 
 	// create dir in tmp for nats server
 	natsDir := filepath.Join(os.TempDir(), fmt.Sprintf("nats-%s", uuid.New()))
@@ -531,27 +529,21 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.ModifyRouterConfig(&routerConfig)
 	}
 
-	cdn := setupCDNServer()
+	cdn := setupCDNServer(t)
 
-	routerPort, free, err := GetFreePort()
+	routerPort, err := GetFreePort()
 	if err != nil {
 		t.Fatalf("could not get free port: %s", err)
 	}
 
-	t.Cleanup(free)
-
 	if cfg.PrometheusRegistry != nil {
-		promPort, free, err := GetFreePort()
+		promPort, err := GetFreePort()
 		if err != nil {
 			t.Fatalf("could not get free port: %s", err)
 		}
 
-		t.Cleanup(free)
-
 		cfg.PrometheusPort = promPort
 	}
-
-	t.Cleanup(free)
 
 	listenerAddr := fmt.Sprintf("localhost:%d", routerPort)
 
@@ -976,35 +968,29 @@ func testTokenClaims() jwt.MapClaims {
 	}
 }
 
-func setupCDNServer() *httptest.Server {
+func setupCDNServer(t testing.TB) *httptest.Server {
 	cdnFileServer := http.FileServer(http.Dir(filepath.Join("testenv", "testdata", "cdn")))
 	var cdnRequestLog []string
 	cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
 			requestLog, err := json.Marshal(cdnRequestLog)
-			if err != nil {
-				panic(err)
-			}
+			require.NoError(t, err)
 			w.Header().Set("Content-Type", "application/json")
 			_, err = w.Write(requestLog)
-			if err != nil {
-				panic(err)
-			}
+			require.NoError(t, err)
 			return
 		}
 		cdnRequestLog = append(cdnRequestLog, r.Method+" "+r.URL.Path)
 		// Ensure we have an authorization header with a valid token
 		authorization := r.Header.Get("Authorization")
 		if authorization == "" {
-			panic("missing authorization header")
+			require.NotEmpty(t, authorization, "missing authorization header")
 		}
 		token := authorization[len("Bearer "):]
 		parsedClaims := make(jwt.MapClaims)
 		jwtParser := new(jwt.Parser)
 		_, _, err := jwtParser.ParseUnverified(token, parsedClaims)
-		if err != nil {
-			panic(err)
-		}
+		require.NoError(t, err)
 		cdnFileServer.ServeHTTP(w, r)
 	}))
 	return cdnServer
@@ -1179,7 +1165,6 @@ func (e *Environment) MakeGraphQLRequestOK(request GraphQLRequest) *TestResponse
 func (e *Environment) MakeGraphQLRequestWithContext(ctx context.Context, request GraphQLRequest) (*TestResponse, error) {
 	data, err := json.Marshal(request)
 	require.NoError(e.t, err)
-	fmt.Println(e.GraphQLRequestURL())
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.GraphQLRequestURL(), bytes.NewReader(data))
 	if err != nil {
 		return nil, err
@@ -1806,33 +1791,20 @@ func (s *Subgraph) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.handler.ServeHTTP(w, r)
 }
 
-var portsMap sync.Map
-
 // GetFreePort asks the kernel for a free open port that is ready to use.
-// The port is locked until the returned cleanup function is called which should be used in conjunction with the test cleanup.
-// This avoids scenarios where the bootstrapping of the router fails because another test was faster and already took the port.
-func GetFreePort() (int, func(), error) {
-	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+func GetFreePort() (int, error) {
+	addr, err := net.ResolveTCPAddr("tcp", "0.0.0.0:0")
 	if err != nil {
-		return 0, nil, err
+		return 0, err
 	}
 
 	l, err := net.ListenTCP("tcp", addr)
 	if err != nil {
-		return 0, nil, err
+		return 0, err
 	}
 	defer l.Close()
 
 	port := l.Addr().(*net.TCPAddr).Port
 
-	if _, ok := portsMap.Load(port); ok {
-		// Best effort to get a free port when we have a collision
-		return GetFreePort()
-	}
-
-	portsMap.Store(port, struct{}{})
-
-	return port, func() {
-		portsMap.Delete(port)
-	}, nil
+	return port, nil
 }
