@@ -10,11 +10,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/consul/sdk/freeport"
 	"io"
 	"log"
 	"math/rand"
 	"mime/multipart"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -273,19 +273,15 @@ type NatsData struct {
 	Server      *natsserver.Server
 }
 
-func setupNatsServers(t testing.TB) (*NatsData, error) {
+func setupNatsServers(t testing.TB, port int) (*NatsData, error) {
 	length := len(demoNatsProviders)
 	natsData := &NatsData{
 		Connections: make([]*nats.Conn, 0, length),
 	}
-	natsPort, err := GetFreePort()
-	if err != nil {
-		t.Fatalf("could not get free port: %s", err)
-	}
 
 	// create dir in tmp for nats server
 	natsDir := filepath.Join(os.TempDir(), fmt.Sprintf("nats-%s", uuid.New()))
-	err = os.MkdirAll(natsDir, os.ModePerm)
+	err := os.MkdirAll(natsDir, os.ModePerm)
 	if err != nil {
 		t.Fatalf("could not create nats dir: %s", err)
 	}
@@ -302,7 +298,7 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 		NoLog:     true,
 		NoSigs:    true,
 		JetStream: true,
-		Port:      natsPort,
+		Port:      port,
 		StoreDir:  natsDir,
 	}
 
@@ -327,13 +323,7 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 }
 
 func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
-	// Ensure that only one test environment is created at a time
-	// We use freeport to get a free port for NATS and the Router
-	// If we don't lock here, two parallel tests might get the same port
-	if cfg.EnableNats {
-		envCreateMux.Lock()
-		defer envCreateMux.Unlock()
-	}
+	t.Helper()
 
 	var (
 		metricReader *metric.ManualReader
@@ -390,12 +380,17 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	var (
-		natsData *NatsData
-		err      error
+		natsData      *NatsData
+		requiredPorts = 3
 	)
 
+	ports, err := freeport.Take(requiredPorts)
+	if err != nil {
+		t.Fatalf("could not take free ports: %s", err)
+	}
+
 	if cfg.EnableNats {
-		natsData, err = setupNatsServers(t)
+		natsData, err = setupNatsServers(t, ports[0])
 		if err != nil {
 			return nil, err
 		}
@@ -531,21 +526,11 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	cdn := setupCDNServer(t)
 
-	routerPort, err := GetFreePort()
-	if err != nil {
-		t.Fatalf("could not get free port: %s", err)
-	}
-
 	if cfg.PrometheusRegistry != nil {
-		promPort, err := GetFreePort()
-		if err != nil {
-			t.Fatalf("could not get free port: %s", err)
-		}
-
-		cfg.PrometheusPort = promPort
+		cfg.PrometheusPort = ports[1]
 	}
 
-	listenerAddr := fmt.Sprintf("localhost:%d", routerPort)
+	listenerAddr := fmt.Sprintf("localhost:%d", ports[2])
 
 	var client *http.Client
 
@@ -1789,22 +1774,4 @@ func (s *Subgraph) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.handler.ServeHTTP(w, r)
-}
-
-// GetFreePort asks the kernel for a free open port that is ready to use.
-func GetFreePort() (int, error) {
-	addr, err := net.ResolveTCPAddr("tcp", "0.0.0.0:0")
-	if err != nil {
-		return 0, err
-	}
-
-	l, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		return 0, err
-	}
-	defer l.Close()
-
-	port := l.Addr().(*net.TCPAddr).Port
-
-	return port, nil
 }
