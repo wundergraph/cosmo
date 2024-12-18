@@ -711,6 +711,22 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			spanStartOptions = append(spanStartOptions, oteltrace.WithNewRoot())
 		}
 
+		middlewareOptions := []otelhttp.Option{
+			otelhttp.WithSpanOptions(spanStartOptions...),
+			otelhttp.WithFilter(rtrace.CommonRequestFilter),
+			otelhttp.WithFilter(rtrace.PrefixRequestFilter(
+				[]string{s.healthCheckPath, s.readinessCheckPath, s.livenessCheckPath}),
+			),
+			// Disable built-in metricStore through NoopMeterProvider
+			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
+			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
+			otelhttp.WithTracerProvider(s.tracerProvider),
+		}
+
+		if s.tracePropagators != nil {
+			middlewareOptions = append(middlewareOptions, otelhttp.WithPropagators(s.tracePropagators))
+		}
+
 		traceHandler := rtrace.NewMiddleware(
 			rtrace.WithTracePreHandler(
 				func(r *http.Request, w http.ResponseWriter) {
@@ -728,17 +744,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 						w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
 					}
 				}),
-			rtrace.WithOtelHttp(
-				otelhttp.WithSpanOptions(spanStartOptions...),
-				otelhttp.WithFilter(rtrace.CommonRequestFilter),
-				otelhttp.WithFilter(rtrace.PrefixRequestFilter(
-					[]string{s.healthCheckPath, s.readinessCheckPath, s.livenessCheckPath}),
-				),
-				// Disable built-in metricStore through NoopMeterProvider
-				otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
-				otelhttp.WithSpanNameFormatter(SpanNameFormatter),
-				otelhttp.WithTracerProvider(s.tracerProvider),
-			),
+			rtrace.WithOtelHttp(middlewareOptions...),
 		)
 
 		httpRouter.Use(traceHandler.Handler)
@@ -815,6 +821,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				},
 			},
 			TracerProvider:                s.tracerProvider,
+			TracePropagators:              s.tracePropagators,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
 		},

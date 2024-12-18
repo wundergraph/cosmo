@@ -14,6 +14,7 @@ import (
 	"log"
 	"math/rand"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -53,7 +54,6 @@ import (
 	natsserver "github.com/nats-io/nats-server/v2/server"
 	natstest "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
-	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
@@ -205,6 +205,7 @@ type Config struct {
 	CustomResourceAttributes           []config.CustomStaticAttribute
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
+	PrometheusPort                     int
 	ShutdownDelay                      time.Duration
 	NoRetryClient                      bool
 	PropagationConfig                  config.PropagationConfig
@@ -277,10 +278,12 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 	natsData := &NatsData{
 		Connections: make([]*nats.Conn, 0, length),
 	}
-	natsPort, err := freeport.GetFreePort()
+	natsPort, free, err := GetFreePort()
 	if err != nil {
 		t.Fatalf("could not get free port: %s", err)
 	}
+
+	t.Cleanup(free)
 
 	// create dir in tmp for nats server
 	natsDir := filepath.Join(os.TempDir(), fmt.Sprintf("nats-%s", uuid.New()))
@@ -530,10 +533,25 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	cdn := setupCDNServer()
 
-	routerPort, err := freeport.GetFreePort()
+	routerPort, free, err := GetFreePort()
 	if err != nil {
 		t.Fatalf("could not get free port: %s", err)
 	}
+
+	t.Cleanup(free)
+
+	if cfg.PrometheusRegistry != nil {
+		promPort, free, err := GetFreePort()
+		if err != nil {
+			t.Fatalf("could not get free port: %s", err)
+		}
+
+		t.Cleanup(free)
+
+		cfg.PrometheusPort = promPort
+	}
+
+	t.Cleanup(free)
 
 	listenerAddr := fmt.Sprintf("localhost:%d", routerPort)
 
@@ -868,13 +886,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	var prometheusConfig rmetric.PrometheusConfig
 
 	if testConfig.PrometheusRegistry != nil {
-		port, err := freeport.GetFreePort()
-		if err != nil {
-			return nil, fmt.Errorf("could not get free port: %w", err)
-		}
 		prometheusConfig = rmetric.PrometheusConfig{
 			Enabled:             true,
-			ListenAddr:          fmt.Sprintf("localhost:%d", port),
+			ListenAddr:          fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
 			Path:                "/metrics",
 			TestRegistry:        testConfig.PrometheusRegistry,
 			GraphqlCache:        testConfig.MetricOptions.EnablePrometheusRouterCache,
@@ -1165,6 +1179,7 @@ func (e *Environment) MakeGraphQLRequestOK(request GraphQLRequest) *TestResponse
 func (e *Environment) MakeGraphQLRequestWithContext(ctx context.Context, request GraphQLRequest) (*TestResponse, error) {
 	data, err := json.Marshal(request)
 	require.NoError(e.t, err)
+	fmt.Println(e.GraphQLRequestURL())
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.GraphQLRequestURL(), bytes.NewReader(data))
 	if err != nil {
 		return nil, err
@@ -1789,4 +1804,35 @@ func (s *Subgraph) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.handler.ServeHTTP(w, r)
+}
+
+var portsMap sync.Map
+
+// GetFreePort asks the kernel for a free open port that is ready to use.
+// The port is locked until the returned cleanup function is called which should be used in conjunction with the test cleanup.
+// This avoids scenarios where the bootstrapping of the router fails because another test was faster and already took the port.
+func GetFreePort() (int, func(), error) {
+	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	if err != nil {
+		return 0, nil, err
+	}
+
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		return 0, nil, err
+	}
+	defer l.Close()
+
+	port := l.Addr().(*net.TCPAddr).Port
+
+	if _, ok := portsMap.Load(port); ok {
+		// Best effort to get a free port when we have a collision
+		return GetFreePort()
+	}
+
+	portsMap.Store(port, struct{}{})
+
+	return port, func() {
+		portsMap.Delete(port)
+	}, nil
 }

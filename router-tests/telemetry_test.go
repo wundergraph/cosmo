@@ -5285,6 +5285,7 @@ func TestTelemetry(t *testing.T) {
 			t.Parallel()
 
 			exporter := tracetest.NewInMemoryExporter(t)
+			defer exporter.Reset()
 
 			testenv.Run(t, &testenv.Config{
 				TraceExporter:     exporter,
@@ -5316,6 +5317,7 @@ func TestTelemetry(t *testing.T) {
 			t.Parallel()
 
 			exporter := tracetest.NewInMemoryExporter(t)
+			defer exporter.Reset()
 
 			testenv.Run(t, &testenv.Config{
 				TraceExporter:     exporter,
@@ -5347,6 +5349,7 @@ func TestTelemetry(t *testing.T) {
 			t.Parallel()
 
 			exporter := tracetest.NewInMemoryExporter(t)
+			defer exporter.Reset()
 
 			testenv.Run(t, &testenv.Config{
 				TraceExporter:     exporter,
@@ -5384,6 +5387,7 @@ func TestTelemetry(t *testing.T) {
 			t.Parallel()
 
 			exporter := tracetest.NewInMemoryExporter(t)
+			defer exporter.Reset()
 
 			testenv.Run(t, &testenv.Config{
 				TraceExporter:     exporter,
