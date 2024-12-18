@@ -22,14 +22,23 @@ func NewTimeoutTransport(transportOpts *SubgraphTransportOptions, roundTripper h
 	}
 
 	for subgraph, subgraphOpts := range transportOpts.SubgraphMap {
-		tt.subgraphTrippers[subgraph] = newHTTPTransport(*subgraphOpts, proxy)
+		if subgraphOpts != nil {
+			tt.subgraphTrippers[subgraph] = newHTTPTransport(*subgraphOpts, proxy)
+		}
 	}
 
 	return tt
 }
 
 func (tt *TimeoutTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req == nil {
+		return nil, nil
+	}
+
 	rq := getRequestContext(req.Context())
+	if rq == nil {
+		return nil, nil
+	}
 	subgraph := rq.ActiveSubgraph(req)
 	if subgraph != nil && subgraph.Name != "" && tt.subgraphTrippers[subgraph.Name] != nil {
 		timeout := tt.opts.SubgraphMap[subgraph.Name].RequestTimeout

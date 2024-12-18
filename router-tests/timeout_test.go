@@ -72,7 +72,7 @@ func TestTimeouts(t *testing.T) {
 			})
 		})
 
-		t.Run("Slow response exceeding timeout", func(t *testing.T) {
+		t.Run("Subgraph timeout options don't affect unrelated subgraph", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
