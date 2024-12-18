@@ -22,37 +22,33 @@ type CacheWarmupSource interface {
 	LoadItems(ctx context.Context, log *zap.Logger) ([]*CacheWarmupItem, error)
 }
 
+type CacheWarmupProcessor interface {
+	ProcessOperation(ctx context.Context, item *CacheWarmupItem) error
+}
+
 type CacheWarmupConfig struct {
-	Log                *zap.Logger
-	OperationProcessor *OperationProcessor
-	OperationPlanner   *OperationPlanner
-	ComplexityLimits   *config.ComplexityLimits
-	RouterSchema       *ast.Document
-	Source             CacheWarmupSource
-	Workers            int
-	ItemsPerSecond     int
-	Timeout            time.Duration
-	TrackSchemaUsage   bool
+	Log            *zap.Logger
+	Source         CacheWarmupSource
+	Workers        int
+	ItemsPerSecond int
+	Timeout        time.Duration
+	Processor      CacheWarmupProcessor
 }
 
 func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 	w := &cacheWarmup{
-		log:                cfg.Log,
-		operationProcessor: cfg.OperationProcessor,
-		operationPlanner:   cfg.OperationPlanner,
-		complexityLimits:   cfg.ComplexityLimits,
-		routerSchema:       cfg.RouterSchema,
-		source:             cfg.Source,
-		workers:            cfg.Workers,
-		itemsPerSecond:     cfg.ItemsPerSecond,
-		timeout:            cfg.Timeout,
-		trackSchemaUsage:   cfg.TrackSchemaUsage,
+		log:            cfg.Log,
+		source:         cfg.Source,
+		workers:        cfg.Workers,
+		itemsPerSecond: cfg.ItemsPerSecond,
+		timeout:        cfg.Timeout,
+		processor:      cfg.Processor,
 	}
 	if cfg.Workers < 1 {
 		w.workers = 4
 	}
 	if cfg.ItemsPerSecond < 1 {
-		w.itemsPerSecond = 100
+		w.itemsPerSecond = 0
 	}
 	if cfg.Timeout <= 0 {
 		w.timeout = time.Second * 30
@@ -87,16 +83,12 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 }
 
 type cacheWarmup struct {
-	log                *zap.Logger
-	operationProcessor *OperationProcessor
-	operationPlanner   *OperationPlanner
-	complexityLimits   *config.ComplexityLimits
-	routerSchema       *ast.Document
-	source             CacheWarmupSource
-	workers            int
-	itemsPerSecond     int
-	timeout            time.Duration
-	trackSchemaUsage   bool
+	log            *zap.Logger
+	source         CacheWarmupSource
+	workers        int
+	itemsPerSecond int
+	timeout        time.Duration
+	processor      CacheWarmupProcessor
 }
 
 func (w *cacheWarmup) run(ctx context.Context) (int, error) {
@@ -154,7 +146,7 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 					}
 					rl.Take()
 					item := items[idx]
-					err := w.processOperation(ctx, item)
+					err := w.processor.ProcessOperation(ctx, item)
 					if err != nil {
 						w.log.Error("Failed to process operation, skipping",
 							zap.Error(err),
@@ -175,11 +167,11 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 	}
 
 	for i := 0; i < len(items); i++ {
+		processed := i + 1
 		select {
 		case <-done:
-			return i, ctx.Err()
+			return processed, ctx.Err()
 		case <-itemCompleted:
-			processed := i + 1
 			if processed%100 == 0 {
 				w.log.Info("Cache warmup - processed items",
 					zap.Int("processed_items", processed),
@@ -191,13 +183,39 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 	return len(items), nil
 }
 
-func (w *cacheWarmup) processOperation(ctx context.Context, item *CacheWarmupItem) error {
+type CacheWarmupPlanningProcessorOptions struct {
+	OperationProcessor *OperationProcessor
+	OperationPlanner   *OperationPlanner
+	ComplexityLimits   *config.ComplexityLimits
+	RouterSchema       *ast.Document
+	TrackSchemaUsage   bool
+}
+
+func NewCacheWarmupPlanningProcessor(options *CacheWarmupPlanningProcessorOptions) *CacheWarmupPlanningProcessor {
+	return &CacheWarmupPlanningProcessor{
+		operationProcessor: options.OperationProcessor,
+		operationPlanner:   options.OperationPlanner,
+		complexityLimits:   options.ComplexityLimits,
+		routerSchema:       options.RouterSchema,
+		trackSchemaUsage:   options.TrackSchemaUsage,
+	}
+}
+
+type CacheWarmupPlanningProcessor struct {
+	operationProcessor *OperationProcessor
+	operationPlanner   *OperationPlanner
+	complexityLimits   *config.ComplexityLimits
+	routerSchema       *ast.Document
+	trackSchemaUsage   bool
+}
+
+func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, item *CacheWarmupItem) error {
 
 	var (
 		isAPQ bool
 	)
 
-	k, err := w.operationProcessor.NewIndependentKit()
+	k, err := c.operationProcessor.NewIndependentKit()
 	if err != nil {
 		return err
 	}
@@ -241,8 +259,8 @@ func (w *cacheWarmup) processOperation(ctx context.Context, item *CacheWarmupIte
 		return err
 	}
 
-	if w.complexityLimits != nil {
-		_, _, _ = k.ValidateQueryComplexity(w.complexityLimits, k.kit.doc, w.routerSchema, k.parsedOperation.IsPersistedOperation)
+	if c.complexityLimits != nil {
+		_, _, _ = k.ValidateQueryComplexity(c.complexityLimits, k.kit.doc, c.routerSchema, k.parsedOperation.IsPersistedOperation)
 	}
 
 	planOptions := PlanOptions{
@@ -255,7 +273,7 @@ func (w *cacheWarmup) processOperation(ctx context.Context, item *CacheWarmupIte
 			IncludeQueryPlanInResponse: false,
 			SendHeartbeat:              false,
 		},
-		TrackSchemaUsageInfo: w.trackSchemaUsage,
+		TrackSchemaUsageInfo: c.trackSchemaUsage,
 	}
 
 	opContext := &operationContext{
@@ -272,7 +290,7 @@ func (w *cacheWarmup) processOperation(ctx context.Context, item *CacheWarmupIte
 		return err
 	}
 
-	err = w.operationPlanner.plan(opContext, planOptions)
+	err = c.operationPlanner.plan(opContext, planOptions)
 	if err != nil {
 		return err
 	}
