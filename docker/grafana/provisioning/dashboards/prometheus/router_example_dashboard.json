@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 4,
+  "id": 2,
   "links": [],
   "panels": [
     {
@@ -88,9 +88,9 @@
         {
           "editorMode": "code",
           "exemplar": false,
-          "expr": "router_graphql_cache_cost_max{cache_type=\"execution\"}",
+          "expr": "router_graphql_cache_cost_max{cache_type=\"plan\"}",
           "instant": true,
-          "legendFormat": "Execution",
+          "legendFormat": "Plan",
           "range": false,
           "refId": "Execution"
         },
@@ -115,12 +115,25 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "router_graphql_cache_cost_max{cache_type=\"normalization\"}",
+          "expr": "router_graphql_cache_cost_max{cache_type=\"query_normalization\"}",
           "hide": false,
           "instant": true,
-          "legendFormat": "Normalization",
+          "legendFormat": "Query Normalization",
           "range": false,
           "refId": "Normalization"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "router_graphql_cache_cost_max{cache_type=\"persisted_query_normalization\"}",
+          "hide": true,
+          "instant": false,
+          "legendFormat": "Persisted Query Normalization",
+          "range": true,
+          "refId": "A"
         }
       ],
       "title": "Total Cache Sizes (In Cost)",
@@ -282,8 +295,8 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(rate(router_graphql_cache_requests_stats_total{cache_type=\"execution\" ,type=\"hits\"}[2h])) /\nsum(rate(router_graphql_cache_requests_stats_total{cache_type=\"execution\"}[2h]))",
-          "legendFormat": "Execution",
+          "expr": "sum(rate(router_graphql_cache_requests_stats_total{cache_type=\"plan\" ,type=\"hits\"}[2h])) /\nsum(rate(router_graphql_cache_requests_stats_total{cache_type=\"plan\"}[2h]))",
+          "legendFormat": "Plan",
           "range": true,
           "refId": "A"
         },
@@ -306,10 +319,10 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum(rate(router_graphql_cache_requests_stats_total{cache_type=\"normalization\" ,type=\"hits\"}[2h])) /\nsum(rate(router_graphql_cache_requests_stats_total{cache_type=\"normalization\"}[2h]))",
+          "expr": "sum(rate(router_graphql_cache_requests_stats_total{cache_type=\"query_normalization\" ,type=\"hits\"}[2h])) /\nsum(rate(router_graphql_cache_requests_stats_total{cache_type=\"query_normalization\"}[2h]))",
           "hide": false,
           "instant": false,
-          "legendFormat": "Normalization",
+          "legendFormat": "Query Normalization",
           "range": true,
           "refId": "C"
         }
@@ -400,7 +413,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by(cache_type, operation)(increase(router_graphql_cache_cost_stats_total{cache_type=\"execution\"} [1h]))",
+          "expr": "sum by(cache_type, operation)(increase(router_graphql_cache_cost_stats_total{cache_type=\"plan\"} [1h]))",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -424,7 +437,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum by(cache_type, operation)(increase(router_graphql_cache_cost_stats_total{cache_type=\"normalization\"} [1h]))",
+          "expr": "sum by(cache_type, operation)(increase(router_graphql_cache_cost_stats_total{cache_type=\"query_normalization\"} [1h]))",
           "hide": false,
           "instant": false,
           "legendFormat": "__auto",
@@ -518,7 +531,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by(cache_type, operation)(increase(router_graphql_cache_keys_stats_total{cache_type=\"execution\"} [1h]))",
+          "expr": "sum by(cache_type, operation)(increase(router_graphql_cache_keys_stats_total{cache_type=\"plan\"} [1h]))",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
@@ -542,7 +555,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum by(cache_type, operation)(increase(router_graphql_cache_keys_stats_total{cache_type=\"normalization\"} [1h]))",
+          "expr": "sum by(cache_type, operation)(increase(router_graphql_cache_keys_stats_total{cache_type=\"query_normalization\"} [1h]))",
           "hide": false,
           "instant": false,
           "legendFormat": "__auto",
@@ -581,6 +594,6 @@
   "timezone": "browser",
   "title": "Router Example Dashboard",
   "uid": "be5cg59c5m6m8f",
-  "version": 3,
+  "version": 1,
   "weekStart": ""
 }

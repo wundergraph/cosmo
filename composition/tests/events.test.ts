@@ -17,7 +17,6 @@ import {
   invalidRootTypeFieldEventsDirectivesErrorMessage,
   invalidRootTypeFieldResponseTypesEventDrivenErrorMessage,
   noBaseDefinitionForExtensionError,
-  nonEntityObjectExtensionsEventDrivenErrorMessage,
   nonExternalKeyFieldNamesEventDrivenErrorMessage,
   nonKeyFieldNamesEventDrivenErrorMessage,
   normalizeSubgraph,
@@ -27,7 +26,6 @@ import {
   Subgraph,
   subgraphValidationError,
   undefinedEventSubjectsArgumentErrorMessage,
-  undefinedNatsStreamConfigurationInputErrorMessage,
   undefinedRequiredArgumentsErrorMessage,
   unexpectedDirectiveArgumentErrorMessage,
 } from '../src';
@@ -46,6 +44,7 @@ import {
   schemaToSortedNormalizedString,
   versionOneFullEventDefinitions,
   versionOnePersistedDirectiveDefinitions,
+  versionOneSubscriptionEventDefinitions,
 } from './utils/utils';
 
 describe('events Configuration tests', () => {
@@ -624,8 +623,82 @@ describe('events Configuration tests', () => {
   });
 
   test('that no error is returned if a NATS request subject is without streamConfiguration and there is a wrong definition of edfs__NatsStreamConfiguration', () => {
-    const { errors } = normalizeSubgraph(subgraphAO.definitions, subgraphAO.name);
+    const { errors, normalizationResult } = normalizeSubgraph(subgraphAO.definitions, subgraphAO.name);
     expect(errors).toBeUndefined();
+    expect(normalizationResult).toBeDefined();
+    expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+      normalizeString(
+        versionOneSubscriptionEventDefinitions +
+          `
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+    
+    type Subscription {
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(
+        subjects: ["entities.{{ args.id }}"]
+      )
+    }
+    
+    input edfs__NatsStreamConfiguration {
+      consumerInactiveThreshold: Int! = 30
+      consumerName: String!
+      streamName: String!
+    }
+    
+    scalar openfed__FieldSet
+      `,
+      ),
+    );
+  });
+
+  test('that no error is returned if a NATS request subject is with a streamConfiguration and there is a correct definition of edfs__NatsStreamConfiguration', () => {
+    const { errors, normalizationResult } = normalizeSubgraph(subgraphAP.definitions, subgraphAP.name);
+    expect(errors).toBeUndefined();
+    expect(normalizationResult).toBeDefined();
+    expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+      normalizeString(
+        versionOneSubscriptionEventDefinitions +
+          `
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+    
+    type Subscription {
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(
+        subjects: ["entities.{{ args.id }}"], 
+        streamConfiguration: {consumerInactiveThreshold: 300, consumerName: "consumer", streamName: "streamName"}
+      )
+    }
+    
+    input edfs__NatsStreamConfiguration {
+      consumerInactiveThreshold: Int! = 30
+      consumerName: String!
+      streamName: String!
+    }
+    
+    scalar openfed__FieldSet
+      `,
+      ),
+    );
+  });
+
+  test('that an error is returned if a NATS request subject is with a streamConfiguration and there is a definition of edfs__NatsStreamConfiguration without default consumerInactiveThreshold', () => {
+    const { errors } = normalizeSubgraph(subgraphAQ.definitions, subgraphAQ.name);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
+      invalidEventDrivenGraphError([invalidNatsStreamConfigurationDefinitionErrorMessage]),
+    );
+  });
+
+  test('that an error is returned if a NATS request subject is with a streamConfiguration and there is a definition of edfs__NatsStreamConfiguration with an incorrect consumerInactiveThreshold default value', () => {
+    const { errors } = normalizeSubgraph(subgraphAR.definitions, subgraphAR.name);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
+      invalidEventDrivenGraphError([invalidNatsStreamConfigurationDefinitionErrorMessage]),
+    );
   });
 
   test('that an error is returned if a NATS publish subject references a valid argument and an invalid one', () => {
@@ -904,6 +977,7 @@ const subgraphStringA = `
   }
   
   input edfs__NatsStreamConfiguration {
+    consumerInactiveThreshold: Int! = 30
     consumerName: String!
     streamName: String!
   }
@@ -920,11 +994,6 @@ const subgraphStringB = `
   
   type Entity @key(fields: "id", resolvable: false) {
     id: ID! @external
-  }
-  
-  input edfs__NatsStreamConfiguration {
-    consumerName: String!
-    streamName: String!
   }
 `;
 
@@ -948,11 +1017,6 @@ const subgraphStringC = `
   type Entity @key(fields: "id", resolvable: false) {
     id: ID! @external
   }
-  
-  input edfs__NatsStreamConfiguration {
-    consumerName: String!
-    streamName: String!
-  }
 `;
 
 const subgraphC: Subgraph = {
@@ -971,11 +1035,6 @@ const subgraphC: Subgraph = {
       id: ID! @external
       name: String!
     }
-    
-    input edfs__NatsStreamConfiguration {
-      consumerName: String!
-      streamName: String!
-    }
   `),
 };
 
@@ -993,11 +1052,6 @@ const subgraphD: Subgraph = {
     
     type Entity @key(fields: "id", resolvable: false) {
       id: ID!
-    }
-    
-    input edfs__NatsStreamConfiguration {
-      consumerName: String!
-      streamName: String!
     }
   `),
 };
@@ -1027,11 +1081,6 @@ const subgraphE: Subgraph = {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
-    input edfs__NatsStreamConfiguration {
-      consumerName: String!
-      streamName: String!
-    }
   `),
 };
 
@@ -1050,11 +1099,6 @@ const subgraphF: Subgraph = {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-    
-    input edfs__NatsStreamConfiguration {
-      consumerName: String!
-      streamName: String!
-    }
   `),
 };
 
@@ -1072,11 +1116,6 @@ const subgraphG: Subgraph = {
     
     type Entity @key(fields: "id") {
       id: ID! @external
-    }
-    
-    input edfs__NatsStreamConfiguration {
-      consumerName: String!
-      streamName: String!
     }
   `),
 };
@@ -1100,11 +1139,6 @@ const subgraphH: Subgraph = {
     
     extend type Object {
       id: ID! @external
-    }
-    
-    input edfs__NatsStreamConfiguration {
-      consumerName: String!
-      streamName: String!
     }
   `),
 };
@@ -1133,11 +1167,6 @@ const subgraphI: Subgraph = {
     type Object {
       id: ID! @external
     }
-    
-    input edfs__NatsStreamConfiguration {
-      consumerName: String!
-      streamName: String!
-    }
   `),
 };
 
@@ -1162,11 +1191,6 @@ const subgraphJ: Subgraph = {
     
     type Object {
       id: ID! @external
-    }
-    
-    input edfs__NatsStreamConfiguration {
-      consumerName: String!
-      streamName: String!
     }
   `),
 };
@@ -1313,6 +1337,7 @@ const subgraphQ: Subgraph = {
     }
     
     input edfs__NatsStreamConfiguration {
+      consumerInactiveThreshold: Int! = 30
       consumerName: String!
       streamName: String!
     }
@@ -1329,11 +1354,6 @@ const subgraphR: Subgraph = {
     
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
-    }
-    
-    input edfs__NatsStreamConfiguration {
-      consumerName: String!
-      streamName: String!
     }
   `),
 };
@@ -1354,6 +1374,7 @@ const subgraphS: Subgraph = {
     }
     
     input edfs__NatsStreamConfiguration {
+      consumerInactiveThreshold: Int! = 30
       consumerName: String!
       streamName: String!
     }
@@ -1376,6 +1397,7 @@ const subgraphT: Subgraph = {
     }
     
     input edfs__NatsStreamConfiguration {
+      consumerInactiveThreshold: Int! = 30
       consumerName: String!
       streamName: String!
     }
@@ -1491,11 +1513,6 @@ const subgraphZ: Subgraph = {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-
-    input edfs__KafkaStreamConfiguration {
-      consumerName: String!
-      streamName: String!
-    }
   `),
 };
 
@@ -1580,11 +1597,6 @@ const subgraphAE: Subgraph = {
 
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
-    }
-
-    input edfs__KafkaStreamConfiguration {
-      consumerName: String!
-      streamName: String!
     }
   `),
 };
@@ -1671,11 +1683,6 @@ const subgraphAL: Subgraph = {
     type Entity @key(fields: "id", resolvable: false) {
       id: ID! @external
     }
-
-    input edfs__KafkaStreamConfiguration {
-      consumerName: String!
-      streamName: String!
-    }
   `),
 };
 
@@ -1734,6 +1741,75 @@ const subgraphAO: Subgraph = {
 
     input edfs__NatsStreamConfiguration {
       consumerInactiveThreshold: String!
+      consumerName: String!
+      streamName: String!
+    }
+  `),
+};
+
+const subgraphAP: Subgraph = {
+  name: 'subgraph-ap',
+  url: '',
+  definitions: parse(`
+    type Subscription {
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(
+        subjects: ["entities.{{ args.id }}"],
+        streamConfiguration: {consumerInactiveThreshold: 300, consumerName: "consumer", streamName: "streamName"}
+      )
+    }
+
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    input edfs__NatsStreamConfiguration {
+      consumerInactiveThreshold: Int! = 30
+      consumerName: String!
+      streamName: String!
+    }
+  `),
+};
+
+const subgraphAQ: Subgraph = {
+  name: 'subgraph-aq',
+  url: '',
+  definitions: parse(`
+    type Subscription {
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(
+        subjects: ["entities.{{ args.id }}"],
+        streamConfiguration: {consumerInactiveThreshold: 300, consumerName: "consumer", streamName: "streamName"}
+      )
+    }
+
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    input edfs__NatsStreamConfiguration {
+      consumerInactiveThreshold: Int!
+      consumerName: String!
+      streamName: String!
+    }
+  `),
+};
+
+const subgraphAR: Subgraph = {
+  name: 'subgraph-ar',
+  url: '',
+  definitions: parse(`
+    type Subscription {
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(
+        subjects: ["entities.{{ args.id }}"],
+        streamConfiguration: {consumerInactiveThreshold: 300, consumerName: "consumer", streamName: "streamName"}
+      )
+    }
+
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    input edfs__NatsStreamConfiguration {
+      consumerInactiveThreshold: Int! = 40
       consumerName: String!
       streamName: String!
     }

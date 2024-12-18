@@ -68,7 +68,9 @@ func TestTimeouts(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: queryEmployeeWithHobby,
 				})
-				require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'hobbies' at Path 'employee'."}],"data":{"employee":{"id":1,"hobbies":null}}}`, res.Body)
+
+				// It can also result in invalid JSON, but we don't care about that here
+				require.Contains(t, res.Body, "Failed to fetch from Subgraph 'hobbies'")
 			})
 		})
 

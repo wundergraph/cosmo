@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -21,8 +22,6 @@ import (
 	"github.com/buger/jsonparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"golang.org/x/sync/semaphore"
-
-	"encoding/json"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gobwas/ws"
@@ -289,7 +288,6 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	}
 
 	planOptions := PlanOptions{
-		Protocol:             OperationProtocolWS,
 		ClientInfo:           clientInfo,
 		TraceOptions:         traceOptions,
 		ExecutionOptions:     executionOptions,

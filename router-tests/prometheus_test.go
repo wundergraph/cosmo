@@ -3036,19 +3036,19 @@ func TestPrometheus(t *testing.T) {
 
 			// cache max cost metrics
 			cacheMaxCostMetricMf := findMetricFamilyByName(cacheMetrics, "router_graphql_cache_cost_max")
-			cacheMaxCostExecution := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "execution")
-			cacheMaxCostNormalization := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "normalization")
+			cacheMaxCostExecution := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "plan")
+			cacheMaxCostNormalization := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "query_normalization")
 			cacheMaxCostValidation := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}), cacheMaxCostExecution[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostExecution[0].GetGauge().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}), cacheMaxCostNormalization[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostNormalization[0].GetGauge().GetValue())
 
@@ -3061,13 +3061,13 @@ func TestPrometheus(t *testing.T) {
 			// Check the cache request stats
 
 			cacheRequestStatsMetricMf := findMetricFamilyByName(cacheMetrics, "router_graphql_cache_requests_stats_total")
-			cacheRequestExecutionStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "execution")
-			cacheRequestNormalizationStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "normalization")
+			cacheRequestExecutionStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "plan")
+			cacheRequestNormalizationStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "query_normalization")
 			cacheRequestValidationStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("type"),
 				Value: PointerOf("hits"),
@@ -3075,7 +3075,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("type"),
 				Value: PointerOf("misses"),
@@ -3086,7 +3086,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("type"),
 				Value: PointerOf("hits"),
@@ -3094,7 +3094,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("type"),
 				Value: PointerOf("misses"),
@@ -3124,13 +3124,13 @@ func TestPrometheus(t *testing.T) {
 
 			// Cache cost stats
 			cacheCostStatsMf := findMetricFamilyByName(cacheMetrics, "router_graphql_cache_cost_stats_total")
-			cacheCostExecutionStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "execution")
-			cacheCostNormalizationStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "normalization")
+			cacheCostExecutionStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "plan")
+			cacheCostNormalizationStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "query_normalization")
 			cacheCostValidationStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("added"),
@@ -3138,7 +3138,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("evicted"),
@@ -3149,7 +3149,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("added"),
@@ -3157,7 +3157,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("evicted"),
@@ -3168,7 +3168,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("evicted"),
@@ -3198,13 +3198,13 @@ func TestPrometheus(t *testing.T) {
 
 			// cache Key stats
 			cacheKeyStatsMf := findMetricFamilyByName(cacheMetrics, "router_graphql_cache_keys_stats_total")
-			cacheKeyExecutionStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "execution")
-			cacheKeyNormalizationStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "normalization")
+			cacheKeyExecutionStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "plan")
+			cacheKeyNormalizationStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "query_normalization")
 			cacheKeyValidationStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("added"),
@@ -3212,7 +3212,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("evicted"),
@@ -3220,7 +3220,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("updated"),
@@ -3232,7 +3232,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("added"),
@@ -3240,7 +3240,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("evicted"),
@@ -3248,7 +3248,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("updated"),
@@ -3363,19 +3363,19 @@ func TestPrometheus(t *testing.T) {
 
 			// cache max cost metrics
 			cacheMaxCostMetricMf := findMetricFamilyByName(cacheMetrics, "router_graphql_cache_cost_max")
-			cacheMaxCostExecution := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "execution")
-			cacheMaxCostNormalization := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "normalization")
+			cacheMaxCostExecution := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "plan")
+			cacheMaxCostNormalization := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "query_normalization")
 			cacheMaxCostValidation := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}), cacheMaxCostExecution[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostExecution[0].GetGauge().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}), cacheMaxCostNormalization[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostNormalization[0].GetGauge().GetValue())
 
@@ -3388,13 +3388,13 @@ func TestPrometheus(t *testing.T) {
 			// Check the cache request stats
 
 			cacheRequestStatsMetricMf := findMetricFamilyByName(cacheMetrics, "router_graphql_cache_requests_stats_total")
-			cacheRequestExecutionStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "execution")
-			cacheRequestNormalizationStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "normalization")
+			cacheRequestExecutionStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "plan")
+			cacheRequestNormalizationStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "query_normalization")
 			cacheRequestValidationStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("type"),
 				Value: PointerOf("hits"),
@@ -3402,7 +3402,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("type"),
 				Value: PointerOf("misses"),
@@ -3413,7 +3413,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("type"),
 				Value: PointerOf("hits"),
@@ -3421,7 +3421,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("type"),
 				Value: PointerOf("misses"),
@@ -3451,13 +3451,13 @@ func TestPrometheus(t *testing.T) {
 
 			// Cache cost stats
 			cacheCostStatsMf := findMetricFamilyByName(cacheMetrics, "router_graphql_cache_cost_stats_total")
-			cacheCostExecutionStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "execution")
-			cacheCostNormalizationStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "normalization")
+			cacheCostExecutionStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "plan")
+			cacheCostNormalizationStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "query_normalization")
 			cacheCostValidationStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("added"),
@@ -3465,7 +3465,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("evicted"),
@@ -3476,7 +3476,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("added"),
@@ -3484,7 +3484,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("evicted"),
@@ -3495,7 +3495,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("evicted"),
@@ -3525,13 +3525,13 @@ func TestPrometheus(t *testing.T) {
 
 			// cache Key stats
 			cacheKeyStatsMf := findMetricFamilyByName(cacheMetrics, "router_graphql_cache_keys_stats_total")
-			cacheKeyExecutionStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "execution")
-			cacheKeyNormalizationStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "normalization")
+			cacheKeyExecutionStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "plan")
+			cacheKeyNormalizationStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "query_normalization")
 			cacheKeyValidationStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("added"),
@@ -3539,7 +3539,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("evicted"),
@@ -3547,7 +3547,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("updated"),
@@ -3559,7 +3559,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("added"),
@@ -3567,7 +3567,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("evicted"),
@@ -3575,7 +3575,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("updated"),
@@ -3694,19 +3694,19 @@ func TestPrometheus(t *testing.T) {
 			// cache max cost metrics
 
 			cacheMaxCostMetricMf := findMetricFamilyByName(cacheMetrics, "router_graphql_cache_cost_max")
-			cacheMaxCostExecution := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "execution")
-			cacheMaxCostNormalization := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "normalization")
+			cacheMaxCostExecution := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "plan")
+			cacheMaxCostNormalization := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "query_normalization")
 			cacheMaxCostValidation := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}), cacheMaxCostExecution[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostExecution[0].GetGauge().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}), cacheMaxCostNormalization[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostNormalization[0].GetGauge().GetValue())
 
@@ -3719,13 +3719,13 @@ func TestPrometheus(t *testing.T) {
 			// Check the cache request stats
 
 			cacheRequestStatsMetricMf := findMetricFamilyByName(cacheMetrics, "router_graphql_cache_requests_stats_total")
-			cacheRequestExecutionStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "execution")
-			cacheRequestNormalizationStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "normalization")
+			cacheRequestExecutionStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "plan")
+			cacheRequestNormalizationStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "query_normalization")
 			cacheRequestValidationStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("type"),
 				Value: PointerOf("hits"),
@@ -3733,7 +3733,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("type"),
 				Value: PointerOf("misses"),
@@ -3744,7 +3744,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("type"),
 				Value: PointerOf("hits"),
@@ -3752,7 +3752,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("type"),
 				Value: PointerOf("misses"),
@@ -3782,13 +3782,13 @@ func TestPrometheus(t *testing.T) {
 
 			// Cache cost stats
 			cacheCostStatsMf := findMetricFamilyByName(cacheMetrics, "router_graphql_cache_cost_stats_total")
-			cacheCostExecutionStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "execution")
-			cacheCostNormalizationStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "normalization")
+			cacheCostExecutionStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "plan")
+			cacheCostNormalizationStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "query_normalization")
 			cacheCostValidationStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("added"),
@@ -3796,7 +3796,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("evicted"),
@@ -3807,7 +3807,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("added"),
@@ -3815,7 +3815,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("evicted"),
@@ -3826,7 +3826,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("evicted"),
@@ -3856,13 +3856,13 @@ func TestPrometheus(t *testing.T) {
 
 			// cache Key stats
 			cacheKeyStatsMf := findMetricFamilyByName(cacheMetrics, "router_graphql_cache_keys_stats_total")
-			cacheKeyExecutionStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "execution")
-			cacheKeyNormalizationStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "normalization")
+			cacheKeyExecutionStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "plan")
+			cacheKeyNormalizationStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "query_normalization")
 			cacheKeyValidationStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("added"),
@@ -3870,7 +3870,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("evicted"),
@@ -3878,7 +3878,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("execution"),
+				Value: PointerOf("plan"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("updated"),
@@ -3890,7 +3890,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("added"),
@@ -3898,7 +3898,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("evicted"),
@@ -3906,7 +3906,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("cache_type"),
-				Value: PointerOf("normalization"),
+				Value: PointerOf("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
 				Name:  PointerOf("operation"),
 				Value: PointerOf("updated"),

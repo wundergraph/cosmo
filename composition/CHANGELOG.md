@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.33.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.33.0...@wundergraph/composition@0.33.1) (2024-12-18)
+
+### Bug Fixes
+
+* edfs__NatsStreamConfiguration validation ([#1456](https://github.com/wundergraph/cosmo/issues/1456)) ([d453eab](https://github.com/wundergraph/cosmo/commit/d453eab5c72dedcb4d9d1c3f5adb11865f7017af)) (@alepane21)
+
 # [0.33.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.32.1...@wundergraph/composition@0.33.0) (2024-12-17)
 
 ### Features

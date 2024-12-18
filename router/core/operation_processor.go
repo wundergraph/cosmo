@@ -118,6 +118,7 @@ type OperationProcessor struct {
 	parseKits                map[int]*parseKit
 	parseKitSemaphore        chan int
 	introspectionEnabled     bool
+	parseKitOptions          *parseKitOptions
 }
 
 // parseKit is a helper struct to parse, normalize and validate operations
@@ -189,6 +190,18 @@ func NewOperationKit(processor *OperationProcessor) *OperationKit {
 	return &OperationKit{
 		operationProcessor:     processor,
 		kit:                    processor.getKit(),
+		operationDefinitionRef: -1,
+		cache:                  processor.operationCache,
+		parsedOperation:        &ParsedOperation{},
+		introspectionEnabled:   processor.introspectionEnabled,
+	}
+}
+
+// NewIndependentOperationKit creates a new OperationKit that does not share resources with other kits.
+func NewIndependentOperationKit(processor *OperationProcessor) *OperationKit {
+	return &OperationKit{
+		operationProcessor:     processor,
+		kit:                    createParseKit(0, processor.parseKitOptions),
 		operationDefinitionRef: -1,
 		cache:                  processor.operationCache,
 		parsedOperation:        &ParsedOperation{},
@@ -782,7 +795,7 @@ func (o *OperationKit) NormalizeVariables() error {
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = nameRef
 
 	o.kit.keyGen.Reset()
-	_, err = o.kit.keyGen.WriteString(o.kit.normalizedOperation.String())
+	_, err = o.kit.keyGen.Write(o.kit.normalizedOperation.Bytes())
 	if err != nil {
 		return err
 	}
@@ -816,6 +829,7 @@ func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bo
 
 	cacheKey, ok := o.loadPersistedOperationCacheKey(clientName, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
 	if !ok {
+		_, _ = o.cache.persistedOperationNormalizationCache.Get(0) // register cache miss
 		return false, nil
 	}
 
@@ -960,12 +974,12 @@ func (o *OperationKit) Validate(skipLoader bool) (cacheHit bool, err error) {
 				statusCode: http.StatusOK,
 			}
 		}
-		if o.cache != nil && o.cache.validationCache != nil {
-			var valid bool
-			valid, cacheHit = o.cache.validationCache.Get(o.parsedOperation.InternalID)
-			if valid {
-				return
-			}
+	}
+	if o.cache != nil && o.cache.validationCache != nil {
+		var valid bool
+		valid, cacheHit = o.cache.validationCache.Get(o.parsedOperation.InternalID)
+		if valid {
+			return
 		}
 	}
 	report := &operationreport.Report{}
@@ -1119,10 +1133,13 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		parseKits:                make(map[int]*parseKit, opts.ParseKitPoolSize),
 		parseKitSemaphore:        make(chan int, opts.ParseKitPoolSize),
 		introspectionEnabled:     opts.IntrospectionEnabled,
+		parseKitOptions: &parseKitOptions{
+			apolloCompatibilityFlags: opts.ApolloCompatibilityFlags,
+		},
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {
 		processor.parseKitSemaphore <- i
-		processor.parseKits[i] = createParseKit(i, &parseKitOptions{apolloCompatibilityFlags: opts.ApolloCompatibilityFlags})
+		processor.parseKits[i] = createParseKit(i, processor.parseKitOptions)
 	}
 	if opts.NormalizationCache != nil || opts.ValidationCache != nil || opts.QueryDepthCache != nil || opts.OperationHashCache != nil || opts.EnablePersistedOperationsCache {
 		processor.operationCache = &OperationCache{
@@ -1183,4 +1200,10 @@ func (p *OperationProcessor) ReadBody(reader io.Reader, buf *bytes.Buffer) ([]by
 // limit.
 func (p *OperationProcessor) NewKit() (*OperationKit, error) {
 	return NewOperationKit(p), nil
+}
+
+// NewIndependentKit creates a new OperationKit which will not be pooled.
+// This is useful, e.g. for warming up the caches
+func (p *OperationProcessor) NewIndependentKit() (*OperationKit, error) {
+	return NewIndependentOperationKit(p), nil
 }
