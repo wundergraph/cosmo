@@ -22,7 +22,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -263,10 +262,6 @@ type LogObservationConfig struct {
 	Enabled  bool
 	LogLevel zapcore.Level
 }
-
-var (
-	envCreateMux sync.Mutex
-)
 
 type NatsData struct {
 	Connections []*nats.Conn
