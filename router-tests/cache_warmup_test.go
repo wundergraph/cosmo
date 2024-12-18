@@ -233,12 +233,12 @@ func TestCacheWarmup(t *testing.T) {
 				}),
 			},
 			AssertCacheMetrics: &testenv.CacheMetricsAssertion{
-				PersistedQueryNormalizationHits:   0,
-				PersistedQueryNormalizationMisses: 2,
-				ValidationMisses:                  1,
-				ValidationHits:                    0,
-				PlanMisses:                        1,
-				PlanHits:                          0,
+				PersistedQueryNormalizationHits:   0, // 1x warmup miss, 1x request miss because of client mismatch
+				PersistedQueryNormalizationMisses: 2, // same as above
+				ValidationMisses:                  1, // 1x warmup miss, no second miss because client mismatch stops request chain
+				ValidationHits:                    0, // no hits because of client mismatch
+				PlanMisses:                        1, // 1x warmup miss
+				PlanHits:                          0, // no hits because client mismatch stops request chain
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
