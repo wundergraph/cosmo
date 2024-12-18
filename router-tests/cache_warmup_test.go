@@ -32,7 +32,7 @@ func TestCacheWarmup(t *testing.T) {
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 					Enabled: true,
 					Source:  "filesystem",
-					Path:    "testenv/testdata/cache_warmup",
+					Path:    "testenv/testdata/cache_warmup/simple",
 				}),
 			},
 			AssertCacheMetrics: &testenv.CacheMetricsAssertion{
@@ -69,7 +69,7 @@ func TestCacheWarmup(t *testing.T) {
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 					Enabled: true,
 					Source:  "filesystem",
-					Path:    "testenv/testdata/invalid_cache_warmup",
+					Path:    "testenv/testdata/cache_warmup/invalid",
 				}),
 			},
 			AssertCacheMetrics: &testenv.CacheMetricsAssertion{
@@ -94,7 +94,7 @@ func TestCacheWarmup(t *testing.T) {
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 					Enabled: true,
 					Source:  "filesystem",
-					Path:    "testenv/testdata/cache_warmup_json",
+					Path:    "testenv/testdata/cache_warmup/json",
 				}),
 			},
 			AssertCacheMetrics: &testenv.CacheMetricsAssertion{
@@ -147,7 +147,7 @@ func TestCacheWarmup(t *testing.T) {
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 					Enabled: true,
 					Source:  "filesystem",
-					Path:    "testenv/testdata/cache_warmup_json_variables",
+					Path:    "testenv/testdata/cache_warmup/json_variables",
 				}),
 			},
 			AssertCacheMetrics: &testenv.CacheMetricsAssertion{
@@ -173,7 +173,7 @@ func TestCacheWarmup(t *testing.T) {
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 					Enabled: true,
 					Source:  "filesystem",
-					Path:    "testenv/testdata/cache_warmup_json_variables",
+					Path:    "testenv/testdata/cache_warmup/json_variables",
 				}),
 			},
 			AssertCacheMetrics: &testenv.CacheMetricsAssertion{
@@ -199,7 +199,7 @@ func TestCacheWarmup(t *testing.T) {
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 					Enabled: true,
 					Source:  "filesystem",
-					Path:    "testenv/testdata/cache_warmup_json_po",
+					Path:    "testenv/testdata/cache_warmup/json_po",
 				}),
 			},
 			AssertCacheMetrics: &testenv.CacheMetricsAssertion{
@@ -229,7 +229,7 @@ func TestCacheWarmup(t *testing.T) {
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 					Enabled: true,
 					Source:  "filesystem",
-					Path:    "testenv/testdata/cache_warmup_json_po",
+					Path:    "testenv/testdata/cache_warmup/json_po",
 				}),
 			},
 			AssertCacheMetrics: &testenv.CacheMetricsAssertion{
@@ -262,7 +262,7 @@ func TestCacheWarmup(t *testing.T) {
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 					Enabled:        true,
 					Source:         "filesystem",
-					Path:           "testenv/testdata/cache_warmup_rate_limit",
+					Path:           "testenv/testdata/cache_warmup/rate_limit",
 					Workers:        4,
 					ItemsPerSecond: 10,
 					Timeout:        time.Second * 5,
@@ -298,7 +298,7 @@ func TestCacheWarmup(t *testing.T) {
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 					Enabled:        true,
 					Source:         "filesystem",
-					Path:           "testenv/testdata/cache_warmup",
+					Path:           "testenv/testdata/cache_warmup/simple",
 					Workers:        2,
 					ItemsPerSecond: 100,
 				}),
