@@ -1715,12 +1715,8 @@ export class NormalizationFactory {
           }
           break;
         }
-        case CONSUMER_NAME: {
-          if (printTypeNode(inputValueData.type) !== NON_NULLABLE_STRING) {
-            return false;
-          }
-          break;
-        }
+        case CONSUMER_NAME:
+        // intentional fallthrough
         case STREAM_NAME: {
           if (printTypeNode(inputValueData.type) !== NON_NULLABLE_STRING) {
             return false;
