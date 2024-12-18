@@ -69,6 +69,7 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 			cfg.Log.Error("Cache warmup - timeout",
 				zap.Error(err),
 				zap.Int("processed_items", completed),
+				zap.String("tip", "Consider to increase the timeout, increase the number of workers, increase the items per second limit, or reduce the number of items to process"),
 			)
 			return err
 		}
