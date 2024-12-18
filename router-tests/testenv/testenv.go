@@ -25,7 +25,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -267,7 +266,7 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 		return setupNatsData(t)
 	}
 
-	natsPort := getFreePort(t)
+	natsPort := freeport.GetPort()
 	if natsPort == 0 {
 		t.Fatalf("could not get free port for nats")
 	}
@@ -344,66 +343,10 @@ func setupKafkaServers(t testing.TB) (*KafkaData, error) {
 	return kafkaData, nil
 }
 
-const reservedPorts = 200
-
-var portMux sync.RWMutex
-var assignedPorts []int
-var freePorts []int
-
-func getFreePort(t testing.TB) int {
-	portMux.Lock()
-	if len(freePorts) == 0 && len(assignedPorts) == 0 {
-		var getPortsErr error
-		freePorts, getPortsErr = freeport.GetFreePorts(reservedPorts)
-		if getPortsErr != nil {
-			t.Fatalf("could not get free ports: %s", getPortsErr.Error())
-		}
-	}
-	localAssignedPortLen := len(assignedPorts)
-	portMux.Unlock()
-
-	if localAssignedPortLen == reservedPorts {
-		for i := 0; i < 10; i++ {
-			t.Log("waiting 0.2s for a port to free up")
-			time.Sleep(200 * time.Millisecond)
-			portMux.RLock()
-			localFreePorts := freePorts
-			portMux.RUnlock()
-			if len(localFreePorts) > 0 {
-				break
-			}
-		}
-	}
-
-	portMux.Lock()
-	if len(freePorts) == 0 {
-		t.Fatalf("no free ports available")
-		return 0
-	}
-	freePort := freePorts[0]
-	freePorts = freePorts[1:]
-	assignedPorts = append(assignedPorts, freePort)
-	portMux.Unlock()
-
-	return freePort
-}
-
-func unlockFreePort(port int) {
-	portMux.Lock()
-	defer portMux.Unlock()
-	i, found := slices.BinarySearch(assignedPorts, port)
-	if found {
-		assignedPorts = append(assignedPorts[:i], assignedPorts[i+1:]...)
-		freePorts = append(freePorts, port)
-	}
-}
+var envMux sync.Mutex
 
 func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	pubSubPrefix := strconv.FormatUint(rand.Uint64(), 16)
-	routerPort := getFreePort(t)
-	if routerPort == 0 {
-		t.Fatalf("could not get free port for router")
-	}
 
 	ctx, cancel := context.WithCancelCause(context.Background())
 
@@ -589,8 +532,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	cdn := setupCDNServer()
 
-	listenerAddr := fmt.Sprintf("localhost:%d", routerPort)
-
 	var client *http.Client
 
 	if cfg.NoRetryClient {
@@ -625,7 +566,28 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.AccessLogger = cfg.Logger
 	}
 
-	rr, err := configureRouter(t, listenerAddr, cfg, &routerConfig, cdn, natsSetup)
+	envMux.Lock()
+	var envMuxUnlockedMux sync.Mutex
+	var envMuxUnlocked bool
+	envMuxUnlock := func() {
+		envMuxUnlockedMux.Lock()
+		defer envMuxUnlockedMux.Unlock()
+		if envMuxUnlocked {
+			return
+		}
+		envMuxUnlocked = true
+		envMux.Unlock()
+	}
+	defer envMuxUnlock()
+	ports, portsErr := freeport.GetFreePorts(2)
+	if portsErr != nil {
+		t.Fatalf("could not get free port for router and prometheus")
+	}
+	routerPort := ports[0]
+	listenerAddr := fmt.Sprintf("localhost:%d", routerPort)
+	prometheusPort := ports[1]
+
+	rr, err := configureRouter(listenerAddr, prometheusPort, cfg, &routerConfig, cdn, natsSetup)
 	if err != nil {
 		return nil, err
 	}
@@ -669,6 +631,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		if err := rr.Start(ctx); err != nil {
 			t.Fatal("Could not start router", zap.Error(err))
 		}
+		envMuxUnlock()
 	}()
 
 	graphQLPath := "/graphql"
@@ -734,6 +697,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		logObserver:             logObserver,
 		getPubSubName:           getPubSubName,
 		routerPort:              routerPort,
+		prometheusPort:          prometheusPort,
 		Servers: []*httptest.Server{
 			employeesServer,
 			familyServer,
@@ -763,7 +727,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	return e, nil
 }
 
-func configureRouter(t testing.TB, listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsData *NatsData) (*core.Router, error) {
+func configureRouter(listenerAddr string, prometheusPort int, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsData *NatsData) (*core.Router, error) {
 	cfg := config.Config{
 		Graph: config.Graph{},
 		CDN: config.CDNConfiguration{
@@ -923,13 +887,9 @@ func configureRouter(t testing.TB, listenerAddr string, testConfig *Config, rout
 	var prometheusConfig rmetric.PrometheusConfig
 
 	if testConfig.PrometheusRegistry != nil {
-		port := getFreePort(t)
-		if port == 0 {
-			return nil, fmt.Errorf("could not get free port: %w", err)
-		}
 		prometheusConfig = rmetric.PrometheusConfig{
 			Enabled:             true,
-			ListenAddr:          fmt.Sprintf("localhost:%d", port),
+			ListenAddr:          fmt.Sprintf("localhost:%d", prometheusPort),
 			Path:                "/metrics",
 			TestRegistry:        testConfig.PrometheusRegistry,
 			GraphqlCache:        testConfig.MetricOptions.EnablePrometheusRouterCache,
@@ -1087,6 +1047,7 @@ type Environment struct {
 	logObserver           *observer.ObservedLogs
 	getPubSubName         func(name string) string
 	routerPort            int
+	prometheusPort        int
 
 	shutdownDelay       time.Duration
 	extraURLQueryValues url.Values
@@ -1164,8 +1125,6 @@ func (e *Environment) Shutdown() {
 		//	e.NatsConnectionMyNats.Close()
 		//	e.NatsData.Server.Shutdown()
 	}
-
-	unlockFreePort(e.routerPort)
 
 	// Close Kafka
 	//if e.cfg.EnableKafka {
