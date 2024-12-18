@@ -141,7 +141,6 @@ import {
   subgraphInvalidSyntaxError,
   subgraphValidationError,
   subgraphValidationFailureError,
-  undefinedNatsStreamConfigurationInputErrorMessage,
   undefinedObjectLikeParentError,
   undefinedRequiredArgumentsErrorMessage,
   undefinedTypeError,
@@ -149,6 +148,7 @@ import {
 } from '../errors/errors';
 import {
   AUTHENTICATED,
+  CONSUMER_INACTIVE_THRESHOLD,
   CONSUMER_NAME,
   DEFAULT_EDFS_PROVIDER_ID,
   EDFS_KAFKA_PUBLISH,
@@ -167,10 +167,11 @@ import {
   INACCESSIBLE,
   KEY,
   MUTATION,
-  NOT_APPLICABLE,
   NON_NULLABLE_BOOLEAN,
   NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT,
+  NON_NULLABLE_INT,
   NON_NULLABLE_STRING,
+  NOT_APPLICABLE,
   OPERATION_TO_DEFAULT,
   OVERRIDE,
   PROVIDER_ID,
@@ -196,7 +197,6 @@ import {
   SUCCESS,
   TOPIC,
   TOPICS,
-  CONSUMER_INACTIVE_THRESHOLD,
 } from '../utils/string-constants';
 import { buildASTSchema } from '../buildASTSchema/buildASTSchema';
 import { ConfigurationData, EventConfiguration, NatsEventType } from '../router-configuration/router-configuration';
@@ -1697,20 +1697,38 @@ export class NormalizationFactory {
     if (streamConfigurationInputData.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
       return false;
     }
-    if (streamConfigurationInputData.inputValueDataByValueName.size != 2) {
+    if (streamConfigurationInputData.inputValueDataByValueName.size != 3) {
       return false;
     }
-    const requiredInputValueNames = new Set<string>([CONSUMER_NAME, STREAM_NAME]);
     for (const [inputValueName, inputValueData] of streamConfigurationInputData.inputValueDataByValueName) {
-      if (!requiredInputValueNames.has(inputValueName)) {
-        return false;
-      }
-      requiredInputValueNames.delete(inputValueName);
-      if (printTypeNode(inputValueData.type) !== NON_NULLABLE_STRING) {
-        return false;
+      switch (inputValueName) {
+        case CONSUMER_INACTIVE_THRESHOLD: {
+          if (printTypeNode(inputValueData.type) !== NON_NULLABLE_INT) {
+            return false;
+          }
+          if (
+            !inputValueData.defaultValue ||
+            inputValueData.defaultValue.kind !== Kind.INT ||
+            inputValueData.defaultValue.value !== `${DEFAULT_CONSUMER_INACTIVE_THRESHOLD}`
+          ) {
+            return false;
+          }
+          break;
+        }
+        case CONSUMER_NAME:
+        // intentional fallthrough
+        case STREAM_NAME: {
+          if (printTypeNode(inputValueData.type) !== NON_NULLABLE_STRING) {
+            return false;
+          }
+          break;
+        }
+        default: {
+          return false;
+        }
       }
     }
-    return requiredInputValueNames.size < 1;
+    return true;
   }
 
   validateEventDrivenSubgraph(definitions: Array<DefinitionNode>) {

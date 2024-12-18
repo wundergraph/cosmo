@@ -71,6 +71,7 @@ export const NOT_APPLICABLE = 'N/A';
 export const NAME = 'name';
 export const NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT = 'edfs__PublishResult!';
 export const NON_NULLABLE_BOOLEAN = 'Boolean!';
+export const NON_NULLABLE_INT = 'Int!';
 export const NON_NULLABLE_STRING = 'String!';
 export const NOT_UPPER = 'NOT';
 export const NULL = 'Null';
