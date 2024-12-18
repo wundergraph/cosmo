@@ -80,6 +80,7 @@ type (
 		playgroundHandler       func(http.Handler) http.Handler
 		publicKey               *ecdsa.PublicKey
 		executionTransport      *http.Transport
+		executionTransportProxy ProxyFunc
 		baseOtelAttributes      []attribute.KeyValue
 		baseRouterConfigVersion string
 		mux                     *chi.Mux
@@ -103,7 +104,8 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		cancelFunc:              cancel,
 		Config:                  &r.Config,
 		websocketStats:          r.WebsocketStats,
-		executionTransport:      newHTTPTransport(r.subgraphTransportOptions, proxy),
+		executionTransport:      newHTTPTransport(r.subgraphTransportOptions.TransportTimeoutOptions, proxy),
+		executionTransportProxy: proxy,
 		playgroundHandler:       r.playgroundHandler,
 		baseRouterConfigVersion: routerConfig.GetVersion(),
 		inFlightRequests:        &atomic.Uint64{},
@@ -798,10 +800,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		logger:         s.logger,
 		trackUsageInfo: s.graphqlMetricsConfig.Enabled,
 		transportOptions: &TransportOptions{
-			RequestTimeout: s.subgraphTransportOptions.RequestTimeout,
-			PreHandlers:    s.preOriginHandlers,
-			PostHandlers:   s.postOriginHandlers,
-			MetricStore:    gm.metricStore,
+			Proxy:                    s.executionTransportProxy,
+			SubgraphTransportOptions: s.subgraphTransportOptions,
+			PreHandlers:              s.preOriginHandlers,
+			PostHandlers:             s.postOriginHandlers,
+			MetricStore:              gm.metricStore,
 			RetryOptions: retrytransport.RetryOptions{
 				Enabled:       s.retryOptions.Enabled,
 				MaxRetryCount: s.retryOptions.MaxRetryCount,

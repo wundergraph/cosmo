@@ -85,7 +85,7 @@ type (
 		proxy             ProxyFunc
 	}
 
-	SubgraphTransportOptions struct {
+	TransportTimeoutOptions struct {
 		RequestTimeout         time.Duration
 		ResponseHeaderTimeout  time.Duration
 		ExpectContinueTimeout  time.Duration
@@ -93,6 +93,11 @@ type (
 		DialTimeout            time.Duration
 		TLSHandshakeTimeout    time.Duration
 		KeepAliveProbeInterval time.Duration
+	}
+
+	SubgraphTransportOptions struct {
+		TransportTimeoutOptions
+		SubgraphMap map[string]*TransportTimeoutOptions
 	}
 
 	GraphQLMetricsConfig struct {
@@ -1587,15 +1592,44 @@ func DefaultFileUploadConfig() *config.FileUpload {
 	}
 }
 
+func NewTransportTimeoutOptions(cfg config.GlobalSubgraphRequestRule) TransportTimeoutOptions {
+	return TransportTimeoutOptions{
+		RequestTimeout:         cfg.RequestTimeout,
+		ResponseHeaderTimeout:  cfg.ResponseHeaderTimeout,
+		ExpectContinueTimeout:  cfg.ExpectContinueTimeout,
+		KeepAliveIdleTimeout:   cfg.KeepAliveIdleTimeout,
+		DialTimeout:            cfg.DialTimeout,
+		TLSHandshakeTimeout:    cfg.TLSHandshakeTimeout,
+		KeepAliveProbeInterval: cfg.KeepAliveProbeInterval,
+	}
+}
+
+func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransportOptions {
+	base := &SubgraphTransportOptions{
+		TransportTimeoutOptions: NewTransportTimeoutOptions(cfg.All),
+		SubgraphMap:             map[string]*TransportTimeoutOptions{},
+	}
+
+	for k, v := range cfg.Subgraphs {
+		opts := NewTransportTimeoutOptions(*v)
+		base.SubgraphMap[k] = &opts
+	}
+
+	return base
+}
+
 func DefaultSubgraphTransportOptions() *SubgraphTransportOptions {
 	return &SubgraphTransportOptions{
-		RequestTimeout:         60 * time.Second,
-		TLSHandshakeTimeout:    10 * time.Second,
-		ResponseHeaderTimeout:  0 * time.Second,
-		ExpectContinueTimeout:  0 * time.Second,
-		KeepAliveProbeInterval: 30 * time.Second,
-		KeepAliveIdleTimeout:   0 * time.Second,
-		DialTimeout:            30 * time.Second,
+		TransportTimeoutOptions: TransportTimeoutOptions{
+			RequestTimeout:         60 * time.Second,
+			TLSHandshakeTimeout:    10 * time.Second,
+			ResponseHeaderTimeout:  0 * time.Second,
+			ExpectContinueTimeout:  0 * time.Second,
+			KeepAliveProbeInterval: 30 * time.Second,
+			KeepAliveIdleTimeout:   0 * time.Second,
+			DialTimeout:            30 * time.Second,
+		},
+		SubgraphMap: map[string]*TransportTimeoutOptions{},
 	}
 }
 
@@ -1731,7 +1765,7 @@ func WithHostName(hostName string) Option {
 
 type ProxyFunc func(req *http.Request) (*url.URL, error)
 
-func newHTTPTransport(opts *SubgraphTransportOptions, proxy ProxyFunc) *http.Transport {
+func newHTTPTransport(opts TransportTimeoutOptions, proxy ProxyFunc) *http.Transport {
 	dialer := &net.Dialer{
 		Timeout:   opts.DialTimeout,
 		KeepAlive: opts.KeepAliveProbeInterval,
