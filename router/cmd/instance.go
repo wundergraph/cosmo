@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-
 	"net/http"
 	"os"
 
@@ -163,6 +162,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithEvents(cfg.Events),
 		core.WithRateLimitConfig(&cfg.RateLimit),
 		core.WithClientHeader(cfg.ClientHeader),
+		core.WithCacheWarmupConfig(&cfg.CacheWarmup),
 	}
 
 	// HTTP_PROXY, HTTPS_PROXY and NO_PROXY

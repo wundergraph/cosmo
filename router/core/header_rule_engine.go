@@ -3,6 +3,14 @@ package core
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
+	"regexp"
+	"slices"
+	"strings"
+	"sync"
+	"time"
+
 	cachedirective "github.com/pquerna/cachecontrol/cacheobject"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -11,13 +19,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	"io"
-	"net/http"
-	"regexp"
-	"slices"
-	"strings"
-	"sync"
-	"time"
 )
 
 var (

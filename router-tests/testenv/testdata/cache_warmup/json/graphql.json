@@ -1,0 +1,3 @@
+{
+  "query": "query { employees { id details { forename } } }"
+}

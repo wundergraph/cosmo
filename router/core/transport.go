@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"fmt"
+	"go.opentelemetry.io/otel/propagation"
 	"io"
 	"net/http"
 	"net/url"
@@ -307,6 +308,7 @@ type TransportFactory struct {
 	metricStore                   metric.Store
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
+	tracePropagators              propagation.TextMapPropagator
 	proxy                         ProxyFunc
 }
 
@@ -322,6 +324,7 @@ type TransportOptions struct {
 	MetricStore                   metric.Store
 	Logger                        *zap.Logger
 	TracerProvider                *sdktrace.TracerProvider
+	TracePropagators              propagation.TextMapPropagator
 }
 
 func NewTransport(opts *TransportOptions) *TransportFactory {
@@ -335,6 +338,7 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		logger:                        opts.Logger,
 		tracerProvider:                opts.TracerProvider,
 		proxy:                         opts.Proxy,
+		tracePropagators:              opts.TracePropagators,
 	}
 }
 
@@ -347,13 +351,19 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport ht
 		baseTransport = docker.NewLocalhostFallbackRoundTripper(baseTransport)
 	}
 
+	otelHttpOptions := []otelhttp.Option{
+		otelhttp.WithSpanNameFormatter(SpanNameFormatter),
+		otelhttp.WithSpanOptions(otrace.WithAttributes(otel.EngineTransportAttribute)),
+		otelhttp.WithTracerProvider(t.tracerProvider),
+	}
+
+	if t.tracePropagators != nil {
+		otelHttpOptions = append(otelHttpOptions, otelhttp.WithPropagators(t.tracePropagators))
+	}
+
 	traceTransport := trace.NewTransport(
 		baseTransport,
-		[]otelhttp.Option{
-			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
-			otelhttp.WithSpanOptions(otrace.WithAttributes(otel.EngineTransportAttribute)),
-			otelhttp.WithTracerProvider(t.tracerProvider),
-		},
+		otelHttpOptions,
 		trace.WithPreHandler(func(r *http.Request) {
 			span := otrace.SpanFromContext(r.Context())
 			reqContext := getRequestContext(r.Context())
