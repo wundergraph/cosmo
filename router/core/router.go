@@ -209,13 +209,13 @@ type (
 		// should be removed once the users have migrated to the new overrides config
 		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
 		// the new overrides config
-		overrides                config.OverridesConfiguration
-		authorization            *config.AuthorizationConfiguration
-		rateLimit                *config.RateLimitConfiguration
-		webSocketConfiguration   *config.WebSocketConfiguration
-		subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
-		clientHeader             config.ClientHeader
-		cacheWarmup              *config.CacheWarmupConfiguration
+		overrides                  config.OverridesConfiguration
+		authorization              *config.AuthorizationConfiguration
+		rateLimit                  *config.RateLimitConfiguration
+		webSocketConfiguration     *config.WebSocketConfiguration
+		subgraphErrorPropagation   config.SubgraphErrorPropagationConfiguration
+		clientHeader               config.ClientHeader
+		cacheWarmup                *config.CacheWarmupConfiguration
 		multipartHeartbeatInterval time.Duration
 		hostName                   string
 	}
@@ -1719,9 +1719,6 @@ func WithClientHeader(cfg config.ClientHeader) Option {
 
 func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 	return func(r *Router) {
-		if cfg.Workers <= 0 {
-			cfg.Workers = 1
-		}
 		r.cacheWarmup = cfg
 	}
 }
