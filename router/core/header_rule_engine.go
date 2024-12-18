@@ -264,6 +264,11 @@ func (h *HeaderPropagation) OnOriginRequest(request *http.Request, ctx RequestCo
 }
 
 func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestContext) *http.Response {
+	// In the case of an error response, it is possible that the response is nil
+	if resp == nil {
+		return nil
+	}
+
 	propagation := getResponseHeaderPropagation(resp.Request.Context())
 	if propagation == nil {
 		return resp

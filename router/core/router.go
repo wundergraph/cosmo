@@ -217,6 +217,7 @@ type (
 		clientHeader             config.ClientHeader
 		cacheWarmup              *config.CacheWarmupConfiguration
 		multipartHeartbeatInterval time.Duration
+		hostName                   string
 	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
@@ -538,6 +539,13 @@ func NewRouter(opts ...Option) (*Router, error) {
 				"Net poller is not functional by the environment. Ensure that the system supports epoll/kqueue and that necessary syscall permissions are granted. Falling back to less efficient connection handling method.",
 				zap.Error(err),
 			)
+		}
+	}
+
+	if r.hostName == "" {
+		r.hostName, err = os.Hostname()
+		if err != nil {
+			r.logger.Warn("Failed to get hostname", zap.Error(err))
 		}
 	}
 
@@ -1715,6 +1723,12 @@ func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 			cfg.Workers = 1
 		}
 		r.cacheWarmup = cfg
+	}
+}
+
+func WithHostName(hostName string) Option {
+	return func(r *Router) {
+		r.hostName = hostName
 	}
 }
 

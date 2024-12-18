@@ -1743,7 +1743,7 @@ func subgraphOptions(ctx context.Context, t testing.TB, natsData *NatsData) *sub
 		js, err := jetstream.New(natsConnection)
 		require.NoError(t, err)
 
-		natsPubSubByProviderID[sourceName] = pubsubNats.NewConnector(zap.NewNop(), natsConnection, js).New(ctx)
+		natsPubSubByProviderID[sourceName] = pubsubNats.NewConnector(zap.NewNop(), natsConnection, js, "hostname", "listenaddr").New(ctx)
 	}
 
 	return &subgraphs.SubgraphOptions{

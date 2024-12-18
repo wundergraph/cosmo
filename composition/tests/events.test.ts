@@ -119,6 +119,7 @@ describe('events Configuration tests', () => {
                   subjects: ['firstSub.{{ args.firstID }}', 'secondSub.{{ args.secondID }}'],
                   type: 'subscribe',
                   streamConfiguration: {
+                    consumerInactiveThreshold: 300,
                     consumerName: 'consumer',
                     streamName: 'streamName',
                   },
@@ -156,10 +157,11 @@ describe('events Configuration tests', () => {
       
         type Subscription {
           entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"], providerId: "my-provider")
-          entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__natsSubscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], providerId: "double", streamConfiguration: {consumerName: "consumer", streamName: "streamName"})
+          entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__natsSubscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], providerId: "double", streamConfiguration: {consumerName: "consumer", streamName: "streamName", consumerInactiveThreshold: 300})
         }
         
         input edfs__NatsStreamConfiguration {
+          consumerInactiveThreshold: Int! = 30
           consumerName: String!
           streamName: String!
         }
@@ -338,15 +340,6 @@ describe('events Configuration tests', () => {
             ]),
           ),
         ]),
-      );
-    });
-
-    test('that an error is returned if edfs__StreamConfiguration is undefined', () => {
-      const { errors } = normalizeSubgraph(subgraphO.definitions, subgraphO.name);
-      expect(errors).toBeDefined();
-      expect(errors).toHaveLength(1);
-      expect(errors![0]).toStrictEqual(
-        invalidEventDrivenGraphError([undefinedNatsStreamConfigurationInputErrorMessage]),
       );
     });
 
@@ -621,6 +614,20 @@ describe('events Configuration tests', () => {
     );
   });
 
+  test('that an error is returned if a NATS request subject uses streamConfiguration and there is a wrong definition of edfs__NatsStreamConfiguration', () => {
+    const { errors } = normalizeSubgraph(subgraphAN.definitions, subgraphAN.name);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
+      invalidEventDrivenGraphError([invalidNatsStreamConfigurationDefinitionErrorMessage]),
+    );
+  });
+
+  test('that no error is returned if a NATS request subject is without streamConfiguration and there is a wrong definition of edfs__NatsStreamConfiguration', () => {
+    const { errors } = normalizeSubgraph(subgraphAO.definitions, subgraphAO.name);
+    expect(errors).toBeUndefined();
+  });
+
   test('that an error is returned if a NATS publish subject references a valid argument and an invalid one', () => {
     const { errors } = normalizeSubgraph(subgraphAI.definitions, subgraphAI.name);
     expect(errors).toBeDefined();
@@ -796,11 +803,6 @@ describe('events Configuration tests', () => {
         type Subscription {
           entitySubscription(fieldSet: String!): Interface!
         }
-        
-        input edfs__NatsStreamConfiguration {
-          consumerName: String!
-          streamName: String!
-        }
      `,
         ),
       );
@@ -835,11 +837,6 @@ describe('events Configuration tests', () => {
         }
         
         union Union = Entity
-        
-        input edfs__NatsStreamConfiguration {
-          consumerName: String!
-          streamName: String!
-        }
      `,
         ),
       );
@@ -899,7 +896,7 @@ const subgraphStringA = `
 
   type Subscription {
     entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"], providerId: "my-provider")
-    entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__natsSubscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], providerId: "double", streamConfiguration: {consumerName: "consumer", streamName: "streamName"})
+    entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__natsSubscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], providerId: "double", streamConfiguration: {consumerName: "consumer", streamName: "streamName", consumerInactiveThreshold: 300})
   }
   
   type Entity @key(fields: "id", resolvable: false) {
@@ -1289,7 +1286,7 @@ const subgraphP: Subgraph = {
   url: '',
   definitions: parse(`
     type Subscription {
-      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"])
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"], streamConfiguration: { consumerName: "consumerName", streamName: "streamName" })
     }
     
     type Entity @key(fields: "id", resolvable: false) {
@@ -1694,6 +1691,51 @@ const subgraphAM: Subgraph = {
 
     type edfs__PublishResult {
       success: Boolean!
+    }
+  `),
+};
+
+const subgraphAN: Subgraph = {
+  name: 'subgraph-an',
+  url: '',
+  definitions: parse(`
+    type Subscription {
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(
+        subjects: ["entities.{{ args.id }}"],
+        streamConfiguration: {consumerName: "consumer", streamName: "streamName"}
+      )
+    }
+
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    input edfs__NatsStreamConfiguration {
+      consumerInactiveThreshold: String!
+      consumerName: String!
+      streamName: String!
+    }
+  `),
+};
+
+const subgraphAO: Subgraph = {
+  name: 'subgraph-ao',
+  url: '',
+  definitions: parse(`
+    type Subscription {
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(
+        subjects: ["entities.{{ args.id }}"],
+      )
+    }
+
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    input edfs__NatsStreamConfiguration {
+      consumerInactiveThreshold: String!
+      consumerName: String!
+      streamName: String!
     }
   `),
 };
