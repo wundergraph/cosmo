@@ -70,7 +70,8 @@ type edfs__PublishResult {
     success: Boolean!
 }
 
-input edfs__StreamConfiguration {
+input edfs__NatsStreamConfiguration {
+    consumerInactiveThreshold: Int! = 30
     consumerName: String!
     streamName: String!
 }
