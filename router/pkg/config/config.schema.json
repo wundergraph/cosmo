@@ -1243,6 +1243,19 @@
               }
             }
           }
+        },
+        "subgraphs": {
+          "type": "object",
+          "description": "The configuration to control traffic shaping for specific subgraphs.",
+          "additionalProperties": {
+            "request_timeout": {
+              "type": "string",
+              "duration": {
+                "minimum": "1s"
+              },
+              "description": "The request timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            }
+          }
         }
       }
     },
