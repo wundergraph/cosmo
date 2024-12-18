@@ -55,7 +55,7 @@ func (f *FileSystemSource) LoadItems(_ context.Context, log *zap.Logger) ([]*Cac
 				},
 			})
 		default:
-			log.Warn("Ignoring file with unknown extension", zap.String("path", path))
+			log.Debug("Ignoring file with unknown extension", zap.String("path", path))
 		}
 
 		return nil
