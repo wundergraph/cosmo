@@ -6,13 +6,16 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
@@ -203,6 +206,7 @@ type (
 		tlsServerConfig               *tls.Config
 		tlsConfig                     *TlsConfig
 		telemetryAttributes           []config.CustomAttribute
+		tracePropagators              propagation.TextMapPropagator
 		// Poller
 		configPoller                 configpoller.ConfigPoller
 		selfRegister                 selfregister.SelfRegister
@@ -219,6 +223,7 @@ type (
 		webSocketConfiguration     *config.WebSocketConfiguration
 		subgraphErrorPropagation   config.SubgraphErrorPropagationConfiguration
 		clientHeader               config.ClientHeader
+		cacheWarmup                *config.CacheWarmupConfiguration
 		multipartHeartbeatInterval time.Duration
 		hostName                   string
 	}
@@ -425,17 +430,36 @@ func NewRouter(opts ...Option) (*Router, error) {
 		}
 	}
 
-	// Add default tracing exporter if needed
-	if r.traceConfig.Enabled && len(r.traceConfig.Exporters) == 0 && r.traceConfig.TestMemoryExporter == nil {
-		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
-			r.logger.Debug("Using default trace exporter", zap.String("endpoint", endpoint))
-			r.traceConfig.Exporters = append(r.traceConfig.Exporters, &rtrace.ExporterConfig{
-				Endpoint: endpoint,
-				Exporter: otelconfig.ExporterOLTPHTTP,
-				HTTPPath: "/v1/traces",
-				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
-			})
+	if r.traceConfig.Enabled {
+		if len(r.traceConfig.Propagators) > 0 {
+			propagators, err := rtrace.NewCompositePropagator(r.traceConfig.Propagators...)
+			if err != nil {
+				r.logger.Error("creating propagators", zap.Error(err))
+				return nil, err
+			}
+
+			// Don't set it globally when we use the router in tests.
+			// In practice, setting it globally only makes sense for module development.
+			if r.traceConfig.TestMemoryExporter == nil {
+				otel.SetTextMapPropagator(propagators)
+			}
+
+			r.tracePropagators = propagators
 		}
+
+		// Add default tracing exporter if needed
+		if len(r.traceConfig.Exporters) == 0 && r.traceConfig.TestMemoryExporter == nil {
+			if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
+				r.logger.Debug("Using default trace exporter", zap.String("endpoint", endpoint))
+				r.traceConfig.Exporters = append(r.traceConfig.Exporters, &rtrace.ExporterConfig{
+					Endpoint: endpoint,
+					Exporter: otelconfig.ExporterOLTPHTTP,
+					HTTPPath: "/v1/traces",
+					Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
+				})
+			}
+		}
+
 	}
 
 	// Add default metric exporter if none are configured
@@ -1746,6 +1770,12 @@ func WithStorageProviders(cfg config.StorageProviders) Option {
 func WithClientHeader(cfg config.ClientHeader) Option {
 	return func(r *Router) {
 		r.clientHeader = cfg
+	}
+}
+
+func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
+	return func(r *Router) {
+		r.cacheWarmup = cfg
 	}
 }
 
