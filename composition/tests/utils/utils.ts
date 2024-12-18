@@ -108,6 +108,14 @@ export const versionOneRouterContractDefinitions =
 export const versionOneFullEventDefinitions =
   fullDefaultSchemaDefinition + eventDirectiveDefinitions + baseDirectiveDefinitions;
 
+export const versionOneSubscriptionEventDefinitions =
+  `
+schema {
+  subscription: Subscription
+}
+directive @edfs__natsSubscribe(providerId: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration, subjects: [String!]!) on FIELD_DEFINITION
+` + baseDirectiveDefinitions;
+
 export const versionTwoRouterDirectiveDefinitions = `
     directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
     directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
