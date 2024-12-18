@@ -31,6 +31,10 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	defaultTimeout = 60 * time.Second
+)
+
 type TransportPreHandler func(req *http.Request, ctx RequestContext) (*http.Request, *http.Response)
 type TransportPostHandler func(resp *http.Response, ctx RequestContext) *http.Response
 
@@ -63,6 +67,7 @@ func NewCustomTransport(
 	ct := &CustomTransport{
 		metricStore: metricStore,
 	}
+
 	if retryOptions.Enabled {
 		ct.roundTripper = retrytransport.NewRetryHTTPTransport(roundTripper, retryOptions, logger)
 	} else {
@@ -296,12 +301,13 @@ func (ct *CustomTransport) singleFlightKey(req *http.Request) uint64 {
 type TransportFactory struct {
 	preHandlers                   []TransportPreHandler
 	postHandlers                  []TransportPostHandler
+	subgraphTransportOptions      *SubgraphTransportOptions
 	retryOptions                  retrytransport.RetryOptions
-	requestTimeout                time.Duration
 	localhostFallbackInsideDocker bool
 	metricStore                   metric.Store
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
+	proxy                         ProxyFunc
 }
 
 var _ ApiTransportFactory = TransportFactory{}
@@ -309,8 +315,9 @@ var _ ApiTransportFactory = TransportFactory{}
 type TransportOptions struct {
 	PreHandlers                   []TransportPreHandler
 	PostHandlers                  []TransportPostHandler
+	SubgraphTransportOptions      *SubgraphTransportOptions
+	Proxy                         ProxyFunc
 	RetryOptions                  retrytransport.RetryOptions
-	RequestTimeout                time.Duration
 	LocalhostFallbackInsideDocker bool
 	MetricStore                   metric.Store
 	Logger                        *zap.Logger
@@ -322,20 +329,26 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		preHandlers:                   opts.PreHandlers,
 		postHandlers:                  opts.PostHandlers,
 		retryOptions:                  opts.RetryOptions,
-		requestTimeout:                opts.RequestTimeout,
+		subgraphTransportOptions:      opts.SubgraphTransportOptions,
 		localhostFallbackInsideDocker: opts.LocalhostFallbackInsideDocker,
 		metricStore:                   opts.MetricStore,
 		logger:                        opts.Logger,
 		tracerProvider:                opts.TracerProvider,
+		proxy:                         opts.Proxy,
 	}
 }
 
-func (t TransportFactory) RoundTripper(enableSingleFlight bool, transport http.RoundTripper) http.RoundTripper {
-	if t.localhostFallbackInsideDocker && docker.Inside() {
-		transport = docker.NewLocalhostFallbackRoundTripper(transport)
+func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport http.RoundTripper) http.RoundTripper {
+	if t.subgraphTransportOptions != nil && t.subgraphTransportOptions.SubgraphMap != nil && len(t.subgraphTransportOptions.SubgraphMap) > 0 {
+		baseTransport = NewTimeoutTransport(t.subgraphTransportOptions, baseTransport, t.logger, t.proxy)
 	}
+
+	if t.localhostFallbackInsideDocker && docker.Inside() {
+		baseTransport = docker.NewLocalhostFallbackRoundTripper(baseTransport)
+	}
+
 	traceTransport := trace.NewTransport(
-		transport,
+		baseTransport,
 		[]otelhttp.Option{
 			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
 			otelhttp.WithSpanOptions(otrace.WithAttributes(otel.EngineTransportAttribute)),
@@ -375,7 +388,10 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, transport http.R
 }
 
 func (t TransportFactory) DefaultTransportTimeout() time.Duration {
-	return t.requestTimeout
+	if t.subgraphTransportOptions != nil {
+		return t.subgraphTransportOptions.RequestTimeout
+	}
+	return defaultTimeout
 }
 
 func (t TransportFactory) DefaultHTTPProxyURL() *url.URL {
