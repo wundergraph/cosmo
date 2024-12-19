@@ -167,7 +167,7 @@ jobs:
         working-directory: ./router
         run: make build
 
-  scan_image:
+  image_scan:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15

@@ -30,7 +30,7 @@ runs:
         version: v0.58.0
         image-ref: ${{ inputs.image_ref }}
         ignore-unfixed: true
-        exit-code: 0
+        exit-code: 1
         severity: 'CRITICAL,HIGH'
         format: 'sarif'
         trivyignores: '.trivyignore'
@@ -44,14 +44,14 @@ runs:
         sarif_file: 'trivy-results.sarif'
 
     - uses: mshick/add-pr-comment@v2
-      if: steps.scan.outcome == 'success'
+      if: success() && steps.scan.outcome == 'success'
       with:
         message: |
           # Trivy Image scan passed
           :white_check_mark: No security vulnerabilities found in image `${{ inputs.image_ref }}`.
 
     - uses: mshick/add-pr-comment@v2
-      if: steps.scan.outcome == 'failure'
+      if: failure() && steps.scan.outcome == 'failure'
       with:
         message: |
           # Trivy Image scan failed
