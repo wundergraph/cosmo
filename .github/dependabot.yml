@@ -4,7 +4,6 @@ updates:
   - package-ecosystem: "gomod"
     directories:
         - "router"
-        - "router-tests"
         - "aws-lambda-router"
         - "composition-go"
         - "connect-go"
