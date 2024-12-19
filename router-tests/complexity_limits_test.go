@@ -10,8 +10,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/trace"
-	tracetest2 "go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 func TestComplexityLimits(t *testing.T) {
@@ -150,7 +148,7 @@ func TestComplexityLimits(t *testing.T) {
 				require.Equal(t, 400, failedRes.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}]}`, failedRes.Body)
 
-				testSpan := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan := RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepth.Int(3))
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
@@ -161,7 +159,7 @@ func TestComplexityLimits(t *testing.T) {
 				require.Equal(t, 400, failedRes2.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"The query depth 3 exceeds the max query depth allowed (2)"}]}`, failedRes2.Body)
 
-				testSpan2 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan2 := RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepth.Int(3))
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 				exporter.Reset()
@@ -170,7 +168,7 @@ func TestComplexityLimits(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, successRes.Body)
-				testSpan3 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan3 := RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryDepth.Int(2))
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
@@ -179,7 +177,7 @@ func TestComplexityLimits(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, successRes2.Body)
-				testSpan4 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan4 := RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryDepth.Int(2))
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 			})
@@ -388,17 +386,4 @@ func TestComplexityLimits(t *testing.T) {
 			})
 		})
 	})
-}
-
-func requireSpanWithName(t *testing.T, exporter *tracetest2.InMemoryExporter, name string) trace.ReadOnlySpan {
-	sn := exporter.GetSpans().Snapshots()
-	var testSpan trace.ReadOnlySpan
-	for _, span := range sn {
-		if span.Name() == name {
-			testSpan = span
-			break
-		}
-	}
-	require.NotNil(t, testSpan)
-	return testSpan
 }

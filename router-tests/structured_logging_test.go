@@ -233,6 +233,8 @@ func TestAccessLogsFileOutput(t *testing.T) {
 	})
 
 	t.Run("subgraph", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("Simple", func(t *testing.T) {
 			t.Parallel()
 
@@ -1170,6 +1172,8 @@ func TestAccessLogs(t *testing.T) {
 	})
 
 	t.Run("subgraph logs", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("Simple without custom attributes", func(t *testing.T) {
 			t.Parallel()
 

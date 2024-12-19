@@ -208,7 +208,7 @@ func TestWebSockets(t *testing.T) {
 			go func() {
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 				// Trigger the subscription via NATS
-				subject := "employeeUpdated.3"
+				subject := xEnv.GetPubSubName("employeeUpdated.3")
 				message := []byte(`{"id":3,"__typename": "Employee"}`)
 				err := xEnv.NatsConnectionDefault.Publish(subject, message)
 				require.NoError(t, err)
@@ -266,7 +266,7 @@ func TestWebSockets(t *testing.T) {
 			go func() {
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 				// Trigger the subscription via NATS
-				subject := "employeeUpdated.3"
+				subject := xEnv.GetPubSubName("employeeUpdated.3")
 				message := []byte(`{"id":3,"__typename": "Employee"}`)
 				err := xEnv.NatsConnectionDefault.Publish(subject, message)
 				require.NoError(t, err)
@@ -326,7 +326,7 @@ func TestWebSockets(t *testing.T) {
 			go func() {
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 				// Trigger the subscription via NATS
-				subject := "employeeUpdated.3"
+				subject := xEnv.GetPubSubName("employeeUpdated.3")
 				message := []byte(`{"id":3,"__typename": "Employee"}`)
 				err := xEnv.NatsConnectionDefault.Publish(subject, message)
 				require.NoError(t, err)
@@ -472,7 +472,7 @@ func TestWebSockets(t *testing.T) {
 			go func() {
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 				// Trigger the subscription via NATS
-				subject := "employeeUpdated.3"
+				subject := xEnv.GetPubSubName("employeeUpdated.3")
 				message := []byte(`{"id":3,"__typename": "Employee"}`)
 				err := xEnv.NatsConnectionDefault.Publish(subject, message)
 				require.NoError(t, err)
@@ -1843,10 +1843,10 @@ func TestWebSockets(t *testing.T) {
 
 			go func() {
 				time.Sleep(time.Millisecond * 100)
-				err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
 				require.NoError(t, err)
 				time.Sleep(time.Millisecond * 100)
-				err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
 				require.NoError(t, err)
 			}()
 
