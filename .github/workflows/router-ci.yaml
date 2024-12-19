@@ -73,6 +73,14 @@ jobs:
         with:
           working-directory: ./router
 
+      - name: 'Dependency Review'
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: 'high'
+          comment-summary-in-pr: 'always'
+          vulnerability-check: true
+          license-check: false
+
       - name: Test
         working-directory: ./router
         run: make test
