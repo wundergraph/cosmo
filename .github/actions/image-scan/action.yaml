@@ -32,6 +32,7 @@ runs:
         exit-code: 1
         severity: 'CRITICAL,HIGH'
         format: 'sarif'
+        trivyignores: '.trivyignore'
         output: 'trivy-results.sarif'
 
     - name: Upload Trivy scan results to GitHub Security tab
@@ -45,12 +46,15 @@ runs:
       with:
         message: |
           # Trivy Image scan passed
-          :white_check_mark: No security vulnerabilities found in image ${{ inputs.image_ref }}.
+          :white_check_mark: No security vulnerabilities found in image `${{ inputs.image_ref }}`.
 
     - uses: mshick/add-pr-comment@v2
       if: failure()
       with:
         message: |
           # Trivy Image scan failed
-          :x: Image ${{ inputs.image_ref }} has security vulnerabilities.
+          :x: Image `${{ inputs.image_ref }}` has security vulnerabilities.
+          
           Please check the security [vulnerabilities](https://github.com/wundergraph/cosmo/security/code-scanning?query=pr%3A${{ github.event.number }}+is%3Aopen+tool%3ATrivy) found in the PR.
+          
+          If you believe this is a false positive, please add the vulnerability to the `.trivyignore` file and re-run the scan.
