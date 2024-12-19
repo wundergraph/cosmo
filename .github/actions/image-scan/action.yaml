@@ -19,17 +19,12 @@ runs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Obtain template file
-      shell: bash
-      run: curl -o trivy-pr-comment.tpl https://raw.githubusercontent.com/domstolene/trivy-pr-report/main/trivy-pr-comment.tpl
-
     - name: Run Trivy for PR report
       uses: aquasecurity/trivy-action@0.29.0
       id: scan
       with:
         version: v0.58.0
-        scan-type: 'fs'
-        scan-ref: './router'
+        image-ref: ${{ inputs.image_ref }}
         ignore-unfixed: true
         exit-code: 1
         severity: 'CRITICAL,HIGH'
@@ -37,6 +32,16 @@ runs:
         trivyignores: '.trivyignore'
         limit-severities-for-sarif: true
         output: 'trivy-results.sarif'
+
+    - name: Run and Print Trivy for PR report
+      uses: aquasecurity/trivy-action@0.29.0
+      with:
+        version: v0.58.0
+        image-ref: ${{ inputs.image_ref }}
+        ignore-unfixed: true
+        severity: 'CRITICAL,HIGH'
+        format: 'table'
+        trivyignores: '.trivyignore'
 
     - name: Upload Trivy scan results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v3
