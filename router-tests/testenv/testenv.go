@@ -1124,8 +1124,6 @@ type Environment struct {
 	KafkaClient           *kgo.Client
 	logObserver           *observer.ObservedLogs
 	getPubSubName         func(name string) string
-	routerPort            int
-	prometheusPort        int
 
 	shutdownDelay       time.Duration
 	extraURLQueryValues url.Values
