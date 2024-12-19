@@ -15,7 +15,7 @@ updates:
     groups:
       wundergraph:
         patterns:
-          - "**/wundergraph/**"
+          - "**wundergraph**"
 
   - package-ecosystem: "github-actions"
     commit-message:
