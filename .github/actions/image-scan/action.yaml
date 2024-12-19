@@ -1,5 +1,5 @@
-name: "Build and Push Image (PR only)"
-description: "This action to build and push docker image for CI in Pull Request only."
+name: "Image Vulnerability Scan"
+description: "This action performs a Trivy scan on the image and adds a PR comment with the results."
 inputs:
   github_token:
     description: 'GitHub Token'
