@@ -163,6 +163,32 @@ jobs:
         run: make build
 
   scan_image:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/build-push-image
+        with:
+          docker_username: ${{secrets.DOCKER_USERNAME}}
+          docker_password: ${{secrets.DOCKER_PASSWORD}}
+          docker_context: router
+          dockerfile: router/Dockerfile
+          token: ${{secrets.GITHUB_TOKEN}}
+          image_name: router
+          image_description: "Cosmo Router"
+          push: 'false'
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: 'ghcr.io/wundergraph/cosmo/router:latest'
+          format: 'github'
+          severity: HIGH,CRITICAL
+
+  scan_image_fork:
+    if: github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
