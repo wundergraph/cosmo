@@ -13,6 +13,10 @@ concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
   cancel-in-progress: true
 
+permissions:
+  contents: read # for actions/checkout to fetch code
+  pull-requests: write # required for adding pull request comments
+
 env:
   CI: true
   ROUTER_REGISTRATION: false
@@ -178,37 +182,13 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: router
           image_description: "Cosmo Router"
+          image_platforms: 'linux/amd64'
           push: 'false'
 
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.29.0
+      - uses: ./.github/actions/image-scan
         with:
-          image-ref: 'ghcr.io/wundergraph/cosmo/router:latest'
-          format: 'github'
-          severity: HIGH,CRITICAL
-
-  scan_image_fork:
-    if: github.event.pull_request.head.repo.full_name != github.repository
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: ./.github/actions/build-push-image
-        with:
-          docker_context: router
-          dockerfile: router/Dockerfile
-          token: ${{secrets.GITHUB_TOKEN}}
-          image_name: router
-          image_description: "Cosmo Router"
-          push: 'false'
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.29.0
-        with:
-          image-ref: 'ghcr.io/wundergraph/cosmo/router:latest'
-          format: 'github'
-          severity: HIGH,CRITICAL
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          image_ref: 'ghcr.io/wundergraph/cosmo/router:latest'
 
   build_push_image:
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry

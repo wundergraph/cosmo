@@ -1,0 +1,66 @@
+name: "Build and Push Image (PR only)"
+description: "This action to build and push docker image for CI in Pull Request only."
+inputs:
+  github_token:
+    description: 'GitHub Token'
+    required: true
+
+  skip_dirs:
+    description: 'A comma separated list of folders to ignore'
+    required: false
+
+  image_ref:
+    description: "The name of the container"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Obtain template file
+      shell: bash
+      run: curl -o trivy-pr-comment.tpl https://raw.githubusercontent.com/domstolene/trivy-pr-report/main/trivy-pr-comment.tpl
+
+    - name: Run Trivy for PR report
+      uses: aquasecurity/trivy-action@0.29.0
+      id: scan
+      with:
+        image-ref: ${{ inputs.image_ref }}
+        format: 'template'
+        template: '@trivy-pr-comment.tpl'
+        ignore-unfixed: true
+        severity: 'CRITICAL,HIGH'
+        output: 'trivy.json'
+        exit-code: 1
+        skip-dirs: ${{ inputs.skip_dirs }}
+        scanners: 'vuln'
+
+    - name: Report vulnerabilities in PR
+      if: failure() && steps.scan.outcome == 'failure'
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      shell: bash
+      run: |
+        echo -n "{\"body\":\"### Vulnerabilities detected\nThe following vulnerabilities of HIGH or CRITICAL severity has been detected in the code. Please resolve these before merging the pull request.\n\n" > result.json
+        cat trivy.json | sort | uniq | tr -d '\n' >> result.json
+        echo "\"}" >> result.json
+        curl -X POST -H "Accept: application/vnd.github+json" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          -H "Authorization: Bearer $GITHUB_TOKEN" \
+          ${{ github.event.pull_request.comments_url }} \
+          -d @result.json
+
+    - name: Report no vulnerabilities in PR
+      if: success() && steps.scan.outcome == 'success'
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+      shell: bash
+      run: |
+        echo -n "{\"body\":\"### No vulnerabilities detected\nNo vulnerabilities of HIGH or CRITICAL severity has been detected in the code.\"}" > result.json
+        curl -X POST -H "Accept: application/vnd.github+json" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          -H "Authorization: Bearer $GITHUB_TOKEN" \
+          ${{ github.event.pull_request.comments_url }} \
+          -d @result.json

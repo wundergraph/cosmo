@@ -19,6 +19,9 @@ inputs:
     description: "The username to use for the Docker container registry"
   docker_password:
     description: "The password to use for the Docker container registry"
+  image_platforms:
+    description: "The platforms to build the image for"
+    default: "linux/amd64,linux/arm64"
   push:
     description: "Whether to push the image to the GitHub container registry"
     default: "true"
@@ -78,7 +81,7 @@ runs:
         context: ${{ inputs.docker_context }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
-        platforms: linux/amd64,linux/arm64
+        platforms: ${{ inputs.image_platforms }}
         outputs:
           type=image,name=target,annotation-index.org.opencontainers.image.description=${{ inputs.image_description }}
           type=image,name=target,annotation-index.org.opencontainers.image.source=https://github.com/wundergraph/cosmo
