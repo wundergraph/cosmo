@@ -31,7 +31,6 @@ runs:
   steps:
     - name: Log in to Docker Container registry (With write access)
       uses: docker/login-action@v3
-      if: ${{ inputs.docker_username != '' && inputs.docker_password != '' }}
       with:
         registry: docker.io
         username: ${{ inputs.docker_username }}
