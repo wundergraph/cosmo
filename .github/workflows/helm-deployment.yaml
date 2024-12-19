@@ -45,7 +45,7 @@ jobs:
       - name: start minikube
         if: github.event_name == 'push' && !startsWith(github.ref, 'refs/heads/release-please--')
         id: minikube
-        uses: medyagh/setup-minikube@v0.0.14
+        uses: medyagh/setup-minikube@v0.0.18
         with:
           addons: ingress
 
