@@ -44,14 +44,14 @@ runs:
         sarif_file: 'trivy-results.sarif'
 
     - uses: mshick/add-pr-comment@v2
-      if: success()
+      if: success() && steps.scan.outcome == 'success'
       with:
         message: |
           # Trivy Image scan passed
           :white_check_mark: No security vulnerabilities found in image `${{ inputs.image_ref }}`.
 
     - uses: mshick/add-pr-comment@v2
-      if: failure()
+      if: failure() && steps.scan.outcome == 'failure'
       with:
         message: |
           # Trivy Image scan failed
