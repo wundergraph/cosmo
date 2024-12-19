@@ -3,6 +3,7 @@ on: [pull_request]
 
 permissions:
   contents: read
+  # Write permissions for pull-requests are required for using the `comment-summary-in-pr` option, comment out if you aren't using this option
   pull-requests: write
 
 jobs:
