@@ -118,7 +118,8 @@
       "KeepAliveProbeInterval": 30000000000
     },
     "Router": {
-      "MaxRequestBodyBytes": 5000000
+      "MaxRequestBodyBytes": 5000000,
+      "MaxHeaderBytes": 0
     },
     "Subgraphs": null
   },
@@ -153,7 +154,6 @@
   },
   "ListenAddr": "localhost:3002",
   "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
-  "MaxHeaderBytes": 0,
   "PlaygroundEnabled": true,
   "IntrospectionEnabled": true,
   "QueryPlansEnabled": true,

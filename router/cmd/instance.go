@@ -98,7 +98,6 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithIntrospection(cfg.IntrospectionEnabled),
 		core.WithQueryPlans(cfg.QueryPlansEnabled),
 		core.WithPlayground(cfg.PlaygroundEnabled),
-		core.WithMaxHeaderBytes(cfg.MaxHeaderBytes.Uint64()),
 		core.WithGraphApiToken(cfg.Graph.Token),
 		core.WithPersistedOperationsConfig(cfg.PersistedOperationsConfig),
 		core.WithAutomatedPersistedQueriesConfig(cfg.AutomaticPersistedQueries),

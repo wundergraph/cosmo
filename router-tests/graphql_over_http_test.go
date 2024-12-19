@@ -2,6 +2,7 @@ package integration
 
 import (
 	"bytes"
+
 	"io"
 	"net/http"
 	"strings"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 func TestGraphQLOverHTTPCompatibility(t *testing.T) {
@@ -215,7 +218,12 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 	t.Run("request with long header and updated max size should return 200 response", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
-			MaxHeaderBytes: 1 << 22, // 4MiB
+			RouterOptions: []core.Option{
+				core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
+					MaxHeaderBytes:      4 << 20, // 4MiB
+					MaxRequestBodyBytes: 5 << 20, // 5 MB
+				}),
+			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := http.Header{
 				"Content-Type": []string{"application/json"},

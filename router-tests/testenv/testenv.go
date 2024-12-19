@@ -222,7 +222,6 @@ type Config struct {
 	EnableKafka                        bool
 	SubgraphAccessLogsEnabled          bool
 	SubgraphAccessLogFields            []config.CustomAttribute
-	MaxHeaderBytes                     uint64
 	AssertCacheMetrics                 *CacheMetricsAssertion
 }
 
@@ -801,7 +800,6 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithAutomatedPersistedQueriesConfig(cfg.AutomaticPersistedQueries),
 		core.WithCDN(cfg.CDN),
 		core.WithListenerAddr(listenerAddr),
-		core.WithMaxHeaderBytes(testConfig.MaxHeaderBytes),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithInstanceID("test-instance"),

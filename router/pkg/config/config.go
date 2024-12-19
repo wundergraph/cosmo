@@ -152,6 +152,8 @@ type FileUpload struct {
 type RouterTrafficConfiguration struct {
 	// MaxRequestBodyBytes is the maximum size of the request body in bytes
 	MaxRequestBodyBytes BytesString `yaml:"max_request_body_size" envDefault:"5MB"`
+	// MaxHeaderBytes is the maximum size of the request headers in bytes
+	MaxHeaderBytes BytesString `yaml:"max_header_bytes" envDefault:"0" env:"MAX_HEADER_BYTES"`
 }
 
 type GlobalSubgraphRequestRule struct {
@@ -773,7 +775,6 @@ type Config struct {
 
 	ListenAddr                    string                      `yaml:"listen_addr" envDefault:"localhost:3002" env:"LISTEN_ADDR"`
 	ControlplaneURL               string                      `yaml:"controlplane_url" envDefault:"https://cosmo-cp.wundergraph.com" env:"CONTROLPLANE_URL"`
-	MaxHeaderBytes                BytesString                 `yaml:"max_header_bytes" envDefault:"0" env:"MAX_HEADER_BYTES"`
 	PlaygroundEnabled             bool                        `yaml:"playground_enabled" envDefault:"true" env:"PLAYGROUND_ENABLED"`
 	IntrospectionEnabled          bool                        `yaml:"introspection_enabled" envDefault:"true" env:"INTROSPECTION_ENABLED"`
 	QueryPlansEnabled             bool                        `yaml:"query_plans_enabled" envDefault:"true" env:"QUERY_PLANS_ENABLED"`
