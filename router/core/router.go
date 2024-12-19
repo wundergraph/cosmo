@@ -46,6 +46,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -82,7 +83,7 @@ type (
 		Config
 		httpServer        *server
 		modules           []Module
-		WebsocketStats    WebSocketsStatistics
+		EngineStats       statistics.EngineStatistics
 		playgroundHandler func(http.Handler) http.Handler
 		proxy             ProxyFunc
 	}
@@ -235,7 +236,7 @@ type (
 // Alternatively, use Router.NewServer() to create a new server instance without starting it.
 func NewRouter(opts ...Option) (*Router, error) {
 	r := &Router{
-		WebsocketStats: NewNoopWebSocketStats(),
+		EngineStats: statistics.NewNoopEngineStats(),
 	}
 
 	for _, opt := range opts {
@@ -843,8 +844,8 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.redisClient = redis.NewClient(options)
 	}
 
-	if r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
-		r.WebsocketStats = NewWebSocketStats(ctx, r.logger)
+	if r.metricConfig.OpenTelemetry.EngineStats || r.metricConfig.Prometheus.EngineStats || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
+		r.EngineStats = statistics.NewEngineStats(ctx, r.logger, r.engineExecutionConfiguration.Debug.ReportWebSocketConnections)
 	}
 
 	if r.engineExecutionConfiguration.Debug.ReportMemoryUsage {
@@ -1942,6 +1943,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			Enabled:             cfg.Metrics.OTLP.Enabled,
 			RouterRuntime:       cfg.Metrics.OTLP.RouterRuntime,
 			GraphqlCache:        cfg.Metrics.OTLP.GraphqlCache,
+			EngineStats:         cfg.Metrics.OTLP.EngineStats,
 			Exporters:           openTelemetryExporters,
 			ExcludeMetrics:      cfg.Metrics.OTLP.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
@@ -1951,6 +1953,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			ListenAddr:          cfg.Metrics.Prometheus.ListenAddr,
 			Path:                cfg.Metrics.Prometheus.Path,
 			GraphqlCache:        cfg.Metrics.Prometheus.GraphqlCache,
+			EngineStats:         cfg.Metrics.Prometheus.EngineStats,
 			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
 		},
