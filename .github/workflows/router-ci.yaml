@@ -16,6 +16,7 @@ concurrency:
 permissions:
   contents: read # for actions/checkout to fetch code
   pull-requests: write # required for adding pull request comments
+  packages: write # required for publishing packages
 
 env:
   CI: true
