@@ -93,8 +93,8 @@ require (
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.3 // indirect
 	github.com/twmb/franz-go v1.16.1 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
-	github.com/wundergraph/astjson v0.0.0-20241108124845-44485579ffa5 // indirect
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.123 // indirect
+	github.com/wundergraph/astjson v0.0.0-20241210135722-15ca0ac078f8 // indirect
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.136 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 // indirect
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0 // indirect
