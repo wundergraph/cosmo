@@ -2,6 +2,8 @@ version: 2
 
 updates:
   - package-ecosystem: "gomod"
+    commit-message:
+      prefix: 'chore(deps): go update'
     directories:
         - "router"
         - "aws-lambda-router"
@@ -15,6 +17,8 @@ updates:
           - "**/wundergraph/**"
 
   - package-ecosystem: "github-actions"
+    commit-message:
+      prefix: 'ci: action update'
     directory: "/"
     schedule:
       interval: "weekly"
