@@ -19,16 +19,6 @@ runs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Run and Print Trivy for PR report
-      uses: aquasecurity/trivy-action@0.29.0
-      with:
-        version: v0.58.0
-        image-ref: ${{ inputs.image_ref }}
-        ignore-unfixed: true
-        severity: 'CRITICAL,HIGH'
-        format: 'table'
-        trivyignores: '.trivyignore'
-
     - name: Run Trivy and Report SARIF to GitHub Security tab
       uses: aquasecurity/trivy-action@0.29.0
       id: scan
