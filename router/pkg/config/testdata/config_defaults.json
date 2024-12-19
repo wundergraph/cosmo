@@ -153,6 +153,7 @@
   },
   "ListenAddr": "localhost:3002",
   "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
+  "MaxHeaderBytes": 0,
   "PlaygroundEnabled": true,
   "IntrospectionEnabled": true,
   "QueryPlansEnabled": true,
