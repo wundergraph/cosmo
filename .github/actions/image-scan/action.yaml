@@ -28,7 +28,8 @@ runs:
       id: scan
       with:
         version: v0.58.0
-        image-ref: ${{ inputs.image_ref }}
+        scan-type: 'fs'
+        scan-ref: './router'
         ignore-unfixed: true
         exit-code: 1
         severity: 'CRITICAL,HIGH'
