@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/wundergraph/cosmo/router/pkg/logging"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
 	"go.uber.org/zap/zaptest/observer"
 
