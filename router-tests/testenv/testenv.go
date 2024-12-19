@@ -19,9 +19,13 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
+	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -50,8 +54,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 	"github.com/hashicorp/go-retryablehttp"
-	natsserver "github.com/nats-io/nats-server/v2/server"
-	natstest "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
@@ -263,66 +265,57 @@ type LogObservationConfig struct {
 	LogLevel zapcore.Level
 }
 
-type NatsData struct {
-	Connections []*nats.Conn
-	Server      *natsserver.Server
-}
-
-func setupNatsServers(t testing.TB, port int) (*NatsData, error) {
-	length := len(demoNatsProviders)
-	natsData := &NatsData{
-		Connections: make([]*nats.Conn, 0, length),
-	}
-
-	// create dir in tmp for nats server
-	natsDir := filepath.Join(os.TempDir(), fmt.Sprintf("nats-%s", uuid.New()))
-	err := os.MkdirAll(natsDir, os.ModePerm)
-	if err != nil {
-		t.Fatalf("could not create nats dir: %s", err)
-	}
-
-	t.Cleanup(func() {
-		err := os.RemoveAll(natsDir)
-		if err != nil {
-			panic(fmt.Errorf("could not remove temporary nats directory, %w", err))
-		}
-	})
-
-	opts := natsserver.Options{
-		Host:      "localhost",
-		NoLog:     true,
-		NoSigs:    true,
-		JetStream: true,
-		Port:      port,
-		StoreDir:  natsDir,
-	}
-
-	natsServer := natstest.RunServer(&opts)
-	if natsServer == nil {
-		t.Fatalf("could not start NATS test server")
-	}
-	natsData.Server = natsServer
-	for range demoNatsProviders {
-		natsConnection, err := nats.Connect(
-			natsServer.ClientURL(),
-			nats.MaxReconnects(10),
-			nats.ReconnectWait(1*time.Second),
-			nats.Timeout(5*time.Second),
-		)
-		if err != nil {
-			return nil, err
-		}
-		natsData.Connections = append(natsData.Connections, natsConnection)
-	}
-	return natsData, nil
-}
-
 func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	t.Helper()
 
 	var (
-		metricReader *metric.ManualReader
+		metricReader     *metric.ManualReader
+		kafkaAdminClient *kadm.Client
+		kafkaStarted     sync.WaitGroup
+		kafkaClient      *kgo.Client
+		natsStarted      sync.WaitGroup
+		natsSetup        *NatsData
+		kafkaSetup       *KafkaData
+		pubSubPrefix     = strconv.FormatUint(rand.Uint64(), 16)
 	)
+
+	if len(cfg.KafkaSeeds) == 0 {
+		cfg.KafkaSeeds = []string{"localhost:9092"}
+	}
+
+	if cfg.EnableKafka {
+		kafkaStarted.Add(1)
+		go func() {
+			defer kafkaStarted.Done()
+
+			var kafkaSetupErr error
+			kafkaSetup, kafkaSetupErr = setupKafkaServers(t)
+			if kafkaSetupErr != nil {
+				t.Fatalf("could not setup kafka: %s", kafkaSetupErr.Error())
+			}
+			client, err := kgo.NewClient(
+				kgo.SeedBrokers(kafkaSetup.Brokers...),
+			)
+			if err != nil {
+				t.Fatalf("could not create kafka client: %s", err)
+			}
+			kafkaClient = client
+			kafkaAdminClient = kadm.NewClient(client)
+			cfg.KafkaSeeds = kafkaSetup.Brokers
+		}()
+	}
+
+	if cfg.EnableNats {
+		natsStarted.Add(1)
+		go func() {
+			defer natsStarted.Done()
+			var natsErr error
+			natsSetup, natsErr = setupNatsServers(t)
+			if natsErr != nil {
+				t.Fatalf("could not setup nats: %s", natsErr.Error())
+			}
+		}()
+	}
 
 	if cfg.AssertCacheMetrics != nil {
 		metricReader = metric.NewManualReader()
@@ -343,24 +336,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	ctx, cancel := context.WithCancelCause(context.Background())
 
-	if len(cfg.KafkaSeeds) == 0 {
-		cfg.KafkaSeeds = []string{"localhost:9092"}
-	}
-
-	var kafkaAdminClient *kadm.Client
-	var kafkaClient *kgo.Client
-	if cfg.EnableKafka {
-		client, err := kgo.NewClient(
-			kgo.SeedBrokers(cfg.KafkaSeeds...),
-		)
-		if err != nil {
-			t.Fatalf("could not create kafka client: %s", err)
-		}
-
-		kafkaClient = client
-		kafkaAdminClient = kadm.NewClient(client)
-	}
-
 	counters := &SubgraphRequestCount{
 		Global:       atomic.NewInt64(0),
 		Employees:    atomic.NewInt64(0),
@@ -375,7 +350,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	var (
-		natsData      *NatsData
 		requiredPorts = 3
 	)
 
@@ -384,16 +358,12 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		t.Fatalf("could not take free ports: %s", err)
 	}
 
-	if cfg.EnableNats {
-		natsData, err = setupNatsServers(t, ports[0])
-		if err != nil {
-			return nil, err
-		}
-		require.Equal(t, 2, len(natsData.Connections))
-	}
+	natsStarted.Wait()
+
+	getPubSubName := GetPubSubNameFn(pubSubPrefix)
 
 	employees := &Subgraph{
-		handler:          subgraphs.EmployeesHandler(subgraphOptions(ctx, t, natsData)),
+		handler:          subgraphs.EmployeesHandler(subgraphOptions(ctx, t, natsSetup, getPubSubName)),
 		middleware:       cfg.Subgraphs.Employees.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -403,7 +373,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	family := &Subgraph{
-		handler:          subgraphs.FamilyHandler(subgraphOptions(ctx, t, natsData)),
+		handler:          subgraphs.FamilyHandler(subgraphOptions(ctx, t, natsSetup, getPubSubName)),
 		middleware:       cfg.Subgraphs.Family.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -413,7 +383,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	hobbies := &Subgraph{
-		handler:          subgraphs.HobbiesHandler(subgraphOptions(ctx, t, natsData)),
+		handler:          subgraphs.HobbiesHandler(subgraphOptions(ctx, t, natsSetup, getPubSubName)),
 		middleware:       cfg.Subgraphs.Hobbies.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -423,7 +393,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	products := &Subgraph{
-		handler:          subgraphs.ProductsHandler(subgraphOptions(ctx, t, natsData)),
+		handler:          subgraphs.ProductsHandler(subgraphOptions(ctx, t, natsSetup, getPubSubName)),
 		middleware:       cfg.Subgraphs.Products.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -433,7 +403,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	productsFg := &Subgraph{
-		handler:          subgraphs.ProductsFGHandler(subgraphOptions(ctx, t, natsData)),
+		handler:          subgraphs.ProductsFGHandler(subgraphOptions(ctx, t, natsSetup, getPubSubName)),
 		middleware:       cfg.Subgraphs.ProductsFg.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -443,7 +413,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	test1 := &Subgraph{
-		handler:          subgraphs.Test1Handler(subgraphOptions(ctx, t, natsData)),
+		handler:          subgraphs.Test1Handler(subgraphOptions(ctx, t, natsSetup, getPubSubName)),
 		middleware:       cfg.Subgraphs.Test1.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -453,7 +423,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	availability := &Subgraph{
-		handler:          subgraphs.AvailabilityHandler(subgraphOptions(ctx, t, natsData)),
+		handler:          subgraphs.AvailabilityHandler(subgraphOptions(ctx, t, natsSetup, getPubSubName)),
 		middleware:       cfg.Subgraphs.Availability.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -463,7 +433,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	mood := &Subgraph{
-		handler:          subgraphs.MoodHandler(subgraphOptions(ctx, t, natsData)),
+		handler:          subgraphs.MoodHandler(subgraphOptions(ctx, t, natsSetup, getPubSubName)),
 		middleware:       cfg.Subgraphs.Mood.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -473,7 +443,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	countries := &Subgraph{
-		handler:          subgraphs.CountriesHandler(subgraphOptions(ctx, t, natsData)),
+		handler:          subgraphs.CountriesHandler(subgraphOptions(ctx, t, natsSetup, getPubSubName)),
 		middleware:       cfg.Subgraphs.Countries.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -513,6 +483,11 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	var routerConfig nodev1.RouterConfig
 	if err := protojson.Unmarshal([]byte(replaced), &routerConfig); err != nil {
 		return nil, err
+	}
+
+	addPubSubPrefixToEngineConfiguration(routerConfig.EngineConfig, getPubSubName)
+	for _, ffConfig := range routerConfig.FeatureFlagConfigs.GetConfigByFeatureFlagName() {
+		addPubSubPrefixToEngineConfiguration(ffConfig.EngineConfig, getPubSubName)
 	}
 
 	if cfg.ModifyRouterConfig != nil {
@@ -561,7 +536,9 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.AccessLogger = cfg.Logger
 	}
 
-	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdn, natsData)
+	kafkaStarted.Wait()
+
+	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdn, natsSetup)
 	if err != nil {
 		return nil, err
 	}
@@ -661,13 +638,14 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		RouterURL:               rr.BaseURL(),
 		RouterClient:            client,
 		CDN:                     cdn,
-		NatsData:                natsData,
+		NatsData:                natsSetup,
 		SubgraphRequestCount:    counters,
 		KafkaAdminClient:        kafkaAdminClient,
 		KafkaClient:             kafkaClient,
 		shutdownDelay:           cfg.ShutdownDelay,
 		shutdown:                atomic.NewBool(false),
 		logObserver:             logObserver,
+		getPubSubName:           getPubSubName,
 		metricReader:            metricReader,
 		Servers: []*httptest.Server{
 			employeesServer,
@@ -681,9 +659,9 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		},
 	}
 
-	if natsData != nil {
-		e.NatsConnectionDefault = natsData.Connections[0]
-		e.NatsConnectionMyNats = natsData.Connections[1]
+	if natsSetup != nil {
+		e.NatsConnectionDefault = natsSetup.Connections[0]
+		e.NatsConnectionMyNats = natsSetup.Connections[1]
 	}
 
 	if routerConfig.FeatureFlagConfigs != nil {
@@ -722,9 +700,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifyCDNConfig(&cfg.CDN)
 	}
 
-	t := jwt.New(jwt.SigningMethodHS256)
-	t.Claims = testTokenClaims()
-	graphApiToken, err := t.SignedString([]byte("hunter2"))
+	jwtToken := jwt.New(jwt.SigningMethodHS256)
+	jwtToken.Claims = testTokenClaims()
+	graphApiToken, err := jwtToken.SignedString([]byte("hunter2"))
 	if err != nil {
 		return nil, err
 	}
@@ -949,7 +927,10 @@ func testTokenClaims() jwt.MapClaims {
 }
 
 func setupCDNServer(t testing.TB) *httptest.Server {
-	cdnFileServer := http.FileServer(http.Dir(filepath.Join("testenv", "testdata", "cdn")))
+	_, filePath, _, ok := runtime.Caller(0)
+	require.True(t, ok)
+	baseCdnFile := filepath.Join(path.Dir(filePath), "testdata", "cdn")
+	cdnFileServer := http.FileServer(http.Dir(baseCdnFile))
 	var cdnRequestLog []string
 	cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
@@ -973,6 +954,7 @@ func setupCDNServer(t testing.TB) *httptest.Server {
 		require.NoError(t, err)
 		cdnFileServer.ServeHTTP(w, r)
 	}))
+
 	return cdnServer
 }
 
@@ -1004,6 +986,7 @@ type Environment struct {
 	KafkaAdminClient      *kadm.Client
 	KafkaClient           *kgo.Client
 	logObserver           *observer.ObservedLogs
+	getPubSubName         func(name string) string
 
 	shutdownDelay       time.Duration
 	extraURLQueryValues url.Values
@@ -1012,6 +995,18 @@ type Environment struct {
 	routerConfigVersionMyFF string
 
 	metricReader *metric.ManualReader
+}
+
+func GetPubSubNameFn(prefix string) func(name string) string {
+	return func(name string) string {
+		return prefix + name
+	}
+}
+
+// GetPubSubName returns the name of a PubSub entity (subject, topic, subscription, etc.) unique for this test environment.
+// Using this method avoid conflicts between tests running in parallel.
+func (e *Environment) GetPubSubName(name string) string {
+	return e.getPubSubName(name)
 }
 
 func (e *Environment) RouterConfigVersionMain() string {
@@ -1065,16 +1060,18 @@ func (e *Environment) Shutdown() {
 
 	// Close NATS
 	if e.cfg.EnableNats {
-		e.NatsConnectionDefault.Close()
-		e.NatsConnectionMyNats.Close()
-		e.NatsData.Server.Shutdown()
+		e.NatsConnectionMyNats.Flush()
+		e.NatsConnectionDefault.Flush()
+		//	e.NatsConnectionDefault.Close()
+		//	e.NatsConnectionMyNats.Close()
+		//	e.NatsData.Server.Shutdown()
 	}
 
 	// Close Kafka
-	if e.cfg.EnableKafka {
-		e.KafkaAdminClient.Close()
-		e.KafkaClient.Close()
-	}
+	//if e.cfg.EnableKafka {
+	//	e.KafkaAdminClient.Close()
+	//	e.KafkaClient.Close()
+	//}
 }
 
 type SubgraphRequestCount struct {
@@ -1709,10 +1706,11 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 
 }
 
-func subgraphOptions(ctx context.Context, t testing.TB, natsData *NatsData) *subgraphs.SubgraphOptions {
+func subgraphOptions(ctx context.Context, t testing.TB, natsData *NatsData, pubSubName func(string) string) *subgraphs.SubgraphOptions {
 	if natsData == nil {
 		return &subgraphs.SubgraphOptions{
 			NatsPubSubByProviderID: map[string]pubsub_datasource.NatsPubSub{},
+			GetPubSubName:          pubSubName,
 		}
 	}
 	natsPubSubByProviderID := make(map[string]pubsub_datasource.NatsPubSub, len(demoNatsProviders))
@@ -1728,6 +1726,7 @@ func subgraphOptions(ctx context.Context, t testing.TB, natsData *NatsData) *sub
 
 	return &subgraphs.SubgraphOptions{
 		NatsPubSubByProviderID: natsPubSubByProviderID,
+		GetPubSubName:          pubSubName,
 	}
 }
 

@@ -118,6 +118,8 @@ func (s *server) listenAndServe() error {
 
 func (s *server) Shutdown(ctx context.Context) error {
 	var err error
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	if s.graphServer != nil {
 		err = errors.Join(s.graphServer.Shutdown(ctx))

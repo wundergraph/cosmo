@@ -14,7 +14,10 @@ import (
 
 // FindConsultancyByUpc is the resolver for the findConsultancyByUpc field.
 func (r *entityResolver) FindConsultancyByUpc(ctx context.Context, upc string) (*model.Consultancy, error) {
-	return consultancy, nil
+	// should make a copy to avoid data race in concurrent environment
+	// the entity can be modified by PopulateConsultancyRequires, as an example
+	newConsultancy := *consultancy
+	return &newConsultancy, nil
 }
 
 // FindCosmoByUpc is the resolver for the findCosmoByUpc field.
@@ -27,7 +30,7 @@ func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.E
 	if id < 1 {
 		return nil, nil
 	}
-	for _, employee := range employees {
+	for _, employee := range r.EmployeesData {
 		if id == employee.ID {
 			emp := &model.Employee{
 				Details:   employee.Details,
