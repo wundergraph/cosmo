@@ -19,7 +19,7 @@ runs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Run Trivy for PR report
+    - name: Run Trivy and Report SARIF to GitHub Security tab
       uses: aquasecurity/trivy-action@0.29.0
       id: scan
       with:
