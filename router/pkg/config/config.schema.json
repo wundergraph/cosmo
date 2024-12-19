@@ -1166,7 +1166,8 @@
             "max_header_bytes": {
               "type": "string",
               "description": "The maximum size of the request headers. Setting this to 0 uses the default value from the http standard lib, which is 1MiB.",
-              "default": "0"
+              "default": "0MiB",
+              "bytes": {}
             }
           }
         },
