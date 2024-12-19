@@ -221,7 +221,7 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
 					MaxHeaderBytes:      4 << 20, // 4MiB
-					MaxRequestBodyBytes: 5 << 20, // 5 MB
+					MaxRequestBodyBytes: 5 << 20, // 5MiB
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
