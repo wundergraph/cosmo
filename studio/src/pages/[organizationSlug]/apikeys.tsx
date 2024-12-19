@@ -699,11 +699,13 @@ export const Empty = ({
   setApiKey,
   open,
   setOpen,
+  refetch,
 }: {
   apiKey: string | undefined;
   setApiKey: Dispatch<SetStateAction<string | undefined>>;
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
+  refetch: () => void;
 }) => {
   const user = useContext(UserContext);
 
@@ -735,6 +737,7 @@ export const Empty = ({
               setApiKey={setApiKey}
               open={open}
               setOpen={setOpen}
+              refetch={refetch}
             />
           )}
         </div>
@@ -748,14 +751,14 @@ export const CreateAPIKey = ({
   setApiKey,
   open,
   setOpen,
+  refetch,
 }: {
   apiKey: string | undefined;
   setApiKey: Dispatch<SetStateAction<string | undefined>>;
   open: boolean;
   setOpen: Dispatch<SetStateAction<boolean>>;
+  refetch: () => void;
 }) => {
-  const { refetch } = useQuery(getAPIKeys);
-
   useEffect(() => {
     if (!apiKey) return;
     setOpen(true);
@@ -810,6 +813,7 @@ const APIKeysPage: NextPageWithLayout = () => {
           setApiKey={setApiKey}
           open={openApiKeyCreatedDialog}
           setOpen={setOpenApiKeyCreatedDialog}
+          refetch={refetch}
         />
       ) : (
         <>
@@ -850,6 +854,7 @@ const APIKeysPage: NextPageWithLayout = () => {
                   setApiKey={setApiKey}
                   open={openApiKeyCreatedDialog}
                   setOpen={setOpenApiKeyCreatedDialog}
+                  refetch={refetch}
                 />
               )}
             </div>
