@@ -92,6 +92,8 @@ type Config struct {
 	ResourceAttributes []attribute.KeyValue
 
 	Attributes []config.CustomAttribute
+	
+	UseCloudExporter bool
 }
 
 func (c *Config) IsEnabled() bool {
