@@ -162,7 +162,32 @@ jobs:
         working-directory: ./router
         run: make build
 
+  scan_image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/build-push-image
+        with:
+          docker_context: router
+          dockerfile: router/Dockerfile
+          token: ${{secrets.GITHUB_TOKEN}}
+          image_name: router
+          image_description: "Cosmo Router"
+          push: 'false'
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: 'ghcr.io/wundergraph/cosmo/router:latest'
+          format: 'github'
+          severity: HIGH,CRITICAL
+
   build_push_image:
+    # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
+    # For now, we will disable the push to the GitHub Container Registry for external contributors
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

@@ -17,10 +17,11 @@ inputs:
     default: "."
   docker_username:
     description: "The username to use for the Docker container registry"
-    required: true
   docker_password:
     description: "The password to use for the Docker container registry"
-    required: true
+  push:
+    description: "Whether to push the image to the GitHub container registry"
+    default: "true"
 
 runs:
   using: "composite"
@@ -72,7 +73,7 @@ runs:
       with:
         # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
         # For now, we will disable the push to the GitHub Container Registry for external contributors
-        push: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+        push: ${{ inputs.push == 'true' }}
         file: ${{ inputs.dockerfile }}
         context: ${{ inputs.docker_context }}
         tags: ${{ steps.meta.outputs.tags }}
