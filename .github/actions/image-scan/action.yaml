@@ -27,12 +27,14 @@ runs:
       uses: aquasecurity/trivy-action@0.29.0
       id: scan
       with:
+        version: v0.58.0
         image-ref: ${{ inputs.image_ref }}
         ignore-unfixed: true
         exit-code: 1
         severity: 'CRITICAL,HIGH'
         format: 'sarif'
         trivyignores: '.trivyignore'
+        limit-severities-for-sarif: true
         output: 'trivy-results.sarif'
 
     - name: Upload Trivy scan results to GitHub Security tab
