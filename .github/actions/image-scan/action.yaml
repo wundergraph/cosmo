@@ -13,6 +13,11 @@ inputs:
     description: "The name of the container"
     required: true
 
+  directory:
+    description: "The directory where the Dockerfile is located"
+    required: false
+    default: "."
+
 runs:
   using: "composite"
   steps:
@@ -39,3 +44,9 @@ runs:
       if: always()
       with:
         sarif_file: 'trivy-results.sarif'
+
+    - uses: mshick/add-pr-comment@v2
+      if: failure()
+      with:
+        message: |
+          Trivy scan failed. Please check the security [vulnerabilities](https://github.com/wundergraph/cosmo/security/code-scanning?query=${{ github.event.number }}+is%3Aopen+tool%3ATrivy) found in the PR.
