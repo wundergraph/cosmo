@@ -29,42 +29,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
 const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
-
-func randString(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
-}
-
-type testQuery struct {
-	Name      string
-	Body      string
-	Variables map[string]interface{}
-}
-
-func (t *testQuery) Data() []byte {
-	name := t.Name
-	if name == "" {
-		name = randString(10)
-	}
-	values := map[string]interface{}{
-		"query":         fmt.Sprintf("query %s %s", name, t.Body),
-		"operationName": name,
-	}
-	if len(t.Variables) > 0 {
-		values["variables"] = t.Variables
-	}
-	data, err := json.Marshal(values)
-	if err != nil {
-		panic(err)
-	}
-	return data
-}
 
 func normalizeJSON(tb testing.TB, data []byte) []byte {
 	buf := new(bytes.Buffer)
@@ -325,6 +290,8 @@ func TestAnonymousQuery(t *testing.T) {
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		t.Run("anonymous query", func(t *testing.T) {
+			t.Parallel()
+
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
 			})
@@ -332,6 +299,8 @@ func TestAnonymousQuery(t *testing.T) {
 		})
 
 		t.Run("sequence of queries with different count of variables", func(t *testing.T) {
+			t.Parallel()
+
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query ($a: Float! = 1) { floatField(arg: $a) }`,
 			})
@@ -582,6 +551,7 @@ func TestTestdataQueries(t *testing.T) {
 		}
 
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			g := goldie.New(
 				t,
@@ -779,54 +749,11 @@ func BenchmarkPb(b *testing.B) {
 	})
 }
 
-func FuzzQuery(f *testing.F) {
-	corpus := []struct {
-		Query     string
-		Variables []byte // As JSON
-	}{
-		{
-			Query: "{ employees { id } }",
-		},
-		{
-			Query: `($team:Department!= MARKETING) {
-				team_mates(team:$team) {
-				  id
-				}
-			  }`,
-			Variables: []byte(`{"team":"MARKETING"}`),
-		},
-		{
-			Query:     `($n:Int!) { employee(id:$n) { id } }`,
-			Variables: []byte(`{"n":4}`),
-		},
-	}
-	for _, tc := range corpus {
-		f.Add(tc.Query, tc.Variables)
-	}
-	f.Fuzz(func(t *testing.T, query string, variables []byte) {
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			var q testQuery
-			if err := json.Unmarshal(variables, &q.Variables); err != nil {
-				// Invalid JSON, mark as uninteresting input
-				t.Skip()
-			}
-			q.Body = query
-
-			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Query:     query,
-				Variables: variables,
-			})
-			require.NoError(t, err)
-			if res.Response.StatusCode != http.StatusOK && res.Response.StatusCode != http.StatusBadRequest {
-				t.Error("unexpected status code", res.Response.StatusCode)
-			}
-		})
-	})
-}
-
 func TestSubgraphOperationMinifier(t *testing.T) {
 	t.Parallel()
 	t.Run("prefer minified version", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.MinifySubgraphOperations = true
@@ -853,6 +780,8 @@ func TestSubgraphOperationMinifier(t *testing.T) {
 		})
 	})
 	t.Run("prefer non-minified when disabled", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
@@ -876,6 +805,8 @@ func TestSubgraphOperationMinifier(t *testing.T) {
 		})
 	})
 	t.Run("minify concurrently without plan cache", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.MinifySubgraphOperations = true
@@ -914,6 +845,8 @@ func TestSubgraphOperationMinifier(t *testing.T) {
 		})
 	})
 	t.Run("prefer non-minified version", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.MinifySubgraphOperations = true

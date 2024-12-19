@@ -1025,6 +1025,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("message with invalid JSON should give a specific error", func(t *testing.T) {
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
