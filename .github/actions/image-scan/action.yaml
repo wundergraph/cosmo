@@ -31,7 +31,6 @@ runs:
         ignore-unfixed: true
         exit-code: 1
         severity: 'CRITICAL,HIGH'
-        limit-severities-for-sarif: true
         format: 'sarif'
         output: 'trivy-results.sarif'
 
