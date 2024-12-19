@@ -265,8 +265,6 @@ type LogObservationConfig struct {
 	LogLevel zapcore.Level
 }
 
-var envMux sync.Mutex
-
 func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	t.Helper()
 
