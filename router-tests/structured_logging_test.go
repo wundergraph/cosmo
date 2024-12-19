@@ -1,4 +1,4 @@
-package integration_test
+package integration
 
 import (
 	"bytes"
@@ -23,13 +23,13 @@ import (
 
 // Interface guard
 var (
-	_ core.EnginePreOriginHandler = (*MyPanicModule)(nil)
-	_ core.Module                 = (*MyPanicModule)(nil)
+	_ core.EnginePreOriginHandler = (*MyPanicModule2)(nil)
+	_ core.Module                 = (*MyPanicModule2)(nil)
 )
 
-type MyPanicModule struct{}
+type MyPanicModule2 struct{}
 
-func (m MyPanicModule) OnOriginRequest(req *http.Request, ctx core.RequestContext) (*http.Request, *http.Response) {
+func (m MyPanicModule2) OnOriginRequest(req *http.Request, ctx core.RequestContext) (*http.Request, *http.Response) {
 
 	if req.Header.Get("panic-with-string") == "true" {
 		panic("implement me")
@@ -42,12 +42,12 @@ func (m MyPanicModule) OnOriginRequest(req *http.Request, ctx core.RequestContex
 	return req, nil
 }
 
-func (m MyPanicModule) Module() core.ModuleInfo {
+func (m MyPanicModule2) Module() core.ModuleInfo {
 	return core.ModuleInfo{
-		ID:       "myPanicModule",
+		ID:       "MyPanicModule2",
 		Priority: math.MaxInt32,
 		New: func() core.Module {
-			return &MyPanicModule{}
+			return &MyPanicModule2{}
 		},
 	}
 }
@@ -888,7 +888,7 @@ func TestAccessLogs(t *testing.T) {
 			},
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
-				core.WithCustomModules(&MyPanicModule{}),
+				core.WithCustomModules(&MyPanicModule2{}),
 				core.WithHeaderRules(config.HeaderRules{
 					All: &config.GlobalHeaderRule{
 						Request: []*config.RequestHeaderRule{
@@ -1024,7 +1024,7 @@ func TestAccessLogs(t *testing.T) {
 			},
 			NoRetryClient: true,
 			RouterOptions: []core.Option{
-				core.WithCustomModules(&MyPanicModule{}),
+				core.WithCustomModules(&MyPanicModule2{}),
 				core.WithHeaderRules(config.HeaderRules{
 					All: &config.GlobalHeaderRule{
 						Request: []*config.RequestHeaderRule{

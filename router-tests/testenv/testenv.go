@@ -11,9 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hashicorp/consul/sdk/freeport"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/kafka"
-	"github.com/testcontainers/testcontainers-go/wait"
 	"io"
 	"log"
 	"math/rand"
@@ -57,8 +54,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
 	"github.com/hashicorp/go-retryablehttp"
-	natsserver "github.com/nats-io/nats-server/v2/server"
-	natstest "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
@@ -270,161 +265,59 @@ type LogObservationConfig struct {
 	LogLevel zapcore.Level
 }
 
-var (
-	kafkaMux   sync.Mutex
-	natsMux    sync.Mutex
-	kafkaData  *KafkaData
-	natsServer *natsserver.Server
-)
-
-type KafkaData struct {
-	Brokers   []string
-	Container *kafka.KafkaContainer
-}
-
-type NatsData struct {
-	Connections []*nats.Conn
-	Server      *natsserver.Server
-}
-
-func addPubSubPrefixToEngineConfiguration(engineConfig *nodev1.EngineConfiguration, getPubSubName func(string) string) {
-	for _, datasource := range engineConfig.DatasourceConfigurations {
-		if customEvents := datasource.CustomEvents; customEvents != nil {
-			for natConfig := range customEvents.Nats {
-				var prefixedSubjects []string
-				for _, subject := range customEvents.Nats[natConfig].Subjects {
-					prefixedSubjects = append(prefixedSubjects, getPubSubName(subject))
-				}
-				customEvents.Nats[natConfig].Subjects = prefixedSubjects
-
-				if customEvents.Nats[natConfig].StreamConfiguration != nil {
-					if customEvents.Nats[natConfig].StreamConfiguration.StreamName != "" {
-						customEvents.Nats[natConfig].StreamConfiguration.StreamName = getPubSubName(customEvents.Nats[natConfig].StreamConfiguration.StreamName)
-					}
-					if customEvents.Nats[natConfig].StreamConfiguration.ConsumerName != "" {
-						customEvents.Nats[natConfig].StreamConfiguration.ConsumerName = getPubSubName(customEvents.Nats[natConfig].StreamConfiguration.ConsumerName)
-					}
-				}
-			}
-			for kafkaConfig := range customEvents.Kafka {
-				var prefixedTopics []string
-				for _, subject := range customEvents.Kafka[kafkaConfig].Topics {
-					prefixedTopics = append(prefixedTopics, getPubSubName(subject))
-				}
-				customEvents.Kafka[kafkaConfig].Topics = prefixedTopics
-			}
-		}
-	}
-}
-
-func setupNatsData(t testing.TB) (*NatsData, error) {
-	natsData := &NatsData{
-		Server: natsServer,
-	}
-	natsData.Server = natsServer
-	for range demoNatsProviders {
-		natsConnection, err := nats.Connect(
-			natsData.Server.ClientURL(),
-			nats.MaxReconnects(10),
-			nats.ReconnectWait(1*time.Second),
-			nats.Timeout(5*time.Second),
-		)
-		if err != nil {
-			return nil, err
-		}
-		natsData.Connections = append(natsData.Connections, natsConnection)
-	}
-	return natsData, nil
-}
-
-func setupNatsServers(t testing.TB) (*NatsData, error) {
-	natsMux.Lock()
-	defer natsMux.Unlock()
-
-	if natsServer != nil {
-		return setupNatsData(t)
-	}
-
-	natsPorts, natsPortsErr := freeport.Take(1)
-	if natsPortsErr != nil {
-		t.Fatalf("could not get free port for nats: %s", natsPortsErr.Error())
-	}
-	natsPort := natsPorts[0]
-
-	// create dir in tmp for nats server
-	natsDir := filepath.Join(os.TempDir(), fmt.Sprintf("nats-%s", uuid.New()))
-	err := os.MkdirAll(natsDir, os.ModePerm)
-	if err != nil {
-		t.Fatalf("could not create nats dir: %s", err)
-	}
-
-	//t.Cleanup(func() {
-	//	err := os.RemoveAll(natsDir)
-	//	if err != nil {
-	//		panic(fmt.Errorf("could not remove temporary nats directory, %w", err))
-	//	}
-	//})
-
-	opts := natsserver.Options{
-		Host:      "localhost",
-		NoLog:     true,
-		NoSigs:    true,
-		JetStream: true,
-		Port:      natsPort,
-		StoreDir:  natsDir,
-	}
-
-	natsServer = natstest.RunServer(&opts)
-	if natsServer == nil {
-		t.Fatalf("could not start NATS test server")
-	}
-
-	return setupNatsData(t)
-}
-
-func setupKafkaServers(t testing.TB) (*KafkaData, error) {
-	kafkaMux.Lock()
-	defer kafkaMux.Unlock()
-
-	if kafkaData != nil {
-		return kafkaData, nil
-	}
-
-	kafkaData = &KafkaData{}
-
-	var err error
-
-	ctx := context.Background()
-	require.Eventually(t, func() bool {
-		// when using Docker Desktop on Mac, it's possible that it takes 2 attempts to get the network port of the container
-		// I've debugged this extensively and the issue is not with the testcontainers-go library, but with the Docker Desktop
-		// Error message: container logs (port not found)
-		// This is an internal issue coming from the Docker pkg
-		// It seems like Docker Desktop on Mac is not always capable of providing a port mapping
-		// The solution is to retry the container creation until we get the network port
-		// Please don't try to improve this code as this workaround allows running the tests without any issues
-		kafkaData.Container, err = kafka.RunContainer(ctx,
-			testcontainers.WithImage("confluentinc/confluent-local:7.6.1"),
-			testcontainers.WithWaitStrategyAndDeadline(time.Second*30, wait.ForListeningPort("9093/tcp")),
-		)
-		return err == nil && kafkaData.Container != nil
-	}, time.Second*30, time.Second)
-
-	require.NoError(t, kafkaData.Container.Start(ctx))
-
-	kafkaData.Brokers, err = kafkaData.Container.Brokers(ctx)
-	require.NoError(t, err)
-
-	return kafkaData, nil
-}
+var envMux sync.Mutex
 
 func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	t.Helper()
-	pubSubPrefix := strconv.FormatUint(rand.Uint64(), 16)
 
 	var (
-		metricReader *metric.ManualReader
+		metricReader     *metric.ManualReader
+		kafkaAdminClient *kadm.Client
+		kafkaStarted     sync.WaitGroup
+		kafkaClient      *kgo.Client
+		natsStarted      sync.WaitGroup
+		natsSetup        *NatsData
+		kafkaSetup       *KafkaData
+		pubSubPrefix     = strconv.FormatUint(rand.Uint64(), 16)
 	)
+
+	if len(cfg.KafkaSeeds) == 0 {
+		cfg.KafkaSeeds = []string{"localhost:9092"}
+	}
+
+	if cfg.EnableKafka {
+		kafkaStarted.Add(1)
+		go func() {
+			defer kafkaStarted.Done()
+
+			var kafkaSetupErr error
+			kafkaSetup, kafkaSetupErr = setupKafkaServers(t)
+			if kafkaSetupErr != nil {
+				t.Fatalf("could not setup kafka: %s", kafkaSetupErr.Error())
+			}
+			client, err := kgo.NewClient(
+				kgo.SeedBrokers(kafkaSetup.Brokers...),
+			)
+			if err != nil {
+				t.Fatalf("could not create kafka client: %s", err)
+			}
+			kafkaClient = client
+			kafkaAdminClient = kadm.NewClient(client)
+			cfg.KafkaSeeds = kafkaSetup.Brokers
+		}()
+	}
+
+	if cfg.EnableNats {
+		natsStarted.Add(1)
+		go func() {
+			defer natsStarted.Done()
+			var natsErr error
+			natsSetup, natsErr = setupNatsServers(t)
+			if natsErr != nil {
+				t.Fatalf("could not setup nats: %s", natsErr.Error())
+			}
+		}()
+	}
 
 	if cfg.AssertCacheMetrics != nil {
 		metricReader = metric.NewManualReader()
@@ -445,29 +338,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	ctx, cancel := context.WithCancelCause(context.Background())
 
-	if len(cfg.KafkaSeeds) == 0 {
-		cfg.KafkaSeeds = []string{"localhost:9092"}
-	}
-
-	var kafkaAdminClient *kadm.Client
-	var kafkaClient *kgo.Client
-	if cfg.EnableKafka {
-		kafkaSetup, kafkaSetupErr := setupKafkaServers(t)
-		if kafkaSetupErr != nil {
-			t.Fatalf("could not setup kafka: %s", kafkaSetupErr.Error())
-		}
-		client, err := kgo.NewClient(
-			kgo.SeedBrokers(kafkaSetup.Brokers...),
-		)
-		if err != nil {
-			t.Fatalf("could not create kafka client: %s", err)
-		}
-
-		kafkaClient = client
-		kafkaAdminClient = kadm.NewClient(client)
-		cfg.KafkaSeeds = kafkaSetup.Brokers
-	}
-
 	counters := &SubgraphRequestCount{
 		Global:       atomic.NewInt64(0),
 		Employees:    atomic.NewInt64(0),
@@ -482,7 +352,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	var (
-		natsSetup     *NatsData
 		requiredPorts = 3
 	)
 
@@ -491,13 +360,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		t.Fatalf("could not take free ports: %s", err)
 	}
 
-	if cfg.EnableNats {
-		var natsErr error
-		natsSetup, natsErr = setupNatsServers(t)
-		if natsErr != nil {
-			t.Fatalf("could not setup nats: %s", natsErr.Error())
-		}
-	}
+	natsStarted.Wait()
 
 	getPubSubName := GetPubSubNameFn(pubSubPrefix)
 
@@ -674,6 +537,8 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.AccessLogger == nil {
 		cfg.AccessLogger = cfg.Logger
 	}
+
+	kafkaStarted.Wait()
 
 	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdn, natsSetup)
 	if err != nil {
