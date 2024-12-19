@@ -139,6 +139,8 @@ type TrafficShapingRules struct {
 	All GlobalSubgraphRequestRule `yaml:"all"`
 	// Apply to requests from clients to the router
 	Router RouterTrafficConfiguration `yaml:"router"`
+	// Subgraphs is a set of rules that apply to requests from the router to subgraphs. The key is the subgraph name.
+	Subgraphs map[string]*GlobalSubgraphRequestRule `yaml:"subgraphs,omitempty"`
 }
 
 type FileUpload struct {
@@ -162,6 +164,10 @@ type GlobalSubgraphRequestRule struct {
 	TLSHandshakeTimeout    time.Duration `yaml:"tls_handshake_timeout,omitempty" envDefault:"10s"`
 	KeepAliveIdleTimeout   time.Duration `yaml:"keep_alive_idle_timeout,omitempty" envDefault:"0s"`
 	KeepAliveProbeInterval time.Duration `yaml:"keep_alive_probe_interval,omitempty" envDefault:"30s"`
+}
+
+type SubgraphTrafficRequestRule struct {
+	RequestTimeout time.Duration `yaml:"request_timeout,omitempty" envDefault:"60s"`
 }
 
 type GraphqlMetrics struct {
@@ -737,6 +743,15 @@ type ApolloCompatibilityReplaceInvalidVarErrors struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_ENABLED"`
 }
 
+type CacheWarmupConfiguration struct {
+	Enabled        bool          `yaml:"enabled" envDefault:"false" env:"CACHE_WARMUP_ENABLED"`
+	Source         string        `yaml:"source" envDefault:"filesystem" env:"CACHE_WARMUP_SOURCE"`
+	Path           string        `yaml:"path" env:"CACHE_WARMUP_PATH"`
+	Workers        int           `yaml:"workers" envDefault:"8" env:"CACHE_WARMUP_WORKERS"`
+	ItemsPerSecond int           `yaml:"items_per_second" envDefault:"50" env:"CACHE_WARMUP_ITEMS_PER_SECOND"`
+	Timeout        time.Duration `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
+}
+
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
@@ -778,6 +793,7 @@ type Config struct {
 	CDN                           CDNConfiguration            `yaml:"cdn,omitempty"`
 	DevelopmentMode               bool                        `yaml:"dev_mode" envDefault:"false" env:"DEV_MODE"`
 	Events                        EventsConfiguration         `yaml:"events,omitempty"`
+	CacheWarmup                   CacheWarmupConfiguration    `yaml:"cache_warmup,omitempty"`
 
 	RouterConfigPath   string `yaml:"router_config_path,omitempty" env:"ROUTER_CONFIG_PATH"`
 	RouterRegistration bool   `yaml:"router_registration" env:"ROUTER_REGISTRATION" envDefault:"true"`

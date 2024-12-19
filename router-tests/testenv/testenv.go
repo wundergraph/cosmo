@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/consul/sdk/freeport"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/kafka"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -32,6 +33,7 @@ import (
 	"time"
 
 	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
 	"go.uber.org/zap/zaptest/observer"
 
@@ -54,7 +56,6 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/websocket"
-	"github.com/hashicorp/consul/sdk/freeport"
 	"github.com/hashicorp/go-retryablehttp"
 	natsserver "github.com/nats-io/nats-server/v2/server"
 	natstest "github.com/nats-io/nats-server/v2/test"
@@ -92,6 +93,9 @@ func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	}
 	t.Cleanup(env.Shutdown)
 	f(t, env)
+	if cfg.AssertCacheMetrics != nil {
+		assertCacheMetrics(t, env, *cfg.AssertCacheMetrics)
+	}
 }
 
 func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
@@ -104,6 +108,66 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 	b.Cleanup(env.Shutdown)
 	b.StartTimer()
 	f(b, env)
+	if cfg.AssertCacheMetrics != nil {
+		assertCacheMetrics(b, env, *cfg.AssertCacheMetrics)
+	}
+}
+
+func assertCacheMetrics(t testing.TB, env *Environment, expected CacheMetricsAssertion) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+	defer cancel()
+	rm := metricdata.ResourceMetrics{}
+	err := env.metricReader.Collect(ctx, &rm)
+	require.NoError(t, err)
+	actual := CacheMetricsAssertion{}
+	for _, sm := range rm.ScopeMetrics {
+		if sm.Scope.Name != "cosmo.router.cache" {
+			continue
+		}
+		for _, m := range sm.Metrics {
+			if m.Name != "router.graphql.cache.requests.stats" {
+				continue
+			}
+			if data, ok := m.Data.(metricdata.Sum[int64]); ok {
+				for _, dp := range data.DataPoints {
+					ct, ok := dp.Attributes.Value("cache_type")
+					if !ok {
+						continue
+					}
+					tp, ok := dp.Attributes.Value("type")
+					if !ok {
+						continue
+					}
+					cacheType := ct.AsString()
+					hm := tp.AsString()
+					switch {
+					case cacheType == "persisted_query_normalization" && hm == "hits":
+						actual.PersistedQueryNormalizationHits = dp.Value
+					case cacheType == "persisted_query_normalization" && hm == "misses":
+						actual.PersistedQueryNormalizationMisses = dp.Value
+					case cacheType == "query_normalization" && hm == "hits":
+						actual.QueryNormalizationHits = dp.Value
+					case cacheType == "query_normalization" && hm == "misses":
+						actual.QueryNormalizationMisses = dp.Value
+					case cacheType == "validation" && hm == "hits":
+						actual.ValidationHits = dp.Value
+					case cacheType == "validation" && hm == "misses":
+						actual.ValidationMisses = dp.Value
+					case cacheType == "plan" && hm == "hits":
+						actual.PlanHits = dp.Value
+					case cacheType == "plan" && hm == "misses":
+						actual.PlanMisses = dp.Value
+					case cacheType == "query_hash" && hm == "misses":
+						actual.QueryHashMisses = dp.Value
+					case cacheType == "query_hash" && hm == "hits":
+						actual.QueryHashHits = dp.Value
+					}
+				}
+			}
+		}
+	}
+	require.Equal(t, expected, actual)
 }
 
 type RouterConfig struct {
@@ -147,6 +211,7 @@ type Config struct {
 	CustomResourceAttributes           []config.CustomStaticAttribute
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
+	PrometheusPort                     int
 	ShutdownDelay                      time.Duration
 	NoRetryClient                      bool
 	PropagationConfig                  config.PropagationConfig
@@ -164,6 +229,20 @@ type Config struct {
 	EnableKafka                        bool
 	SubgraphAccessLogsEnabled          bool
 	SubgraphAccessLogFields            []config.CustomAttribute
+	AssertCacheMetrics                 *CacheMetricsAssertion
+}
+
+type CacheMetricsAssertion struct {
+	QueryNormalizationMisses          int64
+	QueryNormalizationHits            int64
+	PersistedQueryNormalizationMisses int64
+	PersistedQueryNormalizationHits   int64
+	ValidationMisses                  int64
+	ValidationHits                    int64
+	PlanMisses                        int64
+	PlanHits                          int64
+	QueryHashMisses                   int64
+	QueryHashHits                     int64
 }
 
 type SubgraphsConfig struct {
@@ -340,7 +419,29 @@ func setupKafkaServers(t testing.TB) (*KafkaData, error) {
 }
 
 func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
+	t.Helper()
 	pubSubPrefix := strconv.FormatUint(rand.Uint64(), 16)
+
+	var (
+		metricReader *metric.ManualReader
+	)
+
+	if cfg.AssertCacheMetrics != nil {
+		metricReader = metric.NewManualReader()
+		cfg.MetricReader = metricReader
+		cfg.MetricOptions.EnableOTLPRouterCache = true
+		if cfg.ModifyRouterConfig == nil {
+			cfg.ModifyRouterConfig = func(cfg *nodev1.RouterConfig) {
+				cfg.FeatureFlagConfigs = nil
+			}
+		} else {
+			old := cfg.ModifyRouterConfig
+			cfg.ModifyRouterConfig = func(cfg *nodev1.RouterConfig) {
+				old(cfg)
+				cfg.FeatureFlagConfigs = nil
+			}
+		}
+	}
 
 	ctx, cancel := context.WithCancelCause(context.Background())
 
@@ -380,7 +481,15 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		Countries:    atomic.NewInt64(0),
 	}
 
-	var natsSetup *NatsData
+	var (
+		natsSetup     *NatsData
+		requiredPorts = 3
+	)
+
+	ports, err := freeport.Take(requiredPorts)
+	if err != nil {
+		t.Fatalf("could not take free ports: %s", err)
+	}
 
 	if cfg.EnableNats {
 		var natsErr error
@@ -524,7 +633,13 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.ModifyRouterConfig(&routerConfig)
 	}
 
-	cdn := setupCDNServer()
+	cdn := setupCDNServer(t)
+
+	if cfg.PrometheusRegistry != nil {
+		cfg.PrometheusPort = ports[1]
+	}
+
+	listenerAddr := fmt.Sprintf("localhost:%d", ports[2])
 
 	var client *http.Client
 
@@ -560,15 +675,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.AccessLogger = cfg.Logger
 	}
 
-	ports, portsErr := freeport.Take(2)
-	if portsErr != nil {
-		t.Fatalf("could not get free port for router and prometheus")
-	}
-	routerPort := ports[0]
-	listenerAddr := fmt.Sprintf("localhost:%d", routerPort)
-	prometheusPort := ports[1]
-
-	rr, err := configureRouter(listenerAddr, prometheusPort, cfg, &routerConfig, cdn, natsSetup)
+	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdn, natsSetup)
 	if err != nil {
 		return nil, err
 	}
@@ -676,8 +783,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		shutdown:                atomic.NewBool(false),
 		logObserver:             logObserver,
 		getPubSubName:           getPubSubName,
-		routerPort:              routerPort,
-		prometheusPort:          prometheusPort,
+		metricReader:            metricReader,
 		Servers: []*httptest.Server{
 			employeesServer,
 			familyServer,
@@ -707,7 +813,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	return e, nil
 }
 
-func configureRouter(listenerAddr string, prometheusPort int, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsData *NatsData) (*core.Router, error) {
+func configureRouter(listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsData *NatsData) (*core.Router, error) {
 	cfg := config.Config{
 		Graph: config.Graph{},
 		CDN: config.CDNConfiguration{
@@ -869,7 +975,7 @@ func configureRouter(listenerAddr string, prometheusPort int, testConfig *Config
 	if testConfig.PrometheusRegistry != nil {
 		prometheusConfig = rmetric.PrometheusConfig{
 			Enabled:             true,
-			ListenAddr:          fmt.Sprintf("localhost:%d", prometheusPort),
+			ListenAddr:          fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
 			Path:                "/metrics",
 			TestRegistry:        testConfig.PrometheusRegistry,
 			GraphqlCache:        testConfig.MetricOptions.EnablePrometheusRouterCache,
@@ -957,40 +1063,32 @@ func testTokenClaims() jwt.MapClaims {
 	}
 }
 
-func setupCDNServer() *httptest.Server {
+func setupCDNServer(t testing.TB) *httptest.Server {
 	_, filePath, _, ok := runtime.Caller(0)
-	if !ok {
-		panic("Failed to get current file path")
-	}
+	require.True(t, ok)
 	baseCdnFile := filepath.Join(path.Dir(filePath), "testdata", "cdn")
 	cdnFileServer := http.FileServer(http.Dir(baseCdnFile))
 	var cdnRequestLog []string
 	cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
 			requestLog, err := json.Marshal(cdnRequestLog)
-			if err != nil {
-				panic(err)
-			}
+			require.NoError(t, err)
 			w.Header().Set("Content-Type", "application/json")
 			_, err = w.Write(requestLog)
-			if err != nil {
-				panic(err)
-			}
+			require.NoError(t, err)
 			return
 		}
 		cdnRequestLog = append(cdnRequestLog, r.Method+" "+r.URL.Path)
 		// Ensure we have an authorization header with a valid token
 		authorization := r.Header.Get("Authorization")
 		if authorization == "" {
-			panic("missing authorization header")
+			require.NotEmpty(t, authorization, "missing authorization header")
 		}
 		token := authorization[len("Bearer "):]
 		parsedClaims := make(jwt.MapClaims)
 		jwtParser := new(jwt.Parser)
 		_, _, err := jwtParser.ParseUnverified(token, parsedClaims)
-		if err != nil {
-			panic(err)
-		}
+		require.NoError(t, err)
 		cdnFileServer.ServeHTTP(w, r)
 	}))
 
@@ -1034,6 +1132,8 @@ type Environment struct {
 
 	routerConfigVersionMain string
 	routerConfigVersionMyFF string
+
+	metricReader *metric.ManualReader
 }
 
 func GetPubSubNameFn(prefix string) func(name string) string {

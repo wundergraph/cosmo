@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.155.0](https://github.com/wundergraph/cosmo/compare/router@0.154.0...router@0.155.0) (2024-12-18)
+
+### Features
+
+* implement cache warmup using filesystem ([#1437](https://github.com/wundergraph/cosmo/issues/1437)) ([1efd072](https://github.com/wundergraph/cosmo/commit/1efd0720febd27cd328a189c7757036b28e3d81b)) (@jensneuse)
+
+# [0.154.0](https://github.com/wundergraph/cosmo/compare/router@0.153.2...router@0.154.0) (2024-12-18)
+
+### Features
+
+* **router:** support traffic shaping rules on subgraph level ([#1438](https://github.com/wundergraph/cosmo/issues/1438)) ([45a1189](https://github.com/wundergraph/cosmo/commit/45a1189c19d7b41ffebd62230f1ab9276544fd0a)) (@df-wg)
+
 ## [0.153.2](https://github.com/wundergraph/cosmo/compare/router@0.153.1...router@0.153.2) (2024-12-17)
 
 ### Bug Fixes

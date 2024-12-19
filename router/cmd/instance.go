@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-
 	"net/http"
 	"os"
 
@@ -124,15 +123,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithHeaderRules(cfg.Headers),
 		core.WithRouterTrafficConfig(&cfg.TrafficShaping.Router),
 		core.WithFileUploadConfig(&cfg.FileUpload),
-		core.WithSubgraphTransportOptions(&core.SubgraphTransportOptions{
-			RequestTimeout:         cfg.TrafficShaping.All.RequestTimeout,
-			ResponseHeaderTimeout:  cfg.TrafficShaping.All.ResponseHeaderTimeout,
-			ExpectContinueTimeout:  cfg.TrafficShaping.All.ExpectContinueTimeout,
-			KeepAliveIdleTimeout:   cfg.TrafficShaping.All.KeepAliveIdleTimeout,
-			DialTimeout:            cfg.TrafficShaping.All.DialTimeout,
-			TLSHandshakeTimeout:    cfg.TrafficShaping.All.TLSHandshakeTimeout,
-			KeepAliveProbeInterval: cfg.TrafficShaping.All.KeepAliveProbeInterval,
-		}),
+		core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(cfg.TrafficShaping)),
 		core.WithSubgraphRetryOptions(
 			cfg.TrafficShaping.All.BackoffJitterRetry.Enabled,
 			cfg.TrafficShaping.All.BackoffJitterRetry.MaxAttempts,
@@ -171,6 +162,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithEvents(cfg.Events),
 		core.WithRateLimitConfig(&cfg.RateLimit),
 		core.WithClientHeader(cfg.ClientHeader),
+		core.WithCacheWarmupConfig(&cfg.CacheWarmup),
 	}
 
 	// HTTP_PROXY, HTTPS_PROXY and NO_PROXY

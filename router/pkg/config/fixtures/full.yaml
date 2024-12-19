@@ -162,6 +162,9 @@ traffic_shaping:
       max_attempts: 5
       interval: 3s
       max_duration: 10s
+  subgraphs:
+    products: # Will only affect this subgraph
+      request_timeout: 120s
 
 # Header manipulation
 # See "https://cosmo-docs.wundergraph.com/router/proxy-capabilities" for more information
