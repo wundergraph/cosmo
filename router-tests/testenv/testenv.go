@@ -931,14 +931,15 @@ func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server
 	s := httptest.NewUnstartedServer(handler)
 	port, portErr := freeport.Take(1)
 	if portErr != nil {
-		t.Fatalf("could not take free port: %s", portErr)
+		t.Fatalf("could not take free port: %s", portErr.Error())
 	}
-	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port[0]))
+	l, err := net.Listen("tcp", fmt.Sprintf(":%d", port[0]))
 	if err != nil {
-		t.Fatalf("could not listen on port: %s", err)
+		t.Fatalf("could not listen on port: %s", err.Error())
 	}
 	_ = s.Listener.Close()
 	s.Listener = l
+	s.Start()
 
 	return s
 }
