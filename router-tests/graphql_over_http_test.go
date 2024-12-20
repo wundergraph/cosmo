@@ -2,12 +2,16 @@ package integration
 
 import (
 	"bytes"
+
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 func TestGraphQLOverHTTPCompatibility(t *testing.T) {
@@ -195,6 +199,44 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, string(data))
+		})
+		t.Run("request with long header should return 431 response", func(t *testing.T) {
+			header := http.Header{}
+
+			// the limit actually behaves a bit weird in the http library. It's not exactly 1<<20 (1MiB)
+			// It also has some threshold added, and when running all tests at the same time the limit goes even higher.
+			// I couldn't figure out why, so I just go way beyond the limit to make sure it fails.
+			header.Add("X-Long-Header", strings.Repeat("abc", http.DefaultMaxHeaderBytes)) // 3MB
+
+			body := []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{"criteria":{"nationality":"GERMAN"}},"operationName":"Find"}`)
+			res, err := xEnv.MakeRequest("POST", "/graphql", header, bytes.NewReader(body))
+			require.NoError(t, err)
+			require.Equal(t, http.StatusRequestHeaderFieldsTooLarge, res.StatusCode)
+		})
+	})
+
+	t.Run("request with long header and updated max size should return 200 response", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
+					MaxHeaderBytes:      4 << 20, // 4MiB
+					MaxRequestBodyBytes: 5 << 20, // 5MiB
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := http.Header{
+				"Content-Type": []string{"application/json"},
+				"Accept":       []string{"application/json"},
+			}
+
+			header.Add("X-Long-Header", strings.Repeat("abc", http.DefaultMaxHeaderBytes)) // 3MB
+
+			body := []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{"criteria":{"nationality":"GERMAN"}},"operationName":"Find"}`)
+
+			res, err := xEnv.MakeRequest("POST", "/graphql", header, bytes.NewReader(body))
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.StatusCode)
 		})
 	})
 }
