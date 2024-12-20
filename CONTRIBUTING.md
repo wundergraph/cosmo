@@ -44,9 +44,7 @@ According to best practices, we don't commit the `go.work` or `go.sum` files. Th
 ### Example
 
 ```
-go 1.21.5
-
-toolchain go1.22.0
+go 1.23
 
 use (
 	./demo
@@ -89,7 +87,7 @@ We merge all pull requests in `squash merge` mode. You're not enforced to use [c
 - [Docker Compose V2](https://docs.docker.com/compose/install/)
 - [NodeJS LTS](https://nodejs.org/en/download/)
 - [PNPM 8+](https://pnpm.io/installation)
-- [Go 1.21+](https://golang.org/doc/install)
+- [Go 1.23+](https://golang.org/doc/install)
 - [wgc](https://www.npmjs.com/package/wgc)
 - .env/.env.local (see below)
 

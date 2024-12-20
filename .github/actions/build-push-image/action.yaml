@@ -25,6 +25,9 @@ inputs:
   push:
     description: "Whether to push the image to the GitHub container registry"
     default: "true"
+  load_Image:
+    description: "Whether to make the image locally available to the build. Doesn't work with multi-platform builds"
+    default: "false"
 
 runs:
   using: "composite"
@@ -46,7 +49,10 @@ runs:
         tags: |
           type=ref,event=branch
           type=ref,event=pr
+          # minimal (short sha)
           type=sha
+          # full length commit sha
+          type=raw,value=sha-${{ github.sha }}
           # set latest tag for default branch
           type=raw,value=latest,enable={{is_default_branch}}
           # use custom value instead of git tag
@@ -72,7 +78,10 @@ runs:
         password: ${{ inputs.token }}
 
     - name: Build & Push Docker Image
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
+      env:
+        DOCKER_BUILD_SUMMARY: false
+        DOCKER_BUILD_RECORD_UPLOAD: false
       with:
         # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
         # For now, we will disable the push to the GitHub Container Registry for external contributors
@@ -82,6 +91,7 @@ runs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         platforms: ${{ inputs.image_platforms }}
+        load: ${{ inputs.load_Image == 'true' }}
         outputs:
           type=image,name=target,annotation-index.org.opencontainers.image.description=${{ inputs.image_description }}
           type=image,name=target,annotation-index.org.opencontainers.image.source=https://github.com/wundergraph/cosmo
