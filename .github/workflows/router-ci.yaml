@@ -186,10 +186,13 @@ jobs:
           image_platforms: 'linux/amd64'
           push: 'false'
 
+      # list all images
+      - run: docker images
+
       - uses: ./.github/actions/image-scan
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
-          image_ref: 'ghcr.io/wundergraph/cosmo/router:sha-${{ github.sha }}'
+          image_ref: 'cosmo/router:sha-${{ github.sha }}'
 
   build_push_image:
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
