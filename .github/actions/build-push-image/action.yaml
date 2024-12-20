@@ -26,7 +26,7 @@ inputs:
     description: "Whether to push the image to the GitHub container registry"
     default: "true"
   load_Image:
-    description: "Whether to make the image available to the build"
+    description: "Whether to make the image available to the build. Doesn't work multi-platform builds"
     default: "false"
 
 runs:
@@ -78,7 +78,10 @@ runs:
         password: ${{ inputs.token }}
 
     - name: Build & Push Docker Image
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
+      env:
+        DOCKER_BUILD_SUMMARY: false
+        DOCKER_BUILD_RECORD_UPLOAD: false
       with:
         # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
         # For now, we will disable the push to the GitHub Container Registry for external contributors
