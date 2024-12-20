@@ -1,8 +1,6 @@
 module github.com/wundergraph/cosmo/router
 
-go 1.21.5
-
-toolchain go1.22.0
+go 1.23
 
 require (
 	connectrpc.com/connect v1.16.2

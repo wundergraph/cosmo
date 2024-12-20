@@ -1,8 +1,8 @@
 module github.com/wundergraph/cosmo/demo
 
-go 1.21.5
+go 1.23
 
-toolchain go1.22.0
+toolchain go1.23.4
 
 require (
 	github.com/99designs/gqlgen v0.17.49

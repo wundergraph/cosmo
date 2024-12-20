@@ -1,6 +1,6 @@
 module github.com/wundergraph/cosmo/graphqlmetrics
 
-go 1.21.0
+go 1.23
 
 require (
 	connectrpc.com/connect v1.16.2
