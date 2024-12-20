@@ -184,12 +184,14 @@ jobs:
           image_name: router
           image_description: "Cosmo Router"
           image_platforms: 'linux/amd64'
+          load_Image: 'true'
           push: 'false'
 
       - uses: ./.github/actions/image-scan
         with:
+          name: "Router"
           github_token: ${{secrets.GITHUB_TOKEN}}
-          image_ref: 'ghcr.io/wundergraph/cosmo/router:pr-${{github.event.number}}'
+          image_ref: 'ghcr.io/wundergraph/cosmo/router:sha-${{ github.sha }}'
 
   build_push_image:
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
