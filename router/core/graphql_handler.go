@@ -20,6 +20,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
@@ -69,7 +70,7 @@ type HandlerOptions struct {
 	EnablePersistedOperationCacheResponseHeader bool
 	EnableNormalizationCacheResponseHeader      bool
 	EnableResponseHeaderPropagation             bool
-	WebSocketStats                              WebSocketsStatistics
+	WebSocketStats                              statistics.EngineStatistics
 	TracerProvider                              trace.TracerProvider
 	Authorizer                                  *CosmoAuthorizer
 	RateLimiter                                 *CosmoRateLimiter
@@ -113,7 +114,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 type GraphQLHandler struct {
 	log            *zap.Logger
 	executor       *Executor
-	websocketStats WebSocketsStatistics
+	websocketStats statistics.EngineStatistics
 	tracer         trace.Tracer
 	authorizer     *CosmoAuthorizer
 	rateLimiter    *CosmoRateLimiter
