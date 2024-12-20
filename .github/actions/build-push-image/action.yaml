@@ -25,6 +25,9 @@ inputs:
   push:
     description: "Whether to push the image to the GitHub container registry"
     default: "true"
+  load_Image:
+    description: "Whether to make the image available to the build"
+    default: "false"
 
 runs:
   using: "composite"
@@ -85,7 +88,7 @@ runs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         platforms: ${{ inputs.image_platforms }}
-        load: true # Load the image so we can use it in the next steps
+        load: ${{ inputs.load_Image == 'true' }}
         outputs:
           type=image,name=target,annotation-index.org.opencontainers.image.description=${{ inputs.image_description }}
           type=image,name=target,annotation-index.org.opencontainers.image.source=https://github.com/wundergraph/cosmo

@@ -184,6 +184,7 @@ jobs:
           image_name: router
           image_description: "Cosmo Router"
           image_platforms: 'linux/amd64'
+          load_Image: 'true'
           push: 'false'
 
       - run: podman images
