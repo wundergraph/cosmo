@@ -167,6 +167,32 @@ jobs:
         working-directory: ./router
         run: make build
 
+  image_scan:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/build-push-image
+        with:
+          docker_username: ${{secrets.DOCKER_USERNAME}}
+          docker_password: ${{secrets.DOCKER_PASSWORD}}
+          docker_context: router
+          dockerfile: router/Dockerfile
+          token: ${{secrets.GITHUB_TOKEN}}
+          image_name: router
+          image_description: "Cosmo Router"
+          image_platforms: 'linux/amd64'
+          push: 'false'
+
+      - run: podman images
+
+      - uses: ./.github/actions/image-scan
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          image_ref: 'ghcr.io/wundergraph/cosmo/router:sha-${{ github.sha }}'
+
   build_push_image:
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
     # For now, we will disable the push to the GitHub Container Registry for external contributors
@@ -185,8 +211,3 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: router
           image_description: "Cosmo Router"
-
-      - uses: ./.github/actions/image-scan
-        with:
-          github_token: ${{secrets.GITHUB_TOKEN}}
-          image_ref: 'ghcr.io/wundergraph/cosmo/router:sha-${{ github.sha }}'

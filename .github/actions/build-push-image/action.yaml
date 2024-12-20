@@ -85,6 +85,7 @@ runs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         platforms: ${{ inputs.image_platforms }}
+        load: true # Load the image so we can use it in the next steps
         outputs:
           type=image,name=target,annotation-index.org.opencontainers.image.description=${{ inputs.image_description }}
           type=image,name=target,annotation-index.org.opencontainers.image.source=https://github.com/wundergraph/cosmo
