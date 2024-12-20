@@ -307,6 +307,7 @@ func TestNatsEvents(t *testing.T) {
 				wg.Add(1)
 
 				go func() {
+					defer wg.Done()
 					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
 					resp, err := xEnv.RouterClient.Do(req)
 					require.NoError(t, err)
@@ -328,8 +329,6 @@ func TestNatsEvents(t *testing.T) {
 					assertLineEquals(reader, "{}")
 					assertMultipartPrefix(reader)
 					assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
-					wg.Done()
-
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -372,6 +371,7 @@ func TestNatsEvents(t *testing.T) {
 
 				var client *http.Client
 				go func() {
+					defer wg.Done()
 					client = &http.Client{
 						Timeout: time.Second * 10000,
 					}
@@ -389,7 +389,6 @@ func TestNatsEvents(t *testing.T) {
 					// Read the first part
 					assertMultipartPrefix(reader)
 					assertLineEquals(reader, "{}")
-					wg.Done()
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -412,6 +411,7 @@ func TestNatsEvents(t *testing.T) {
 
 				var client http.Client
 				go func() {
+					defer wg.Done()
 					client = http.Client{
 						Timeout: time.Second * 100,
 					}
@@ -433,7 +433,6 @@ func TestNatsEvents(t *testing.T) {
 					assertMultipartPrefix(reader)
 					assertLineEquals(reader, "{\"payload\":{\"data\":{\"countFor\":3}}}")
 					assertLineEquals(reader, "--graphql--")
-					wg.Done()
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -492,6 +491,7 @@ func TestNatsEvents(t *testing.T) {
 			wg.Add(1)
 
 			go func() {
+				defer wg.Done()
 				client := http.Client{
 					Timeout: time.Second * 10,
 				}
@@ -523,7 +523,6 @@ func TestNatsEvents(t *testing.T) {
 				require.Equal(t, "{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}", string(data))
 				_, _, err = reader.ReadLine()
 				require.Error(t, err, io.EOF) // Subscription closed after one time
-				wg.Done()
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -559,6 +558,7 @@ func TestNatsEvents(t *testing.T) {
 			wg.Add(1)
 
 			go func() {
+				defer wg.Done()
 				client := http.Client{
 					Timeout: time.Second * 10,
 				}
@@ -595,8 +595,6 @@ func TestNatsEvents(t *testing.T) {
 				line, _, err = reader.ReadLine()
 				require.NoError(t, err)
 				require.Equal(t, "", string(line))
-
-				wg.Done()
 
 			}()
 
@@ -698,6 +696,7 @@ func TestNatsEvents(t *testing.T) {
 			wg.Add(1)
 
 			go func() {
+				defer wg.Done()
 				client := http.Client{
 					Timeout: time.Second * 10,
 				}
@@ -731,7 +730,6 @@ func TestNatsEvents(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "", string(line))
 
-				wg.Done()
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)

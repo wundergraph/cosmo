@@ -437,6 +437,7 @@ func TestKafkaEvents(t *testing.T) {
 				wg.Add(1)
 
 				go func() {
+					defer wg.Done()
 					client := http.Client{
 						Timeout: time.Second * 100,
 					}
@@ -453,7 +454,6 @@ func TestKafkaEvents(t *testing.T) {
 					assertLineEquals(reader, "{}")
 					assertMultipartPrefix(reader)
 					assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
-					wg.Done()
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -517,6 +517,7 @@ func TestKafkaEvents(t *testing.T) {
 			wg.Add(1)
 
 			go func() {
+				defer wg.Done()
 				client := http.Client{
 					Timeout: time.Second * 10,
 				}
@@ -543,8 +544,6 @@ func TestKafkaEvents(t *testing.T) {
 				line, _, gErr := reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "", string(line))
-
-				wg.Done()
 
 			}()
 
@@ -576,6 +575,7 @@ func TestKafkaEvents(t *testing.T) {
 			wg.Add(1)
 
 			go func() {
+				defer wg.Done()
 				client := http.Client{
 					Timeout: time.Second * 10,
 				}
@@ -602,8 +602,6 @@ func TestKafkaEvents(t *testing.T) {
 				line, _, gErr := reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "", string(line))
-
-				wg.Done()
 
 			}()
 
