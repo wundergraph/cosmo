@@ -104,6 +104,8 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 		return setupNatsData(t)
 	}
 
+	// get free port for nats and never frees it!
+	// don't use Get!
 	natsPorts, natsPortsErr := freeport.Take(1)
 	if natsPortsErr != nil {
 		t.Fatalf("could not get free port for nats: %s", natsPortsErr.Error())

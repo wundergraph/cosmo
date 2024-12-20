@@ -351,13 +351,10 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	var (
-		requiredPorts = 3
+		requiredPorts = 2
 	)
 
-	ports, err := freeport.Take(requiredPorts)
-	if err != nil {
-		t.Fatalf("could not take free ports: %s", err)
-	}
+	ports := freeport.GetN(t, requiredPorts)
 
 	natsStarted.Wait()
 
@@ -498,10 +495,10 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	cdn := setupCDNServer(t)
 
 	if cfg.PrometheusRegistry != nil {
-		cfg.PrometheusPort = ports[1]
+		cfg.PrometheusPort = ports[0]
 	}
 
-	listenerAddr := fmt.Sprintf("localhost:%d", ports[2])
+	listenerAddr := fmt.Sprintf("localhost:%d", ports[1])
 
 	var client *http.Client
 
@@ -657,6 +654,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			availabilityServer,
 			moodServer,
 			countriesServer,
+			productFgServer,
 		},
 	}
 
@@ -929,11 +927,8 @@ func testTokenClaims() jwt.MapClaims {
 
 func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server {
 	s := httptest.NewUnstartedServer(handler)
-	port, portErr := freeport.Take(1)
-	if portErr != nil {
-		t.Fatalf("could not take free port: %s", portErr.Error())
-	}
-	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port[0]))
+	port := freeport.GetOne(t)
+	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
 		t.Fatalf("could not listen on port: %s", err.Error())
 	}
@@ -1071,10 +1066,12 @@ func (e *Environment) Shutdown() {
 	// Close all test servers
 	for _, s := range e.Servers {
 		s.CloseClientConnections()
+		s.Close()
 	}
 
 	// Close the CDN
 	e.CDN.CloseClientConnections()
+	e.CDN.Close()
 
 	// Close NATS
 	if e.cfg.EnableNats {

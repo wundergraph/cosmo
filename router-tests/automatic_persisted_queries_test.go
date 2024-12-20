@@ -168,6 +168,8 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 		t.Parallel()
 
 		t.Run("sha without query fails", func(t *testing.T) {
+			t.Parallel()
+
 			key := uuid.New().String()
 			t.Cleanup(func() {
 				client := redis.NewClient(&redis.Options{Addr: redisLocalUrl, Password: redisPassword})
