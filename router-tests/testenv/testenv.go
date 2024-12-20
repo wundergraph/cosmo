@@ -223,6 +223,7 @@ type Config struct {
 	SubgraphAccessLogsEnabled          bool
 	SubgraphAccessLogFields            []config.CustomAttribute
 	AssertCacheMetrics                 *CacheMetricsAssertion
+	DisableSimulateCloudExporter       bool
 }
 
 type CacheMetricsAssertion struct {
@@ -891,6 +892,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 		c.Prometheus = prometheusConfig
 		c.OpenTelemetry.TestReader = testConfig.MetricReader
+		c.UseCloudExporter = !testConfig.DisableSimulateCloudExporter
 
 		routerOpts = append(routerOpts, core.WithMetrics(c))
 
