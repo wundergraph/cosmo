@@ -1,6 +1,10 @@
 name: "Image Vulnerability Scan"
 description: "This action performs a Trivy scan on the image and adds a PR comment with the results."
 inputs:
+  name:
+    description: "The name of service"
+    required: true
+
   github_token:
     description: 'GitHub Token'
     required: true
@@ -43,16 +47,24 @@ runs:
       if: success() && steps.scan.outcome == 'success'
       with:
         message: |
-          # Trivy Image scan passed
+          # ${{ inputs.name }} image scan passed
           :white_check_mark: No security vulnerabilities found in image:
-          `${{ inputs.image_ref }}`.
+          
+          ```
+          ${{ inputs.image_ref }}
+          ```
+
 
     - uses: mshick/add-pr-comment@v2
       if: failure() && steps.scan.outcome == 'failure'
       with:
         message: |
-          # Trivy Image scan failed
-          :x: Image `${{ inputs.image_ref }}` has security vulnerabilities.
+          # ${{ inputs.name }} image scan failed
+          :x: Security vulnerabilities found in image:
+          
+          ```
+          ${{ inputs.image_ref }}
+          ```
           
           Please check the security [vulnerabilities](https://github.com/wundergraph/cosmo/security/code-scanning?query=pr%3A${{ github.event.number }}+is%3Aopen+tool%3ATrivy) found in the PR.
           

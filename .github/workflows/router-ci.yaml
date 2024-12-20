@@ -191,6 +191,7 @@ jobs:
 
       - uses: ./.github/actions/image-scan
         with:
+          name: "Router"
           github_token: ${{secrets.GITHUB_TOKEN}}
           image_ref: 'ghcr.io/wundergraph/cosmo/router:sha-${{ github.sha }}'
 
