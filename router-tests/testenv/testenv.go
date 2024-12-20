@@ -1075,20 +1075,16 @@ func (e *Environment) Shutdown() {
 	// Do not call s.Close() here, as it will get stuck on connections left open!
 	e.CDN.Listener.Close()
 
-	// Close NATS
+	// Flush NATS connections
 	if e.cfg.EnableNats {
 		e.NatsConnectionMyNats.Flush()
 		e.NatsConnectionDefault.Flush()
-		//	e.NatsConnectionDefault.Close()
-		//	e.NatsConnectionMyNats.Close()
-		//	e.NatsData.Server.Shutdown()
 	}
 
-	// Close Kafka
-	//if e.cfg.EnableKafka {
-	//	e.KafkaAdminClient.Close()
-	//	e.KafkaClient.Close()
-	//}
+	// Flush Kafka connection
+	if e.cfg.EnableKafka {
+		e.KafkaClient.Flush(ctx)
+	}
 }
 
 type SubgraphRequestCount struct {
