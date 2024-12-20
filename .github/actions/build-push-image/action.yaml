@@ -26,7 +26,7 @@ inputs:
     description: "Whether to push the image to the GitHub container registry"
     default: "true"
   load_Image:
-    description: "Whether to make the image available to the build. Doesn't work multi-platform builds"
+    description: "Whether to make the image locally available to the build. Doesn't work with multi-platform builds"
     default: "false"
 
 runs:
