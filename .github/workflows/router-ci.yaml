@@ -187,8 +187,6 @@ jobs:
           load_Image: 'true'
           push: 'false'
 
-      - run: podman images
-
       - uses: ./.github/actions/image-scan
         with:
           name: "Router"
