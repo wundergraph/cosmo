@@ -48,7 +48,7 @@ runs:
       with:
         message: |
           # ${{ inputs.name }} image scan passed
-          :white_check_mark: No security vulnerabilities found in image:
+          :white_check_mark: No security [vulnerabilities](https://github.com/wundergraph/cosmo/security/code-scanning?query=pr%3A${{ github.event.number }}+is%3Aopen+tool%3ATrivy) found in image:
           
           ```
           ${{ inputs.image_ref }}
