@@ -46,10 +46,10 @@ runs:
         tags: |
           type=ref,event=branch
           type=ref,event=pr
-          # minimal (short sha
+          # minimal (short sha)
           type=sha
-          # full length sha
-          type=sha,format=long
+          # full length commit sha
+          type=raw,value=sha-${{ github.sha }}
           # set latest tag for default branch
           type=raw,value=latest,enable={{is_default_branch}}
           # use custom value instead of git tag
