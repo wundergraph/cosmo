@@ -242,7 +242,8 @@
       "KeepAliveProbeInterval": 30000000000
     },
     "Router": {
-      "MaxRequestBodyBytes": 5000000
+      "MaxRequestBodyBytes": 5000000,
+      "MaxHeaderBytes": 4194304
     },
     "Subgraphs": {
       "products": {
