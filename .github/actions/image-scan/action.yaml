@@ -44,7 +44,8 @@ runs:
       with:
         message: |
           # Trivy Image scan passed
-          :white_check_mark: No security vulnerabilities found in image `${{ inputs.image_ref }}`.
+          :white_check_mark: No security vulnerabilities found in image:
+          `${{ inputs.image_ref }}`.
 
     - uses: mshick/add-pr-comment@v2
       if: failure() && steps.scan.outcome == 'failure'
