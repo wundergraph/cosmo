@@ -214,7 +214,7 @@ func TestConfigHotReload(t *testing.T) {
 		})
 	})
 
-	/*t.Run("Router grace period defines how long the shutdown can take until all client connections are closed immediately", func(t *testing.T) {
+	t.Run("Router grace period defines how long the shutdown can take until all client connections are closed immediately", func(t *testing.T) {
 		t.Parallel()
 
 		pm := ConfigPollerMock{
@@ -261,7 +261,7 @@ func TestConfigHotReload(t *testing.T) {
 
 			wg.Wait()
 		})
-	})*/
+	})
 
 	t.Run("Swap config closes websockets connections of old graph instance immediately", func(t *testing.T) {
 		t.Parallel()

@@ -1066,12 +1066,14 @@ func (e *Environment) Shutdown() {
 	// Close all test servers
 	for _, s := range e.Servers {
 		s.CloseClientConnections()
-		s.Close()
+		// Do not call s.Close() here, as it will get stuck on connections left open!
+		s.Listener.Close()
 	}
 
 	// Close the CDN
 	e.CDN.CloseClientConnections()
-	e.CDN.Close()
+	// Do not call s.Close() here, as it will get stuck on connections left open!
+	e.CDN.Listener.Close()
 
 	// Close NATS
 	if e.cfg.EnableNats {
