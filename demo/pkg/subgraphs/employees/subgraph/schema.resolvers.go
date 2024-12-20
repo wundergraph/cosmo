@@ -82,14 +82,14 @@ func (r *mutationResolver) UpdateEmployeeTag(ctx context.Context, id int, tag st
 
 // SingleUpload is the resolver for the singleUpload field.
 func (r *mutationResolver) SingleUpload(ctx context.Context, file graphql.Upload) (bool, error) {
-	fmt.Printf("uploading file %s with size %d", file.Filename, file.Size)
+	fmt.Printf("uploading file %s with size %d\n", file.Filename, file.Size)
 	return true, nil
 }
 
 // MultipleUpload is the resolver for the multipleUpload field.
 func (r *mutationResolver) MultipleUpload(ctx context.Context, files []*graphql.Upload) (bool, error) {
 	for _, file := range files {
-		fmt.Printf("uploading file %s with size %d", file.Filename, file.Size)
+		fmt.Printf("uploading file %s with size %d\n", file.Filename, file.Size)
 	}
 	return true, nil
 }

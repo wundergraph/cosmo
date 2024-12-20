@@ -15,6 +15,7 @@ import (
 	"log"
 	"math/rand"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -452,15 +453,15 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localDelay:       cfg.Subgraphs.Countries.Delay,
 	}
 
-	employeesServer := httptest.NewServer(employees)
-	familyServer := httptest.NewServer(family)
-	hobbiesServer := httptest.NewServer(hobbies)
-	productsServer := httptest.NewServer(products)
-	test1Server := httptest.NewServer(test1)
-	availabilityServer := httptest.NewServer(availability)
-	moodServer := httptest.NewServer(mood)
-	countriesServer := httptest.NewServer(countries)
-	productFgServer := httptest.NewServer(productsFg)
+	employeesServer := makeSafeHttpTestServer(t, employees)
+	familyServer := makeSafeHttpTestServer(t, family)
+	hobbiesServer := makeSafeHttpTestServer(t, hobbies)
+	productsServer := makeSafeHttpTestServer(t, products)
+	test1Server := makeSafeHttpTestServer(t, test1)
+	availabilityServer := makeSafeHttpTestServer(t, availability)
+	moodServer := makeSafeHttpTestServer(t, mood)
+	countriesServer := makeSafeHttpTestServer(t, countries)
+	productFgServer := makeSafeHttpTestServer(t, productsFg)
 
 	replacements := map[string]string{
 		subgraphs.EmployeesDefaultDemoURL:    gqlURL(employeesServer),
@@ -926,13 +927,29 @@ func testTokenClaims() jwt.MapClaims {
 	}
 }
 
+func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server {
+	s := httptest.NewUnstartedServer(handler)
+	port, portErr := freeport.Take(1)
+	if portErr != nil {
+		t.Fatalf("could not take free port: %s", portErr)
+	}
+	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port[0]))
+	if err != nil {
+		t.Fatalf("could not listen on port: %s", err)
+	}
+	_ = s.Listener.Close()
+	s.Listener = l
+
+	return s
+}
+
 func setupCDNServer(t testing.TB) *httptest.Server {
 	_, filePath, _, ok := runtime.Caller(0)
 	require.True(t, ok)
 	baseCdnFile := filepath.Join(path.Dir(filePath), "testdata", "cdn")
 	cdnFileServer := http.FileServer(http.Dir(baseCdnFile))
 	var cdnRequestLog []string
-	cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	cdnServer := makeSafeHttpTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
 			requestLog, err := json.Marshal(cdnRequestLog)
 			require.NoError(t, err)
