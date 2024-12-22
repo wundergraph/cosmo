@@ -41,6 +41,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { formatISO } from "date-fns";
 import { useContext } from "react";
+import { AnalyticsViewResultFilter } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 
 export type OperationAnalytics = {
   name: string;
@@ -48,37 +49,20 @@ export type OperationAnalytics = {
   operationType: number;
 };
 
-const OverviewToolbar = () => {
+const OverviewToolbar = ({
+  filters,
+}: {
+  filters?: AnalyticsViewResultFilter[];
+}) => {
   const graphContext = useContext(GraphContext);
   const client = useQueryClient();
 
-  const { filters, range, dateRange, refreshInterval } =
-    useAnalyticsQueryState();
+  const { range, dateRange, refreshInterval } = useAnalyticsQueryState();
 
   const isFetching = useIsFetching();
 
-  const { data } = useQuery(
-    getGraphMetrics,
-    {
-      namespace: graphContext?.graph?.namespace,
-      federatedGraphName: graphContext?.graph?.name,
-      dateRange: range
-        ? undefined
-        : {
-            start: formatISO(dateRange.start),
-            end: formatISO(dateRange.end),
-          },
-      range,
-      filters,
-    },
-    {
-      placeholderData: keepPreviousData,
-      refetchOnWindowFocus: false,
-    },
-  );
-
   const { filtersList, selectedFilters, resetFilters } = useMetricsFilters(
-    data?.filters ?? [],
+    filters ?? [],
   );
 
   const applyParams = useApplyParams();
@@ -124,7 +108,7 @@ const OverviewToolbar = () => {
             calendarDaysLimit={analyticsRetention}
           />
 
-          <MetricsFilters filters={data?.filters ?? []} />
+          <MetricsFilters filters={filters ?? []} />
           <AnalyticsSelectedFilters
             filters={filtersList}
             selectedFilters={selectedFilters}
@@ -211,7 +195,7 @@ const AnalyticsPage: NextPageWithLayout = () => {
 
   return (
     <div className="w-full space-y-4">
-      <OverviewToolbar />
+      <OverviewToolbar filters={data?.filters} />
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3">
         <RequestMetricsCard data={data?.requests} />
         <LatencyMetricsCard data={data?.latency} />

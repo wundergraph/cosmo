@@ -711,6 +711,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		tlsServerConfig: r.tlsServerConfig,
 		healthcheck:     r.healthcheck,
 		baseURL:         r.baseURL,
+		maxHeaderBytes:  int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
 	})
 
 	// Start the server with the static config without polling
@@ -1045,6 +1046,7 @@ func (r *Router) Start(ctx context.Context) error {
 		tlsServerConfig: r.tlsServerConfig,
 		healthcheck:     r.healthcheck,
 		baseURL:         r.baseURL,
+		maxHeaderBytes:  int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
 	})
 
 	// Start the server with the static config without polling
@@ -1777,12 +1779,6 @@ func WithClientHeader(cfg config.ClientHeader) Option {
 func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 	return func(r *Router) {
 		r.cacheWarmup = cfg
-	}
-}
-
-func WithHostName(hostName string) Option {
-	return func(r *Router) {
-		r.hostName = hostName
 	}
 }
 
