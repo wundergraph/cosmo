@@ -2,6 +2,7 @@ package authentication
 
 import (
 	"fmt"
+	"go.uber.org/zap"
 	"time"
 
 	"github.com/MicahParks/keyfunc/v2"
@@ -29,10 +30,19 @@ func (j *jwksTokenDecoder) Decode(tokenString string) (Claims, error) {
 	return Claims(claims), nil
 }
 
-func NewJwksTokenDecoder(url string, refreshInterval time.Duration) (TokenDecoder, error) {
+func NewJwksTokenDecoder(logger *zap.Logger, url string, refreshInterval time.Duration) (TokenDecoder, error) {
 
 	jwks, err := keyfunc.Get(url, keyfunc.Options{
 		RefreshInterval: refreshInterval,
+		// Allow the JWKS to be empty initially, but it can recover on refresh.
+		TolerateInitialJWKHTTPError: true,
+		RefreshErrorHandler: func(err error) {
+			logger.Error("Could not refresh JWKS. Trying again in the next interval.",
+				zap.Error(err),
+				zap.String("url", url),
+				zap.String("interval", refreshInterval.String()),
+			)
+		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error initializing JWKS from %q: %w", url, err)

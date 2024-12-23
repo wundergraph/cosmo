@@ -61,7 +61,12 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			if name == "" {
 				name = fmt.Sprintf("jwks-#%d", i)
 			}
-			tokenDecoder, _ := authentication.NewJwksTokenDecoder(auth.JWKS.URL, auth.JWKS.RefreshInterval)
+			providerLogger := logger.With(zap.String("provider_name", name))
+			tokenDecoder, err := authentication.NewJwksTokenDecoder(providerLogger, auth.JWKS.URL, auth.JWKS.RefreshInterval)
+			if err != nil {
+				providerLogger.Error("Could not create JWKS token decoder", zap.Error(err))
+				return nil, err
+			}
 			opts := authentication.HttpHeaderAuthenticatorOptions{
 				Name:                name,
 				URL:                 auth.JWKS.URL,
@@ -71,7 +76,8 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			}
 			authenticator, err := authentication.NewHttpHeaderAuthenticator(opts)
 			if err != nil {
-				logger.Fatal("Could not create HttpHeader authenticator", zap.Error(err), zap.String("name", name))
+				providerLogger.Error("Could not create HttpHeader authenticator", zap.Error(err))
+				return nil, err
 			}
 			authenticators = append(authenticators, authenticator)
 
@@ -83,7 +89,8 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 				}
 				authenticator, err = authentication.NewWebsocketInitialPayloadAuthenticator(opts)
 				if err != nil {
-					logger.Fatal("Could not create WebsocketInitialPayload authenticator", zap.Error(err))
+					providerLogger.Error("Could not create WebsocketInitialPayload authenticator", zap.Error(err))
+					return nil, err
 				}
 				authenticators = append(authenticators, authenticator)
 			}
