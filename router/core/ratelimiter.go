@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 
 	"github.com/go-redis/redis_rate/v10"
@@ -86,7 +87,8 @@ func (c *CosmoRateLimiter) generateKey(ctx *resolve.Context) string {
 	if c.keySuffixFromRequestHeader {
 		v := ctx.Request.Header.Get(c.requestHeaderName)
 		if v != "" {
-			return fmt.Sprintf("%s:%s", ctx.RateLimitOptions.RateLimitKey, v)
+			trimmed := strings.TrimSpace(v)
+			return fmt.Sprintf("%s:%s", ctx.RateLimitOptions.RateLimitKey, trimmed)
 		}
 	}
 	if c.keySuffixFromClaim {
@@ -94,7 +96,10 @@ func (c *CosmoRateLimiter) generateKey(ctx *resolve.Context) string {
 		if auth != nil {
 			claims := auth.Claims()
 			if v, ok := claims[c.claimName]; ok {
-				return fmt.Sprintf("%s:%s", ctx.RateLimitOptions.RateLimitKey, v)
+				str, ok := v.(string)
+				if ok {
+					return fmt.Sprintf("%s:%s", ctx.RateLimitOptions.RateLimitKey, str)
+				}
 			}
 		}
 	}
