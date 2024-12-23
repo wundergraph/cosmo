@@ -558,8 +558,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	metricsEnabled := s.metricConfig.IsEnabled()
 
+	// we only enable the attribute mapper if we are not using the default cloud exporter
+	enableAttributeMapper := !(s.metricConfig.IsUsingCloudExporter || rmetric.IsDefaultCloudExporterConfigured(s.metricConfig.OpenTelemetry.Exporters))
+
 	// We might want to remap or exclude known attributes based on the configuration for metrics
-	mapper := newAttributeMapper(!s.metricConfig.UseCloudExporter, s.metricConfig.Attributes)
+	mapper := newAttributeMapper(enableAttributeMapper, s.metricConfig.Attributes)
 	baseMetricAttributes := mapper.mapAttributes(baseOtelAttributes)
 	// Prometheus metricStore rely on OTLP metricStore
 	if metricsEnabled {

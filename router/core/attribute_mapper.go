@@ -14,10 +14,10 @@ type attributeMapper struct {
 	// These keys are used to identify attributes, which should not be included by default and map to the
 	// corresponding fields in the request context.
 	lookupMap map[attribute.Key]string
-	// attr is the list of configured custom context attributes. This list indicates whether attributes are
+	// contextAttrMap is the map of configured custom context attributes. This map indicates whether attributes are
 	// added to the metrics and potentially remapped to a new key. Only attributes from the lookupMap are taken
 	// into account.
-	attr []config.CustomAttribute
+	contextAttrMap map[string]config.CustomAttribute
 }
 
 func newAttributeMapper(enabled bool, attr []config.CustomAttribute) *attributeMapper {
@@ -30,10 +30,18 @@ func newAttributeMapper(enabled bool, attr []config.CustomAttribute) *attributeM
 		otel.WgRouterConfigVersion: "router_config_version",
 	}
 
+	attrMap := make(map[string]config.CustomAttribute)
+
+	for _, a := range attr {
+		if a.ValueFrom != nil && a.ValueFrom.ContextField != "" {
+			attrMap[a.ValueFrom.ContextField] = a
+		}
+	}
+
 	return &attributeMapper{
-		enabled:   enabled,
-		attr:      attr,
-		lookupMap: set,
+		enabled:        enabled,
+		contextAttrMap: attrMap,
+		lookupMap:      set,
 	}
 }
 
@@ -64,24 +72,21 @@ func (r *attributeMapper) mapAttributes(attributes []attribute.KeyValue) []attri
 }
 
 func (r *attributeMapper) mapAttribute(attr attribute.KeyValue, contextField string) attribute.KeyValue {
-	for _, a := range r.attr {
-		if a.ValueFrom == nil || a.ValueFrom.ContextField != contextField {
-			continue
-		}
-
-		val := attr.Value.AsString()
-		if val == "" {
-			val = a.Default
-		}
-
-		var key string
-		if key = a.Key; key == "" {
-			// if the key should not be remapped we fall back to the default key name
-			key = string(attr.Key)
-		}
-
-		return attribute.String(key, val)
-
+	a, exists := r.contextAttrMap[contextField]
+	if !exists {
+		return attribute.KeyValue{}
 	}
-	return attribute.KeyValue{}
+
+	val := attr.Value.AsString()
+	if val == "" {
+		val = a.Default
+	}
+
+	key := a.Key
+	if key == "" {
+		// if the key should not be remapped we fall back to the default key name
+		key = string(attr.Key)
+	}
+
+	return attribute.String(key, val)
 }

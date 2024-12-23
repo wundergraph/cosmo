@@ -892,7 +892,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 		c.Prometheus = prometheusConfig
 		c.OpenTelemetry.TestReader = testConfig.MetricReader
-		c.UseCloudExporter = !testConfig.DisableSimulateCloudExporter
+		c.IsUsingCloudExporter = !testConfig.DisableSimulateCloudExporter
 
 		routerOpts = append(routerOpts, core.WithMetrics(c))
 

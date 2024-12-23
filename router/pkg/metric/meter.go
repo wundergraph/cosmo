@@ -268,10 +268,6 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 			continue
 		}
 
-		if !c.UseCloudExporter && isCloudExporter(exp) {
-			c.UseCloudExporter = true
-		}
-
 		exporter, err := createOTELExporter(log, exp)
 		if err != nil {
 			log.Error("creating OTEL metrics exporter", zap.Error(err))
@@ -291,6 +287,16 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 	otel.SetMeterProvider(mp)
 
 	return mp, nil
+}
+
+// IsDefaultCloudExporterConfigured checks if the default cloud exporter is configured in the provided exporters.
+func IsDefaultCloudExporterConfigured(c []*OpenTelemetryExporter) bool {
+	for _, exp := range c {
+		if isCloudExporter(exp) {
+			return true
+		}
+	}
+	return false
 }
 
 // isCloudExporter checks if the provided is the default cloud exporter.
