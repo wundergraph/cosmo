@@ -37,7 +37,11 @@ func NewJwksTokenDecoder(logger *zap.Logger, url string, refreshInterval time.Du
 		// Allow the JWKS to be empty initially, but it can recover on refresh.
 		TolerateInitialJWKHTTPError: true,
 		RefreshErrorHandler: func(err error) {
-			logger.Error("Could not refresh JWKS. Trying again in the next interval.", zap.Error(err))
+			logger.Error("Could not refresh JWKS. Trying again in the next interval.",
+				zap.Error(err),
+				zap.String("url", url),
+				zap.String("interval", refreshInterval.String()),
+			)
 		},
 	})
 	if err != nil {
