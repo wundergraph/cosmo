@@ -298,7 +298,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 				kgo.SeedBrokers(kafkaSetup.Brokers...),
 			)
 			if err != nil {
-				t.Fatalf("could not create kafka client: %s", err)
+				t.Fatalf("could not create kafka client: %s", err.Error())
 			}
 			kafkaClient = client
 			kafkaAdminClient = kadm.NewClient(client)
@@ -1067,22 +1067,32 @@ func (e *Environment) Shutdown() {
 	for _, s := range e.Servers {
 		s.CloseClientConnections()
 		// Do not call s.Close() here, as it will get stuck on connections left open!
-		s.Listener.Close()
+		lErr := s.Listener.Close()
+		if lErr != nil {
+			e.t.Logf("could not close server listener: %s", lErr)
+		}
 	}
 
 	// Close the CDN
 	e.CDN.CloseClientConnections()
 	// Do not call s.Close() here, as it will get stuck on connections left open!
-	e.CDN.Listener.Close()
+	lErr := e.CDN.Listener.Close()
+	if lErr != nil {
+		e.t.Logf("could not close CDN listener: %s", lErr)
+	}
 
 	// Flush NATS connections
 	if e.cfg.EnableNats {
-		e.NatsConnectionMyNats.Flush()
-		e.NatsConnectionDefault.Flush()
+		if e.NatsConnectionMyNats != nil {
+			e.NatsConnectionMyNats.Flush()
+		}
+		if e.NatsConnectionDefault != nil {
+			e.NatsConnectionDefault.Flush()
+		}
 	}
 
 	// Flush Kafka connection
-	if e.cfg.EnableKafka {
+	if e.cfg.EnableKafka && e.KafkaClient != nil {
 		e.KafkaClient.Flush(ctx)
 	}
 }
@@ -1612,7 +1622,7 @@ func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time
 			return
 		case r, ok := <-sub:
 			if !ok {
-				e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", r.Subscriptions, desiredCount)
+				e.t.Fatalf("channel, closed timed out waiting for subscription count, got %d, want %d", r.Subscriptions, desiredCount)
 				return
 			}
 			report = r
@@ -1676,7 +1686,7 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 			return
 		case r, ok := <-sub:
 			if !ok {
-				e.t.Fatalf("timed out waiting for messages sent, got %d, want %d", r.MessagesSent, desiredCount)
+				e.t.Fatalf("channel closed, timed out waiting for messages sent, got %d, want %d", r.MessagesSent, desiredCount)
 				return
 			}
 			report = r

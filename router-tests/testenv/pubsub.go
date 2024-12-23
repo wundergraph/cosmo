@@ -58,6 +58,7 @@ func setupKafkaServers(t testing.TB) (*KafkaData, error) {
 		return err == nil && kafkaData.Container != nil
 	}, time.Second*30, time.Second)
 
+	require.NotNil(t, kafkaData.Container)
 	require.NoError(t, kafkaData.Container.Start(ctx))
 
 	kafkaData.Brokers, err = kafkaData.Container.Brokers(ctx)

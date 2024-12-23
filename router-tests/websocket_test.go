@@ -469,7 +469,10 @@ func TestWebSockets(t *testing.T) {
 			})
 			require.NoError(t, err)
 
+			var wg sync.WaitGroup
+			wg.Add(1)
 			go func() {
+				defer wg.Done()
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 				// Trigger the subscription via NATS
 				subject := xEnv.GetPubSubName("employeeUpdated.3")
@@ -479,6 +482,7 @@ func TestWebSockets(t *testing.T) {
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 			}()
+			wg.Wait()
 
 			var res testenv.WebSocketMessage
 			err = conn.ReadJSON(&res)
@@ -486,8 +490,8 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, "next", res.Type)
 			require.Equal(t, "1", res.ID)
 			require.JSONEq(t, `{"data":{"employeeUpdated":{"id":3}}}`, string(res.Payload))
-
 			require.NoError(t, conn.Close())
+
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
@@ -1327,7 +1331,9 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			require.NotEqual(t, "", countHobID)
 
+			wg.Add(1)
 			go func() {
+				defer wg.Done()
 				require.NoError(t, client.Run())
 			}()
 

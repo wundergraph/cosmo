@@ -602,7 +602,6 @@ func TestKafkaEvents(t *testing.T) {
 				line, _, gErr := reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "", string(line))
-
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -1049,28 +1048,27 @@ func TestKafkaEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			wg := &sync.WaitGroup{}
-			wg.Add(4)
-
+			countWg := sync.Mutex{}
 			count := 0
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer wg.Done()
+				countWg.Lock()
+				oldCount := count
+				count++
+				countWg.Unlock()
 
-				if count == 0 {
+				if oldCount == 0 {
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					require.Equal(t, "Invalid message received", gqlErr[0].Message)
-				} else if count == 1 || count == 3 {
+				} else if oldCount == 1 || oldCount == 3 {
 					require.NoError(t, errValue)
 					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
-				} else if count == 2 {
+				} else if oldCount == 2 {
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdatedMyKafka.id'.", gqlErr[0].Message)
 				}
-
-				count++
 
 				return nil
 			})
@@ -1085,18 +1083,29 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{asas`) // Invalid message
-			xEnv.WaitForMessagesSent(1, time.Second*10)
-
+			require.Eventually(t, func() bool {
+				countWg.Lock()
+				defer countWg.Unlock()
+				return count == 1
+			}, time.Second*10, time.Millisecond*100)
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":1}`) // Correct message
-			xEnv.WaitForMessagesSent(2, time.Second*10)
-
+			require.Eventually(t, func() bool {
+				countWg.Lock()
+				defer countWg.Unlock()
+				return count == 2
+			}, time.Second*10, time.Millisecond*100)
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
-			xEnv.WaitForMessagesSent(3, time.Second*10)
-
+			require.Eventually(t, func() bool {
+				countWg.Lock()
+				defer countWg.Unlock()
+				return count == 3
+			}, time.Second*10, time.Millisecond*100)
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
-			xEnv.WaitForMessagesSent(4, time.Second*10)
-
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				countWg.Lock()
+				defer countWg.Unlock()
+				return count == 4
+			}, time.Second*10, time.Millisecond*100)
 
 			require.NoError(t, client.Close())
 
@@ -1108,7 +1117,6 @@ func TestKafkaEvents(t *testing.T) {
 
 func ensureTopicExists(t *testing.T, xEnv *testenv.Environment, topics ...string) {
 	// Delete topic for idempotency
-
 	deleteCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	prefixedTopics := make([]string, len(topics))
@@ -1146,6 +1154,8 @@ func produceKafkaMessage(t *testing.T, xEnv *testenv.Environment, topicName stri
 	})
 
 	wg.Wait()
+
+	xEnv.KafkaClient.Flush(ctx)
 
 	require.NoError(t, pErr)
 }

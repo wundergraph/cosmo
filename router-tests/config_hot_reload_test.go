@@ -184,13 +184,16 @@ func TestConfigHotReload(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			wg := &sync.WaitGroup{}
+			var requestsStarted uint8
+			var requestsStartedLock sync.Mutex
+			var requestsDone uint8
+			var requestsDoneLock sync.Mutex
 
 			for i := 0; i < 10; i++ {
-				wg.Add(1)
-
 				go func() {
-					defer wg.Done()
+					requestsStartedLock.Lock()
+					requestsStarted++
+					requestsStartedLock.Unlock()
 
 					// Create a new context for each request to ensure that the request is not cancelled by the shutdown
 					res, err := xEnv.MakeGraphQLRequestWithContext(context.Background(), testenv.GraphQLRequest{
@@ -199,18 +202,28 @@ func TestConfigHotReload(t *testing.T) {
 					require.NoError(t, err)
 					require.Equal(t, res.Response.StatusCode, 200)
 					require.JSONEq(t, employeesIDData, res.Body)
+
+					requestsDoneLock.Lock()
+					requestsDone++
+					requestsDoneLock.Unlock()
 				}()
 			}
 
-			// Let's wait a bit to make sure all requests are in flight
-			// otherwise the shutdown will be too fast and the wait-group will not be done fully
-			time.Sleep(time.Millisecond * 100)
+			// Let's wait until all requests are in flight
+			require.Eventually(t, func() bool {
+				requestsStartedLock.Lock()
+				defer requestsStartedLock.Unlock()
+				return requestsStarted == 10
+			}, time.Second*5, time.Millisecond*100)
 
 			xEnv.Shutdown()
 
-			// Ensure that all requests are served successfully
-			wg.Wait()
-
+			// Let's wait until all requests are completed
+			require.Eventually(t, func() bool {
+				requestsDoneLock.Lock()
+				defer requestsDoneLock.Unlock()
+				return requestsDone == 10
+			}, time.Second*5, time.Millisecond*100)
 		})
 	})
 

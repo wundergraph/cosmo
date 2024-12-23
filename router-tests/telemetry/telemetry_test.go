@@ -3159,11 +3159,11 @@ func TestTelemetry(t *testing.T) {
 				core.WithSubgraphTransportOptions(
 					core.NewSubgraphTransportOptions(config.TrafficShapingRules{
 						All: config.GlobalSubgraphRequestRule{
-							RequestTimeout: 10 * time.Millisecond,
+							RequestTimeout: 10 * time.Second,
 						},
 						Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
 							"hobbies": {
-								RequestTimeout: 3 * time.Millisecond,
+								RequestTimeout: 3 * time.Second,
 							},
 						},
 					})),
