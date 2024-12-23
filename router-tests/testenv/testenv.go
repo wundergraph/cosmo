@@ -68,6 +68,8 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
+var EnvironmentClosedErr = errors.New("test environment closed")
+
 const (
 	natsDefaultSourceName = "default"
 	myNatsProviderID      = "my-nats"
@@ -1060,12 +1062,15 @@ func (e *Environment) Shutdown() {
 		e.t.Errorf("could not shutdown router: %s", err)
 	}
 
-	// Terminate test server resources
-	e.cancel(errors.New("test environment closed"))
-
 	// Close all test servers
 	for _, s := range e.Servers {
 		s.CloseClientConnections()
+	}
+
+	// Terminate test server resources
+	e.cancel(EnvironmentClosedErr)
+
+	for _, s := range e.Servers {
 		// Do not call s.Close() here, as it will get stuck on connections left open!
 		lErr := s.Listener.Close()
 		if lErr != nil {
@@ -1417,7 +1422,8 @@ type GraphQLResponse struct {
 }
 
 type GraphQLError struct {
-	Message string `json:"message"`
+	Message    string          `json:"message"`
+	Extensions json.RawMessage `json:"extensions,omitempty"`
 }
 
 const maxSocketRetries = 5
@@ -1539,7 +1545,7 @@ func (e *Environment) ReadSSE(ctx context.Context, body io.ReadCloser, handler f
 			return
 		default:
 			line, err := reader.ReadString('\n')
-			if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, io.EOF) {
+			if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, io.EOF) && !errors.Is(err, EnvironmentClosedErr) {
 				e.t.Fatalf("could not read line: %s", err)
 				return
 			}

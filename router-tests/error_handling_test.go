@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"encoding/json"
 	"net/http"
 	"testing"
 
@@ -8,6 +9,28 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
+
+func checkContentAndErrors(t *testing.T, expectedContent string, expectedErrors []testenv.GraphQLError, body string) {
+	res := testenv.GraphQLResponse{}
+	require.NoError(t, json.Unmarshal([]byte(body), &res))
+	require.Len(t, res.Errors, len(expectedErrors))
+	var matchedErrors int
+	for _, expectedErr := range expectedErrors {
+		for _, err := range res.Errors {
+			if err.Message == expectedErr.Message {
+				if len(expectedErr.Extensions) > 0 || len(err.Extensions) > 0 {
+					require.JSONEq(t, string(expectedErr.Extensions), string(err.Extensions))
+				}
+				matchedErrors++
+				break
+			}
+		}
+	}
+	content, contentErr := res.Data.MarshalJSON()
+	require.NoError(t, contentErr)
+	require.Len(t, res.Errors, matchedErrors)
+	require.Equal(t, expectedContent, string(content))
+}
 
 func TestErrorPropagation(t *testing.T) {
 	t.Parallel()
@@ -104,7 +127,6 @@ func TestErrorPropagation(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id details { forename surname } notes } }`,
 			})
-			// TODO: errors order is not guaranteed, so we need to compare the errors separately
 			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":403}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
 		})
 	})
@@ -131,7 +153,6 @@ func TestErrorPropagation(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id details { forename surname } notes } }`,
 			})
-			// TODO: errors order is not guaranteed, so we need to compare the errors separately
 			require.Equal(t, `{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","statusCode":403}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
 		})
 	})
@@ -609,7 +630,11 @@ func TestErrorPropagation(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employee(id: 1) { id details { forename surname } rootFieldThrowsError fieldThrowsError rootFieldErrorWrapper { okField errorField } } }`,
 			})
-			require.Equal(t, `{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"],"extensions":{"code":"ERROR_CODE"}},{"message":"error resolving ErrorField","path":["employee","rootFieldErrorWrapper","errorField"]},{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employee"]}],"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"rootFieldThrowsError":null,"fieldThrowsError":null,"rootFieldErrorWrapper":{"okField":"ok","errorField":null}}}}`, res.Body)
+			checkContentAndErrors(t, "{\"employee\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"},\"rootFieldThrowsError\":null,\"fieldThrowsError\":null,\"rootFieldErrorWrapper\":{\"okField\":\"ok\",\"errorField\":null}}}", []testenv.GraphQLError{
+				{Message: "error resolving RootFieldThrowsError for Employee 1", Extensions: json.RawMessage(`{"code":"ERROR_CODE"}`)},
+				{Message: "error resolving ErrorField"},
+				{Message: "resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1"},
+			}, res.Body)
 		})
 	})
 
@@ -624,6 +649,11 @@ func TestErrorPropagation(t *testing.T) {
 				Query: `{ employeeAsList(id: 1) { id details { forename surname } rootFieldThrowsError fieldThrowsError rootFieldErrorWrapper { okField errorField } } }`,
 			})
 			require.Equal(t, `{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employeeAsList",0,"rootFieldThrowsError"],"extensions":{"code":"ERROR_CODE","statusCode":200}},{"message":"error resolving ErrorField","path":["employeeAsList",0,"rootFieldErrorWrapper","errorField"],"extensions":{"statusCode":200}},{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employeeAsList"],"extensions":{"statusCode":200}}],"data":{"employeeAsList":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"rootFieldThrowsError":null,"fieldThrowsError":null,"rootFieldErrorWrapper":{"okField":"ok","errorField":null}}]}}`, res.Body)
+			checkContentAndErrors(t, "{\"employeeAsList\":[{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"},\"rootFieldThrowsError\":null,\"fieldThrowsError\":null,\"rootFieldErrorWrapper\":{\"okField\":\"ok\",\"errorField\":null}}]}", []testenv.GraphQLError{
+				{Message: "error resolving RootFieldThrowsError for Employee 1", Extensions: json.RawMessage(`{"code":"ERROR_CODE","statusCode":200}`)},
+				{Message: "error resolving ErrorField", Extensions: json.RawMessage(`{"statusCode":200}`)},
+				{Message: "resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1", Extensions: json.RawMessage(`{"statusCode":200}`)},
+			}, res.Body)
 		})
 	})
 
@@ -638,7 +668,10 @@ func TestErrorPropagation(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employee(id: 1) { id details { forename surname } rootFieldThrowsError fieldThrowsError rootFieldErrorWrapper { okField errorField } } }`,
 			})
-			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'.","extensions":{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"],"extensions":{"code":"ERROR_CODE"}},{"message":"error resolving ErrorField","path":["employee","rootFieldErrorWrapper","errorField"]}],"statusCode":200}},{"message":"Failed to fetch from Subgraph 'test1' at Path 'employee'.","extensions":{"errors":[{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employee"]}],"statusCode":200}}],"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"rootFieldThrowsError":null,"fieldThrowsError":null,"rootFieldErrorWrapper":{"okField":"ok","errorField":null}}}}`, res.Body)
+			checkContentAndErrors(t, "{\"employee\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"},\"rootFieldThrowsError\":null,\"fieldThrowsError\":null,\"rootFieldErrorWrapper\":{\"okField\":\"ok\",\"errorField\":null}}}", []testenv.GraphQLError{
+				{Message: "Failed to fetch from Subgraph 'employees'.", Extensions: json.RawMessage(`{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"],"extensions":{"code":"ERROR_CODE"}},{"message":"error resolving ErrorField","path":["employee","rootFieldErrorWrapper","errorField"]}],"statusCode":200}`)},
+				{Message: "Failed to fetch from Subgraph 'test1' at Path 'employee'.", Extensions: json.RawMessage(`{"errors":[{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employee"]}],"statusCode":200}`)},
+			}, res.Body)
 		})
 	})
 
@@ -654,7 +687,12 @@ func TestErrorPropagation(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employee(id: 1) { id details { forename surname } rootFieldThrowsError fieldThrowsError rootFieldErrorWrapper { okField errorField } } }`,
 			})
-			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'.","extensions":{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"],"extensions":{"code":"ERROR_CODE"}},{"message":"error resolving ErrorField","path":["employee","rootFieldErrorWrapper","errorField"]}],"serviceName":"employees","statusCode":200}},{"message":"Failed to fetch from Subgraph 'test1' at Path 'employee'.","extensions":{"errors":[{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employee"]}],"serviceName":"test1","statusCode":200}}],"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"rootFieldThrowsError":null,"fieldThrowsError":null,"rootFieldErrorWrapper":{"okField":"ok","errorField":null}}}}`, res.Body)
+			checkContentAndErrors(t,
+				"{\"employee\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"},\"rootFieldThrowsError\":null,\"fieldThrowsError\":null,\"rootFieldErrorWrapper\":{\"okField\":\"ok\",\"errorField\":null}}}",
+				[]testenv.GraphQLError{
+					{Message: "Failed to fetch from Subgraph 'employees'.", Extensions: json.RawMessage(`{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"],"extensions":{"code":"ERROR_CODE"}},{"message":"error resolving ErrorField","path":["employee","rootFieldErrorWrapper","errorField"]}],"serviceName":"employees","statusCode":200}`)},
+					{Message: "Failed to fetch from Subgraph 'test1' at Path 'employee'.", Extensions: json.RawMessage(`{"errors":[{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employee"]}],"serviceName":"test1","statusCode":200}`)},
+				}, res.Body)
 		})
 	})
 
@@ -670,7 +708,14 @@ func TestErrorPropagation(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employee(id: 1) { id details { forename surname } rootFieldThrowsError fieldThrowsError rootFieldErrorWrapper { okField errorField } } }`,
 			})
-			require.Equal(t, `{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"],"extensions":{"code":"ERROR_CODE","serviceName":"employees","statusCode":200}},{"message":"error resolving ErrorField","path":["employee","rootFieldErrorWrapper","errorField"],"extensions":{"serviceName":"employees","statusCode":200}},{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employee"],"extensions":{"serviceName":"test1","statusCode":200}}],"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"rootFieldThrowsError":null,"fieldThrowsError":null,"rootFieldErrorWrapper":{"okField":"ok","errorField":null}}}}`, res.Body)
+
+			checkContentAndErrors(t,
+				"{\"employee\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"},\"rootFieldThrowsError\":null,\"fieldThrowsError\":null,\"rootFieldErrorWrapper\":{\"okField\":\"ok\",\"errorField\":null}}}",
+				[]testenv.GraphQLError{
+					{Message: "error resolving RootFieldThrowsError for Employee 1", Extensions: json.RawMessage(`{"code":"ERROR_CODE","serviceName":"employees","statusCode":200}`)},
+					{Message: "error resolving ErrorField", Extensions: json.RawMessage(`{"serviceName":"employees","statusCode":200}`)},
+					{Message: "resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1", Extensions: json.RawMessage(`{"statusCode":200,"serviceName":"test1"}`)},
+				}, res.Body)
 		})
 	})
 
@@ -735,7 +780,14 @@ func TestErrorPropagation(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employee(id: 1) { id details { forename surname } rootFieldThrowsError fieldThrowsError rootFieldErrorWrapper { okField errorField } } }`,
 			})
-			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'.","extensions":{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"],"extensions":{"code":"ERROR_CODE"}},{"message":"error resolving ErrorField","path":["employee","rootFieldErrorWrapper","errorField"],"extensions":{"code":"DEFAULT_CODE"}}],"statusCode":200}},{"message":"Failed to fetch from Subgraph 'test1' at Path 'employee'.","extensions":{"errors":[{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employee"],"extensions":{"code":"DEFAULT_CODE"}}],"statusCode":200}}],"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"rootFieldThrowsError":null,"fieldThrowsError":null,"rootFieldErrorWrapper":{"okField":"ok","errorField":null}}}}`, res.Body)
+			checkContentAndErrors(t,
+				"{\"employee\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"},\"rootFieldThrowsError\":null,\"fieldThrowsError\":null,\"rootFieldErrorWrapper\":{\"okField\":\"ok\",\"errorField\":null}}}",
+				[]testenv.GraphQLError{
+					{Message: "Failed to fetch from Subgraph 'employees'.", Extensions: json.RawMessage(`{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"],"extensions":{"code":"ERROR_CODE"}},{"message":"error resolving ErrorField","path":["employee","rootFieldErrorWrapper","errorField"],"extensions":{"code":"DEFAULT_CODE"}}],"statusCode":200}`)},
+					{Message: "Failed to fetch from Subgraph 'test1' at Path 'employee'.", Extensions: json.RawMessage(`{"errors":[{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employee"],"extensions":{"code":"DEFAULT_CODE"}}],"statusCode":200}`)},
+				},
+				res.Body,
+			)
 		})
 	})
 
@@ -800,7 +852,15 @@ func TestErrorPropagation(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employee(id: 1) { id details { forename surname } rootFieldThrowsError fieldThrowsError rootFieldErrorWrapper { okField errorField } } }`,
 			})
-			require.Equal(t, `{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"],"extensions":{"code":"ERROR_CODE","statusCode":200}},{"message":"error resolving ErrorField","path":["employee","rootFieldErrorWrapper","errorField"],"extensions":{"code":"DEFAULT_CODE","statusCode":200}},{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employee"],"extensions":{"code":"DEFAULT_CODE","statusCode":200}}],"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"rootFieldThrowsError":null,"fieldThrowsError":null,"rootFieldErrorWrapper":{"okField":"ok","errorField":null}}}}`, res.Body)
+			checkContentAndErrors(t,
+				"{\"employee\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"},\"rootFieldThrowsError\":null,\"fieldThrowsError\":null,\"rootFieldErrorWrapper\":{\"okField\":\"ok\",\"errorField\":null}}}",
+				[]testenv.GraphQLError{
+					{Message: "error resolving RootFieldThrowsError for Employee 1", Extensions: json.RawMessage(`{"code":"ERROR_CODE","statusCode":200}`)},
+					{Message: "error resolving ErrorField", Extensions: json.RawMessage(`{"code":"DEFAULT_CODE","statusCode":200}`)},
+					{Message: "resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1", Extensions: json.RawMessage(`{"code":"DEFAULT_CODE","statusCode":200}`)},
+				},
+				res.Body,
+			)
 		})
 	})
 
