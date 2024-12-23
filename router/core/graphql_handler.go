@@ -70,7 +70,7 @@ type HandlerOptions struct {
 	EnablePersistedOperationCacheResponseHeader bool
 	EnableNormalizationCacheResponseHeader      bool
 	EnableResponseHeaderPropagation             bool
-	WebSocketStats                              statistics.EngineStatistics
+	EngineStats                                 statistics.EngineStatistics
 	TracerProvider                              trace.TracerProvider
 	Authorizer                                  *CosmoAuthorizer
 	RateLimiter                                 *CosmoRateLimiter
@@ -87,7 +87,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		enablePersistedOperationCacheResponseHeader: opts.EnablePersistedOperationCacheResponseHeader,
 		enableNormalizationCacheResponseHeader:      opts.EnableNormalizationCacheResponseHeader,
 		enableResponseHeaderPropagation:             opts.EnableResponseHeaderPropagation,
-		websocketStats:                              opts.WebSocketStats,
+		engineStats:                                 opts.EngineStats,
 		tracer: opts.TracerProvider.Tracer(
 			"wundergraph/cosmo/router/graphql_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
@@ -112,12 +112,12 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 // https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#response
 
 type GraphQLHandler struct {
-	log            *zap.Logger
-	executor       *Executor
-	websocketStats statistics.EngineStatistics
-	tracer         trace.Tracer
-	authorizer     *CosmoAuthorizer
-	rateLimiter    *CosmoRateLimiter
+	log         *zap.Logger
+	executor    *Executor
+	engineStats statistics.EngineStatistics
+	tracer      trace.Tracer
+	authorizer  *CosmoAuthorizer
+	rateLimiter *CosmoRateLimiter
 
 	rateLimitConfig          *config.RateLimitConfiguration
 	subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
@@ -200,8 +200,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if !ctx.ExecutionOptions.SkipLoader {
-			h.websocketStats.ConnectionsInc()
-			defer h.websocketStats.ConnectionsDec()
+			h.engineStats.ConnectionsInc()
+			defer h.engineStats.ConnectionsDec()
 		}
 
 		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, writer)
