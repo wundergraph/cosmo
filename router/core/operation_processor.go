@@ -918,7 +918,6 @@ func (o *OperationKit) loadPersistedOperationCacheKey(clientName, persistedQuery
 
 func (o *OperationKit) generatePersistedOperationCacheKey(clientName string, skipIncludeVariableNames []string) uint64 {
 	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
-	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.Request.OperationName)
 	_, _ = o.kit.keyGen.WriteString(clientName)
 	o.writeSkipIncludeCacheKeyToKeyGen(skipIncludeVariableNames)
 	sum := o.kit.keyGen.Sum64()
