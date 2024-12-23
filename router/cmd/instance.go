@@ -76,7 +76,8 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			}
 			authenticator, err := authentication.NewHttpHeaderAuthenticator(opts)
 			if err != nil {
-				providerLogger.Fatal("Could not create HttpHeader authenticator", zap.Error(err))
+				providerLogger.Error("Could not create HttpHeader authenticator", zap.Error(err))
+				continue
 			}
 			authenticators = append(authenticators, authenticator)
 
@@ -88,7 +89,8 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 				}
 				authenticator, err = authentication.NewWebsocketInitialPayloadAuthenticator(opts)
 				if err != nil {
-					providerLogger.Fatal("Could not create WebsocketInitialPayload authenticator", zap.Error(err))
+					providerLogger.Error("Could not create WebsocketInitialPayload authenticator", zap.Error(err))
+					continue
 				}
 				authenticators = append(authenticators, authenticator)
 			}
