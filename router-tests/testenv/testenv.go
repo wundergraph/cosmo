@@ -68,7 +68,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-var EnvironmentClosedErr = errors.New("test environment closed")
+var ErrEnvironmentClosed = errors.New("test environment closed")
 
 const (
 	natsDefaultSourceName = "default"
@@ -1068,7 +1068,7 @@ func (e *Environment) Shutdown() {
 	}
 
 	// Terminate test server resources
-	e.cancel(EnvironmentClosedErr)
+	e.cancel(ErrEnvironmentClosed)
 
 	for _, s := range e.Servers {
 		// Do not call s.Close() here, as it will get stuck on connections left open!
@@ -1545,7 +1545,7 @@ func (e *Environment) ReadSSE(ctx context.Context, body io.ReadCloser, handler f
 			return
 		default:
 			line, err := reader.ReadString('\n')
-			if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, io.EOF) && !errors.Is(err, EnvironmentClosedErr) {
+			if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, io.EOF) && !errors.Is(err, ErrEnvironmentClosed) {
 				e.t.Fatalf("could not read line: %s", err)
 				return
 			}
