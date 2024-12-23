@@ -1,4 +1,4 @@
-package integration_test
+package integration
 
 import (
 	"context"
@@ -22,6 +22,8 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 		t.Parallel()
 
 		t.Run("Sha without query fails", func(t *testing.T) {
+			t.Parallel()
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithGraphApiToken(""),
@@ -38,6 +40,8 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 		})
 
 		t.Run("Sha with query works", func(t *testing.T) {
+			t.Parallel()
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					// This ensures that no CDN client for persistent operations is created, so we can verify that
@@ -83,6 +87,8 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 		})
 
 		t.Run("query is deleted after ttl expires", func(t *testing.T) {
+			t.Parallel()
+
 			testenv.Run(t, &testenv.Config{
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
 					Enabled: true,
@@ -113,6 +119,8 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 		})
 
 		t.Run("query renews ttl time", func(t *testing.T) {
+			t.Parallel()
+
 			testenv.Run(t, &testenv.Config{
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
 					Enabled: true,
@@ -160,6 +168,8 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 		t.Parallel()
 
 		t.Run("sha without query fails", func(t *testing.T) {
+			t.Parallel()
+
 			key := uuid.New().String()
 			t.Cleanup(func() {
 				client := redis.NewClient(&redis.Options{Addr: redisLocalUrl, Password: redisPassword})
@@ -192,6 +202,8 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 		})
 
 		t.Run("sha with query works", func(t *testing.T) {
+			t.Parallel()
+
 			key := uuid.New().String()
 			t.Cleanup(func() {
 				client := redis.NewClient(&redis.Options{Addr: redisLocalUrl, Password: redisPassword})
@@ -248,6 +260,8 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 		})
 
 		t.Run("query is deleted after ttl expires", func(t *testing.T) {
+			t.Parallel()
+
 			key := uuid.New().String()
 			t.Cleanup(func() {
 				client := redis.NewClient(&redis.Options{Addr: redisLocalUrl, Password: redisPassword})
@@ -296,6 +310,8 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 		})
 
 		t.Run("query renews ttl time", func(t *testing.T) {
+			t.Parallel()
+
 			key := uuid.New().String()
 			t.Cleanup(func() {
 				client := redis.NewClient(&redis.Options{Addr: redisLocalUrl, Password: redisPassword})

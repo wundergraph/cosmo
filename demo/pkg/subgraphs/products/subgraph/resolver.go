@@ -1,6 +1,7 @@
 package subgraph
 
 import (
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products/subgraph/model"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"sync"
 )
@@ -10,6 +11,7 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	mux                    sync.Mutex
-	NatsPubSubByProviderID map[string]pubsub_datasource.NatsPubSub
+	mux                          sync.Mutex
+	NatsPubSubByProviderID       map[string]pubsub_datasource.NatsPubSub
+	TopSecretFederationFactsData []model.TopSecretFact
 }

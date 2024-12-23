@@ -1,4 +1,4 @@
-package integration_test
+package events_test
 
 import (
 	"bufio"
@@ -54,11 +54,13 @@ func TestNatsEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			wg := &sync.WaitGroup{}
-			wg.Add(2)
+			var subscriptionCalled uint8
+			var subscriptionCalledMux sync.Mutex
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer wg.Done()
+				subscriptionCalledMux.Lock()
+				defer subscriptionCalledMux.Unlock()
+				subscriptionCalled++
 				require.NoError(t, errValue)
 				require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
 				return nil
@@ -71,9 +73,18 @@ func TestNatsEvents(t *testing.T) {
 				require.NoError(t, clientErr)
 			}()
 
+			var closed bool
+			var closedMu sync.Mutex
 			go func() {
-				wg.Wait()
+				require.Eventually(t, func() bool {
+					subscriptionCalledMux.Lock()
+					defer subscriptionCalledMux.Unlock()
+					return subscriptionCalled == 2
+				}, time.Second*20, time.Millisecond*100)
 				require.NoError(t, client.Close())
+				closedMu.Lock()
+				closed = true
+				closedMu.Unlock()
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
@@ -85,11 +96,17 @@ func TestNatsEvents(t *testing.T) {
 			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, resOne.Body)
 
 			// Trigger the first subscription via NATS
-			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
 			require.NoError(t, err)
 
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
+
+			require.Eventually(t, func() bool {
+				closedMu.Lock()
+				defer closedMu.Unlock()
+				return closed
+			}, time.Second*10, time.Millisecond*100)
 
 			xEnv.WaitForMessagesSent(2, time.Second*10)
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
@@ -124,29 +141,27 @@ func TestNatsEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			wg := &sync.WaitGroup{}
-			wg.Add(4)
-
+			var countMu sync.Mutex
 			count := 0
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				countMu.Lock()
+				oldCount := count
+				count++
+				countMu.Unlock()
 
-				defer wg.Done()
-
-				if count == 0 {
+				if oldCount == 0 {
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					require.Equal(t, "Invalid message received", gqlErr[0].Message)
-				} else if count == 1 || count == 3 {
+				} else if oldCount == 1 || oldCount == 3 {
 					require.NoError(t, errValue)
 					require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
-				} else if count == 2 {
+				} else if oldCount == 2 {
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.", gqlErr[0].Message)
 				}
-
-				count++
 
 				return nil
 			})
@@ -160,31 +175,35 @@ func TestNatsEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
-			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(``)) // Empty message
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(``)) // Empty message
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 			xEnv.WaitForMessagesSent(1, time.Second*10)
 
-			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 			xEnv.WaitForMessagesSent(2, time.Second*10)
 
-			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"__typename":"Employee","update":{"name":"foo"}}`)) // Missing id
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","update":{"name":"foo"}}`)) // Missing id
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 			xEnv.WaitForMessagesSent(3, time.Second*10)
 
-			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 			xEnv.WaitForMessagesSent(4, time.Second*10)
 
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				countMu.Lock()
+				defer countMu.Unlock()
+				return count == 4
+			}, time.Second*10, time.Millisecond*100)
 
 			require.NoError(t, client.Close())
 
@@ -200,7 +219,7 @@ func TestNatsEvents(t *testing.T) {
 			EnableNats: true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.EnableNetPoll = false
-				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Second
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -250,7 +269,7 @@ func TestNatsEvents(t *testing.T) {
 			time.Sleep(time.Millisecond * 200)
 
 			// Trigger the subscription via NATS
-			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
 			require.NoError(t, err)
 
 			err = xEnv.NatsConnectionDefault.Flush()
@@ -293,8 +312,8 @@ func TestNatsEvents(t *testing.T) {
 				EnableNats: true,
 				TLSConfig: &core.TlsConfig{
 					Enabled:  true,
-					CertFile: "testdata/tls/cert.pem",
-					KeyFile:  "testdata/tls/key.pem",
+					CertFile: "../testdata/tls/cert.pem",
+					KeyFile:  "../testdata/tls/key.pem",
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -304,6 +323,7 @@ func TestNatsEvents(t *testing.T) {
 				wg.Add(1)
 
 				go func() {
+					defer wg.Done()
 					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
 					resp, err := xEnv.RouterClient.Do(req)
 					require.NoError(t, err)
@@ -325,8 +345,6 @@ func TestNatsEvents(t *testing.T) {
 					assertLineEquals(reader, "{}")
 					assertMultipartPrefix(reader)
 					assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
-					wg.Done()
-
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -340,13 +358,11 @@ func TestNatsEvents(t *testing.T) {
 
 				time.Sleep(heartbeatInterval * 2)
 				// Trigger the subscription via NATS
-				err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
 				require.NoError(t, err)
 
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
-
-				xEnv.NatsConnectionDefault.Close()
 				wg.Wait()
 			})
 		})
@@ -369,9 +385,8 @@ func TestNatsEvents(t *testing.T) {
 
 				var client *http.Client
 				go func() {
-					client = &http.Client{
-						Timeout: time.Second * 10000,
-					}
+					defer wg.Done()
+					client = &http.Client{}
 
 					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
 					resp, err := client.Do(req)
@@ -386,11 +401,9 @@ func TestNatsEvents(t *testing.T) {
 					// Read the first part
 					assertMultipartPrefix(reader)
 					assertLineEquals(reader, "{}")
-					wg.Done()
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
-				xEnv.NatsConnectionDefault.Close()
 				wg.Wait()
 			})
 		})
@@ -409,9 +422,8 @@ func TestNatsEvents(t *testing.T) {
 
 				var client http.Client
 				go func() {
-					client = http.Client{
-						Timeout: time.Second * 100,
-					}
+					defer wg.Done()
+					client = http.Client{}
 					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
 					resp, err := client.Do(req)
 					require.NoError(t, err)
@@ -430,12 +442,9 @@ func TestNatsEvents(t *testing.T) {
 					assertMultipartPrefix(reader)
 					assertLineEquals(reader, "{\"payload\":{\"data\":{\"countFor\":3}}}")
 					assertLineEquals(reader, "--graphql--")
-					wg.Done()
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
-
-				xEnv.NatsConnectionDefault.Close()
 				wg.Wait()
 			})
 		})
@@ -455,9 +464,7 @@ func TestNatsEvents(t *testing.T) {
 				}
 
 				for _, subscribePayload := range queries {
-					client := http.Client{
-						Timeout: time.Second * 1000,
-					}
+					client := http.Client{}
 
 					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
 					req.Header.Set("Cache-Control", "no-cache")
@@ -470,7 +477,6 @@ func TestNatsEvents(t *testing.T) {
 
 					assertMultipartPrefix(reader)
 					assertLineEquals(reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
-					xEnv.NatsConnectionDefault.Close()
 				}
 			})
 		})
@@ -489,9 +495,8 @@ func TestNatsEvents(t *testing.T) {
 			wg.Add(1)
 
 			go func() {
-				client := http.Client{
-					Timeout: time.Second * 10,
-				}
+				defer wg.Done()
+				client := http.Client{}
 				xUrl, err := url.Parse(xEnv.GraphQLRequestURL())
 				require.NoError(t, err)
 				xUrl.RawQuery = core.WgSubscribeOnceParam
@@ -520,7 +525,6 @@ func TestNatsEvents(t *testing.T) {
 				require.Equal(t, "{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}", string(data))
 				_, _, err = reader.ReadLine()
 				require.Error(t, err, io.EOF) // Subscription closed after one time
-				wg.Done()
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -533,7 +537,7 @@ func TestNatsEvents(t *testing.T) {
 			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
 
 			// Trigger the subscription via NATS
-			err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+			err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
 			require.NoError(t, err)
 
 			err = xEnv.NatsConnectionDefault.Flush()
@@ -552,13 +556,11 @@ func TestNatsEvents(t *testing.T) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
 
-			wg := &sync.WaitGroup{}
-			wg.Add(1)
+			var requestCompleted bool
+			var requestCompletedMux sync.Mutex
 
 			go func() {
-				client := http.Client{
-					Timeout: time.Second * 10,
-				}
+				client := http.Client{}
 				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 				require.NoError(t, err)
 
@@ -593,8 +595,9 @@ func TestNatsEvents(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "", string(line))
 
-				wg.Done()
-
+				requestCompletedMux.Lock()
+				requestCompleted = true
+				requestCompletedMux.Unlock()
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -607,13 +610,17 @@ func TestNatsEvents(t *testing.T) {
 			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
 
 			// Trigger the subscription via NATS
-			err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+			err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
 			require.NoError(t, err)
 
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				requestCompletedMux.Lock()
+				defer requestCompletedMux.Unlock()
+				return requestCompleted
+			}, time.Second*10, time.Millisecond*100)
 		})
 	})
 
@@ -629,9 +636,7 @@ func TestNatsEvents(t *testing.T) {
 			subscribePayloadOne := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`)
 			subscribePayloadTwo := []byte(`{"query":"subscription { employeeUpdatedMyNats(id: 12) { id details { forename surname } }}"}`)
 
-			client := http.Client{
-				Timeout: time.Second * 10,
-			}
+			client := http.Client{}
 			reqOne, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayloadOne))
 			require.NoError(t, err)
 
@@ -695,9 +700,8 @@ func TestNatsEvents(t *testing.T) {
 			wg.Add(1)
 
 			go func() {
-				client := http.Client{
-					Timeout: time.Second * 10,
-				}
+				defer wg.Done()
+				client := http.Client{}
 				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(firstSubscribePayload))
 				require.NoError(t, err)
 
@@ -728,7 +732,6 @@ func TestNatsEvents(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "", string(line))
 
-				wg.Done()
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -740,7 +743,7 @@ func TestNatsEvents(t *testing.T) {
 			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
 
 			// Trigger the subscription via NATS
-			err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+			err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
 			require.NoError(t, err)
 
 			err = xEnv.NatsConnectionDefault.Flush()
@@ -760,14 +763,14 @@ func TestNatsEvents(t *testing.T) {
 			EnableNats: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			firstSub, err := xEnv.NatsConnectionDefault.Subscribe("getEmployee.3", func(msg *nats.Msg) {
+			firstSub, err := xEnv.NatsConnectionDefault.Subscribe(xEnv.GetPubSubName("getEmployee.3"), func(msg *nats.Msg) {
 				err := msg.Respond([]byte(`{"id": 3, "__typename": "Employee"}`))
 				require.NoError(t, err)
 			})
 			require.NoError(t, err)
 			require.NoError(t, xEnv.NatsConnectionDefault.Flush())
 
-			secondSub, err := xEnv.NatsConnectionMyNats.Subscribe("getEmployeeMyNats.12", func(msg *nats.Msg) {
+			secondSub, err := xEnv.NatsConnectionMyNats.Subscribe(xEnv.GetPubSubName("getEmployeeMyNats.12"), func(msg *nats.Msg) {
 				err = msg.Respond([]byte(`{"id": 12, "__typename": "Employee"}`))
 				require.NoError(t, err)
 			})
@@ -803,11 +806,11 @@ func TestNatsEvents(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			firstSub, err := xEnv.NatsConnectionDefault.SubscribeSync("employeeUpdatedMyNats.3")
+			firstSub, err := xEnv.NatsConnectionDefault.SubscribeSync(xEnv.GetPubSubName("employeeUpdatedMyNats.3"))
 			require.NoError(t, err)
 			require.NoError(t, xEnv.NatsConnectionDefault.Flush())
 
-			secondSub, err := xEnv.NatsConnectionMyNats.SubscribeSync("employeeUpdatedMyNatsTwo.12")
+			secondSub, err := xEnv.NatsConnectionMyNats.SubscribeSync(xEnv.GetPubSubName("employeeUpdatedMyNatsTwo.12"))
 			require.NoError(t, err)
 			require.NoError(t, xEnv.NatsConnectionMyNats.Flush())
 
@@ -830,7 +833,7 @@ func TestNatsEvents(t *testing.T) {
 
 			msgOne, err := firstSub.NextMsg(5 * time.Second)
 			require.NoError(t, err)
-			require.Equal(t, "employeeUpdatedMyNats.3", msgOne.Subject)
+			require.Equal(t, xEnv.GetPubSubName("employeeUpdatedMyNats.3"), msgOne.Subject)
 			require.Equal(t, `{"employeeID":3,"update":{"name":"Stefan Avramovic","email":"avramovic@wundergraph.com"}}`, string(msgOne.Data))
 
 			resTwo := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -851,7 +854,7 @@ func TestNatsEvents(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 10
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Second
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			type subscriptionPayload struct {
@@ -876,13 +879,13 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, time.Second*20)
 
 			// Trigger the first subscription via NATS
-			err = xEnv.NatsConnectionMyNats.Publish("employeeUpdatedMyNats.12", []byte(`{"id":13,"__typename":"Employee"}`))
+			err = xEnv.NatsConnectionMyNats.Publish(xEnv.GetPubSubName("employeeUpdatedMyNats.12"), []byte(`{"id":13,"__typename":"Employee"}`))
 			require.NoError(t, err)
 
 			err = xEnv.NatsConnectionMyNats.Flush()
 			require.NoError(t, err)
 
-			xEnv.WaitForMessagesSent(1, time.Second*5)
+			xEnv.WaitForMessagesSent(1, time.Second*10)
 
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
@@ -893,13 +896,13 @@ func TestNatsEvents(t *testing.T) {
 			require.Equal(t, float64(13), payload.Data.EmployeeUpdatedMyNats.ID)
 
 			// Trigger the first subscription via NATS
-			err = xEnv.NatsConnectionMyNats.Publish("employeeUpdatedMyNatsTwo.12", []byte(`{"id":99,"__typename":"Employee"}`))
+			err = xEnv.NatsConnectionMyNats.Publish(xEnv.GetPubSubName("employeeUpdatedMyNatsTwo.12"), []byte(`{"id":99,"__typename":"Employee"}`))
 			require.NoError(t, err)
 
 			err = xEnv.NatsConnectionMyNats.Flush()
 			require.NoError(t, err)
 
-			xEnv.WaitForMessagesSent(2, time.Second*5)
+			xEnv.WaitForMessagesSent(2, time.Second*10)
 
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
@@ -917,7 +920,7 @@ func TestNatsEvents(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 10
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Second
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			type subscriptionPayload struct {
@@ -932,8 +935,8 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 
 			_, err = js.CreateOrUpdateStream(xEnv.Context, jetstream.StreamConfig{
-				Name:     "streamName",
-				Subjects: []string{"employeeUpdated.>"},
+				Name:     xEnv.GetPubSubName("streamName"),
+				Subjects: []string{xEnv.GetPubSubName("employeeUpdated.>")},
 				Storage:  jetstream.MemoryStorage,
 			})
 			require.NoError(t, err)
@@ -953,7 +956,7 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
 			// Trigger the first subscription via NATS
-			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.12", []byte(`{"id":13,"__typename":"Employee"}`))
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.12"), []byte(`{"id":13,"__typename":"Employee"}`))
 			require.NoError(t, err)
 
 			err = xEnv.NatsConnectionDefault.Flush()
@@ -982,7 +985,7 @@ func TestNatsEvents(t *testing.T) {
 			require.Equal(t, "complete", complete.Type)
 
 			// Publish the second event while the subscription is unsubscribed
-			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.12", []byte(`{"id":14,"__typename":"Employee"}`))
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.12"), []byte(`{"id":14,"__typename":"Employee"}`))
 			require.NoError(t, err)
 
 			err = xEnv.NatsConnectionDefault.Flush()
@@ -1005,7 +1008,7 @@ func TestNatsEvents(t *testing.T) {
 			require.Equal(t, float64(14), payload.Data.EmployeeUpdatedNatsStream.ID)
 
 			// Publish the third event while the subscription is subscribed
-			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.12", []byte(`{"id":15,"__typename":"Employee"}`))
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.12"), []byte(`{"id":15,"__typename":"Employee"}`))
 			require.NoError(t, err)
 
 			err = xEnv.NatsConnectionDefault.Flush()
@@ -1036,7 +1039,8 @@ func TestNatsEvents(t *testing.T) {
 			js, err := jetstream.New(xEnv.NatsConnectionDefault)
 			require.NoError(t, err)
 
-			stream, err := js.Stream(xEnv.Context, "streamName")
+			stream, err := js.Stream(xEnv.Context, xEnv.GetPubSubName("streamName"))
+			require.Error(t, err)
 			require.Equal(t, "nats: API error: code=404 err_code=10059 description=stream not found", err.Error())
 			require.Equal(t, nil, stream)
 
@@ -1051,7 +1055,13 @@ func TestNatsEvents(t *testing.T) {
 
 			_, err = client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
 				defer wg.Done()
-				require.Contains(t, errValue.Error(), `EDFS error: failed to create or update consumer for stream "streamName"`)
+				require.Contains(t,
+					errValue.Error(),
+					fmt.Sprintf(
+						"EDFS error: failed to create or update consumer for stream \"%s\"",
+						xEnv.GetPubSubName("streamName"),
+					),
+				)
 				return nil
 			})
 			require.NoError(t, err)
@@ -1071,7 +1081,7 @@ func TestNatsEvents(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Second
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			type subscriptionPayload struct {
@@ -1188,7 +1198,7 @@ func TestNatsEvents(t *testing.T) {
 			}()
 
 			// Trigger the subscription via NATS
-			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.1", []byte(`{"id":1,"__typename":"Employee"}`))
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(`{"id":1,"__typename":"Employee"}`))
 			require.NoError(t, err)
 
 			// Events 1, 3, 4, 5, 7, 8, and 11 should be included
@@ -1196,7 +1206,7 @@ func TestNatsEvents(t *testing.T) {
 				// Ensure the NATS consumer can keep up with the provider
 				time.Sleep(time.Millisecond * 100)
 
-				err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.1", []byte(fmt.Sprintf(`{"id":%d,"__typename":"Employee"}`, i)))
+				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename":"Employee"}`, i)))
 				require.NoError(t, err)
 
 				err = xEnv.NatsConnectionDefault.Flush()
@@ -1225,9 +1235,7 @@ func TestNatsEvents(t *testing.T) {
 			go func() {
 				defer wg.Done()
 
-				client := http.Client{
-					Timeout: time.Second * 10,
-				}
+				client := http.Client{}
 				req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 				require.NoError(t, gErr)
 
@@ -1374,7 +1382,7 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
 			// Trigger the subscription via NATS
-			err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.1", []byte(`{"id":1,"__typename": "Employee"}`))
+			err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(`{"id":1,"__typename": "Employee"}`))
 			require.NoError(t, err)
 
 			// Events 1, 3, 4, 5, 7, 8, and 11 should be included
@@ -1389,7 +1397,7 @@ func TestNatsEvents(t *testing.T) {
 					}
 				}
 
-				err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.1", []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, i)))
+				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, i)))
 				require.NoError(t, err)
 
 				err = xEnv.NatsConnectionDefault.Flush()
@@ -1423,29 +1431,27 @@ func TestNatsEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			wg := &sync.WaitGroup{}
-			wg.Add(4)
-
+			var countMu sync.Mutex
 			count := 0
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				countMu.Lock()
+				countLocal := count
+				count++
+				countMu.Unlock()
 
-				defer wg.Done()
-
-				if count == 0 {
+				if countLocal == 0 {
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					require.Equal(t, "Invalid message received", gqlErr[0].Message)
-				} else if count == 1 || count == 3 {
+				} else if countLocal == 1 || countLocal == 3 {
 					require.NoError(t, errValue)
 					require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
-				} else if count == 2 {
+				} else if countLocal == 2 {
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.", gqlErr[0].Message)
 				}
-
-				count++
 
 				return nil
 			})
@@ -1459,31 +1465,35 @@ func TestNatsEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
-			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{asas`)) // Empty message
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{asas`)) // Empty message
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 			xEnv.WaitForMessagesSent(1, time.Second*10)
 
-			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 			xEnv.WaitForMessagesSent(2, time.Second*10)
 
-			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"__typename":"Employee","update":{"name":"foo"}}`)) // Missing id
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","update":{"name":"foo"}}`)) // Missing id
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 			xEnv.WaitForMessagesSent(3, time.Second*10)
 
-			err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 			xEnv.WaitForMessagesSent(4, time.Second*10)
 
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				countMu.Lock()
+				defer countMu.Unlock()
+				return count == 4
+			}, time.Second*10, time.Millisecond*100)
 
 			require.NoError(t, client.Close())
 

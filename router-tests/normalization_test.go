@@ -46,6 +46,7 @@ func TestNormalization(t *testing.T) {
 	})
 
 	t.Run("Different variable values should not produce different hashes", func(t *testing.T) {
+		t.Parallel()
 
 		testCases := []struct {
 			Name          string
@@ -161,6 +162,8 @@ func TestNormalization(t *testing.T) {
 		for _, tc := range testCases {
 			tc := tc
 			t.Run(tc.Name, func(t *testing.T) {
+				t.Parallel()
+
 				exporter := tracetest.NewInMemoryExporter(t)
 
 				defer exporter.Reset()

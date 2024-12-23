@@ -58,7 +58,7 @@ func (r *mutationResolver) UpdateEmployeeTag(ctx context.Context, id int, tag st
 	}
 	r.mux.Lock()
 	defer r.mux.Unlock()
-	for _, employee := range employees {
+	for _, employee := range r.EmployeesData {
 		if id == employee.ID {
 			details := &model.Details{}
 			if employee.Details != nil {
@@ -82,14 +82,14 @@ func (r *mutationResolver) UpdateEmployeeTag(ctx context.Context, id int, tag st
 
 // SingleUpload is the resolver for the singleUpload field.
 func (r *mutationResolver) SingleUpload(ctx context.Context, file graphql.Upload) (bool, error) {
-	fmt.Printf("uploading file %s with size %d", file.Filename, file.Size)
+	fmt.Printf("uploading file %s with size %d\n", file.Filename, file.Size)
 	return true, nil
 }
 
 // MultipleUpload is the resolver for the multipleUpload field.
 func (r *mutationResolver) MultipleUpload(ctx context.Context, files []*graphql.Upload) (bool, error) {
 	for _, file := range files {
-		fmt.Printf("uploading file %s with size %d", file.Filename, file.Size)
+		fmt.Printf("uploading file %s with size %d\n", file.Filename, file.Size)
 	}
 	return true, nil
 }
@@ -106,7 +106,7 @@ func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, 
 	if id < 1 {
 		return nil, nil
 	}
-	for _, employee := range employees {
+	for _, employee := range r.EmployeesData {
 		if id == employee.ID {
 			return &model.Employee{
 				ID: employee.ID,
@@ -140,8 +140,8 @@ func (r *queryResolver) Employees(ctx context.Context) ([]*model.Employee, error
 	r.mux.Lock()
 	defer r.mux.Unlock()
 
-	out := make([]*model.Employee, len(employees))
-	for i, employee := range employees {
+	out := make([]*model.Employee, len(Employees))
+	for i, employee := range r.EmployeesData {
 		out[i] = &model.Employee{
 			ID:        employee.ID,
 			Details:   employee.Details,
@@ -180,13 +180,13 @@ func (r *queryResolver) FirstEmployee(ctx context.Context) (*model.Employee, err
 	defer r.mux.Unlock()
 
 	employee := &model.Employee{
-		ID:        employees[0].ID,
-		Details:   employees[0].Details,
-		Tag:       employees[0].Tag,
-		Role:      employees[0].Role,
-		Notes:     employees[0].Notes,
+		ID:        Employees[0].ID,
+		Details:   Employees[0].Details,
+		Tag:       Employees[0].Tag,
+		Role:      Employees[0].Role,
+		Notes:     Employees[0].Notes,
 		UpdatedAt: time.Now().String(),
-		StartDate: employees[0].StartDate,
+		StartDate: Employees[0].StartDate,
 	}
 
 	return employee, nil

@@ -1,4 +1,4 @@
-package integration_test
+package integration
 
 import (
 	"crypto/sha256"
@@ -209,7 +209,7 @@ func TestWebSockets(t *testing.T) {
 			go func() {
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 				// Trigger the subscription via NATS
-				subject := "employeeUpdated.3"
+				subject := xEnv.GetPubSubName("employeeUpdated.3")
 				message := []byte(`{"id":3,"__typename": "Employee"}`)
 				err := xEnv.NatsConnectionDefault.Publish(subject, message)
 				require.NoError(t, err)
@@ -267,7 +267,7 @@ func TestWebSockets(t *testing.T) {
 			go func() {
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 				// Trigger the subscription via NATS
-				subject := "employeeUpdated.3"
+				subject := xEnv.GetPubSubName("employeeUpdated.3")
 				message := []byte(`{"id":3,"__typename": "Employee"}`)
 				err := xEnv.NatsConnectionDefault.Publish(subject, message)
 				require.NoError(t, err)
@@ -327,7 +327,7 @@ func TestWebSockets(t *testing.T) {
 			go func() {
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 				// Trigger the subscription via NATS
-				subject := "employeeUpdated.3"
+				subject := xEnv.GetPubSubName("employeeUpdated.3")
 				message := []byte(`{"id":3,"__typename": "Employee"}`)
 				err := xEnv.NatsConnectionDefault.Publish(subject, message)
 				require.NoError(t, err)
@@ -470,16 +470,20 @@ func TestWebSockets(t *testing.T) {
 			})
 			require.NoError(t, err)
 
+			var wg sync.WaitGroup
+			wg.Add(1)
 			go func() {
+				defer wg.Done()
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 				// Trigger the subscription via NATS
-				subject := "employeeUpdated.3"
+				subject := xEnv.GetPubSubName("employeeUpdated.3")
 				message := []byte(`{"id":3,"__typename": "Employee"}`)
 				err := xEnv.NatsConnectionDefault.Publish(subject, message)
 				require.NoError(t, err)
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 			}()
+			wg.Wait()
 
 			var res testenv.WebSocketMessage
 			err = conn.ReadJSON(&res)
@@ -487,8 +491,8 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, "next", res.Type)
 			require.Equal(t, "1", res.ID)
 			require.JSONEq(t, `{"data":{"employeeUpdated":{"id":3}}}`, string(res.Payload))
-
 			require.NoError(t, conn.Close())
+
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
@@ -1328,7 +1332,9 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			require.NotEqual(t, "", countHobID)
 
+			wg.Add(1)
 			go func() {
+				defer wg.Done()
 				require.NoError(t, client.Run())
 			}()
 
@@ -1844,10 +1850,10 @@ func TestWebSockets(t *testing.T) {
 
 			go func() {
 				time.Sleep(time.Millisecond * 100)
-				err := xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
 				require.NoError(t, err)
 				time.Sleep(time.Millisecond * 100)
-				err = xEnv.NatsConnectionDefault.Publish("employeeUpdated.3", []byte(`{"id":3,"__typename": "Employee"}`))
+				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
 				require.NoError(t, err)
 			}()
 

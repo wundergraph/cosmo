@@ -8,8 +8,9 @@ import (
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/availability/subgraph/generated"
 )
 
-func NewSchema(pubSubBySourceName map[string]pubsub_datasource.NatsPubSub) graphql.ExecutableSchema {
+func NewSchema(pubSubBySourceName map[string]pubsub_datasource.NatsPubSub, pubSubName func(string) string) graphql.ExecutableSchema {
 	return generated.NewExecutableSchema(generated.Config{Resolvers: &subgraph.Resolver{
 		NatsPubSubByProviderID: pubSubBySourceName,
+		GetPubSubName:          pubSubName,
 	}})
 }
