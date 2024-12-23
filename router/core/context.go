@@ -9,10 +9,8 @@ import (
 	"time"
 
 	"github.com/wundergraph/astjson"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/otel"
-
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"go.opentelemetry.io/otel/attribute"
 
@@ -138,96 +136,6 @@ var metricAttrsPool = sync.Pool{
 	},
 }
 
-// The mapper can include elements, which are not part of the context, but it should be possible
-// to also configure them in the same way as the context fields.
-const (
-	filterKeyOperationName       = ContextFieldOperationName
-	filterKeyOperationHash       = ContextFieldOperationHash
-	filterKeyRouterConfigVersion = "router_config_version"
-)
-
-type attributeKeyMap map[attribute.Key]string
-
-// attributeMapper resolves attributes from the requestContext based on the configured custom attributes
-type attributeMapper struct {
-	enabled bool
-
-	// lookupMap contains the default key names, which can be mapped to a new name with custom attributes.
-	// These keys are used to identify attributes, which should not be included by default and map to the
-	// corresponding fields in the request context.
-	lookupMap attributeKeyMap
-	// attr is the list of configured custom context attributes. This list indicates whether attributes are
-	// added to the metrics and potentially remapped to a new key. Only attributes from the lookupMap are taken
-	// into account.
-	attr []config.CustomAttribute
-}
-
-func newAttributeMapper(enabled bool, attr []config.CustomAttribute) attributeMapper {
-	// Any attributes that are in this map, will be resolved only if they are configured in the `attr` list.
-	// This is to avoid adding certain attributes which might cause higher cardinality to the metrics
-	// by default as it can be expensive for the metric backend.
-	set := attributeKeyMap{
-		otel.WgOperationName:       filterKeyOperationName,
-		otel.WgOperationHash:       filterKeyOperationHash,
-		otel.WgRouterConfigVersion: filterKeyRouterConfigVersion,
-	}
-
-	return attributeMapper{
-		enabled:   enabled,
-		attr:      attr,
-		lookupMap: set,
-	}
-}
-
-func (r *attributeMapper) mapAttributes(attributes []attribute.KeyValue) []attribute.KeyValue {
-	if !r.enabled {
-		return attributes
-	}
-
-	result := make([]attribute.KeyValue, 0, len(attributes))
-
-	for _, attr := range attributes {
-		// check if the attribute is defined in the set of default keys
-		contextField, exists := r.lookupMap[attr.Key]
-		if !exists {
-			// if the attribute is not in the default set, we don't expect it to generate high cardinality
-			// and can safely add it to the result
-			result = append(result, attr)
-			continue
-		}
-
-		// if the attribute is in the map, we need to check if we want it to be added
-		if resolvedAttr := r.mapAttribute(attr, contextField); resolvedAttr.Valid() {
-			result = append(result, resolvedAttr)
-		}
-	}
-
-	return result
-}
-
-func (r *attributeMapper) mapAttribute(attr attribute.KeyValue, contextField string) attribute.KeyValue {
-	for _, a := range r.attr {
-		if a.ValueFrom == nil || a.ValueFrom.ContextField != contextField {
-			continue
-		}
-
-		val := attr.Value.AsString()
-		if val == "" {
-			val = a.Default
-		}
-
-		var key string
-		if key = a.Key; key == "" {
-			// if the key should not be remapped we fall back to the default key name
-			key = string(attr.Key)
-		}
-
-		return attribute.String(key, val)
-
-	}
-	return attribute.KeyValue{}
-}
-
 type requestTelemetryAttributes struct {
 	// traceAttrs are the base attributes for traces only
 	traceAttrs []attribute.KeyValue
@@ -241,7 +149,7 @@ type requestTelemetryAttributes struct {
 	// It is used to identify attributes that should not be included by default  but can be included if they are
 	// configured in the custom attributes list. The mapper will potentially filter out attributes or include them.
 	// It will also remap the key if configured.
-	mapper attributeMapper
+	mapper *attributeMapper
 
 	// metricsEnabled indicates if metrics are enabled. If false, no metrics attributes will be added
 	metricsEnabled bool
@@ -687,8 +595,7 @@ type requestContextOptions struct {
 	metricSetAttributes map[string]string
 	metricsEnabled      bool
 	traceEnabled        bool
-	filterEnabled       bool
-	includedAttributes  []config.CustomAttribute
+	mapper              *attributeMapper
 	w                   http.ResponseWriter
 	r                   *http.Request
 }
@@ -704,7 +611,7 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 			metricSetAttrs: opts.metricSetAttributes,
 			metricsEnabled: opts.metricsEnabled,
 			traceEnabled:   opts.traceEnabled,
-			mapper:         newAttributeMapper(opts.filterEnabled, opts.includedAttributes),
+			mapper:         opts.mapper,
 		},
 		subgraphResolver: subgraphResolverFromContext(opts.r.Context()),
 	}
