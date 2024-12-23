@@ -4,7 +4,6 @@ go 1.23
 
 require (
 	connectrpc.com/connect v1.16.2
-	github.com/MicahParks/keyfunc/v2 v2.1.0
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/buger/jsonparser v1.1.1
 	github.com/cespare/xxhash/v2 v2.3.0
@@ -62,6 +61,7 @@ require (
 
 require (
 	github.com/KimMachineGun/automemlimit v0.6.1
+	github.com/MicahParks/keyfunc/v2 v2.1.0
 	github.com/bep/debounce v1.2.1
 	github.com/caarlos0/env/v11 v11.1.0
 	github.com/fsnotify/fsnotify v1.7.0
