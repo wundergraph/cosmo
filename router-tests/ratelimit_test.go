@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
+	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -257,7 +258,7 @@ func TestRateLimit(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		tokenDecoder, _ := authentication.NewJwksTokenDecoder(authServer.JWKSURL(), time.Second*5)
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(zap.NewNop(), authServer.JWKSURL(), time.Second*5)
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
 			Name:         "my-jwks-server",
 			URL:          authServer.JWKSURL(),
