@@ -1477,6 +1477,11 @@
             "reject_exceeding_requests": {
               "type": "boolean",
               "description": "Reject the requests that exceed the rate limit. If the value is true, the requests that exceed the rate limit are rejected."
+            },
+            "reject_status_code": {
+              "type": "integer",
+              "description": "The status code to return when the request is rejected. The default value is 200 (OK) as we're returning a well formed GraphQL response.",
+              "default": 200
             }
           },
           "required": ["rate", "burst", "period"]
@@ -1501,6 +1506,26 @@
         "debug": {
           "type": "boolean",
           "description": "Enable the debug mode for the rate limit."
+        },
+        "key_suffix_from_header": {
+          "type": "boolean",
+          "description": "Use a header value as a suffix for the rate limit key. The default value is false.",
+          "default": false
+        },
+        "key_suffix_header_name": {
+          "type": "string",
+          "description": "The name of the header to use as a suffix for the rate limit key. The default value is 'X-Forwarded-For'.",
+          "default": "X-Forwarded-For"
+        },
+        "key_suffix_from_claim": {
+          "type": "boolean",
+          "description": "Use a claim value as a suffix for the rate limit key. The default value is false.",
+          "default": false
+        },
+        "key_suffix_claim_name": {
+          "type": "string",
+          "description": "The name of the claim to use as a suffix for the rate limit key. The default value is 'sub'.",
+          "default": "sub"
         }
       }
     },
