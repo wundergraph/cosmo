@@ -851,6 +851,17 @@
                   "default": false,
                   "description": "Enable the collection of metrics for the GraphQL operation router caches. The default value is false."
                 },
+                "engine_stats" : {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "subscriptions": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Enabling this will report additional engine metrics for WebSockets and SSE such as connections, subscriptions and triggers. The default value is false"
+                    }
+                  }
+                },
                 "exporters": {
                   "type": "array",
                   "description": "The exporters to use to export the metrics. If no exporters are specified, the default Cosmo Cloud exporter is used. If you override, please make sure to include the default exporter.",
@@ -934,6 +945,17 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of metrics for the GraphQL operation router caches. The default value is false."
+                },
+                "engine_stats" : {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "subscriptions": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enabling this will report additional engine metrics for WebSockets and SSE such as connections, subscriptions and triggers. The default value is false"
+                    }
+                  }
                 },
                 "exclude_metrics": {
                   "type": "array",
