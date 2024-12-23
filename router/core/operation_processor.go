@@ -923,7 +923,7 @@ func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bo
 
 func (o *OperationKit) loadPersistedOperationCacheKey(clientName, persistedQuerySha256Hash string, includeOperationName bool) (key uint64, ok bool) {
 	o.cache.persistedOperationVariableNamesLock.RLock()
-	variableNames, _ := o.cache.persistedOperationVariableNames[persistedQuerySha256Hash]
+	variableNames := o.cache.persistedOperationVariableNames[persistedQuerySha256Hash]
 	o.cache.persistedOperationVariableNamesLock.RUnlock()
 	key = o.generatePersistedOperationCacheKey(clientName, variableNames, includeOperationName)
 	return key, true
