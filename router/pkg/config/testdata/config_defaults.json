@@ -34,7 +34,9 @@
         "Enabled": true,
         "RouterRuntime": true,
         "GraphqlCache": false,
-        "EngineStats": false,
+        "EngineStats": {
+          "Subscriptions": false
+        },
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "Exporters": null
@@ -44,7 +46,9 @@
         "Path": "/metrics",
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": false,
-        "EngineStats": false,
+        "EngineStats": {
+          "Subscriptions": false
+        },
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null
       }

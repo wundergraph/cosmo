@@ -28,6 +28,28 @@ type engineInstruments struct {
 	messagesSent      otelmetric.Int64ObservableCounter
 }
 
+func (i *engineInstruments) toList() []otelmetric.Observable {
+	result := make([]otelmetric.Observable, 0)
+
+	if i.connectionCount != nil {
+		result = append(result, i.connectionCount)
+	}
+
+	if i.subscriptionCount != nil {
+		result = append(result, i.subscriptionCount)
+	}
+
+	if i.triggerCount != nil {
+		result = append(result, i.triggerCount)
+	}
+
+	if i.messagesSent != nil {
+		result = append(result, i.messagesSent)
+	}
+
+	return result
+}
+
 // EngineMetrics is a struct that holds the engine metrics.
 type EngineMetrics struct {
 	instruments             *engineInstruments
@@ -43,10 +65,15 @@ func NewEngineMetrics(
 	baseAttributes []attribute.KeyValue,
 	provider *metric.MeterProvider,
 	stats statistics.EngineStatistics,
+	statConfig *EngineStatsConfig,
 ) (*EngineMetrics, error) {
+	if !statConfig.Enabled() {
+		return nil, nil
+	}
+
 	meter := provider.Meter(cosmoEngineMeterName, otelmetric.WithInstrumentationVersion(cosmoEngineMeterVersion))
 
-	instruments, err := setupInstruments(meter)
+	instruments, err := setupInstruments(meter, statConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -65,30 +92,41 @@ func NewEngineMetrics(
 	return em, nil
 }
 
-func setupInstruments(m otelmetric.Meter) (*engineInstruments, error) {
-	connectionCount, err := m.Int64ObservableUpDownCounter(engineConnectionCountKey,
-		otelmetric.WithDescription("Number of connections in the engine. Contains both websocket and http connections"))
-	if err != nil {
-		return nil, err
-	}
+func setupInstruments(m otelmetric.Meter, statConfig *EngineStatsConfig) (*engineInstruments, error) {
+	var (
+		err error
 
-	subscriptionCount, err := m.Int64ObservableUpDownCounter(engineSubscriptionCountKey,
-		otelmetric.WithDescription("Number of subscriptions in the engine."))
+		connectionCount   otelmetric.Int64ObservableUpDownCounter
+		subscriptionCount otelmetric.Int64ObservableUpDownCounter
+		triggerCount      otelmetric.Int64ObservableUpDownCounter
+		messagesSent      otelmetric.Int64ObservableCounter
+	)
 
-	if err != nil {
-		return nil, err
-	}
+	if statConfig.Subscription {
+		connectionCount, err = m.Int64ObservableUpDownCounter(engineConnectionCountKey,
+			otelmetric.WithDescription("Number of connections in the engine. Contains both websocket and http connections"))
+		if err != nil {
+			return nil, err
+		}
 
-	triggerCount, err := m.Int64ObservableUpDownCounter(engineTriggerCountKey,
-		otelmetric.WithDescription("Number of triggers in the engine."))
-	if err != nil {
-		return nil, err
-	}
+		subscriptionCount, err = m.Int64ObservableUpDownCounter(engineSubscriptionCountKey,
+			otelmetric.WithDescription("Number of subscriptions in the engine."))
 
-	messagesSent, err := m.Int64ObservableCounter(engineMessagesSentKey,
-		otelmetric.WithDescription("Number of subscription updates in the engine."))
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
+
+		triggerCount, err = m.Int64ObservableUpDownCounter(engineTriggerCountKey,
+			otelmetric.WithDescription("Number of triggers in the engine."))
+		if err != nil {
+			return nil, err
+		}
+
+		messagesSent, err = m.Int64ObservableCounter(engineMessagesSentKey,
+			otelmetric.WithDescription("Number of subscription updates in the engine."))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &engineInstruments{
@@ -100,15 +138,17 @@ func setupInstruments(m otelmetric.Meter) (*engineInstruments, error) {
 }
 
 func (e *EngineMetrics) registerObservers(stats statistics.EngineStatistics) error {
+	instrumentList := e.instruments.toList()
+
+	// Nothing to register
+	if len(instrumentList) == 0 {
+		return nil
+	}
+
 	rc, err := e.meter.RegisterCallback(func(_ context.Context, o otelmetric.Observer) error {
 		e.observeInstruments(o, stats)
 		return nil
-	},
-		e.instruments.connectionCount,
-		e.instruments.subscriptionCount,
-		e.instruments.triggerCount,
-		e.instruments.messagesSent,
-	)
+	}, instrumentList...)
 
 	if err != nil {
 		return err

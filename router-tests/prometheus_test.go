@@ -3957,7 +3957,9 @@ func TestPrometheus(t *testing.T) {
 			MetricReader:       metricReader,
 			PrometheusRegistry: promRegistry,
 			MetricOptions: testenv.MetricOptions{
-				EnablePrometheusEngineStats: true,
+				PrometheusEngineStatsOptions: testenv.EngineStatOptions{
+					EnableSubscription: true,
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			baseAttributes := []*io_prometheus_client.LabelPair{

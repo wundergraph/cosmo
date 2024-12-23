@@ -93,8 +93,8 @@ type (
 		runtimeMetrics          *rmetric.RuntimeMetrics
 		otlpEngineMetrics       *rmetric.EngineMetrics
 		prometheusEngineMetrics *rmetric.EngineMetrics
-		hostName         string
-		routerListenAddr string
+		hostName                string
+		routerListenAddr        string
 	}
 )
 
@@ -295,34 +295,36 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 	}, nil
 }
 
+// setupEngineStatistics creates the engine statistics for the server.
+// It creates the OTLP and Prometheus metrics for the engine statistics.
 func (s *graphServer) setupEngineStatistics() (err error) {
+	// We only include the base router config version in the attributes for the engine statistics.
+	// Same approach is used for the runtime metrics.
 	baseAttributes := append([]attribute.KeyValue{
 		otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion)}, s.baseOtelAttributes...)
 
-	if s.metricConfig.OpenTelemetry.EngineStats {
-		s.otlpEngineMetrics, err = rmetric.NewEngineMetrics(
-			s.logger,
-			baseAttributes,
-			s.otlpMeterProvider,
-			s.engineStats,
-		)
+	s.otlpEngineMetrics, err = rmetric.NewEngineMetrics(
+		s.logger,
+		baseAttributes,
+		s.otlpMeterProvider,
+		s.engineStats,
+		&s.metricConfig.OpenTelemetry.EngineStats,
+	)
 
-		if err != nil {
-			return err
-		}
+	if err != nil {
+		return err
 	}
 
-	if s.metricConfig.Prometheus.EngineStats {
-		s.prometheusEngineMetrics, err = rmetric.NewEngineMetrics(
-			s.logger,
-			baseAttributes,
-			s.promMeterProvider,
-			s.engineStats,
-		)
+	s.prometheusEngineMetrics, err = rmetric.NewEngineMetrics(
+		s.logger,
+		baseAttributes,
+		s.promMeterProvider,
+		s.engineStats,
+		&s.metricConfig.Prometheus.EngineStats,
+	)
 
-		if err != nil {
-			return err
-		}
+	if err != nil {
+		return err
 	}
 
 	return nil

@@ -38,7 +38,9 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			MetricReader: metricReader,
 			MetricOptions: testenv.MetricOptions{
-				EnableOTLPEngineStats: true,
+				OTLPEngineStatsOptions: testenv.EngineStatOptions{
+					EnableSubscription: true,
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -94,7 +96,9 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			MetricReader: metricReader,
 			MetricOptions: testenv.MetricOptions{
-				EnableOTLPEngineStats: true,
+				OTLPEngineStatsOptions: testenv.EngineStatOptions{
+					EnableSubscription: true,
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -178,7 +182,9 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			MetricReader: metricReader,
 			MetricOptions: testenv.MetricOptions{
-				EnableOTLPEngineStats: true,
+				OTLPEngineStatsOptions: testenv.EngineStatOptions{
+					EnableSubscription: true,
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
@@ -238,7 +244,9 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			MetricReader: metricReader,
 			MetricOptions: testenv.MetricOptions{
-				EnableOTLPEngineStats: true,
+				OTLPEngineStatsOptions: testenv.EngineStatOptions{
+					EnableSubscription: true,
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
@@ -350,7 +358,9 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			MetricReader: metricReader,
 			MetricOptions: testenv.MetricOptions{
-				EnableOTLPEngineStats: true,
+				OTLPEngineStatsOptions: testenv.EngineStatOptions{
+					EnableSubscription: true,
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)

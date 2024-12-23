@@ -845,7 +845,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.redisClient = redis.NewClient(options)
 	}
 
-	if r.metricConfig.OpenTelemetry.EngineStats || r.metricConfig.Prometheus.EngineStats || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
+	if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
 		r.EngineStats = statistics.NewEngineStats(ctx, r.logger, r.engineExecutionConfiguration.Debug.ReportWebSocketConnections)
 	}
 
@@ -1936,20 +1936,24 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 		Attributes:         cfg.Metrics.Attributes,
 		ResourceAttributes: buildResourceAttributes(cfg.ResourceAttributes),
 		OpenTelemetry: rmetric.OpenTelemetry{
-			Enabled:             cfg.Metrics.OTLP.Enabled,
-			RouterRuntime:       cfg.Metrics.OTLP.RouterRuntime,
-			GraphqlCache:        cfg.Metrics.OTLP.GraphqlCache,
-			EngineStats:         cfg.Metrics.OTLP.EngineStats,
+			Enabled:       cfg.Metrics.OTLP.Enabled,
+			RouterRuntime: cfg.Metrics.OTLP.RouterRuntime,
+			GraphqlCache:  cfg.Metrics.OTLP.GraphqlCache,
+			EngineStats: rmetric.EngineStatsConfig{
+				Subscription: cfg.Metrics.OTLP.EngineStats.Subscriptions,
+			},
 			Exporters:           openTelemetryExporters,
 			ExcludeMetrics:      cfg.Metrics.OTLP.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
 		},
 		Prometheus: rmetric.PrometheusConfig{
-			Enabled:             cfg.Metrics.Prometheus.Enabled,
-			ListenAddr:          cfg.Metrics.Prometheus.ListenAddr,
-			Path:                cfg.Metrics.Prometheus.Path,
-			GraphqlCache:        cfg.Metrics.Prometheus.GraphqlCache,
-			EngineStats:         cfg.Metrics.Prometheus.EngineStats,
+			Enabled:      cfg.Metrics.Prometheus.Enabled,
+			ListenAddr:   cfg.Metrics.Prometheus.ListenAddr,
+			Path:         cfg.Metrics.Prometheus.Path,
+			GraphqlCache: cfg.Metrics.Prometheus.GraphqlCache,
+			EngineStats: rmetric.EngineStatsConfig{
+				Subscription: cfg.Metrics.OTLP.EngineStats.Subscriptions,
+			},
 			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
 		},

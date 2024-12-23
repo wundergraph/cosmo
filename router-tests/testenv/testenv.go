@@ -175,13 +175,17 @@ type MetricExclusions struct {
 	ExcludedOTLPMetricLabels       []*regexp.Regexp
 }
 
+type EngineStatOptions struct {
+	EnableSubscription bool
+}
+
 type MetricOptions struct {
-	MetricExclusions            MetricExclusions
-	EnableRuntimeMetrics        bool
-	EnableOTLPRouterCache       bool
-	EnablePrometheusRouterCache bool
-	EnableOTLPEngineStats       bool
-	EnablePrometheusEngineStats bool
+	MetricExclusions             MetricExclusions
+	EnableRuntimeMetrics         bool
+	EnableOTLPRouterCache        bool
+	EnablePrometheusRouterCache  bool
+	OTLPEngineStatsOptions       EngineStatOptions
+	PrometheusEngineStatsOptions EngineStatOptions
 }
 
 type Config struct {
@@ -861,12 +865,14 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 	if testConfig.PrometheusRegistry != nil {
 		prometheusConfig = rmetric.PrometheusConfig{
-			Enabled:             true,
-			ListenAddr:          fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
-			Path:                "/metrics",
-			TestRegistry:        testConfig.PrometheusRegistry,
-			GraphqlCache:        testConfig.MetricOptions.EnablePrometheusRouterCache,
-			EngineStats:         testConfig.MetricOptions.EnablePrometheusEngineStats,
+			Enabled:      true,
+			ListenAddr:   fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
+			Path:         "/metrics",
+			TestRegistry: testConfig.PrometheusRegistry,
+			GraphqlCache: testConfig.MetricOptions.EnablePrometheusRouterCache,
+			EngineStats: rmetric.EngineStatsConfig{
+				Subscription: testConfig.MetricOptions.PrometheusEngineStatsOptions.EnableSubscription,
+			},
 			ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetrics,
 			ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetricLabels,
 		}
@@ -883,10 +889,12 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					Enabled: true,
 				},
 				OTLP: config.MetricsOTLP{
-					Enabled:             true,
-					RouterRuntime:       testConfig.MetricOptions.EnableRuntimeMetrics,
-					GraphqlCache:        testConfig.MetricOptions.EnableOTLPRouterCache,
-					EngineStats:         testConfig.MetricOptions.EnableOTLPEngineStats,
+					Enabled:       true,
+					RouterRuntime: testConfig.MetricOptions.EnableRuntimeMetrics,
+					GraphqlCache:  testConfig.MetricOptions.EnableOTLPRouterCache,
+					EngineStats: config.EngineStats{
+						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,
+					},
 					ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetrics,
 					ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetricLabels,
 				},
