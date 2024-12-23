@@ -83,6 +83,11 @@ export enum EnumStatusCode {
    * @generated from enum value: ERR_DEPLOYMENT_FAILED = 14;
    */
   ERR_DEPLOYMENT_FAILED = 14,
+
+  /**
+   * @generated from enum value: ERR_INVALID_NAME = 15;
+   */
+  ERR_INVALID_NAME = 15,
 }
 // Retrieve enum metadata with: proto3.getEnumType(EnumStatusCode)
 proto3.util.setEnumType(EnumStatusCode, "wg.cosmo.common.EnumStatusCode", [
@@ -101,6 +106,7 @@ proto3.util.setEnumType(EnumStatusCode, "wg.cosmo.common.EnumStatusCode", [
   { no: 12, name: "ERROR_NOT_AUTHORIZED" },
   { no: 13, name: "ERR_LIMIT_REACHED" },
   { no: 14, name: "ERR_DEPLOYMENT_FAILED" },
+  { no: 15, name: "ERR_INVALID_NAME" },
 ]);
 
 /**
