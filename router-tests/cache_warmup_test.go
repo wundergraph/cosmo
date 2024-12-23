@@ -240,8 +240,8 @@ func TestCacheWarmup(t *testing.T) {
 				}),
 			},
 			AssertCacheMetrics: &testenv.CacheMetricsAssertion{
-				PersistedQueryNormalizationHits:   0, // 1x warmup miss, 1x request miss because of client mismatch
-				PersistedQueryNormalizationMisses: 2, // same as above
+				PersistedQueryNormalizationHits:   0, // 1x warmup miss, 1x request miss because of client mismatch, 1x request miss because checking with operation name
+				PersistedQueryNormalizationMisses: 3, // same as above
 				ValidationMisses:                  1, // 1x warmup miss, no second miss because client mismatch stops request chain
 				ValidationHits:                    0, // no hits because of client mismatch
 				PlanMisses:                        1, // 1x warmup miss
@@ -259,6 +259,44 @@ func TestCacheWarmup(t *testing.T) {
 			require.Equal(t, `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
 		})
 	})
+	t.Run("cache warmup persisted operation with multiple operations", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled: true,
+					Source:  "filesystem",
+					Path:    "testenv/testdata/cache_warmup/json_po_multi_operations",
+				}),
+			},
+			AssertCacheMetrics: &testenv.CacheMetricsAssertion{
+				PersistedQueryNormalizationHits:   1, // 1x hit after warmup, when called with operation name
+				PersistedQueryNormalizationMisses: 3, // 1x miss during warmup, 1 miss for first operation trying without operation name, 1 miss for second operation trying without operation name
+				ValidationHits:                    2,
+				ValidationMisses:                  1,
+				PlanHits:                          2,
+				PlanMisses:                        1,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"A"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "724399f210ef3f16e6e5427a70bb9609ecea7297e99c3e9241d5912d04eabe60"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"a":{"id":1,"details":{"pets":null}}}}`, res.Body)
+
+			res2, err2 := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "724399f210ef3f16e6e5427a70bb9609ecea7297e99c3e9241d5912d04eabe60"}}`),
+				Header:     header,
+			})
+			require.NoError(t, err2)
+			require.Equal(t, `{"data":{"a":{"id":1,"details":{"pets":null}}}}`, res2.Body)
+		})
+	})
+
 	t.Run("cache warmup workers throttle", func(t *testing.T) {
 		t.Parallel()
 		logger, err := zap.NewDevelopment()
