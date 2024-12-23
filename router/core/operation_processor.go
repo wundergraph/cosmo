@@ -534,6 +534,7 @@ func (o *OperationKit) Parse() error {
 		}
 	}
 
+	o.kit.numOperations = 0
 	for i := range o.kit.doc.RootNodes {
 		if o.kit.doc.RootNodes[i].Kind != ast.NodeKindOperationDefinition {
 			continue
