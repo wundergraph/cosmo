@@ -534,7 +534,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("type", "misses"),
 							)...),
-							Value: 2,
+							Value: 4,
 						},
 					},
 				},

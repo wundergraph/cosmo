@@ -124,6 +124,7 @@ type OperationProcessor struct {
 // parseKit is a helper struct to parse, normalize and validate operations
 type parseKit struct {
 	i                   int
+	numOperations       int
 	parser              *astparser.Parser
 	doc                 *ast.Document
 	keyGen              *xxhash.Digest
@@ -384,7 +385,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 			statusCode: http.StatusOK,
 		}
 	}
-	fromCache, err := o.loadPersistedOperationFromCache(clientInfo.Name)
+	fromCache, includeOperationName, err := o.loadPersistedOperationFromCache(clientInfo.Name)
 	if err != nil {
 		return false, false, &httpGraphqlError{
 			statusCode: http.StatusInternalServerError,
@@ -392,7 +393,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		}
 	}
 	if fromCache {
-		if isApq, _ := o.persistedOperationCacheKeyHasTtl(clientInfo.Name); isApq {
+		if isApq, _ := o.persistedOperationCacheKeyHasTtl(clientInfo.Name, includeOperationName); isApq {
 			// if it is an APQ request, we need to save it again to renew the TTL expiration
 			if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.NormalizedRepresentation); err != nil {
 				return false, false, err
@@ -495,7 +496,6 @@ func (o *OperationKit) isIntrospectionQuery() (result bool, err error) {
 // UnmarshalOperationFromBody must be called before calling this method.
 func (o *OperationKit) Parse() error {
 	var (
-		operationCount                  = 0
 		anonymousOperationCount         = 0
 		anonymousOperationDefinitionRef = -1
 	)
@@ -534,11 +534,12 @@ func (o *OperationKit) Parse() error {
 		}
 	}
 
+	o.kit.numOperations = 0
 	for i := range o.kit.doc.RootNodes {
 		if o.kit.doc.RootNodes[i].Kind != ast.NodeKindOperationDefinition {
 			continue
 		}
-		operationCount++
+		o.kit.numOperations++
 		ref := o.kit.doc.RootNodes[i].Ref
 		name := string(o.kit.doc.OperationDefinitionNameBytes(ref))
 		if len(name) == 0 {
@@ -560,14 +561,14 @@ func (o *OperationKit) Parse() error {
 		}
 	}
 
-	if o.parsedOperation.Request.OperationName == "" && operationCount > 1 {
+	if o.parsedOperation.Request.OperationName == "" && o.kit.numOperations > 1 {
 		return &httpGraphqlError{
 			message:    "operation name is required when multiple operations are defined",
 			statusCode: http.StatusOK,
 		}
 	}
 
-	if o.parsedOperation.Request.OperationName != "" && operationCount != 0 && o.operationDefinitionRef == -1 {
+	if o.parsedOperation.Request.OperationName != "" && o.kit.numOperations != 0 && o.operationDefinitionRef == -1 {
 		return &httpGraphqlError{
 			message:    fmt.Sprintf("operation with name '%s' not found", o.parsedOperation.Request.OperationName),
 			statusCode: http.StatusOK,
@@ -623,7 +624,7 @@ func (o *OperationKit) NormalizeOperation(clientName string, isApq bool) (bool, 
 func (o *OperationKit) normalizePersistedOperation(clientName string, isApq bool) (cached bool, err error) {
 	if o.parsedOperation.NormalizedRepresentation != "" {
 		// when dealing with APQ requests which have a TTL set, we need to renew the TTL
-		if shouldRenew, skipIncludeNames := o.persistedOperationCacheKeyHasTtl(clientName); shouldRenew {
+		if shouldRenew, skipIncludeNames := o.persistedOperationCacheKeyHasTtl(clientName, o.kit.numOperations > 1); shouldRenew {
 			o.savePersistedOperationToCache(clientName, true, skipIncludeNames)
 		}
 		// normalized operation was loaded from cache
@@ -821,22 +822,37 @@ func (o *OperationKit) NormalizeVariables() error {
 	return nil
 }
 
-func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bool, err error) {
+func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bool, includeOpName bool, err error) {
 
 	if o.cache == nil || o.cache.persistedOperationNormalizationCache == nil {
-		return false, nil
+		return false, false, nil
 	}
 
-	cacheKey, ok := o.loadPersistedOperationCacheKey(clientName, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
+	cacheKey, ok := o.loadPersistedOperationCacheKey(clientName, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, false)
 	if !ok {
 		_, _ = o.cache.persistedOperationNormalizationCache.Get(0) // register cache miss
-		return false, nil
+		return false, false, nil
 	}
 
 	entry, ok := o.cache.persistedOperationNormalizationCache.Get(cacheKey)
-	if !ok {
-		return false, nil
+	if ok {
+		return true, false, o.handleFoundPersistedOperationEntry(entry)
 	}
+
+	if o.parsedOperation.Request.OperationName == "" {
+		return false, false, nil
+	}
+
+	if namedCacheKey, namedOk := o.loadPersistedOperationCacheKey(clientName, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, true); namedOk {
+		if namedEntry, ok := o.cache.persistedOperationNormalizationCache.Get(namedCacheKey); ok {
+			return true, true, o.handleFoundPersistedOperationEntry(namedEntry)
+		}
+	}
+
+	return false, false, nil
+}
+
+func (o *OperationKit) handleFoundPersistedOperationEntry(entry NormalizationCacheEntry) error {
 	o.parsedOperation.PersistedOperationCacheHit = true
 	o.parsedOperation.NormalizationCacheHit = true
 	o.parsedOperation.InternalID = entry.operationID
@@ -845,11 +861,11 @@ func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bo
 	//  We will always only have a single operation definition in the document
 	// Because we removed the unused operations during normalization
 	o.operationDefinitionRef = 0
-	err = o.setAndParseOperationDoc()
+	err := o.setAndParseOperationDoc()
 	if err != nil {
-		return false, err
+		return err
 	}
-	return true, nil
+	return nil
 }
 
 func (o *OperationKit) jsonIsNull(variables []byte) bool {
@@ -866,7 +882,7 @@ func (o *OperationKit) jsonIsNull(variables []byte) bool {
 	return value.Type() == fastjson.TypeNull
 }
 
-func (o *OperationKit) persistedOperationCacheKeyHasTtl(clientName string) (bool, []string) {
+func (o *OperationKit) persistedOperationCacheKeyHasTtl(clientName string, includeOperationName bool) (bool, []string) {
 	if o.cache == nil || o.cache.persistedOperationVariableNames == nil || o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash == "" {
 		return false, nil
 	}
@@ -877,14 +893,14 @@ func (o *OperationKit) persistedOperationCacheKeyHasTtl(clientName string) (bool
 	if !present {
 		return false, variableNames
 	}
-	cacheKey := o.generatePersistedOperationCacheKey(clientName, variableNames)
+	cacheKey := o.generatePersistedOperationCacheKey(clientName, variableNames, includeOperationName)
 
 	ttl, ok := o.cache.persistedOperationNormalizationCache.GetTTL(cacheKey)
 	return ok && ttl > 0, variableNames
 }
 
 func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bool, skipIncludeVariableNames []string) {
-	cacheKey := o.generatePersistedOperationCacheKey(clientName, skipIncludeVariableNames)
+	cacheKey := o.generatePersistedOperationCacheKey(clientName, skipIncludeVariableNames, o.kit.numOperations > 1)
 	entry := NormalizationCacheEntry{
 		operationID:              o.parsedOperation.InternalID,
 		normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
@@ -905,20 +921,20 @@ func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bo
 	o.cache.persistedOperationVariableNamesLock.Unlock()
 }
 
-func (o *OperationKit) loadPersistedOperationCacheKey(clientName, persistedQuerySha256Hash string) (key uint64, ok bool) {
+func (o *OperationKit) loadPersistedOperationCacheKey(clientName, persistedQuerySha256Hash string, includeOperationName bool) (key uint64, ok bool) {
 	o.cache.persistedOperationVariableNamesLock.RLock()
-	variableNames, ok := o.cache.persistedOperationVariableNames[persistedQuerySha256Hash]
+	variableNames := o.cache.persistedOperationVariableNames[persistedQuerySha256Hash]
 	o.cache.persistedOperationVariableNamesLock.RUnlock()
-	if !ok {
-		return 0, false
-	}
-	key = o.generatePersistedOperationCacheKey(clientName, variableNames)
+	key = o.generatePersistedOperationCacheKey(clientName, variableNames, includeOperationName)
 	return key, true
 }
 
-func (o *OperationKit) generatePersistedOperationCacheKey(clientName string, skipIncludeVariableNames []string) uint64 {
+func (o *OperationKit) generatePersistedOperationCacheKey(clientName string, skipIncludeVariableNames []string, includeOperationName bool) uint64 {
 	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
-	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.Request.OperationName)
+	if includeOperationName {
+		// If there are multiple operations in the document, we need to include the operation name in the cache key
+		_, _ = o.kit.keyGen.WriteString(o.parsedOperation.Request.OperationName)
+	}
 	_, _ = o.kit.keyGen.WriteString(clientName)
 	o.writeSkipIncludeCacheKeyToKeyGen(skipIncludeVariableNames)
 	sum := o.kit.keyGen.Sum64()
