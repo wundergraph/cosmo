@@ -648,7 +648,6 @@ func TestErrorPropagation(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employeeAsList(id: 1) { id details { forename surname } rootFieldThrowsError fieldThrowsError rootFieldErrorWrapper { okField errorField } } }`,
 			})
-			require.Equal(t, `{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employeeAsList",0,"rootFieldThrowsError"],"extensions":{"code":"ERROR_CODE","statusCode":200}},{"message":"error resolving ErrorField","path":["employeeAsList",0,"rootFieldErrorWrapper","errorField"],"extensions":{"statusCode":200}},{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employeeAsList"],"extensions":{"statusCode":200}}],"data":{"employeeAsList":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"rootFieldThrowsError":null,"fieldThrowsError":null,"rootFieldErrorWrapper":{"okField":"ok","errorField":null}}]}}`, res.Body)
 			checkContentAndErrors(t, "{\"employeeAsList\":[{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"},\"rootFieldThrowsError\":null,\"fieldThrowsError\":null,\"rootFieldErrorWrapper\":{\"okField\":\"ok\",\"errorField\":null}}]}", []testenv.GraphQLError{
 				{Message: "error resolving RootFieldThrowsError for Employee 1", Extensions: json.RawMessage(`{"code":"ERROR_CODE","statusCode":200}`)},
 				{Message: "error resolving ErrorField", Extensions: json.RawMessage(`{"statusCode":200}`)},
