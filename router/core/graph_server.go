@@ -15,7 +15,7 @@ import (
 	"github.com/klauspost/compress/gzip"
 
 	"github.com/cloudflare/backoff"
-	"github.com/dgraph-io/ristretto"
+	"github.com/dgraph-io/ristretto/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
