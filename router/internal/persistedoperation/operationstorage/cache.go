@@ -2,7 +2,7 @@ package operationstorage
 
 import (
 	"fmt"
-	"github.com/dgraph-io/ristretto"
+	"github.com/dgraph-io/ristretto/v2"
 	"sync"
 	"time"
 )
