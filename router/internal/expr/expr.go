@@ -71,8 +71,6 @@ func (r *RequestRootContext) LoadRequest(req *http.Request) {
 		Path:   req.URL.Path,
 		Query:  qv,
 	}
-
-	return
 }
 
 type RequestAuth struct {
@@ -121,9 +119,9 @@ func ResolveStringExpression(vm *vm.Program, ctx RequestRootContext) (string, er
 		return "", handleExpressionError(err)
 	}
 
-	switch r.(type) {
+	switch v := r.(type) {
 	case string:
-		return r.(string), nil
+		return v, nil
 	default:
 		return "", fmt.Errorf("expected string, got %T", r)
 	}
@@ -141,9 +139,9 @@ func ResolveBoolExpression(vm *vm.Program, ctx RequestRootContext) (bool, error)
 		return false, handleExpressionError(err)
 	}
 
-	switch r.(type) {
+	switch v := r.(type) {
 	case bool:
-		return r.(bool), nil
+		return v, nil
 	default:
 		return false, fmt.Errorf("failed to run expression: expected bool, got %T", r)
 	}
