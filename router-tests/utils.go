@@ -8,6 +8,9 @@ import (
 )
 
 func RequireSpanWithName(t *testing.T, exporter *tracetest2.InMemoryExporter, name string) trace.ReadOnlySpan {
+	require.NotNil(t, exporter)
+	require.NotNil(t, exporter.GetSpans())
+	require.NotNil(t, exporter.GetSpans().Snapshots())
 	sn := exporter.GetSpans().Snapshots()
 	var testSpan trace.ReadOnlySpan
 	for _, span := range sn {

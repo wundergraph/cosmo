@@ -1226,14 +1226,18 @@ func TestNatsEvents(t *testing.T) {
 
 			subscribePayload := []byte(`{"query":"subscription { filteredEmployeeUpdated(id: 1) { id details { forename surname } } }"}`)
 
-			wg := &sync.WaitGroup{}
-			wg.Add(1)
+			var requestsDone bool
+			var requestsDoneMux sync.Mutex
 
 			tick := make(chan struct{}, 1)
 			timeout := time.After(time.Second * 10)
 
 			go func() {
-				defer wg.Done()
+				defer func() {
+					requestsDoneMux.Lock()
+					requestsDone = true
+					requestsDoneMux.Unlock()
+				}()
 
 				client := http.Client{}
 				req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
@@ -1385,6 +1389,9 @@ func TestNatsEvents(t *testing.T) {
 			err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(`{"id":1,"__typename": "Employee"}`))
 			require.NoError(t, err)
 
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+
 			// Events 1, 3, 4, 5, 7, 8, and 11 should be included
 			for i := 1; i < 13; i++ {
 
@@ -1405,7 +1412,11 @@ func TestNatsEvents(t *testing.T) {
 
 			}
 
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				requestsDoneMux.Lock()
+				defer requestsDoneMux.Unlock()
+				return requestsDone
+			}, time.Second*10, time.Millisecond*100)
 		})
 	})
 
