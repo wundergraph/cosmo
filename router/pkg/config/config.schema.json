@@ -824,7 +824,12 @@
                       "context_field": {
                         "type": "string",
                         "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
-                        "enum": ["operation_service_names", "graphql_error_codes", "graphql_error_service_names", "operation_sha256"]
+                        "enum": [
+                          "operation_service_names",
+                          "graphql_error_codes",
+                          "graphql_error_service_names",
+                          "operation_sha256"
+                        ]
                       }
                     }
                   }
@@ -1668,54 +1673,54 @@
     },
     "cache_warmup": {
       "type": "object",
-        "description": "Cache Warmup pre-warms all caches (e.g. normalization, validation, planning) before accepting traffic.",
-        "additionalProperties": false,
-        "properties": {
-          "enabled": {
-              "type": "boolean",
-              "description": "Enable the cache warmup.",
-              "default": false
-          },
-          "source": {
-            "type": "string",
-            "description": "The source of the cache warmup items can be filesystem, cdn (Cosmo), or s3.",
-            "enum": ["filesystem"]
-          },
-          "workers": {
-            "type": "integer",
-            "description": "The number of workers for the cache warmup to run in parallel. Higher numbers decrease the time to warm up the cache but increase the load on the system.",
-            "default": 8
-          },
-          "items_per_second": {
-            "type": "integer",
-            "description": "The number of cache warmup items to process per second. Higher numbers decrease the time to warm up the cache but increase the load on the system.",
-            "default": 50
-          },
-          "timeout": {
-            "type": "string",
-            "description": "The timeout for warming up the cache. This can be used to limit the amount of time cache warming will block deploying a new config. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
-            "default": "30s",
-            "duration": {
-              "minimum": "1s"
+      "description": "Cache Warmup pre-warms all caches (e.g. normalization, validation, planning) before accepting traffic.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the cache warmup.",
+          "default": false
+        },
+        "source": {
+          "type": "string",
+          "description": "The source of the cache warmup items can be filesystem, cdn (Cosmo), or s3.",
+          "enum": ["filesystem"]
+        },
+        "workers": {
+          "type": "integer",
+          "description": "The number of workers for the cache warmup to run in parallel. Higher numbers decrease the time to warm up the cache but increase the load on the system.",
+          "default": 8
+        },
+        "items_per_second": {
+          "type": "integer",
+          "description": "The number of cache warmup items to process per second. Higher numbers decrease the time to warm up the cache but increase the load on the system.",
+          "default": 50
+        },
+        "timeout": {
+          "type": "string",
+          "description": "The timeout for warming up the cache. This can be used to limit the amount of time cache warming will block deploying a new config. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "30s",
+          "duration": {
+            "minimum": "1s"
+          }
+        },
+        "if": {
+          "properties": {
+            "source": {
+              "const": "filesystem"
             }
-          },
-          "if": {
-            "properties": {
-              "source": {
-                "const": "filesystem"
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "path": {
-                  "type": "string",
-                  "description": "The path to the directory containing the cache warmup items.",
-                  "format": "file-path"
-              }
+          }
+        },
+        "then": {
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "The path to the directory containing the cache warmup items.",
+              "format": "file-path"
             }
           }
         }
+      }
     },
     "router_config_path": {
       "type": "string",
@@ -1787,35 +1792,66 @@
       "additionalProperties": false,
       "properties": {
         "block_mutations": {
-          "type": "boolean",
-          "default": false,
-          "description": "Block mutation Operations. If the value is true, the mutations are blocked."
+          "type": "object",
+          "description": "The configuration for blocking mutations.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Block mutation Operations. If the value is true, all operations are blocked. You can also specify a condition that is evaluated to determine if the mutation should be blocked."
+            },
+            "condition": {
+              "type": "string",
+              "description": "The expression to evaluate if the mutation should be blocked. The expression is specified as a string. Please see https://expr-lang.org/ for more information."
+            }
+          }
         },
         "block_subscriptions": {
-          "type": "boolean",
-          "description": "Block subscription Operations. If the value is true, the subscriptions are blocked."
+          "type": "object",
+          "description": "The configuration for blocking subscriptions.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Block subscription Operations. If the value is true, all operations are blocked. You can also specify a condition that is evaluated to determine if the subscription should be blocked."
+            },
+            "condition": {
+              "type": "string",
+              "description": "The expression to evaluate if the subscription should be blocked. The expression is specified as a string. Please see https://expr-lang.org/ for more information."
+            }
+          }
         },
         "block_non_persisted_operations": {
-          "type": "boolean",
-          "default": false,
-          "description": "Block non-persisted Operations. If the value is true, the non-persisted operations are blocked."
+          "type": "object",
+          "description": "The configuration for blocking non-persisted operations.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Block non-persisted operations. If the value is true, all Operations are blocked. You can also specify a condition that is evaluated to determine if the non-persisted operation should be blocked."
+            },
+            "condition": {
+              "type": "string",
+              "description": "The expression to evaluate if the non-persisted operation should be blocked. The expression is specified as a string. Please see https://expr-lang.org/ for more information."
+            }
+          }
         },
         "complexity_calculation_cache": {
           "type": "object",
-            "description": "The configuration for the complexity calculation cache. The complexity calculation cache is used to cache the complexity calculation for the queries.",
-            "additionalProperties": false,
-            "properties": {
-              "enabled": {
-                "type": "boolean",
-                "default": true,
-                "description": "Enable the complexity calculation cache. If the value is true, the complexity calculation cache is enabled."
-              },
-              "size": {
-                "type": "integer",
-                "default": 1024,
-                "description": "The size of the cache for the complexity calculation."
-              }
+          "description": "The configuration for the complexity calculation cache. The complexity calculation cache is used to cache the complexity calculation for the queries.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable the complexity calculation cache. If the value is true, the complexity calculation cache is enabled."
+            },
+            "size": {
+              "type": "integer",
+              "default": 1024,
+              "description": "The size of the cache for the complexity calculation."
             }
+          }
         },
         "complexity_limits": {
           "type": "object",
@@ -2113,9 +2149,9 @@
           "description": "The size of the validation cache."
         },
         "enable_subgraph_fetch_operation_name": {
-            "type": "boolean",
-            "default": false,
-            "description": "Enable appending the operation name to subgraph fetches. This will ensure that the operation name will be included in the corresponding subgraph requests using the following format: $operationName__$subgraphName__$sequenceID."
+          "type": "boolean",
+          "default": false,
+          "description": "Enable appending the operation name to subgraph fetches. This will ensure that the operation name will be included in the corresponding subgraph requests using the following format: $operationName__$subgraphName__$sequenceID."
         }
       }
     },
@@ -2372,9 +2408,7 @@
             "context_field": {
               "type": "string",
               "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
-              "enum": [
-                "operation_name"
-              ]
+              "enum": ["operation_name"]
             }
           }
         }

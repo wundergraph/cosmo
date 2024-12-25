@@ -501,7 +501,7 @@ func TestKafkaEvents(t *testing.T) {
 			})
 		})
 
-		t.Run("subscribe sync with block", func(t *testing.T) {
+		t.Run("Should block subscribe sync operation", func(t *testing.T) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
@@ -509,7 +509,9 @@ func TestKafkaEvents(t *testing.T) {
 				KafkaSeeds:  seeds,
 				EnableKafka: true,
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.BlockSubscriptions = true
+					securityConfiguration.BlockSubscriptions = config.BlockSubscriptionConfiguration{
+						Enabled: true,
+					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				client := http.Client{
@@ -650,7 +652,7 @@ func TestKafkaEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribe sync sse with block", func(t *testing.T) {
+	t.Run("should block subscribe sync sse operation", func(t *testing.T) {
 
 		subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
@@ -658,7 +660,9 @@ func TestKafkaEvents(t *testing.T) {
 			KafkaSeeds:  seeds,
 			EnableKafka: true,
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.BlockSubscriptions = true
+				securityConfiguration.BlockSubscriptions = config.BlockSubscriptionConfiguration{
+					Enabled: true,
+				}
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			client := http.Client{

@@ -334,13 +334,28 @@ type EngineExecutionConfiguration struct {
 	EnableSubgraphFetchOperationName       bool                     `envDefault:"false" env:"ENGINE_ENABLE_SUBGRAPH_FETCH_OPERATION_NAME" yaml:"enable_subgraph_fetch_operation_name"`
 }
 
+type BlockMutationConfiguration struct {
+	Enabled   bool   `yaml:"enabled" envDefault:"false" env:"BLOCK_MUTATION_ENABLED"`
+	Condition string `yaml:"condition" env:"BLOCK_MUTATION_CONDITION"`
+}
+
+type BlockSubscriptionConfiguration struct {
+	Enabled   bool   `yaml:"enabled" envDefault:"false" env:"BLOCK_SUBSCRIPTION_ENABLED"`
+	Condition string `yaml:"condition" env:"BLOCK_SUBSCRIPTION_CONDITION"`
+}
+
+type BlockNonPersistedConfiguration struct {
+	Enabled   bool   `yaml:"enabled" envDefault:"false" env:"BLOCK_NON_PERSISTED_ENABLED"`
+	Condition string `yaml:"condition" env:"BLOCK_NON_PERSISTED_CONDITION"`
+}
+
 type SecurityConfiguration struct {
-	BlockMutations              bool                        `yaml:"block_mutations" envDefault:"false" env:"SECURITY_BLOCK_MUTATIONS"`
-	BlockSubscriptions          bool                        `yaml:"block_subscriptions" envDefault:"false" env:"SECURITY_BLOCK_SUBSCRIPTIONS"`
-	BlockNonPersistedOperations bool                        `yaml:"block_non_persisted_operations" envDefault:"false" env:"SECURITY_BLOCK_NON_PERSISTED_OPERATIONS"`
-	ComplexityCalculationCache  *ComplexityCalculationCache `yaml:"complexity_calculation_cache"`
-	ComplexityLimits            *ComplexityLimits           `yaml:"complexity_limits"`
-	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
+	BlockMutations              BlockMutationConfiguration     `yaml:"block_mutations" env:"SECURITY_BLOCK_MUTATIONS"`
+	BlockSubscriptions          BlockSubscriptionConfiguration `yaml:"block_subscriptions" env:"SECURITY_BLOCK_SUBSCRIPTIONS"`
+	BlockNonPersistedOperations BlockNonPersistedConfiguration `yaml:"block_non_persisted_operations" env:"SECURITY_BLOCK_NON_PERSISTED_OPERATIONS"`
+	ComplexityCalculationCache  *ComplexityCalculationCache    `yaml:"complexity_calculation_cache"`
+	ComplexityLimits            *ComplexityLimits              `yaml:"complexity_limits"`
+	DepthLimit                  *QueryDepthConfiguration       `yaml:"depth_limit"`
 }
 
 type QueryDepthConfiguration struct {

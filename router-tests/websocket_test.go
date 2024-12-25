@@ -1186,12 +1186,14 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, `[{"message":"Unable to subscribe"}]`, string(msg.Payload))
 		})
 	})
-	t.Run("subscription blocked", func(t *testing.T) {
+	t.Run("should block subscriptions", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.BlockSubscriptions = true
+				securityConfiguration.BlockSubscriptions = config.BlockSubscriptionConfiguration{
+					Enabled: true,
+				}
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 

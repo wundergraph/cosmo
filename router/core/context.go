@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"net/http"
 	"net/url"
 	"strings"
@@ -245,6 +246,8 @@ type requestContext struct {
 	graphQLErrorCodes []string
 	// telemetry are the base telemetry information of the request
 	telemetry *requestTelemetryAttributes
+	// expressionContext is the context for expressions parser when evaluating dynamic expressions
+	expressionContext expr.RequestRootContext
 }
 
 func (c *requestContext) Operation() OperationContext {
@@ -598,6 +601,10 @@ type requestContextOptions struct {
 }
 
 func buildRequestContext(opts requestContextOptions) *requestContext {
+
+	rootCtx := expr.RequestRootContext{}
+	rootCtx.LoadRequest(opts.r)
+
 	return &requestContext{
 		logger:         opts.requestLogger,
 		keys:           map[string]any{},
@@ -609,6 +616,7 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 			metricsEnabled: opts.metricsEnabled,
 			traceEnabled:   opts.traceEnabled,
 		},
-		subgraphResolver: subgraphResolverFromContext(opts.r.Context()),
+		expressionContext: rootCtx,
+		subgraphResolver:  subgraphResolverFromContext(opts.r.Context()),
 	}
 }

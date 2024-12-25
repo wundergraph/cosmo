@@ -603,7 +603,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	go func() {
 		if err := rr.Start(ctx); err != nil {
-			t.Fatal("Could not start router", zap.Error(err))
+			require.Failf(t, "Could not start router", "error: %s", err)
 		}
 	}()
 

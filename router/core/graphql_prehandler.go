@@ -265,7 +265,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			readMultiPartSpan.End()
 
-			// Cleanup all files. Needs to be called in the pre_handler function to ensure that the
+			// Cleanup all files. Needs to be called in the pre_handler function to ensure that
 			// defer is called after the response is written
 			defer func() {
 				if err := multipartParser.RemoveAll(); err != nil {
@@ -298,24 +298,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		variablesParser := h.variableParsePool.Get()
 		defer h.variableParsePool.Put(variablesParser)
 
-		err = h.handleOperation(r, variablesParser, &httpOperation{
-			requestContext:   requestContext,
-			requestLogger:    requestLogger,
-			routerSpan:       routerSpan,
-			operationMetrics: metrics,
-			traceTimings:     traceTimings,
-			files:            files,
-			body:             body,
-		})
-		if err != nil {
-			requestContext.error = err
-			// Mark the root span of the router as failed, so we can easily identify failed requests
-			rtrace.AttachErrToSpan(routerSpan, err)
-
-			writeOperationError(r, w, requestLogger, err)
-			return
-		}
-
 		// If we have authenticators, we try to authenticate the request
 		if h.accessController != nil {
 			_, authenticateSpan := h.tracer.Start(r.Context(), "Authenticate",
@@ -344,6 +326,26 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			authenticateSpan.End()
 
 			r = validatedReq
+
+			requestContext.expressionContext.LoadAuth(r.Context())
+		}
+
+		err = h.handleOperation(r, variablesParser, &httpOperation{
+			requestContext:   requestContext,
+			requestLogger:    requestLogger,
+			routerSpan:       routerSpan,
+			operationMetrics: metrics,
+			traceTimings:     traceTimings,
+			files:            files,
+			body:             body,
+		})
+		if err != nil {
+			requestContext.error = err
+			// Mark the root span of the router as failed, so we can easily identify failed requests
+			rtrace.AttachErrToSpan(routerSpan, err)
+
+			writeOperationError(r, w, requestLogger, err)
+			return
 		}
 
 		art.SetRequestTracingStats(r.Context(), traceOptions, traceTimings)
@@ -516,7 +518,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	// Set the operation name and type to the operation metrics and the router span as early as possible
 	httpOperation.routerSpan.SetAttributes(attributesAfterParse...)
 
-	if err := h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation); err != nil {
+	if err := h.operationBlocker.OperationIsBlocked(requestContext.logger, requestContext.expressionContext, operationKit.parsedOperation); err != nil {
 		return &httpGraphqlError{
 			message:    err.Error(),
 			statusCode: http.StatusOK,
