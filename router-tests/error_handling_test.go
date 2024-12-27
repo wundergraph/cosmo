@@ -1,8 +1,10 @@
 package integration
 
 import (
+	"cmp"
 	"encoding/json"
 	"net/http"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -10,25 +12,60 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-func checkContentAndErrors(t *testing.T, expectedContent string, expectedErrors []testenv.GraphQLError, body string) {
-	res := testenv.GraphQLResponse{}
-	require.NoError(t, json.Unmarshal([]byte(body), &res))
-	require.Len(t, res.Errors, len(expectedErrors))
+func compareErrors(t *testing.T, expectedErrors []testenv.GraphQLError, actualErrors []testenv.GraphQLError) {
 	var matchedErrors int
+
+	require.Lenf(t, actualErrors, len(expectedErrors), "Expected %d errors, got %d", len(expectedErrors), len(actualErrors))
+
 	for _, expectedErr := range expectedErrors {
-		for _, err := range res.Errors {
+		for _, err := range actualErrors {
 			if err.Message == expectedErr.Message {
-				if len(expectedErr.Extensions) > 0 || len(err.Extensions) > 0 {
-					require.JSONEq(t, string(expectedErr.Extensions), string(err.Extensions))
+				if slices.CompareFunc(err.Path, expectedErr.Path, func(s1 any, s2 any) int {
+					if s1 == nil && s2 == nil {
+						return 0
+					}
+					s1Str, s1StrOk := s1.(string)
+					s2Str, s2StrOk := s2.(string)
+					if s1StrOk && s2StrOk {
+						return cmp.Compare(s1Str, s2Str)
+					}
+					s1Float, s1FloatOk := s1.(float64)
+					s2Float, s2FloatOk := s2.(float64)
+					if s1FloatOk && s2FloatOk {
+						return cmp.Compare(s1Float, s2Float)
+					}
+					// in all the other cases, let's just return 1
+					return 1
+				}) != 0 {
+					continue
 				}
+				if err.Extensions.Code != expectedErr.Extensions.Code {
+					continue
+				}
+				if err.Extensions.StatusCode != expectedErr.Extensions.StatusCode {
+					continue
+				}
+				if len(err.Extensions.Errors) != len(expectedErr.Extensions.Errors) {
+					continue
+				}
+				compareErrors(t, expectedErr.Extensions.Errors, err.Extensions.Errors)
 				matchedErrors++
 				break
 			}
 		}
 	}
+	require.Len(t, actualErrors, matchedErrors)
+}
+
+func checkContentAndErrors(t *testing.T, expectedContent string, expectedErrors []testenv.GraphQLError, body string) {
+	res := testenv.GraphQLResponse{}
+	require.NoError(t, json.Unmarshal([]byte(body), &res))
+	require.Len(t, res.Errors, len(expectedErrors))
+
+	compareErrors(t, expectedErrors, res.Errors)
 	content, contentErr := res.Data.MarshalJSON()
 	require.NoError(t, contentErr)
-	require.Len(t, res.Errors, matchedErrors)
+
 	require.Equal(t, expectedContent, string(content))
 }
 
@@ -631,9 +668,21 @@ func TestErrorPropagation(t *testing.T) {
 				Query: `{ employee(id: 1) { id details { forename surname } rootFieldThrowsError fieldThrowsError rootFieldErrorWrapper { okField errorField } } }`,
 			})
 			checkContentAndErrors(t, "{\"employee\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"},\"rootFieldThrowsError\":null,\"fieldThrowsError\":null,\"rootFieldErrorWrapper\":{\"okField\":\"ok\",\"errorField\":null}}}", []testenv.GraphQLError{
-				{Message: "error resolving RootFieldThrowsError for Employee 1", Extensions: json.RawMessage(`{"code":"ERROR_CODE"}`)},
-				{Message: "error resolving ErrorField"},
-				{Message: "resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1"},
+				{
+					Message: "error resolving RootFieldThrowsError for Employee 1",
+					Path:    []any{"employee", "rootFieldThrowsError"},
+					Extensions: testenv.GraphQLErrorExtensions{
+						Code: "ERROR_CODE",
+					},
+				},
+				{
+					Message: "error resolving ErrorField",
+					Path:    []any{"employee", "rootFieldErrorWrapper", "errorField"},
+				},
+				{
+					Message: "resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1",
+					Path:    []any{"employee"},
+				},
 			}, res.Body)
 		})
 	})
@@ -649,9 +698,21 @@ func TestErrorPropagation(t *testing.T) {
 				Query: `{ employeeAsList(id: 1) { id details { forename surname } rootFieldThrowsError fieldThrowsError rootFieldErrorWrapper { okField errorField } } }`,
 			})
 			checkContentAndErrors(t, "{\"employeeAsList\":[{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"},\"rootFieldThrowsError\":null,\"fieldThrowsError\":null,\"rootFieldErrorWrapper\":{\"okField\":\"ok\",\"errorField\":null}}]}", []testenv.GraphQLError{
-				{Message: "error resolving RootFieldThrowsError for Employee 1", Extensions: json.RawMessage(`{"code":"ERROR_CODE","statusCode":200}`)},
-				{Message: "error resolving ErrorField", Extensions: json.RawMessage(`{"statusCode":200}`)},
-				{Message: "resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1", Extensions: json.RawMessage(`{"statusCode":200}`)},
+				{
+					Message:    "error resolving RootFieldThrowsError for Employee 1",
+					Path:       []any{"employeeAsList", float64(0), "rootFieldThrowsError"},
+					Extensions: testenv.GraphQLErrorExtensions{Code: "ERROR_CODE", StatusCode: 200},
+				},
+				{
+					Message:    "error resolving ErrorField",
+					Path:       []any{"employeeAsList", float64(0), "rootFieldErrorWrapper", "errorField"},
+					Extensions: testenv.GraphQLErrorExtensions{StatusCode: 200},
+				},
+				{
+					Message:    "resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1",
+					Path:       []any{"employeeAsList"},
+					Extensions: testenv.GraphQLErrorExtensions{StatusCode: 200},
+				},
 			}, res.Body)
 		})
 	})
@@ -668,8 +729,34 @@ func TestErrorPropagation(t *testing.T) {
 				Query: `{ employee(id: 1) { id details { forename surname } rootFieldThrowsError fieldThrowsError rootFieldErrorWrapper { okField errorField } } }`,
 			})
 			checkContentAndErrors(t, "{\"employee\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"},\"rootFieldThrowsError\":null,\"fieldThrowsError\":null,\"rootFieldErrorWrapper\":{\"okField\":\"ok\",\"errorField\":null}}}", []testenv.GraphQLError{
-				{Message: "Failed to fetch from Subgraph 'employees'.", Extensions: json.RawMessage(`{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"],"extensions":{"code":"ERROR_CODE"}},{"message":"error resolving ErrorField","path":["employee","rootFieldErrorWrapper","errorField"]}],"statusCode":200}`)},
-				{Message: "Failed to fetch from Subgraph 'test1' at Path 'employee'.", Extensions: json.RawMessage(`{"errors":[{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employee"]}],"statusCode":200}`)},
+				{
+					Message: "Failed to fetch from Subgraph 'employees'.",
+					Extensions: testenv.GraphQLErrorExtensions{
+						StatusCode: 200,
+						Errors: []testenv.GraphQLError{
+							{
+								Message:    "error resolving RootFieldThrowsError for Employee 1",
+								Path:       []any{"employee", "rootFieldThrowsError"},
+								Extensions: testenv.GraphQLErrorExtensions{Code: "ERROR_CODE"}},
+							{
+								Message: "error resolving ErrorField",
+								Path:    []any{"employee", "rootFieldErrorWrapper", "errorField"},
+							},
+						},
+					},
+				},
+				{
+					Message: "Failed to fetch from Subgraph 'test1' at Path 'employee'.",
+					Extensions: testenv.GraphQLErrorExtensions{
+						StatusCode: 200,
+						Errors: []testenv.GraphQLError{
+							{
+								Message: "resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1",
+								Path:    []any{"employee"},
+							},
+						},
+					},
+				},
 			}, res.Body)
 		})
 	})
@@ -689,8 +776,36 @@ func TestErrorPropagation(t *testing.T) {
 			checkContentAndErrors(t,
 				"{\"employee\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"},\"rootFieldThrowsError\":null,\"fieldThrowsError\":null,\"rootFieldErrorWrapper\":{\"okField\":\"ok\",\"errorField\":null}}}",
 				[]testenv.GraphQLError{
-					{Message: "Failed to fetch from Subgraph 'employees'.", Extensions: json.RawMessage(`{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"],"extensions":{"code":"ERROR_CODE"}},{"message":"error resolving ErrorField","path":["employee","rootFieldErrorWrapper","errorField"]}],"serviceName":"employees","statusCode":200}`)},
-					{Message: "Failed to fetch from Subgraph 'test1' at Path 'employee'.", Extensions: json.RawMessage(`{"errors":[{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employee"]}],"serviceName":"test1","statusCode":200}`)},
+					{
+						Message: "Failed to fetch from Subgraph 'employees'.",
+						Extensions: testenv.GraphQLErrorExtensions{
+							StatusCode: 200,
+							Errors: []testenv.GraphQLError{
+								{
+									Message:    "error resolving RootFieldThrowsError for Employee 1",
+									Path:       []any{"employee", "rootFieldThrowsError"},
+									Extensions: testenv.GraphQLErrorExtensions{Code: "ERROR_CODE"},
+								},
+								{
+									Message: "error resolving ErrorField",
+									Path:    []any{"employee", "rootFieldErrorWrapper", "errorField"},
+								},
+							},
+						},
+					},
+					{
+						Message: "Failed to fetch from Subgraph 'test1' at Path 'employee'.",
+						Extensions: testenv.GraphQLErrorExtensions{
+							StatusCode:  200,
+							ServiceName: "test1",
+							Errors: []testenv.GraphQLError{
+								{
+									Message: "resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1",
+									Path:    []any{"employee"},
+								},
+							},
+						},
+					},
 				}, res.Body)
 		})
 	})
@@ -711,9 +826,31 @@ func TestErrorPropagation(t *testing.T) {
 			checkContentAndErrors(t,
 				"{\"employee\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"},\"rootFieldThrowsError\":null,\"fieldThrowsError\":null,\"rootFieldErrorWrapper\":{\"okField\":\"ok\",\"errorField\":null}}}",
 				[]testenv.GraphQLError{
-					{Message: "error resolving RootFieldThrowsError for Employee 1", Extensions: json.RawMessage(`{"code":"ERROR_CODE","serviceName":"employees","statusCode":200}`)},
-					{Message: "error resolving ErrorField", Extensions: json.RawMessage(`{"serviceName":"employees","statusCode":200}`)},
-					{Message: "resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1", Extensions: json.RawMessage(`{"statusCode":200,"serviceName":"test1"}`)},
+					{
+						Message: "error resolving RootFieldThrowsError for Employee 1",
+						Path:    []any{"employee", "rootFieldThrowsError"},
+						Extensions: testenv.GraphQLErrorExtensions{
+							Code:        "ERROR_CODE",
+							ServiceName: "employees",
+							StatusCode:  200,
+						},
+					},
+					{
+						Message: "error resolving ErrorField",
+						Path:    []any{"employee", "rootFieldErrorWrapper", "errorField"},
+						Extensions: testenv.GraphQLErrorExtensions{
+							ServiceName: "employees",
+							StatusCode:  200,
+						},
+					},
+					{
+						Message: "resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1",
+						Path:    []any{"employee"},
+						Extensions: testenv.GraphQLErrorExtensions{
+							StatusCode:  200,
+							ServiceName: "test1",
+						},
+					},
 				}, res.Body)
 		})
 	})
@@ -782,8 +919,37 @@ func TestErrorPropagation(t *testing.T) {
 			checkContentAndErrors(t,
 				"{\"employee\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"},\"rootFieldThrowsError\":null,\"fieldThrowsError\":null,\"rootFieldErrorWrapper\":{\"okField\":\"ok\",\"errorField\":null}}}",
 				[]testenv.GraphQLError{
-					{Message: "Failed to fetch from Subgraph 'employees'.", Extensions: json.RawMessage(`{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"],"extensions":{"code":"ERROR_CODE"}},{"message":"error resolving ErrorField","path":["employee","rootFieldErrorWrapper","errorField"],"extensions":{"code":"DEFAULT_CODE"}}],"statusCode":200}`)},
-					{Message: "Failed to fetch from Subgraph 'test1' at Path 'employee'.", Extensions: json.RawMessage(`{"errors":[{"message":"resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1","path":["employee"],"extensions":{"code":"DEFAULT_CODE"}}],"statusCode":200}`)},
+					{
+						Message: "Failed to fetch from Subgraph 'employees'.",
+						Extensions: testenv.GraphQLErrorExtensions{
+							StatusCode: 200,
+							Errors: []testenv.GraphQLError{
+								{
+									Message:    "error resolving RootFieldThrowsError for Employee 1",
+									Path:       []any{"employee", "rootFieldThrowsError"},
+									Extensions: testenv.GraphQLErrorExtensions{Code: "ERROR_CODE"},
+								},
+								{
+									Message:    "error resolving ErrorField",
+									Path:       []any{"employee", "rootFieldErrorWrapper", "errorField"},
+									Extensions: testenv.GraphQLErrorExtensions{Code: "DEFAULT_CODE"},
+								},
+							},
+						},
+					},
+					{
+						Message: "Failed to fetch from Subgraph 'test1' at Path 'employee'.",
+						Extensions: testenv.GraphQLErrorExtensions{
+							StatusCode: 200,
+							Errors: []testenv.GraphQLError{
+								{
+									Message:    "resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1",
+									Path:       []any{"employee"},
+									Extensions: testenv.GraphQLErrorExtensions{Code: "DEFAULT_CODE"},
+								},
+							},
+						},
+					},
 				},
 				res.Body,
 			)
@@ -854,9 +1020,30 @@ func TestErrorPropagation(t *testing.T) {
 			checkContentAndErrors(t,
 				"{\"employee\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"},\"rootFieldThrowsError\":null,\"fieldThrowsError\":null,\"rootFieldErrorWrapper\":{\"okField\":\"ok\",\"errorField\":null}}}",
 				[]testenv.GraphQLError{
-					{Message: "error resolving RootFieldThrowsError for Employee 1", Extensions: json.RawMessage(`{"code":"ERROR_CODE","statusCode":200}`)},
-					{Message: "error resolving ErrorField", Extensions: json.RawMessage(`{"code":"DEFAULT_CODE","statusCode":200}`)},
-					{Message: "resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1", Extensions: json.RawMessage(`{"code":"DEFAULT_CODE","statusCode":200}`)},
+					{
+						Message: "error resolving RootFieldThrowsError for Employee 1",
+						Path:    []any{"employee", "rootFieldThrowsError"},
+						Extensions: testenv.GraphQLErrorExtensions{
+							Code:       "ERROR_CODE",
+							StatusCode: 200,
+						},
+					},
+					{
+						Message: "error resolving ErrorField",
+						Path:    []any{"employee", "rootFieldErrorWrapper", "errorField"},
+						Extensions: testenv.GraphQLErrorExtensions{
+							Code:       "DEFAULT_CODE",
+							StatusCode: 200,
+						},
+					},
+					{
+						Message: "resolving Entity \"Employee\": error resolving FindEmployeeByID for id 1",
+						Path:    []any{"employee"},
+						Extensions: testenv.GraphQLErrorExtensions{
+							Code:       "DEFAULT_CODE",
+							StatusCode: 200,
+						},
+					},
 				},
 				res.Body,
 			)

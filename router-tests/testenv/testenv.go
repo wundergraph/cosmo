@@ -1421,9 +1421,17 @@ type GraphQLResponse struct {
 	Errors []GraphQLError  `json:"errors,omitempty"`
 }
 
+type GraphQLErrorExtensions struct {
+	Code        string         `json:"code"`
+	StatusCode  int            `json:"statusCode"`
+	ServiceName string         `json:"serviceName"`
+	Errors      []GraphQLError `json:"errors"`
+}
+
 type GraphQLError struct {
-	Message    string          `json:"message"`
-	Extensions json.RawMessage `json:"extensions,omitempty"`
+	Message    string                 `json:"message"`
+	Path       []any                  `json:"path,omitempty"`
+	Extensions GraphQLErrorExtensions `json:"extensions,omitempty"`
 }
 
 const maxSocketRetries = 5
