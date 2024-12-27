@@ -84,7 +84,7 @@ jobs:
 
       - name: Run Integration tests
         working-directory: ./router-tests
-        run: make test test_params="-p=2 --parallel=10"
+        run: make test test_params="-p=1 --parallel=100"
 
       - name: Build
         working-directory: ./router
@@ -161,7 +161,7 @@ jobs:
 
       - name: Run Integration tests
         working-directory: ./router-tests
-        run: make test test_params="-p=2 --parallel=10"
+        run: make test test_params="-p=1 --parallel=100"
 
       - name: Build
         working-directory: ./router
