@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/wundergraph/cosmo/router/core"
 	"net/http"
-	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -67,11 +67,10 @@ func TestKafkaEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			wg := &sync.WaitGroup{}
-			wg.Add(1)
+			var counter atomic.Uint32
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer wg.Done()
+				defer counter.Add(1)
 				require.NoError(t, errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
 				return nil
@@ -85,7 +84,9 @@ func TestKafkaEvents(t *testing.T) {
 			}()
 
 			go func() {
-				wg.Wait()
+				require.Eventually(t, func() bool {
+					return counter.Load() == 1
+				}, time.Second*10, time.Millisecond*100)
 				_ = client.Close()
 			}()
 
@@ -126,14 +127,11 @@ func TestKafkaEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			count := 0
-			var countMu sync.Mutex
+			var counter atomic.Uint32
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				countMu.Lock()
-				oldCount := count
-				count++
-				countMu.Unlock()
+				oldCount := counter.Load()
+				counter.Add(1)
 
 				if oldCount == 0 {
 					var gqlErr graphql.Errors
@@ -162,30 +160,22 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], ``) // Empty message
 			require.Eventually(t, func() bool {
-				countMu.Lock()
-				defer countMu.Unlock()
-				return count == 1
+				return counter.Load() == 1
 			}, time.Second*10, time.Millisecond*100)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
 			require.Eventually(t, func() bool {
-				countMu.Lock()
-				defer countMu.Unlock()
-				return count == 2
+				return counter.Load() == 2
 			}, time.Second*10, time.Millisecond*100)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
 			require.Eventually(t, func() bool {
-				countMu.Lock()
-				defer countMu.Unlock()
-				return count == 3
+				return counter.Load() == 3
 			}, time.Second*10, time.Millisecond*100)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
 			require.Eventually(t, func() bool {
-				countMu.Lock()
-				defer countMu.Unlock()
-				return count == 4
+				return counter.Load() == 4
 			}, time.Second*10, time.Millisecond*100)
 
 			require.NoError(t, client.Close())
@@ -219,11 +209,10 @@ func TestKafkaEvents(t *testing.T) {
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
-			wg := &sync.WaitGroup{}
-			wg.Add(2)
+			var counter atomic.Uint32
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer wg.Done()
+				defer counter.Add(1)
 				require.NoError(t, errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
 				return nil
@@ -232,7 +221,7 @@ func TestKafkaEvents(t *testing.T) {
 			require.NotEmpty(t, subscriptionOneID)
 
 			subscriptionTwoID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer wg.Done()
+				defer counter.Add(1)
 				require.NoError(t, errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
 				return nil
@@ -251,7 +240,9 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForMessagesSent(2, time.Second*10)
 
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				return counter.Load() == 2
+			}, time.Second*10, time.Millisecond*100)
 
 			_ = client.Close()
 
@@ -287,11 +278,10 @@ func TestKafkaEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			wg := &sync.WaitGroup{}
-			wg.Add(4)
+			var counter atomic.Uint32
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer wg.Done()
+				defer counter.Add(1)
 
 				require.NoError(t, errValue)
 
@@ -311,7 +301,7 @@ func TestKafkaEvents(t *testing.T) {
 			require.NotEmpty(t, subscriptionOneID)
 
 			subscriptionTwoID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer wg.Done()
+				defer counter.Add(1)
 
 				require.NoError(t, errValue)
 
@@ -340,7 +330,9 @@ func TestKafkaEvents(t *testing.T) {
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 			produceKafkaMessage(t, xEnv, topics[1], `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
 
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				return counter.Load() == 4
+			}, time.Second*10, time.Millisecond*100)
 
 			require.NoError(t, client.Close())
 
@@ -381,11 +373,10 @@ func TestKafkaEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			wg := &sync.WaitGroup{}
-			wg.Add(1)
+			var counter atomic.Uint32
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer wg.Done()
+				defer counter.Add(1)
 				require.NoError(t, errValue)
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
 				return nil
@@ -399,7 +390,9 @@ func TestKafkaEvents(t *testing.T) {
 			}()
 
 			go func() {
-				wg.Wait()
+				require.Eventually(t, func() bool {
+					return counter.Load() == 1
+				}, time.Second*10, time.Millisecond*100)
 				_ = client.Close()
 			}()
 
@@ -446,8 +439,7 @@ func TestKafkaEvents(t *testing.T) {
 
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
-				count := 0
-				var countMu sync.Mutex
+				var counter atomic.Uint32
 
 				go func() {
 					client := http.Client{
@@ -464,39 +456,29 @@ func TestKafkaEvents(t *testing.T) {
 					assertMultipartPrefix(t, reader)
 					assertLineEquals(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 
-					countMu.Lock()
-					count++
-					countMu.Unlock()
+					counter.Add(1)
 
 					assertMultipartPrefix(t, reader)
 					assertLineEquals(t, reader, "{}")
 
-					countMu.Lock()
-					count++
-					countMu.Unlock()
+					counter.Add(1)
 
 					assertMultipartPrefix(t, reader)
 					assertLineEquals(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 
-					countMu.Lock()
-					count++
-					countMu.Unlock()
+					counter.Add(1)
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 				require.Eventually(t, func() bool {
-					countMu.Lock()
-					defer countMu.Unlock()
-					return count == 2
+					return counter.Load() == 2
 				}, time.Second*10, time.Millisecond*100)
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 				require.Eventually(t, func() bool {
-					countMu.Lock()
-					defer countMu.Unlock()
-					return count == 3
+					return counter.Load() == 3
 				}, time.Second*10, time.Millisecond*100)
 
 				xEnv.WaitForSubscriptionCount(0, time.Second*10)
@@ -548,11 +530,11 @@ func TestKafkaEvents(t *testing.T) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
-			wg := &sync.WaitGroup{}
-			wg.Add(1)
+			var counter atomic.Uint32
 
 			go func() {
-				defer wg.Done()
+				defer counter.Add(1)
+
 				client := http.Client{
 					Timeout: time.Second * 10,
 				}
@@ -586,7 +568,9 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				return counter.Load() == 1
+			}, time.Second*10, time.Millisecond*100)
 
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
@@ -606,11 +590,11 @@ func TestKafkaEvents(t *testing.T) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
-			wg := &sync.WaitGroup{}
-			wg.Add(1)
+			var counter atomic.Uint32
 
 			go func() {
-				defer wg.Done()
+				defer counter.Add(1)
+
 				client := http.Client{
 					Timeout: time.Second * 10,
 				}
@@ -643,7 +627,9 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				return counter.Load() == 1
+			}, time.Second*10, time.Millisecond*100)
 
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
@@ -728,11 +714,10 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
-			wg := &sync.WaitGroup{}
-			wg.Add(1)
+			var counter atomic.Uint32
 
 			go func() {
-				defer wg.Done()
+				defer counter.Add(1)
 
 				gErr := conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
@@ -794,7 +779,9 @@ func TestKafkaEvents(t *testing.T) {
 				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
 			}
 
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				return counter.Load() == 1
+			}, time.Second*10, time.Millisecond*100)
 		})
 	})
 
@@ -835,11 +822,10 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
-			wg := &sync.WaitGroup{}
-			wg.Add(1)
+			var counter atomic.Uint32
 
 			go func() {
-				defer wg.Done()
+				defer counter.Add(1)
 
 				gErr := conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
@@ -890,7 +876,9 @@ func TestKafkaEvents(t *testing.T) {
 				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
 			}
 
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				return counter.Load() == 1
+			}, time.Second*10, time.Millisecond*100)
 		})
 	})
 
@@ -931,11 +919,10 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
-			wg := &sync.WaitGroup{}
-			wg.Add(1)
+			var counter atomic.Uint32
 
 			go func() {
-				defer wg.Done()
+				defer counter.Add(1)
 
 				gErr := conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
@@ -986,7 +973,9 @@ func TestKafkaEvents(t *testing.T) {
 				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
 			}
 
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				return counter.Load() == 1
+			}, time.Second*10, time.Millisecond*100)
 		})
 	})
 
@@ -1027,11 +1016,10 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
-			wg := &sync.WaitGroup{}
-			wg.Add(1)
+			var counter atomic.Uint32
 
 			go func() {
-				defer wg.Done()
+				defer counter.Add(1)
 
 				gErr := conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
@@ -1052,7 +1040,9 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":12}`)
 
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				return counter.Load() == 1
+			}, time.Second*10, time.Millisecond*100)
 		})
 	})
 
@@ -1083,14 +1073,11 @@ func TestKafkaEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			countMu := sync.Mutex{}
-			count := 0
+			var counter atomic.Uint32
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				countMu.Lock()
-				oldCount := count
-				count++
-				countMu.Unlock()
+				oldCount := counter.Load()
+				counter.Add(1)
 
 				if oldCount == 0 {
 					var gqlErr graphql.Errors
@@ -1119,27 +1106,19 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], `{asas`) // Invalid message
 			require.Eventually(t, func() bool {
-				countMu.Lock()
-				defer countMu.Unlock()
-				return count == 1
+				return counter.Load() == 1
 			}, time.Second*10, time.Millisecond*100)
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":1}`) // Correct message
 			require.Eventually(t, func() bool {
-				countMu.Lock()
-				defer countMu.Unlock()
-				return count == 2
+				return counter.Load() == 2
 			}, time.Second*10, time.Millisecond*100)
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
 			require.Eventually(t, func() bool {
-				countMu.Lock()
-				defer countMu.Unlock()
-				return count == 3
+				return counter.Load() == 3
 			}, time.Second*10, time.Millisecond*100)
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
 			require.Eventually(t, func() bool {
-				countMu.Lock()
-				defer countMu.Unlock()
-				return count == 4
+				return counter.Load() == 4
 			}, time.Second*10, time.Millisecond*100)
 
 			require.NoError(t, client.Close())
@@ -1173,8 +1152,7 @@ func produceKafkaMessage(t *testing.T, xEnv *testenv.Environment, topicName stri
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	var wg sync.WaitGroup
-	wg.Add(1)
+	var done atomic.Bool
 
 	var pErr error
 
@@ -1182,13 +1160,15 @@ func produceKafkaMessage(t *testing.T, xEnv *testenv.Environment, topicName stri
 		Topic: xEnv.GetPubSubName(topicName),
 		Value: []byte(message),
 	}, func(record *kgo.Record, err error) {
-		defer wg.Done()
+		defer done.Store(true)
 		if err != nil {
 			pErr = err
 		}
 	})
 
-	wg.Wait()
+	require.Eventually(t, func() bool {
+		return done.Load()
+	}, time.Second*10, time.Millisecond*100)
 
 	xEnv.KafkaClient.Flush(ctx)
 

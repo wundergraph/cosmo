@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -54,13 +55,10 @@ func TestNatsEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			var subscriptionCalled uint8
-			var subscriptionCalledMux sync.Mutex
+			var subscriptionCalled atomic.Uint32
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				subscriptionCalledMux.Lock()
-				defer subscriptionCalledMux.Unlock()
-				subscriptionCalled++
+				subscriptionCalled.Add(1)
 				require.NoError(t, errValue)
 				require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
 				return nil
@@ -80,9 +78,7 @@ func TestNatsEvents(t *testing.T) {
 					if t == nil {
 						return false
 					}
-					subscriptionCalledMux.Lock()
-					defer subscriptionCalledMux.Unlock()
-					return subscriptionCalled == 2
+					return subscriptionCalled.Load() == 2
 				}, time.Second*20, time.Millisecond*100)
 				require.NoError(t, client.Close())
 				closedMu.Lock()
@@ -144,14 +140,11 @@ func TestNatsEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			var countMu sync.Mutex
-			count := 0
+			var counter atomic.Uint32
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				countMu.Lock()
-				oldCount := count
-				count++
-				countMu.Unlock()
+				oldCount := counter.Load()
+				counter.Add(1)
 
 				if oldCount == 0 {
 					var gqlErr graphql.Errors
@@ -203,9 +196,7 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForMessagesSent(4, time.Second*10)
 
 			require.Eventually(t, func() bool {
-				countMu.Lock()
-				defer countMu.Unlock()
-				return count == 4
+				return counter.Load() == 4
 			}, time.Second*10, time.Millisecond*100)
 
 			require.NoError(t, client.Close())
@@ -242,15 +233,10 @@ func TestNatsEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			counter := 0
-			var counterMu sync.Mutex
+			var counter atomic.Uint32
 
 			subscriptionID, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
-				defer func() {
-					counterMu.Lock()
-					counter++
-					counterMu.Unlock()
-				}()
+				defer counter.Add(1)
 
 				require.NoError(t, errValue)
 				require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
@@ -284,9 +270,7 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Eventually(t, func() bool {
-				counterMu.Lock()
-				defer counterMu.Unlock()
-				return counter == 2
+				return counter.Load() == 2
 			}, time.Second*10, time.Millisecond*100)
 
 			require.NoError(t, client.Close())
@@ -331,15 +315,10 @@ func TestNatsEvents(t *testing.T) {
 
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
 
-				counter := 0
-				var counterMu sync.Mutex
+				var counter atomic.Uint32
 
 				go func() {
-					defer func() {
-						counterMu.Lock()
-						counter++
-						counterMu.Unlock()
-					}()
+					defer counter.Add(1)
 
 					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
 					resp, err := xEnv.RouterClient.Do(req)
@@ -382,9 +361,7 @@ func TestNatsEvents(t *testing.T) {
 				require.NoError(t, err)
 
 				require.Eventually(t, func() bool {
-					counterMu.Lock()
-					defer counterMu.Unlock()
-					return counter == 1
+					return counter.Load() == 1
 				}, time.Second*10, time.Millisecond*100)
 			})
 		})
@@ -402,16 +379,11 @@ func TestNatsEvents(t *testing.T) {
 
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
 
-				counter := 0
-				var counterMu sync.Mutex
+				var counter atomic.Uint32
 
 				var client *http.Client
 				go func() {
-					defer func() {
-						counterMu.Lock()
-						counter++
-						counterMu.Unlock()
-					}()
+					defer counter.Add(1)
 
 					client = &http.Client{}
 
@@ -433,9 +405,7 @@ func TestNatsEvents(t *testing.T) {
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
 				require.Eventually(t, func() bool {
-					counterMu.Lock()
-					defer counterMu.Unlock()
-					return counter == 1
+					return counter.Load() == 1
 				}, time.Second*10, time.Millisecond*100)
 			})
 		})
@@ -449,16 +419,11 @@ func TestNatsEvents(t *testing.T) {
 
 				subscribePayload := []byte(`{"query":"subscription { countFor(count: 3) }"}`)
 
-				counter := 0
-				var counterMu sync.Mutex
+				var counter atomic.Uint32
 
 				var client http.Client
 				go func() {
-					defer func() {
-						counterMu.Lock()
-						counter++
-						counterMu.Unlock()
-					}()
+					defer counter.Add(1)
 
 					client = http.Client{}
 					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
@@ -483,9 +448,7 @@ func TestNatsEvents(t *testing.T) {
 
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 				require.Eventually(t, func() bool {
-					counterMu.Lock()
-					defer counterMu.Unlock()
-					return counter == 1
+					return counter.Load() == 1
 				}, time.Second*10, time.Millisecond*100)
 			})
 		})
@@ -532,15 +495,10 @@ func TestNatsEvents(t *testing.T) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
 
-			counter := 0
-			var counterMu sync.Mutex
+			var counter atomic.Uint32
 
 			go func() {
-				defer func() {
-					counterMu.Lock()
-					counter++
-					counterMu.Unlock()
-				}()
+				defer counter.Add(1)
 
 				client := http.Client{}
 				xUrl, err := url.Parse(xEnv.GraphQLRequestURL())
@@ -590,9 +548,7 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Eventually(t, func() bool {
-				counterMu.Lock()
-				defer counterMu.Unlock()
-				return counter == 1
+				return counter.Load() == 1
 			}, time.Second*10, time.Millisecond*100)
 		})
 	})
@@ -606,8 +562,7 @@ func TestNatsEvents(t *testing.T) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
 
-			var requestCompleted bool
-			var requestCompletedMux sync.Mutex
+			var requestCompleted atomic.Bool
 
 			go func() {
 				client := http.Client{}
@@ -645,9 +600,7 @@ func TestNatsEvents(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "", string(line))
 
-				requestCompletedMux.Lock()
-				requestCompleted = true
-				requestCompletedMux.Unlock()
+				requestCompleted.Store(true)
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -667,9 +620,7 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Eventually(t, func() bool {
-				requestCompletedMux.Lock()
-				defer requestCompletedMux.Unlock()
-				return requestCompleted
+				return requestCompleted.Load()
 			}, time.Second*10, time.Millisecond*100)
 		})
 	})
@@ -746,15 +697,10 @@ func TestNatsEvents(t *testing.T) {
 
 			firstSubscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`)
 
-			counter := 0
-			var counterMu sync.Mutex
+			var counter atomic.Uint32
 
 			go func() {
-				defer func() {
-					counterMu.Lock()
-					counter++
-					counterMu.Unlock()
-				}()
+				defer counter.Add(1)
 
 				client := http.Client{}
 				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(firstSubscribePayload))
@@ -804,9 +750,7 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Eventually(t, func() bool {
-				counterMu.Lock()
-				defer counterMu.Unlock()
-				return counter == 1
+				return counter.Load() == 1
 			}, time.Second*10, time.Millisecond*100)
 
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
@@ -1108,15 +1052,10 @@ func TestNatsEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			counter := 0
-			var counterMu sync.Mutex
+			var counter atomic.Uint32
 
 			_, err = client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
-				defer func() {
-					counterMu.Lock()
-					counter++
-					counterMu.Unlock()
-				}()
+				defer counter.Add(1)
 
 				require.Contains(t,
 					errValue.Error(),
@@ -1135,9 +1074,7 @@ func TestNatsEvents(t *testing.T) {
 			}()
 
 			require.Eventually(t, func() bool {
-				counterMu.Lock()
-				defer counterMu.Unlock()
-				return counter == 1
+				return counter.Load() == 1
 			}, time.Second*10, time.Millisecond*100)
 		})
 	})
@@ -1177,15 +1114,10 @@ func TestNatsEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
-			counter := 0
-			var counterMu sync.Mutex
+			var counter atomic.Uint32
 
 			go func() {
-				defer func() {
-					counterMu.Lock()
-					counter++
-					counterMu.Unlock()
-				}()
+				defer counter.Add(1)
 
 				gErr := conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
@@ -1285,9 +1217,7 @@ func TestNatsEvents(t *testing.T) {
 			}
 
 			require.Eventually(t, func() bool {
-				counterMu.Lock()
-				defer counterMu.Unlock()
-				return counter == 1
+				return counter.Load() == 1
 			}, time.Second*10, time.Millisecond*100)
 		})
 	})
@@ -1301,18 +1231,13 @@ func TestNatsEvents(t *testing.T) {
 
 			subscribePayload := []byte(`{"query":"subscription { filteredEmployeeUpdated(id: 1) { id details { forename surname } } }"}`)
 
-			var requestsDone bool
-			var requestsDoneMux sync.Mutex
+			var requestsDone atomic.Bool
 
 			tick := make(chan struct{}, 1)
 			timeout := time.After(time.Second * 10)
 
 			go func() {
-				defer func() {
-					requestsDoneMux.Lock()
-					requestsDone = true
-					requestsDoneMux.Unlock()
-				}()
+				defer requestsDone.Store(true)
 
 				client := http.Client{}
 				req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
@@ -1488,9 +1413,7 @@ func TestNatsEvents(t *testing.T) {
 			}
 
 			require.Eventually(t, func() bool {
-				requestsDoneMux.Lock()
-				defer requestsDoneMux.Unlock()
-				return requestsDone
+				return requestsDone.Load()
 			}, time.Second*10, time.Millisecond*100)
 		})
 	})
@@ -1517,23 +1440,20 @@ func TestNatsEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			var countMu sync.Mutex
-			count := 0
+			var counter atomic.Uint32
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				countMu.Lock()
-				countLocal := count
-				count++
-				countMu.Unlock()
+				oldCount := counter.Load()
+				counter.Add(1)
 
-				if countLocal == 0 {
+				if oldCount == 0 {
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					require.Equal(t, "Invalid message received", gqlErr[0].Message)
-				} else if countLocal == 1 || countLocal == 3 {
+				} else if oldCount == 1 || oldCount == 3 {
 					require.NoError(t, errValue)
 					require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
-				} else if countLocal == 2 {
+				} else if oldCount == 2 {
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.", gqlErr[0].Message)
@@ -1576,9 +1496,7 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForMessagesSent(4, time.Second*10)
 
 			require.Eventually(t, func() bool {
-				countMu.Lock()
-				defer countMu.Unlock()
-				return count == 4
+				return counter.Load() == 4
 			}, time.Second*10, time.Millisecond*100)
 
 			require.NoError(t, client.Close())
