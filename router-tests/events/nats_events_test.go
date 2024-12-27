@@ -77,6 +77,9 @@ func TestNatsEvents(t *testing.T) {
 			var closedMu sync.Mutex
 			go func() {
 				require.Eventually(t, func() bool {
+					if t == nil {
+						return false
+					}
 					subscriptionCalledMux.Lock()
 					defer subscriptionCalledMux.Unlock()
 					return subscriptionCalled == 2
