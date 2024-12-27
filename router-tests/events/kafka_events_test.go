@@ -416,16 +416,16 @@ func TestKafkaEvents(t *testing.T) {
 	t.Run("multipart", func(t *testing.T) {
 		t.Parallel()
 
-		assertLineEquals := func(reader *bufio.Reader, expected string) {
+		assertLineEquals := func(t *testing.T, reader *bufio.Reader, expected string) {
 			line, _, err := reader.ReadLine()
 			require.NoError(t, err)
 			require.Equal(t, expected, string(line))
 		}
 
-		assertMultipartPrefix := func(reader *bufio.Reader) {
-			assertLineEquals(reader, "--graphql")
-			assertLineEquals(reader, "Content-Type: application/json")
-			assertLineEquals(reader, "")
+		assertMultipartPrefix := func(t *testing.T, reader *bufio.Reader) {
+			assertLineEquals(t, reader, "--graphql")
+			assertLineEquals(t, reader, "Content-Type: application/json")
+			assertLineEquals(t, reader, "")
 		}
 
 		var multipartHeartbeatInterval = 500 * time.Millisecond
@@ -461,22 +461,22 @@ func TestKafkaEvents(t *testing.T) {
 					reader := bufio.NewReader(resp.Body)
 
 					xEnv.WaitForMessagesSent(1, time.Second*10)
-					assertMultipartPrefix(reader)
-					assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
+					assertMultipartPrefix(t, reader)
+					assertLineEquals(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 
 					countMu.Lock()
 					count++
 					countMu.Unlock()
 
-					assertMultipartPrefix(reader)
-					assertLineEquals(reader, "{}")
+					assertMultipartPrefix(t, reader)
+					assertLineEquals(t, reader, "{}")
 
 					countMu.Lock()
 					count++
 					countMu.Unlock()
 
-					assertMultipartPrefix(reader)
-					assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
+					assertMultipartPrefix(t, reader)
+					assertLineEquals(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 
 					countMu.Lock()
 					count++
@@ -526,8 +526,8 @@ func TestKafkaEvents(t *testing.T) {
 				defer resp.Body.Close()
 				reader := bufio.NewReader(resp.Body)
 
-				assertMultipartPrefix(reader)
-				assertLineEquals(reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
+				assertMultipartPrefix(t, reader)
+				assertLineEquals(t, reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
 
 				xEnv.WaitForSubscriptionCount(0, time.Second*10)
 				xEnv.WaitForConnectionCount(0, time.Second*10)
