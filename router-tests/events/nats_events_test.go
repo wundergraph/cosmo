@@ -242,11 +242,16 @@ func TestNatsEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			wg := &sync.WaitGroup{}
-			wg.Add(2)
+			counter := 0
+			var counterMu sync.Mutex
 
 			subscriptionID, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
-				defer wg.Done()
+				defer func() {
+					counterMu.Lock()
+					counter++
+					counterMu.Unlock()
+				}()
+
 				require.NoError(t, errValue)
 				require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
 				return nil
@@ -278,7 +283,11 @@ func TestNatsEvents(t *testing.T) {
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				counterMu.Lock()
+				defer counterMu.Unlock()
+				return counter == 2
+			}, time.Second*10, time.Millisecond*100)
 
 			require.NoError(t, client.Close())
 
@@ -322,11 +331,16 @@ func TestNatsEvents(t *testing.T) {
 
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
 
-				wg := &sync.WaitGroup{}
-				wg.Add(1)
+				counter := 0
+				var counterMu sync.Mutex
 
 				go func() {
-					defer wg.Done()
+					defer func() {
+						counterMu.Lock()
+						counter++
+						counterMu.Unlock()
+					}()
+
 					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
 					resp, err := xEnv.RouterClient.Do(req)
 					require.NoError(t, err)
@@ -366,7 +380,12 @@ func TestNatsEvents(t *testing.T) {
 
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
-				wg.Wait()
+
+				require.Eventually(t, func() bool {
+					counterMu.Lock()
+					defer counterMu.Unlock()
+					return counter == 1
+				}, time.Second*10, time.Millisecond*100)
 			})
 		})
 
@@ -383,12 +402,17 @@ func TestNatsEvents(t *testing.T) {
 
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
 
-				wg := &sync.WaitGroup{}
-				wg.Add(1)
+				counter := 0
+				var counterMu sync.Mutex
 
 				var client *http.Client
 				go func() {
-					defer wg.Done()
+					defer func() {
+						counterMu.Lock()
+						counter++
+						counterMu.Unlock()
+					}()
+
 					client = &http.Client{}
 
 					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
@@ -407,7 +431,12 @@ func TestNatsEvents(t *testing.T) {
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
-				wg.Wait()
+
+				require.Eventually(t, func() bool {
+					counterMu.Lock()
+					defer counterMu.Unlock()
+					return counter == 1
+				}, time.Second*10, time.Millisecond*100)
 			})
 		})
 
@@ -420,12 +449,17 @@ func TestNatsEvents(t *testing.T) {
 
 				subscribePayload := []byte(`{"query":"subscription { countFor(count: 3) }"}`)
 
-				wg := &sync.WaitGroup{}
-				wg.Add(1)
+				counter := 0
+				var counterMu sync.Mutex
 
 				var client http.Client
 				go func() {
-					defer wg.Done()
+					defer func() {
+						counterMu.Lock()
+						counter++
+						counterMu.Unlock()
+					}()
+
 					client = http.Client{}
 					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
 					resp, err := client.Do(req)
@@ -448,7 +482,11 @@ func TestNatsEvents(t *testing.T) {
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
-				wg.Wait()
+				require.Eventually(t, func() bool {
+					counterMu.Lock()
+					defer counterMu.Unlock()
+					return counter == 1
+				}, time.Second*10, time.Millisecond*100)
 			})
 		})
 
@@ -494,11 +532,16 @@ func TestNatsEvents(t *testing.T) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
 
-			wg := &sync.WaitGroup{}
-			wg.Add(1)
+			counter := 0
+			var counterMu sync.Mutex
 
 			go func() {
-				defer wg.Done()
+				defer func() {
+					counterMu.Lock()
+					counter++
+					counterMu.Unlock()
+				}()
+
 				client := http.Client{}
 				xUrl, err := url.Parse(xEnv.GraphQLRequestURL())
 				require.NoError(t, err)
@@ -546,7 +589,11 @@ func TestNatsEvents(t *testing.T) {
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				counterMu.Lock()
+				defer counterMu.Unlock()
+				return counter == 1
+			}, time.Second*10, time.Millisecond*100)
 		})
 	})
 
@@ -699,11 +746,16 @@ func TestNatsEvents(t *testing.T) {
 
 			firstSubscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`)
 
-			wg := &sync.WaitGroup{}
-			wg.Add(1)
+			counter := 0
+			var counterMu sync.Mutex
 
 			go func() {
-				defer wg.Done()
+				defer func() {
+					counterMu.Lock()
+					counter++
+					counterMu.Unlock()
+				}()
+
 				client := http.Client{}
 				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(firstSubscribePayload))
 				require.NoError(t, err)
@@ -734,7 +786,6 @@ func TestNatsEvents(t *testing.T) {
 				line, _, err := reader.ReadLine()
 				require.NoError(t, err)
 				require.Equal(t, "", string(line))
-
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -752,7 +803,11 @@ func TestNatsEvents(t *testing.T) {
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				counterMu.Lock()
+				defer counterMu.Unlock()
+				return counter == 1
+			}, time.Second*10, time.Millisecond*100)
 
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
@@ -1053,11 +1108,16 @@ func TestNatsEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			wg := &sync.WaitGroup{}
-			wg.Add(1)
+			counter := 0
+			var counterMu sync.Mutex
 
 			_, err = client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
-				defer wg.Done()
+				defer func() {
+					counterMu.Lock()
+					counter++
+					counterMu.Unlock()
+				}()
+
 				require.Contains(t,
 					errValue.Error(),
 					fmt.Sprintf(
@@ -1074,7 +1134,11 @@ func TestNatsEvents(t *testing.T) {
 				require.NoError(t, clientErr)
 			}()
 
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				counterMu.Lock()
+				defer counterMu.Unlock()
+				return counter == 1
+			}, time.Second*10, time.Millisecond*100)
 		})
 	})
 
@@ -1113,11 +1177,15 @@ func TestNatsEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
-			wg := &sync.WaitGroup{}
-			wg.Add(1)
+			counter := 0
+			var counterMu sync.Mutex
 
 			go func() {
-				defer wg.Done()
+				defer func() {
+					counterMu.Lock()
+					counter++
+					counterMu.Unlock()
+				}()
 
 				gErr := conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
@@ -1216,7 +1284,11 @@ func TestNatsEvents(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				counterMu.Lock()
+				defer counterMu.Unlock()
+				return counter == 1
+			}, time.Second*10, time.Millisecond*100)
 		})
 	})
 
