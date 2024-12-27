@@ -126,28 +126,27 @@ func TestKafkaEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			wg := &sync.WaitGroup{}
-			wg.Add(4)
-
 			count := 0
+			var countMu sync.Mutex
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				defer wg.Done()
+				countMu.Lock()
+				oldCount := count
+				count++
+				countMu.Unlock()
 
-				if count == 0 {
+				if oldCount == 0 {
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					require.Equal(t, "Invalid message received", gqlErr[0].Message)
-				} else if count == 1 || count == 3 {
+				} else if oldCount == 1 || oldCount == 3 {
 					require.NoError(t, errValue)
 					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
-				} else if count == 2 {
+				} else if oldCount == 2 {
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdatedMyKafka.id'.", gqlErr[0].Message)
 				}
-
-				count++
 
 				return nil
 			})
@@ -162,18 +161,32 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
 			produceKafkaMessage(t, xEnv, topics[0], ``) // Empty message
-			xEnv.WaitForMessagesSent(1, time.Second*10)
+			require.Eventually(t, func() bool {
+				countMu.Lock()
+				defer countMu.Unlock()
+				return count == 1
+			}, time.Second*10, time.Millisecond*100)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
-			xEnv.WaitForMessagesSent(2, time.Second*10)
+			require.Eventually(t, func() bool {
+				countMu.Lock()
+				defer countMu.Unlock()
+				return count == 2
+			}, time.Second*10, time.Millisecond*100)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
-			xEnv.WaitForMessagesSent(3, time.Second*10)
+			require.Eventually(t, func() bool {
+				countMu.Lock()
+				defer countMu.Unlock()
+				return count == 3
+			}, time.Second*10, time.Millisecond*100)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
-			xEnv.WaitForMessagesSent(4, time.Second*10)
-
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				countMu.Lock()
+				defer countMu.Unlock()
+				return count == 4
+			}, time.Second*10, time.Millisecond*100)
 
 			require.NoError(t, client.Close())
 
@@ -1048,14 +1061,14 @@ func TestKafkaEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			countWg := sync.Mutex{}
+			countMu := sync.Mutex{}
 			count := 0
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				countWg.Lock()
+				countMu.Lock()
 				oldCount := count
 				count++
-				countWg.Unlock()
+				countMu.Unlock()
 
 				if oldCount == 0 {
 					var gqlErr graphql.Errors
@@ -1084,26 +1097,26 @@ func TestKafkaEvents(t *testing.T) {
 
 			produceKafkaMessage(t, xEnv, topics[0], `{asas`) // Invalid message
 			require.Eventually(t, func() bool {
-				countWg.Lock()
-				defer countWg.Unlock()
+				countMu.Lock()
+				defer countMu.Unlock()
 				return count == 1
 			}, time.Second*10, time.Millisecond*100)
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":1}`) // Correct message
 			require.Eventually(t, func() bool {
-				countWg.Lock()
-				defer countWg.Unlock()
+				countMu.Lock()
+				defer countMu.Unlock()
 				return count == 2
 			}, time.Second*10, time.Millisecond*100)
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
 			require.Eventually(t, func() bool {
-				countWg.Lock()
-				defer countWg.Unlock()
+				countMu.Lock()
+				defer countMu.Unlock()
 				return count == 3
 			}, time.Second*10, time.Millisecond*100)
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
 			require.Eventually(t, func() bool {
-				countWg.Lock()
-				defer countWg.Unlock()
+				countMu.Lock()
+				defer countMu.Unlock()
 				return count == 4
 			}, time.Second*10, time.Millisecond*100)
 
