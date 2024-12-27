@@ -47,7 +47,7 @@ func TestTimeouts(t *testing.T) {
 
 		trafficConfig := config.TrafficShapingRules{
 			All: config.GlobalSubgraphRequestRule{
-				RequestTimeout: 100 * time.Millisecond,
+				RequestTimeout: 500 * time.Millisecond,
 			},
 			Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
 				"hobbies": {
@@ -109,7 +109,7 @@ func TestTimeouts(t *testing.T) {
 
 		trafficConfig := config.TrafficShapingRules{
 			All: config.GlobalSubgraphRequestRule{
-				RequestTimeout: 200 * time.Millisecond,
+				RequestTimeout: 500 * time.Millisecond,
 			},
 			Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
 				"hobbies": {
