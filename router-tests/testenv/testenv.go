@@ -1675,15 +1675,15 @@ func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.D
 func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Duration) {
 	e.t.Helper()
 
-	report := e.Router.WebsocketStats.GetReport()
-	if report.MessagesSent == desiredCount {
-		return
-	}
-
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
 	sub := e.Router.WebsocketStats.Subscribe(ctx)
+
+	report := e.Router.WebsocketStats.GetReport()
+	if report.MessagesSent == desiredCount {
+		return
+	}
 
 	for {
 		select {
@@ -1695,8 +1695,7 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 				e.t.Fatalf("channel closed, timed out waiting for messages sent, got %d, want %d", r.MessagesSent, desiredCount)
 				return
 			}
-			report = r
-			if report.MessagesSent == desiredCount {
+			if r.MessagesSent == desiredCount {
 				return
 			}
 		}
