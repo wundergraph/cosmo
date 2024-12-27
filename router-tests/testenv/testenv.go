@@ -1611,15 +1611,15 @@ func (e *Environment) InitAbsintheWebSocketConnection(header http.Header, initia
 func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time.Duration) {
 	e.t.Helper()
 
-	report := e.Router.WebsocketStats.GetReport()
-	if report.Subscriptions == desiredCount {
-		return
-	}
-
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
 	sub := e.Router.WebsocketStats.Subscribe(ctx)
+
+	report := e.Router.WebsocketStats.GetReport()
+	if report.Subscriptions == desiredCount {
+		return
+	}
 
 	for {
 		select {
@@ -1631,8 +1631,7 @@ func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time
 				e.t.Fatalf("channel, closed timed out waiting for subscription count, got %d, want %d", r.Subscriptions, desiredCount)
 				return
 			}
-			report = r
-			if report.Subscriptions == desiredCount {
+			if r.Subscriptions == desiredCount {
 				time.Sleep(100 * time.Millisecond) // Give NATS some time to have the subscription set up
 				return
 			}
@@ -1643,16 +1642,15 @@ func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time
 func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.Duration) {
 	e.t.Helper()
 
-	report := e.Router.WebsocketStats.GetReport()
-
-	if report.Connections == desiredCount {
-		return
-	}
-
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
 	sub := e.Router.WebsocketStats.Subscribe(ctx)
+
+	report := e.Router.WebsocketStats.GetReport()
+	if report.Connections == desiredCount {
+		return
+	}
 
 	for {
 		select {
@@ -1664,8 +1662,7 @@ func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.D
 				e.t.Fatalf("timed out waiting for connection count, got %d, want %d", r.Connections, desiredCount)
 				return
 			}
-			report = r
-			if report.Connections == desiredCount {
+			if r.Connections == desiredCount {
 				return
 			}
 		}
@@ -1705,15 +1702,15 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Duration) {
 	e.t.Helper()
 
-	report := e.Router.WebsocketStats.GetReport()
-	if report.Triggers == desiredCount {
-		return
-	}
-
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
 	sub := e.Router.WebsocketStats.Subscribe(ctx)
+
+	report := e.Router.WebsocketStats.GetReport()
+	if report.Triggers == desiredCount {
+		return
+	}
 
 	for {
 		select {
@@ -1725,8 +1722,7 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 				e.t.Fatalf("timed out waiting for trigger count, got %d, want %d", r.Triggers, desiredCount)
 				return
 			}
-			report = r
-			if report.Triggers == desiredCount {
+			if r.Triggers == desiredCount {
 				return
 			}
 		}
