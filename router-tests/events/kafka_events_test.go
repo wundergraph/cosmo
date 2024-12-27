@@ -446,11 +446,10 @@ func TestKafkaEvents(t *testing.T) {
 
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
-				wg := &sync.WaitGroup{}
-				wg.Add(1)
+				count := 0
+				var countMu sync.Mutex
 
 				go func() {
-					defer wg.Done()
 					client := http.Client{
 						Timeout: time.Second * 100,
 					}
@@ -463,19 +462,41 @@ func TestKafkaEvents(t *testing.T) {
 
 					assertMultipartPrefix(reader)
 					assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
+
+					countMu.Lock()
+					count++
+					countMu.Unlock()
+
 					assertMultipartPrefix(reader)
 					assertLineEquals(reader, "{}")
+
+					countMu.Lock()
+					count++
+					countMu.Unlock()
+
 					assertMultipartPrefix(reader)
 					assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
+
+					countMu.Lock()
+					count++
+					countMu.Unlock()
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-				time.Sleep(multipartHeartbeatInterval * 2)
+				require.Eventually(t, func() bool {
+					countMu.Lock()
+					defer countMu.Unlock()
+					return count == 2
+				}, time.Second*10, time.Millisecond*100)
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-				wg.Wait()
+				require.Eventually(t, func() bool {
+					countMu.Lock()
+					defer countMu.Unlock()
+					return count == 3
+				}, time.Second*10, time.Millisecond*100)
 
 				xEnv.WaitForSubscriptionCount(0, time.Second*10)
 				xEnv.WaitForConnectionCount(0, time.Second*10)
