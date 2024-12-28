@@ -293,14 +293,16 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 			var kafkaSetupErr error
 			kafkaSetup, kafkaSetupErr = setupKafkaServers(t)
-			if kafkaSetupErr != nil {
+			if kafkaSetupErr != nil || kafkaSetup == nil {
 				t.Fatalf("could not setup kafka: %s", kafkaSetupErr.Error())
+				return
 			}
 			client, err := kgo.NewClient(
 				kgo.SeedBrokers(kafkaSetup.Brokers...),
 			)
 			if err != nil {
 				t.Fatalf("could not create kafka client: %s", err.Error())
+				return
 			}
 			kafkaClient = client
 			kafkaAdminClient = kadm.NewClient(client)

@@ -75,9 +75,6 @@ func TestNatsEvents(t *testing.T) {
 			var closedMu sync.Mutex
 			go func() {
 				require.Eventually(t, func() bool {
-					if t == nil {
-						return false
-					}
 					return subscriptionCalled.Load() == 2
 				}, time.Second*20, time.Millisecond*100)
 				require.NoError(t, client.Close())

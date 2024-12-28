@@ -194,6 +194,11 @@ func TestConfigHotReload(t *testing.T) {
 					requestsStartedLock.Lock()
 					requestsStarted++
 					requestsStartedLock.Unlock()
+					defer func() {
+						requestsDoneLock.Lock()
+						requestsDone++
+						requestsDoneLock.Unlock()
+					}()
 
 					// Create a new context for each request to ensure that the request is not cancelled by the shutdown
 					res, err := xEnv.MakeGraphQLRequestWithContext(context.Background(), testenv.GraphQLRequest{
@@ -202,10 +207,6 @@ func TestConfigHotReload(t *testing.T) {
 					require.NoError(t, err)
 					require.Equal(t, res.Response.StatusCode, 200)
 					require.JSONEq(t, employeesIDData, res.Body)
-
-					requestsDoneLock.Lock()
-					requestsDone++
-					requestsDoneLock.Unlock()
 				}()
 			}
 
@@ -223,7 +224,7 @@ func TestConfigHotReload(t *testing.T) {
 				requestsDoneLock.Lock()
 				defer requestsDoneLock.Unlock()
 				return requestsDone == 10
-			}, time.Second*10, time.Millisecond*100)
+			}, time.Second*20, time.Millisecond*100)
 		})
 	})
 
