@@ -6359,7 +6359,7 @@ func TestTelemetry(t *testing.T) {
 			})
 		})
 
-		t.Run("root fields caches success and failure runs", func(t *testing.T) {
+		t.Run("root fields caches success and failure runs 1", func(t *testing.T) {
 			t.Parallel()
 
 			metricReader := metric.NewManualReader()
@@ -6421,7 +6421,7 @@ func TestTelemetry(t *testing.T) {
 			})
 		})
 
-		t.Run("root fields caches success and failure runs", func(t *testing.T) {
+		t.Run("root fields caches success and failure runs 2", func(t *testing.T) {
 			t.Parallel()
 
 			metricReader := metric.NewManualReader()
