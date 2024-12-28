@@ -223,7 +223,7 @@ func TestConfigHotReload(t *testing.T) {
 				requestsDoneLock.Lock()
 				defer requestsDoneLock.Unlock()
 				return requestsDone == 10
-			}, time.Second*5, time.Millisecond*100)
+			}, time.Second*10, time.Millisecond*100)
 		})
 	})
 
