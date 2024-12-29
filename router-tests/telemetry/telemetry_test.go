@@ -2101,6 +2101,7 @@ func TestRuntimeTelemetry(t *testing.T) {
 		metricReader := metric.NewManualReader()
 		exporter := tracetest.NewInMemoryExporter(t)
 
+		start := time.Now()
 		testenv.Run(t, &testenv.Config{
 			TraceExporter: exporter,
 			MetricReader:  metricReader,
@@ -2125,6 +2126,8 @@ func TestRuntimeTelemetry(t *testing.T) {
 			require.NotNil(t, runtimeScope)
 			require.Len(t, runtimeScope.Metrics, 15)
 
+			metricRuntimeUptime := getMetricByName(runtimeScope, "runtime.uptime")
+			runtimeUptimeValue := time.Now().Sub(start).Round(time.Second)
 			runtimeUptimeMetric := metricdata.Metrics{
 				Name:        "runtime.uptime",
 				Description: "Seconds since application was initialized",
@@ -2140,13 +2143,13 @@ func TestRuntimeTelemetry(t *testing.T) {
 								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
-							Value: 0,
+							Value: int64(runtimeUptimeValue),
 						},
 					},
 				},
 			}
 
-			metricdatatest.AssertEqual(t, runtimeUptimeMetric, *getMetricByName(runtimeScope, "runtime.uptime"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, runtimeUptimeMetric, *metricRuntimeUptime, metricdatatest.IgnoreTimestamp())
 
 			processCpuUsageMetric := metricdata.Metrics{
 				Name:        "process.cpu.usage",
@@ -2169,6 +2172,8 @@ func TestRuntimeTelemetry(t *testing.T) {
 
 			metricdatatest.AssertEqual(t, processCpuUsageMetric, *getMetricByName(runtimeScope, "process.cpu.usage"), metricdatatest.IgnoreTimestamp())
 
+			metricServerUptime := getMetricByName(runtimeScope, "server.uptime")
+			serverUptimeValue := time.Now().Sub(start).Round(time.Second)
 			serverUptimeMetric := metricdata.Metrics{
 				Name:        "server.uptime",
 				Description: "Seconds since the server started. Resets between router config changes.",
@@ -2184,13 +2189,13 @@ func TestRuntimeTelemetry(t *testing.T) {
 								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
-							Value: 0,
+							Value: int64(serverUptimeValue),
 						},
 					},
 				},
 			}
 
-			metricdatatest.AssertEqual(t, serverUptimeMetric, *getMetricByName(runtimeScope, "server.uptime"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, serverUptimeMetric, *metricServerUptime, metricdatatest.IgnoreTimestamp())
 
 			processRuntimeGoMemHeapAllocMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.heap_alloc",
