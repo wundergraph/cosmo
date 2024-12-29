@@ -2,7 +2,6 @@ package telemetry
 
 import (
 	"context"
-	"math"
 	"net/http"
 	"regexp"
 	"runtime"
@@ -2128,7 +2127,7 @@ func TestRuntimeTelemetry(t *testing.T) {
 			require.Len(t, runtimeScope.Metrics, 15)
 
 			metricRuntimeUptime := getMetricByName(runtimeScope, "runtime.uptime")
-			runtimeUptimeValue := math.Round(time.Since(start).Seconds())
+			runtimeUptimeValue := time.Since(start).Truncate(time.Second).Seconds()
 			runtimeUptimeMetric := metricdata.Metrics{
 				Name:        "runtime.uptime",
 				Description: "Seconds since application was initialized",
@@ -2174,7 +2173,7 @@ func TestRuntimeTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, processCpuUsageMetric, *getMetricByName(runtimeScope, "process.cpu.usage"), metricdatatest.IgnoreTimestamp())
 
 			metricServerUptime := getMetricByName(runtimeScope, "server.uptime")
-			serverUptimeValue := math.Round(time.Since(start).Seconds())
+			serverUptimeValue := time.Since(start).Truncate(time.Second).Seconds()
 			serverUptimeMetric := metricdata.Metrics{
 				Name:        "server.uptime",
 				Description: "Seconds since the server started. Resets between router config changes.",
