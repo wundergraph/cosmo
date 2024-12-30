@@ -281,16 +281,16 @@ func TestNatsEvents(t *testing.T) {
 	t.Run("multipart", func(t *testing.T) {
 		t.Parallel()
 
-		assertLineEquals := func(reader *bufio.Reader, expected string) {
+		assertLineEquals := func(t *testing.T, reader *bufio.Reader, expected string) {
 			line, _, err := reader.ReadLine()
 			require.NoError(t, err)
 			require.Equal(t, expected, string(line))
 		}
 
-		assertMultipartPrefix := func(reader *bufio.Reader) {
-			assertLineEquals(reader, "--graphql")
-			assertLineEquals(reader, "Content-Type: application/json")
-			assertLineEquals(reader, "")
+		assertMultipartPrefix := func(t *testing.T, reader *bufio.Reader) {
+			assertLineEquals(t, reader, "--graphql")
+			assertLineEquals(t, reader, "Content-Type: application/json")
+			assertLineEquals(t, reader, "")
 		}
 
 		heartbeatInterval := 150 * time.Millisecond
@@ -312,10 +312,11 @@ func TestNatsEvents(t *testing.T) {
 
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
 
-				var counter atomic.Uint32
+				var produced atomic.Uint32
+				var consumed atomic.Uint32
 
 				go func() {
-					defer counter.Add(1)
+					defer produced.Add(1)
 
 					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
 					resp, err := xEnv.RouterClient.Do(req)
@@ -332,12 +333,20 @@ func TestNatsEvents(t *testing.T) {
 					reader := bufio.NewReader(resp.Body)
 
 					// Read the first part
-					assertMultipartPrefix(reader)
-					assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
-					assertMultipartPrefix(reader)
-					assertLineEquals(reader, "{}")
-					assertMultipartPrefix(reader)
-					assertLineEquals(reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
+					assertMultipartPrefix(t, reader)
+					assertLineEquals(t, reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
+					consumed.Add(1)
+
+					assertMultipartPrefix(t, reader)
+					assertLineEquals(t, reader, "{}")
+					consumed.Add(1)
+
+					require.Eventually(t, func() bool {
+						return produced.Load() == 2
+					}, time.Second*5, time.Millisecond*100)
+					assertMultipartPrefix(t, reader)
+					assertLineEquals(t, reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
+					consumed.Add(1)
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -348,17 +357,22 @@ func TestNatsEvents(t *testing.T) {
 					Query: `mutation { updateAvailability(employeeID: 3, isAvailable: true) { id } }`,
 				})
 				require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
+				produced.Add(1)
 
-				time.Sleep(heartbeatInterval * 2)
+				require.Eventually(t, func() bool {
+					return consumed.Load() == 2
+				}, time.Second*10, time.Millisecond*100)
+
 				// Trigger the subscription via NATS
 				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
 				require.NoError(t, err)
 
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
+				produced.Add(1)
 
 				require.Eventually(t, func() bool {
-					return counter.Load() == 1
+					return consumed.Load() == 3
 				}, time.Second*10, time.Millisecond*100)
 			})
 		})
@@ -395,8 +409,8 @@ func TestNatsEvents(t *testing.T) {
 					reader := bufio.NewReader(resp.Body)
 
 					// Read the first part
-					assertMultipartPrefix(reader)
-					assertLineEquals(reader, "{}")
+					assertMultipartPrefix(t, reader)
+					assertLineEquals(t, reader, "{}")
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -432,15 +446,15 @@ func TestNatsEvents(t *testing.T) {
 					reader := bufio.NewReader(resp.Body)
 
 					// Read the first part
-					assertMultipartPrefix(reader)
-					assertLineEquals(reader, "{\"payload\":{\"data\":{\"countFor\":0}}}")
-					assertMultipartPrefix(reader)
-					assertLineEquals(reader, "{\"payload\":{\"data\":{\"countFor\":1}}}")
-					assertMultipartPrefix(reader)
-					assertLineEquals(reader, "{\"payload\":{\"data\":{\"countFor\":2}}}")
-					assertMultipartPrefix(reader)
-					assertLineEquals(reader, "{\"payload\":{\"data\":{\"countFor\":3}}}")
-					assertLineEquals(reader, "--graphql--")
+					assertMultipartPrefix(t, reader)
+					assertLineEquals(t, reader, "{\"payload\":{\"data\":{\"countFor\":0}}}")
+					assertMultipartPrefix(t, reader)
+					assertLineEquals(t, reader, "{\"payload\":{\"data\":{\"countFor\":1}}}")
+					assertMultipartPrefix(t, reader)
+					assertLineEquals(t, reader, "{\"payload\":{\"data\":{\"countFor\":2}}}")
+					assertMultipartPrefix(t, reader)
+					assertLineEquals(t, reader, "{\"payload\":{\"data\":{\"countFor\":3}}}")
+					assertLineEquals(t, reader, "--graphql--")
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -476,8 +490,8 @@ func TestNatsEvents(t *testing.T) {
 					defer resp.Body.Close()
 					reader := bufio.NewReader(resp.Body)
 
-					assertMultipartPrefix(reader)
-					assertLineEquals(reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
+					assertMultipartPrefix(t, reader)
+					assertLineEquals(t, reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
 				}
 			})
 		})
