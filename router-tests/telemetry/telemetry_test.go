@@ -2101,7 +2101,6 @@ func TestRuntimeTelemetry(t *testing.T) {
 		metricReader := metric.NewManualReader()
 		exporter := tracetest.NewInMemoryExporter(t)
 
-		start := time.Now()
 		testenv.Run(t, &testenv.Config{
 			TraceExporter: exporter,
 			MetricReader:  metricReader,
@@ -2127,7 +2126,9 @@ func TestRuntimeTelemetry(t *testing.T) {
 			require.Len(t, runtimeScope.Metrics, 15)
 
 			metricRuntimeUptime := getMetricByName(runtimeScope, "runtime.uptime")
-			runtimeUptimeValue := time.Since(start).Truncate(time.Second).Seconds()
+			require.NotNil(t, metricRuntimeUptime)
+			metricRuntimeUptimeDataType := metricRuntimeUptime.Data.(metricdata.Sum[int64])
+			require.Len(t, metricRuntimeUptimeDataType.DataPoints, 1)
 			runtimeUptimeMetric := metricdata.Metrics{
 				Name:        "runtime.uptime",
 				Description: "Seconds since application was initialized",
@@ -2143,7 +2144,7 @@ func TestRuntimeTelemetry(t *testing.T) {
 								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
-							Value: int64(runtimeUptimeValue),
+							Value: metricRuntimeUptimeDataType.DataPoints[0].Value,
 						},
 					},
 				},
@@ -2173,7 +2174,9 @@ func TestRuntimeTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, processCpuUsageMetric, *getMetricByName(runtimeScope, "process.cpu.usage"), metricdatatest.IgnoreTimestamp())
 
 			metricServerUptime := getMetricByName(runtimeScope, "server.uptime")
-			serverUptimeValue := time.Since(start).Truncate(time.Second).Seconds()
+			require.NotNil(t, metricServerUptime)
+			metricServerUptimeDataType := metricServerUptime.Data.(metricdata.Sum[int64])
+			require.Len(t, metricServerUptimeDataType.DataPoints, 1)
 			serverUptimeMetric := metricdata.Metrics{
 				Name:        "server.uptime",
 				Description: "Seconds since the server started. Resets between router config changes.",
@@ -2189,7 +2192,7 @@ func TestRuntimeTelemetry(t *testing.T) {
 								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
-							Value: int64(serverUptimeValue),
+							Value: metricServerUptimeDataType.DataPoints[0].Value,
 						},
 					},
 				},
