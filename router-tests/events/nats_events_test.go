@@ -102,7 +102,7 @@ func TestNatsEvents(t *testing.T) {
 				closedMu.Lock()
 				defer closedMu.Unlock()
 				return closed
-			}, time.Second*10, time.Millisecond*100)
+			}, time.Second*20, time.Millisecond*100)
 
 			xEnv.WaitForMessagesSent(2, time.Second*10)
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)

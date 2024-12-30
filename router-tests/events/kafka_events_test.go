@@ -822,10 +822,14 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
 			var counter atomic.Uint32
+			var produced atomic.Uint32
 
 			go func() {
 				defer counter.Add(1)
 
+				require.Eventually(t, func() bool {
+					return produced.Load() >= 1
+				}, time.Second*5, time.Millisecond*100)
 				gErr := conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -836,6 +840,9 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Forename)
 				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Surname)
 
+				require.Eventually(t, func() bool {
+					return produced.Load() >= 2
+				}, time.Second*5, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -846,6 +853,9 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, "Dustin", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Forename)
 				require.Equal(t, "Deus", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Surname)
 
+				require.Eventually(t, func() bool {
+					return produced.Load() >= 11
+				}, time.Second*5, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -856,6 +866,9 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Forename)
 				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Surname)
 
+				require.Eventually(t, func() bool {
+					return produced.Load() >= 12
+				}, time.Second*5, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -869,10 +882,8 @@ func TestKafkaEvents(t *testing.T) {
 
 			// Events 1, 2, 11, and 12 should be included
 			for i := 1; i < 13; i++ {
-				// Ensure the Kafka consumer can keep up with the provider
-				time.Sleep(time.Millisecond * 100)
-
 				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
+				produced.Add(1)
 			}
 
 			require.Eventually(t, func() bool {
