@@ -6,6 +6,7 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"sync"
 
 	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -31,6 +32,7 @@ type HttpFlushWriter struct {
 	sse           bool
 	multipart     bool
 	buf           *bytes.Buffer
+	bufMu         sync.Mutex
 }
 
 func (f *HttpFlushWriter) Complete() {
@@ -47,6 +49,9 @@ func (f *HttpFlushWriter) Complete() {
 }
 
 func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
+	f.bufMu.Lock()
+	defer f.bufMu.Unlock()
+
 	if err = f.ctx.Err(); err != nil {
 		return
 	}
@@ -63,6 +68,9 @@ func (f *HttpFlushWriter) Close() {
 }
 
 func (f *HttpFlushWriter) Flush() (err error) {
+	f.bufMu.Lock()
+	defer f.bufMu.Unlock()
+
 	if err = f.ctx.Err(); err != nil {
 		return err
 	}
