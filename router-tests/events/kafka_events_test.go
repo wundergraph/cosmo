@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/wundergraph/cosmo/router/core"
 	"net/http"
+	"slices"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -821,11 +822,12 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
-			var counter atomic.Uint32
+			var done atomic.Uint32
 			var produced atomic.Uint32
+			var consumed atomic.Uint32
 
 			go func() {
-				defer counter.Add(1)
+				defer done.Add(1)
 
 				require.Eventually(t, func() bool {
 					return produced.Load() >= 1
@@ -839,6 +841,7 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.ID)
 				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Forename)
 				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Surname)
+				consumed.Add(1)
 
 				require.Eventually(t, func() bool {
 					return produced.Load() >= 2
@@ -852,6 +855,7 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, float64(2), payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.ID)
 				require.Equal(t, "Dustin", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Forename)
 				require.Equal(t, "Deus", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Surname)
+				consumed.Add(1)
 
 				require.Eventually(t, func() bool {
 					return produced.Load() >= 11
@@ -865,6 +869,7 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, float64(11), payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.ID)
 				require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Forename)
 				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Surname)
+				consumed.Add(1)
 
 				require.Eventually(t, func() bool {
 					return produced.Load() >= 12
@@ -878,16 +883,33 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, float64(12), payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.ID)
 				require.Equal(t, "David", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Forename)
 				require.Equal(t, "Stutt", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Surname)
+				consumed.Add(1)
 			}()
 
 			// Events 1, 2, 11, and 12 should be included
+			var oldConsumed uint32
 			for i := 1; i < 13; i++ {
+				require.Eventually(t, func() bool {
+					if oldConsumed == 0 {
+						return true
+					}
+					newConsumed := consumed.Load()
+					if slices.Contains([]int{1, 2, 11, 12}, i) {
+						if oldConsumed != newConsumed {
+							oldConsumed = newConsumed
+							return true
+						} else {
+							return false
+						}
+					}
+					return true
+				}, time.Second*10, time.Millisecond*100)
 				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
 				produced.Add(1)
 			}
 
 			require.Eventually(t, func() bool {
-				return counter.Load() == 1
+				return done.Load() == 1
 			}, time.Second*10, time.Millisecond*100)
 		})
 	})
