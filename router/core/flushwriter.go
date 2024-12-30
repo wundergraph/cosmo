@@ -63,9 +63,6 @@ func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
 }
 
 func (f *HttpFlushWriter) Close() {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
 	if f.ctx.Err() != nil {
 		return
 	}
