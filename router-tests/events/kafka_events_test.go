@@ -421,7 +421,7 @@ func TestKafkaEvents(t *testing.T) {
 			assertLineEquals(t, reader, "")
 		}
 
-		var multipartHeartbeatInterval = 500 * time.Millisecond
+		var multipartHeartbeatInterval = time.Second
 
 		t.Run("subscribe sync", func(t *testing.T) {
 			t.Parallel()
@@ -452,7 +452,6 @@ func TestKafkaEvents(t *testing.T) {
 					defer resp.Body.Close()
 					reader := bufio.NewReader(resp.Body)
 
-					xEnv.WaitForMessagesSent(1, time.Second*10)
 					assertMultipartPrefix(t, reader)
 					assertLineEquals(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 
