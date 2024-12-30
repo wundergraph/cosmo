@@ -29,18 +29,6 @@ jobs:
     if: github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    services:
-      redis:
-        # Docker Hub image
-        image: redis:7
-        # Set health checks to wait until redis has started
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6379:6379
     steps:
       - uses: actions/checkout@v4
 
@@ -82,10 +70,6 @@ jobs:
         working-directory: ./router
         run: make test
 
-      - name: Run Integration tests
-        working-directory: ./router-tests
-        run: make test test_params="--timeout=5m"
-
       - name: Build
         working-directory: ./router
         run: make build
@@ -96,21 +80,6 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    services:
-      redis:
-        # Docker Hub image
-        image: redis:7
-        # Set health checks to wait until redis has started
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        credentials:
-          username: ${{secrets.DOCKER_USERNAME}}
-          password: ${{secrets.DOCKER_PASSWORD}}
-        ports:
-          - 6379:6379
     steps:
       - uses: actions/checkout@v4
 
@@ -159,13 +128,35 @@ jobs:
         working-directory: ./router
         run: make test
 
-      - name: Run Integration tests
-        working-directory: ./router-tests
-        run: make test test_params="--timeout=5m"
-
       - name: Build
         working-directory: ./router
         run: make build
+
+  integration_test:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      redis:
+        # Docker Hub image
+        image: redis:7
+        # Set health checks to wait until redis has started
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        credentials:
+          username: ${{secrets.DOCKER_USERNAME}}
+          password: ${{secrets.DOCKER_PASSWORD}}
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Integration tests
+        working-directory: ./router-tests
+        run: make test test_params="--timeout=5m"
 
   image_scan:
     if: github.event.pull_request.head.repo.full_name == github.repository
