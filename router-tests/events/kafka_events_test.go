@@ -929,10 +929,12 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
-			var processed atomic.Bool
+			var completed atomic.Bool
 			var produced atomic.Uint32
 
 			go func() {
+				defer completed.Store(true)
+
 				require.Eventually(t, func() bool {
 					return produced.Load() >= 1
 				}, 10*time.Second, 100*time.Millisecond)
@@ -945,7 +947,6 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.ID)
 				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Forename)
 				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Surname)
-				processed.Store(true)
 
 				require.Eventually(t, func() bool {
 					return produced.Load() >= 2
@@ -959,7 +960,6 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, float64(2), payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.ID)
 				require.Equal(t, "Dustin", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Forename)
 				require.Equal(t, "Deus", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Surname)
-				processed.Store(true)
 
 				require.Eventually(t, func() bool {
 					return produced.Load() >= 11
@@ -973,7 +973,6 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, float64(11), payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.ID)
 				require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Forename)
 				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Surname)
-				processed.Store(true)
 
 				require.Eventually(t, func() bool {
 					return produced.Load() >= 12
@@ -987,18 +986,16 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, float64(12), payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.ID)
 				require.Equal(t, "David", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Forename)
 				require.Equal(t, "Stutt", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Surname)
-				processed.Store(true)
 			}()
 
 			// Events 1, 2, 11, and 12 should be included
 			for i := 1; i < 13; i++ {
 				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
-				processed.Store(false)
 				produced.Add(1)
 			}
 
 			require.Eventually(t, func() bool {
-				return processed.Load() && produced.Load() == 12
+				return completed.Load()
 			}, time.Second*20, time.Millisecond*100)
 		})
 	})
