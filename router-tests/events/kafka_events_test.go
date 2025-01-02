@@ -34,14 +34,14 @@ func TestLocalKafka(t *testing.T) {
 }
 
 func TestKafkaEvents(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 	// All tests are running in sequence because they are using the same kafka topic
 
 	if testing.Short() {
 		t.Skip("skipping test in short mode.")
 	}
 	t.Run("subscribe async", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -101,7 +101,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("message and resolve errors should not abort the subscription", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -186,7 +186,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("every subscriber gets the message", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -252,7 +252,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe to multiple topics through a single directive", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -343,7 +343,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe async netPoll disabled", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -407,7 +407,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("multipart", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		assertLineEquals := func(t *testing.T, reader *bufio.Reader, expected string) {
 			line, _, err := reader.ReadLine()
@@ -424,7 +424,7 @@ func TestKafkaEvents(t *testing.T) {
 		var multipartHeartbeatInterval = time.Second
 
 		t.Run("subscribe sync", func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 
 			topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -496,7 +496,7 @@ func TestKafkaEvents(t *testing.T) {
 		})
 
 		t.Run("subscribe sync with block", func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
@@ -527,7 +527,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe sync sse legacy method works", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -587,7 +587,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe sync sse", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -646,7 +646,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe sync sse with block", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
@@ -687,7 +687,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe async with filter", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -817,7 +817,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe async with filter and multiple list field arguments", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -930,7 +930,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe async with filter and nested list argument", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -1043,7 +1043,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe async with filter non-matching filter and nested list argument", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
@@ -1110,7 +1110,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("message with invalid JSON should give a specific error", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
