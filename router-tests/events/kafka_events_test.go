@@ -439,7 +439,8 @@ func TestKafkaEvents(t *testing.T) {
 
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
-				var counter atomic.Uint32
+				var consumed atomic.Uint32
+				var produced atomic.Uint32
 
 				go func() {
 					client := http.Client{
@@ -452,32 +453,41 @@ func TestKafkaEvents(t *testing.T) {
 					defer resp.Body.Close()
 					reader := bufio.NewReader(resp.Body)
 
+					require.Eventually(t, func() bool {
+						return produced.Load() == 1
+					}, time.Second*10, time.Millisecond*100)
 					assertMultipartPrefix(t, reader)
 					assertLineEquals(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
-
-					counter.Add(1)
+					consumed.Add(1)
 
 					assertMultipartPrefix(t, reader)
 					assertLineEquals(t, reader, "{}")
+					consumed.Add(1)
 
-					counter.Add(1)
-
+					require.Eventually(t, func() bool {
+						return produced.Load() == 2
+					}, time.Second*10, time.Millisecond*100)
 					assertMultipartPrefix(t, reader)
 					assertLineEquals(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 
-					counter.Add(1)
+					consumed.Add(1)
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-				require.Eventually(t, func() bool {
-					return counter.Load() == 2
-				}, time.Second*10, time.Millisecond*100)
-				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+				xEnv.WaitForMessagesSent(1, time.Second*5)
+				produced.Add(1)
 
 				require.Eventually(t, func() bool {
-					return counter.Load() == 3
+					return consumed.Load() == 2
+				}, time.Second*10, time.Millisecond*100)
+				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+				xEnv.WaitForMessagesSent(3, time.Second*5) // 2 messages + the empty one
+				produced.Add(1)
+
+				require.Eventually(t, func() bool {
+					return consumed.Load() == 3
 				}, time.Second*10, time.Millisecond*100)
 
 				xEnv.WaitForSubscriptionCount(0, time.Second*10)
@@ -1223,7 +1233,8 @@ func produceKafkaMessage(t *testing.T, xEnv *testenv.Environment, topicName stri
 		return done.Load()
 	}, time.Second*10, time.Millisecond*100)
 
-	xEnv.KafkaClient.Flush(ctx)
-
 	require.NoError(t, pErr)
+
+	fErr := xEnv.KafkaClient.Flush(ctx)
+	require.NoError(t, fErr)
 }
