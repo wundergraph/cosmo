@@ -53,10 +53,10 @@ func setupKafkaServers(t testing.TB) (*KafkaData, error) {
 		// Please don't try to improve this code as this workaround allows running the tests without any issues
 		kafkaData.Container, err = kafka.RunContainer(ctx,
 			testcontainers.WithImage("confluentinc/confluent-local:7.6.1"),
-			testcontainers.WithWaitStrategyAndDeadline(time.Second*30, wait.ForListeningPort("9093/tcp")),
+			testcontainers.WithWaitStrategyAndDeadline(time.Second*10, wait.ForListeningPort("9093/tcp")),
 		)
 		return err == nil && kafkaData.Container != nil
-	}, time.Second*30, time.Second)
+	}, time.Second*60, time.Second)
 
 	require.NoError(t, err)
 	if err != nil {
