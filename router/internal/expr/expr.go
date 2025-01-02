@@ -32,14 +32,19 @@ type RequestContext struct {
 // it is limited in scope to the URL object and its components. For convenience, the query parameters are parsed.
 type RequestURL struct {
 	Method string
+	// Scheme is the scheme of the URL
 	Scheme string
-	Host   string
-	Path   string
-	Query  map[string]string
+	// Host is the host of the URL
+	Host string
+	// Path is the path of the URL
+	Path string
+	// Query is the parsed query parameters
+	Query map[string]string
 }
 
 // RequestHeaders is the context for the headers object in expressions
 type RequestHeaders struct {
+	// Header is the http headers. We expose the header object to work with header case-insensitive
 	Header http.Header
 }
 
