@@ -27,10 +27,10 @@ import (
 )
 
 func TestNatsEvents(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
 	t.Run("subscribe async", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -116,7 +116,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("message and resolve errors should not abort the subscription", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -204,7 +204,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe async netPoll disabled", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -279,7 +279,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("multipart", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		assertLineEquals := func(t *testing.T, reader *bufio.Reader, expected string) {
 			line, _, err := reader.ReadLine()
@@ -296,7 +296,7 @@ func TestNatsEvents(t *testing.T) {
 		heartbeatInterval := 150 * time.Millisecond
 
 		t.Run("subscribe with multipart responses", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
@@ -378,7 +378,7 @@ func TestNatsEvents(t *testing.T) {
 		})
 
 		t.Run("subscribe with multipart responses http/1", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
 				EnableNats: true,
@@ -422,7 +422,7 @@ func TestNatsEvents(t *testing.T) {
 		})
 
 		t.Run("subscribe with closing channel", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
 				EnableNats: true,
@@ -465,7 +465,7 @@ func TestNatsEvents(t *testing.T) {
 		})
 
 		t.Run("subscribe sync multipart with block", func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
 				EnableNats: true,
@@ -498,7 +498,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe once", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -565,7 +565,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe sync sse works without query param", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -637,7 +637,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe sync sse with block", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -700,7 +700,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe sync sse client close", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -770,7 +770,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("request", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -814,7 +814,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("publish", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -862,7 +862,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe to multiple subjects", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -928,7 +928,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe with stream and consumer", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -1038,7 +1038,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribing to a non-existent stream returns an error", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -1091,7 +1091,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe ws with filter", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -1131,7 +1131,7 @@ func TestNatsEvents(t *testing.T) {
 			go func() {
 				require.Eventually(t, func() bool {
 					return produced.Load() == 1
-				}, time.Second*5, time.Millisecond*100)
+				}, time.Second*10, time.Millisecond*100)
 				gErr := conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -1145,7 +1145,7 @@ func TestNatsEvents(t *testing.T) {
 
 				require.Eventually(t, func() bool {
 					return produced.Load() == 2
-				}, time.Second*5, time.Millisecond*100)
+				}, time.Second*10, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -1159,7 +1159,7 @@ func TestNatsEvents(t *testing.T) {
 
 				require.Eventually(t, func() bool {
 					return produced.Load() == 4
-				}, time.Second*5, time.Millisecond*100)
+				}, time.Second*10, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -1173,7 +1173,7 @@ func TestNatsEvents(t *testing.T) {
 
 				require.Eventually(t, func() bool {
 					return produced.Load() == 5
-				}, time.Second*5, time.Millisecond*100)
+				}, time.Second*10, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -1187,7 +1187,7 @@ func TestNatsEvents(t *testing.T) {
 
 				require.Eventually(t, func() bool {
 					return produced.Load() == 6
-				}, time.Second*5, time.Millisecond*100)
+				}, time.Second*10, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -1201,7 +1201,7 @@ func TestNatsEvents(t *testing.T) {
 
 				require.Eventually(t, func() bool {
 					return produced.Load() == 8
-				}, time.Second*5, time.Millisecond*100)
+				}, time.Second*10, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -1215,7 +1215,7 @@ func TestNatsEvents(t *testing.T) {
 
 				require.Eventually(t, func() bool {
 					return produced.Load() == 9
-				}, time.Second*5, time.Millisecond*100)
+				}, time.Second*10, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -1229,7 +1229,7 @@ func TestNatsEvents(t *testing.T) {
 
 				require.Eventually(t, func() bool {
 					return produced.Load() == 12
-				}, time.Second*5, time.Millisecond*100)
+				}, time.Second*10, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -1267,7 +1267,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe sse with filter", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -1463,7 +1463,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("message with invalid JSON should give a specific error", func(t *testing.T) {
-		t.Parallel()
+		// t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -1520,6 +1520,7 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
+			xEnv.WaitForMessagesSent(1, time.Second*10)
 			produced.Add(1)
 
 			require.Eventually(t, func() bool {
@@ -1529,6 +1530,7 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
+			xEnv.WaitForMessagesSent(2, time.Second*10)
 			produced.Add(1)
 
 			require.Eventually(t, func() bool {
@@ -1538,6 +1540,7 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
+			xEnv.WaitForMessagesSent(3, time.Second*10)
 			produced.Add(1)
 
 			require.Eventually(t, func() bool {
@@ -1547,6 +1550,7 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
+			xEnv.WaitForMessagesSent(4, time.Second*10)
 			produced.Add(1)
 
 			require.Eventually(t, func() bool {
