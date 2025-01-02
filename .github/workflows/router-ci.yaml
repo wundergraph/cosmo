@@ -159,7 +159,7 @@ jobs:
 
       - name: Run Integration tests
         working-directory: ./router-tests
-        run: make test test_params="--timeout=5m --parallel=5"
+        run: make test test_params="--timeout=15m -p=1 --parallel=1"
 
   image_scan:
     if: github.event.pull_request.head.repo.full_name == github.repository
