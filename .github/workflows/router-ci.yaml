@@ -164,7 +164,7 @@ jobs:
           retry_on: error
           command: |
             cd router-tests
-            make test test_params="--timeout=15m -p=1 --parallel=1"
+            make test test_params="--timeout=15m"
 
   image_scan:
     if: github.event.pull_request.head.repo.full_name == github.repository
