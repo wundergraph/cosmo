@@ -43,17 +43,17 @@ At runtime, the following expression can be used to set additional fields in the
 
 ```
 # set agent to undefined
-unset("request.context.agent")
+unsetContext("request.context.agent")
 ```
 
 ```
 # set agent to request.auth.claims.sub
-set("request.context.agent", request.auth.claims.sub)
+setContext("agent", request.auth.claims.sub)
 ```
 
 ```
 # add another field to the context object
-set("request.context.client", request.client.name)
+setContext("client", request.client.name)
 ```
 
 # authentication
