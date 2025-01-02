@@ -84,6 +84,7 @@ type RequestAuth struct {
 }
 
 // LoadAuth loads the authentication context into the request object.
+// Must only be called when the authentication was successful.
 func (r *RequestRootContext) LoadAuth(ctx context.Context) {
 	authCtx := authentication.FromContext(ctx)
 	if authCtx == nil {
