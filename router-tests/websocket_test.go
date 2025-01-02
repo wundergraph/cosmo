@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -470,10 +471,9 @@ func TestWebSockets(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			var wg sync.WaitGroup
-			wg.Add(1)
+			var done atomic.Bool
 			go func() {
-				defer wg.Done()
+				defer done.Store(true)
 				xEnv.WaitForSubscriptionCount(1, time.Second*5)
 				// Trigger the subscription via NATS
 				subject := xEnv.GetPubSubName("employeeUpdated.3")
@@ -483,7 +483,7 @@ func TestWebSockets(t *testing.T) {
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 			}()
-			wg.Wait()
+			require.Eventually(t, done.Load, time.Second*5, time.Millisecond*100)
 
 			var res testenv.WebSocketMessage
 			err = conn.ReadJSON(&res)
