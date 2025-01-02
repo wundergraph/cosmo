@@ -159,7 +159,11 @@ jobs:
 
       - name: Run Integration tests
         working-directory: ./router-tests
-        run: make test test_params="--timeout=15m -p=1 --parallel=1"
+        run: make test test_params=". ./fuzzquery ./modules ./telemetry --timeout=10m -p=3 --parallel=5"
+
+      - name: Run EDFS Integration tests
+        working-directory: ./router-tests
+        run: make test test_params="./events --timeout=15m --parallel=2"
 
   image_scan:
     if: github.event.pull_request.head.repo.full_name == github.repository
