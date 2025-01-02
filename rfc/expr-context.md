@@ -113,3 +113,22 @@ response.status // HTTP status code
 response.header // HTTP headers
 response.body // HTTP body
 ```
+
+# field.*
+
+The field object provides information about the field being resolved.
+This is useful, e.g. in the case of defining an Event Driven Subgraph. 
+
+```graphql
+type Subscription {
+    employeeUpdated(employeeID: ID!): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ field.args.employeeID }}"])
+}
+```
+
+```
+field.name // name of the field, e.g. employeeUpdated
+field.args // arguments of the field, e.g. { employeeID: "123" }
+field.type // type of the field, e.g. Employee
+field.parentType // parent type of the field, e.g. Subscription
+field.path // path of the field, e.g. employeeUpdated
+```
