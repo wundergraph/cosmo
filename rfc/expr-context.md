@@ -21,7 +21,6 @@ request.uri.port
 request.client.name
 request.client.version
 request.client.ip
-request.routerConfigVersion
 ```
 
 # request.context
@@ -132,4 +131,12 @@ field.args // arguments of the field, e.g. { employeeID: "123" }
 field.type // type of the field, e.g. Employee
 field.parentType // parent type of the field, e.g. Subscription
 field.path // path of the field, e.g. employeeUpdated
+```
+
+# router
+
+The router object provides information about the router.
+
+```
+router.config.version
 ```
