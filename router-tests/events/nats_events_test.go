@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -27,10 +26,10 @@ import (
 )
 
 func TestNatsEvents(t *testing.T) {
-	// t.Parallel()
+	t.Parallel()
 
 	t.Run("subscribe async", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -71,16 +70,13 @@ func TestNatsEvents(t *testing.T) {
 				require.NoError(t, clientErr)
 			}()
 
-			var closed bool
-			var closedMu sync.Mutex
+			var closed atomic.Bool
 			go func() {
 				require.Eventually(t, func() bool {
 					return subscriptionCalled.Load() == 2
 				}, time.Second*20, time.Millisecond*100)
 				require.NoError(t, client.Close())
-				closedMu.Lock()
-				closed = true
-				closedMu.Unlock()
+				closed.Store(true)
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
@@ -99,9 +95,7 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Eventually(t, func() bool {
-				closedMu.Lock()
-				defer closedMu.Unlock()
-				return closed
+				return closed.Load()
 			}, time.Second*20, time.Millisecond*100)
 
 			xEnv.WaitForMessagesSent(2, time.Second*10)
@@ -116,7 +110,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("message and resolve errors should not abort the subscription", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -204,7 +198,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe async netPoll disabled", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -279,7 +273,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("multipart", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		assertLineEquals := func(t *testing.T, reader *bufio.Reader, expected string) {
 			line, _, err := reader.ReadLine()
@@ -296,7 +290,7 @@ func TestNatsEvents(t *testing.T) {
 		heartbeatInterval := 150 * time.Millisecond
 
 		t.Run("subscribe with multipart responses", func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
@@ -378,7 +372,7 @@ func TestNatsEvents(t *testing.T) {
 		})
 
 		t.Run("subscribe with multipart responses http/1", func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
 				EnableNats: true,
@@ -422,7 +416,7 @@ func TestNatsEvents(t *testing.T) {
 		})
 
 		t.Run("subscribe with closing channel", func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
 				EnableNats: true,
@@ -465,7 +459,7 @@ func TestNatsEvents(t *testing.T) {
 		})
 
 		t.Run("subscribe sync multipart with block", func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
 				EnableNats: true,
@@ -498,7 +492,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe once", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -565,7 +559,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe sync sse works without query param", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -637,7 +631,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe sync sse with block", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -700,7 +694,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe sync sse client close", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -770,7 +764,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("request", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -814,7 +808,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("publish", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -862,7 +856,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe to multiple subjects", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -928,7 +922,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe with stream and consumer", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -1038,7 +1032,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribing to a non-existent stream returns an error", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -1091,7 +1085,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe ws with filter", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -1267,7 +1261,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("subscribe sse with filter", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
@@ -1463,7 +1457,7 @@ func TestNatsEvents(t *testing.T) {
 	})
 
 	t.Run("message with invalid JSON should give a specific error", func(t *testing.T) {
-		// t.Parallel()
+		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
