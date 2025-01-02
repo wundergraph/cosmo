@@ -17,41 +17,39 @@ import (
 // If possible function calls should be avoided in the expressions as they are much more expensive
 // See https://github.com/expr-lang/expr/issues/734
 type RequestRootContext struct {
-	Request RequestContext
+	Request Request `expr:"request"`
 }
 
-// RequestContext is the context for the request object in expressions. Be aware, that only value receiver methods
+// Request is the context for the request object in expressions. Be aware, that only value receiver methods
 // are exported in the expr environment. This is because the expressions are evaluated in a read-only context.
-type RequestContext struct {
-	Auth   RequestAuth
-	Header RequestHeaders
-	URL    RequestURL
+type Request struct {
+	Auth   RequestAuth    `expr:"auth"`
+	URL    RequestURL     `expr:"url"`
+	Header RequestHeaders `expr:"header"`
 }
 
 // RequestURL is the context for the URL object in expressions
 // it is limited in scope to the URL object and its components. For convenience, the query parameters are parsed.
 type RequestURL struct {
-	Method string
+	Method string `expr:"method"`
 	// Scheme is the scheme of the URL
-	Scheme string
+	Scheme string `expr:"scheme"`
 	// Host is the host of the URL
-	Host string
+	Host string `expr:"host"`
 	// Path is the path of the URL
-	Path string
+	Path string `expr:"path"`
 	// Query is the parsed query parameters
-	Query map[string]string
+	Query map[string]string `expr:"query"`
 }
 
-// RequestHeaders is the context for the headers object in expressions
-type RequestHeaders struct {
-	// Header is the http headers. We expose the header object to work with header case-insensitive
-	Header http.Header
-}
+// RequestHeaders is the context for the headers object in expressions. A user can access the headers directly by
+// key and get the array representation of the header values or use the Get method to get the first value.
+type RequestHeaders map[string][]string
 
 // Get returns the first value associated with the given key (Exported).
 // For convenience, we export a function to make the work with headers case-insensitive.
 func (r RequestHeaders) Get(key string) string {
-	return r.Header.Get(key)
+	return http.Header(r).Get(key)
 }
 
 // LoadRequest loads the request object into the context.
@@ -60,7 +58,7 @@ func (r *RequestRootContext) LoadRequest(req *http.Request) {
 		return
 	}
 
-	r.Request.Header.Header = req.Header
+	r.Request.Header = RequestHeaders(req.Header)
 
 	m, _ := url.ParseQuery(req.URL.RawQuery)
 	qv := make(map[string]string, len(m))
@@ -79,8 +77,10 @@ func (r *RequestRootContext) LoadRequest(req *http.Request) {
 }
 
 type RequestAuth struct {
-	Claims map[string]any
-	Scopes []string
+	IsAuthenticated bool           `expr:"isAuthenticated"`
+	Type            string         `expr:"type"`
+	Claims          map[string]any `expr:"claims"`
+	Scopes          []string       `expr:"scopes"`
 }
 
 // LoadAuth loads the authentication context into the request object.
@@ -90,6 +90,8 @@ func (r *RequestRootContext) LoadAuth(ctx context.Context) {
 		return
 	}
 
+	r.Request.Auth.Type = authCtx.Authenticator()
+	r.Request.Auth.IsAuthenticated = true
 	r.Request.Auth.Claims = authCtx.Claims()
 	r.Request.Auth.Scopes = authCtx.Scopes()
 }
