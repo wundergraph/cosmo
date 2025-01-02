@@ -103,3 +103,13 @@ fetch.response.body.errors
 fetch.response.body.data
 fetch.response.body.extensions
 ```
+
+# response
+
+The response object provides read only information about the response that will be sent to the client.
+
+```
+response.status // HTTP status code
+response.header // HTTP headers
+response.body // HTTP body
+```
