@@ -1125,11 +1125,13 @@ func TestNatsEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
-			var counter atomic.Uint32
+			var produced atomic.Uint32
+			var consumed atomic.Uint32
 
 			go func() {
-				defer counter.Add(1)
-
+				require.Eventually(t, func() bool {
+					return produced.Load() == 1
+				}, time.Second*5, time.Millisecond*100)
 				gErr := conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -1139,7 +1141,11 @@ func TestNatsEvents(t *testing.T) {
 				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdated.ID)
 				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdated.Details.Forename)
 				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+				consumed.Add(1)
 
+				require.Eventually(t, func() bool {
+					return produced.Load() == 2
+				}, time.Second*5, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -1149,7 +1155,11 @@ func TestNatsEvents(t *testing.T) {
 				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdated.ID)
 				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdated.Details.Forename)
 				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+				consumed.Add(2) // skipping one message
 
+				require.Eventually(t, func() bool {
+					return produced.Load() == 4
+				}, time.Second*5, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -1159,7 +1169,11 @@ func TestNatsEvents(t *testing.T) {
 				require.Equal(t, float64(3), payload.Data.FilteredEmployeeUpdated.ID)
 				require.Equal(t, "Stefan", payload.Data.FilteredEmployeeUpdated.Details.Forename)
 				require.Equal(t, "Avram", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+				consumed.Add(1)
 
+				require.Eventually(t, func() bool {
+					return produced.Load() == 5
+				}, time.Second*5, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -1169,7 +1183,11 @@ func TestNatsEvents(t *testing.T) {
 				require.Equal(t, float64(4), payload.Data.FilteredEmployeeUpdated.ID)
 				require.Equal(t, "Björn", payload.Data.FilteredEmployeeUpdated.Details.Forename)
 				require.Equal(t, "Schwenzer", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+				consumed.Add(1)
 
+				require.Eventually(t, func() bool {
+					return produced.Load() == 6
+				}, time.Second*5, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -1179,7 +1197,11 @@ func TestNatsEvents(t *testing.T) {
 				require.Equal(t, float64(5), payload.Data.FilteredEmployeeUpdated.ID)
 				require.Equal(t, "Sergiy", payload.Data.FilteredEmployeeUpdated.Details.Forename)
 				require.Equal(t, "Petrunin", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+				consumed.Add(2) // skipping one message
 
+				require.Eventually(t, func() bool {
+					return produced.Load() == 8
+				}, time.Second*5, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -1189,7 +1211,11 @@ func TestNatsEvents(t *testing.T) {
 				require.Equal(t, float64(7), payload.Data.FilteredEmployeeUpdated.ID)
 				require.Equal(t, "Suvij", payload.Data.FilteredEmployeeUpdated.Details.Forename)
 				require.Equal(t, "Surya", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+				consumed.Add(1)
 
+				require.Eventually(t, func() bool {
+					return produced.Load() == 9
+				}, time.Second*5, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -1199,7 +1225,11 @@ func TestNatsEvents(t *testing.T) {
 				require.Equal(t, float64(8), payload.Data.FilteredEmployeeUpdated.ID)
 				require.Equal(t, "Nithin", payload.Data.FilteredEmployeeUpdated.Details.Forename)
 				require.Equal(t, "Kumar", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+				consumed.Add(2) // should skip two messages
 
+				require.Eventually(t, func() bool {
+					return produced.Load() == 12
+				}, time.Second*5, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -1209,26 +1239,29 @@ func TestNatsEvents(t *testing.T) {
 				require.Equal(t, float64(11), payload.Data.FilteredEmployeeUpdated.ID)
 				require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdated.Details.Forename)
 				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdated.Details.Surname)
+				consumed.Add(1)
 			}()
 
 			// Trigger the subscription via NATS
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(`{"id":1,"__typename":"Employee"}`))
 			require.NoError(t, err)
+			produced.Add(1)
 
 			// Events 1, 3, 4, 5, 7, 8, and 11 should be included
-			for i := 1; i < 13; i++ {
-				// Ensure the NATS consumer can keep up with the provider
-				time.Sleep(time.Millisecond * 100)
+			for i := uint32(1); i < 13; i++ {
+				require.Eventually(t, func() bool {
+					return consumed.Load() >= i-1
+				}, time.Second*10, time.Millisecond*100)
 
 				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename":"Employee"}`, i)))
 				require.NoError(t, err)
-
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
+				produced.Add(1)
 			}
 
 			require.Eventually(t, func() bool {
-				return counter.Load() == 1
+				return consumed.Load() == 11 && produced.Load() == 13
 			}, time.Second*10, time.Millisecond*100)
 		})
 	})
@@ -1451,20 +1484,21 @@ func TestNatsEvents(t *testing.T) {
 				_ = client.Close()
 			})
 
-			var counter atomic.Uint32
+			var produced atomic.Uint32
+			var consumed atomic.Uint32
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				oldCount := counter.Load()
-				counter.Add(1)
+				defer consumed.Add(1)
+				oldCount := produced.Load()
 
-				if oldCount == 0 {
+				if oldCount == 1 {
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					require.Equal(t, "Invalid message received", gqlErr[0].Message)
-				} else if oldCount == 1 || oldCount == 3 {
+				} else if oldCount == 2 || oldCount == 4 {
 					require.NoError(t, errValue)
 					require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
-				} else if oldCount == 2 {
+				} else if oldCount == 3 {
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.", gqlErr[0].Message)
@@ -1482,33 +1516,42 @@ func TestNatsEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
-			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{asas`)) // Empty message
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{asas`)) // Invalid message
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
-			xEnv.WaitForMessagesSent(1, time.Second*10)
+			produced.Add(1)
 
+			require.Eventually(t, func() bool {
+				return consumed.Load() == 1
+			}, time.Second*5, time.Millisecond*100)
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
-			xEnv.WaitForMessagesSent(2, time.Second*10)
+			produced.Add(1)
 
+			require.Eventually(t, func() bool {
+				return consumed.Load() == 2
+			}, time.Second*5, time.Millisecond*100)
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","update":{"name":"foo"}}`)) // Missing id
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
-			xEnv.WaitForMessagesSent(3, time.Second*10)
+			produced.Add(1)
 
+			require.Eventually(t, func() bool {
+				return consumed.Load() == 3
+			}, time.Second*5, time.Millisecond*100)
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
-			xEnv.WaitForMessagesSent(4, time.Second*10)
+			produced.Add(1)
 
 			require.Eventually(t, func() bool {
-				return counter.Load() == 4
-			}, time.Second*10, time.Millisecond*100)
+				return consumed.Load() == 4
+			}, time.Second*5, time.Millisecond*100)
 
 			require.NoError(t, client.Close())
 
