@@ -34,7 +34,7 @@ func TestBlockOperations(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.BlockMutations = config.BlockMutationConfiguration{
+					securityConfiguration.BlockMutations = config.BlockOperationConfiguration{
 						Enabled: true,
 					}
 				},
@@ -51,7 +51,7 @@ func TestBlockOperations(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.BlockMutations = config.BlockMutationConfiguration{
+					securityConfiguration.BlockMutations = config.BlockOperationConfiguration{
 						Enabled:   true,
 						Condition: "request.header.Get('graphql-client-name') == 'my-client'",
 					}
@@ -86,7 +86,7 @@ func TestBlockOperations(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.BlockMutations = config.BlockMutationConfiguration{
+					securityConfiguration.BlockMutations = config.BlockOperationConfiguration{
 						Enabled:   true,
 						Condition: "request.url.query.foo == 'bar'",
 					}
@@ -131,9 +131,9 @@ func TestBlockOperations(t *testing.T) {
 					core.WithAccessController(core.NewAccessController(authenticators, false)),
 				},
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.BlockMutations = config.BlockMutationConfiguration{
+					securityConfiguration.BlockMutations = config.BlockOperationConfiguration{
 						Enabled:   true,
-						Condition: "'read:miscellaneous' in request.auth.scopes",
+						Condition: "'read:miscellaneous' in request.auth.scopes && request.auth.isAuthenticated",
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -179,13 +179,113 @@ func TestBlockOperations(t *testing.T) {
 		})
 	})
 
+	t.Run("block subscriptions", func(t *testing.T) {
+
+		t.Run("should block all subscriptions", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.BlockSubscriptions = config.BlockOperationConfiguration{
+						Enabled: true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+
+				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+				err := conn.WriteJSON(&testenv.WebSocketMessage{
+					ID:      "1",
+					Type:    "subscribe",
+					Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+				})
+				require.NoError(t, err)
+
+				var msg testenv.WebSocketMessage
+				err = conn.ReadJSON(&msg)
+				require.NoError(t, err)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "error", msg.Type)
+				require.Equal(t, `[{"message":"operation type 'subscription' is blocked"}]`, string(msg.Payload))
+			})
+		})
+
+		t.Run("should block subscriptions by header match expression", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.BlockSubscriptions = config.BlockOperationConfiguration{
+						Enabled:   true,
+						Condition: "request.header.Get('graphql-client-name') == 'my-client'",
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+
+				type currentTimePayload struct {
+					Data struct {
+						CurrentTime struct {
+							UnixTime  float64 `json:"unixTime"`
+							Timestamp string  `json:"timestamp"`
+						} `json:"currentTime"`
+					} `json:"data"`
+				}
+
+				// Positive test
+
+				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+				err := conn.WriteJSON(&testenv.WebSocketMessage{
+					ID:      "1",
+					Type:    "subscribe",
+					Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+				})
+				require.NoError(t, err)
+
+				var msg testenv.WebSocketMessage
+				var payload currentTimePayload
+
+				err = conn.ReadJSON(&msg)
+				require.NoError(t, err)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+
+				err = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, err)
+
+				require.NotEmpty(t, payload.Data.CurrentTime.UnixTime)
+				require.NotEmpty(t, payload.Data.CurrentTime.Timestamp)
+
+				_ = conn.Close()
+
+				// Negative test
+
+				header := make(http.Header)
+				header.Add("graphql-client-name", "my-client")
+				conn = xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
+				err = conn.WriteJSON(&testenv.WebSocketMessage{
+					ID:      "1",
+					Type:    "subscribe",
+					Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+				})
+				require.NoError(t, err)
+
+				msg = testenv.WebSocketMessage{}
+				err = conn.ReadJSON(&msg)
+				require.NoError(t, err)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "error", msg.Type)
+				require.Equal(t, `[{"message":"operation type 'subscription' is blocked"}]`, string(msg.Payload))
+			})
+		})
+
+	})
+
 	t.Run("block non-persisted operations", func(t *testing.T) {
 		t.Parallel()
 
 		t.Run("should allow operations", func(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.BlockNonPersistedOperations = config.BlockNonPersistedConfiguration{
+					securityConfiguration.BlockNonPersistedOperations = config.BlockOperationConfiguration{
 						Enabled: true,
 					}
 				},
@@ -218,7 +318,7 @@ func TestBlockOperations(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.BlockNonPersistedOperations = config.BlockNonPersistedConfiguration{
+					securityConfiguration.BlockNonPersistedOperations = config.BlockOperationConfiguration{
 						Enabled:   true,
 						Condition: "request.header.Get('graphql-client-name') == 'my-client'",
 					}

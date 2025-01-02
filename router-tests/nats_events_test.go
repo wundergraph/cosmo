@@ -446,7 +446,7 @@ func TestNatsEvents(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				EnableNats: true,
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.BlockSubscriptions = config.BlockSubscriptionConfiguration{
+					securityConfiguration.BlockSubscriptions = config.BlockOperationConfiguration{
 						Enabled: true,
 					}
 				},
@@ -625,7 +625,7 @@ func TestNatsEvents(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			EnableNats: true,
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.BlockSubscriptions = config.BlockSubscriptionConfiguration{
+				securityConfiguration.BlockSubscriptions = config.BlockOperationConfiguration{
 					Enabled: true,
 				}
 			},

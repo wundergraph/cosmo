@@ -509,7 +509,7 @@ func TestKafkaEvents(t *testing.T) {
 				KafkaSeeds:  seeds,
 				EnableKafka: true,
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.BlockSubscriptions = config.BlockSubscriptionConfiguration{
+					securityConfiguration.BlockSubscriptions = config.BlockOperationConfiguration{
 						Enabled: true,
 					}
 				},
@@ -660,7 +660,7 @@ func TestKafkaEvents(t *testing.T) {
 			KafkaSeeds:  seeds,
 			EnableKafka: true,
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.BlockSubscriptions = config.BlockSubscriptionConfiguration{
+				securityConfiguration.BlockSubscriptions = config.BlockOperationConfiguration{
 					Enabled: true,
 				}
 			},
