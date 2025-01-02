@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/wundergraph/cosmo/router/core"
 	"net/http"
-	"slices"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -714,11 +713,16 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
-			var counter atomic.Uint32
+			var produced atomic.Uint32
+			var consumed atomic.Uint32
+			const MsgCount = uint32(12)
 
 			go func() {
-				defer counter.Add(1)
+				consumed.Add(1) // the first message is ignored
 
+				require.Eventually(t, func() bool {
+					return produced.Load() == MsgCount-11
+				}, time.Second*5, time.Millisecond*100)
 				gErr := conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -728,7 +732,11 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, float64(11), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
 				require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
 				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
+				consumed.Add(4) // should arrive to 5th message, with id 7
 
+				require.Eventually(t, func() bool {
+					return produced.Load() == MsgCount-7
+				}, time.Second*5, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -738,7 +746,11 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, float64(7), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
 				require.Equal(t, "Suvij", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
 				require.Equal(t, "Surya", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
+				consumed.Add(3) // should arrive to 8th message, with id 4
 
+				require.Eventually(t, func() bool {
+					return produced.Load() == MsgCount-4
+				}, time.Second*5, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -748,7 +760,11 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, float64(4), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
 				require.Equal(t, "Björn", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
 				require.Equal(t, "Schwenzer", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
+				consumed.Add(1)
 
+				require.Eventually(t, func() bool {
+					return produced.Load() == MsgCount-3
+				}, time.Second*5, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -758,7 +774,11 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, float64(3), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
 				require.Equal(t, "Stefan", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
 				require.Equal(t, "Avram", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
+				consumed.Add(2) // should arrive to 10th message, with id 2
 
+				require.Eventually(t, func() bool {
+					return produced.Load() == MsgCount-1
+				}, time.Second*5, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -768,19 +788,20 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
 				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
 				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
-
+				consumed.Add(1)
 			}()
 
 			// Events 1, 3, 4, 7, and 11 should be included
-			for i := 12; i > 0; i-- {
-				// Ensure the Kafka consumer can keep up with the provider
-				time.Sleep(time.Millisecond * 100)
-
+			for i := MsgCount; i > 0; i-- {
+				require.Eventually(t, func() bool {
+					return consumed.Load() >= MsgCount-i
+				}, time.Second*5, time.Millisecond*100)
 				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
+				produced.Add(1)
 			}
 
 			require.Eventually(t, func() bool {
-				return counter.Load() == 1
+				return consumed.Load() == MsgCount && produced.Load() == MsgCount
 			}, time.Second*10, time.Millisecond*100)
 		})
 	})
@@ -822,15 +843,12 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
-			var done atomic.Uint32
 			var produced atomic.Uint32
 			var consumed atomic.Uint32
 
 			go func() {
-				defer done.Add(1)
-
 				require.Eventually(t, func() bool {
-					return produced.Load() >= 1
+					return produced.Load() == 1
 				}, time.Second*5, time.Millisecond*100)
 				gErr := conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
@@ -844,7 +862,7 @@ func TestKafkaEvents(t *testing.T) {
 				consumed.Add(1)
 
 				require.Eventually(t, func() bool {
-					return produced.Load() >= 2
+					return produced.Load() == 2
 				}, time.Second*5, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
@@ -855,10 +873,10 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, float64(2), payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.ID)
 				require.Equal(t, "Dustin", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Forename)
 				require.Equal(t, "Deus", payload.Data.FilteredEmployeeUpdatedMyKafkaWithListFieldArguments.Details.Surname)
-				consumed.Add(1)
+				consumed.Add(9) // should arrive to 10
 
 				require.Eventually(t, func() bool {
-					return produced.Load() >= 11
+					return produced.Load() == 11
 				}, time.Second*5, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
@@ -872,7 +890,7 @@ func TestKafkaEvents(t *testing.T) {
 				consumed.Add(1)
 
 				require.Eventually(t, func() bool {
-					return produced.Load() >= 12
+					return produced.Load() == 12
 				}, time.Second*5, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
@@ -887,29 +905,16 @@ func TestKafkaEvents(t *testing.T) {
 			}()
 
 			// Events 1, 2, 11, and 12 should be included
-			var oldConsumed uint32
-			for i := 1; i < 13; i++ {
+			for i := uint32(1); i < 13; i++ {
 				require.Eventually(t, func() bool {
-					if oldConsumed == 0 {
-						return true
-					}
-					newConsumed := consumed.Load()
-					if slices.Contains([]int{1, 2, 11, 12}, i) {
-						if oldConsumed != newConsumed {
-							oldConsumed = newConsumed
-							return true
-						} else {
-							return false
-						}
-					}
-					return true
+					return consumed.Load() >= i-1
 				}, time.Second*10, time.Millisecond*100)
 				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
 				produced.Add(1)
 			}
 
 			require.Eventually(t, func() bool {
-				return done.Load() == 1
+				return consumed.Load() == 12 && produced.Load() == 12
 			}, time.Second*10, time.Millisecond*100)
 		})
 	})
@@ -951,14 +956,12 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
 
-			var completed atomic.Bool
 			var produced atomic.Uint32
+			var consumed atomic.Uint32
 
 			go func() {
-				defer completed.Store(true)
-
 				require.Eventually(t, func() bool {
-					return produced.Load() >= 1
+					return produced.Load() == 1
 				}, 10*time.Second, 100*time.Millisecond)
 				gErr := conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
@@ -969,9 +972,10 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.ID)
 				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Forename)
 				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Surname)
+				consumed.Add(1)
 
 				require.Eventually(t, func() bool {
-					return produced.Load() >= 2
+					return produced.Load() == 2
 				}, 10*time.Second, 100*time.Millisecond)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
@@ -982,9 +986,10 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, float64(2), payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.ID)
 				require.Equal(t, "Dustin", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Forename)
 				require.Equal(t, "Deus", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Surname)
+				consumed.Add(9) // should arrive to 10
 
 				require.Eventually(t, func() bool {
-					return produced.Load() >= 11
+					return produced.Load() == 11
 				}, 10*time.Second, 100*time.Millisecond)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
@@ -995,9 +1000,10 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, float64(11), payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.ID)
 				require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Forename)
 				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Surname)
+				consumed.Add(1)
 
 				require.Eventually(t, func() bool {
-					return produced.Load() >= 12
+					return produced.Load() == 12
 				}, 10*time.Second, 100*time.Millisecond)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
@@ -1008,16 +1014,20 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, float64(12), payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.ID)
 				require.Equal(t, "David", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Forename)
 				require.Equal(t, "Stutt", payload.Data.FilteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument.Details.Surname)
+				consumed.Add(1)
 			}()
 
 			// Events 1, 2, 11, and 12 should be included
-			for i := 1; i < 13; i++ {
+			for i := uint32(1); i < 13; i++ {
+				require.Eventually(t, func() bool {
+					return consumed.Load() >= i-1
+				}, time.Second*5, time.Millisecond*100)
 				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
 				produced.Add(1)
 			}
 
 			require.Eventually(t, func() bool {
-				return completed.Load()
+				return consumed.Load() == 12 && produced.Load() == 12
 			}, time.Second*20, time.Millisecond*100)
 		})
 	})
