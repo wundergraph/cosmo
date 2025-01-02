@@ -61,8 +61,8 @@ setContext("client", request.client.name)
 The authentication object provides information about the authentication of the request.
 
 ```
-request.isAuthenticated // true or false
-request.auth // Only set when authenticated
+request.auth
+request.auth.isAuthenticated
 request.auth.type
 request.auth.claims
 request.auth.scopes
@@ -84,24 +84,24 @@ The fetch object provides information about a fetch operation being executed by 
 typically used to fetch data from a subgraph via a federated GraphQL Request.
 
 ```
-fetch.request.header
-fetch.request.method // GET, POST, PUT, DELETE 
-fetch.request.body.query // GraphQL query
-fetch.request.body.operation_name // GraphQL operation name
-fetch.request.body.variables // GraphQL variables
-fetch.request.body.extensions // GraphQL extensions
-fetch.request.uri.host // subgraph host
-fetch.request.uri.path // e.g. /graphql
-fetch.request.uri.port // e.g. 443
+subgraph.request.header
+subgraph.request.method // GET, POST, PUT, DELETE 
+subgraph.request.body.query // GraphQL query
+subgraph.request.body.operation_name // GraphQL operation name
+subgraph.request.body.variables // GraphQL variables
+subgraph.request.body.extensions // GraphQL extensions
+subgraph.request.uri.host // subgraph host
+subgraph.request.uri.path // e.g. /graphql
+subgraph.request.uri.port // e.g. 443
 
-fetch.subgraph.name // name of the subgraph being fetched from
-fetch.subgraph.id // id of the subgraph being fetched from
+subgraph.name // name of the subgraph being fetched from
+subgraph.id // id of the subgraph being fetched from
 
-fetch.response.status
-fetch.response.header
-fetch.response.body.errors
-fetch.response.body.data
-fetch.response.body.extensions
+subgraph.response.status
+subgraph.response.header
+subgraph.response.body.errors
+subgraph.response.body.data
+subgraph.response.body.extensions
 ```
 
 # response
@@ -121,7 +121,8 @@ This is useful, e.g. in the case of defining an Event Driven Subgraph.
 
 ```graphql
 type Subscription {
-    employeeUpdated(employeeID: ID!): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdated.{{ field.args.employeeID }}"])
+    employeeUpdated(employeeID: ID!): Employee! @edfs__natsSubscribe(subjectsExpr: "'employee.updated.' + field.args.employeeID")
+    employeeUpdatedFromClaim: Employee! @edfs__natsSubscribe(subjectsExpr: "'employee.updated.' + request.auth.claims.sub")
 }
 ```
 
