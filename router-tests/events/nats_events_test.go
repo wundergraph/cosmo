@@ -1248,7 +1248,7 @@ func TestNatsEvents(t *testing.T) {
 			// Events 1, 3, 4, 5, 7, 8, and 11 should be included
 			for i := uint32(1); i < 13; i++ {
 				require.Eventually(t, func() bool {
-					return consumed.Load() >= i-1
+					return consumed.Load() >= i
 				}, time.Second*10, time.Millisecond*100)
 				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename":"Employee"}`, i)))
 				require.NoError(t, err)
