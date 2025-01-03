@@ -334,10 +334,15 @@ type EngineExecutionConfiguration struct {
 	EnableSubgraphFetchOperationName       bool                     `envDefault:"false" env:"ENGINE_ENABLE_SUBGRAPH_FETCH_OPERATION_NAME" yaml:"enable_subgraph_fetch_operation_name"`
 }
 
+type BlockOperationConfiguration struct {
+	Enabled   bool   `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Condition string `yaml:"condition" env:"CONDITION"`
+}
+
 type SecurityConfiguration struct {
-	BlockMutations              bool                        `yaml:"block_mutations" envDefault:"false" env:"SECURITY_BLOCK_MUTATIONS"`
-	BlockSubscriptions          bool                        `yaml:"block_subscriptions" envDefault:"false" env:"SECURITY_BLOCK_SUBSCRIPTIONS"`
-	BlockNonPersistedOperations bool                        `yaml:"block_non_persisted_operations" envDefault:"false" env:"SECURITY_BLOCK_NON_PERSISTED_OPERATIONS"`
+	BlockMutations              BlockOperationConfiguration `yaml:"block_mutations" envPrefix:"SECURITY_BLOCK_MUTATIONS_"`
+	BlockSubscriptions          BlockOperationConfiguration `yaml:"block_subscriptions" envPrefix:"SECURITY_BLOCK_SUBSCRIPTIONS_"`
+	BlockNonPersistedOperations BlockOperationConfiguration `yaml:"block_non_persisted_operations" envPrefix:"SECURITY_BLOCK_NON_PERSISTED_OPERATIONS_"`
 	ComplexityCalculationCache  *ComplexityCalculationCache `yaml:"complexity_calculation_cache"`
 	ComplexityLimits            *ComplexityLimits           `yaml:"complexity_limits"`
 	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"net"
 	"net/http"
 	"regexp"
@@ -224,6 +225,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	)
 
 	requestID := middleware.GetReqID(r.Context())
+	requestContext := getRequestContext(r.Context())
 
 	requestLogger := h.logger.With(logging.WithRequestID(requestID), logging.WithTraceID(rtrace.GetTraceID(r.Context())))
 	clientInfo := NewClientInfoFromRequest(r, h.clientHeader)
@@ -240,6 +242,8 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			return
 		}
 		r = validatedReq
+
+		requestContext.expressionContext.Request.Auth = expr.LoadAuth(r.Context())
 	}
 
 	upgrader := ws.HTTPUpgrader{
@@ -369,6 +373,8 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			}
 			handler.request.Header.Set(fromInitialPayloadConfig.ExportToken.HeaderKey, jwtToken)
 		}
+
+		requestContext.expressionContext.Request.Auth = expr.LoadAuth(handler.request.Context())
 	}
 
 	// Only when epoll/kqueue is available. On Windows, epoll is not available
@@ -747,7 +753,7 @@ func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err e
 	return h.protocol.WriteGraphQLErrors(operationID, payload, nil)
 }
 
-func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperation, *operationContext, error) {
+func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegistration) (*ParsedOperation, *operationContext, error) {
 
 	operationKit, err := h.operationProcessor.NewKit()
 	if err != nil {
@@ -759,7 +765,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 		clientInfo: h.plannerOptions.ClientInfo,
 	}
 
-	if err := operationKit.UnmarshalOperationFromBody(payload); err != nil {
+	if err := operationKit.UnmarshalOperationFromBody(registration.msg.Payload); err != nil {
 		return nil, nil, err
 	}
 
@@ -792,7 +798,12 @@ func (h *WebSocketConnectionHandler) parseAndPlan(payload []byte) (*ParsedOperat
 	opContext.name = operationKit.parsedOperation.Request.OperationName
 	opContext.opType = operationKit.parsedOperation.Type
 
-	if blocked := h.operationBlocker.OperationIsBlocked(operationKit.parsedOperation); blocked != nil {
+	reqCtx := getRequestContext(registration.clientRequest.Context())
+	if reqCtx == nil {
+		return nil, nil, fmt.Errorf("request context not found")
+	}
+
+	if blocked := h.operationBlocker.OperationIsBlocked(h.logger, reqCtx.expressionContext, operationKit.parsedOperation); blocked != nil {
 		return nil, nil, blocked
 	}
 
@@ -848,7 +859,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 
 	rw := newWebsocketResponseWriter(registration.msg.ID, h.protocol, h.graphqlHandler.subgraphErrorPropagation.Enabled, h.logger, h.stats)
 
-	_, operationCtx, err := h.parseAndPlan(registration.msg.Payload)
+	_, operationCtx, err := h.parseAndPlan(registration)
 	if err != nil {
 		wErr := h.writeErrorMessage(registration.msg.ID, err)
 		if wErr != nil {
@@ -919,7 +930,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 	}
 	resolveCtx = h.graphqlHandler.configureRateLimiting(resolveCtx)
 
-	// Put in a closure to evaluate err after the defer
+	// Put in a closure to evaluate err after defer
 	defer func() {
 		// StatusCode has no meaning here. We set it to 0 but set the error.
 		h.metrics.ExportSchemaUsageInfo(operationCtx, 0, err != nil, false)
