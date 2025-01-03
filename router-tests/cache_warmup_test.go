@@ -270,7 +270,7 @@ func TestCacheWarmup(t *testing.T) {
 				}),
 			},
 			AssertCacheMetrics: &testenv.CacheMetricsAssertion{
-				PersistedQueryNormalizationHits:   1, // 1x hit after warmup, when called with operation name
+				PersistedQueryNormalizationHits:   1, // 1x hit after warmup, when called with operation name. No hit from second request because of missing operation name, it recomputes it
 				PersistedQueryNormalizationMisses: 3, // 1x miss during warmup, 1 miss for first operation trying without operation name, 1 miss for second operation trying without operation name
 				ValidationHits:                    2,
 				ValidationMisses:                  1,
