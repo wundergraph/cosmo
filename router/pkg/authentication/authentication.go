@@ -94,7 +94,8 @@ func Authenticate(ctx context.Context, authenticators []Authenticator, p Provide
 			continue
 		}
 
-		// Claims can never be nil if the authenticator did not return an error.
+		// Claims is nil when no authentication information matched the authenticator.
+		// In that case, we continue to the next authenticator.
 		if claims == nil {
 			continue
 		}
