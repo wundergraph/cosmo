@@ -225,6 +225,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	)
 
 	requestID := middleware.GetReqID(r.Context())
+	requestContext := getRequestContext(r.Context())
 
 	requestLogger := h.logger.With(logging.WithRequestID(requestID), logging.WithTraceID(rtrace.GetTraceID(r.Context())))
 	clientInfo := NewClientInfoFromRequest(r, h.clientHeader)
@@ -241,6 +242,8 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			return
 		}
 		r = validatedReq
+
+		requestContext.expressionContext.LoadAuth(r.Context())
 	}
 
 	upgrader := ws.HTTPUpgrader{
@@ -348,6 +351,8 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 				handler.Close()
 				return
 			}
+
+			requestContext.expressionContext.LoadAuth(handler.request.Context())
 		}
 
 		// Export the token from the initial payload to the request header
@@ -793,7 +798,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 	opContext.name = operationKit.parsedOperation.Request.OperationName
 	opContext.opType = operationKit.parsedOperation.Type
 
-	exprCtx := expr.RequestRootContext{}
+	exprCtx := expr.Context{}
 	exprCtx.LoadRequest(registration.clientRequest)
 
 	if blocked := h.operationBlocker.OperationIsBlocked(h.logger, exprCtx, operationKit.parsedOperation); blocked != nil {

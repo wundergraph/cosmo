@@ -88,7 +88,7 @@ func (o *OperationBlocker) compileExpressions() error {
 	return nil
 }
 
-func (o *OperationBlocker) OperationIsBlocked(requestLogger *zap.Logger, exprContext expr.RequestRootContext, operation *ParsedOperation) error {
+func (o *OperationBlocker) OperationIsBlocked(requestLogger *zap.Logger, exprContext expr.Context, operation *ParsedOperation) error {
 
 	if !operation.IsPersistedOperation && o.blockNonPersisted.Enabled {
 

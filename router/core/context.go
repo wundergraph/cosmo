@@ -247,7 +247,7 @@ type requestContext struct {
 	// telemetry are the base telemetry information of the request
 	telemetry *requestTelemetryAttributes
 	// expressionContext is the context that will be provided to a compiled expression in order to retrieve data via dynamic expressions
-	expressionContext expr.RequestRootContext
+	expressionContext expr.Context
 }
 
 func (c *requestContext) Operation() OperationContext {
@@ -602,7 +602,7 @@ type requestContextOptions struct {
 
 func buildRequestContext(opts requestContextOptions) *requestContext {
 
-	rootCtx := expr.RequestRootContext{}
+	rootCtx := expr.Context{}
 	rootCtx.LoadRequest(opts.r)
 
 	return &requestContext{

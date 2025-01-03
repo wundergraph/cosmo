@@ -13,10 +13,23 @@ import (
 	"reflect"
 )
 
-// RequestRootContext is the context for expressions parser when evaluating dynamic expressions
-// If possible function calls should be avoided in the expressions as they are much more expensive
-// See https://github.com/expr-lang/expr/issues/734
-type RequestRootContext struct {
+/**
+* Naming conventions:
+* - Fields are named using camelCase
+* - Methods are named using PascalCase (Required to be exported)
+* - Methods should be exported through the interface to make the contract clear
+*
+* Principles:
+* The Expr package is used to evaluate expressions in the context of the request or router.
+* The user should never be able to mutate the context or any other application state.
+*
+* Recommendations:
+* If possible function calls should be avoided in the expressions as they are much more expensive.
+* See https://github.com/expr-lang/expr/issues/734
+ */
+
+// Context is the context for expressions parser when evaluating dynamic expressions
+type Context struct {
 	Request Request `expr:"request"`
 }
 
@@ -26,6 +39,13 @@ type Request struct {
 	Auth   RequestAuth    `expr:"auth"`
 	URL    RequestURL     `expr:"url"`
 	Header RequestHeaders `expr:"header"`
+}
+
+// RequestHeaders is the interface available for the headers object in expressions.
+type RequestHeaders interface {
+	// Get returns the value of the header with the given key. If the header is not present, an empty string is returned.
+	// The key is case-insensitive and transformed to the canonical format.
+	Get(key string) string
 }
 
 // RequestURL is the context for the URL object in expressions
@@ -42,23 +62,13 @@ type RequestURL struct {
 	Query map[string]string `expr:"query"`
 }
 
-// RequestHeaders is the context for the headers object in expressions. A user can access the headers directly by
-// key and get the array representation of the header values or use the Get method to get the first value.
-type RequestHeaders map[string][]string
-
-// Get returns the first value associated with the given key (Exported).
-// For convenience, we export a function to make the work with headers case-insensitive.
-func (r RequestHeaders) Get(key string) string {
-	return http.Header(r).Get(key)
-}
-
 // LoadRequest loads the request object into the context.
-func (r *RequestRootContext) LoadRequest(req *http.Request) {
+func (r *Context) LoadRequest(req *http.Request) {
 	if req == nil {
 		return
 	}
 
-	r.Request.Header = RequestHeaders(req.Header)
+	r.Request.Header = req.Header
 
 	m, _ := url.ParseQuery(req.URL.RawQuery)
 	qv := make(map[string]string, len(m))
@@ -85,7 +95,7 @@ type RequestAuth struct {
 
 // LoadAuth loads the authentication context into the request object.
 // Must only be called when the authentication was successful.
-func (r *RequestRootContext) LoadAuth(ctx context.Context) {
+func (r *Context) LoadAuth(ctx context.Context) {
 	authCtx := authentication.FromContext(ctx)
 	if authCtx == nil {
 		return
@@ -98,9 +108,9 @@ func (r *RequestRootContext) LoadAuth(ctx context.Context) {
 }
 
 // CompileBoolExpression compiles an expression and returns the program. It is used for expressions that return bool.
-// The exprContext is used to provide the context for the expression evaluation.
+// The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
 func CompileBoolExpression(s string) (*vm.Program, error) {
-	v, err := expr.Compile(s, expr.Env(RequestRootContext{}), expr.AsBool())
+	v, err := expr.Compile(s, expr.Env(Context{}), expr.AsBool())
 	if err != nil {
 		return nil, handleExpressionError(err)
 	}
@@ -109,9 +119,9 @@ func CompileBoolExpression(s string) (*vm.Program, error) {
 }
 
 // CompileStringExpression compiles an expression and returns the program. It is used for expressions that return strings
-// The exprContext is used to provide the context for the expression evaluation.
+// The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
 func CompileStringExpression(s string) (*vm.Program, error) {
-	v, err := expr.Compile(s, expr.Env(RequestRootContext{}), expr.AsKind(reflect.String))
+	v, err := expr.Compile(s, expr.Env(Context{}), expr.AsKind(reflect.String))
 	if err != nil {
 		return nil, handleExpressionError(err)
 	}
@@ -120,8 +130,8 @@ func CompileStringExpression(s string) (*vm.Program, error) {
 }
 
 // ResolveStringExpression evaluates the expression and returns the result as a string. The exprContext is used to
-// provide the context for the expression evaluation.
-func ResolveStringExpression(vm *vm.Program, ctx RequestRootContext) (string, error) {
+// provide the context for the expression evaluation. Not safe for concurrent use.
+func ResolveStringExpression(vm *vm.Program, ctx Context) (string, error) {
 	r, err := expr.Run(vm, ctx)
 	if err != nil {
 		return "", handleExpressionError(err)
@@ -136,8 +146,8 @@ func ResolveStringExpression(vm *vm.Program, ctx RequestRootContext) (string, er
 }
 
 // ResolveBoolExpression evaluates the expression and returns the result as a bool. The exprContext is used to
-// provide the context for the expression evaluation.
-func ResolveBoolExpression(vm *vm.Program, ctx RequestRootContext) (bool, error) {
+// provide the context for the expression evaluation. Not safe for concurrent use.
+func ResolveBoolExpression(vm *vm.Program, ctx Context) (bool, error) {
 	if vm == nil {
 		return false, nil
 	}
