@@ -2125,17 +2125,15 @@ func TestRuntimeTelemetry(t *testing.T) {
 			require.NotNil(t, runtimeScope)
 			require.Len(t, runtimeScope.Metrics, 15)
 
-			metricRuntimeUptime := getMetricByName(runtimeScope, "runtime.uptime")
+			metricRuntimeUptime := getMetricByName(runtimeScope, "process.uptime")
 			require.NotNil(t, metricRuntimeUptime)
-			metricRuntimeUptimeDataType := metricRuntimeUptime.Data.(metricdata.Sum[int64])
+			metricRuntimeUptimeDataType := metricRuntimeUptime.Data.(metricdata.Gauge[int64])
 			require.Len(t, metricRuntimeUptimeDataType.DataPoints, 1)
 			runtimeUptimeMetric := metricdata.Metrics{
-				Name:        "runtime.uptime",
+				Name:        "process.uptime",
 				Description: "Seconds since application was initialized",
 				Unit:        "s",
-				Data: metricdata.Sum[int64]{
-					Temporality: metricdata.CumulativeTemporality,
-					IsMonotonic: true,
+				Data: metricdata.Gauge[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(

@@ -75,7 +75,7 @@ func (r *RuntimeMetrics) Start() error {
 	defer lock.Unlock()
 
 	runtimeUptime, err := r.meter.Int64ObservableGauge(
-		"runtime.uptime",
+		"process.uptime",
 		otelmetric.WithUnit("s"),
 		otelmetric.WithDescription("Seconds since application was initialized"),
 	)

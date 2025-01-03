@@ -19,7 +19,7 @@ SELECT
 FROM
     cosmo.otel_metrics_gauge
 WHERE
-    ScopeName = 'cosmo.router.runtime' AND MetricName = 'runtime.uptime'
+    ScopeName = 'cosmo.router.runtime' AND MetricName = 'process.uptime'
 GROUP BY
     ConfigVersionID,
     OrganizationID,
