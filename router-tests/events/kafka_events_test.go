@@ -648,7 +648,7 @@ func TestKafkaEvents(t *testing.T) {
 	})
 
 	t.Run("should block subscribe sync sse operation", func(t *testing.T) {
-		t.Paralell()
+		t.Parallel()
 
 		subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 

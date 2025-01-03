@@ -94,8 +94,12 @@ func Authenticate(ctx context.Context, authenticators []Authenticator, p Provide
 			continue
 		}
 
-		// If authentication succeeds, we return the authentication
-		// A provider can also return no claims as long as there is no error.
+		// Claims can never be nil if the authenticator did not return an error.
+		if claims == nil {
+			continue
+		}
+
+		// If authentication succeeds, we return the authentication for the first provider.
 		return &authentication{
 			authenticator: auth.Name(),
 			claims:        claims,
