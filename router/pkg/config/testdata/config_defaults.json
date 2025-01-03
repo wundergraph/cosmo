@@ -224,9 +224,18 @@
     "Subgraphs": null
   },
   "SecurityConfiguration": {
-    "BlockMutations": false,
-    "BlockSubscriptions": false,
-    "BlockNonPersistedOperations": false,
+    "BlockMutations": {
+      "Enabled": false,
+      "Condition": ""
+    },
+    "BlockSubscriptions": {
+      "Enabled": false,
+      "Condition": ""
+    },
+    "BlockNonPersistedOperations": {
+      "Enabled": false,
+      "Condition": ""
+    },
     "ComplexityCalculationCache": null,
     "ComplexityLimits": null,
     "DepthLimit": null
