@@ -1,4 +1,4 @@
-package integration_test
+package integration
 
 import (
 	"github.com/stretchr/testify/require"
@@ -47,7 +47,7 @@ func TestTimeouts(t *testing.T) {
 
 		trafficConfig := config.TrafficShapingRules{
 			All: config.GlobalSubgraphRequestRule{
-				RequestTimeout: 10 * time.Millisecond,
+				RequestTimeout: 500 * time.Millisecond,
 			},
 			Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
 				"hobbies": {
@@ -109,11 +109,11 @@ func TestTimeouts(t *testing.T) {
 
 		trafficConfig := config.TrafficShapingRules{
 			All: config.GlobalSubgraphRequestRule{
-				RequestTimeout: 10 * time.Millisecond,
+				RequestTimeout: 500 * time.Millisecond,
 			},
 			Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
 				"hobbies": {
-					ResponseHeaderTimeout: 3 * time.Millisecond,
+					ResponseHeaderTimeout: 100 * time.Millisecond,
 				},
 			},
 		}

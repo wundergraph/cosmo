@@ -15,7 +15,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-func prettifyJSON(data string) []byte {
+func indentedJSON(data string) []byte {
 	var prettyJSON bytes.Buffer
 	err := json.Indent(&prettyJSON, []byte(data), "", "  ")
 	if err != nil {
@@ -58,7 +58,7 @@ func TestQueryPlans(t *testing.T) {
 					}`,
 			})
 
-			g.Assert(t, "response_with_query_plan", prettifyJSON(res.Body))
+			g.Assert(t, "response_with_query_plan", indentedJSON(res.Body))
 		})
 	})
 	t.Run("include query plan via header", func(t *testing.T) {
@@ -84,7 +84,7 @@ func TestQueryPlans(t *testing.T) {
 					}`,
 			})
 
-			g.Assert(t, "response_with_query_plan", prettifyJSON(res.Body))
+			g.Assert(t, "response_with_query_plan", indentedJSON(res.Body))
 		})
 	})
 	t.Run("query plans disabled", func(t *testing.T) {
@@ -112,7 +112,7 @@ func TestQueryPlans(t *testing.T) {
 					}`,
 			})
 
-			g.Assert(t, "response_without_query_plan", prettifyJSON(res.Body))
+			g.Assert(t, "response_without_query_plan", indentedJSON(res.Body))
 		})
 	})
 	t.Run("only query plan without data", func(t *testing.T) {
@@ -139,7 +139,7 @@ func TestQueryPlans(t *testing.T) {
 					}`,
 			})
 
-			g.Assert(t, "only_query_plan", prettifyJSON(res.Body))
+			g.Assert(t, "only_query_plan", indentedJSON(res.Body))
 		})
 	})
 	t.Run("only query plan without data but with trace", func(t *testing.T) {
@@ -174,7 +174,7 @@ func TestQueryPlans(t *testing.T) {
 			rex, err := regexp.Compile(`http://127.0.0.1:\d+/graphql`)
 			require.NoError(t, err)
 			resultBody := rex.ReplaceAllString(res.Body, "http://localhost/graphql")
-			g.Assert(t, "query_plan_with_trace_no_data", prettifyJSON(resultBody))
+			g.Assert(t, "query_plan_with_trace_no_data", indentedJSON(resultBody))
 			if t.Failed() {
 				t.Log(res.Body)
 			}
@@ -205,7 +205,7 @@ func TestQueryPlans(t *testing.T) {
 					}`,
 			})
 
-			g.Assert(t, "response_with_query_plan_operation_name", prettifyJSON(res.Body))
+			g.Assert(t, "response_with_query_plan_operation_name", indentedJSON(res.Body))
 		})
 	})
 
@@ -289,7 +289,7 @@ func TestQueryPlans(t *testing.T) {
 					}`,
 			})
 
-			g.Assert(t, "response_with_query_plan_operation_name_sanitized_no_data", prettifyJSON(res.Body))
+			g.Assert(t, "response_with_query_plan_operation_name_sanitized_no_data", indentedJSON(res.Body))
 		})
 	})
 	t.Run("query plan on skip load for a subscription", func(t *testing.T) {
@@ -298,14 +298,14 @@ func TestQueryPlans(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.Debug.AlwaysIncludeQueryPlan = true
-				cfg.Debug.AlwaysSkipLoader  = true
+				cfg.Debug.AlwaysSkipLoader = true
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `subscription Q1 { currentTime { unixTime } }`,
 			})
 
-			g.Assert(t, "subscription_response_with_query_plan", prettifyJSON(res.Body))
+			g.Assert(t, "subscription_response_with_query_plan", indentedJSON(res.Body))
 		})
 	})
 

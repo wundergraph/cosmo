@@ -17,7 +17,7 @@ import (
 func (r *mutationResolver) UpdateAvailability(ctx context.Context, employeeID int, isAvailable bool) (*model.Employee, error) {
 	storage.Set(employeeID, isAvailable)
 	err := r.NatsPubSubByProviderID["default"].Publish(ctx, pubsub_datasource.NatsPublishAndRequestEventConfiguration{
-		Subject: fmt.Sprintf("employeeUpdated.%d", employeeID),
+		Subject: r.GetPubSubName(fmt.Sprintf("employeeUpdated.%d", employeeID)),
 		Data:    []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID)),
 	})
 
@@ -25,7 +25,7 @@ func (r *mutationResolver) UpdateAvailability(ctx context.Context, employeeID in
 		return nil, err
 	}
 	err = r.NatsPubSubByProviderID["my-nats"].Publish(ctx, pubsub_datasource.NatsPublishAndRequestEventConfiguration{
-		Subject: fmt.Sprintf("employeeUpdatedMyNats.%d", employeeID),
+		Subject: r.GetPubSubName(fmt.Sprintf("employeeUpdatedMyNats.%d", employeeID)),
 		Data:    []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID)),
 	})
 

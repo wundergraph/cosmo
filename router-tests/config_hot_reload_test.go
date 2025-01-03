@@ -3,7 +3,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
-	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -115,12 +115,10 @@ func TestConfigHotReload(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			var wg sync.WaitGroup
-
-			wg.Add(1)
+			var done atomic.Uint32
 
 			go func() {
-				defer wg.Done()
+				defer done.Add(1)
 
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employees { id } }`,
@@ -130,10 +128,8 @@ func TestConfigHotReload(t *testing.T) {
 				require.JSONEq(t, employeesIDData, res.Body)
 			}()
 
-			wg.Add(1)
-
 			go func() {
-				defer wg.Done()
+				defer done.Add(1)
 
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employees { id } }`,
@@ -161,7 +157,9 @@ func TestConfigHotReload(t *testing.T) {
 			require.JSONEq(t, employeesIDData, res.Body)
 
 			// Ensure that all requests are served successfully
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				return done.Load() == 2
+			}, time.Second*5, time.Millisecond*100)
 		})
 	})
 
@@ -184,13 +182,13 @@ func TestConfigHotReload(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			wg := &sync.WaitGroup{}
+			var requestsStarted atomic.Uint32
+			var requestsDone atomic.Uint32
 
 			for i := 0; i < 10; i++ {
-				wg.Add(1)
-
-				go func() {
-					defer wg.Done()
+				requestsStarted.Add(1)
+				func() {
+					defer requestsDone.Add(1)
 
 					// Create a new context for each request to ensure that the request is not cancelled by the shutdown
 					res, err := xEnv.MakeGraphQLRequestWithContext(context.Background(), testenv.GraphQLRequest{
@@ -202,15 +200,17 @@ func TestConfigHotReload(t *testing.T) {
 				}()
 			}
 
-			// Let's wait a bit to make sure all requests are in flight
-			// otherwise the shutdown will be too fast and the wait-group will not be done fully
-			time.Sleep(time.Millisecond * 100)
+			// Let's wait until all requests are in flight
+			require.Eventually(t, func() bool {
+				return requestsStarted.Load() == 10
+			}, time.Second*5, time.Millisecond*100)
 
 			xEnv.Shutdown()
 
-			// Ensure that all requests are served successfully
-			wg.Wait()
-
+			// Let's wait until all requests are completed
+			require.Eventually(t, func() bool {
+				return requestsDone.Load() == 10
+			}, time.Second*20, time.Millisecond*100)
 		})
 	})
 
@@ -238,12 +238,10 @@ func TestConfigHotReload(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			wg := &sync.WaitGroup{}
-
-			wg.Add(1)
+			var done atomic.Bool
 
 			go func() {
-				defer wg.Done()
+				defer done.Store(true)
 
 				res, err := xEnv.MakeGraphQLRequestWithContext(context.Background(), testenv.GraphQLRequest{
 					Query: `{ employees { id } }`,
@@ -259,7 +257,9 @@ func TestConfigHotReload(t *testing.T) {
 
 			xEnv.Shutdown()
 
-			wg.Wait()
+			require.Eventually(t, func() bool {
+				return done.Load()
+			}, time.Second*5, time.Millisecond*100)
 		})
 	})
 

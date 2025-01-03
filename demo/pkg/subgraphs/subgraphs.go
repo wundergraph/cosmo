@@ -75,8 +75,10 @@ func (p *Ports) AsArray() []int {
 }
 
 type Config struct {
-	Ports       Ports
-	EnableDebug bool
+	Ports         Ports
+	EnableDebug   bool
+	PubSubPrefix  string
+	GetPubSubName func(string) string
 }
 
 type Subgraphs struct {
@@ -161,6 +163,7 @@ func subgraphHandler(schema graphql.ExecutableSchema) http.Handler {
 
 type SubgraphOptions struct {
 	NatsPubSubByProviderID map[string]pubsub_datasource.NatsPubSub
+	GetPubSubName          func(string) string
 }
 
 func EmployeesHandler(opts *SubgraphOptions) http.Handler {
@@ -188,7 +191,7 @@ func Test1Handler(opts *SubgraphOptions) http.Handler {
 }
 
 func AvailabilityHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(availability.NewSchema(opts.NatsPubSubByProviderID))
+	return subgraphHandler(availability.NewSchema(opts.NatsPubSubByProviderID, opts.GetPubSubName))
 }
 
 func MoodHandler(opts *SubgraphOptions) http.Handler {
@@ -256,7 +259,7 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 	if srv := newServer("test1", config.EnableDebug, config.Ports.Test1, test1.NewSchema(natsPubSubByProviderID)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("availability", config.EnableDebug, config.Ports.Availability, availability.NewSchema(natsPubSubByProviderID)); srv != nil {
+	if srv := newServer("availability", config.EnableDebug, config.Ports.Availability, availability.NewSchema(natsPubSubByProviderID, config.GetPubSubName)); srv != nil {
 		servers = append(servers, srv)
 	}
 	if srv := newServer("mood", config.EnableDebug, config.Ports.Mood, mood.NewSchema(natsPubSubByProviderID)); srv != nil {

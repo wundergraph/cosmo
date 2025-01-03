@@ -68,6 +68,7 @@ func TestNormalizationCacheWithMultiOperationDocument(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Should identify correct document after removing unused operations during normalization", func(t *testing.T) {
+		t.Parallel()
 
 		document := `query A {
   a: employee(id: 1) {

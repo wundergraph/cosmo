@@ -16,7 +16,7 @@ import (
 // UpdateMood is the resolver for the updateMood field.
 func (r *mutationResolver) UpdateMood(ctx context.Context, employeeID int, mood model.Mood) (*model.Employee, error) {
 	storage.Set(employeeID, mood)
-	myNatsTopic := fmt.Sprintf("employeeUpdated.%d", employeeID)
+	myNatsTopic := r.GetPubSubName(fmt.Sprintf("employeeUpdated.%d", employeeID))
 	payload := fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID)
 	err := r.NatsPubSubByProviderID["default"].Publish(ctx, pubsub_datasource.NatsPublishAndRequestEventConfiguration{
 		Subject: myNatsTopic,
@@ -26,7 +26,7 @@ func (r *mutationResolver) UpdateMood(ctx context.Context, employeeID int, mood 
 		return nil, err
 	}
 
-	defaultTopic := fmt.Sprintf("employeeUpdatedMyNats.%d", employeeID)
+	defaultTopic := r.GetPubSubName(fmt.Sprintf("%semployeeUpdatedMyNats.%d", employeeID))
 	err = r.NatsPubSubByProviderID["my-nats"].Publish(ctx, pubsub_datasource.NatsPublishAndRequestEventConfiguration{
 		Subject: defaultTopic,
 		Data:    []byte(payload),

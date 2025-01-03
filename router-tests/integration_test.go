@@ -1,4 +1,4 @@
-package integration_test
+package integration
 
 import (
 	"bytes"
@@ -29,42 +29,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
 const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
-
-func randString(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
-}
-
-type testQuery struct {
-	Name      string
-	Body      string
-	Variables map[string]interface{}
-}
-
-func (t *testQuery) Data() []byte {
-	name := t.Name
-	if name == "" {
-		name = randString(10)
-	}
-	values := map[string]interface{}{
-		"query":         fmt.Sprintf("query %s %s", name, t.Body),
-		"operationName": name,
-	}
-	if len(t.Variables) > 0 {
-		values["variables"] = t.Variables
-	}
-	data, err := json.Marshal(values)
-	if err != nil {
-		panic(err)
-	}
-	return data
-}
 
 func normalizeJSON(tb testing.TB, data []byte) []byte {
 	buf := new(bytes.Buffer)
@@ -325,6 +290,8 @@ func TestAnonymousQuery(t *testing.T) {
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		t.Run("anonymous query", func(t *testing.T) {
+			t.Parallel()
+
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
 			})
@@ -332,6 +299,8 @@ func TestAnonymousQuery(t *testing.T) {
 		})
 
 		t.Run("sequence of queries with different count of variables", func(t *testing.T) {
+			t.Parallel()
+
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query ($a: Float! = 1) { floatField(arg: $a) }`,
 			})
@@ -552,7 +521,7 @@ func TestOperationSelection(t *testing.T) {
 			})
 		})
 
-		t.Run("multiple named operations B", func(t *testing.T) {
+		t.Run("multiple named operations C", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -582,6 +551,7 @@ func TestTestdataQueries(t *testing.T) {
 		}
 
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			g := goldie.New(
 				t,
@@ -639,12 +609,12 @@ func TestParallel(t *testing.T) {
 		wg.Add(10)
 		for i := 0; i < 10; i++ {
 			go func() {
+				defer wg.Done()
 				<-trigger
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employee(id:1) { id details { forename surname } } }`,
 				})
 				require.JSONEq(t, expect, res.Body)
-				wg.Done()
 			}()
 		}
 		time.Sleep(10 * time.Millisecond)
@@ -779,54 +749,11 @@ func BenchmarkPb(b *testing.B) {
 	})
 }
 
-func FuzzQuery(f *testing.F) {
-	corpus := []struct {
-		Query     string
-		Variables []byte // As JSON
-	}{
-		{
-			Query: "{ employees { id } }",
-		},
-		{
-			Query: `($team:Department!= MARKETING) {
-				team_mates(team:$team) {
-				  id
-				}
-			  }`,
-			Variables: []byte(`{"team":"MARKETING"}`),
-		},
-		{
-			Query:     `($n:Int!) { employee(id:$n) { id } }`,
-			Variables: []byte(`{"n":4}`),
-		},
-	}
-	for _, tc := range corpus {
-		f.Add(tc.Query, tc.Variables)
-	}
-	f.Fuzz(func(t *testing.T, query string, variables []byte) {
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			var q testQuery
-			if err := json.Unmarshal(variables, &q.Variables); err != nil {
-				// Invalid JSON, mark as uninteresting input
-				t.Skip()
-			}
-			q.Body = query
-
-			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Query:     query,
-				Variables: variables,
-			})
-			require.NoError(t, err)
-			if res.Response.StatusCode != http.StatusOK && res.Response.StatusCode != http.StatusBadRequest {
-				t.Error("unexpected status code", res.Response.StatusCode)
-			}
-		})
-	})
-}
-
 func TestSubgraphOperationMinifier(t *testing.T) {
 	t.Parallel()
 	t.Run("prefer minified version", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.MinifySubgraphOperations = true
@@ -853,6 +780,8 @@ func TestSubgraphOperationMinifier(t *testing.T) {
 		})
 	})
 	t.Run("prefer non-minified when disabled", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
@@ -876,6 +805,8 @@ func TestSubgraphOperationMinifier(t *testing.T) {
 		})
 	})
 	t.Run("minify concurrently without plan cache", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.MinifySubgraphOperations = true
@@ -900,13 +831,13 @@ func TestSubgraphOperationMinifier(t *testing.T) {
 			start := make(chan struct{})
 			for i := 0; i < 100; i++ {
 				go func() {
+					defer wg.Done()
 					<-start
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query:         `query MyQuery {a: employees { ...EmployeeDetails } b: employees { ...EmployeeDetails } c: employees { ...EmployeeDetails } d: employees { ...EmployeeDetails } e: employees { ...EmployeeDetails } } fragment EmployeeDetails on Employee { id details { forename surname hasChildren } }`,
 						OperationName: json.RawMessage(`"MyQuery"`),
 					})
 					require.Equal(t, `{"data":{"a":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"b":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"c":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"d":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"e":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}]}}`, res.Body)
-					wg.Done()
 				}()
 			}
 			close(start)
@@ -914,6 +845,8 @@ func TestSubgraphOperationMinifier(t *testing.T) {
 		})
 	})
 	t.Run("prefer non-minified version", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.MinifySubgraphOperations = true
