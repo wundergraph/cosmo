@@ -78,9 +78,15 @@ const (
 
 var (
 	//go:embed testdata/config.json
-	configJSONTemplate string
-	demoNatsProviders  = []string{natsDefaultSourceName, myNatsProviderID}
-	demoKafkaProviders = []string{myKafkaProviderID}
+	ConfigJSONTemplate string
+	//go:embed testdata/configWithEdfs.json
+	ConfigWithEdfsJSONTemplate string
+	//go:embed testdata/configWithEdfsKafka.json
+	ConfigWithEdfsKafkaJSONTemplate string
+	//go:embed testdata/configWithEdfsNats.json
+	ConfigWithEdfsNatsJSONTemplate string
+	demoNatsProviders              = []string{natsDefaultSourceName, myNatsProviderID}
+	demoKafkaProviders             = []string{myKafkaProviderID}
 )
 
 func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
@@ -94,6 +100,17 @@ func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	if cfg.AssertCacheMetrics != nil {
 		assertCacheMetrics(t, env, *cfg.AssertCacheMetrics)
 	}
+}
+
+func RunWithError(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) error {
+	t.Helper()
+	env, err := createTestEnv(t, cfg)
+	t.Cleanup(env.Shutdown)
+	if err == nil {
+		f(t, env)
+	}
+
+	return err
 }
 
 func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
@@ -193,6 +210,7 @@ type Config struct {
 	RouterOptions                      []core.Option
 	OverrideGraphQLPath                string
 	OverrideAbsinthePath               string
+	RouterConfigJSONTemplate           string
 	ModifyRouterConfig                 func(routerConfig *nodev1.RouterConfig)
 	ModifyEngineExecutionConfiguration func(engineExecutionConfiguration *config.EngineExecutionConfiguration)
 	ModifySecurityConfiguration        func(securityConfiguration *config.SecurityConfiguration)
@@ -222,6 +240,7 @@ type Config struct {
 	AccessLogger                       *zap.Logger
 	AccessLogFields                    []config.CustomAttribute
 	MetricOptions                      MetricOptions
+	ModifyEventsConfiguration          func(cfg *config.EventsConfiguration)
 	EnableRuntimeMetrics               bool
 	EnableNats                         bool
 	EnableKafka                        bool
@@ -476,7 +495,10 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(productFgServer),
 	}
 
-	replaced := configJSONTemplate
+	if cfg.RouterConfigJSONTemplate == "" {
+		cfg.RouterConfigJSONTemplate = ConfigJSONTemplate
+	}
+	replaced := cfg.RouterConfigJSONTemplate
 
 	for k, v := range replacements {
 		replaced = strings.ReplaceAll(replaced, k, v)
@@ -580,10 +602,9 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		}
 	}
 
+	var routerStartErr = make(chan error, 1)
 	go func() {
-		if err := rr.Start(ctx); err != nil {
-			require.Failf(t, "Could not start router", "error: %s", err)
-		}
+		routerStartErr <- rr.Start(ctx)
 	}()
 
 	graphQLPath := "/graphql"
@@ -674,9 +695,9 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		}
 	}
 
-	e.WaitForServer(ctx, e.RouterURL+"/health/live", 100, 10)
+	waitErr := e.WaitForServer(ctx, e.RouterURL+"/health/live", 100, 10, routerStartErr)
 
-	return e, nil
+	return e, waitErr
 }
 
 func configureRouter(listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsData *NatsData) (*core.Router, error) {
@@ -764,6 +785,16 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		})
 	}
 
+	eventsConfiguration := config.EventsConfiguration{
+		Providers: config.EventProviders{
+			Nats:  natsEventSources,
+			Kafka: kafkaEventSources,
+		},
+	}
+	if testConfig.ModifyEventsConfiguration != nil {
+		testConfig.ModifyEventsConfiguration(&eventsConfiguration)
+	}
+
 	routerOpts := []core.Option{
 		core.WithLogger(testConfig.Logger),
 		core.WithAccessLogs(&core.AccessLogsConfig{
@@ -787,12 +818,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithGracePeriod(15 * time.Second),
 		core.WithIntrospection(true),
 		core.WithQueryPlans(true),
-		core.WithEvents(config.EventsConfiguration{
-			Providers: config.EventProviders{
-				Nats:  natsEventSources,
-				Kafka: kafkaEventSources,
-			},
-		}),
+		core.WithEvents(eventsConfiguration),
 	}
 	routerOpts = append(routerOpts, testConfig.RouterOptions...)
 
@@ -1132,23 +1158,28 @@ type TestResponse struct {
 	Proto    string
 }
 
-func (e *Environment) WaitForServer(ctx context.Context, url string, timeoutMs int, maxAttempts int) {
+func (e *Environment) WaitForServer(ctx context.Context, url string, timeoutMs int, maxAttempts int, routerStartErr chan error) error {
 	for {
 		if maxAttempts == 0 {
-			e.t.Fatalf("timed out waiting for server to be ready")
+			return errors.New("timed out waiting for server to be ready")
 		}
 		select {
 		case <-ctx.Done():
-			e.t.Fatalf("timed out waiting for router to be ready")
+			return errors.New("timed out waiting for router to be ready")
+		case err := <-routerStartErr:
+			return err
 		default:
-			req, err := http.NewRequest("GET", url, nil)
+			reqCtx, cancelFn := context.WithTimeout(context.Background(), time.Second)
+			req, err := http.NewRequestWithContext(reqCtx, "GET", url, nil)
 			if err != nil {
+				cancelFn()
 				e.t.Fatalf("Could not create request for health check")
 			}
 			req.Header.Set("User-Agent", "Router-tests")
 			resp, err := e.RouterClient.Do(req)
+			cancelFn()
 			if err == nil && resp.StatusCode == 200 {
-				return
+				return nil
 			}
 			time.Sleep(time.Millisecond * time.Duration(timeoutMs))
 			maxAttempts--
