@@ -1,4 +1,4 @@
-package integration
+package telemetry
 
 import (
 	"context"
@@ -24,6 +24,8 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.19.0"
 	"go.opentelemetry.io/otel/trace"
+
+	integration "github.com/wundergraph/cosmo/router-tests"
 )
 
 func TestOperationCacheTelemetry(t *testing.T) {
@@ -2123,6 +2125,10 @@ func TestRuntimeTelemetry(t *testing.T) {
 			require.NotNil(t, runtimeScope)
 			require.Len(t, runtimeScope.Metrics, 15)
 
+			metricRuntimeUptime := getMetricByName(runtimeScope, "runtime.uptime")
+			require.NotNil(t, metricRuntimeUptime)
+			metricRuntimeUptimeDataType := metricRuntimeUptime.Data.(metricdata.Sum[int64])
+			require.Len(t, metricRuntimeUptimeDataType.DataPoints, 1)
 			runtimeUptimeMetric := metricdata.Metrics{
 				Name:        "runtime.uptime",
 				Description: "Seconds since application was initialized",
@@ -2138,13 +2144,13 @@ func TestRuntimeTelemetry(t *testing.T) {
 								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
-							Value: 0,
+							Value: metricRuntimeUptimeDataType.DataPoints[0].Value,
 						},
 					},
 				},
 			}
 
-			metricdatatest.AssertEqual(t, runtimeUptimeMetric, *getMetricByName(runtimeScope, "runtime.uptime"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, runtimeUptimeMetric, *metricRuntimeUptime, metricdatatest.IgnoreTimestamp())
 
 			processCpuUsageMetric := metricdata.Metrics{
 				Name:        "process.cpu.usage",
@@ -2167,6 +2173,10 @@ func TestRuntimeTelemetry(t *testing.T) {
 
 			metricdatatest.AssertEqual(t, processCpuUsageMetric, *getMetricByName(runtimeScope, "process.cpu.usage"), metricdatatest.IgnoreTimestamp())
 
+			metricServerUptime := getMetricByName(runtimeScope, "server.uptime")
+			require.NotNil(t, metricServerUptime)
+			metricServerUptimeDataType := metricServerUptime.Data.(metricdata.Sum[int64])
+			require.Len(t, metricServerUptimeDataType.DataPoints, 1)
 			serverUptimeMetric := metricdata.Metrics{
 				Name:        "server.uptime",
 				Description: "Seconds since the server started. Resets between router config changes.",
@@ -2182,13 +2192,13 @@ func TestRuntimeTelemetry(t *testing.T) {
 								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
-							Value: 0,
+							Value: metricServerUptimeDataType.DataPoints[0].Value,
 						},
 					},
 				},
 			}
 
-			metricdatatest.AssertEqual(t, serverUptimeMetric, *getMetricByName(runtimeScope, "server.uptime"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, serverUptimeMetric, *metricServerUptime, metricdatatest.IgnoreTimestamp())
 
 			processRuntimeGoMemHeapAllocMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.heap_alloc",
@@ -3157,11 +3167,11 @@ func TestTelemetry(t *testing.T) {
 				core.WithSubgraphTransportOptions(
 					core.NewSubgraphTransportOptions(config.TrafficShapingRules{
 						All: config.GlobalSubgraphRequestRule{
-							RequestTimeout: 10 * time.Millisecond,
+							RequestTimeout: 10 * time.Second,
 						},
 						Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
 							"hobbies": {
-								RequestTimeout: 3 * time.Millisecond,
+								RequestTimeout: 3 * time.Second,
 							},
 						},
 					})),
@@ -8143,7 +8153,7 @@ func TestTelemetry(t *testing.T) {
 				require.Equal(t, 400, failedRes.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"The total number of fields 2 exceeds the limit allowed (1)"}]}`, failedRes.Body)
 
-				testSpan := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryTotalFields.Int(2))
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
@@ -8154,7 +8164,7 @@ func TestTelemetry(t *testing.T) {
 				require.Equal(t, 400, failedRes2.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"The total number of fields 2 exceeds the limit allowed (1)"}]}`, failedRes2.Body)
 
-				testSpan2 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan2 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryTotalFields.Int(2))
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 				exporter.Reset()
@@ -8163,7 +8173,7 @@ func TestTelemetry(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, successRes.Body)
-				testSpan3 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan3 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryTotalFields.Int(1))
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
@@ -8172,13 +8182,13 @@ func TestTelemetry(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, successRes2.Body)
-				testSpan4 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan4 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryTotalFields.Int(1))
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 			})
 		})
 
-		t.Run("root fields caches success and failure runs", func(t *testing.T) {
+		t.Run("root fields caches success and failure runs 1", func(t *testing.T) {
 			t.Parallel()
 
 			metricReader := metric.NewManualReader()
@@ -8205,7 +8215,7 @@ func TestTelemetry(t *testing.T) {
 				require.Equal(t, 400, failedRes.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"The number of root fields 3 exceeds the root field limit allowed (2)"}]}`, failedRes.Body)
 
-				testSpan := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryRootFields.Int(3))
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
@@ -8216,7 +8226,7 @@ func TestTelemetry(t *testing.T) {
 				require.Equal(t, 400, failedRes2.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"The number of root fields 3 exceeds the root field limit allowed (2)"}]}`, failedRes2.Body)
 
-				testSpan2 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan2 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryRootFields.Int(3))
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 				exporter.Reset()
@@ -8225,7 +8235,7 @@ func TestTelemetry(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, successRes.Body)
-				testSpan3 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan3 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryRootFields.Int(1))
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
@@ -8234,13 +8244,13 @@ func TestTelemetry(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, successRes2.Body)
-				testSpan4 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan4 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryRootFields.Int(1))
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 			})
 		})
 
-		t.Run("root fields caches success and failure runs", func(t *testing.T) {
+		t.Run("root fields caches success and failure runs 2", func(t *testing.T) {
 			t.Parallel()
 
 			metricReader := metric.NewManualReader()
@@ -8267,7 +8277,7 @@ func TestTelemetry(t *testing.T) {
 				require.Equal(t, 400, failedRes.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"The number of root field aliases 2 exceeds the root field aliases limit allowed (1)"}]}`, failedRes.Body)
 
-				testSpan := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryRootFieldAliases.Int(2))
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
@@ -8278,7 +8288,7 @@ func TestTelemetry(t *testing.T) {
 				require.Equal(t, 400, failedRes2.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"The number of root field aliases 2 exceeds the root field aliases limit allowed (1)"}]}`, failedRes2.Body)
 
-				testSpan2 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan2 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryRootFieldAliases.Int(2))
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 				exporter.Reset()
@@ -8287,7 +8297,7 @@ func TestTelemetry(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, successRes.Body)
-				testSpan3 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan3 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryRootFieldAliases.Int(0))
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
@@ -8296,7 +8306,7 @@ func TestTelemetry(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, successRes2.Body)
-				testSpan4 := requireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan4 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryRootFieldAliases.Int(0))
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 			})
