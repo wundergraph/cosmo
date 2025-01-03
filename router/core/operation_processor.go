@@ -16,7 +16,7 @@ import (
 
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
-	"github.com/dgraph-io/ristretto"
+	"github.com/dgraph-io/ristretto/v2"
 	"github.com/pkg/errors"
 	"github.com/tidwall/sjson"
 	fastjson "github.com/wundergraph/astjson"

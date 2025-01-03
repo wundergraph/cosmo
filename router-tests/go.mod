@@ -17,7 +17,7 @@ require (
 	github.com/prometheus/client_model v0.6.1
 	github.com/redis/go-redis/v9 v9.4.0
 	github.com/sebdah/goldie/v2 v2.5.3
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.29.1
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.29.1
 	github.com/tidwall/gjson v1.18.0
@@ -58,7 +58,7 @@ require (
 	github.com/cpuguy83/dockercfg v0.3.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/dgraph-io/ristretto v0.1.2-0.20240723054643-f5997484152c // indirect
+	github.com/dgraph-io/ristretto/v2 v2.0.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/distribution/reference v0.5.0 // indirect
 	github.com/docker/docker v25.0.5+incompatible // indirect
