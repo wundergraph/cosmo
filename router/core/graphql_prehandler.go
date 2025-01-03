@@ -85,7 +85,6 @@ type PreHandler struct {
 	maxUploadFiles              int
 	maxUploadFileSize           int
 	complexityLimits            *config.ComplexityLimits
-	bodyReadBuffers             *sync.Pool
 	trackSchemaUsageInfo        bool
 	clientHeader                config.ClientHeader
 	computeOperationSha256      bool
@@ -126,7 +125,6 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		maxUploadFiles:           opts.MaxUploadFiles,
 		maxUploadFileSize:        opts.MaxUploadFileSize,
 		complexityLimits:         opts.ComplexityLimits,
-		bodyReadBuffers:          &sync.Pool{},
 		alwaysIncludeQueryPlan:   opts.AlwaysIncludeQueryPlan,
 		alwaysSkipLoader:         opts.AlwaysSkipLoader,
 		queryPlansEnabled:        opts.QueryPlansEnabled,
@@ -140,20 +138,11 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 
 func (h *PreHandler) getBodyReadBuffer(preferredSize int64) *bytes.Buffer {
 	if preferredSize <= 0 {
-		preferredSize = 1024
+		preferredSize = 1024 * 4 // 4KB
 	} else if preferredSize > h.operationProcessor.maxOperationSizeInBytes {
 		preferredSize = h.operationProcessor.maxOperationSizeInBytes
 	}
-	buf := h.bodyReadBuffers.Get()
-	if buf == nil {
-		return bytes.NewBuffer(make([]byte, 0, preferredSize))
-	}
-	return buf.(*bytes.Buffer)
-}
-
-func (h *PreHandler) releaseBodyReadBuffer(buf *bytes.Buffer) {
-	buf.Reset()
-	h.bodyReadBuffers.Put(buf)
+	return bytes.NewBuffer(make([]byte, 0, preferredSize))
 }
 
 // Error and Status Code handling
@@ -243,9 +232,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		var body []byte
 		var files []httpclient.File
-		// XXX: This buffer needs to be returned to the pool only
-		// AFTER we're done with body (retrieved from parser.ReadBody())
-		buf := h.getBodyReadBuffer(r.ContentLength)
 
 		if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
 			if !h.fileUploadEnabled {
@@ -254,7 +240,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 					statusCode: http.StatusOK,
 				}
 				writeOperationError(r, w, requestLogger, requestContext.error)
-				h.releaseBodyReadBuffer(buf)
 				return
 			}
 
@@ -266,11 +251,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			multipartParser := NewMultipartParser(h.operationProcessor, h.maxUploadFiles, h.maxUploadFileSize)
 
 			var err error
-			body, files, err = multipartParser.Parse(r, buf)
+			body, files, err = multipartParser.Parse(r, h.getBodyReadBuffer(r.ContentLength))
 			if err != nil {
 				requestContext.error = err
 				writeOperationError(r, w, requestLogger, requestContext.error)
-				h.releaseBodyReadBuffer(buf)
 				readMultiPartSpan.End()
 				return
 			}
@@ -295,7 +279,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			)
 
 			var err error
-			body, err = h.operationProcessor.ReadBody(buf, r.Body)
+			body, err = h.operationProcessor.ReadBody(r.Body, h.getBodyReadBuffer(r.ContentLength))
 			if err != nil {
 				requestContext.error = err
 
@@ -304,7 +288,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				// The error is logged as debug log in the writeOperationError function
 
 				writeOperationError(r, w, requestLogger, err)
-				h.releaseBodyReadBuffer(buf)
 				readOperationBodySpan.End()
 				return
 			}
@@ -315,7 +298,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		variablesParser := h.variableParsePool.Get()
 		defer h.variableParsePool.Put(variablesParser)
 
-		err = h.handleOperation(r, buf, variablesParser, &httpOperation{
+		err = h.handleOperation(r, variablesParser, &httpOperation{
 			requestContext:   requestContext,
 			requestLogger:    requestLogger,
 			routerSpan:       routerSpan,
@@ -330,7 +313,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			rtrace.AttachErrToSpan(routerSpan, err)
 
 			writeOperationError(r, w, requestLogger, err)
-			h.releaseBodyReadBuffer(buf)
 			return
 		}
 
@@ -385,7 +367,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 	})
 }
 
-func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, variablesParser *astjson.Parser, httpOperation *httpOperation) error {
+func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson.Parser, httpOperation *httpOperation) error {
 	operationKit, err := h.operationProcessor.NewKit()
 	if err != nil {
 		return err
@@ -524,9 +506,6 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, varia
 	// Set the router span name after we have the operation name
 	httpOperation.routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Request.OperationName, operationKit.parsedOperation.Type))
 
-	// Give the buffer back to the pool as soon as we're done with it
-	h.releaseBodyReadBuffer(buf)
-
 	if req.Method == http.MethodGet && operationKit.parsedOperation.Type == "mutation" {
 		return &httpGraphqlError{
 			message:    "Mutations can only be sent over HTTP POST",
@@ -587,15 +566,8 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, varia
 	// Set the cache hit attribute on the span
 	engineNormalizeSpan.SetAttributes(otel.WgNormalizationCacheHit.Bool(cached))
 
-	requestContext.operation.hash = operationKit.parsedOperation.ID
 	requestContext.operation.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
-
-	operationHashString := strconv.FormatUint(operationKit.parsedOperation.ID, 10)
-	operationHashAttribute := otel.WgOperationHash.String(operationHashString)
-
-	requestContext.telemetry.addCommonAttribute(operationHashAttribute)
-
-	httpOperation.routerSpan.SetAttributes(operationHashAttribute)
+	requestContext.operation.internalHash = operationKit.parsedOperation.InternalID
 
 	/**
 	* Normalize the variables
@@ -615,6 +587,13 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, varia
 
 		return err
 	}
+
+	requestContext.operation.hash = operationKit.parsedOperation.ID
+	operationHashString := strconv.FormatUint(operationKit.parsedOperation.ID, 10)
+
+	operationHashAttribute := otel.WgOperationHash.String(operationHashString)
+	requestContext.telemetry.addCommonAttribute(operationHashAttribute)
+	httpOperation.routerSpan.SetAttributes(operationHashAttribute)
 
 	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
 	requestContext.operation.variables, err = variablesParser.ParseBytes(operationKit.parsedOperation.Request.Variables)
@@ -729,7 +708,6 @@ func (h *PreHandler) handleOperation(req *http.Request, buf *bytes.Buffer, varia
 	)
 
 	planOptions := PlanOptions{
-		Protocol:             OperationProtocolHTTP,
 		ClientInfo:           requestContext.operation.clientInfo,
 		TraceOptions:         requestContext.operation.traceOptions,
 		ExecutionOptions:     requestContext.operation.executionOptions,

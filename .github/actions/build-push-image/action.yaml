@@ -17,17 +17,24 @@ inputs:
     default: "."
   docker_username:
     description: "The username to use for the Docker container registry"
-    required: true
   docker_password:
     description: "The password to use for the Docker container registry"
-    required: true
+  image_platforms:
+    description: "The platforms to build the image for"
+    default: "linux/amd64,linux/arm64"
+  push:
+    description: "Whether to push the image to the GitHub container registry"
+    default: "true"
+  load_Image:
+    description: "Whether to make the image locally available to the build. Doesn't work with multi-platform builds"
+    default: "false"
 
 runs:
   using: "composite"
   steps:
     - name: Log in to Docker Container registry (With write access)
       uses: docker/login-action@v3
-      if: github.event.pull_request.head.repo.full_name == github.repository
+      if: ${{ inputs.docker_username != '' && inputs.docker_password != '' }}
       with:
         registry: docker.io
         username: ${{ inputs.docker_username }}
@@ -42,7 +49,10 @@ runs:
         tags: |
           type=ref,event=branch
           type=ref,event=pr
+          # minimal (short sha)
           type=sha
+          # full length commit sha
+          type=raw,value=sha-${{ github.sha }}
           # set latest tag for default branch
           type=raw,value=latest,enable={{is_default_branch}}
           # use custom value instead of git tag
@@ -68,16 +78,17 @@ runs:
         password: ${{ inputs.token }}
 
     - name: Build & Push Docker Image
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
         # For now, we will disable the push to the GitHub Container Registry for external contributors
-        push: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+        push: ${{ inputs.push == 'true' }}
         file: ${{ inputs.dockerfile }}
         context: ${{ inputs.docker_context }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
-        platforms: linux/amd64,linux/arm64
+        platforms: ${{ inputs.image_platforms }}
+        load: ${{ inputs.load_Image == 'true' }}
         outputs:
           type=image,name=target,annotation-index.org.opencontainers.image.description=${{ inputs.image_description }}
           type=image,name=target,annotation-index.org.opencontainers.image.source=https://github.com/wundergraph/cosmo

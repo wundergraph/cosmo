@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
@@ -95,7 +96,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("type", "hits"),
 							)...),
 							Value: 1,
@@ -103,7 +104,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
@@ -111,7 +112,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("type", "hits"),
 							)...),
 							Value: 1,
@@ -119,7 +120,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
@@ -139,6 +140,22 @@ func TestOperationCacheTelemetry(t *testing.T) {
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 0,
 						},
 					},
 				},
@@ -155,7 +172,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: 2,
@@ -163,7 +180,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -171,14 +188,14 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
 						},
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: 2,
@@ -186,7 +203,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -194,7 +211,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -218,6 +235,29 @@ func TestOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
 								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -237,7 +277,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: baseCost * 2,
@@ -245,14 +285,14 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
 						},
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: baseCost * 2,
@@ -260,7 +300,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -276,6 +316,21 @@ func TestOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
 								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -293,20 +348,405 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 							)...),
 							Value: 1024,
 						},
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 							)...),
 							Value: 1024,
 						},
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
 								attribute.String("cache_type", "validation"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+							)...),
+							Value: 1024,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, maxCostMetrics, *getMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
+		})
+	})
+
+	t.Run("Validate operation cache telemetry for persisted and non persisted operations", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
+			ModifyRouterConfig: func(config *nodev1.RouterConfig) {
+				config.FeatureFlagConfigs = nil
+			},
+			MetricOptions: testenv.MetricOptions{
+				EnableOTLPRouterCache: true,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			// miss
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { id } }`,
+			})
+
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			// hit
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { id } }`,
+			})
+
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			// miss
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { tag } }`,
+			})
+
+			require.JSONEq(t, employeesTagData, res.Body)
+
+			// Persisted query is already in the plan and validation cache because the same query content was used in the previous request
+			// hit and normalization miss
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"Employees"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+
+			// This wasn't cache before
+			// miss and normalization miss
+			expected := `{"data":{"employees":[{"details":{"forename":"Jens","hasChildren":true,"location":{"key":{"name":"Germany"}},"maritalStatus":"MARRIED","middlename":"","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Neuse"}},{"details":{"forename":"Dustin","hasChildren":false,"location":{"key":{"name":"Germany"}},"maritalStatus":"ENGAGED","middlename":"Klaus","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Deus"}},{"details":{"forename":"Stefan","hasChildren":false,"location":{"key":{"name":"America"}},"maritalStatus":"ENGAGED","middlename":"","nationality":"AMERICAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"REPTILE","gender":"UNKNOWN","name":"Snappy","__typename":"Alligator","dangerous":"yes"}],"surname":"Avram"}},{"details":{"forename":"Björn","hasChildren":true,"location":{"key":{"name":"Germany"}},"maritalStatus":"MARRIED","middlename":"Volker","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Abby","__typename":"Dog","breed":"GOLDEN_RETRIEVER"},{"class":"MAMMAL","gender":"MALE","name":"Survivor","__typename":"Pony"}],"surname":"Schwenzer"}},{"details":{"forename":"Sergiy","hasChildren":false,"location":{"key":{"name":"Ukraine"}},"maritalStatus":"ENGAGED","middlename":"","nationality":"UKRAINIAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Blotch","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Grayone","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Rusty","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"FEMALE","name":"Manya","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"MALE","name":"Peach","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Panda","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"FEMALE","name":"Mommy","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"FEMALE","name":"Terry","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"FEMALE","name":"Tilda","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"MALE","name":"Vasya","__typename":"Cat","type":"HOME"}],"surname":"Petrunin"}},{"details":{"forename":"Suvij","hasChildren":false,"location":{"key":{"name":"India"}},"maritalStatus":null,"middlename":"","nationality":"INDIAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Surya"}},{"details":{"forename":"Nithin","hasChildren":false,"location":{"key":{"name":"India"}},"maritalStatus":null,"middlename":"","nationality":"INDIAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Kumar"}},{"details":{"forename":"Eelco","hasChildren":false,"location":{"key":{"name":"Netherlands"}},"maritalStatus":null,"middlename":"","nationality":"DUTCH","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"UNKNOWN","name":"Vanson","__typename":"Mouse"}],"surname":"Wiersma"}},{"details":{"forename":"Alexandra","hasChildren":true,"location":{"key":{"name":"Germany"}},"maritalStatus":"MARRIED","middlename":"","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Neuse"}},{"details":{"forename":"David","hasChildren":false,"location":{"key":{"name":"England"}},"maritalStatus":"MARRIED","middlename":null,"nationality":"ENGLISH","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Pepper","__typename":"Cat","type":"HOME"}],"surname":"Stutt"}}]}}`
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"Employees"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "1167510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, expected, res.Body)
+
+			// hit and normalization hit
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"Employees"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "1167510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, expected, res.Body)
+
+			rm := metricdata.ResourceMetrics{}
+			err = metricReader.Collect(context.Background(), &rm)
+
+			require.NoError(t, err)
+			require.Len(t, rm.ScopeMetrics, 2)
+
+			cacheScope := getMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
+			require.NotNil(t, cacheScope)
+
+			require.Len(t, cacheScope.Metrics, 4)
+
+			baseAttributes := []attribute.KeyValue{
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgRouterVersion.String("dev"),
+			}
+
+			hitStatMetrics := metricdata.Metrics{
+				Name:        "router.graphql.cache.requests.stats",
+				Description: "Cache stats related to cache requests. Tracks cache hits and misses. Can be used to calculate the ratio",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "plan"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 3,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "plan"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 3,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 1,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 3,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 3,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 1,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 2,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, hitStatMetrics, *getMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
+
+			keyStatMetrics := metricdata.Metrics{
+				Name:        "router.graphql.cache.keys.stats",
+				Description: "Cache stats for Keys. Tracks added, updated and evicted keys. Can be used to get the total number of items",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "plan"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 3,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "plan"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "plan"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 3,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, keyStatMetrics, *getMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
+
+			costStatsMetrics := metricdata.Metrics{
+				Name:        "router.graphql.cache.cost.stats",
+				Description: "Cache stats for Cost. Tracks the cost of the cache operations. Can be used to calculate the cost of the cache operations",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "plan"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 3,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "plan"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 3,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, costStatsMetrics, *getMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
+
+			maxCostMetrics := metricdata.Metrics{
+				Name:        "router.graphql.cache.cost.max",
+				Description: "Tracks the maximum configured cost for a cache. Useful to investigate differences between the number of keys and the current cost",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "plan"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "query_normalization"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "validation"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 							)...),
 							Value: 1024,
 						},
@@ -378,7 +818,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("type", "hits"),
 							)...),
 							Value: 1,
@@ -386,7 +826,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
@@ -394,7 +834,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("type", "hits"),
 							)...),
 							Value: 1,
@@ -402,7 +842,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
@@ -422,6 +862,22 @@ func TestOperationCacheTelemetry(t *testing.T) {
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 0,
 						},
 					},
 				},
@@ -438,7 +894,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: 2,
@@ -446,7 +902,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -454,14 +910,14 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
 						},
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: 2,
@@ -469,7 +925,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -477,7 +933,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -501,6 +957,29 @@ func TestOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
 								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -520,7 +999,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: baseCost * 2,
@@ -528,14 +1007,14 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
 						},
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: baseCost * 2,
@@ -543,7 +1022,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -559,6 +1038,21 @@ func TestOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
 								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -576,20 +1070,26 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 							)...),
 							Value: 1024,
 						},
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 							)...),
 							Value: 1024,
 						},
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
 								attribute.String("cache_type", "validation"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 							)...),
 							Value: 1024,
 						},
@@ -663,7 +1163,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("type", "hits"),
 							)...),
 							Value: 1,
@@ -671,7 +1171,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
@@ -679,7 +1179,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("type", "hits"),
 							)...),
 							Value: 1,
@@ -687,7 +1187,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
@@ -707,6 +1207,22 @@ func TestOperationCacheTelemetry(t *testing.T) {
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 0,
 						},
 					},
 				},
@@ -723,7 +1239,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: 2,
@@ -731,7 +1247,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -739,14 +1255,14 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
 						},
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: 2,
@@ -754,7 +1270,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -762,7 +1278,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -786,6 +1302,30 @@ func TestOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
 								attribute.String("cache_type", "validation"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -805,7 +1345,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: baseCost * 2,
@@ -813,14 +1353,14 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
 						},
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: baseCost * 2,
@@ -828,7 +1368,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -847,6 +1387,21 @@ func TestOperationCacheTelemetry(t *testing.T) {
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: baseCost,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
 						},
 					},
 				},
@@ -861,14 +1416,14 @@ func TestOperationCacheTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 							)...),
 							Value: 1024,
 						},
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 							)...),
 							Value: 1024,
 						},
@@ -877,6 +1432,12 @@ func TestOperationCacheTelemetry(t *testing.T) {
 								attribute.String("cache_type", "validation"),
 							)...),
 							Value: baseCost,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+							)...),
+							Value: 1024,
 						},
 					},
 				},
@@ -977,14 +1538,14 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("type", "hits"),
 							)...),
 							Value: 1,
 						},
 						{
 							Attributes: attribute.NewSet(append(mainAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
@@ -992,7 +1553,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("type", "hits"),
 							)...),
 							Value: 1,
@@ -1000,10 +1561,26 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 0,
 						},
 						{
 							Attributes: attribute.NewSet(append(
@@ -1025,7 +1602,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("type", "hits"),
 							)...),
 							Value: 1,
@@ -1033,7 +1610,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
@@ -1041,7 +1618,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("type", "hits"),
 							)...),
 							Value: 1,
@@ -1049,10 +1626,26 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 0,
 						},
 						{
 							Attributes: attribute.NewSet(append(
@@ -1086,7 +1679,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: 2,
@@ -1094,7 +1687,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -1102,7 +1695,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -1110,7 +1703,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: 2,
@@ -1118,7 +1711,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -1126,7 +1719,31 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -1160,7 +1777,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: 2,
@@ -1168,7 +1785,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -1176,7 +1793,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -1184,7 +1801,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: 2,
@@ -1192,7 +1809,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -1200,7 +1817,31 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -1245,7 +1886,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: baseCost * 2,
@@ -1253,7 +1894,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -1261,7 +1902,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: baseCost * 2,
@@ -1269,7 +1910,23 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -1294,7 +1951,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: baseCost * 2,
@@ -1302,7 +1959,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -1310,7 +1967,7 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
 							Value: baseCost * 2,
@@ -1318,7 +1975,23 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "evicted"),
 							)...),
 							Value: 0,
@@ -1353,14 +2026,21 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 							)...),
 							Value: 1024,
 						},
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 							)...),
 							Value: 1024,
 						},
@@ -1375,14 +2055,21 @@ func TestOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "execution"),
+								attribute.String("cache_type", "plan"),
 							)...),
 							Value: 1024,
 						},
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
-								attribute.String("cache_type", "normalization"),
+								attribute.String("cache_type", "query_normalization"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "persisted_query_normalization"),
 							)...),
 							Value: 1024,
 						},
@@ -1926,7 +2613,7 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[3].Attributes(), otel.WgOperationName.String(""))
 			require.Contains(t, sn[3].Attributes(), otel.WgOperationType.String("query"))
 
-			require.Contains(t, sn[3].Attributes(), otel.WgOperationHash.String("14226210703439426856"))
+			require.Contains(t, sn[3].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
 			require.Contains(t, sn[3].Attributes(), otel.WgValidationCacheHit.Bool(false))
 
 			// Span Resource attributes
@@ -1960,7 +2647,7 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[4].Attributes(), otel.WgOperationName.String(""))
 			require.Contains(t, sn[4].Attributes(), otel.WgOperationType.String("query"))
 			require.Contains(t, sn[4].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[4].Attributes(), otel.WgOperationHash.String("14226210703439426856"))
+			require.Contains(t, sn[4].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
 
 			// Engine Transport
 			require.Equal(t, "query unnamed", sn[5].Name())
@@ -2006,7 +2693,7 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[5].Attributes(), otel.WgOperationName.String(""))
 			require.Contains(t, sn[5].Attributes(), otel.WgOperationType.String("query"))
 			require.Contains(t, sn[5].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[5].Attributes(), otel.WgOperationHash.String("14226210703439426856"))
+			require.Contains(t, sn[5].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
 			require.Contains(t, sn[5].Attributes(), otel.WgSubgraphID.String("0"))
 			require.Contains(t, sn[5].Attributes(), otel.WgSubgraphName.String("employees"))
 			require.Contains(t, sn[5].Attributes(), semconv.HTTPStatusCode(200))
@@ -2047,7 +2734,7 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[6].Attributes(), otel.WgOperationName.String(""))
 			require.Contains(t, sn[6].Attributes(), otel.WgOperationType.String("query"))
 			require.Contains(t, sn[6].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[6].Attributes(), otel.WgOperationHash.String("14226210703439426856"))
+			require.Contains(t, sn[6].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
 			require.Contains(t, sn[6].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[6].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[6].Attributes(), otel.WgFederatedGraphID.String("graph"))
@@ -2083,7 +2770,7 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[7].Attributes(), otel.WgOperationName.String(""))
 			require.Contains(t, sn[7].Attributes(), otel.WgOperationType.String("query"))
 			require.Contains(t, sn[7].Attributes(), otel.WgOperationProtocol.String("http"))
-			require.Contains(t, sn[7].Attributes(), otel.WgOperationHash.String("14226210703439426856"))
+			require.Contains(t, sn[7].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
 
 			require.Contains(t, sn[7].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[7].Attributes(), otel.WgRouterClusterName.String(""))
@@ -2142,7 +2829,7 @@ func TestTelemetry(t *testing.T) {
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationType.String("query"))
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationContent.String("{employees {id}}"))
 			require.Contains(t, sn[8].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[8].Attributes(), otel.WgOperationHash.String("14226210703439426856"))
+			require.Contains(t, sn[8].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
 			require.Contains(t, sn[8].Attributes(), semconv.HTTPStatusCode(200))
 
 			/**
@@ -2166,7 +2853,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -2184,7 +2871,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -2211,7 +2898,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -2229,7 +2916,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -2256,7 +2943,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -2274,7 +2961,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -2302,7 +2989,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -2320,7 +3007,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -2358,7 +3045,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -2387,7 +3074,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -2455,6 +3142,409 @@ func TestTelemetry(t *testing.T) {
 			require.Len(t, sn, 9, "expected 9 spans, got %d", len(sn))
 			require.Len(t, sn[3].Attributes(), 11)
 			require.Contains(t, sn[3].Attributes(), otel.WgValidationCacheHit.Bool(true))
+		})
+	})
+
+	t.Run("Telemetry works with subgraph timeouts", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			MetricReader:  metricReader,
+			RouterOptions: []core.Option{
+				core.WithSubgraphTransportOptions(
+					core.NewSubgraphTransportOptions(config.TrafficShapingRules{
+						All: config.GlobalSubgraphRequestRule{
+							RequestTimeout: 10 * time.Millisecond,
+						},
+						Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
+							"hobbies": {
+								RequestTimeout: 3 * time.Millisecond,
+							},
+						},
+					})),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employee(id:1) { id details { forename surname } } }`,
+			})
+			require.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+
+			sn := exporter.GetSpans().Snapshots()
+			require.Len(t, sn, 9, "expected 9 spans, got %d", len(sn))
+
+			/**
+			* Spans
+			 */
+
+			// Pre-Handler Operation Read
+
+			require.Equal(t, "HTTP - Read Body", sn[0].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[0].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
+			require.Len(t, sn[0].Attributes(), 7)
+			require.Contains(t, sn[0].Attributes(), otel.WgRouterVersion.String("dev"))
+			require.Contains(t, sn[0].Attributes(), otel.WgRouterClusterName.String(""))
+			require.Contains(t, sn[0].Attributes(), otel.WgFederatedGraphID.String("graph"))
+			require.Contains(t, sn[0].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
+			require.Contains(t, sn[0].Attributes(), otel.WgClientName.String("unknown"))
+			require.Contains(t, sn[0].Attributes(), otel.WgClientVersion.String("missing"))
+			require.Contains(t, sn[0].Attributes(), otel.WgOperationProtocol.String("http"))
+
+			// Pre-Handler Operation Parse
+
+			require.Equal(t, "Operation - Parse", sn[1].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[1].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[1].Status())
+
+			// Span Resource attributes
+
+			rs := attribute.NewSet(sn[1].Resource().Attributes()...)
+
+			require.True(t, rs.HasValue("host.name"))
+			require.True(t, rs.HasValue("os.type"))
+			require.True(t, rs.HasValue("process.pid"))
+
+			require.NotEmpty(t, sn[1].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
+			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
+			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
+			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
+			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("service.version", "dev"))
+			require.Contains(t, sn[1].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+
+			// Span attributes
+
+			require.Len(t, sn[1].Attributes(), 7)
+			require.Contains(t, sn[1].Attributes(), otel.WgRouterVersion.String("dev"))
+			require.Contains(t, sn[1].Attributes(), otel.WgRouterClusterName.String(""))
+			require.Contains(t, sn[1].Attributes(), otel.WgFederatedGraphID.String("graph"))
+			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
+			require.Contains(t, sn[1].Attributes(), otel.WgClientName.String("unknown"))
+			require.Contains(t, sn[1].Attributes(), otel.WgClientVersion.String("missing"))
+			require.Contains(t, sn[1].Attributes(), otel.WgOperationProtocol.String("http"))
+
+			require.Equal(t, "Operation - Normalize", sn[2].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[2].Status())
+
+			// Span Resource attributes
+
+			rs = attribute.NewSet(sn[2].Resource().Attributes()...)
+
+			require.Len(t, sn[2].Resource().Attributes(), 9)
+
+			require.True(t, rs.HasValue("host.name"))
+			require.True(t, rs.HasValue("os.type"))
+			require.True(t, rs.HasValue("process.pid"))
+
+			require.NotEmpty(t, sn[2].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
+			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
+			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
+			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
+			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("service.version", "dev"))
+			require.Contains(t, sn[2].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+
+			// Span attributes
+
+			require.Len(t, sn[2].Attributes(), 10)
+
+			require.Contains(t, sn[2].Attributes(), otel.WgRouterVersion.String("dev"))
+			require.Contains(t, sn[2].Attributes(), otel.WgRouterClusterName.String(""))
+			require.Contains(t, sn[2].Attributes(), otel.WgFederatedGraphID.String("graph"))
+			require.Contains(t, sn[2].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
+			require.Contains(t, sn[2].Attributes(), otel.WgOperationName.String(""))
+			require.Contains(t, sn[2].Attributes(), otel.WgOperationType.String("query"))
+			require.Contains(t, sn[2].Attributes(), otel.WgNormalizationCacheHit.Bool(false))
+			require.Contains(t, sn[2].Attributes(), otel.WgClientName.String("unknown"))
+			require.Contains(t, sn[2].Attributes(), otel.WgClientVersion.String("missing"))
+			require.Contains(t, sn[2].Attributes(), otel.WgOperationProtocol.String("http"))
+
+			require.Equal(t, "Operation - Validate", sn[3].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[3].Status())
+
+			// Span Resource attributes
+
+			rs = attribute.NewSet(sn[3].Resource().Attributes()...)
+
+			require.Len(t, sn[3].Resource().Attributes(), 9)
+
+			require.True(t, rs.HasValue("host.name"))
+			require.True(t, rs.HasValue("os.type"))
+			require.True(t, rs.HasValue("process.pid"))
+
+			require.NotEmpty(t, sn[3].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
+			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
+			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
+			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
+			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("service.version", "dev"))
+			require.Contains(t, sn[3].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+
+			// Span attributes
+
+			require.Len(t, sn[3].Attributes(), 11)
+
+			require.Equal(t, "Operation - Validate", sn[3].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[3].Status())
+
+			require.Contains(t, sn[3].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
+			require.Contains(t, sn[3].Attributes(), otel.WgRouterVersion.String("dev"))
+			require.Contains(t, sn[3].Attributes(), otel.WgRouterClusterName.String(""))
+			require.Contains(t, sn[3].Attributes(), otel.WgFederatedGraphID.String("graph"))
+
+			require.Contains(t, sn[3].Attributes(), otel.WgClientName.String("unknown"))
+			require.Contains(t, sn[3].Attributes(), otel.WgValidationCacheHit.Bool(false))
+
+			require.Contains(t, sn[3].Attributes(), otel.WgClientVersion.String("missing"))
+			require.Contains(t, sn[3].Attributes(), otel.WgOperationProtocol.String("http"))
+			require.Contains(t, sn[3].Attributes(), otel.WgOperationName.String(""))
+			require.Contains(t, sn[3].Attributes(), otel.WgOperationType.String("query"))
+
+			require.Contains(t, sn[3].Attributes(), otel.WgOperationHash.String("14671468813149144966"))
+			require.Contains(t, sn[3].Attributes(), otel.WgValidationCacheHit.Bool(false))
+
+			// Span Resource attributes
+
+			rs = attribute.NewSet(sn[4].Resource().Attributes()...)
+
+			require.Len(t, sn[4].Resource().Attributes(), 9)
+
+			require.True(t, rs.HasValue("host.name"))
+			require.True(t, rs.HasValue("os.type"))
+			require.True(t, rs.HasValue("process.pid"))
+
+			require.NotEmpty(t, sn[4].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
+			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
+			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
+			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
+			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("service.version", "dev"))
+			require.Contains(t, sn[4].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+
+			// Span attributes
+
+			require.Len(t, sn[4].Attributes(), 12)
+			require.Contains(t, sn[4].Attributes(), otel.WgRouterVersion.String("dev"))
+			require.Contains(t, sn[4].Attributes(), otel.WgRouterClusterName.String(""))
+			require.Contains(t, sn[4].Attributes(), otel.WgFederatedGraphID.String("graph"))
+			require.Contains(t, sn[4].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
+			require.Contains(t, sn[4].Attributes(), otel.WgEngineRequestTracingEnabled.Bool(false))
+			require.Contains(t, sn[4].Attributes(), otel.WgEnginePlanCacheHit.Bool(false))
+			require.Contains(t, sn[4].Attributes(), otel.WgClientName.String("unknown"))
+			require.Contains(t, sn[4].Attributes(), otel.WgClientVersion.String("missing"))
+			require.Contains(t, sn[4].Attributes(), otel.WgOperationName.String(""))
+			require.Contains(t, sn[4].Attributes(), otel.WgOperationType.String("query"))
+			require.Contains(t, sn[4].Attributes(), otel.WgOperationProtocol.String("http"))
+			require.Contains(t, sn[4].Attributes(), otel.WgOperationHash.String("14671468813149144966"))
+
+			// Engine Transport
+			require.Equal(t, "query unnamed", sn[5].Name())
+			require.Equal(t, trace.SpanKindClient, sn[5].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[5].Status())
+
+			// Span Resource attributes
+
+			rs = attribute.NewSet(sn[5].Resource().Attributes()...)
+
+			require.Len(t, sn[5].Resource().Attributes(), 9)
+
+			require.True(t, rs.HasValue("host.name"))
+			require.True(t, rs.HasValue("os.type"))
+			require.True(t, rs.HasValue("process.pid"))
+
+			require.NotEmpty(t, sn[5].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
+			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
+			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
+			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
+			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("service.version", "dev"))
+			require.Contains(t, sn[5].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+
+			// Span attributes
+
+			sa := attribute.NewSet(sn[5].Attributes()...)
+
+			require.Len(t, sn[5].Attributes(), 21)
+			require.True(t, sa.HasValue(semconv.HTTPURLKey))
+			require.True(t, sa.HasValue(semconv.NetPeerPortKey))
+
+			require.Contains(t, sn[5].Attributes(), otel.WgRouterVersion.String("dev"))
+			require.Contains(t, sn[5].Attributes(), otel.WgRouterClusterName.String(""))
+			require.Contains(t, sn[5].Attributes(), otel.WgFederatedGraphID.String("graph"))
+			require.Contains(t, sn[5].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
+			require.Contains(t, sn[5].Attributes(), otel.WgComponentName.String("engine-transport"))
+			require.Contains(t, sn[5].Attributes(), semconv.HTTPMethod("POST"))
+			require.Contains(t, sn[5].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
+			require.Contains(t, sn[5].Attributes(), semconv.NetPeerName("127.0.0.1"))
+			require.Contains(t, sn[5].Attributes(), semconv.HTTPRequestContentLength(96))
+			require.Contains(t, sn[5].Attributes(), otel.WgClientName.String("unknown"))
+			require.Contains(t, sn[5].Attributes(), otel.WgClientVersion.String("missing"))
+			require.Contains(t, sn[5].Attributes(), otel.WgOperationName.String(""))
+			require.Contains(t, sn[5].Attributes(), otel.WgOperationType.String("query"))
+			require.Contains(t, sn[5].Attributes(), otel.WgOperationProtocol.String("http"))
+			require.Contains(t, sn[5].Attributes(), otel.WgOperationHash.String("14671468813149144966"))
+			require.Contains(t, sn[5].Attributes(), otel.WgSubgraphID.String("0"))
+			require.Contains(t, sn[5].Attributes(), otel.WgSubgraphName.String("employees"))
+			require.Contains(t, sn[5].Attributes(), semconv.HTTPStatusCode(200))
+			require.Contains(t, sn[5].Attributes(), semconv.HTTPResponseContentLength(78))
+
+			// Engine Loader Hooks
+			require.Equal(t, "Engine - Fetch", sn[6].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[6].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[6].Status())
+
+			// Span Resource attributes
+
+			rs = attribute.NewSet(sn[6].Resource().Attributes()...)
+
+			require.Len(t, sn[6].Resource().Attributes(), 9)
+
+			require.True(t, rs.HasValue("host.name"))
+			require.True(t, rs.HasValue("os.type"))
+			require.True(t, rs.HasValue("process.pid"))
+
+			require.NotEmpty(t, sn[6].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
+			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
+			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
+			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
+			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("service.version", "dev"))
+			require.Contains(t, sn[6].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+
+			// Span attributes
+
+			require.Len(t, sn[6].Attributes(), 14)
+
+			require.Contains(t, sn[6].Attributes(), otel.WgSubgraphID.String("0"))
+			require.Contains(t, sn[6].Attributes(), otel.WgSubgraphName.String("employees"))
+			require.Contains(t, sn[6].Attributes(), semconv.HTTPStatusCode(200))
+			require.Contains(t, sn[6].Attributes(), otel.WgComponentName.String("engine-loader"))
+			require.Contains(t, sn[6].Attributes(), otel.WgClientName.String("unknown"))
+			require.Contains(t, sn[6].Attributes(), otel.WgClientVersion.String("missing"))
+			require.Contains(t, sn[6].Attributes(), otel.WgOperationName.String(""))
+			require.Contains(t, sn[6].Attributes(), otel.WgOperationType.String("query"))
+			require.Contains(t, sn[6].Attributes(), otel.WgOperationProtocol.String("http"))
+			require.Contains(t, sn[6].Attributes(), otel.WgOperationHash.String("14671468813149144966"))
+			require.Contains(t, sn[6].Attributes(), otel.WgRouterVersion.String("dev"))
+			require.Contains(t, sn[6].Attributes(), otel.WgRouterClusterName.String(""))
+			require.Contains(t, sn[6].Attributes(), otel.WgFederatedGraphID.String("graph"))
+			require.Contains(t, sn[6].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
+
+			// GraphQL handler
+			require.Equal(t, "Operation - Execute", sn[7].Name())
+			require.Equal(t, trace.SpanKindInternal, sn[7].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[7].Status())
+
+			// Span Resource attributes
+
+			rs = attribute.NewSet(sn[7].Resource().Attributes()...)
+
+			require.Len(t, sn[7].Resource().Attributes(), 9)
+
+			require.True(t, rs.HasValue("host.name"))
+			require.True(t, rs.HasValue("os.type"))
+			require.True(t, rs.HasValue("process.pid"))
+
+			require.NotEmpty(t, sn[7].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
+			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
+			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
+			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
+			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("service.version", "dev"))
+			require.Contains(t, sn[7].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+
+			// Span attributes
+
+			require.Len(t, sn[7].Attributes(), 11)
+			require.Contains(t, sn[7].Attributes(), otel.WgClientName.String("unknown"))
+			require.Contains(t, sn[7].Attributes(), otel.WgClientVersion.String("missing"))
+			require.Contains(t, sn[7].Attributes(), otel.WgOperationName.String(""))
+			require.Contains(t, sn[7].Attributes(), otel.WgOperationType.String("query"))
+			require.Contains(t, sn[7].Attributes(), otel.WgOperationProtocol.String("http"))
+			require.Contains(t, sn[7].Attributes(), otel.WgOperationHash.String("14671468813149144966"))
+
+			require.Contains(t, sn[7].Attributes(), otel.WgRouterVersion.String("dev"))
+			require.Contains(t, sn[7].Attributes(), otel.WgRouterClusterName.String(""))
+			require.Contains(t, sn[7].Attributes(), otel.WgFederatedGraphID.String("graph"))
+			require.Contains(t, sn[7].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
+			require.Contains(t, sn[7].Attributes(), otel.WgAcquireResolverWaitTimeMs.Int64(0))
+
+			// Root Server middleware
+			require.Equal(t, "query unnamed", sn[8].Name())
+			require.Equal(t, trace.SpanKindServer, sn[8].SpanKind())
+			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[8].Status())
+
+			// Span Resource attributes
+
+			rs = attribute.NewSet(sn[8].Resource().Attributes()...)
+
+			require.Len(t, sn[8].Resource().Attributes(), 9)
+
+			require.True(t, rs.HasValue("host.name"))
+			require.True(t, rs.HasValue("os.type"))
+			require.True(t, rs.HasValue("process.pid"))
+
+			require.NotEmpty(t, sn[8].Resource().Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
+			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("service.instance.id", "test-instance"))
+			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
+			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("telemetry.sdk.language", "go"))
+			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("service.version", "dev"))
+			require.Contains(t, sn[8].Resource().Attributes(), attribute.String("service.name", "cosmo-router"))
+
+			sa = attribute.NewSet(sn[8].Attributes()...)
+
+			require.Len(t, sn[8].Attributes(), 26)
+			require.True(t, sa.HasValue(semconv.NetHostPortKey))
+			require.True(t, sa.HasValue(semconv.NetSockPeerAddrKey))
+			require.True(t, sa.HasValue(semconv.NetSockPeerPortKey))
+			require.True(t, sa.HasValue(otel.WgRouterConfigVersion))
+			require.True(t, sa.HasValue(otel.WgFederatedGraphID))
+			require.True(t, sa.HasValue("http.user_agent"))
+			require.True(t, sa.HasValue("http.host"))
+			require.True(t, sa.HasValue("http.read_bytes"))
+			require.True(t, sa.HasValue("http.wrote_bytes"))
+
+			require.Contains(t, sn[8].Attributes(), semconv.HTTPMethod("POST"))
+			require.Contains(t, sn[8].Attributes(), semconv.HTTPScheme("http"))
+			require.Contains(t, sn[8].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
+			require.Contains(t, sn[8].Attributes(), semconv.NetHostName("localhost"))
+			require.Contains(t, sn[8].Attributes(), otel.WgRouterVersion.String("dev"))
+			require.Contains(t, sn[8].Attributes(), otel.WgRouterClusterName.String(""))
+			require.Contains(t, sn[8].Attributes(), otel.WgComponentName.String("router-server"))
+			require.Contains(t, sn[8].Attributes(), otel.WgRouterRootSpan.Bool(true))
+			require.Contains(t, sn[8].Attributes(), semconv.HTTPTarget("/graphql"))
+			require.Contains(t, sn[8].Attributes(), otel.WgClientName.String("unknown"))
+			require.Contains(t, sn[8].Attributes(), otel.WgClientVersion.String("missing"))
+			require.Contains(t, sn[8].Attributes(), otel.WgOperationProtocol.String("http"))
+			require.Contains(t, sn[8].Attributes(), otel.WgOperationName.String(""))
+			require.Contains(t, sn[8].Attributes(), otel.WgOperationType.String("query"))
+			require.Contains(t, sn[8].Attributes(), otel.WgOperationContent.String("query($a: Int!){employee(id: $a){id details {forename surname}}}"))
+			require.Contains(t, sn[8].Attributes(), otel.WgFederatedGraphID.String("graph"))
+			require.Contains(t, sn[8].Attributes(), otel.WgOperationHash.String("14671468813149144966"))
+			require.Contains(t, sn[8].Attributes(), semconv.HTTPStatusCode(200))
+
+			/**
+			* Metrics
+			 */
+			rm := metricdata.ResourceMetrics{}
+			err := metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			rs = attribute.NewSet(rm.Resource.Attributes()...)
+
+			require.True(t, rs.HasValue("host.name"))
+			require.True(t, rs.HasValue("os.type"))
+			require.True(t, rs.HasValue("process.pid"))
+
+			require.NotEmpty(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.version", "1.24.0"))
+			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.instance.id", "test-instance"))
+			require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.name", "opentelemetry"))
+			require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.language", "go"))
+			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
+			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
+
+			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
+			require.Equal(t, 6, len(rm.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
 		})
 	})
 
@@ -2631,7 +3721,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -2650,7 +3740,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -2678,7 +3768,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -2697,7 +3787,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -2725,7 +3815,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -2744,7 +3834,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -2773,7 +3863,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -2792,7 +3882,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -2832,7 +3922,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -2862,7 +3952,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -3032,7 +4122,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -3051,7 +4141,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -3079,7 +4169,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -3098,7 +4188,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -3126,7 +4216,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -3145,7 +4235,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -3174,7 +4264,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -3193,7 +4283,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -3233,7 +4323,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -3263,7 +4353,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -3410,7 +4500,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -3429,7 +4519,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -3457,7 +4547,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -3476,7 +4566,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -3504,7 +4594,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -3523,7 +4613,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -3552,7 +4642,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -3571,7 +4661,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -3611,7 +4701,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -3641,7 +4731,7 @@ func TestTelemetry(t *testing.T) {
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
-								otel.WgOperationHash.String("14226210703439426856"),
+								otel.WgOperationHash.String("1163600561566987607"),
 								otel.WgOperationName.String(""),
 								otel.WgOperationProtocol.String("http"),
 								otel.WgOperationType.String("query"),
@@ -4018,7 +5108,7 @@ func TestTelemetry(t *testing.T) {
 				otel.WgClientVersion.String("missing"),
 				otel.WgComponentName.String("engine-loader"),
 				otel.WgFederatedGraphID.String("graph"),
-				otel.WgOperationHash.String("16884868987896027258"),
+				otel.WgOperationHash.String("13939103824696605913"),
 				otel.WgOperationProtocol.String("http"),
 				otel.WgOperationType.String("query"),
 				otel.WgRouterClusterName.String(""),
@@ -4052,7 +5142,7 @@ func TestTelemetry(t *testing.T) {
 				otel.WgOperationName.String("myQuery"),
 				otel.WgOperationType.String("query"),
 				otel.WgOperationProtocol.String("http"),
-				otel.WgOperationHash.String("16884868987896027258"),
+				otel.WgOperationHash.String("13939103824696605913"),
 			}...)
 
 			require.True(t, given.Equals(&want))
@@ -4195,6 +5285,7 @@ func TestTelemetry(t *testing.T) {
 			t.Parallel()
 
 			exporter := tracetest.NewInMemoryExporter(t)
+			defer exporter.Reset()
 
 			testenv.Run(t, &testenv.Config{
 				TraceExporter:     exporter,
@@ -4226,6 +5317,7 @@ func TestTelemetry(t *testing.T) {
 			t.Parallel()
 
 			exporter := tracetest.NewInMemoryExporter(t)
+			defer exporter.Reset()
 
 			testenv.Run(t, &testenv.Config{
 				TraceExporter:     exporter,
@@ -4257,6 +5349,7 @@ func TestTelemetry(t *testing.T) {
 			t.Parallel()
 
 			exporter := tracetest.NewInMemoryExporter(t)
+			defer exporter.Reset()
 
 			testenv.Run(t, &testenv.Config{
 				TraceExporter:     exporter,
@@ -4294,6 +5387,7 @@ func TestTelemetry(t *testing.T) {
 			t.Parallel()
 
 			exporter := tracetest.NewInMemoryExporter(t)
+			defer exporter.Reset()
 
 			testenv.Run(t, &testenv.Config{
 				TraceExporter:     exporter,
@@ -4612,7 +5706,7 @@ func TestTelemetry(t *testing.T) {
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
-									otel.WgOperationHash.String("16884868987896027258"),
+									otel.WgOperationHash.String("13939103824696605913"),
 									otel.WgOperationName.String("myQuery"),
 									otel.WgOperationProtocol.String("http"),
 									otel.WgOperationType.String("query"),
@@ -4636,7 +5730,7 @@ func TestTelemetry(t *testing.T) {
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
-									otel.WgOperationHash.String("16884868987896027258"),
+									otel.WgOperationHash.String("13939103824696605913"),
 									otel.WgOperationName.String("myQuery"),
 									otel.WgOperationProtocol.String("http"),
 									otel.WgOperationType.String("query"),
@@ -4654,7 +5748,7 @@ func TestTelemetry(t *testing.T) {
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
-									otel.WgOperationHash.String("16884868987896027258"),
+									otel.WgOperationHash.String("13939103824696605913"),
 									otel.WgOperationName.String("myQuery"),
 									otel.WgOperationProtocol.String("http"),
 									otel.WgOperationType.String("query"),
@@ -4687,7 +5781,7 @@ func TestTelemetry(t *testing.T) {
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
-									otel.WgOperationHash.String("16884868987896027258"),
+									otel.WgOperationHash.String("13939103824696605913"),
 									otel.WgOperationName.String("myQuery"),
 									otel.WgOperationProtocol.String("http"),
 									otel.WgOperationType.String("query"),
@@ -4711,7 +5805,7 @@ func TestTelemetry(t *testing.T) {
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
-									otel.WgOperationHash.String("16884868987896027258"),
+									otel.WgOperationHash.String("13939103824696605913"),
 									otel.WgOperationName.String("myQuery"),
 									otel.WgOperationProtocol.String("http"),
 									otel.WgOperationType.String("query"),
@@ -4729,7 +5823,7 @@ func TestTelemetry(t *testing.T) {
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
-									otel.WgOperationHash.String("16884868987896027258"),
+									otel.WgOperationHash.String("13939103824696605913"),
 									otel.WgOperationName.String("myQuery"),
 									otel.WgOperationProtocol.String("http"),
 									otel.WgOperationType.String("query"),
@@ -4760,7 +5854,7 @@ func TestTelemetry(t *testing.T) {
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
-									otel.WgOperationHash.String("16884868987896027258"),
+									otel.WgOperationHash.String("13939103824696605913"),
 									otel.WgOperationName.String("myQuery"),
 									otel.WgOperationProtocol.String("http"),
 									otel.WgOperationType.String("query"),
@@ -4783,7 +5877,7 @@ func TestTelemetry(t *testing.T) {
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
-									otel.WgOperationHash.String("16884868987896027258"),
+									otel.WgOperationHash.String("13939103824696605913"),
 									otel.WgOperationName.String("myQuery"),
 									otel.WgOperationProtocol.String("http"),
 									otel.WgOperationType.String("query"),
@@ -4800,7 +5894,7 @@ func TestTelemetry(t *testing.T) {
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
-									otel.WgOperationHash.String("16884868987896027258"),
+									otel.WgOperationHash.String("13939103824696605913"),
 									otel.WgOperationName.String("myQuery"),
 									otel.WgOperationProtocol.String("http"),
 									otel.WgOperationType.String("query"),
@@ -4832,7 +5926,7 @@ func TestTelemetry(t *testing.T) {
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
-									otel.WgOperationHash.String("16884868987896027258"),
+									otel.WgOperationHash.String("13939103824696605913"),
 									otel.WgOperationName.String("myQuery"),
 									otel.WgOperationProtocol.String("http"),
 									otel.WgOperationType.String("query"),
@@ -4852,7 +5946,7 @@ func TestTelemetry(t *testing.T) {
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
-									otel.WgOperationHash.String("16884868987896027258"),
+									otel.WgOperationHash.String("13939103824696605913"),
 									otel.WgOperationName.String("myQuery"),
 									otel.WgOperationProtocol.String("http"),
 									otel.WgOperationType.String("query"),
@@ -4875,7 +5969,7 @@ func TestTelemetry(t *testing.T) {
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
-									otel.WgOperationHash.String("16884868987896027258"),
+									otel.WgOperationHash.String("13939103824696605913"),
 									otel.WgOperationName.String("myQuery"),
 									otel.WgOperationProtocol.String("http"),
 									otel.WgOperationType.String("query"),
@@ -4903,7 +5997,7 @@ func TestTelemetry(t *testing.T) {
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
-									otel.WgOperationHash.String("16884868987896027258"),
+									otel.WgOperationHash.String("13939103824696605913"),
 									otel.WgOperationName.String("myQuery"),
 									otel.WgOperationProtocol.String("http"),
 									otel.WgOperationType.String("query"),
@@ -4922,7 +6016,7 @@ func TestTelemetry(t *testing.T) {
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
-									otel.WgOperationHash.String("16884868987896027258"),
+									otel.WgOperationHash.String("13939103824696605913"),
 									otel.WgOperationName.String("myQuery"),
 									otel.WgOperationProtocol.String("http"),
 									otel.WgOperationType.String("query"),
@@ -4966,7 +6060,7 @@ func TestTelemetry(t *testing.T) {
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
-									otel.WgOperationHash.String("16884868987896027258"),
+									otel.WgOperationHash.String("13939103824696605913"),
 									otel.WgOperationName.String("myQuery"),
 									otel.WgOperationProtocol.String("http"),
 									otel.WgOperationType.String("query"),
@@ -4997,7 +6091,7 @@ func TestTelemetry(t *testing.T) {
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
-									otel.WgOperationHash.String("16884868987896027258"),
+									otel.WgOperationHash.String("13939103824696605913"),
 									otel.WgOperationName.String("myQuery"),
 									otel.WgOperationProtocol.String("http"),
 									otel.WgOperationType.String("query"),
@@ -5020,7 +6114,7 @@ func TestTelemetry(t *testing.T) {
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
-									otel.WgOperationHash.String("16884868987896027258"),
+									otel.WgOperationHash.String("13939103824696605913"),
 									otel.WgOperationName.String("myQuery"),
 									otel.WgOperationProtocol.String("http"),
 									otel.WgOperationType.String("query"),

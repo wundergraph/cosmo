@@ -6,13 +6,16 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
@@ -84,7 +87,7 @@ type (
 		proxy             ProxyFunc
 	}
 
-	SubgraphTransportOptions struct {
+	TransportTimeoutOptions struct {
 		RequestTimeout         time.Duration
 		ResponseHeaderTimeout  time.Duration
 		ExpectContinueTimeout  time.Duration
@@ -92,6 +95,11 @@ type (
 		DialTimeout            time.Duration
 		TLSHandshakeTimeout    time.Duration
 		KeepAliveProbeInterval time.Duration
+	}
+
+	SubgraphTransportOptions struct {
+		TransportTimeoutOptions
+		SubgraphMap map[string]*TransportTimeoutOptions
 	}
 
 	GraphQLMetricsConfig struct {
@@ -198,6 +206,7 @@ type (
 		tlsServerConfig               *tls.Config
 		tlsConfig                     *TlsConfig
 		telemetryAttributes           []config.CustomAttribute
+		tracePropagators              propagation.TextMapPropagator
 		// Poller
 		configPoller                 configpoller.ConfigPoller
 		selfRegister                 selfregister.SelfRegister
@@ -214,7 +223,9 @@ type (
 		webSocketConfiguration     *config.WebSocketConfiguration
 		subgraphErrorPropagation   config.SubgraphErrorPropagationConfiguration
 		clientHeader               config.ClientHeader
+		cacheWarmup                *config.CacheWarmupConfiguration
 		multipartHeartbeatInterval time.Duration
+		hostName                   string
 	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
@@ -419,17 +430,36 @@ func NewRouter(opts ...Option) (*Router, error) {
 		}
 	}
 
-	// Add default tracing exporter if needed
-	if r.traceConfig.Enabled && len(r.traceConfig.Exporters) == 0 && r.traceConfig.TestMemoryExporter == nil {
-		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
-			r.logger.Debug("Using default trace exporter", zap.String("endpoint", endpoint))
-			r.traceConfig.Exporters = append(r.traceConfig.Exporters, &rtrace.ExporterConfig{
-				Endpoint: endpoint,
-				Exporter: otelconfig.ExporterOLTPHTTP,
-				HTTPPath: "/v1/traces",
-				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
-			})
+	if r.traceConfig.Enabled {
+		if len(r.traceConfig.Propagators) > 0 {
+			propagators, err := rtrace.NewCompositePropagator(r.traceConfig.Propagators...)
+			if err != nil {
+				r.logger.Error("creating propagators", zap.Error(err))
+				return nil, err
+			}
+
+			// Don't set it globally when we use the router in tests.
+			// In practice, setting it globally only makes sense for module development.
+			if r.traceConfig.TestMemoryExporter == nil {
+				otel.SetTextMapPropagator(propagators)
+			}
+
+			r.tracePropagators = propagators
 		}
+
+		// Add default tracing exporter if needed
+		if len(r.traceConfig.Exporters) == 0 && r.traceConfig.TestMemoryExporter == nil {
+			if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
+				r.logger.Debug("Using default trace exporter", zap.String("endpoint", endpoint))
+				r.traceConfig.Exporters = append(r.traceConfig.Exporters, &rtrace.ExporterConfig{
+					Endpoint: endpoint,
+					Exporter: otelconfig.ExporterOLTPHTTP,
+					HTTPPath: "/v1/traces",
+					Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
+				})
+			}
+		}
+
 	}
 
 	// Add default metric exporter if none are configured
@@ -536,6 +566,13 @@ func NewRouter(opts ...Option) (*Router, error) {
 				"Net poller is not functional by the environment. Ensure that the system supports epoll/kqueue and that necessary syscall permissions are granted. Falling back to less efficient connection handling method.",
 				zap.Error(err),
 			)
+		}
+	}
+
+	if r.hostName == "" {
+		r.hostName, err = os.Hostname()
+		if err != nil {
+			r.logger.Warn("Failed to get hostname", zap.Error(err))
 		}
 	}
 
@@ -673,6 +710,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		tlsServerConfig: r.tlsServerConfig,
 		healthcheck:     r.healthcheck,
 		baseURL:         r.baseURL,
+		maxHeaderBytes:  int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
 	})
 
 	// Start the server with the static config without polling
@@ -1007,6 +1045,7 @@ func (r *Router) Start(ctx context.Context) error {
 		tlsServerConfig: r.tlsServerConfig,
 		healthcheck:     r.healthcheck,
 		baseURL:         r.baseURL,
+		maxHeaderBytes:  int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
 	})
 
 	// Start the server with the static config without polling
@@ -1577,15 +1616,44 @@ func DefaultFileUploadConfig() *config.FileUpload {
 	}
 }
 
+func NewTransportTimeoutOptions(cfg config.GlobalSubgraphRequestRule) TransportTimeoutOptions {
+	return TransportTimeoutOptions{
+		RequestTimeout:         cfg.RequestTimeout,
+		ResponseHeaderTimeout:  cfg.ResponseHeaderTimeout,
+		ExpectContinueTimeout:  cfg.ExpectContinueTimeout,
+		KeepAliveIdleTimeout:   cfg.KeepAliveIdleTimeout,
+		DialTimeout:            cfg.DialTimeout,
+		TLSHandshakeTimeout:    cfg.TLSHandshakeTimeout,
+		KeepAliveProbeInterval: cfg.KeepAliveProbeInterval,
+	}
+}
+
+func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransportOptions {
+	base := &SubgraphTransportOptions{
+		TransportTimeoutOptions: NewTransportTimeoutOptions(cfg.All),
+		SubgraphMap:             map[string]*TransportTimeoutOptions{},
+	}
+
+	for k, v := range cfg.Subgraphs {
+		opts := NewTransportTimeoutOptions(*v)
+		base.SubgraphMap[k] = &opts
+	}
+
+	return base
+}
+
 func DefaultSubgraphTransportOptions() *SubgraphTransportOptions {
 	return &SubgraphTransportOptions{
-		RequestTimeout:         60 * time.Second,
-		TLSHandshakeTimeout:    10 * time.Second,
-		ResponseHeaderTimeout:  0 * time.Second,
-		ExpectContinueTimeout:  0 * time.Second,
-		KeepAliveProbeInterval: 30 * time.Second,
-		KeepAliveIdleTimeout:   0 * time.Second,
-		DialTimeout:            30 * time.Second,
+		TransportTimeoutOptions: TransportTimeoutOptions{
+			RequestTimeout:         60 * time.Second,
+			TLSHandshakeTimeout:    10 * time.Second,
+			ResponseHeaderTimeout:  0 * time.Second,
+			ExpectContinueTimeout:  0 * time.Second,
+			KeepAliveProbeInterval: 30 * time.Second,
+			KeepAliveIdleTimeout:   0 * time.Second,
+			DialTimeout:            30 * time.Second,
+		},
+		SubgraphMap: map[string]*TransportTimeoutOptions{},
 	}
 }
 
@@ -1707,9 +1775,15 @@ func WithClientHeader(cfg config.ClientHeader) Option {
 	}
 }
 
+func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
+	return func(r *Router) {
+		r.cacheWarmup = cfg
+	}
+}
+
 type ProxyFunc func(req *http.Request) (*url.URL, error)
 
-func newHTTPTransport(opts *SubgraphTransportOptions, proxy ProxyFunc) *http.Transport {
+func newHTTPTransport(opts TransportTimeoutOptions, proxy ProxyFunc) *http.Transport {
 	dialer := &net.Dialer{
 		Timeout:   opts.DialTimeout,
 		KeepAlive: opts.KeepAliveProbeInterval,

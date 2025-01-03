@@ -33,7 +33,7 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}`),
 				})
-				require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
+				require.Equal(t, `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
 			})
 		})
 
@@ -57,7 +57,7 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
 					Header:     header,
 				})
-				require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res0.Body)
+				require.Equal(t, `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res0.Body)
 
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query:      `{__typename}`,
@@ -108,7 +108,7 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
 					Header:     header,
 				})
-				require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res0.Body)
+				require.Equal(t, `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res0.Body)
 			})
 		})
 
@@ -187,7 +187,7 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}`),
 				})
-				require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
+				require.Equal(t, `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
 			})
 		})
 
@@ -222,7 +222,7 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
 					Header:     header,
 				})
-				require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res0.Body)
+				require.Equal(t, `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res0.Body)
 
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query:      `{__typename}`,
@@ -291,7 +291,7 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
 					Header:     header,
 				})
-				require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res0.Body)
+				require.Equal(t, `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res0.Body)
 			})
 		})
 
@@ -351,6 +351,90 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 			})
 		})
 	})
+}
+
+func TestAPQNormalizationCacheWithMultiOperationDocument(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Should identify correct document after removing unused operations during normalization", func(t *testing.T) {
+
+		document := `query A {
+  a: employee(id: 1) {
+    id
+    details {
+      pets {
+        name
+      }
+    }
+  }
+}
+query B ($id: Int!) {
+  b: employee(id: $id) {
+    id
+    details {
+      pets {
+        name
+      }
+    }
+  }
+}`
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				// This ensures that no CDN client for persistent operations is created, so we can verify that
+				// APQ alone (without persistent operation support setup) works as expected.
+				core.WithGraphApiToken(""),
+			},
+			ApqConfig: config.AutomaticPersistedQueriesConfig{
+				Enabled: true,
+				Cache: config.AutomaticPersistedQueriesCacheConfig{
+					Size: 1024 * 1024,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				OperationName: []byte(`"A"`),
+				Query:         document,
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+				Header:        header,
+			})
+			require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+			require.Equal(t, `{"data":{"a":{"id":1,"details":{"pets":null}}}}`, res.Body)
+
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				OperationName: []byte(`"A"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+				Header:        header,
+			})
+			require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+			require.Equal(t, `{"data":{"a":{"id":1,"details":{"pets":null}}}}`, res.Body)
+
+			// Now we send a request for operation with the name B
+
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				OperationName: []byte(`"B"`),
+				Query:         document,
+				Variables:     []byte(`{"id": 3}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+				Header:        header,
+			})
+			require.Equal(t, "MISS", res.Response.Header.Get(core.NormalizationCacheHeader))
+			require.Equal(t, `{"data":{"b":{"id":3,"details":{"pets":[{"name":"Snappy"}]}}}}`, res.Body)
+
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				OperationName: []byte(`"B"`),
+				Variables:     []byte(`{"id": 3}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+				Header:        header,
+			})
+			require.Equal(t, "HIT", res.Response.Header.Get(core.NormalizationCacheHeader))
+			require.Equal(t, `{"data":{"b":{"id":3,"details":{"pets":[{"name":"Snappy"}]}}}}`, res.Body)
+		})
+	})
+
 }
 
 func BenchmarkAutomaticPersistedQueriesCacheEnabled(b *testing.B) {

@@ -118,8 +118,10 @@
       "KeepAliveProbeInterval": 30000000000
     },
     "Router": {
-      "MaxRequestBodyBytes": 5000000
-    }
+      "MaxRequestBodyBytes": 5000000,
+      "MaxHeaderBytes": 0
+    },
+    "Subgraphs": null
   },
   "FileUpload": {
     "Enabled": true,
@@ -198,6 +200,14 @@
       "Nats": null,
       "Kafka": null
     }
+  },
+  "CacheWarmup": {
+    "Enabled": false,
+    "Source": "filesystem",
+    "Path": "",
+    "Workers": 8,
+    "ItemsPerSecond": 50,
+    "Timeout": 30000000000
   },
   "RouterConfigPath": "",
   "RouterRegistration": true,

@@ -4,6 +4,85 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.158.0](https://github.com/wundergraph/cosmo/compare/router@0.157.0...router@0.158.0) (2024-12-23)
+
+### Features
+
+* tolerate initial JWK error ([#1475](https://github.com/wundergraph/cosmo/issues/1475)) ([57e8507](https://github.com/wundergraph/cosmo/commit/57e85079c59454137463d52eccbcb246e8fdac84)) (@StarpTech)
+
+# [0.157.0](https://github.com/wundergraph/cosmo/compare/router@0.156.0...router@0.157.0) (2024-12-21)
+
+### Features
+
+* upgrade go to 1.23 ([#1473](https://github.com/wundergraph/cosmo/issues/1473)) ([4c29d2d](https://github.com/wundergraph/cosmo/commit/4c29d2d358c2b716a33e35505b080b9be2e1fce3)) (@StarpTech)
+
+# [0.156.0](https://github.com/wundergraph/cosmo/compare/router@0.155.0...router@0.156.0) (2024-12-20)
+
+### Features
+
+* **router:** make header size configurable ([#1457](https://github.com/wundergraph/cosmo/issues/1457)) ([9d3ca55](https://github.com/wundergraph/cosmo/commit/9d3ca55150295e637f419bed31c84d139916fff2)) (@Noroth)
+
+# [0.155.0](https://github.com/wundergraph/cosmo/compare/router@0.154.0...router@0.155.0) (2024-12-18)
+
+### Features
+
+* implement cache warmup using filesystem ([#1437](https://github.com/wundergraph/cosmo/issues/1437)) ([1efd072](https://github.com/wundergraph/cosmo/commit/1efd0720febd27cd328a189c7757036b28e3d81b)) (@jensneuse)
+
+# [0.154.0](https://github.com/wundergraph/cosmo/compare/router@0.153.2...router@0.154.0) (2024-12-18)
+
+### Features
+
+* **router:** support traffic shaping rules on subgraph level ([#1438](https://github.com/wundergraph/cosmo/issues/1438)) ([45a1189](https://github.com/wundergraph/cosmo/commit/45a1189c19d7b41ffebd62230f1ab9276544fd0a)) (@df-wg)
+
+## [0.153.2](https://github.com/wundergraph/cosmo/compare/router@0.153.1...router@0.153.2) (2024-12-17)
+
+### Bug Fixes
+
+* router playground cursor visibility ([#1451](https://github.com/wundergraph/cosmo/issues/1451)) ([73b82da](https://github.com/wundergraph/cosmo/commit/73b82dafff85e9ba4ead8bccaa180e70fdf7f6ce)) (@thisisnithin)
+
+## [0.153.1](https://github.com/wundergraph/cosmo/compare/router@0.153.0...router@0.153.1) (2024-12-17)
+
+### Bug Fixes
+
+* **router:** ensure subgraph timeouts/nil responses are handled correctly ([#1449](https://github.com/wundergraph/cosmo/issues/1449)) ([5402152](https://github.com/wundergraph/cosmo/commit/540215241eeecf8630e092c1864d50443e71967d)) (@df-wg)
+
+# [0.153.0](https://github.com/wundergraph/cosmo/compare/router@0.152.1...router@0.153.0) (2024-12-17)
+
+### Features
+
+* edfs nats create bespoke consumer ([#1443](https://github.com/wundergraph/cosmo/issues/1443)) ([af97af7](https://github.com/wundergraph/cosmo/commit/af97af71af0eb2de20dd5a0e0bc8cc454f1b0e38)) (@alepane21)
+
+## [0.152.1](https://github.com/wundergraph/cosmo/compare/router@0.152.0...router@0.152.1) (2024-12-16)
+
+### Bug Fixes
+
+* don't re-use buffer for reading requests ([#1447](https://github.com/wundergraph/cosmo/issues/1447)) ([3262622](https://github.com/wundergraph/cosmo/commit/32626221aae9f6e3cf3af56797be67993f17cca3)) (@jensneuse)
+
+# [0.152.0](https://github.com/wundergraph/cosmo/compare/router@0.151.1...router@0.152.0) (2024-12-16)
+
+### Bug Fixes
+
+* **router:** ensure subgraph access logs handles null requests/errors ([#1445](https://github.com/wundergraph/cosmo/issues/1445)) ([909967e](https://github.com/wundergraph/cosmo/commit/909967eb02e66f859c9aeae0818675756166a215)) (@df-wg)
+
+### Features
+
+* implement otel cardinality limit ([#1423](https://github.com/wundergraph/cosmo/issues/1423)) ([c31c563](https://github.com/wundergraph/cosmo/commit/c31c563d3cd82b6da3c3bba7cbfdb4674077ba7c)) (@Noroth)
+
+## [0.151.1](https://github.com/wundergraph/cosmo/compare/router@0.151.0...router@0.151.1) (2024-12-12)
+
+### Bug Fixes
+
+* **APQ:** set normalization cache hit stat correctly ([#1435](https://github.com/wundergraph/cosmo/issues/1435)) ([8a6b0d7](https://github.com/wundergraph/cosmo/commit/8a6b0d7fab8c6e8c17990f911b27ec8f084451f4)) (@StarpTech)
+* panic when normalizing multi operation documents ([#1433](https://github.com/wundergraph/cosmo/issues/1433)) ([a017b71](https://github.com/wundergraph/cosmo/commit/a017b71529b82c828f03aac4ac5a3760b81391d5)) (@StarpTech)
+* **router:** add missing telemetry config ([#1436](https://github.com/wundergraph/cosmo/issues/1436)) ([be6d144](https://github.com/wundergraph/cosmo/commit/be6d144a73dccebfe5a39de16135e166033e8590)) (@Noroth)
+
+# [0.151.0](https://github.com/wundergraph/cosmo/compare/router@0.150.0...router@0.151.0) (2024-12-11)
+
+### Features
+
+* add error message on invalid JSON in edfs message ([#1415](https://github.com/wundergraph/cosmo/issues/1415)) ([9d181e9](https://github.com/wundergraph/cosmo/commit/9d181e92be3cf332ce45b63c833e4f710c27f542)) (@alepane21)
+* ensure consistent hash for operations ([#1367](https://github.com/wundergraph/cosmo/issues/1367)) ([9e516e4](https://github.com/wundergraph/cosmo/commit/9e516e4eff01d166a7a282eb562aead23aa6b6dd)) (@StarpTech)
+
 # [0.150.0](https://github.com/wundergraph/cosmo/compare/router@0.149.0...router@0.150.0) (2024-12-10)
 
 ### Features

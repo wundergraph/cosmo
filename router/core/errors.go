@@ -4,12 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"net"
-	"net/http"
-
 	"github.com/hashicorp/go-multierror"
+	"github.com/wundergraph/astjson"
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
@@ -19,6 +17,8 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+	"net"
+	"net/http"
 )
 
 type errorType int
@@ -32,6 +32,7 @@ const (
 	errorTypeUpgradeFailed
 	errorTypeEDFS
 	errorTypeInvalidWsSubprotocol
+	errorTypeEDFSInvalidMessage
 )
 
 type (
@@ -74,9 +75,12 @@ func getErrorType(err error) errorType {
 		return errorTypeEDFS
 	}
 	var invalidWsSubprotocolErr graphql_datasource.InvalidWsSubprotocolError
-
 	if errors.As(err, &invalidWsSubprotocolErr) {
 		return errorTypeInvalidWsSubprotocol
+	}
+	var jsonParseErr *astjson.ParseError
+	if errors.As(err, &jsonParseErr) {
+		return errorTypeEDFSInvalidMessage
 	}
 	return errorTypeUnknown
 }
@@ -287,7 +291,7 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 	case errors.As(err, &httpErr):
 		writeRequestErrors(r, w, httpErr.StatusCode(), requestErrorsFromHttpError(httpErr), requestLogger)
 	case errors.As(err, &poNotFoundErr):
-		newErr := NewHttpGraphqlError("persisted query not found", "PERSISTED_QUERY_NOT_FOUND", http.StatusOK)
+		newErr := NewHttpGraphqlError("PersistedQueryNotFound", "PERSISTED_QUERY_NOT_FOUND", http.StatusOK)
 		writeRequestErrors(r, w, http.StatusOK, requestErrorsFromHttpError(newErr), requestLogger)
 	case errors.As(err, &reportErr):
 		report := reportErr.Report()

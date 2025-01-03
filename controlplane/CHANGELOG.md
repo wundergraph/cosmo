@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.118.5](https://github.com/wundergraph/cosmo/compare/controlplane@0.118.4...controlplane@0.118.5) (2025-01-02)
+
+### Bug Fixes
+
+* use secure variant of id generator ([#1483](https://github.com/wundergraph/cosmo/issues/1483)) ([cdd5bee](https://github.com/wundergraph/cosmo/commit/cdd5bee55915bc20e92b497965b7a87ab32e0359)) (@StarpTech)
+
+## [0.118.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.118.3...controlplane@0.118.4) (2024-12-21)
+
+**Note:** Version bump only for package controlplane
+
+## [0.118.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.118.2...controlplane@0.118.3) (2024-12-18)
+
+**Note:** Version bump only for package controlplane
+
+## [0.118.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.118.1...controlplane@0.118.2) (2024-12-17)
+
+**Note:** Version bump only for package controlplane
+
 ## [0.118.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.118.0...controlplane@0.118.1) (2024-12-06)
 
 ### Bug Fixes

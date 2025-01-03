@@ -5,11 +5,6 @@ directive @openfed__subscriptionFilter(condition: openfed__SubscriptionFilterCon
 directive @edfs__kafkaPublish(topic: String!, providerId: String! = "default") on FIELD_DEFINITION
 directive @edfs__kafkaSubscribe(topics: [String!]!, providerId: String! = "default") on FIELD_DEFINITION
 
-input edfs__NatsStreamConfiguration {
-    consumerName: String!
-    streamName: String!
-}
-
 scalar openfed__SubscriptionFilterValue
 
 input openfed__SubscriptionFieldCondition {
@@ -75,7 +70,8 @@ type edfs__PublishResult {
     success: Boolean!
 }
 
-input edfs__StreamConfiguration {
+input edfs__NatsStreamConfiguration {
+    consumerInactiveThreshold: Int! = 30
     consumerName: String!
     streamName: String!
 }

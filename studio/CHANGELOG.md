@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.96.3](https://github.com/wundergraph/cosmo/compare/studio@0.96.2...studio@0.96.3) (2024-12-20)
+
+### Bug Fixes
+
+* remove double frontend requests to controlplane ([#1458](https://github.com/wundergraph/cosmo/issues/1458)) ([91f50b3](https://github.com/wundergraph/cosmo/commit/91f50b366cb0840cb3ea5470af5498f825397e89)) (@JivusAyrus)
+
+## [0.96.2](https://github.com/wundergraph/cosmo/compare/studio@0.96.1...studio@0.96.2) (2024-12-17)
+
+**Note:** Version bump only for package studio
+
+## [0.96.1](https://github.com/wundergraph/cosmo/compare/studio@0.96.0...studio@0.96.1) (2024-12-11)
+
+### Bug Fixes
+
+* tailwind entry point for newer Node.js versions ([#1432](https://github.com/wundergraph/cosmo/issues/1432)) ([ddcf279](https://github.com/wundergraph/cosmo/commit/ddcf279c612dff7edea84ec75be59a6bf23f0204)) (@StarpTech)
+
 # [0.96.0](https://github.com/wundergraph/cosmo/compare/studio@0.95.7...studio@0.96.0) (2024-12-10)
 
 ### Features

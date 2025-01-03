@@ -71,6 +71,7 @@ export const NOT_APPLICABLE = 'N/A';
 export const NAME = 'name';
 export const NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT = 'edfs__PublishResult!';
 export const NON_NULLABLE_BOOLEAN = 'Boolean!';
+export const NON_NULLABLE_INT = 'Int!';
 export const NON_NULLABLE_STRING = 'String!';
 export const NOT_UPPER = 'NOT';
 export const NULL = 'Null';
@@ -106,6 +107,7 @@ export const SERVICE_FIELD = '_service';
 export const SHAREABLE = 'shareable';
 export const SPECIFIED_BY = 'specifiedBy';
 export const STREAM_CONFIGURATION = 'streamConfiguration';
+export const CONSUMER_INACTIVE_THRESHOLD = 'consumerInactiveThreshold';
 export const STREAM_NAME = 'streamName';
 export const STRING = 'string';
 export const STRING_SCALAR = 'String';
@@ -146,7 +148,11 @@ export const EVENT_DIRECTIVE_NAMES = new Set<string>([
   EDFS_NATS_REQUEST,
   EDFS_NATS_SUBSCRIBE,
 ]);
-export const STREAM_CONFIGURATION_FIELD_NAMES = new Set<string>([CONSUMER_NAME, STREAM_NAME]);
+export const STREAM_CONFIGURATION_FIELD_NAMES = new Set<string>([
+  CONSUMER_INACTIVE_THRESHOLD,
+  CONSUMER_NAME,
+  STREAM_NAME,
+]);
 export const PERSISTED_CLIENT_DIRECTIVES = new Set<string>([AUTHENTICATED, DEPRECATED, REQUIRES_SCOPES]);
 export const SUBSCRIPTION_FILTER_INPUT_NAMES = new Set<string>([AND_UPPER, IN_UPPER, NOT_UPPER, OR_UPPER]);
 export const SUBSCRIPTION_FILTER_LIST_INPUT_NAMES = new Set<string>([AND_UPPER, OR_UPPER]);

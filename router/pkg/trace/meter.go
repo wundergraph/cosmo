@@ -177,15 +177,6 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 		opts = append(opts, redact.Attributes(SensitiveAttributes, rFunc))
 	}
 
-	if len(config.Config.Propagators) > 0 {
-		propagators, err := NewCompositePropagator(config.Config.Propagators...)
-		if err != nil {
-			config.Logger.Error("creating propagators", zap.Error(err))
-			return nil, err
-		}
-		otel.SetTextMapPropagator(propagators)
-	}
-
 	if config.Config.Enabled {
 
 		// Either memory exporter or the configured exporters are used.
@@ -233,8 +224,13 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 	}
 
 	tp := sdktrace.NewTracerProvider(opts...)
-	// Set the global TraceProvider to the SDK tracer provider.
-	otel.SetTracerProvider(tp)
+
+	// Don't set it globally when we use the router in tests.
+	// In practice, setting it globally only makes sense for module development.
+	if config.MemoryExporter == nil {
+		otel.SetTracerProvider(tp)
+	}
+
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
 		config.Logger.Error("otel error", zap.Error(err))
 	}))

@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/consul/sdk/freeport"
 	"io"
 	"log"
 	"math/rand"
@@ -21,11 +22,11 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
 	"go.uber.org/zap/zaptest/observer"
 
@@ -52,7 +53,6 @@ import (
 	natsserver "github.com/nats-io/nats-server/v2/server"
 	natstest "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
-	"github.com/phayes/freeport"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
@@ -86,6 +86,9 @@ func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	}
 	t.Cleanup(env.Shutdown)
 	f(t, env)
+	if cfg.AssertCacheMetrics != nil {
+		assertCacheMetrics(t, env, *cfg.AssertCacheMetrics)
+	}
 }
 
 func RunWithError(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) error {
@@ -109,6 +112,66 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 	b.Cleanup(env.Shutdown)
 	b.StartTimer()
 	f(b, env)
+	if cfg.AssertCacheMetrics != nil {
+		assertCacheMetrics(b, env, *cfg.AssertCacheMetrics)
+	}
+}
+
+func assertCacheMetrics(t testing.TB, env *Environment, expected CacheMetricsAssertion) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+	defer cancel()
+	rm := metricdata.ResourceMetrics{}
+	err := env.metricReader.Collect(ctx, &rm)
+	require.NoError(t, err)
+	actual := CacheMetricsAssertion{}
+	for _, sm := range rm.ScopeMetrics {
+		if sm.Scope.Name != "cosmo.router.cache" {
+			continue
+		}
+		for _, m := range sm.Metrics {
+			if m.Name != "router.graphql.cache.requests.stats" {
+				continue
+			}
+			if data, ok := m.Data.(metricdata.Sum[int64]); ok {
+				for _, dp := range data.DataPoints {
+					ct, ok := dp.Attributes.Value("cache_type")
+					if !ok {
+						continue
+					}
+					tp, ok := dp.Attributes.Value("type")
+					if !ok {
+						continue
+					}
+					cacheType := ct.AsString()
+					hm := tp.AsString()
+					switch {
+					case cacheType == "persisted_query_normalization" && hm == "hits":
+						actual.PersistedQueryNormalizationHits = dp.Value
+					case cacheType == "persisted_query_normalization" && hm == "misses":
+						actual.PersistedQueryNormalizationMisses = dp.Value
+					case cacheType == "query_normalization" && hm == "hits":
+						actual.QueryNormalizationHits = dp.Value
+					case cacheType == "query_normalization" && hm == "misses":
+						actual.QueryNormalizationMisses = dp.Value
+					case cacheType == "validation" && hm == "hits":
+						actual.ValidationHits = dp.Value
+					case cacheType == "validation" && hm == "misses":
+						actual.ValidationMisses = dp.Value
+					case cacheType == "plan" && hm == "hits":
+						actual.PlanHits = dp.Value
+					case cacheType == "plan" && hm == "misses":
+						actual.PlanMisses = dp.Value
+					case cacheType == "query_hash" && hm == "misses":
+						actual.QueryHashMisses = dp.Value
+					case cacheType == "query_hash" && hm == "hits":
+						actual.QueryHashHits = dp.Value
+					}
+				}
+			}
+		}
+	}
+	require.Equal(t, expected, actual)
 }
 
 type RouterConfig struct {
@@ -152,6 +215,7 @@ type Config struct {
 	CustomResourceAttributes           []config.CustomStaticAttribute
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
+	PrometheusPort                     int
 	ShutdownDelay                      time.Duration
 	NoRetryClient                      bool
 	PropagationConfig                  config.PropagationConfig
@@ -171,6 +235,20 @@ type Config struct {
 	ForcePubSubChecks                  bool
 	SubgraphAccessLogsEnabled          bool
 	SubgraphAccessLogFields            []config.CustomAttribute
+	AssertCacheMetrics                 *CacheMetricsAssertion
+}
+
+type CacheMetricsAssertion struct {
+	QueryNormalizationMisses          int64
+	QueryNormalizationHits            int64
+	PersistedQueryNormalizationMisses int64
+	PersistedQueryNormalizationHits   int64
+	ValidationMisses                  int64
+	ValidationHits                    int64
+	PlanMisses                        int64
+	PlanHits                          int64
+	QueryHashMisses                   int64
+	QueryHashHits                     int64
 }
 
 type SubgraphsConfig struct {
@@ -198,28 +276,20 @@ type LogObservationConfig struct {
 	LogLevel zapcore.Level
 }
 
-var (
-	envCreateMux sync.Mutex
-)
-
 type NatsData struct {
 	Connections []*nats.Conn
 	Server      *natsserver.Server
 }
 
-func setupNatsServers(t testing.TB) (*NatsData, error) {
+func setupNatsServers(t testing.TB, port int) (*NatsData, error) {
 	length := len(demoNatsProviders)
 	natsData := &NatsData{
 		Connections: make([]*nats.Conn, 0, length),
 	}
-	natsPort, err := freeport.GetFreePort()
-	if err != nil {
-		t.Fatalf("could not get free port: %s", err)
-	}
 
 	// create dir in tmp for nats server
 	natsDir := filepath.Join(os.TempDir(), fmt.Sprintf("nats-%s", uuid.New()))
-	err = os.MkdirAll(natsDir, os.ModePerm)
+	err := os.MkdirAll(natsDir, os.ModePerm)
 	if err != nil {
 		t.Fatalf("could not create nats dir: %s", err)
 	}
@@ -236,7 +306,7 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 		NoLog:     true,
 		NoSigs:    true,
 		JetStream: true,
-		Port:      natsPort,
+		Port:      port,
 		StoreDir:  natsDir,
 	}
 
@@ -261,11 +331,28 @@ func setupNatsServers(t testing.TB) (*NatsData, error) {
 }
 
 func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
-	// Ensure that only one test environment is created at a time
-	// We use freeport to get a free port for NATS and the Router
-	// If we don't lock here, two parallel tests might get the same port
-	envCreateMux.Lock()
-	defer envCreateMux.Unlock()
+	t.Helper()
+
+	var (
+		metricReader *metric.ManualReader
+	)
+
+	if cfg.AssertCacheMetrics != nil {
+		metricReader = metric.NewManualReader()
+		cfg.MetricReader = metricReader
+		cfg.MetricOptions.EnableOTLPRouterCache = true
+		if cfg.ModifyRouterConfig == nil {
+			cfg.ModifyRouterConfig = func(cfg *nodev1.RouterConfig) {
+				cfg.FeatureFlagConfigs = nil
+			}
+		} else {
+			old := cfg.ModifyRouterConfig
+			cfg.ModifyRouterConfig = func(cfg *nodev1.RouterConfig) {
+				old(cfg)
+				cfg.FeatureFlagConfigs = nil
+			}
+		}
+	}
 
 	ctx, cancel := context.WithCancelCause(context.Background())
 
@@ -301,12 +388,17 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	var (
-		natsData *NatsData
-		err      error
+		natsData      *NatsData
+		requiredPorts = 3
 	)
 
+	ports, err := freeport.Take(requiredPorts)
+	if err != nil {
+		t.Fatalf("could not take free ports: %s", err)
+	}
+
 	if cfg.EnableNats {
-		natsData, err = setupNatsServers(t)
+		natsData, err = setupNatsServers(t, ports[0])
 		if err != nil {
 			return nil, err
 		}
@@ -455,14 +547,13 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.ModifyRouterConfig(&routerConfig)
 	}
 
-	cdn := setupCDNServer()
+	cdn := setupCDNServer(t)
 
-	routerPort, err := freeport.GetFreePort()
-	if err != nil {
-		t.Fatalf("could not get free port: %s", err)
+	if cfg.PrometheusRegistry != nil {
+		cfg.PrometheusPort = ports[1]
 	}
 
-	listenerAddr := fmt.Sprintf("localhost:%d", routerPort)
+	listenerAddr := fmt.Sprintf("localhost:%d", ports[2])
 
 	var client *http.Client
 
@@ -604,6 +695,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		shutdownDelay:           cfg.ShutdownDelay,
 		shutdown:                atomic.NewBool(false),
 		logObserver:             logObserver,
+		metricReader:            metricReader,
 		Servers: []*httptest.Server{
 			employeesServer,
 			familyServer,
@@ -798,13 +890,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	var prometheusConfig rmetric.PrometheusConfig
 
 	if testConfig.PrometheusRegistry != nil {
-		port, err := freeport.GetFreePort()
-		if err != nil {
-			return nil, fmt.Errorf("could not get free port: %w", err)
-		}
 		prometheusConfig = rmetric.PrometheusConfig{
 			Enabled:             true,
-			ListenAddr:          fmt.Sprintf("localhost:%d", port),
+			ListenAddr:          fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
 			Path:                "/metrics",
 			TestRegistry:        testConfig.PrometheusRegistry,
 			GraphqlCache:        testConfig.MetricOptions.EnablePrometheusRouterCache,
@@ -892,35 +980,29 @@ func testTokenClaims() jwt.MapClaims {
 	}
 }
 
-func setupCDNServer() *httptest.Server {
+func setupCDNServer(t testing.TB) *httptest.Server {
 	cdnFileServer := http.FileServer(http.Dir(filepath.Join("testenv", "testdata", "cdn")))
 	var cdnRequestLog []string
 	cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
 			requestLog, err := json.Marshal(cdnRequestLog)
-			if err != nil {
-				panic(err)
-			}
+			require.NoError(t, err)
 			w.Header().Set("Content-Type", "application/json")
 			_, err = w.Write(requestLog)
-			if err != nil {
-				panic(err)
-			}
+			require.NoError(t, err)
 			return
 		}
 		cdnRequestLog = append(cdnRequestLog, r.Method+" "+r.URL.Path)
 		// Ensure we have an authorization header with a valid token
 		authorization := r.Header.Get("Authorization")
 		if authorization == "" {
-			panic("missing authorization header")
+			require.NotEmpty(t, authorization, "missing authorization header")
 		}
 		token := authorization[len("Bearer "):]
 		parsedClaims := make(jwt.MapClaims)
 		jwtParser := new(jwt.Parser)
 		_, _, err := jwtParser.ParseUnverified(token, parsedClaims)
-		if err != nil {
-			panic(err)
-		}
+		require.NoError(t, err)
 		cdnFileServer.ServeHTTP(w, r)
 	}))
 	return cdnServer
@@ -960,6 +1042,8 @@ type Environment struct {
 
 	routerConfigVersionMain string
 	routerConfigVersionMyFF string
+
+	metricReader *metric.ManualReader
 }
 
 func (e *Environment) RouterConfigVersionMain() string {
@@ -1676,7 +1760,7 @@ func subgraphOptions(ctx context.Context, t testing.TB, natsData *NatsData) *sub
 		js, err := jetstream.New(natsConnection)
 		require.NoError(t, err)
 
-		natsPubSubByProviderID[sourceName] = pubsubNats.NewConnector(zap.NewNop(), natsConnection, js).New(ctx)
+		natsPubSubByProviderID[sourceName] = pubsubNats.NewConnector(zap.NewNop(), natsConnection, js, "hostname", "listenaddr").New(ctx)
 	}
 
 	return &subgraphs.SubgraphOptions{
