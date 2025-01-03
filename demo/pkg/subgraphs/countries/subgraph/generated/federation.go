@@ -177,14 +177,25 @@ func entityResolverNameForCountry(ctx context.Context, rep map[string]interface{
 			ok  bool
 		)
 		_ = val
+		// if all of the KeyFields values for this resolver are null,
+		// we shouldn't use use it
+		allNull := true
 		m = rep
-		if val, ok = m["key"]; !ok {
+		val, ok = m["key"]
+		if !ok {
 			break
 		}
 		if m, ok = val.(map[string]interface{}); !ok {
 			break
 		}
-		if _, ok = m["name"]; !ok {
+		val, ok = m["name"]
+		if !ok {
+			break
+		}
+		if allNull {
+			allNull = val == nil
+		}
+		if allNull {
 			break
 		}
 		return "findCountryByKeyName", nil
