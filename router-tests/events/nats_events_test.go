@@ -1223,7 +1223,7 @@ func TestNatsEvents(t *testing.T) {
 				require.Equal(t, float64(8), payload.Data.FilteredEmployeeUpdated.ID)
 				require.Equal(t, "Nithin", payload.Data.FilteredEmployeeUpdated.Details.Forename)
 				require.Equal(t, "Kumar", payload.Data.FilteredEmployeeUpdated.Details.Surname)
-				consumed.Add(2) // should skip two messages
+				consumed.Add(3) // should skip two messages
 
 				require.Eventually(t, func() bool {
 					return produced.Load() == 12
@@ -1248,9 +1248,8 @@ func TestNatsEvents(t *testing.T) {
 			// Events 1, 3, 4, 5, 7, 8, and 11 should be included
 			for i := uint32(1); i < 13; i++ {
 				require.Eventually(t, func() bool {
-					return consumed.Load() >= i-1
+					return consumed.Load() >= i
 				}, time.Second*10, time.Millisecond*100)
-
 				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename":"Employee"}`, i)))
 				require.NoError(t, err)
 				err = xEnv.NatsConnectionDefault.Flush()
@@ -1259,7 +1258,7 @@ func TestNatsEvents(t *testing.T) {
 			}
 
 			require.Eventually(t, func() bool {
-				return consumed.Load() == 11 && produced.Load() == 13
+				return consumed.Load() == 12 && produced.Load() == 13
 			}, time.Second*10, time.Millisecond*100)
 		})
 	})
