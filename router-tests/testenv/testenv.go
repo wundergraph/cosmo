@@ -1211,7 +1211,7 @@ func (e *Environment) MakeGraphQLRequestWithContext(ctx context.Context, request
 		req.Header = request.Header
 	}
 	req.Header.Set("Accept-Encoding", "identity")
-	return e.makeGraphQLRequest(req)
+	return e.MakeGraphQLRequestRaw(req)
 }
 
 func (e *Environment) MakeGraphQLRequestWithHeaders(request GraphQLRequest, headers map[string]string) (*TestResponse, error) {
@@ -1224,11 +1224,10 @@ func (e *Environment) MakeGraphQLRequestWithHeaders(request GraphQLRequest, head
 	if request.Header != nil {
 		req.Header = request.Header
 	}
-	req.Header.Set("Accept-Encoding", "identity")
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
-	return e.makeGraphQLRequest(req)
+	return e.MakeGraphQLRequestRaw(req)
 }
 
 func (e *Environment) MakeGraphQLRequestOverGET(request GraphQLRequest) (*TestResponse, error) {
@@ -1237,7 +1236,7 @@ func (e *Environment) MakeGraphQLRequestOverGET(request GraphQLRequest) (*TestRe
 		return nil, err
 	}
 
-	return e.makeGraphQLRequest(req)
+	return e.MakeGraphQLRequestRaw(req)
 }
 
 func (e *Environment) newGraphQLRequestOverGET(baseURL string, request GraphQLRequest) (*http.Request, error) {
@@ -1268,7 +1267,8 @@ func (e *Environment) newGraphQLRequestOverGET(baseURL string, request GraphQLRe
 	return req, nil
 }
 
-func (e *Environment) makeGraphQLRequest(request *http.Request) (*TestResponse, error) {
+func (e *Environment) MakeGraphQLRequestRaw(request *http.Request) (*TestResponse, error) {
+	request.Header.Set("Accept-Encoding", "identity")
 	resp, err := e.RouterClient.Do(request)
 	if err != nil {
 		return nil, err

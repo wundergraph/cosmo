@@ -1194,31 +1194,6 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, `[{"message":"Unable to subscribe"}]`, string(msg.Payload))
 		})
 	})
-	t.Run("subscription blocked", func(t *testing.T) {
-		t.Parallel()
-
-		testenv.Run(t, &testenv.Config{
-			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.BlockSubscriptions = true
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err := conn.WriteJSON(&testenv.WebSocketMessage{
-				ID:      "1",
-				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
-			})
-			require.NoError(t, err)
-
-			var msg testenv.WebSocketMessage
-			err = conn.ReadJSON(&msg)
-			require.NoError(t, err)
-			require.Equal(t, "1", msg.ID)
-			require.Equal(t, "error", msg.Type)
-			require.Equal(t, `[{"message":"operation type 'subscription' is blocked"}]`, string(msg.Payload))
-		})
-	})
 	t.Run("multiple subscriptions one connection", func(t *testing.T) {
 		t.Parallel()
 

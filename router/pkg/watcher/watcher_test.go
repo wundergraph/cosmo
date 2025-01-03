@@ -3,7 +3,6 @@ package watcher_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
@@ -91,13 +90,9 @@ func TestCreate(t *testing.T) {
 		events, err := getEvent(eventCh)
 		require.NoError(t, err)
 
-		// For debugging
-		if len(events) > 1 {
-			fmt.Printf("event-1: op: %v, path: %v\n", events[0].Op, events[0].Path)
-			fmt.Printf("events-2: op: %v, path: %v\n", events[1].Op, events[1].Path)
-		}
-
-		assert.Len(t, events, 1)
+		// In rare circumstances (Depends on the OS and the watcher implementation)
+		// we might get multiple events for the same file (create, update)
+		assert.True(t, len(events) == 1 || len(events) == 2, "expected 1 or 2 events, got %d", len(events))
 		assert.Equal(t, events[0].Path, tempFile)
 		assert.Equal(t, events[0].Op, watcher.OpCreate)
 		return true

@@ -464,14 +464,16 @@ func TestNatsEvents(t *testing.T) {
 			})
 		})
 
-		t.Run("subscribe sync multipart with block", func(t *testing.T) {
+		t.Run("should block subscribe sync multipart operation", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				EnableNats:               true,
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.BlockSubscriptions = true
+					securityConfiguration.BlockSubscriptions = config.BlockOperationConfiguration{
+						Enabled: true,
+					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				queries := [][]byte{
@@ -639,14 +641,16 @@ func TestNatsEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribe sync sse with block", func(t *testing.T) {
+	t.Run("should block subscribe sync sse operation", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.BlockSubscriptions = true
+				securityConfiguration.BlockSubscriptions = config.BlockOperationConfiguration{
+					Enabled: true,
+				}
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			subscribePayloadOne := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`)
