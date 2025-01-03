@@ -63,12 +63,10 @@ type RequestURL struct {
 }
 
 // LoadRequest loads the request object into the context.
-func (r *Context) LoadRequest(req *http.Request) {
-	if req == nil {
-		return
+func LoadRequest(req *http.Request) Request {
+	r := Request{
+		Header: req.Header,
 	}
-
-	r.Request.Header = req.Header
 
 	m, _ := url.ParseQuery(req.URL.RawQuery)
 	qv := make(map[string]string, len(m))
@@ -77,13 +75,15 @@ func (r *Context) LoadRequest(req *http.Request) {
 		qv[k] = m.Get(k)
 	}
 
-	r.Request.URL = RequestURL{
+	r.URL = RequestURL{
 		Method: req.Method,
 		Scheme: req.URL.Scheme,
 		Host:   req.URL.Host,
 		Path:   req.URL.Path,
 		Query:  qv,
 	}
+
+	return r
 }
 
 type RequestAuth struct {
@@ -95,16 +95,18 @@ type RequestAuth struct {
 
 // LoadAuth loads the authentication context into the request object.
 // Must only be called when the authentication was successful.
-func (r *Context) LoadAuth(ctx context.Context) {
+func LoadAuth(ctx context.Context) RequestAuth {
 	authCtx := authentication.FromContext(ctx)
 	if authCtx == nil {
-		return
+		return RequestAuth{}
 	}
 
-	r.Request.Auth.Type = authCtx.Authenticator()
-	r.Request.Auth.IsAuthenticated = true
-	r.Request.Auth.Claims = authCtx.Claims()
-	r.Request.Auth.Scopes = authCtx.Scopes()
+	return RequestAuth{
+		Type:            authCtx.Authenticator(),
+		IsAuthenticated: true,
+		Claims:          authCtx.Claims(),
+		Scopes:          authCtx.Scopes(),
+	}
 }
 
 // CompileBoolExpression compiles an expression and returns the program. It is used for expressions that return bool.

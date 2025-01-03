@@ -1802,7 +1802,7 @@
             },
             "condition": {
               "type": "string",
-              "description": "The expression to evaluate if the mutation should be blocked. The expression is specified as a string. Please see https://expr-lang.org/ for more information."
+              "description": "The expression to evaluate if the mutation should be blocked. The expression is specified as a string and needs to evaluate to a boolean. Please see https://expr-lang.org/ for more information."
             }
           }
         },
@@ -1817,7 +1817,7 @@
             },
             "condition": {
               "type": "string",
-              "description": "The expression to evaluate if the subscription should be blocked. The expression is specified as a string. Please see https://expr-lang.org/ for more information."
+              "description": "The expression to evaluate if the subscription should be blocked. The expression is specified as a string and needs to evaluate to a boolean. Please see https://expr-lang.org/ for more information."
             }
           }
         },
@@ -1832,7 +1832,7 @@
             },
             "condition": {
               "type": "string",
-              "description": "The expression to evaluate if the non-persisted operation should be blocked. The expression is specified as a string. Please see https://expr-lang.org/ for more information."
+              "description": "The expression to evaluate if the non-persisted operation should be blocked. The expression is specified as a string and needs to evaluate to a boolean. Please see https://expr-lang.org/ for more information."
             }
           }
         },

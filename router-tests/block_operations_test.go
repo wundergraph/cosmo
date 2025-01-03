@@ -122,7 +122,7 @@ func TestBlockOperations(t *testing.T) {
 			})
 		})
 
-		t.Run("should block operation by claim expression condition", func(t *testing.T) {
+		t.Run("should block operation by scope expression condition", func(t *testing.T) {
 			t.Parallel()
 
 			authenticators, authServer := configureAuth(t)
@@ -137,8 +137,6 @@ func TestBlockOperations(t *testing.T) {
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-
-				// Positive test
 
 				token, err := authServer.Token(map[string]any{
 					"scope": "write:fact read:miscellaneous read:all",
@@ -274,6 +272,194 @@ func TestBlockOperations(t *testing.T) {
 				require.Equal(t, "1", msg.ID)
 				require.Equal(t, "error", msg.Type)
 				require.Equal(t, `[{"message":"operation type 'subscription' is blocked"}]`, string(msg.Payload))
+			})
+		})
+
+		t.Run("should block subscriptions by scope match expression", func(t *testing.T) {
+			t.Parallel()
+
+			authenticators, authServer := configureAuth(t)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
+						RejectOperationIfUnauthorized: false,
+					}),
+				},
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.BlockSubscriptions = config.BlockOperationConfiguration{
+						Enabled:   true,
+						Condition: "'read:block' in request.auth.scopes && request.auth.isAuthenticated",
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				type currentTimePayload struct {
+					Data struct {
+						CurrentTime struct {
+							UnixTime  float64 `json:"unixTime"`
+							Timestamp string  `json:"timestamp"`
+						} `json:"currentTime"`
+					} `json:"data"`
+				}
+
+				// Positive test
+
+				token, err := authServer.Token(map[string]any{
+					"scope": "read:all",
+				})
+				require.NoError(t, err)
+
+				header := http.Header{
+					"Authorization": []string{"Bearer " + token},
+				}
+
+				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+				err = conn.WriteJSON(&testenv.WebSocketMessage{
+					ID:      "1",
+					Type:    "subscribe",
+					Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+				})
+				require.NoError(t, err)
+
+				var msg testenv.WebSocketMessage
+				var payload currentTimePayload
+
+				err = conn.ReadJSON(&msg)
+				require.NoError(t, err)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+
+				err = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, err)
+
+				require.NotEmpty(t, payload.Data.CurrentTime.UnixTime)
+				require.NotEmpty(t, payload.Data.CurrentTime.Timestamp)
+
+				// Negative test
+
+				token, err = authServer.Token(map[string]any{
+					"scope": "read:block",
+				})
+				require.NoError(t, err)
+
+				header = http.Header{
+					"Authorization": []string{"Bearer " + token},
+				}
+
+				conn = xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
+				err = conn.WriteJSON(&testenv.WebSocketMessage{
+					ID:      "1",
+					Type:    "subscribe",
+					Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+				})
+				require.NoError(t, err)
+
+				msg = testenv.WebSocketMessage{}
+
+				err = conn.ReadJSON(&msg)
+				require.NoError(t, err)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "error", msg.Type)
+				require.Equal(t, `[{"message":"operation type 'subscription' is blocked"}]`, string(msg.Payload))
+
+				_ = conn.Close()
+			})
+		})
+
+		t.Run("should block subscriptions by scope match expression and from initial payload enabled", func(t *testing.T) {
+			t.Parallel()
+
+			authenticators, authServer := configureAuth(t)
+
+			testenv.Run(t, &testenv.Config{
+				ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
+					cfg.Authentication.FromInitialPayload.Enabled = true
+					cfg.Enabled = true
+				},
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
+						RejectOperationIfUnauthorized: false,
+					}),
+				},
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.BlockSubscriptions = config.BlockOperationConfiguration{
+						Enabled:   true,
+						Condition: "'read:block' in request.auth.scopes && request.auth.isAuthenticated",
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				type currentTimePayload struct {
+					Data struct {
+						CurrentTime struct {
+							UnixTime  float64 `json:"unixTime"`
+							Timestamp string  `json:"timestamp"`
+						} `json:"currentTime"`
+					} `json:"data"`
+				}
+
+				// Positive test
+
+				token, err := authServer.Token(map[string]any{
+					"scope": "read:all",
+				})
+				require.NoError(t, err)
+
+				header := http.Header{
+					"Authorization": []string{"Bearer " + token},
+				}
+
+				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+				err = conn.WriteJSON(&testenv.WebSocketMessage{
+					ID:      "1",
+					Type:    "subscribe",
+					Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+				})
+				require.NoError(t, err)
+
+				var msg testenv.WebSocketMessage
+				var payload currentTimePayload
+
+				err = conn.ReadJSON(&msg)
+				require.NoError(t, err)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+
+				err = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, err)
+
+				require.NotEmpty(t, payload.Data.CurrentTime.UnixTime)
+				require.NotEmpty(t, payload.Data.CurrentTime.Timestamp)
+
+				// Negative test
+
+				token, err = authServer.Token(map[string]any{
+					"scope": "read:block",
+				})
+				require.NoError(t, err)
+
+				header = http.Header{
+					"Authorization": []string{"Bearer " + token},
+				}
+
+				conn = xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
+				err = conn.WriteJSON(&testenv.WebSocketMessage{
+					ID:      "1",
+					Type:    "subscribe",
+					Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+				})
+				require.NoError(t, err)
+
+				msg = testenv.WebSocketMessage{}
+
+				err = conn.ReadJSON(&msg)
+				require.NoError(t, err)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "error", msg.Type)
+				require.Equal(t, `[{"message":"operation type 'subscription' is blocked"}]`, string(msg.Payload))
+
+				_ = conn.Close()
 			})
 		})
 

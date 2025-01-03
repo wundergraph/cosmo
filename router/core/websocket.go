@@ -243,7 +243,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		}
 		r = validatedReq
 
-		requestContext.expressionContext.LoadAuth(r.Context())
+		requestContext.expressionContext.Request.Auth = expr.LoadAuth(r.Context())
 	}
 
 	upgrader := ws.HTTPUpgrader{
@@ -351,8 +351,6 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 				handler.Close()
 				return
 			}
-
-			requestContext.expressionContext.LoadAuth(handler.request.Context())
 		}
 
 		// Export the token from the initial payload to the request header
@@ -375,6 +373,8 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			}
 			handler.request.Header.Set(fromInitialPayloadConfig.ExportToken.HeaderKey, jwtToken)
 		}
+
+		requestContext.expressionContext.Request.Auth = expr.LoadAuth(handler.request.Context())
 	}
 
 	// Only when epoll/kqueue is available. On Windows, epoll is not available
@@ -798,10 +798,12 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 	opContext.name = operationKit.parsedOperation.Request.OperationName
 	opContext.opType = operationKit.parsedOperation.Type
 
-	exprCtx := expr.Context{}
-	exprCtx.LoadRequest(registration.clientRequest)
+	reqCtx := getRequestContext(registration.clientRequest.Context())
+	if reqCtx == nil {
+		return nil, nil, fmt.Errorf("request context not found")
+	}
 
-	if blocked := h.operationBlocker.OperationIsBlocked(h.logger, exprCtx, operationKit.parsedOperation); blocked != nil {
+	if blocked := h.operationBlocker.OperationIsBlocked(h.logger, reqCtx.expressionContext, operationKit.parsedOperation); blocked != nil {
 		return nil, nil, blocked
 	}
 

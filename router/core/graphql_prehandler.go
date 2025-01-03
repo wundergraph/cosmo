@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"net/http"
 	"strconv"
 	"strings"
@@ -327,7 +328,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			r = validatedReq
 
-			requestContext.expressionContext.LoadAuth(r.Context())
+			requestContext.expressionContext.Request.Auth = expr.LoadAuth(r.Context())
 		}
 
 		err = h.handleOperation(r, variablesParser, &httpOperation{

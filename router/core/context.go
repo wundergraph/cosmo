@@ -602,8 +602,9 @@ type requestContextOptions struct {
 
 func buildRequestContext(opts requestContextOptions) *requestContext {
 
-	rootCtx := expr.Context{}
-	rootCtx.LoadRequest(opts.r)
+	rootCtx := expr.Context{
+		Request: expr.LoadRequest(opts.r),
+	}
 
 	return &requestContext{
 		logger:         opts.requestLogger,

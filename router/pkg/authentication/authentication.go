@@ -93,12 +93,13 @@ func Authenticate(ctx context.Context, authenticators []Authenticator, p Provide
 			joinedErrors = errors.Join(joinedErrors, err)
 			continue
 		}
-		if claims != nil {
-			return &authentication{
-				authenticator: auth.Name(),
-				claims:        claims,
-			}, nil
-		}
+
+		// If authentication succeeds, we return the authentication
+		// A provider can also return no claims as long as there is no error.
+		return &authentication{
+			authenticator: auth.Name(),
+			claims:        claims,
+		}, nil
 	}
 	// If no authentication failed error will be nil here,
 	// even if to claims were found.
