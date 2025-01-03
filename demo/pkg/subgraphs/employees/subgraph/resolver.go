@@ -16,11 +16,12 @@ import (
 type Resolver struct {
 	mux                    sync.Mutex
 	NatsPubSubByProviderID map[string]pubsub_datasource.NatsPubSub
+	EmployeesData          []*model.Employee
 }
 
 func (r *Resolver) Employees(ctx context.Context, obj model.RoleType) ([]*model.Employee, error) {
 	var res []*model.Employee
-	for _, employee := range employees {
+	for _, employee := range r.EmployeesData {
 		if isSameType(employee.Role, obj) {
 			res = append(res, employee)
 		}
