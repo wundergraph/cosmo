@@ -73,9 +73,15 @@ const (
 
 var (
 	//go:embed testdata/config.json
-	configJSONTemplate string
-	demoNatsProviders  = []string{natsDefaultSourceName, myNatsProviderID}
-	demoKafkaProviders = []string{myKafkaProviderID}
+	ConfigJSONTemplate string
+	//go:embed testdata/configWithEdfs.json
+	ConfigWithEdfsJSONTemplate string
+	//go:embed testdata/configWithEdfsKafka.json
+	ConfigWithEdfsKafkaJSONTemplate string
+	//go:embed testdata/configWithEdfsNats.json
+	ConfigWithEdfsNatsJSONTemplate string
+	demoNatsProviders              = []string{natsDefaultSourceName, myNatsProviderID}
+	demoKafkaProviders             = []string{myKafkaProviderID}
 )
 
 func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
@@ -199,6 +205,7 @@ type Config struct {
 	RouterOptions                      []core.Option
 	OverrideGraphQLPath                string
 	OverrideAbsinthePath               string
+	RouterConfigJSONTemplate           string
 	ModifyRouterConfig                 func(routerConfig *nodev1.RouterConfig)
 	ModifyEngineExecutionConfiguration func(engineExecutionConfiguration *config.EngineExecutionConfiguration)
 	ModifySecurityConfiguration        func(securityConfiguration *config.SecurityConfiguration)
@@ -232,7 +239,6 @@ type Config struct {
 	EnableRuntimeMetrics               bool
 	EnableNats                         bool
 	EnableKafka                        bool
-	ForcePubSubChecks                  bool
 	SubgraphAccessLogsEnabled          bool
 	SubgraphAccessLogFields            []config.CustomAttribute
 	AssertCacheMetrics                 *CacheMetricsAssertion
@@ -517,7 +523,10 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(productFgServer),
 	}
 
-	replaced := configJSONTemplate
+	if cfg.RouterConfigJSONTemplate == "" {
+		cfg.RouterConfigJSONTemplate = ConfigJSONTemplate
+	}
+	replaced := cfg.RouterConfigJSONTemplate
 
 	for k, v := range replacements {
 		replaced = strings.ReplaceAll(replaced, k, v)
@@ -526,21 +535,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	var routerConfig nodev1.RouterConfig
 	if err := protojson.Unmarshal([]byte(replaced), &routerConfig); err != nil {
 		return nil, err
-	}
-
-	if !cfg.ForcePubSubChecks {
-		for _, datasource := range routerConfig.EngineConfig.DatasourceConfigurations {
-			if customEvents := datasource.CustomEvents; customEvents != nil {
-				customEvents.DontVerify = true
-			}
-		}
-		for _, ffConfig := range routerConfig.FeatureFlagConfigs.GetConfigByFeatureFlagName() {
-			for _, datasource := range ffConfig.EngineConfig.DatasourceConfigurations {
-				if customEvents := datasource.CustomEvents; customEvents != nil {
-					customEvents.DontVerify = true
-				}
-			}
-		}
 	}
 
 	if cfg.ModifyRouterConfig != nil {

@@ -32,7 +32,8 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			EnableNats: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
 				LogLevel: zapcore.InfoLevel,
@@ -106,7 +107,8 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			EnableNats: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			var subscriptionOne struct {
 				employeeUpdated struct {
@@ -197,7 +199,8 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			EnableNats: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.EnableNetPoll = false
 				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
@@ -287,6 +290,7 @@ func TestNatsEvents(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				RouterOptions: []core.Option{
 					core.WithMultipartHeartbeatInterval(heartbeatInterval),
 				},
@@ -355,8 +359,9 @@ func TestNatsEvents(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
-				EnableNats: true,
-				TLSConfig:  nil, // Force Http/1
+				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+				EnableNats:               true,
+				TLSConfig:                nil, // Force Http/1
 				RouterOptions: []core.Option{
 					core.WithMultipartHeartbeatInterval(heartbeatInterval),
 				},
@@ -399,7 +404,8 @@ func TestNatsEvents(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
-				EnableNats: true,
+				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+				EnableNats:               true,
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 
 				subscribePayload := []byte(`{"query":"subscription { countFor(count: 3) }"}`)
@@ -444,7 +450,8 @@ func TestNatsEvents(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
-				EnableNats: true,
+				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+				EnableNats:               true,
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.BlockSubscriptions = true
 				},
@@ -480,7 +487,8 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			EnableNats: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
@@ -547,7 +555,8 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			EnableNats: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
@@ -621,7 +630,8 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			EnableNats: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 				securityConfiguration.BlockSubscriptions = true
 			},
@@ -686,7 +696,8 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			EnableNats: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			firstSubscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } }}"}`)
@@ -757,7 +768,8 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			EnableNats: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			firstSub, err := xEnv.NatsConnectionDefault.Subscribe("getEmployee.3", func(msg *nats.Msg) {
@@ -801,7 +813,8 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			EnableNats: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			firstSub, err := xEnv.NatsConnectionDefault.SubscribeSync("employeeUpdatedMyNats.3")
 			require.NoError(t, err)
@@ -820,7 +833,7 @@ func TestNatsEvents(t *testing.T) {
 
 			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `mutation UpdateEmployeeNats($update: UpdateEmployeeInput!) {
-							updateEmployeeMyNats(employeeID: 3, update: $update) {success}
+							updateEmployeeMyNats(id: 3, update: $update) {success}
 						}`,
 				Variables: json.RawMessage(`{"update":{"name":"Stefan Avramovic","email":"avramovic@wundergraph.com"}}`),
 			})
@@ -831,11 +844,11 @@ func TestNatsEvents(t *testing.T) {
 			msgOne, err := firstSub.NextMsg(5 * time.Second)
 			require.NoError(t, err)
 			require.Equal(t, "employeeUpdatedMyNats.3", msgOne.Subject)
-			require.Equal(t, `{"employeeID":3,"update":{"name":"Stefan Avramovic","email":"avramovic@wundergraph.com"}}`, string(msgOne.Data))
+			require.Equal(t, `{"id":3,"update":{"name":"Stefan Avramovic","email":"avramovic@wundergraph.com"}}`, string(msgOne.Data))
 
 			resTwo := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `mutation updateEmployeeMyNats($update: UpdateEmployeeInput!) {
-							updateEmployeeMyNats(employeeID: 12, update: $update) {success}
+							updateEmployeeMyNats(id: 12, update: $update) {success}
 						}`,
 				Variables: json.RawMessage(`{"update":{"name":"David Stutt","email":"stutt@wundergraph.com"}}`),
 			})
@@ -849,7 +862,8 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			EnableNats: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
@@ -915,7 +929,8 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			EnableNats: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 10
 			},
@@ -1025,7 +1040,8 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			EnableNats: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			var subscription struct {
 				employeeUpdatedNatsStream struct {
@@ -1069,7 +1085,8 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			EnableNats: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
 			},
@@ -1211,7 +1228,8 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			EnableNats: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			subscribePayload := []byte(`{"query":"subscription { filteredEmployeeUpdated(id: 1) { id details { forename surname } } }"}`)
@@ -1405,7 +1423,8 @@ func TestNatsEvents(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			EnableNats: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			var subscriptionOne struct {
 				employeeUpdated struct {

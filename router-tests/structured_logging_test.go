@@ -152,8 +152,9 @@ func TestRouterStartLogs(t *testing.T) {
 	t.Parallel()
 
 	testenv.Run(t, &testenv.Config{
-		EnableNats:  true,
-		EnableKafka: true,
+		RouterConfigJSONTemplate: testenv.ConfigWithEdfsJSONTemplate,
+		EnableNats:               true,
+		EnableKafka:              true,
 		LogObservation: testenv.LogObservationConfig{
 			Enabled:  true,
 			LogLevel: zapcore.InfoLevel,
