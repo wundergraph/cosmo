@@ -919,8 +919,13 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	if s.redisClient != nil {
 		handlerOpts.RateLimitConfig = s.rateLimit
 		handlerOpts.RateLimiter = NewCosmoRateLimiter(&CosmoRateLimiterOptions{
-			RedisClient: s.redisClient,
-			Debug:       s.rateLimit.Debug,
+			RedisClient:                s.redisClient,
+			Debug:                      s.rateLimit.Debug,
+			RejectStatusCode:           s.rateLimit.SimpleStrategy.RejectStatusCode,
+			KeySuffixFromRequestHeader: s.rateLimit.KeySuffixFromHeader,
+			RequestHeaderName:          s.rateLimit.KeySuffixHeaderName,
+			KeySuffixFromClaim:         s.rateLimit.KeySuffixFromClaim,
+			ClaimName:                  s.rateLimit.KeySuffixClaimName,
 		})
 	}
 

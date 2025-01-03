@@ -291,7 +291,7 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 			RateLimit: buf.Bytes(),
 		}
 		if isHttpResponseWriter {
-			httpWriter.WriteHeader(http.StatusOK) // Always return 200 OK when we return a well-formed response
+			httpWriter.WriteHeader(h.rateLimiter.RejectStatusCode())
 		}
 	case errorTypeUnauthorized:
 		response.Errors[0].Message = "Unauthorized"

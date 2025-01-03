@@ -415,7 +415,12 @@ type RateLimitConfiguration struct {
 	SimpleStrategy RateLimitSimpleStrategy `yaml:"simple_strategy"`
 	Storage        RedisConfiguration      `yaml:"storage"`
 	// Debug ensures that retryAfter and resetAfter are set to stable values for testing
-	Debug bool `yaml:"debug" envDefault:"false" env:"RATE_LIMIT_DEBUG"`
+	// Debug also exposes the rate limit key in the response extension for debugging purposes
+	Debug               bool   `yaml:"debug" envDefault:"false" env:"RATE_LIMIT_DEBUG"`
+	KeySuffixFromHeader bool   `yaml:"key_suffix_from_header" envDefault:"false" env:"RATE_LIMIT_KEY_SUFFIX_FROM_HEADER"`
+	KeySuffixHeaderName string `yaml:"key_suffix_header_name" envDefault:"X-Forwarded-For" env:"RATE_LIMIT_KEY_SUFFIX_HEADER_NAME"`
+	KeySuffixFromClaim  bool   `yaml:"key_suffix_from_claim" envDefault:"false" env:"RATE_LIMIT_KEY_SUFFIX_FROM_CLAIM"`
+	KeySuffixClaimName  string `yaml:"key_suffix_claim_name" envDefault:"sub" env:"RATE_LIMIT_KEY_SUFFIX_CLAIM_NAME"`
 }
 
 type RedisConfiguration struct {
@@ -428,6 +433,7 @@ type RateLimitSimpleStrategy struct {
 	Burst                   int           `yaml:"burst" envDefault:"10" env:"RATE_LIMIT_SIMPLE_BURST"`
 	Period                  time.Duration `yaml:"period" envDefault:"1s" env:"RATE_LIMIT_SIMPLE_PERIOD"`
 	RejectExceedingRequests bool          `yaml:"reject_exceeding_requests" envDefault:"false" env:"RATE_LIMIT_SIMPLE_REJECT_EXCEEDING_REQUESTS"`
+	RejectStatusCode        int           `yaml:"reject_status_code" envDefault:"200" env:"RATE_LIMIT_SIMPLE_REJECT_STATUS_CODE"`
 }
 
 type CDNConfiguration struct {
