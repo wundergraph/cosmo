@@ -59,28 +59,19 @@ The context object provides information about the context of the request. A gene
 request.context.agent
 ```
 
-In the Router config, you can use the following expression to set a custom field in the context object:
+## Expression templates
+
+In the Router config, you can define templates. This can be useful to provide a more readable way to access repeated expressions. Templates can be references everywhere where expressions are used.
 
 ```yaml
-context:
+expressions:
   agent: "request.auth.claims.sub || request.client.ip || request.header.X-Forwarded-For"
 ```
 
-At runtime, the following expression can be used to set additional fields in the context object or to override or unset existing fields:
+Usage:
 
-```
-# set agent to undefined
-unsetContext("request.context.agent")
-```
-
-```
-# set agent to request.auth.claims.sub
-setContext("agent", request.auth.claims.sub)
-```
-
-```
-# add another field to the context object
-setContext("client", request.client.name)
+```yaml
+condition: templates.agent == "Foo"
 ```
 
 ## authentication
