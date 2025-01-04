@@ -6,6 +6,7 @@ author: Jens Neuse, Dustin Deus
 # Expression Context
 
 This RFC proposes a new feature to provide a read-only context object to an expr-lang VM that can be used to access information about the request, response, and other relevant information. The context object is available at all times during the request's lifecycle but not all fields are available at all times. One example is authentication information, which is only available after the request has been authenticated.
+At build time, the router will validate the expressions and provide a clear error message if the expression is invalid or will not return the expected type.
 
 ## Motivation
 
