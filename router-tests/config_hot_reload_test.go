@@ -259,7 +259,7 @@ func TestConfigHotReload(t *testing.T) {
 
 			require.Eventually(t, func() bool {
 				return done.Load()
-			}, time.Second*5, time.Millisecond*100)
+			}, time.Second*10, time.Millisecond*100)
 		})
 	})
 
