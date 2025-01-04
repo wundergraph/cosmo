@@ -21,7 +21,7 @@ The motivation for this feature is to provide a flexible way to create condition
 
 - Fields are named using camelCase (e.g. request.auth.claims)
 - Methods are named using PascalCase (e.g. request.header.Get("Content-Type"))
-- Methods should be exported through an interface to make the contract clear
+- Methods should be exported through a custom type to avoid accidental methods that can mutate the context
 
 # Principles
 
