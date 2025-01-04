@@ -96,7 +96,7 @@ request.operation.type // query, mutation, subscription
 request.operation.hash // hash of the operation
 ```
 
-# subgraph.*
+## subgraph.*
 
 The subgraph object provides information about the current fetch operation being executed by the router,
 typically used to fetch data from a subgraph via a federated GraphQL Request.
