@@ -56,7 +56,7 @@ type RequestURL struct {
 }
 
 type RequestHeaders struct {
-	Header http.Header
+	Header http.Header `expr:"-"` // Do not expose the full header
 }
 
 // Get returns the value of the header with the given key. If the header is not present, an empty string is returned.
