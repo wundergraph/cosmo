@@ -10,6 +10,7 @@ import (
 
 func NewSchema(natsPubSubByProviderID map[string]pubsub_datasource.NatsPubSub) graphql.ExecutableSchema {
 	return generated.NewExecutableSchema(generated.Config{Resolvers: &subgraph.Resolver{
-		NatsPubSubByProviderID: natsPubSubByProviderID,
+		NatsPubSubByProviderID:       natsPubSubByProviderID,
+		TopSecretFederationFactsData: subgraph.TopSecretFederationFacts,
 	}})
 }
