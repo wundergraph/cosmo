@@ -1,6 +1,7 @@
 package module_test
 
 import (
+	"context"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	setScopesModule "github.com/wundergraph/cosmo/router-tests/modules/custom-set-scopes"
@@ -27,7 +28,7 @@ func configureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) 
 	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
-	tokenDecoder, _ := authentication.NewJwksTokenDecoder(zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+	tokenDecoder, _ := authentication.NewJwksTokenDecoder(context.Background(), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{
 		Name:         jwksName,
 		URL:          authServer.JWKSURL(),

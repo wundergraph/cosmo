@@ -139,14 +139,17 @@ func NewClient(endpoint string, token string, opts Options) (persistedoperation.
 		return nil, err
 	}
 
-	logger := opts.Logger.With(zap.String("component", "persisted_operations_client"))
+	logger := opts.Logger.With(
+		zap.String("component", "persisted_operations_client"),
+		zap.String("url", endpoint),
+	)
 
 	return &client{
 		cdnURL:              u,
 		authenticationToken: token,
 		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
 		organizationID:      url.PathEscape(claims.OrganizationID),
-		httpClient:          httpclient.NewRetryableHTTPClient(logger),
+		httpClient:          httpclient.NewRetryableHTTPClient(logger, 5),
 		logger:              logger,
 	}, nil
 }
