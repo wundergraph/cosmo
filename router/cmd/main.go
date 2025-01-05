@@ -104,11 +104,9 @@ func Main() {
 		logger.Fatal("Could not create router", zap.Error(err))
 	}
 
-	go func() {
-		if err = router.Start(routerCtx); err != nil {
-			logger.Fatal("Could not start router", zap.Error(err))
-		}
-	}()
+	if err = router.Start(routerCtx); err != nil {
+		logger.Fatal("Could not start router", zap.Error(err))
+	}
 
 	<-ctx.Done()
 
