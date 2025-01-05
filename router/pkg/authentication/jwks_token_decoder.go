@@ -50,7 +50,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, u string, refr
 		return nil, fmt.Errorf("failed to parse given URL %q: %w", u, err)
 	}
 	jwksetHTTPStorageOptions := jwkset.HTTPClientStorageOptions{
-		Client:             httpclient.NewRetryableHTTPClient(logger, 5),
+		Client:             httpclient.NewRetryableHTTPClient(logger),
 		Ctx:                ctx, // Used to end background refresh goroutine.
 		HTTPExpectedStatus: http.StatusOK,
 		HTTPMethod:         http.MethodGet,

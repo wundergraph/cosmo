@@ -97,7 +97,7 @@ func NewClient(endpoint string, token string, opts *Options) (routerconfig.Clien
 		authenticationToken: token,
 		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
 		organizationID:      url.PathEscape(claims.OrganizationID),
-		httpClient:          httpclient.NewRetryableHTTPClient(logger, 5),
+		httpClient:          httpclient.NewRetryableHTTPClient(logger),
 		logger:              opts.Logger,
 	}
 

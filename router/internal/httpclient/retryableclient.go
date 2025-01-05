@@ -7,10 +7,10 @@ import (
 	"time"
 )
 
-func NewRetryableHTTPClient(logger *zap.Logger, maxRetry int) *http.Client {
+func NewRetryableHTTPClient(logger *zap.Logger) *http.Client {
 	retryClient := retryablehttp.NewClient()
 	retryClient.RetryWaitMax = 30 * time.Second
-	retryClient.RetryMax = maxRetry
+	retryClient.RetryMax = 5
 	retryClient.Backoff = retryablehttp.DefaultBackoff
 	retryClient.Logger = nil
 	retryClient.ErrorHandler = func(resp *http.Response, err error, numTries int) (*http.Response, error) {
