@@ -17,7 +17,8 @@ import (
 * Naming conventions:
 * - Fields are named using camelCase
 * - Methods are named using PascalCase (Required to be exported)
-* - Methods should be exported through a custom type to avoid accidental methods that can mutate the context
+* - Methods should be exported through a custom type to avoid exposing accidental methods that can mutate the context
+* -Use interface to expose only the required methods. Blocked by https://github.com/expr-lang/expr/issues/744
 *
 * Principles:
 * The Expr package is used to evaluate expressions in the context of the request or router.
@@ -61,6 +62,7 @@ type RequestHeaders struct {
 
 // Get returns the value of the header with the given key. If the header is not present, an empty string is returned.
 // The key is case-insensitive and transformed to the canonical format.
+// TODO: Use interface to expose only the required methods. Blocked by https://github.com/expr-lang/expr/issues/744
 func (r RequestHeaders) Get(key string) string {
 	return r.Header.Get(key)
 }
