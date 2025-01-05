@@ -99,7 +99,6 @@ func Main() {
 		Config: &result.Config,
 		Logger: logger,
 	})
-
 	if err != nil {
 		logger.Fatal("Could not create router", zap.Error(err))
 	}
