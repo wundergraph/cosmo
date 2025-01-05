@@ -104,11 +104,9 @@ func Main() {
 	routerCtx, routerCancel := context.WithCancel(context.Background())
 	defer routerCancel()
 
-	go func() {
-		if err = router.Start(routerCtx); err != nil {
-			logger.Fatal("Could not start router", zap.Error(err))
-		}
-	}()
+	if err = router.Start(routerCtx); err != nil {
+		logger.Fatal("Could not start router", zap.Error(err))
+	}
 
 	<-ctx.Done()
 

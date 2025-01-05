@@ -533,5 +533,21 @@ func TestBlockOperations(t *testing.T) {
 				require.Equal(t, `{"errors":[{"message":"non-persisted operation is blocked"}]}`, res.Body)
 			})
 		})
+
+		t.Run("should not be possible to access unexported fields", func(t *testing.T) {
+			t.Parallel()
+			err := testenv.RunWithError(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.BlockNonPersistedOperations = config.BlockOperationConfiguration{
+						Enabled:   true,
+						Condition: "request.header.Header.Set('graphql-client-name')",
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				t.Fatal("this should not be possible")
+			})
+
+			require.ErrorContains(t, err, "line 1, column 15: type expr.RequestHeaders has no field Header")
+		})
 	})
 }
