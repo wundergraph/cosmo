@@ -495,16 +495,14 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		engineParseSpan.End()
 	}
 
+	requestContext.operation.name = operationKit.parsedOperation.Request.OperationName
+	requestContext.operation.opType = operationKit.parsedOperation.Type
+
 	attributesAfterParse := []attribute.KeyValue{
 		otel.WgOperationName.String(operationKit.parsedOperation.Request.OperationName),
 		otel.WgOperationType.String(operationKit.parsedOperation.Type),
 	}
-
 	requestContext.telemetry.addCommonAttribute(attributesAfterParse...)
-
-	requestContext.operation.name = operationKit.parsedOperation.Request.OperationName
-
-	requestContext.operation.opType = operationKit.parsedOperation.Type
 
 	// Set the router span name after we have the operation name
 	httpOperation.routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Request.OperationName, operationKit.parsedOperation.Type))

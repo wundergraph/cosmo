@@ -824,12 +824,7 @@
                       "context_field": {
                         "type": "string",
                         "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
-                        "enum": [
-                          "operation_service_names",
-                          "graphql_error_codes",
-                          "graphql_error_service_names",
-                          "operation_sha256"
-                        ]
+                        "enum": ["operation_service_names", "graphql_error_codes", "graphql_error_service_names", "operation_sha256", "operation_name", "operation_hash", "router_config_version"]
                       }
                     }
                   }

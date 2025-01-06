@@ -592,24 +592,26 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	httpRouter := chi.NewRouter()
 
-	baseOtelAttributes := append(
-		[]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)},
-		s.baseOtelAttributes...,
-	)
+	baseOtelAttributes := append([]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)}, s.baseOtelAttributes...)
 
 	if featureFlagName != "" {
 		baseOtelAttributes = append(baseOtelAttributes, otel.WgFeatureFlag.String(featureFlagName))
 	}
 
 	metricsEnabled := s.metricConfig.IsEnabled()
-	traceEnabled := s.traceConfig.Enabled
 
+	// we only enable the attribute mapper if we are not using the default cloud exporter
+	enableAttributeMapper := !(s.metricConfig.IsUsingCloudExporter || rmetric.IsDefaultCloudExporterConfigured(s.metricConfig.OpenTelemetry.Exporters))
+
+	// We might want to remap or exclude known attributes based on the configuration for metrics
+	mapper := newAttributeMapper(enableAttributeMapper, s.metricConfig.Attributes)
+	baseMetricAttributes := mapper.mapAttributes(baseOtelAttributes)
 	// Prometheus metricStore rely on OTLP metricStore
 	if metricsEnabled {
 		m, err := rmetric.NewStore(
 			rmetric.WithPromMeterProvider(s.promMeterProvider),
 			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
-			rmetric.WithBaseAttributes(baseOtelAttributes),
+			rmetric.WithBaseAttributes(baseMetricAttributes),
 			rmetric.WithLogger(s.logger),
 			rmetric.WithProcessStartTime(s.processStartTime),
 			rmetric.WithCardinalityLimit(rmetric.DefaultCardinalityLimit),
@@ -636,7 +638,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return nil, err
 	}
 
-	if err = gm.configureCacheMetrics(s, baseOtelAttributes); err != nil {
+	if err = gm.configureCacheMetrics(s, baseMetricAttributes); err != nil {
 		return nil, err
 	}
 
@@ -671,7 +673,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				requestLogger:       requestLogger,
 				metricSetAttributes: b,
 				metricsEnabled:      metricsEnabled,
-				traceEnabled:        traceEnabled,
+				traceEnabled:        s.traceConfig.Enabled,
+				mapper:              mapper,
 				w:                   w,
 				r:                   r,
 			})
@@ -729,6 +732,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			reqContext := getRequestContext(r.Context())
 
 			reqContext.telemetry.addCommonTraceAttribute(baseOtelAttributes...)
+			reqContext.telemetry.addCommonTraceAttribute(otel.WgRouterConfigVersion.String(routerConfigVersion))
 
 			if commonAttrRequestMapper != nil {
 				reqContext.telemetry.addCommonAttribute(commonAttrRequestMapper(r)...)

@@ -102,6 +102,10 @@ type Config struct {
 	ResourceAttributes []attribute.KeyValue
 
 	Attributes []config.CustomAttribute
+
+	// IsUsingCloudExporter indicates whether the cloud exporter is used.
+	// This value is used for tests to enable/disable the simulated cloud exporter.
+	IsUsingCloudExporter bool
 }
 
 func (c *Config) IsEnabled() bool {
