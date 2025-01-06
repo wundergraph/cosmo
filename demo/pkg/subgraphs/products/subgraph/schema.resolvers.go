@@ -80,6 +80,10 @@ func (r *queriesResolver) FactTypes(ctx context.Context) ([]model.TopSecretFactT
 
 // SharedThings is the resolver for the sharedThings field.
 func (r *queriesResolver) SharedThings(ctx context.Context, numOfA int, numOfB int) ([]*model.Thing, error) {
+	const MaxNumOfA = 1000
+	if numOfA < 0 || numOfA > MaxNumOfA {
+		return nil, errors.New("numOfA is out of allowed range")
+	}
 	things := make([]*model.Thing, 0, numOfA)
 	for i := 0; i < numOfA; i++ {
 		thing := &model.Thing{
