@@ -37,11 +37,6 @@ type CDNSource struct {
 	httpClient     *http.Client
 }
 
-type CDNSourceOptions struct {
-	endpoint string
-	token    string
-}
-
 type cdnWarmupOperations struct {
 	Operations []*CacheWarmupItem `json:"operations"`
 }
