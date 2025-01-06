@@ -83,6 +83,7 @@ var (
 	demoKafkaProviders = []string{myKafkaProviderID}
 )
 
+// Run runs the test and fails the test if an error occurs
 func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	t.Helper()
 	env, err := createTestEnv(t, cfg)
@@ -94,6 +95,23 @@ func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	if cfg.AssertCacheMetrics != nil {
 		assertCacheMetrics(t, env, *cfg.AssertCacheMetrics)
 	}
+}
+
+// RunWithError runs the test but returns an error instead of failing the test
+// Useful when you want to assert errors during router bootstrapping
+func RunWithError(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) error {
+	t.Helper()
+	env, err := createTestEnv(t, cfg)
+	if err != nil {
+		return err
+	}
+	t.Cleanup(env.Shutdown)
+	f(t, env)
+	if cfg.AssertCacheMetrics != nil {
+		assertCacheMetrics(t, env, *cfg.AssertCacheMetrics)
+	}
+
+	return nil
 }
 
 func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
@@ -586,11 +604,9 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		}
 	}
 
-	go func() {
-		if err := rr.Start(ctx); err != nil {
-			require.Failf(t, "Could not start router", "error: %s", err)
-		}
-	}()
+	if err := rr.Start(ctx); err != nil {
+		return nil, err
+	}
 
 	graphQLPath := "/graphql"
 	if cfg.OverrideGraphQLPath != "" {

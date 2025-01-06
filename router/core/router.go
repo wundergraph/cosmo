@@ -1028,8 +1028,10 @@ func (r *Router) buildClients() error {
 	return nil
 }
 
-// Start starts the server. It does not block. The server can be shutdown with Router.Shutdown().
-// Not safe for concurrent use.
+// Start starts the router. It does block until the router has been initialized. After that the server is listening
+// on a separate goroutine. The server can be shutdown with Router.Shutdown(). Not safe for concurrent use.
+// During initialization, the router will register itself with the control plane and poll the config from the CDN
+// if the user opted in to connect to Cosmo Cloud.
 func (r *Router) Start(ctx context.Context) error {
 	if r.shutdown.Load() {
 		return fmt.Errorf("router is shutdown. Create a new instance with router.NewRouter()")
