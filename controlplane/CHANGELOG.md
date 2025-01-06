@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.118.6](https://github.com/wundergraph/cosmo/compare/controlplane@0.118.5...controlplane@0.118.6) (2025-01-06)
+
+### Bug Fixes
+
+* use gauge metric type for router uptime metric ([#1485](https://github.com/wundergraph/cosmo/issues/1485)) ([94b0125](https://github.com/wundergraph/cosmo/commit/94b01252d6be2848b98449fb29a0bd63dcd980d3)) (@StarpTech)
+
 ## [0.118.5](https://github.com/wundergraph/cosmo/compare/controlplane@0.118.4...controlplane@0.118.5) (2025-01-02)
 
 ### Bug Fixes
