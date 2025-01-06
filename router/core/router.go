@@ -1305,14 +1305,6 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		r.persistedOperationClient.Close()
 	}
 
-	if r.accessController != nil {
-		for _, authenticator := range r.accessController.authenticators {
-			if authenticator != nil {
-				authenticator.Close()
-			}
-		}
-	}
-
 	wg.Wait()
 
 	return err
@@ -1954,7 +1946,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			Path:         cfg.Metrics.Prometheus.Path,
 			GraphqlCache: cfg.Metrics.Prometheus.GraphqlCache,
 			EngineStats: rmetric.EngineStatsConfig{
-				Subscription: cfg.Metrics.OTLP.EngineStats.Subscriptions,
+				Subscription: cfg.Metrics.Prometheus.EngineStats.Subscriptions,
 			},
 			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
