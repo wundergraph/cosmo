@@ -83,6 +83,7 @@ var (
 	demoKafkaProviders = []string{myKafkaProviderID}
 )
 
+// Run runs the test and fails the test if an error occurs
 func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	t.Helper()
 	env, err := createTestEnv(t, cfg)
@@ -98,6 +99,23 @@ func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 			assertCacheMetrics(t, env, v, ff)
 		}
 	}
+}
+
+// RunWithError runs the test but returns an error instead of failing the test
+// Useful when you want to assert errors during router bootstrapping
+func RunWithError(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) error {
+	t.Helper()
+	env, err := createTestEnv(t, cfg)
+	if err != nil {
+		return err
+	}
+	t.Cleanup(env.Shutdown)
+	f(t, env)
+	if cfg.AssertCacheMetrics != nil {
+		assertCacheMetrics(t, env, cfg.AssertCacheMetrics.BaseGraphAssertions, "")
+	}
+
+	return nil
 }
 
 func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
@@ -600,11 +618,9 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		}
 	}
 
-	go func() {
-		if err := rr.Start(ctx); err != nil {
-			t.Fatal("Could not start router", zap.Error(err))
-		}
-	}()
+	if err := rr.Start(ctx); err != nil {
+		return nil, err
+	}
 
 	graphQLPath := "/graphql"
 	if cfg.OverrideGraphQLPath != "" {
@@ -1200,7 +1216,7 @@ func (e *Environment) MakeGraphQLRequestWithContext(ctx context.Context, request
 		req.Header = request.Header
 	}
 	req.Header.Set("Accept-Encoding", "identity")
-	return e.makeGraphQLRequest(req)
+	return e.MakeGraphQLRequestRaw(req)
 }
 
 func (e *Environment) MakeGraphQLRequestWithHeaders(request GraphQLRequest, headers map[string]string) (*TestResponse, error) {
@@ -1213,11 +1229,10 @@ func (e *Environment) MakeGraphQLRequestWithHeaders(request GraphQLRequest, head
 	if request.Header != nil {
 		req.Header = request.Header
 	}
-	req.Header.Set("Accept-Encoding", "identity")
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
-	return e.makeGraphQLRequest(req)
+	return e.MakeGraphQLRequestRaw(req)
 }
 
 func (e *Environment) MakeGraphQLRequestOverGET(request GraphQLRequest) (*TestResponse, error) {
@@ -1226,7 +1241,7 @@ func (e *Environment) MakeGraphQLRequestOverGET(request GraphQLRequest) (*TestRe
 		return nil, err
 	}
 
-	return e.makeGraphQLRequest(req)
+	return e.MakeGraphQLRequestRaw(req)
 }
 
 func (e *Environment) newGraphQLRequestOverGET(baseURL string, request GraphQLRequest) (*http.Request, error) {
@@ -1257,7 +1272,8 @@ func (e *Environment) newGraphQLRequestOverGET(baseURL string, request GraphQLRe
 	return req, nil
 }
 
-func (e *Environment) makeGraphQLRequest(request *http.Request) (*TestResponse, error) {
+func (e *Environment) MakeGraphQLRequestRaw(request *http.Request) (*TestResponse, error) {
+	request.Header.Set("Accept-Encoding", "identity")
 	resp, err := e.RouterClient.Do(request)
 	if err != nil {
 		return nil, err

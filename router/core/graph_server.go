@@ -931,11 +931,24 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	graphqlHandler := NewGraphQLHandler(handlerOpts)
 	executor.Resolver.SetAsyncErrorWriter(graphqlHandler)
 
-	operationBlocker := NewOperationBlocker(&OperationBlockerOptions{
-		BlockMutations:     s.securityConfiguration.BlockMutations,
-		BlockSubscriptions: s.securityConfiguration.BlockSubscriptions,
-		BlockNonPersisted:  s.securityConfiguration.BlockNonPersistedOperations,
+	operationBlocker, err := NewOperationBlocker(&OperationBlockerOptions{
+		BlockMutations: BlockMutationOptions{
+			Enabled:   s.securityConfiguration.BlockMutations.Enabled,
+			Condition: s.securityConfiguration.BlockMutations.Condition,
+		},
+		BlockSubscriptions: BlockSubscriptionOptions{
+			Enabled:   s.securityConfiguration.BlockSubscriptions.Enabled,
+			Condition: s.securityConfiguration.BlockSubscriptions.Condition,
+		},
+		BlockNonPersisted: BlockNonPersistedOptions{
+			Enabled:   s.securityConfiguration.BlockNonPersistedOperations.Enabled,
+			Condition: s.securityConfiguration.BlockNonPersistedOperations.Condition,
+		},
 	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create operation blocker: %w", err)
+	}
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
 		Logger:                      s.logger,
