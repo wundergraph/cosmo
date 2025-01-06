@@ -1,4 +1,4 @@
-package core
+package statistics
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type WebSocketsStatistics interface {
+type EngineStatistics interface {
 	Subscribe(ctx context.Context) chan *UsageReport
 	GetReport() *UsageReport
 	SubscriptionUpdateSent()
@@ -21,10 +21,11 @@ type WebSocketsStatistics interface {
 	TriggerCountDec(count int)
 }
 
-type WebSocketStats struct {
+type EngineStats struct {
 	mu            sync.Mutex
 	ctx           context.Context
 	logger        *zap.Logger
+	reportStats   bool
 	connections   atomic.Uint64
 	subscriptions atomic.Uint64
 	messagesSent  atomic.Uint64
@@ -40,19 +41,20 @@ type UsageReport struct {
 	Triggers      uint64
 }
 
-func NewWebSocketStats(ctx context.Context, logger *zap.Logger) *WebSocketStats {
-	stats := &WebSocketStats{
+func NewEngineStats(ctx context.Context, logger *zap.Logger, reportStats bool) *EngineStats {
+	stats := &EngineStats{
 		ctx:         ctx,
 		logger:      logger,
 		update:      make(chan struct{}),
 		mu:          sync.Mutex{},
+		reportStats: reportStats,
 		subscribers: map[context.Context]chan *UsageReport{},
 	}
 	go stats.run(ctx)
 	return stats
 }
 
-func (s *WebSocketStats) Subscribe(ctx context.Context) chan *UsageReport {
+func (s *EngineStats) Subscribe(ctx context.Context) chan *UsageReport {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -61,7 +63,7 @@ func (s *WebSocketStats) Subscribe(ctx context.Context) chan *UsageReport {
 	return sub
 }
 
-func (s *WebSocketStats) GetReport() *UsageReport {
+func (s *EngineStats) GetReport() *UsageReport {
 	report := &UsageReport{
 		Connections:   s.connections.Load(),
 		Subscriptions: s.subscriptions.Load(),
@@ -71,8 +73,12 @@ func (s *WebSocketStats) GetReport() *UsageReport {
 	return report
 }
 
-func (s *WebSocketStats) run(ctx context.Context) {
+func (s *EngineStats) run(ctx context.Context) {
 	tickReport := time.NewTicker(time.Second * 5)
+	if !s.reportStats {
+		tickReport.Stop()
+	}
+
 	defer tickReport.Stop()
 	for {
 		select {
@@ -98,7 +104,7 @@ func (s *WebSocketStats) run(ctx context.Context) {
 	}
 }
 
-func (s *WebSocketStats) reportConnections() {
+func (s *EngineStats) reportConnections() {
 	s.logger.Info("WebSocket Stats",
 		zap.Uint64("open_connections", s.connections.Load()),
 		zap.Uint64("triggers", s.triggers.Load()),
@@ -106,75 +112,75 @@ func (s *WebSocketStats) reportConnections() {
 	)
 }
 
-func (s *WebSocketStats) publish() {
+func (s *EngineStats) publish() {
 	s.update <- struct{}{}
 }
 
-func (s *WebSocketStats) SubscriptionUpdateSent() {
+func (s *EngineStats) SubscriptionUpdateSent() {
 	s.messagesSent.Inc()
 	s.publish()
 }
 
-func (s *WebSocketStats) ConnectionsInc() {
+func (s *EngineStats) ConnectionsInc() {
 	s.connections.Inc()
 	s.publish()
 }
 
-func (s *WebSocketStats) ConnectionsDec() {
+func (s *EngineStats) ConnectionsDec() {
 	s.connections.Dec()
 	s.publish()
 }
 
-func (s *WebSocketStats) SubscriptionCountInc(count int) {
+func (s *EngineStats) SubscriptionCountInc(count int) {
 	s.subscriptions.Add(uint64(count))
 	s.publish()
 }
 
-func (s *WebSocketStats) SubscriptionCountDec(count int) {
+func (s *EngineStats) SubscriptionCountDec(count int) {
 	s.subscriptions.Sub(uint64(count))
 	s.publish()
 }
 
-func (s *WebSocketStats) TriggerCountInc(count int) {
+func (s *EngineStats) TriggerCountInc(count int) {
 	s.triggers.Add(uint64(count))
 	s.publish()
 }
 
-func (s *WebSocketStats) TriggerCountDec(count int) {
+func (s *EngineStats) TriggerCountDec(count int) {
 	s.triggers.Sub(uint64(count))
 	s.publish()
 }
 
-type NoopWebSocketStats struct{}
+type NoopEngineStats struct{}
 
-func NewNoopWebSocketStats() *NoopWebSocketStats {
-	return &NoopWebSocketStats{}
+func NewNoopEngineStats() *NoopEngineStats {
+	return &NoopEngineStats{}
 }
 
-func (s *NoopWebSocketStats) Subscribe(_ context.Context) chan *UsageReport {
+func (s *NoopEngineStats) Subscribe(_ context.Context) chan *UsageReport {
 	return nil
 }
 
-func (s *NoopWebSocketStats) GetReport() *UsageReport {
+func (s *NoopEngineStats) GetReport() *UsageReport {
 	return nil
 }
 
-func (s *NoopWebSocketStats) SubscriptionUpdateSent() {}
+func (s *NoopEngineStats) SubscriptionUpdateSent() {}
 
-func (s *NoopWebSocketStats) ConnectionsInc() {}
+func (s *NoopEngineStats) ConnectionsInc() {}
 
-func (s *NoopWebSocketStats) ConnectionsDec() {}
+func (s *NoopEngineStats) ConnectionsDec() {}
 
-func (s *NoopWebSocketStats) SubscriptionCountInc(_ int) {}
+func (s *NoopEngineStats) SubscriptionCountInc(_ int) {}
 
-func (s *NoopWebSocketStats) SubscriptionCountDec(_ int) {}
+func (s *NoopEngineStats) SubscriptionCountDec(_ int) {}
 
-func (s *NoopWebSocketStats) SynchronousSubscriptionsInc() {}
+func (s *NoopEngineStats) SynchronousSubscriptionsInc() {}
 
-func (s *NoopWebSocketStats) SynchronousSubscriptionsDec() {}
+func (s *NoopEngineStats) SynchronousSubscriptionsDec() {}
 
-func (s *NoopWebSocketStats) TriggerCountInc(count int) {}
+func (s *NoopEngineStats) TriggerCountInc(count int) {}
 
-func (s *NoopWebSocketStats) TriggerCountDec(count int) {}
+func (s *NoopEngineStats) TriggerCountDec(count int) {}
 
-var _ WebSocketsStatistics = &WebSocketStats{}
+var _ EngineStatistics = &EngineStats{}

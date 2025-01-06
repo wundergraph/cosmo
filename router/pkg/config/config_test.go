@@ -474,3 +474,29 @@ client_header:
 	_, err := LoadConfig(f, "")
 	require.NoError(t, err)
 }
+
+func TestPrefixedMetricEngineConfig(t *testing.T) {
+	t.Cleanup(func() {
+		_ = os.Unsetenv("PROMETHEUS_ENGINE_STATS_SUBSCRIPTIONS")
+		_ = os.Unsetenv("METRICS_OTLP_ENGINE_STATS_SUBSCRIPTIONS")
+	})
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+`)
+	c, err := LoadConfig(f, "")
+	require.NoError(t, err)
+
+	require.False(t, c.Config.Telemetry.Metrics.Prometheus.EngineStats.Subscriptions)
+	require.False(t, c.Config.Telemetry.Metrics.OTLP.EngineStats.Subscriptions)
+
+	require.NoError(t, os.Setenv("PROMETHEUS_ENGINE_STATS_SUBSCRIPTIONS", "true"))
+	require.NoError(t, os.Setenv("METRICS_OTLP_ENGINE_STATS_SUBSCRIPTIONS", "true"))
+
+	c, err = LoadConfig(f, "")
+	require.NoError(t, err)
+
+	require.True(t, c.Config.Telemetry.Metrics.Prometheus.EngineStats.Subscriptions)
+	require.True(t, c.Config.Telemetry.Metrics.OTLP.EngineStats.Subscriptions)
+
+}
