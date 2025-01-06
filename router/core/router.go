@@ -1946,7 +1946,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			Path:         cfg.Metrics.Prometheus.Path,
 			GraphqlCache: cfg.Metrics.Prometheus.GraphqlCache,
 			EngineStats: rmetric.EngineStatsConfig{
-				Subscription: cfg.Metrics.OTLP.EngineStats.Subscriptions,
+				Subscription: cfg.Metrics.Prometheus.EngineStats.Subscriptions,
 			},
 			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
