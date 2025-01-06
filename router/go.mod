@@ -4,7 +4,6 @@ go 1.23
 
 require (
 	connectrpc.com/connect v1.16.2
-	github.com/MicahParks/keyfunc/v2 v2.1.0
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/buger/jsonparser v1.1.1
 	github.com/cespare/xxhash/v2 v2.3.0
@@ -17,7 +16,7 @@ require (
 	github.com/go-redis/redis_rate/v10 v10.0.1
 	github.com/gobwas/ws v1.4.0
 	github.com/goccy/go-yaml v1.13.4
-	github.com/golang-jwt/jwt/v5 v5.2.0
+	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/gorilla/websocket v1.5.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-retryablehttp v0.7.7
@@ -62,6 +61,8 @@ require (
 
 require (
 	github.com/KimMachineGun/automemlimit v0.6.1
+	github.com/MicahParks/jwkset v0.5.19
+	github.com/MicahParks/keyfunc/v3 v3.3.5
 	github.com/bep/debounce v1.2.1
 	github.com/caarlos0/env/v11 v11.1.0
 	github.com/expr-lang/expr v1.16.9
@@ -75,6 +76,7 @@ require (
 	go.uber.org/ratelimit v0.3.1
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
 	golang.org/x/text v0.21.0
+	golang.org/x/time v0.5.0
 )
 
 require (
