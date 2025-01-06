@@ -2,7 +2,6 @@ package integration
 
 import (
 	"bytes"
-	"context"
 	"go.uber.org/zap"
 	"io"
 	"net/http"
@@ -599,7 +598,8 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
-	tokenDecoder, _ := authentication.NewJwksTokenDecoder(context.Background(), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+
+	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{
 		Name:                jwksName,
 		URL:                 authServer.JWKSURL(),
@@ -734,7 +734,7 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(authServer2.Close)
 
-	tokenDecoder1, _ := authentication.NewJwksTokenDecoder(context.Background(), zap.NewNop(), authServer1.JWKSURL(), time.Second*5)
+	tokenDecoder1, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer1.JWKSURL(), time.Second*5)
 	authenticator1HeaderValuePrefixes := []string{"Provider1"}
 	authenticator1, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
 		Name:                "1",
@@ -744,7 +744,7 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	tokenDecoder2, _ := authentication.NewJwksTokenDecoder(context.Background(), zap.NewNop(), authServer2.JWKSURL(), time.Second*5)
+	tokenDecoder2, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer2.JWKSURL(), time.Second*5)
 	authenticator2HeaderValuePrefixes := []string{"", "Provider2"}
 	authenticator2, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
 		Name:                "2",
@@ -844,7 +844,7 @@ func TestAuthenticationOverWebsocket(t *testing.T) {
 	require.NoError(t, err)
 	defer authServer.Close()
 
-	tokenDecoder, _ := authentication.NewJwksTokenDecoder(context.Background(), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
 	jwksOpts := authentication.HttpHeaderAuthenticatorOptions{
 		Name:         jwksName,
 		URL:          authServer.JWKSURL(),

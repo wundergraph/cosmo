@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
@@ -76,7 +75,7 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		tokenDecoder, _ := authentication.NewJwksTokenDecoder(context.Background(), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
 			Name:         jwksName,
 			URL:          authServer.JWKSURL(),
@@ -126,7 +125,7 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		tokenDecoder, _ := authentication.NewJwksTokenDecoder(context.Background(), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
 			Name:         jwksName,
 			URL:          authServer.JWKSURL(),
@@ -176,7 +175,7 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		tokenDecoder, _ := authentication.NewJwksTokenDecoder(context.Background(), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
 			Name:         jwksName,
 			URL:          authServer.JWKSURL(),
@@ -235,7 +234,7 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		tokenDecoder, _ := authentication.NewJwksTokenDecoder(context.Background(), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
 			Name:         jwksName,
 			URL:          authServer.JWKSURL(),
@@ -293,7 +292,7 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		tokenDecoder, _ := authentication.NewJwksTokenDecoder(context.Background(), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
 		authOptions := authentication.WebsocketInitialPayloadAuthenticatorOptions{
 			TokenDecoder: tokenDecoder,
 			Key:          "Authorization",
@@ -354,7 +353,7 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		tokenDecoder, _ := authentication.NewJwksTokenDecoder(context.Background(), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
 		authOptions := authentication.WebsocketInitialPayloadAuthenticatorOptions{
 			TokenDecoder: tokenDecoder,
 			Key:          "Authorization",
@@ -403,7 +402,7 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		tokenDecoder, _ := authentication.NewJwksTokenDecoder(context.Background(), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
 		authOptions := authentication.WebsocketInitialPayloadAuthenticatorOptions{
 			TokenDecoder: tokenDecoder,
 			Key:          "Authorization",
