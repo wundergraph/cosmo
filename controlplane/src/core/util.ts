@@ -286,6 +286,9 @@ export const isValidNamespaceName = (name: string): boolean => {
 };
 
 export const isValidGraphName = (name: string): boolean => {
+  if (name.length === 0 || name.length > 100) {
+    return false;
+  }
   return graphNameRegex.test(name);
 };
 

@@ -517,6 +517,15 @@ describe('Federated Graph', (ctx) => {
 
     expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
 
+    createFedGraphRes = await client.createFederatedGraph({
+      name: 'Test'.repeat(26),
+      namespace: 'default',
+      routingUrl: 'http://localhost:8081',
+      labelMatchers: [joinLabel(label)],
+    });
+
+    expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
+
     await server.close();
   });
 });

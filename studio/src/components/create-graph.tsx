@@ -87,6 +87,9 @@ export const CreateGraphForm = ({
       .min(1, {
         message: "The name cannot be empty",
       })
+      .max(100, {
+        message: "The name must be at most 100 characters long",
+      })
       .regex(
         new RegExp("^[a-zA-Z0-9]+(?:[_.@/-][a-zA-Z0-9]+)*$"),
         "Name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between.",

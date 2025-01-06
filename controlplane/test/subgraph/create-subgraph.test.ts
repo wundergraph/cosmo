@@ -80,6 +80,14 @@ describe('Create subgraph tests', () => {
 
       expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
 
+      createFederatedSubgraphResp = await client.createFederatedSubgraph({
+        name: "Test".repeat(26),
+        namespace: DEFAULT_NAMESPACE,
+        routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      });
+
+      expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
+
       await server.close();
     });
 

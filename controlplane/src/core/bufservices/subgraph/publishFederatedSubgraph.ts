@@ -265,7 +265,7 @@ export function publishFederatedSubgraph(
         return {
           response: {
             code: EnumStatusCode.ERR_INVALID_NAME,
-            details: `The name of the subgraph is invalid. Name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between.`,
+            details: `The name of the subgraph is invalid. Name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between and must be between 1 and 100 characters in length.`,
           },
           compositionErrors: [],
           deploymentErrors: [],
