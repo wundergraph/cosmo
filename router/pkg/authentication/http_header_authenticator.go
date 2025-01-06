@@ -32,6 +32,7 @@ func (a *httpHeaderAuthenticator) Name() string {
 func (a *httpHeaderAuthenticator) Authenticate(ctx context.Context, p Provider) (Claims, error) {
 	headers := p.AuthenticationHeaders()
 	var errs error
+
 	for _, header := range a.headerNames {
 		authorization := headers.Get(header)
 		for _, prefix := range a.headerValuePrefixes {
@@ -41,6 +42,11 @@ func (a *httpHeaderAuthenticator) Authenticate(ctx context.Context, p Provider) 
 				if err != nil {
 					errs = errors.Join(errs, fmt.Errorf("could not validate token: %w", err))
 					continue
+				}
+				// If claims is nil, we should return an empty Claims map to signal that the
+				// authentication was successful, but no claims were found.
+				if claims == nil {
+					claims = make(Claims)
 				}
 				return claims, nil
 			}

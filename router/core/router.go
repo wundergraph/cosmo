@@ -6,13 +6,16 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
@@ -43,6 +46,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -79,12 +83,12 @@ type (
 		Config
 		httpServer        *server
 		modules           []Module
-		WebsocketStats    WebSocketsStatistics
+		EngineStats       statistics.EngineStatistics
 		playgroundHandler func(http.Handler) http.Handler
 		proxy             ProxyFunc
 	}
 
-	SubgraphTransportOptions struct {
+	TransportTimeoutOptions struct {
 		RequestTimeout         time.Duration
 		ResponseHeaderTimeout  time.Duration
 		ExpectContinueTimeout  time.Duration
@@ -92,6 +96,11 @@ type (
 		DialTimeout            time.Duration
 		TLSHandshakeTimeout    time.Duration
 		KeepAliveProbeInterval time.Duration
+	}
+
+	SubgraphTransportOptions struct {
+		TransportTimeoutOptions
+		SubgraphMap map[string]*TransportTimeoutOptions
 	}
 
 	GraphQLMetricsConfig struct {
@@ -198,6 +207,7 @@ type (
 		tlsServerConfig               *tls.Config
 		tlsConfig                     *TlsConfig
 		telemetryAttributes           []config.CustomAttribute
+		tracePropagators              propagation.TextMapPropagator
 		// Poller
 		configPoller                 configpoller.ConfigPoller
 		selfRegister                 selfregister.SelfRegister
@@ -214,6 +224,7 @@ type (
 		webSocketConfiguration     *config.WebSocketConfiguration
 		subgraphErrorPropagation   config.SubgraphErrorPropagationConfiguration
 		clientHeader               config.ClientHeader
+		cacheWarmup                *config.CacheWarmupConfiguration
 		multipartHeartbeatInterval time.Duration
 		hostName                   string
 	}
@@ -225,7 +236,7 @@ type (
 // Alternatively, use Router.NewServer() to create a new server instance without starting it.
 func NewRouter(opts ...Option) (*Router, error) {
 	r := &Router{
-		WebsocketStats: NewNoopWebSocketStats(),
+		EngineStats: statistics.NewNoopEngineStats(),
 	}
 
 	for _, opt := range opts {
@@ -420,17 +431,36 @@ func NewRouter(opts ...Option) (*Router, error) {
 		}
 	}
 
-	// Add default tracing exporter if needed
-	if r.traceConfig.Enabled && len(r.traceConfig.Exporters) == 0 && r.traceConfig.TestMemoryExporter == nil {
-		if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
-			r.logger.Debug("Using default trace exporter", zap.String("endpoint", endpoint))
-			r.traceConfig.Exporters = append(r.traceConfig.Exporters, &rtrace.ExporterConfig{
-				Endpoint: endpoint,
-				Exporter: otelconfig.ExporterOLTPHTTP,
-				HTTPPath: "/v1/traces",
-				Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
-			})
+	if r.traceConfig.Enabled {
+		if len(r.traceConfig.Propagators) > 0 {
+			propagators, err := rtrace.NewCompositePropagator(r.traceConfig.Propagators...)
+			if err != nil {
+				r.logger.Error("creating propagators", zap.Error(err))
+				return nil, err
+			}
+
+			// Don't set it globally when we use the router in tests.
+			// In practice, setting it globally only makes sense for module development.
+			if r.traceConfig.TestMemoryExporter == nil {
+				otel.SetTextMapPropagator(propagators)
+			}
+
+			r.tracePropagators = propagators
 		}
+
+		// Add default tracing exporter if needed
+		if len(r.traceConfig.Exporters) == 0 && r.traceConfig.TestMemoryExporter == nil {
+			if endpoint := otelconfig.DefaultEndpoint(); endpoint != "" {
+				r.logger.Debug("Using default trace exporter", zap.String("endpoint", endpoint))
+				r.traceConfig.Exporters = append(r.traceConfig.Exporters, &rtrace.ExporterConfig{
+					Endpoint: endpoint,
+					Exporter: otelconfig.ExporterOLTPHTTP,
+					HTTPPath: "/v1/traces",
+					Headers:  otelconfig.DefaultEndpointHeaders(r.graphApiToken),
+				})
+			}
+		}
+
 	}
 
 	// Add default metric exporter if none are configured
@@ -681,6 +711,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 		tlsServerConfig: r.tlsServerConfig,
 		healthcheck:     r.healthcheck,
 		baseURL:         r.baseURL,
+		maxHeaderBytes:  int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
 	})
 
 	// Start the server with the static config without polling
@@ -814,8 +845,8 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.redisClient = redis.NewClient(options)
 	}
 
-	if r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
-		r.WebsocketStats = NewWebSocketStats(ctx, r.logger)
+	if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
+		r.EngineStats = statistics.NewEngineStats(ctx, r.logger, r.engineExecutionConfiguration.Debug.ReportWebSocketConnections)
 	}
 
 	if r.engineExecutionConfiguration.Debug.ReportMemoryUsage {
@@ -997,8 +1028,10 @@ func (r *Router) buildClients() error {
 	return nil
 }
 
-// Start starts the server. It does not block. The server can be shutdown with Router.Shutdown().
-// Not safe for concurrent use.
+// Start starts the router. It does block until the router has been initialized. After that the server is listening
+// on a separate goroutine. The server can be shutdown with Router.Shutdown(). Not safe for concurrent use.
+// During initialization, the router will register itself with the control plane and poll the config from the CDN
+// if the user opted in to connect to Cosmo Cloud.
 func (r *Router) Start(ctx context.Context) error {
 	if r.shutdown.Load() {
 		return fmt.Errorf("router is shutdown. Create a new instance with router.NewRouter()")
@@ -1015,6 +1048,7 @@ func (r *Router) Start(ctx context.Context) error {
 		tlsServerConfig: r.tlsServerConfig,
 		healthcheck:     r.healthcheck,
 		baseURL:         r.baseURL,
+		maxHeaderBytes:  int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
 	})
 
 	// Start the server with the static config without polling
@@ -1585,15 +1619,44 @@ func DefaultFileUploadConfig() *config.FileUpload {
 	}
 }
 
+func NewTransportTimeoutOptions(cfg config.GlobalSubgraphRequestRule) TransportTimeoutOptions {
+	return TransportTimeoutOptions{
+		RequestTimeout:         cfg.RequestTimeout,
+		ResponseHeaderTimeout:  cfg.ResponseHeaderTimeout,
+		ExpectContinueTimeout:  cfg.ExpectContinueTimeout,
+		KeepAliveIdleTimeout:   cfg.KeepAliveIdleTimeout,
+		DialTimeout:            cfg.DialTimeout,
+		TLSHandshakeTimeout:    cfg.TLSHandshakeTimeout,
+		KeepAliveProbeInterval: cfg.KeepAliveProbeInterval,
+	}
+}
+
+func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransportOptions {
+	base := &SubgraphTransportOptions{
+		TransportTimeoutOptions: NewTransportTimeoutOptions(cfg.All),
+		SubgraphMap:             map[string]*TransportTimeoutOptions{},
+	}
+
+	for k, v := range cfg.Subgraphs {
+		opts := NewTransportTimeoutOptions(*v)
+		base.SubgraphMap[k] = &opts
+	}
+
+	return base
+}
+
 func DefaultSubgraphTransportOptions() *SubgraphTransportOptions {
 	return &SubgraphTransportOptions{
-		RequestTimeout:         60 * time.Second,
-		TLSHandshakeTimeout:    10 * time.Second,
-		ResponseHeaderTimeout:  0 * time.Second,
-		ExpectContinueTimeout:  0 * time.Second,
-		KeepAliveProbeInterval: 30 * time.Second,
-		KeepAliveIdleTimeout:   0 * time.Second,
-		DialTimeout:            30 * time.Second,
+		TransportTimeoutOptions: TransportTimeoutOptions{
+			RequestTimeout:         60 * time.Second,
+			TLSHandshakeTimeout:    10 * time.Second,
+			ResponseHeaderTimeout:  0 * time.Second,
+			ExpectContinueTimeout:  0 * time.Second,
+			KeepAliveProbeInterval: 30 * time.Second,
+			KeepAliveIdleTimeout:   0 * time.Second,
+			DialTimeout:            30 * time.Second,
+		},
+		SubgraphMap: map[string]*TransportTimeoutOptions{},
 	}
 }
 
@@ -1715,15 +1778,15 @@ func WithClientHeader(cfg config.ClientHeader) Option {
 	}
 }
 
-func WithHostName(hostName string) Option {
+func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 	return func(r *Router) {
-		r.hostName = hostName
+		r.cacheWarmup = cfg
 	}
 }
 
 type ProxyFunc func(req *http.Request) (*url.URL, error)
 
-func newHTTPTransport(opts *SubgraphTransportOptions, proxy ProxyFunc) *http.Transport {
+func newHTTPTransport(opts TransportTimeoutOptions, proxy ProxyFunc) *http.Transport {
 	dialer := &net.Dialer{
 		Timeout:   opts.DialTimeout,
 		KeepAlive: opts.KeepAliveProbeInterval,
@@ -1875,18 +1938,24 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 		Attributes:         cfg.Metrics.Attributes,
 		ResourceAttributes: buildResourceAttributes(cfg.ResourceAttributes),
 		OpenTelemetry: rmetric.OpenTelemetry{
-			Enabled:             cfg.Metrics.OTLP.Enabled,
-			RouterRuntime:       cfg.Metrics.OTLP.RouterRuntime,
-			GraphqlCache:        cfg.Metrics.OTLP.GraphqlCache,
+			Enabled:       cfg.Metrics.OTLP.Enabled,
+			RouterRuntime: cfg.Metrics.OTLP.RouterRuntime,
+			GraphqlCache:  cfg.Metrics.OTLP.GraphqlCache,
+			EngineStats: rmetric.EngineStatsConfig{
+				Subscription: cfg.Metrics.OTLP.EngineStats.Subscriptions,
+			},
 			Exporters:           openTelemetryExporters,
 			ExcludeMetrics:      cfg.Metrics.OTLP.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
 		},
 		Prometheus: rmetric.PrometheusConfig{
-			Enabled:             cfg.Metrics.Prometheus.Enabled,
-			ListenAddr:          cfg.Metrics.Prometheus.ListenAddr,
-			Path:                cfg.Metrics.Prometheus.Path,
-			GraphqlCache:        cfg.Metrics.Prometheus.GraphqlCache,
+			Enabled:      cfg.Metrics.Prometheus.Enabled,
+			ListenAddr:   cfg.Metrics.Prometheus.ListenAddr,
+			Path:         cfg.Metrics.Prometheus.Path,
+			GraphqlCache: cfg.Metrics.Prometheus.GraphqlCache,
+			EngineStats: rmetric.EngineStatsConfig{
+				Subscription: cfg.Metrics.OTLP.EngineStats.Subscriptions,
+			},
 			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
 		},

@@ -92,7 +92,6 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData
 }
 
 type PlanOptions struct {
-	Protocol             OperationProtocol
 	ClientInfo           *ClientInfo
 	TraceOptions         resolve.TraceOptions
 	ExecutionOptions     resolve.ExecutionOptions

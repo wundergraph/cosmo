@@ -13,7 +13,6 @@ import (
 
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/klauspost/compress/gzip"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
 
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto"
@@ -42,11 +41,13 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/health"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
@@ -76,21 +77,24 @@ type (
 		context                 context.Context
 		cancelFunc              context.CancelFunc
 		pubSubProviders         *EnginePubSubProviders
-		websocketStats          WebSocketsStatistics
+		engineStats             statistics.EngineStatistics
 		playgroundHandler       func(http.Handler) http.Handler
 		publicKey               *ecdsa.PublicKey
 		executionTransport      *http.Transport
+		executionTransportProxy ProxyFunc
 		baseOtelAttributes      []attribute.KeyValue
 		baseRouterConfigVersion string
 		mux                     *chi.Mux
 		// inFlightRequests is used to track the number of requests currently being processed
 		// does not include websocket (hijacked) connections
-		inFlightRequests *atomic.Uint64
-		graphMuxList     []*graphMux
-		graphMuxListLock sync.Mutex
-		runtimeMetrics   *rmetric.RuntimeMetrics
-		hostName         string
-		routerListenAddr string
+		inFlightRequests        *atomic.Uint64
+		graphMuxList            []*graphMux
+		graphMuxListLock        sync.Mutex
+		runtimeMetrics          *rmetric.RuntimeMetrics
+		otlpEngineMetrics       *rmetric.EngineMetrics
+		prometheusEngineMetrics *rmetric.EngineMetrics
+		hostName                string
+		routerListenAddr        string
 	}
 )
 
@@ -102,8 +106,9 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		context:                 ctx,
 		cancelFunc:              cancel,
 		Config:                  &r.Config,
-		websocketStats:          r.WebsocketStats,
-		executionTransport:      newHTTPTransport(r.subgraphTransportOptions, proxy),
+		engineStats:             r.EngineStats,
+		executionTransport:      newHTTPTransport(r.subgraphTransportOptions.TransportTimeoutOptions, proxy),
+		executionTransportProxy: proxy,
 		playgroundHandler:       r.playgroundHandler,
 		baseRouterConfigVersion: routerConfig.GetVersion(),
 		inFlightRequests:        &atomic.Uint64{},
@@ -146,6 +151,10 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		if err := s.runtimeMetrics.Start(); err != nil {
 			return nil, err
 		}
+	}
+
+	if err := s.setupEngineStatistics(); err != nil {
+		return nil, fmt.Errorf("failed to setup engine statistics: %w", err)
 	}
 
 	if s.registrationInfo != nil {
@@ -286,6 +295,41 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 	}, nil
 }
 
+// setupEngineStatistics creates the engine statistics for the server.
+// It creates the OTLP and Prometheus metrics for the engine statistics.
+func (s *graphServer) setupEngineStatistics() (err error) {
+	// We only include the base router config version in the attributes for the engine statistics.
+	// Same approach is used for the runtime metrics.
+	baseAttributes := append([]attribute.KeyValue{
+		otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion)}, s.baseOtelAttributes...)
+
+	s.otlpEngineMetrics, err = rmetric.NewEngineMetrics(
+		s.logger,
+		baseAttributes,
+		s.otlpMeterProvider,
+		s.engineStats,
+		&s.metricConfig.OpenTelemetry.EngineStats,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	s.prometheusEngineMetrics, err = rmetric.NewEngineMetrics(
+		s.logger,
+		baseAttributes,
+		s.promMeterProvider,
+		s.engineStats,
+		&s.metricConfig.Prometheus.EngineStats,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type graphMux struct {
 	mux                        *chi.Mux
 	planCache                  *ristretto.Cache[uint64, *planWithMetaData]
@@ -302,7 +346,7 @@ type graphMux struct {
 
 // buildOperationCaches creates the caches for the graph mux.
 // The caches are created based on the engine configuration.
-func (s *graphMux) buildOperationCaches(srv *graphServer) (err error) {
+func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, err error) {
 
 	// We create a new execution plan cache for each operation planner which is coupled to
 	// the specific engine configuration. This is necessary because otherwise we would return invalid plans.
@@ -324,7 +368,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (err error) {
 		}
 		s.planCache, err = ristretto.NewCache[uint64, *planWithMetaData](planCacheConfig)
 		if err != nil {
-			return fmt.Errorf("failed to create planner cache: %w", err)
+			return computeSha256, fmt.Errorf("failed to create planner cache: %w", err)
 		}
 	}
 
@@ -335,6 +379,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (err error) {
 			NumCounters:        cacheSize * 10,
 			IgnoreInternalCost: true,
 			BufferItems:        64,
+			Metrics:            true,
 		}
 
 		s.persistedOperationCache, _ = ristretto.NewCache[uint64, NormalizationCacheEntry](persistedOperationCacheConfig)
@@ -350,7 +395,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (err error) {
 		}
 		s.normalizationCache, err = ristretto.NewCache[uint64, NormalizationCacheEntry](normalizationCacheConfig)
 		if err != nil {
-			return fmt.Errorf("failed to create normalization cache: %w", err)
+			return computeSha256, fmt.Errorf("failed to create normalization cache: %w", err)
 		}
 	}
 
@@ -364,12 +409,13 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (err error) {
 		}
 		s.validationCache, err = ristretto.NewCache[uint64, bool](validationCacheConfig)
 		if err != nil {
-			return fmt.Errorf("failed to create validation cache: %w", err)
+			return computeSha256, fmt.Errorf("failed to create validation cache: %w", err)
 		}
 	}
 
 	if srv.securityConfiguration.ComplexityCalculationCache != nil && srv.securityConfiguration.ComplexityCalculationCache.Enabled && srv.securityConfiguration.ComplexityCalculationCache.CacheSize > 0 {
 		complexityCalculationCacheConfig := &ristretto.Config[uint64, ComplexityCacheEntry]{
+			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
 			MaxCost:            srv.securityConfiguration.ComplexityCalculationCache.CacheSize,
 			NumCounters:        srv.securityConfiguration.ComplexityCalculationCache.CacheSize * 10,
 			IgnoreInternalCost: true,
@@ -377,11 +423,42 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (err error) {
 		}
 		s.complexityCalculationCache, err = ristretto.NewCache[uint64, ComplexityCacheEntry](complexityCalculationCacheConfig)
 		if err != nil {
-			return fmt.Errorf("failed to create query depth cache: %w", err)
+			return computeSha256, fmt.Errorf("failed to create query depth cache: %w", err)
 		}
 	}
 
-	return nil
+	// Currently, we only support custom attributes from the context for OTLP metrics
+	if len(srv.metricConfig.Attributes) > 0 {
+		for _, customAttribute := range srv.metricConfig.Attributes {
+			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
+				computeSha256 = true
+				break
+			}
+		}
+	} else if srv.accessLogsConfig != nil {
+		for _, customAttribute := range append(srv.accessLogsConfig.Attributes, srv.accessLogsConfig.SubgraphAttributes...) {
+			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
+				computeSha256 = true
+				break
+			}
+		}
+	}
+
+	if computeSha256 {
+		operationHashCacheConfig := &ristretto.Config[uint64, string]{
+			MaxCost:            srv.engineExecutionConfiguration.OperationHashCacheSize,
+			NumCounters:        srv.engineExecutionConfiguration.OperationHashCacheSize * 10,
+			IgnoreInternalCost: true,
+			BufferItems:        64,
+			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
+		}
+		s.operationHashCache, err = ristretto.NewCache[uint64, string](operationHashCacheConfig)
+		if err != nil {
+			return computeSha256, fmt.Errorf("failed to create operation hash cache: %w", err)
+		}
+	}
+
+	return computeSha256, nil
 }
 
 // configureCacheMetrics sets up the cache metrics for this mux if enabled in the config.
@@ -415,15 +492,23 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 	var metricInfos []rmetric.CacheMetricInfo
 
 	if s.planCache != nil {
-		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("execution", srv.engineExecutionConfiguration.ExecutionPlanCacheSize, s.planCache.Metrics))
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("plan", srv.engineExecutionConfiguration.ExecutionPlanCacheSize, s.planCache.Metrics))
 	}
 
 	if s.normalizationCache != nil {
-		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("normalization", srv.engineExecutionConfiguration.NormalizationCacheSize, s.normalizationCache.Metrics))
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("query_normalization", srv.engineExecutionConfiguration.NormalizationCacheSize, s.normalizationCache.Metrics))
+	}
+
+	if s.persistedOperationCache != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("persisted_query_normalization", 1024, s.persistedOperationCache.Metrics))
 	}
 
 	if s.validationCache != nil {
 		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("validation", srv.engineExecutionConfiguration.ValidationCacheSize, s.validationCache.Metrics))
+	}
+
+	if s.operationHashCache != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("query_hash", srv.engineExecutionConfiguration.OperationHashCacheSize, s.operationHashCache.Metrics))
 	}
 
 	if s.otelCacheMetrics != nil {
@@ -546,44 +631,13 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return nil, err
 	}
 
-	if err = gm.buildOperationCaches(s); err != nil {
+	computeSha256, err := gm.buildOperationCaches(s)
+	if err != nil {
 		return nil, err
 	}
 
 	if err = gm.configureCacheMetrics(s, baseOtelAttributes); err != nil {
 		return nil, err
-	}
-
-	computeSha256 := false
-
-	// Currently, we only support custom attributes from the context for OTLP metrics
-	if len(s.metricConfig.Attributes) > 0 {
-		for _, customAttribute := range s.metricConfig.Attributes {
-			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
-				computeSha256 = true
-				break
-			}
-		}
-	} else if s.accessLogsConfig != nil {
-		for _, customAttribute := range append(s.accessLogsConfig.Attributes, s.accessLogsConfig.SubgraphAttributes...) {
-			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
-				computeSha256 = true
-				break
-			}
-		}
-	}
-
-	if computeSha256 {
-		operationHashCacheConfig := &ristretto.Config[uint64, string]{
-			MaxCost:            s.engineExecutionConfiguration.OperationHashCacheSize,
-			NumCounters:        s.engineExecutionConfiguration.OperationHashCacheSize * 10,
-			IgnoreInternalCost: true,
-			BufferItems:        64,
-		}
-		gm.operationHashCache, err = ristretto.NewCache[uint64, string](operationHashCacheConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create operation hash cache: %w", err)
-		}
 	}
 
 	metrics := NewRouterMetrics(&routerMetricsConfig{
@@ -699,6 +753,22 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			spanStartOptions = append(spanStartOptions, oteltrace.WithNewRoot())
 		}
 
+		middlewareOptions := []otelhttp.Option{
+			otelhttp.WithSpanOptions(spanStartOptions...),
+			otelhttp.WithFilter(rtrace.CommonRequestFilter),
+			otelhttp.WithFilter(rtrace.PrefixRequestFilter(
+				[]string{s.healthCheckPath, s.readinessCheckPath, s.livenessCheckPath}),
+			),
+			// Disable built-in metricStore through NoopMeterProvider
+			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
+			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
+			otelhttp.WithTracerProvider(s.tracerProvider),
+		}
+
+		if s.tracePropagators != nil {
+			middlewareOptions = append(middlewareOptions, otelhttp.WithPropagators(s.tracePropagators))
+		}
+
 		traceHandler := rtrace.NewMiddleware(
 			rtrace.WithTracePreHandler(
 				func(r *http.Request, w http.ResponseWriter) {
@@ -716,17 +786,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 						w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
 					}
 				}),
-			rtrace.WithOtelHttp(
-				otelhttp.WithSpanOptions(spanStartOptions...),
-				otelhttp.WithFilter(rtrace.CommonRequestFilter),
-				otelhttp.WithFilter(rtrace.PrefixRequestFilter(
-					[]string{s.healthCheckPath, s.readinessCheckPath, s.livenessCheckPath}),
-				),
-				// Disable built-in metricStore through NoopMeterProvider
-				otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
-				otelhttp.WithSpanNameFormatter(SpanNameFormatter),
-				otelhttp.WithTracerProvider(s.tracerProvider),
-			),
+			rtrace.WithOtelHttp(middlewareOptions...),
 		)
 
 		httpRouter.Use(traceHandler.Handler)
@@ -788,10 +848,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		logger:         s.logger,
 		trackUsageInfo: s.graphqlMetricsConfig.Enabled,
 		transportOptions: &TransportOptions{
-			RequestTimeout: s.subgraphTransportOptions.RequestTimeout,
-			PreHandlers:    s.preOriginHandlers,
-			PostHandlers:   s.postOriginHandlers,
-			MetricStore:    gm.metricStore,
+			Proxy:                    s.executionTransportProxy,
+			SubgraphTransportOptions: s.subgraphTransportOptions,
+			PreHandlers:              s.preOriginHandlers,
+			PostHandlers:             s.postOriginHandlers,
+			MetricStore:              gm.metricStore,
 			RetryOptions: retrytransport.RetryOptions{
 				Enabled:       s.retryOptions.Enabled,
 				MaxRetryCount: s.retryOptions.MaxRetryCount,
@@ -802,6 +863,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				},
 			},
 			TracerProvider:                s.tracerProvider,
+			TracePropagators:              s.tracePropagators,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
 		},
@@ -814,7 +876,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			Subgraphs:                configSubgraphs,
 			RouterEngineConfig:       routerEngineConfig,
 			PubSubProviders:          s.pubSubProviders,
-			Reporter:                 s.websocketStats,
+			Reporter:                 s.engineStats,
 			ApolloCompatibilityFlags: s.apolloCompatibilityFlags,
 			HeartbeatInterval:        s.multipartHeartbeatInterval,
 		},
@@ -840,6 +902,39 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
+	if s.Config.cacheWarmup != nil && s.Config.cacheWarmup.Enabled {
+		processor := NewCacheWarmupPlanningProcessor(&CacheWarmupPlanningProcessorOptions{
+			OperationProcessor: operationProcessor,
+			OperationPlanner:   operationPlanner,
+			ComplexityLimits:   s.securityConfiguration.ComplexityLimits,
+			RouterSchema:       executor.RouterSchema,
+			TrackSchemaUsage:   s.graphqlMetricsConfig.Enabled,
+		})
+		warmupConfig := &CacheWarmupConfig{
+			Log:            s.logger,
+			Processor:      processor,
+			Workers:        s.Config.cacheWarmup.Workers,
+			ItemsPerSecond: s.Config.cacheWarmup.ItemsPerSecond,
+			Timeout:        s.Config.cacheWarmup.Timeout,
+		}
+		switch s.Config.cacheWarmup.Source {
+		case "filesystem":
+			warmupConfig.Source = NewFileSystemSource(&FileSystemSourceConfig{
+				RootPath: s.Config.cacheWarmup.Path,
+			})
+		case "s3":
+			return nil, fmt.Errorf("s3 cache warmup is not supported yet")
+		case "cdn":
+			return nil, fmt.Errorf("cdn cache warmup is not supported yet")
+		default:
+			return nil, fmt.Errorf("invalid cache warmup source: %s, valid sources are: filesystem, s3, cdn", s.Config.cacheWarmup.Source)
+		}
+		err = WarmupCaches(ctx, warmupConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to warmup caches: %w", err)
+		}
+	}
+
 	authorizerOptions := &CosmoAuthorizerOptions{
 		FieldConfigurations:           engineConfig.FieldConfigurations,
 		RejectOperationIfUnauthorized: false,
@@ -856,7 +951,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		EnablePersistedOperationCacheResponseHeader: s.engineExecutionConfiguration.Debug.EnablePersistedOperationsCacheResponseHeader,
 		EnableNormalizationCacheResponseHeader:      s.engineExecutionConfiguration.Debug.EnableNormalizationCacheResponseHeader,
 		EnableResponseHeaderPropagation:             s.headerRules != nil,
-		WebSocketStats:                              s.websocketStats,
+		EngineStats:                                 s.engineStats,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
@@ -874,11 +969,24 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	graphqlHandler := NewGraphQLHandler(handlerOpts)
 	executor.Resolver.SetAsyncErrorWriter(graphqlHandler)
 
-	operationBlocker := NewOperationBlocker(&OperationBlockerOptions{
-		BlockMutations:     s.securityConfiguration.BlockMutations,
-		BlockSubscriptions: s.securityConfiguration.BlockSubscriptions,
-		BlockNonPersisted:  s.securityConfiguration.BlockNonPersistedOperations,
+	operationBlocker, err := NewOperationBlocker(&OperationBlockerOptions{
+		BlockMutations: BlockMutationOptions{
+			Enabled:   s.securityConfiguration.BlockMutations.Enabled,
+			Condition: s.securityConfiguration.BlockMutations.Condition,
+		},
+		BlockSubscriptions: BlockSubscriptionOptions{
+			Enabled:   s.securityConfiguration.BlockSubscriptions.Enabled,
+			Condition: s.securityConfiguration.BlockSubscriptions.Condition,
+		},
+		BlockNonPersisted: BlockNonPersistedOptions{
+			Enabled:   s.securityConfiguration.BlockNonPersistedOperations.Enabled,
+			Condition: s.securityConfiguration.BlockNonPersistedOperations.Condition,
+		},
 	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create operation blocker: %w", err)
+	}
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
 		Logger:                      s.logger,
@@ -918,7 +1026,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			Metrics:                metrics,
 			AccessController:       s.accessController,
 			Logger:                 s.logger,
-			Stats:                  s.websocketStats,
+			Stats:                  s.engineStats,
 			ReadTimeout:            s.engineExecutionConfiguration.WebSocketClientReadTimeout,
 			EnableNetPoll:          s.engineExecutionConfiguration.EnableNetPoll,
 			NetPollTimeout:         s.engineExecutionConfiguration.WebSocketClientPollTimeout,
@@ -1109,6 +1217,20 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	if s.runtimeMetrics != nil {
 		if err := s.runtimeMetrics.Shutdown(); err != nil {
 			s.logger.Error("Failed to shutdown runtime metrics", zap.Error(err))
+			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
+	if s.otlpEngineMetrics != nil {
+		if err := s.otlpEngineMetrics.Shutdown(); err != nil {
+			s.logger.Error("Failed to shutdown OTLP engine metrics", zap.Error(err))
+			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
+	if s.prometheusEngineMetrics != nil {
+		if err := s.prometheusEngineMetrics.Shutdown(); err != nil {
+			s.logger.Error("Failed to shutdown Prometheus engine metrics", zap.Error(err))
 			finalErr = errors.Join(finalErr, err)
 		}
 	}

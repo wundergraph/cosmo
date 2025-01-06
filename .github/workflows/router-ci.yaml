@@ -13,6 +13,11 @@ concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
   cancel-in-progress: true
 
+permissions:
+  contents: read # for actions/checkout to fetch code
+  pull-requests: write # required for adding pull request comments
+  packages: write # required for publishing packages
+
 env:
   CI: true
   ROUTER_REGISTRATION: false
@@ -24,18 +29,6 @@ jobs:
     if: github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    services:
-      redis:
-        # Docker Hub image
-        image: redis:7
-        # Set health checks to wait until redis has started
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6379:6379
     steps:
       - uses: actions/checkout@v4
 
@@ -77,10 +70,6 @@ jobs:
         working-directory: ./router
         run: make test
 
-      - name: Run Integration tests
-        working-directory: ./router-tests
-        run: make test
-
       - name: Build
         working-directory: ./router
         run: make build
@@ -91,21 +80,6 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    services:
-      redis:
-        # Docker Hub image
-        image: redis:7
-        # Set health checks to wait until redis has started
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        credentials:
-          username: ${{secrets.DOCKER_USERNAME}}
-          password: ${{secrets.DOCKER_PASSWORD}}
-        ports:
-          - 6379:6379
     steps:
       - uses: actions/checkout@v4
 
@@ -154,15 +128,74 @@ jobs:
         working-directory: ./router
         run: make test
 
-      - name: Run Integration tests
-        working-directory: ./router-tests
-        run: make test
-
       - name: Build
         working-directory: ./router
         run: make build
 
+  integration_test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      redis:
+        # Docker Hub image
+        image: redis:7
+        # Set health checks to wait until redis has started
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        credentials:
+          username: ${{secrets.DOCKER_USERNAME}}
+          password: ${{secrets.DOCKER_PASSWORD}}
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/go
+        with:
+          cache-dependency-path: |
+            router-tests/go.sum
+      - uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 30
+          max_attempts: 5
+          retry_wait_seconds: 5
+          retry_on: error
+          command: |
+            cd router-tests
+            make test test_params="--timeout=5m"
+
+  image_scan:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/build-push-image
+        with:
+          docker_username: ${{secrets.DOCKER_USERNAME}}
+          docker_password: ${{secrets.DOCKER_PASSWORD}}
+          docker_context: router
+          dockerfile: router/Dockerfile
+          token: ${{secrets.GITHUB_TOKEN}}
+          image_name: router
+          image_description: "Cosmo Router"
+          image_platforms: 'linux/amd64'
+          load_Image: 'true'
+          push: 'false'
+
+      - uses: ./.github/actions/image-scan
+        with:
+          name: "Router"
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          image_ref: 'ghcr.io/wundergraph/cosmo/router:sha-${{ github.sha }}'
+
   build_push_image:
+    # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
+    # For now, we will disable the push to the GitHub Container Registry for external contributors
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

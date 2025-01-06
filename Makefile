@@ -7,7 +7,7 @@ setup-build-tools:
 
 setup-dev-tools: setup-build-tools
 	go install github.com/amacneil/dbmate/v2@v2.6.0
-	go install honnef.co/go/tools/cmd/staticcheck@2023.1.7
+	go install honnef.co/go/tools/cmd/staticcheck@2024.1.1
 	go install github.com/yannh/kubeconform/cmd/kubeconform@v0.6.3
 	go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.11.3
 
