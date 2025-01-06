@@ -90,19 +90,18 @@ func Main() {
 		)
 	}
 
-	router, err := NewRouter(Params{
-		Config: &result.Config,
-		Logger: logger,
-	})
-
-	if err != nil {
-		logger.Fatal("Could not create router", zap.Error(err))
-	}
-
 	// Provide a way to cancel all running components of the router after graceful shutdown
 	// Don't use the parent context that is canceled by the signal handler
 	routerCtx, routerCancel := context.WithCancel(context.Background())
 	defer routerCancel()
+
+	router, err := NewRouter(routerCtx, Params{
+		Config: &result.Config,
+		Logger: logger,
+	})
+	if err != nil {
+		logger.Fatal("Could not create router", zap.Error(err))
+	}
 
 	if err = router.Start(routerCtx); err != nil {
 		logger.Fatal("Could not start router", zap.Error(err))

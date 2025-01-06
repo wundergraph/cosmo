@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -26,7 +27,7 @@ type Params struct {
 // NewRouter creates a new router instance.
 //
 // additionalOptions can be used to override default options or options provided in the config.
-func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, error) {
+func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Option) (*core.Router, error) {
 	// Automatically set GOMAXPROCS to avoid CPU throttling on containerized environments
 	_, err := maxprocs.Set(maxprocs.Logger(params.Logger.Sugar().Debugf))
 	if err != nil {
@@ -62,7 +63,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 				name = fmt.Sprintf("jwks-#%d", i)
 			}
 			providerLogger := logger.With(zap.String("provider_name", name))
-			tokenDecoder, err := authentication.NewJwksTokenDecoder(providerLogger, auth.JWKS.URL, auth.JWKS.RefreshInterval)
+			tokenDecoder, err := authentication.NewJwksTokenDecoder(ctx, providerLogger, auth.JWKS.URL, auth.JWKS.RefreshInterval)
 			if err != nil {
 				providerLogger.Error("Could not create JWKS token decoder", zap.Error(err))
 				return nil, err

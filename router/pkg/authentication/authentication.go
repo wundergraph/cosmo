@@ -22,7 +22,6 @@ type Provider interface {
 type Authenticator interface {
 	Name() string
 	Authenticate(ctx context.Context, p Provider) (Claims, error)
-	Close()
 }
 
 type Authentication interface {

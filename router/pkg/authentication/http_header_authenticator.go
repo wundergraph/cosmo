@@ -19,12 +19,6 @@ type httpHeaderAuthenticator struct {
 	headerValuePrefixes []string
 }
 
-func (a *httpHeaderAuthenticator) Close() {
-	if a.tokenDecoder != nil {
-		a.tokenDecoder.Close()
-	}
-}
-
 func (a *httpHeaderAuthenticator) Name() string {
 	return a.name
 }
