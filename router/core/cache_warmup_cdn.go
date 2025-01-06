@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"path"
 
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
@@ -58,7 +59,7 @@ func NewCDNSource(endpoint, token, featureFlag string, logger *zap.Logger) (*CDN
 
 	path := "operations.json"
 	if featureFlag != "" {
-		path = fmt.Sprintf("operations_%s.json", featureFlag)
+		path = fmt.Sprintf("%s/%s", featureFlag, path)
 	}
 
 	return &CDNSource{
@@ -75,7 +76,8 @@ func (c *CDNSource) LoadItems(ctx context.Context, log *zap.Logger) ([]*CacheWar
 	span := trace.SpanFromContext(ctx)
 	defer span.End()
 
-	operationPath := fmt.Sprintf("/%s/%s/cache_warmup/%s", c.organizationID, c.federatedGraphID, c.path)
+	operationBasePath := fmt.Sprintf("/%s/%s/cache_warmup/", c.organizationID, c.federatedGraphID)
+	operationPath := path.Join(operationBasePath, c.path)
 
 	operationURL := c.cdnURL.ResolveReference(&url.URL{Path: operationPath})
 	log.Debug("Loading cache warmup config", zap.String("url", operationURL.String()))
