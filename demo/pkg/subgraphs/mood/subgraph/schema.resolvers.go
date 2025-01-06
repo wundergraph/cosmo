@@ -26,7 +26,7 @@ func (r *mutationResolver) UpdateMood(ctx context.Context, employeeID int, mood 
 		return nil, err
 	}
 
-	defaultTopic := r.GetPubSubName(fmt.Sprintf("%semployeeUpdatedMyNats.%d", employeeID))
+	defaultTopic := r.GetPubSubName(fmt.Sprintf("employeeUpdatedMyNats.%d", employeeID))
 	err = r.NatsPubSubByProviderID["my-nats"].Publish(ctx, pubsub_datasource.NatsPublishAndRequestEventConfiguration{
 		Subject: defaultTopic,
 		Data:    []byte(payload),

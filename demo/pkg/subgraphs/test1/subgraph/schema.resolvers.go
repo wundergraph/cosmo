@@ -130,6 +130,22 @@ func (r *queryResolver) FloatField(ctx context.Context, arg *float64) (*float64,
 	return arg, nil
 }
 
+// SharedThings is the resolver for the sharedThings field.
+func (r *queryResolver) SharedThings(ctx context.Context, numOfA int, numOfB int) ([]*model.Thing, error) {
+	const MaxNumOfB = 1000 // Define a reasonable maximum value for numOfB
+	if numOfB < 0 || numOfB > MaxNumOfB {
+		return nil, errors.New("numOfB is out of allowed range")
+	}
+	things := make([]*model.Thing, 0, numOfB)
+	for i := 0; i < numOfB; i++ {
+		thing := &model.Thing{
+			B: fmt.Sprintf("b-%d", i),
+		}
+		things = append(things, thing)
+	}
+	return things, nil
+}
+
 // HeaderValue is the resolver for the headerValue field.
 func (r *subscriptionResolver) HeaderValue(ctx context.Context, name string, repeat *int) (<-chan *model.TimestampedString, error) {
 	header := injector.Header(ctx)

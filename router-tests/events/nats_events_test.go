@@ -834,28 +834,28 @@ func TestNatsEvents(t *testing.T) {
 
 			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `mutation UpdateEmployeeNats($update: UpdateEmployeeInput!) {
-							updateEmployeeMyNats(employeeID: 3, update: $update) {success}
+							updateEmployeeMyNats(id: 3, update: $update) {success}
 						}`,
 				Variables: json.RawMessage(`{"update":{"name":"Stefan Avramovic","email":"avramovic@wundergraph.com"}}`),
 			})
 
 			// Send a query to receive the response from the NATS message
-			require.JSONEq(t, `{"data":{"updateEmployeeMyNats": {"success": true}}}`, resOne.Body)
+			require.Equal(t, `{"data":{"updateEmployeeMyNats":{"success":true}}}`, resOne.Body)
 
 			msgOne, err := firstSub.NextMsg(5 * time.Second)
 			require.NoError(t, err)
 			require.Equal(t, xEnv.GetPubSubName("employeeUpdatedMyNats.3"), msgOne.Subject)
-			require.Equal(t, `{"employeeID":3,"update":{"name":"Stefan Avramovic","email":"avramovic@wundergraph.com"}}`, string(msgOne.Data))
+			require.Equal(t, `{"id":3,"update":{"name":"Stefan Avramovic","email":"avramovic@wundergraph.com"}}`, string(msgOne.Data))
 
 			resTwo := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `mutation updateEmployeeMyNats($update: UpdateEmployeeInput!) {
-							updateEmployeeMyNats(employeeID: 12, update: $update) {success}
+							updateEmployeeMyNats(id: 12, update: $update) {success}
 						}`,
 				Variables: json.RawMessage(`{"update":{"name":"David Stutt","email":"stutt@wundergraph.com"}}`),
 			})
 
 			// Send a query to receive the response from the NATS message
-			require.JSONEq(t, `{"data":{"updateEmployeeMyNats": {"success": true}}}`, resTwo.Body)
+			require.Equal(t, `{"data":{"updateEmployeeMyNats":{"success":true}}}`, resTwo.Body)
 		})
 	})
 

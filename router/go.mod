@@ -34,7 +34,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.136
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.138.0.20250106145350-20e4f82cea6b
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0
@@ -54,7 +54,7 @@ require (
 	go.uber.org/zap v1.27.0
 	go.withmatt.com/connect-brotli v0.4.0
 	golang.org/x/sync v0.10.0
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
 	google.golang.org/grpc v1.61.0
 	google.golang.org/protobuf v1.34.2
 )
@@ -72,7 +72,7 @@ require (
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.3
-	github.com/wundergraph/astjson v0.0.0-20241210135722-15ca0ac078f8
+	github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083
 	go.uber.org/ratelimit v0.3.1
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
 	golang.org/x/text v0.21.0
