@@ -46,6 +46,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -82,7 +83,7 @@ type (
 		Config
 		httpServer        *server
 		modules           []Module
-		WebsocketStats    WebSocketsStatistics
+		EngineStats       statistics.EngineStatistics
 		playgroundHandler func(http.Handler) http.Handler
 		proxy             ProxyFunc
 	}
@@ -235,7 +236,7 @@ type (
 // Alternatively, use Router.NewServer() to create a new server instance without starting it.
 func NewRouter(opts ...Option) (*Router, error) {
 	r := &Router{
-		WebsocketStats: NewNoopWebSocketStats(),
+		EngineStats: statistics.NewNoopEngineStats(),
 	}
 
 	for _, opt := range opts {
@@ -844,8 +845,8 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.redisClient = redis.NewClient(options)
 	}
 
-	if r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
-		r.WebsocketStats = NewWebSocketStats(ctx, r.logger)
+	if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
+		r.EngineStats = statistics.NewEngineStats(ctx, r.logger, r.engineExecutionConfiguration.Debug.ReportWebSocketConnections)
 	}
 
 	if r.engineExecutionConfiguration.Debug.ReportMemoryUsage {
@@ -1027,8 +1028,10 @@ func (r *Router) buildClients() error {
 	return nil
 }
 
-// Start starts the server. It does not block. The server can be shutdown with Router.Shutdown().
-// Not safe for concurrent use.
+// Start starts the router. It does block until the router has been initialized. After that the server is listening
+// on a separate goroutine. The server can be shutdown with Router.Shutdown(). Not safe for concurrent use.
+// During initialization, the router will register itself with the control plane and poll the config from the CDN
+// if the user opted in to connect to Cosmo Cloud.
 func (r *Router) Start(ctx context.Context) error {
 	if r.shutdown.Load() {
 		return fmt.Errorf("router is shutdown. Create a new instance with router.NewRouter()")
@@ -1935,18 +1938,24 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 		Attributes:         cfg.Metrics.Attributes,
 		ResourceAttributes: buildResourceAttributes(cfg.ResourceAttributes),
 		OpenTelemetry: rmetric.OpenTelemetry{
-			Enabled:             cfg.Metrics.OTLP.Enabled,
-			RouterRuntime:       cfg.Metrics.OTLP.RouterRuntime,
-			GraphqlCache:        cfg.Metrics.OTLP.GraphqlCache,
+			Enabled:       cfg.Metrics.OTLP.Enabled,
+			RouterRuntime: cfg.Metrics.OTLP.RouterRuntime,
+			GraphqlCache:  cfg.Metrics.OTLP.GraphqlCache,
+			EngineStats: rmetric.EngineStatsConfig{
+				Subscription: cfg.Metrics.OTLP.EngineStats.Subscriptions,
+			},
 			Exporters:           openTelemetryExporters,
 			ExcludeMetrics:      cfg.Metrics.OTLP.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
 		},
 		Prometheus: rmetric.PrometheusConfig{
-			Enabled:             cfg.Metrics.Prometheus.Enabled,
-			ListenAddr:          cfg.Metrics.Prometheus.ListenAddr,
-			Path:                cfg.Metrics.Prometheus.Path,
-			GraphqlCache:        cfg.Metrics.Prometheus.GraphqlCache,
+			Enabled:      cfg.Metrics.Prometheus.Enabled,
+			ListenAddr:   cfg.Metrics.Prometheus.ListenAddr,
+			Path:         cfg.Metrics.Prometheus.Path,
+			GraphqlCache: cfg.Metrics.Prometheus.GraphqlCache,
+			EngineStats: rmetric.EngineStatsConfig{
+				Subscription: cfg.Metrics.OTLP.EngineStats.Subscriptions,
+			},
 			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
 		},
