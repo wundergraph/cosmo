@@ -275,6 +275,13 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 	}
 
 	switch getErrorType(err) {
+	case errorTypeMergeResult:
+		var errMerge resolve.ErrMergeResult
+		if !errors.As(err, &errMerge) {
+			response.Errors[0].Message = "Internal server error"
+			return
+		}
+		response.Errors[0].Message = errMerge.Error()
 	case errorTypeRateLimit:
 		response.Errors[0].Message = "Rate limit exceeded"
 		buf := bytes.NewBuffer(make([]byte, 0, 1024))

@@ -102,9 +102,14 @@ type ComplexityRoot struct {
 	Queries struct {
 		FactTypes                func(childComplexity int) int
 		ProductTypes             func(childComplexity int) int
+		SharedThings             func(childComplexity int, numOfA int, numOfB int) int
 		TopSecretFederationFacts func(childComplexity int) int
 		__resolve__service       func(childComplexity int) int
 		__resolve_entities       func(childComplexity int, representations []map[string]interface{}) int
+	}
+
+	Thing struct {
+		A func(childComplexity int) int
 	}
 
 	_Service struct {
@@ -128,6 +133,7 @@ type QueriesResolver interface {
 	ProductTypes(ctx context.Context) ([]model.Products, error)
 	TopSecretFederationFacts(ctx context.Context) ([]model.TopSecretFact, error)
 	FactTypes(ctx context.Context) ([]model.TopSecretFactType, error)
+	SharedThings(ctx context.Context, numOfA int, numOfB int) ([]*model.Thing, error)
 }
 
 type executableSchema struct {
@@ -354,6 +360,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Queries.ProductTypes(childComplexity), true
 
+	case "Queries.sharedThings":
+		if e.complexity.Queries.SharedThings == nil {
+			break
+		}
+
+		args, err := ec.field_Queries_sharedThings_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Queries.SharedThings(childComplexity, args["numOfA"].(int), args["numOfB"].(int)), true
+
 	case "Queries.topSecretFederationFacts":
 		if e.complexity.Queries.TopSecretFederationFacts == nil {
 			break
@@ -379,6 +397,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Queries.__resolve_entities(childComplexity, args["representations"].([]map[string]interface{})), true
+
+	case "Thing.a":
+		if e.complexity.Thing.A == nil {
+			break
+		}
+
+		return e.complexity.Thing.A(childComplexity), true
 
 	case "_Service.sdl":
 		if e.complexity._Service.SDL == nil {
@@ -505,10 +530,15 @@ type Queries {
   productTypes: [Products!]!
   topSecretFederationFacts: [TopSecretFact!]! @requiresScopes(scopes: [["read:fact"], ["read:all"]])
   factTypes: [TopSecretFactType!]
+  sharedThings(numOfA: Int! numOfB: Int!): [Thing!]! @shareable
 }
 
 type Mutation {
   addFact(fact: TopSecretFactInput!): TopSecretFact! @requiresScopes(scopes: [["write:fact"], ["write:all"]])
+}
+
+type Thing @shareable {
+  a: String!
 }
 
 input TopSecretFactInput {
@@ -778,6 +808,30 @@ func (ec *executionContext) field_Queries__entities_args(ctx context.Context, ra
 		}
 	}
 	args["representations"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Queries_sharedThings_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["numOfA"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("numOfA"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["numOfA"] = arg0
+	var arg1 int
+	if tmp, ok := rawArgs["numOfB"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("numOfB"))
+		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["numOfB"] = arg1
 	return args, nil
 }
 
@@ -2036,6 +2090,65 @@ func (ec *executionContext) fieldContext_Queries_factTypes(_ context.Context, fi
 	return fc, nil
 }
 
+func (ec *executionContext) _Queries_sharedThings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Queries_sharedThings(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Queries().SharedThings(rctx, fc.Args["numOfA"].(int), fc.Args["numOfB"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Thing)
+	fc.Result = res
+	return ec.marshalNThing2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐThingᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Queries_sharedThings(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Queries",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "a":
+				return ec.fieldContext_Thing_a(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Thing", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Queries_sharedThings_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Queries__entities(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Queries__entities(ctx, field)
 	if err != nil {
@@ -2263,6 +2376,50 @@ func (ec *executionContext) fieldContext_Queries___schema(_ context.Context, fie
 				return ec.fieldContext___Schema_directives(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type __Schema", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Thing_a(ctx context.Context, field graphql.CollectedField, obj *model.Thing) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Thing_a(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.A, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Thing_a(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Thing",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -4843,6 +5000,28 @@ func (ec *executionContext) _Queries(ctx context.Context, sel ast.SelectionSet) 
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "sharedThings":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Queries_sharedThings(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "_entities":
 			field := field
 
@@ -4895,6 +5074,45 @@ func (ec *executionContext) _Queries(ctx context.Context, sel ast.SelectionSet) 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Queries___schema(ctx, field)
 			})
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var thingImplementors = []string{"Thing"}
+
+func (ec *executionContext) _Thing(ctx context.Context, sel ast.SelectionSet, obj *model.Thing) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, thingImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Thing")
+		case "a":
+			out.Values[i] = ec._Thing_a(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -5567,6 +5785,60 @@ func (ec *executionContext) marshalNString2ᚕstringᚄ(ctx context.Context, sel
 	}
 
 	return ret
+}
+
+func (ec *executionContext) marshalNThing2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐThingᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Thing) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNThing2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐThing(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNThing2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐThing(ctx context.Context, sel ast.SelectionSet, v *model.Thing) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Thing(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNTopSecretFact2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋproductsᚋsubgraphᚋmodelᚐTopSecretFact(ctx context.Context, sel ast.SelectionSet, v model.TopSecretFact) graphql.Marshaler {
