@@ -75,14 +75,25 @@ export const CreateGraphForm = ({
       (url) =>
         process.env.NODE_ENV === "production"
           ? url.startsWith("https://")
-          : true,
-      "The endpoint must use https",
+          : url.startsWith("http://") || url.startsWith("https://"),
+      process.env.NODE_ENV === "production"
+        ? "The endpoint must use https"
+        : "The endpoint must use http or https",
     );
 
   const schema = z.object({
-    name: z.string().min(1, {
-      message: "The name cannot be empty",
-    }),
+    name: z
+      .string()
+      .min(1, {
+        message: "The name cannot be empty",
+      })
+      .max(100, {
+        message: "The name must be at most 100 characters long",
+      })
+      .regex(
+        new RegExp("^[a-zA-Z0-9]+(?:[_.@/-][a-zA-Z0-9]+)*$"),
+        "Name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between.",
+      ),
     routingUrl: urlSchema,
     graphUrl: isMonograph ? urlSchema : urlSchema.optional(),
     labelMatchers: z

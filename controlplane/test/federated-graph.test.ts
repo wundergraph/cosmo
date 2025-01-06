@@ -485,4 +485,47 @@ describe('Federated Graph', (ctx) => {
 
     await server.close();
   });
+
+  test('Should return an error if the graph name is invalid', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    const label = genUniqueLabel();
+
+    let createFedGraphRes = await client.createFederatedGraph({
+      name: 'a*1',
+      namespace: 'default',
+      routingUrl: 'http://localhost:8081',
+      labelMatchers: [joinLabel(label)],
+    });
+
+    expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
+
+    createFedGraphRes = await client.createFederatedGraph({
+      name: 'a/1*',
+      namespace: 'default',
+      routingUrl: 'http://localhost:8081',
+      labelMatchers: [joinLabel(label)],
+    });
+
+    expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
+
+    createFedGraphRes = await client.createFederatedGraph({
+      name: '^a*1/',
+      namespace: 'default',
+      routingUrl: 'http://localhost:8081',
+      labelMatchers: [joinLabel(label)],
+    });
+
+    expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
+
+    createFedGraphRes = await client.createFederatedGraph({
+      name: 'Test'.repeat(26),
+      namespace: 'default',
+      routingUrl: 'http://localhost:8081',
+      labelMatchers: [joinLabel(label)],
+    });
+
+    expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
+
+    await server.close();
+  });
 });

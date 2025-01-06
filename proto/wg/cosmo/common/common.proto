@@ -18,6 +18,7 @@ enum EnumStatusCode {
   ERROR_NOT_AUTHORIZED = 12;
   ERR_LIMIT_REACHED = 13;
   ERR_DEPLOYMENT_FAILED = 14;
+  ERR_INVALID_NAME = 15;
 }
 
 enum GraphQLSubscriptionProtocol {
