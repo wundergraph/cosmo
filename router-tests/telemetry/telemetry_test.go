@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"regexp"
 	"runtime"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -27,6 +29,436 @@ import (
 
 	integration "github.com/wundergraph/cosmo/router-tests"
 )
+
+func TestEngineStatisticsTelemetry(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Should provide correct metrics for one subscription over SSE", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
+			MetricOptions: testenv.MetricOptions{
+				OTLPEngineStatsOptions: testenv.EngineStatOptions{
+					EnableSubscription: true,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			var wg sync.WaitGroup
+			wg.Add(2)
+
+			var sentMessages int64 = 0
+
+			go xEnv.GraphQLSubscriptionOverSSE(ctx, testenv.GraphQLRequest{
+				OperationName: []byte(`CurrentTime`),
+				Query:         `subscription CurrentTime { currentTime { unixTime timeStamp }}`,
+				Header: map[string][]string{
+					"Content-Type":  {"application/json"},
+					"Accept":        {"text/event-stream"},
+					"Connection":    {"keep-alive"},
+					"Cache-Control": {"no-cache"},
+				},
+			}, func(data string) {
+				defer wg.Done()
+
+				sentMessages += 1
+
+				xEnv.WaitForMinMessagesSent(uint64(sentMessages), time.Second*5)
+
+				xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
+					Subscriptions: 1,
+					Connections:   1,
+					MessagesSent:  sentMessages,
+					Triggers:      1,
+				})
+			})
+
+			wg.Wait()
+
+			cancel()
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
+				Subscriptions: 0,
+				Connections:   0,
+				MessagesSent:  sentMessages,
+				Triggers:      0,
+			})
+
+		})
+	})
+
+	t.Run("Should provide correct metrics for multiple subscriptions over SSE", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
+			MetricOptions: testenv.MetricOptions{
+				OTLPEngineStatsOptions: testenv.EngineStatOptions{
+					EnableSubscription: true,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			var wg1 sync.WaitGroup
+			var wg2 sync.WaitGroup
+			wg1.Add(2)
+			wg2.Add(2)
+
+			sentMessages := &atomic.Int64{}
+
+			go xEnv.GraphQLSubscriptionOverSSE(ctx, testenv.GraphQLRequest{
+				OperationName: []byte(`CurrentTime`),
+				Query:         `subscription CurrentTime { currentTime { unixTime timeStamp }}`,
+				Header: map[string][]string{
+					"Content-Type":  {"application/json"},
+					"Accept":        {"text/event-stream"},
+					"Connection":    {"keep-alive"},
+					"Cache-Control": {"no-cache"},
+				},
+			}, func(data string) {
+				defer wg2.Done()
+				xEnv.WaitForSubscriptionCount(2, time.Second*5)
+
+				sentMessages.Add(1)
+				xEnv.WaitForMinMessagesSent(uint64(sentMessages.Load()), time.Second*5)
+
+				xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
+					Subscriptions: 2,
+					Connections:   2,
+					MessagesSent:  sentMessages.Load(),
+					Triggers:      1,
+				})
+			})
+
+			go xEnv.GraphQLSubscriptionOverSSE(ctx, testenv.GraphQLRequest{
+				OperationName: []byte(`CurrentTime`),
+				Query:         `subscription CurrentTime { currentTime { unixTime timeStamp }}`,
+				Header: map[string][]string{
+					"Content-Type":  {"application/json"},
+					"Accept":        {"text/event-stream"},
+					"Connection":    {"keep-alive"},
+					"Cache-Control": {"no-cache"},
+				},
+			}, func(data string) {
+				defer wg1.Done()
+
+				xEnv.WaitForSubscriptionCount(2, time.Second*5)
+
+				sentMessages.Add(1)
+				xEnv.WaitForMinMessagesSent(uint64(sentMessages.Load()), time.Second*5)
+
+				xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
+					Subscriptions: 2,
+					Connections:   2,
+					MessagesSent:  sentMessages.Load(),
+					Triggers:      1,
+				})
+			})
+
+			wg1.Wait()
+			wg2.Wait()
+
+			cancel()
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
+				Subscriptions: 0,
+				Connections:   0,
+				MessagesSent:  sentMessages.Load(),
+				Triggers:      0,
+			})
+
+		})
+	})
+
+	t.Run("Should provide correct metrics for active connections, subscription and triggers and count the number of messages sent for websocket", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
+			MetricOptions: testenv.MetricOptions{
+				OTLPEngineStatsOptions: testenv.EngineStatOptions{
+					EnableSubscription: true,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+			})
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
+				Subscriptions: 1,
+				Connections:   1,
+				MessagesSent:  0,
+				Triggers:      1,
+			})
+
+			require.NoError(t, err)
+			var res testenv.WebSocketMessage
+			err = conn.ReadJSON(&res)
+			require.NoError(t, err)
+
+			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
+				Subscriptions: 1,
+				Connections:   1,
+				MessagesSent:  1,
+				Triggers:      1,
+			})
+
+			var complete testenv.WebSocketMessage
+			err = conn.ReadJSON(&complete)
+			require.NoError(t, err)
+
+			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
+				Subscriptions: 1,
+				Connections:   1,
+				MessagesSent:  2,
+				Triggers:      1,
+			})
+
+			require.NoError(t, conn.Close())
+
+			xEnv.WaitForConnectionCount(0, time.Second*5)
+			xEnv.WaitForSubscriptionCount(0, time.Second*10)
+			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
+				Subscriptions: 0,
+				Connections:   0,
+				MessagesSent:  2,
+				Triggers:      0,
+			})
+		})
+	})
+
+	t.Run("Should provide correct metrics for active connections, subscription and triggers and count the number of messages sent for multiple websockets", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
+			MetricOptions: testenv.MetricOptions{
+				OTLPEngineStatsOptions: testenv.EngineStatOptions{
+					EnableSubscription: true,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			conn2 := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+
+			xEnv.WaitForConnectionCount(2, time.Second*5)
+			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
+				Subscriptions: 0,
+				Connections:   2,
+				MessagesSent:  0,
+				Triggers:      0,
+			})
+
+			wg := sync.WaitGroup{}
+			wg.Add(2)
+
+			go func() {
+				defer wg.Done()
+				err := conn1.WriteJSON(&testenv.WebSocketMessage{
+					ID:      "1",
+					Type:    "subscribe",
+					Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+				})
+				require.NoError(t, err)
+			}()
+
+			go func() {
+				defer wg.Done()
+				err := conn2.WriteJSON(&testenv.WebSocketMessage{
+					ID:      "1",
+					Type:    "subscribe",
+					Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+				})
+				require.NoError(t, err)
+			}()
+
+			wg.Wait()
+
+			xEnv.WaitForSubscriptionCount(2, time.Second*5)
+
+			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
+				Subscriptions: 2,
+				Connections:   2,
+				MessagesSent:  0,
+				Triggers:      1,
+			})
+
+			var res testenv.WebSocketMessage
+			err := conn1.ReadJSON(&res)
+			require.NoError(t, err)
+
+			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
+				Subscriptions: 2,
+				Connections:   2,
+				MessagesSent:  1,
+				Triggers:      1,
+			})
+
+			err = conn2.ReadJSON(&res)
+			require.NoError(t, err)
+
+			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
+				Subscriptions: 2,
+				Connections:   2,
+				MessagesSent:  2,
+				Triggers:      1,
+			})
+
+			var complete testenv.WebSocketMessage
+			err = conn1.ReadJSON(&complete)
+			require.NoError(t, err)
+
+			err = conn2.ReadJSON(&complete)
+			require.NoError(t, err)
+
+			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
+				Subscriptions: 2,
+				Connections:   2,
+				MessagesSent:  4,
+				Triggers:      1,
+			})
+
+			require.NoError(t, conn1.Close())
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
+				Subscriptions: 1,
+				Connections:   1,
+				MessagesSent:  4,
+				Triggers:      1,
+			})
+
+			require.NoError(t, conn2.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*10)
+
+			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
+				Subscriptions: 0,
+				Connections:   0,
+				MessagesSent:  4,
+				Triggers:      0,
+			})
+		})
+	})
+
+	t.Run("Should contain only base attributes in metrics", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
+			MetricOptions: testenv.MetricOptions{
+				OTLPEngineStatsOptions: testenv.EngineStatOptions{
+					EnableSubscription: true,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+			})
+
+			require.NoError(t, err)
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+
+			rm := metricdata.ResourceMetrics{}
+			err = metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			baseAttributes := []attribute.KeyValue{
+				otel.WgRouterClusterName.String(""),
+				otel.WgFederatedGraphID.String("graph"),
+				otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+				otel.WgRouterVersion.String("dev"),
+			}
+
+			engineScope := getMetricScopeByName(rm.ScopeMetrics, "cosmo.router.engine")
+			connectionMetrics := metricdata.Metrics{
+				Name:        "router.engine.connections",
+				Description: "Number of connections in the engine. Contains both websocket and http connections",
+
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(baseAttributes...),
+							Value:      1,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, connectionMetrics, *getMetricByName(engineScope, "router.engine.connections"), metricdatatest.IgnoreTimestamp())
+
+			subscriptionMetrics := metricdata.Metrics{
+				Name:        "router.engine.subscriptions",
+				Description: "Number of subscriptions in the engine.",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(baseAttributes...),
+							Value:      1,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, subscriptionMetrics, *getMetricByName(engineScope, "router.engine.subscriptions"), metricdatatest.IgnoreTimestamp())
+
+			triggerMetrics := metricdata.Metrics{
+				Name:        "router.engine.triggers",
+				Description: "Number of triggers in the engine.",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(baseAttributes...),
+							Value:      1,
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, triggerMetrics, *getMetricByName(engineScope, "router.engine.triggers"), metricdatatest.IgnoreTimestamp())
+
+			messagesSentMetrics := metricdata.Metrics{
+				Name:        "router.engine.messages.sent",
+				Description: "Number of subscription updates in the engine.",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(baseAttributes...),
+						},
+					},
+				},
+			}
+
+			metricdatatest.AssertEqual(t, messagesSentMetrics, *getMetricByName(engineScope, "router.engine.messages.sent"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+		})
+	})
+}
 
 func TestOperationCacheTelemetry(t *testing.T) {
 	t.Parallel()

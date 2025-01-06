@@ -31,7 +31,6 @@ import (
 	"time"
 
 	"github.com/wundergraph/cosmo/router/pkg/logging"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
 	"go.uber.org/zap/zaptest/observer"
 
@@ -48,6 +47,7 @@ import (
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/hashicorp/go-cleanhttp"
@@ -198,11 +198,17 @@ type MetricExclusions struct {
 	ExcludedOTLPMetricLabels       []*regexp.Regexp
 }
 
+type EngineStatOptions struct {
+	EnableSubscription bool
+}
+
 type MetricOptions struct {
-	MetricExclusions            MetricExclusions
-	EnableRuntimeMetrics        bool
-	EnableOTLPRouterCache       bool
-	EnablePrometheusRouterCache bool
+	MetricExclusions             MetricExclusions
+	EnableRuntimeMetrics         bool
+	EnableOTLPRouterCache        bool
+	EnablePrometheusRouterCache  bool
+	OTLPEngineStatsOptions       EngineStatOptions
+	PrometheusEngineStatsOptions EngineStatOptions
 }
 
 type Config struct {
@@ -857,11 +863,14 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 	if testConfig.PrometheusRegistry != nil {
 		prometheusConfig = rmetric.PrometheusConfig{
-			Enabled:             true,
-			ListenAddr:          fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
-			Path:                "/metrics",
-			TestRegistry:        testConfig.PrometheusRegistry,
-			GraphqlCache:        testConfig.MetricOptions.EnablePrometheusRouterCache,
+			Enabled:      true,
+			ListenAddr:   fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
+			Path:         "/metrics",
+			TestRegistry: testConfig.PrometheusRegistry,
+			GraphqlCache: testConfig.MetricOptions.EnablePrometheusRouterCache,
+			EngineStats: rmetric.EngineStatsConfig{
+				Subscription: testConfig.MetricOptions.PrometheusEngineStatsOptions.EnableSubscription,
+			},
 			ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetrics,
 			ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetricLabels,
 		}
@@ -878,9 +887,12 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					Enabled: true,
 				},
 				OTLP: config.MetricsOTLP{
-					Enabled:             true,
-					RouterRuntime:       testConfig.MetricOptions.EnableRuntimeMetrics,
-					GraphqlCache:        testConfig.MetricOptions.EnableOTLPRouterCache,
+					Enabled:       true,
+					RouterRuntime: testConfig.MetricOptions.EnableRuntimeMetrics,
+					GraphqlCache:  testConfig.MetricOptions.EnableOTLPRouterCache,
+					EngineStats: config.EngineStats{
+						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,
+					},
 					ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetrics,
 					ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetricLabels,
 				},
@@ -1211,6 +1223,7 @@ func (e *Environment) MakeGraphQLRequestWithHeaders(request GraphQLRequest, head
 	if request.Header != nil {
 		req.Header = request.Header
 	}
+	req.Header.Set("Accept-Encoding", "identity")
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
@@ -1642,9 +1655,9 @@ func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	sub := e.Router.WebsocketStats.Subscribe(ctx)
+	sub := e.Router.EngineStats.Subscribe(ctx)
 
-	report := e.Router.WebsocketStats.GetReport()
+	report := e.Router.EngineStats.GetReport()
 	if report.Subscriptions == desiredCount {
 		return
 	}
@@ -1673,9 +1686,9 @@ func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.D
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	sub := e.Router.WebsocketStats.Subscribe(ctx)
+	sub := e.Router.EngineStats.Subscribe(ctx)
 
-	report := e.Router.WebsocketStats.GetReport()
+	report := e.Router.EngineStats.GetReport()
 	if report.Connections == desiredCount {
 		return
 	}
@@ -1697,15 +1710,61 @@ func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.D
 	}
 }
 
+type EngineStatisticAssertion struct {
+	Subscriptions int64
+	Connections   int64
+	MessagesSent  int64
+	Triggers      int64
+}
+
+func (e *Environment) AssertEngineStatistics(t testing.TB, metricReader metric.Reader, assertions EngineStatisticAssertion) {
+	t.Helper()
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, metricReader.Collect(context.Background(), &rm))
+
+	actual := EngineStatisticAssertion{}
+
+	for _, sm := range rm.ScopeMetrics {
+		if sm.Scope.Name != "cosmo.router.engine" {
+			continue
+		}
+
+		for _, m := range sm.Metrics {
+			d, ok := m.Data.(metricdata.Sum[int64])
+			require.True(t, ok)
+
+			require.Len(t, d.DataPoints, 1)
+
+			switch m.Name {
+			case "router.engine.subscriptions":
+				actual.Subscriptions = d.DataPoints[0].Value
+			case "router.engine.connections":
+				actual.Connections = d.DataPoints[0].Value
+			case "router.engine.messages.sent":
+				actual.MessagesSent = d.DataPoints[0].Value
+			case "router.engine.triggers":
+				actual.Triggers = d.DataPoints[0].Value
+			}
+		}
+	}
+
+	require.Equal(t, assertions.Subscriptions, actual.Subscriptions)
+	require.Equal(t, assertions.Connections, actual.Connections)
+	require.Equal(t, assertions.Triggers, actual.Triggers)
+	// messages sent depends on how slow the test execution is, so we only check that it's greater or equal
+	require.GreaterOrEqual(t, actual.MessagesSent, assertions.MessagesSent)
+}
+
 func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Duration) {
 	e.t.Helper()
 
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	sub := e.Router.WebsocketStats.Subscribe(ctx)
+	sub := e.Router.EngineStats.Subscribe(ctx)
 
-	report := e.Router.WebsocketStats.GetReport()
+	report := e.Router.EngineStats.GetReport()
 	if report.MessagesSent == desiredCount {
 		return
 	}
@@ -1727,15 +1786,46 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 	}
 }
 
+func (e *Environment) WaitForMinMessagesSent(minCount uint64, timeout time.Duration) {
+	e.t.Helper()
+
+	ctx, cancel := context.WithTimeout(e.Context, timeout)
+	defer cancel()
+
+	sub := e.Router.EngineStats.Subscribe(ctx)
+
+	report := e.Router.EngineStats.GetReport()
+	if report.MessagesSent >= minCount {
+		return
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", report.MessagesSent, minCount)
+			return
+		case r, ok := <-sub:
+			if !ok {
+				e.t.Fatalf("channel closed, timed out waiting for messages sent, got %d, want at least %d", r.MessagesSent, minCount)
+				return
+			}
+			report = r
+			if report.MessagesSent >= minCount {
+				return
+			}
+		}
+	}
+}
+
 func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Duration) {
 	e.t.Helper()
 
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	sub := e.Router.WebsocketStats.Subscribe(ctx)
+	sub := e.Router.EngineStats.Subscribe(ctx)
 
-	report := e.Router.WebsocketStats.GetReport()
+	report := e.Router.EngineStats.GetReport()
 	if report.Triggers == desiredCount {
 		return
 	}
@@ -1755,7 +1845,6 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 			}
 		}
 	}
-
 }
 
 func subgraphOptions(ctx context.Context, t testing.TB, natsData *NatsData, pubSubName func(string) string) *subgraphs.SubgraphOptions {
