@@ -272,8 +272,12 @@ github.com/vektah/gqlparser/v2 v2.5.16 h1:1gcmLTvs3JLKXckwCwlUagVn/IlV2bwqle0vJ0
 github.com/vektah/gqlparser/v2 v2.5.16/go.mod h1:1lz1OeCqgQbQepsGxPVywrjdBHW2T08PUS3pJqepRww=
 github.com/wundergraph/astjson v0.0.0-20241210135722-15ca0ac078f8 h1:D0Pw/sly2S9gt63BVlTAfHZG8h98h1AsELOuMgydDt0=
 github.com/wundergraph/astjson v0.0.0-20241210135722-15ca0ac078f8/go.mod h1:eOTL6acwctsN4F3b7YE+eE2t8zcJ/doLm9sZzsxxxrE=
+github.com/wundergraph/astjson v0.0.0-20250102160438-534f686313e6 h1:VNJdQaqaHtc+02Bl3N9hw0b8sjCSh8ginYYcVKaTBfE=
+github.com/wundergraph/astjson v0.0.0-20250102160438-534f686313e6/go.mod h1:eOTL6acwctsN4F3b7YE+eE2t8zcJ/doLm9sZzsxxxrE=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.136 h1:DrQIzB1uO7W85Nf04h3HCPlKrE+D+bs1fR4LvxCQLgE=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.136/go.mod h1:xQLII50+GThIafwHGzeOVLsobqpAAB4WA/M9S+HTzxo=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.138 h1:GS0V4Yv8H3b8CLouc0ZWucgSZXgbw20lA4hkth8eoJM=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.138/go.mod h1:5DhrjJAM+S+g6Bv4iogzhM+zjvZtxT/pElk+vsXp72c=
 github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo0=
 github.com/yusufpapurcu/wmi v1.2.4/go.mod h1:SBZ9tNy3G9/m5Oi98Zks0QjeHVDvuK0qfxQmPyzfmi0=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 h1:aFJWCqJMNjENlcleuuOkGAPH82y0yULBScfXcIEdS24=

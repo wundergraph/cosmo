@@ -697,6 +697,10 @@ type TBigObject struct {
 
 func (TBigObject) IsBigAbstractResponse() {}
 
+type Thing struct {
+	B string `json:"b"`
+}
+
 type TimestampedString struct {
 	// The value of the string.
 	Value string `json:"value"`

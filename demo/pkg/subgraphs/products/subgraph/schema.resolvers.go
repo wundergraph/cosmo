@@ -7,6 +7,7 @@ package subgraph
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products/subgraph/model"
@@ -75,6 +76,18 @@ func (r *queriesResolver) TopSecretFederationFacts(ctx context.Context) ([]model
 // FactTypes is the resolver for the factTypes field.
 func (r *queriesResolver) FactTypes(ctx context.Context) ([]model.TopSecretFactType, error) {
 	return model.AllTopSecretFactType, nil
+}
+
+// SharedThings is the resolver for the sharedThings field.
+func (r *queriesResolver) SharedThings(ctx context.Context, numOfA int, numOfB int) ([]*model.Thing, error) {
+	things := make([]*model.Thing, 0, numOfA)
+	for i := 0; i < numOfA; i++ {
+		thing := &model.Thing{
+			A: fmt.Sprintf("a-%d", i),
+		}
+		things = append(things, thing)
+	}
+	return things, nil
 }
 
 // Documentation returns generated.DocumentationResolver implementation.
