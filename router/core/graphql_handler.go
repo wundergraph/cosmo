@@ -174,7 +174,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		resp, err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, HeaderPropagationWriter(w, ctx.Context()))
 		requestContext.dataSourceNames = getSubgraphNames(p.Response.DataSources)
-		requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldOperationServices, requestContext.dataSourceNames)
 
 		if err != nil {
 			trackFinalResponseError(ctx.Context(), err)
@@ -206,7 +205,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, writer)
 		requestContext.dataSourceNames = getSubgraphNames(p.Response.Response.DataSources)
-		requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldOperationServices, requestContext.dataSourceNames)
 
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
