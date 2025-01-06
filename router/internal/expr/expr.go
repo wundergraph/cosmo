@@ -17,7 +17,8 @@ import (
 * Naming conventions:
 * - Fields are named using camelCase
 * - Methods are named using PascalCase (Required to be exported)
-* - Methods should be exported through the interface to make the contract clear
+* - Methods should be exported through a custom type to avoid exposing accidental methods that can mutate the context
+* - Use interface to expose only the required methods. Blocked by https://github.com/expr-lang/expr/issues/744
 *
 * Principles:
 * The Expr package is used to evaluate expressions in the context of the request or router.
@@ -41,13 +42,6 @@ type Request struct {
 	Header RequestHeaders `expr:"header"`
 }
 
-// RequestHeaders is the interface available for the headers object in expressions.
-type RequestHeaders interface {
-	// Get returns the value of the header with the given key. If the header is not present, an empty string is returned.
-	// The key is case-insensitive and transformed to the canonical format.
-	Get(key string) string
-}
-
 // RequestURL is the context for the URL object in expressions
 // it is limited in scope to the URL object and its components. For convenience, the query parameters are parsed.
 type RequestURL struct {
@@ -62,10 +56,23 @@ type RequestURL struct {
 	Query map[string]string `expr:"query"`
 }
 
+type RequestHeaders struct {
+	Header http.Header `expr:"-"` // Do not expose the full header
+}
+
+// Get returns the value of the header with the given key. If the header is not present, an empty string is returned.
+// The key is case-insensitive and transformed to the canonical format.
+// TODO: Use interface to expose only the required methods. Blocked by https://github.com/expr-lang/expr/issues/744
+func (r RequestHeaders) Get(key string) string {
+	return r.Header.Get(key)
+}
+
 // LoadRequest loads the request object into the context.
 func LoadRequest(req *http.Request) Request {
 	r := Request{
-		Header: req.Header,
+		Header: RequestHeaders{
+			Header: req.Header,
+		},
 	}
 
 	m, _ := url.ParseQuery(req.URL.RawQuery)
