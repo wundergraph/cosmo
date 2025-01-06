@@ -10,7 +10,7 @@ func strPtr(s string) *string {
 	return &s
 }
 
-var employees = []*model.Employee{
+var Employees = []*model.Employee{
 	{
 		Details: &model.Details{
 			Forename: "Jens",
@@ -417,7 +417,7 @@ var employees = []*model.Employee{
 }
 
 func filterEmployees(predicate func(employee *model.Employee) bool) (filtered []*model.Employee) {
-	for _, employee := range employees {
+	for _, employee := range Employees {
 		if predicate(employee) {
 			filtered = append(filtered, employee)
 		}

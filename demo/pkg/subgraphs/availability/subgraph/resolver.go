@@ -10,4 +10,5 @@ import (
 
 type Resolver struct {
 	NatsPubSubByProviderID map[string]pubsub_datasource.NatsPubSub
+	GetPubSubName          func(string) string
 }
