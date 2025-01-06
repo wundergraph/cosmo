@@ -197,8 +197,18 @@ func entityResolverNameForEmployee(ctx context.Context, rep map[string]interface
 			ok  bool
 		)
 		_ = val
+		// if all of the KeyFields values for this resolver are null,
+		// we shouldn't use use it
+		allNull := true
 		m = rep
-		if _, ok = m["id"]; !ok {
+		val, ok = m["id"]
+		if !ok {
+			break
+		}
+		if allNull {
+			allNull = val == nil
+		}
+		if allNull {
 			break
 		}
 		return "findEmployeeByID", nil
@@ -214,8 +224,18 @@ func entityResolverNameForSDK(ctx context.Context, rep map[string]interface{}) (
 			ok  bool
 		)
 		_ = val
+		// if all of the KeyFields values for this resolver are null,
+		// we shouldn't use use it
+		allNull := true
 		m = rep
-		if _, ok = m["upc"]; !ok {
+		val, ok = m["upc"]
+		if !ok {
+			break
+		}
+		if allNull {
+			allNull = val == nil
+		}
+		if allNull {
 			break
 		}
 		return "findSDKByUpc", nil
