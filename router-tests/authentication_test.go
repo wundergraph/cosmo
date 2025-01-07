@@ -1,4 +1,4 @@
-package integration_test
+package integration
 
 import (
 	"bytes"
@@ -18,28 +18,12 @@ import (
 )
 
 const (
-	jwksName                      = "my-jwks-server"
 	employeesQuery                = `{"query":"{ employees { id } }"}`
 	employeesQueryRequiringClaims = `{"query":"{ employees { id startDate } }"}`
 	employeesExpectedData         = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
 	unauthorizedExpectedData      = `{"errors":[{"message":"unauthorized"}]}`
 	xAuthenticatedByHeader        = "X-Authenticated-By"
 )
-
-func configureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) {
-	authServer, err := jwks.NewServer(t)
-	require.NoError(t, err)
-	t.Cleanup(authServer.Close)
-	tokenDecoder, _ := authentication.NewJwksTokenDecoder(zap.NewNop(), authServer.JWKSURL(), time.Second*5)
-	authOptions := authentication.HttpHeaderAuthenticatorOptions{
-		Name:         jwksName,
-		URL:          authServer.JWKSURL(),
-		TokenDecoder: tokenDecoder,
-	}
-	authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
-	require.NoError(t, err)
-	return []authentication.Authenticator{authenticator}, authServer
-}
 
 func TestAuthentication(t *testing.T) {
 	t.Parallel()
@@ -614,7 +598,8 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
-	tokenDecoder, _ := authentication.NewJwksTokenDecoder(zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+
+	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{
 		Name:                jwksName,
 		URL:                 authServer.JWKSURL(),
@@ -749,8 +734,8 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(authServer2.Close)
 
-	tokenDecoder1, _ := authentication.NewJwksTokenDecoder(zap.NewNop(), authServer1.JWKSURL(), time.Second*5)
-	authenticator1HeaderValuePrefixes := []string{"Bearer"}
+	tokenDecoder1, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer1.JWKSURL(), time.Second*5)
+	authenticator1HeaderValuePrefixes := []string{"Provider1"}
 	authenticator1, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
 		Name:                "1",
 		HeaderValuePrefixes: authenticator1HeaderValuePrefixes,
@@ -759,8 +744,8 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	tokenDecoder2, _ := authentication.NewJwksTokenDecoder(zap.NewNop(), authServer2.JWKSURL(), time.Second*5)
-	authenticator2HeaderValuePrefixes := []string{"", "Bearer", "Token"}
+	tokenDecoder2, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer2.JWKSURL(), time.Second*5)
+	authenticator2HeaderValuePrefixes := []string{"", "Provider2"}
 	authenticator2, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
 		Name:                "2",
 		HeaderValuePrefixes: authenticator2HeaderValuePrefixes,
@@ -771,7 +756,7 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	authenticators := []authentication.Authenticator{authenticator1, authenticator2}
 	accessController := core.NewAccessController(authenticators, false)
 
-	t.Run("authenticate with first provider", func(t *testing.T) {
+	t.Run("authenticate with first provider due to matching prefix", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -800,7 +785,7 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 		})
 	})
 
-	t.Run("authenticate with second provider", func(t *testing.T) {
+	t.Run("authenticate with second provider due to matching prefix", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -859,7 +844,7 @@ func TestAuthenticationOverWebsocket(t *testing.T) {
 	require.NoError(t, err)
 	defer authServer.Close()
 
-	tokenDecoder, _ := authentication.NewJwksTokenDecoder(zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
 	jwksOpts := authentication.HttpHeaderAuthenticatorOptions{
 		Name:         jwksName,
 		URL:          authServer.JWKSURL(),

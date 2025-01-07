@@ -22,7 +22,6 @@ type Provider interface {
 type Authenticator interface {
 	Name() string
 	Authenticate(ctx context.Context, p Provider) (Claims, error)
-	Close()
 }
 
 type Authentication interface {
@@ -93,12 +92,18 @@ func Authenticate(ctx context.Context, authenticators []Authenticator, p Provide
 			joinedErrors = errors.Join(joinedErrors, err)
 			continue
 		}
-		if claims != nil {
-			return &authentication{
-				authenticator: auth.Name(),
-				claims:        claims,
-			}, nil
+
+		// Claims is nil when no authentication information matched the authenticator.
+		// In that case, we continue to the next authenticator.
+		if claims == nil {
+			continue
 		}
+
+		// If authentication succeeds, we return the authentication for the first provider.
+		return &authentication{
+			authenticator: auth.Name(),
+			claims:        claims,
+		}, nil
 	}
 	// If no authentication failed error will be nil here,
 	// even if to claims were found.
