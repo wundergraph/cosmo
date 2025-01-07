@@ -1531,7 +1531,7 @@
         },
         "key_suffix_expression": {
           "type": "string",
-          "description": "Use Expr-Lang to define a key suffix for the rate limit, e.g. by using request headers, claims, or a combination of both with a fallback strategy."
+          "description": "The expression to define a key suffix for the rate limit, e.g. by using request headers, claims, or a combination of both with a fallback strategy. The expression is specified as a string and needs to evaluate to a string. Please see https://expr-lang.org/ for more information."
         }
       }
     },
