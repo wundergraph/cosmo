@@ -102,13 +102,13 @@ func TestTimeoutTransport(t *testing.T) {
 		transportOpts := &SubgraphTransportOptions{
 			SubgraphMap: map[string]*TransportTimeoutOptions{
 				testSubgraphKey: {
-					ResponseHeaderTimeout: 3 * time.Millisecond,
+					ResponseHeaderTimeout: 10 * time.Millisecond,
 				},
 			},
 		}
 
 		headerTimeoutServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			time.Sleep(5 * time.Millisecond) // Delayed header response
+			time.Sleep(50 * time.Millisecond) // Delayed header response
 			w.WriteHeader(http.StatusOK)
 		}))
 		defer headerTimeoutServer.Close()
