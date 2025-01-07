@@ -313,6 +313,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           nf.directiveDefinitionByDirectiveName,
           nf.handledRepeatedDirectivesByHostPath,
           nf.originalParentTypeName,
+          nf.subgraphName,
         );
       },
       leave() {

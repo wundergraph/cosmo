@@ -1,6 +1,7 @@
 import {
   duplicateEnumValueDefinitionError,
   ENUM,
+  EnumDefinitionData,
   federateSubgraphs,
   incompatibleSharedEnumError,
   noBaseDefinitionForExtensionError,
@@ -520,6 +521,17 @@ describe('Enum tests', () => {
           `,
         ),
       );
+    });
+
+    test('that an Enum has subgraphs data', () => {
+      const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
+      expect(errors).toBeUndefined();
+
+      const enumVa = federationResult?.parentDefinitionDataByTypeName.get('Instruction');
+      console.log((enumVa as EnumDefinitionData).enumValueDataByValueName.get('FIGHT')?.subgraphNames);
+      // console.dir(enumVa, {
+      //   depth: null,
+      // });
     });
   });
 });

@@ -1043,6 +1043,7 @@ export class FederationFactory {
     switch (existingData.kind) {
       case Kind.ENUM_TYPE_DEFINITION:
         existingData.appearances += 1;
+        addIterableValuesToSet((incomingData as EnumDefinitionData).subgraphNames, existingData.subgraphNames);
         for (const data of (incomingData as EnumDefinitionData).enumValueDataByValueName.values()) {
           this.upsertEnumValueData(existingData.enumValueDataByValueName, data, isParentInaccessible);
         }
@@ -2388,6 +2389,7 @@ export class FederationFactory {
         federatedGraphAST: newRouterAST,
         federatedGraphSchema: buildASTSchema(newRouterAST, { assumeValid: true, assumeValidSDL: true }),
         federatedGraphClientSchema: newClientSchema,
+        parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
         ...this.getClientSchemaObjectBoolean(),
       },
       warnings: this.warnings,
@@ -2671,6 +2673,7 @@ export class FederationFactory {
         federatedGraphAST: newRouterAST,
         federatedGraphSchema: buildASTSchema(newRouterAST, { assumeValid: true, assumeValidSDL: true }),
         federatedGraphClientSchema: newClientSchema,
+        parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
         ...this.getClientSchemaObjectBoolean(),
       },
       warnings: this.warnings,
