@@ -1499,6 +1499,11 @@
             "reject_exceeding_requests": {
               "type": "boolean",
               "description": "Reject the requests that exceed the rate limit. If the value is true, the requests that exceed the rate limit are rejected."
+            },
+            "reject_status_code": {
+              "type": "integer",
+              "description": "The status code to return when the request is rejected. The default value is 200 (OK) as we're returning a well formed GraphQL response.",
+              "default": 200
             }
           },
           "required": ["rate", "burst", "period"]
@@ -1523,6 +1528,10 @@
         "debug": {
           "type": "boolean",
           "description": "Enable the debug mode for the rate limit."
+        },
+        "key_suffix_expression": {
+          "type": "string",
+          "description": "The expression to define a key suffix for the rate limit, e.g. by using request headers, claims, or a combination of both with a fallback strategy. The expression is specified as a string and needs to evaluate to a string. Please see https://expr-lang.org/ for more information."
         }
       }
     },

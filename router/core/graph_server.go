@@ -964,10 +964,15 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	if s.redisClient != nil {
 		handlerOpts.RateLimitConfig = s.rateLimit
-		handlerOpts.RateLimiter = NewCosmoRateLimiter(&CosmoRateLimiterOptions{
-			RedisClient: s.redisClient,
-			Debug:       s.rateLimit.Debug,
+		handlerOpts.RateLimiter, err = NewCosmoRateLimiter(&CosmoRateLimiterOptions{
+			RedisClient:         s.redisClient,
+			Debug:               s.rateLimit.Debug,
+			RejectStatusCode:    s.rateLimit.SimpleStrategy.RejectStatusCode,
+			KeySuffixExpression: s.rateLimit.KeySuffixExpression,
 		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create rate limiter: %w", err)
+		}
 	}
 
 	graphqlHandler := NewGraphQLHandler(handlerOpts)
