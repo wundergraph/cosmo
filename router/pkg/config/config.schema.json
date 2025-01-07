@@ -1428,17 +1428,14 @@
       "description": "The configuration for the authentication. The authentication is used to authenticate the incoming requests. We currently support JWK (JSON Web Key) authentication.",
       "additionalProperties": false,
       "properties": {
-        "providers": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "name": {
-                "type": "string",
-                "description": "The name of the authentication provider. The name is used to identify the provider in the configuration."
-              },
-              "jwks": {
+        "jwt": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "jwks": {
+              "type": "array",
+              "additionalProperties": false,
+              "items": {
                 "type": "object",
                 "additionalProperties": false,
                 "properties": {
@@ -1447,20 +1444,12 @@
                     "description": "The URL of the JWKs. The JWKs are used to verify the JWT (JSON Web Token). The URL is specified as a string with the format 'scheme://host:port'.",
                     "format": "http-url"
                   },
-                  "header_names": {
+                  "algorithms": {
                     "type": "array",
-                    "description": "The names of the headers. The headers are used to extract the token from the request. The default value is 'Authorization'",
-                    "default": ["Authorization"],
+                    "description": "The allowed algorithms for the keys that are retrieved from the JWKs. An empty list means that all algorithms are allowed.",
                     "items": {
-                      "type": "string"
-                    }
-                  },
-                  "header_value_prefixes": {
-                    "type": "array",
-                    "description": "The prefixes of the header values. The prefixes are used to extract the token from the header value. The default value is 'Bearer'",
-                    "default": ["Bearer"],
-                    "items": {
-                      "type": "string"
+                      "type": "string",
+                      "enum": ["HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA"]
                     }
                   },
                   "refresh_interval": {
@@ -1475,7 +1464,42 @@
                 "required": ["url"]
               }
             },
-            "required": ["name"]
+            "header_name": {
+              "type": "string",
+              "description": "The name of the header. The header is used to extract the token from the request. The default value is 'Authorization'.",
+              "default": "Authorization"
+            },
+            "header_value_prefix": {
+              "type": "string",
+              "description": "The prefix of the header value. The prefix is used to extract the token from the header value. The default value is 'Bearer'.",
+              "default": "Bearer"
+            },
+            "header_sources": {
+              "type": "array",
+              "description": "Additional sources for the token. The sources are used to extract the token from the request.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "description": "The type of the source. The supported types are 'header', 'cookie'.",
+                    "enum": ["header", "cookie"]
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "The name of the header. The header is used to extract the token from the request.",
+                    "format": "http-header",
+                    "examples": ["X-Authorization"]
+                  },
+                  "value_prefix": {
+                    "type": "string",
+                    "description": "The prefix of the header value. The prefix is used to extract the token from the header value."
+                  }
+                },
+                "required": ["type", "name"]
+              }
+            }
           }
         }
       }

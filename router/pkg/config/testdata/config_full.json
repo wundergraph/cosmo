@@ -336,21 +336,44 @@
   "GraphQLPath": "/graphql",
   "PlaygroundPath": "/",
   "Authentication": {
-    "Providers": [
-      {
-        "Name": "My Auth Provider",
-        "JWKS": {
+    "JWT": {
+      "JWKS": [
+        {
           "URL": "https://example.com/.well-known/jwks.json",
-          "HeaderNames": [
-            "Authorization"
-          ],
-          "HeaderValuePrefixes": [
-            "Bearer"
+          "Algorithms": [
+            "RS256"
           ],
           "RefreshInterval": 60000000000
+        },
+        {
+          "URL": "https://example.com/.well-known/jwks2.json",
+          "Algorithms": [
+            "RS256",
+            "HS256"
+          ],
+          "RefreshInterval": 120000000000
+        },
+        {
+          "URL": "https://example.com/.well-known/jwks3.json",
+          "Algorithms": null,
+          "RefreshInterval": 0
         }
-      }
-    ]
+      ],
+      "HeaderName": "Authorization",
+      "HeaderValuePrefix": "Bearer",
+      "HeaderSources": [
+        {
+          "Type": "header",
+          "Name": "X-Authorization",
+          "ValuePrefix": "Bearer"
+        },
+        {
+          "Type": "cookie",
+          "Name": "authz",
+          "ValuePrefix": ""
+        }
+      ]
+    }
   },
   "Authorization": {
     "RequireAuthentication": false,

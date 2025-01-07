@@ -599,10 +599,9 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
 
-	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{
 		Name:                jwksName,
-		URL:                 authServer.JWKSURL(),
 		HeaderNames:         []string{headerName},
 		HeaderValuePrefixes: []string{headerValuePrefix},
 		TokenDecoder:        tokenDecoder,
@@ -734,22 +733,20 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(authServer2.Close)
 
-	tokenDecoder1, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer1.JWKSURL(), time.Second*5)
+	tokenDecoder1, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer1.JWKSURL(), time.Second*5)})
 	authenticator1HeaderValuePrefixes := []string{"Provider1"}
 	authenticator1, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
 		Name:                "1",
 		HeaderValuePrefixes: authenticator1HeaderValuePrefixes,
-		URL:                 authServer1.JWKSURL(),
 		TokenDecoder:        tokenDecoder1,
 	})
 	require.NoError(t, err)
 
-	tokenDecoder2, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer2.JWKSURL(), time.Second*5)
+	tokenDecoder2, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer2.JWKSURL(), time.Second*5)})
 	authenticator2HeaderValuePrefixes := []string{"", "Provider2"}
 	authenticator2, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
 		Name:                "2",
 		HeaderValuePrefixes: authenticator2HeaderValuePrefixes,
-		URL:                 authServer2.JWKSURL(),
 		TokenDecoder:        tokenDecoder2,
 	})
 	require.NoError(t, err)
@@ -844,10 +841,9 @@ func TestAuthenticationOverWebsocket(t *testing.T) {
 	require.NoError(t, err)
 	defer authServer.Close()
 
-	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
 	jwksOpts := authentication.HttpHeaderAuthenticatorOptions{
 		Name:         jwksName,
-		URL:          authServer.JWKSURL(),
 		TokenDecoder: tokenDecoder,
 	}
 
@@ -880,4 +876,12 @@ func TestAuthenticationOverWebsocket(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusSwitchingProtocols, res.StatusCode)
 	})
+}
+
+func toJWKSConfig(url string, refresh time.Duration, allowedAlgorithms ...string) authentication.JWKSConfig {
+	return authentication.JWKSConfig{
+		URL:               url,
+		RefreshInterval:   refresh,
+		AllowedAlgorithms: allowedAlgorithms,
+	}
 }

@@ -53,8 +53,6 @@ func (a *httpHeaderAuthenticator) Authenticate(ctx context.Context, p Provider) 
 type HttpHeaderAuthenticatorOptions struct {
 	// Name is the authenticator name. It cannot be empty.
 	Name string
-	// URL is the URL of the JWKS endpoint, it is mandatory.
-	URL string
 	// HeaderNames are the header names to use for retrieving the token. It defaults to
 	// Authorization
 	HeaderNames []string
