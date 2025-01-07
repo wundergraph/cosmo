@@ -290,6 +290,7 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 			wg.Wait()
 
 			xEnv.WaitForSubscriptionCount(2, time.Second*5)
+			xEnv.WaitForTriggerCount(1, time.Second*5)
 
 			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
 				Subscriptions: 2,

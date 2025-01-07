@@ -73,6 +73,7 @@ func TestNatsEvents(t *testing.T) {
 
 			var closed atomic.Bool
 			go func() {
+				xEnv.WaitForMessagesSent(2, time.Second*10)
 				require.Eventually(t, func() bool {
 					return subscriptionCalled.Load() == 2
 				}, time.Second*20, time.Millisecond*100)
