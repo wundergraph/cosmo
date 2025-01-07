@@ -195,10 +195,7 @@
       "KeyPrefix": "cosmo_rate_limit"
     },
     "Debug": false,
-    "KeySuffixFromHeader": false,
-    "KeySuffixHeaderName": "X-Forwarded-For",
-    "KeySuffixFromClaim": false,
-    "KeySuffixClaimName": "sub"
+    "KeySuffixExpression": ""
   },
   "LocalhostFallbackInsideDocker": true,
   "CDN": {

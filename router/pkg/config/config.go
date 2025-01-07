@@ -428,10 +428,7 @@ type RateLimitConfiguration struct {
 	// Debug ensures that retryAfter and resetAfter are set to stable values for testing
 	// Debug also exposes the rate limit key in the response extension for debugging purposes
 	Debug               bool   `yaml:"debug" envDefault:"false" env:"RATE_LIMIT_DEBUG"`
-	KeySuffixFromHeader bool   `yaml:"key_suffix_from_header" envDefault:"false" env:"RATE_LIMIT_KEY_SUFFIX_FROM_HEADER"`
-	KeySuffixHeaderName string `yaml:"key_suffix_header_name" envDefault:"X-Forwarded-For" env:"RATE_LIMIT_KEY_SUFFIX_HEADER_NAME"`
-	KeySuffixFromClaim  bool   `yaml:"key_suffix_from_claim" envDefault:"false" env:"RATE_LIMIT_KEY_SUFFIX_FROM_CLAIM"`
-	KeySuffixClaimName  string `yaml:"key_suffix_claim_name" envDefault:"sub" env:"RATE_LIMIT_KEY_SUFFIX_CLAIM_NAME"`
+	KeySuffixExpression string `yaml:"key_suffix_expression,omitempty" env:"RATE_LIMIT_KEY_SUFFIX_EXPRESSION"`
 }
 
 type RedisConfiguration struct {

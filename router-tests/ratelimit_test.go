@@ -125,8 +125,7 @@ func TestRateLimit(t *testing.T) {
 						KeyPrefix: key,
 					},
 					Debug:               true,
-					KeySuffixFromHeader: true,
-					KeySuffixHeaderName: "X-Forwarded-For",
+					KeySuffixExpression: "request.header.Get('X-Forwarded-For')",
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -167,8 +166,7 @@ func TestRateLimit(t *testing.T) {
 						KeyPrefix: key,
 					},
 					Debug:               true,
-					KeySuffixFromHeader: true,
-					KeySuffixHeaderName: "X-Forwarded-For",
+					KeySuffixExpression: "request.header.Get('X-Forwarded-For')",
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -230,8 +228,7 @@ func TestRateLimit(t *testing.T) {
 						Url:       "redis://localhost:6379",
 						KeyPrefix: key,
 					},
-					KeySuffixFromHeader: true,
-					KeySuffixHeaderName: "X-Forwarded-For",
+					KeySuffixExpression: "request.header.Get('X-Forwarded-For')",
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -258,7 +255,7 @@ func TestRateLimit(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		tokenDecoder, _ := authentication.NewJwksTokenDecoder(zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
 			Name:         "my-jwks-server",
 			URL:          authServer.JWKSURL(),
@@ -284,9 +281,8 @@ func TestRateLimit(t *testing.T) {
 						Url:       "redis://localhost:6379",
 						KeyPrefix: key,
 					},
-					Debug:              true,
-					KeySuffixFromClaim: true,
-					KeySuffixClaimName: "sub",
+					Debug:               true,
+					KeySuffixExpression: "request.auth.claims.sub",
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {

@@ -5,12 +5,13 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/expr"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/expr"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.opentelemetry.io/otel/attribute"

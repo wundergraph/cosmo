@@ -1529,25 +1529,9 @@
           "type": "boolean",
           "description": "Enable the debug mode for the rate limit."
         },
-        "key_suffix_from_header": {
-          "type": "boolean",
-          "description": "Use a header value as a suffix for the rate limit key. The default value is false.",
-          "default": false
-        },
-        "key_suffix_header_name": {
+        "key_suffix_expression": {
           "type": "string",
-          "description": "The name of the header to use as a suffix for the rate limit key. The default value is 'X-Forwarded-For'.",
-          "default": "X-Forwarded-For"
-        },
-        "key_suffix_from_claim": {
-          "type": "boolean",
-          "description": "Use a claim value as a suffix for the rate limit key. The default value is false.",
-          "default": false
-        },
-        "key_suffix_claim_name": {
-          "type": "string",
-          "description": "The name of the claim to use as a suffix for the rate limit key. The default value is 'sub'.",
-          "default": "sub"
+          "description": "Use Expr-Lang to define a key suffix for the rate limit, e.g. by using request headers, claims, or a combination of both with a fallback strategy."
         }
       }
     },

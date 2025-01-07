@@ -1,17 +1,18 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 	"sync"
 
+	"github.com/expr-lang/expr/vm"
 	"github.com/go-redis/redis_rate/v10"
 	"github.com/redis/go-redis/v9"
-	"github.com/wundergraph/cosmo/router/pkg/authentication"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
@@ -25,24 +26,24 @@ type CosmoRateLimiterOptions struct {
 
 	RejectStatusCode int
 
-	KeySuffixFromRequestHeader bool
-	RequestHeaderName          string
-	KeySuffixFromClaim         bool
-	ClaimName                  string
+	KeySuffixExpression string
 }
 
-func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) *CosmoRateLimiter {
+func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, err error) {
 	limiter := redis_rate.NewLimiter(opts.RedisClient)
-	return &CosmoRateLimiter{
-		client:                     opts.RedisClient,
-		limiter:                    limiter,
-		debug:                      opts.Debug,
-		rejectStatusCode:           opts.RejectStatusCode,
-		keySuffixFromRequestHeader: opts.KeySuffixFromRequestHeader,
-		requestHeaderName:          opts.RequestHeaderName,
-		keySuffixFromClaim:         opts.KeySuffixFromClaim,
-		claimName:                  opts.ClaimName,
+	rl = &CosmoRateLimiter{
+		client:           opts.RedisClient,
+		limiter:          limiter,
+		debug:            opts.Debug,
+		rejectStatusCode: opts.RejectStatusCode,
 	}
+	if opts.KeySuffixExpression != "" {
+		rl.keySuffixProgram, err = expr.CompileStringExpression(opts.KeySuffixExpression)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return rl, nil
 }
 
 type CosmoRateLimiter struct {
@@ -52,10 +53,7 @@ type CosmoRateLimiter struct {
 
 	rejectStatusCode int
 
-	keySuffixFromRequestHeader bool
-	requestHeaderName          string
-	keySuffixFromClaim         bool
-	claimName                  string
+	keySuffixProgram *vm.Program
 }
 
 func (c *CosmoRateLimiter) RateLimitPreFetch(ctx *resolve.Context, info *resolve.FetchInfo, input json.RawMessage) (result *resolve.RateLimitDeny, err error) {
@@ -68,7 +66,10 @@ func (c *CosmoRateLimiter) RateLimitPreFetch(ctx *resolve.Context, info *resolve
 		Burst:  ctx.RateLimitOptions.Burst,
 		Period: ctx.RateLimitOptions.Period,
 	}
-	key := c.generateKey(ctx)
+	key, err := c.generateKey(ctx)
+	if err != nil {
+		return nil, err
+	}
 	allow, err := c.limiter.AllowN(ctx.Context(), key, limit, requestRate)
 	if err != nil {
 		return nil, err
@@ -83,27 +84,23 @@ func (c *CosmoRateLimiter) RateLimitPreFetch(ctx *resolve.Context, info *resolve
 	return &resolve.RateLimitDeny{}, nil
 }
 
-func (c *CosmoRateLimiter) generateKey(ctx *resolve.Context) string {
-	if c.keySuffixFromRequestHeader {
-		v := ctx.Request.Header.Get(c.requestHeaderName)
-		if v != "" {
-			trimmed := strings.TrimSpace(v)
-			return fmt.Sprintf("%s:%s", ctx.RateLimitOptions.RateLimitKey, trimmed)
-		}
+func (c *CosmoRateLimiter) generateKey(ctx *resolve.Context) (string, error) {
+	if c.keySuffixProgram == nil {
+		return ctx.RateLimitOptions.RateLimitKey, nil
 	}
-	if c.keySuffixFromClaim {
-		auth := authentication.FromContext(ctx.Context())
-		if auth != nil {
-			claims := auth.Claims()
-			if v, ok := claims[c.claimName]; ok {
-				str, ok := v.(string)
-				if ok {
-					return fmt.Sprintf("%s:%s", ctx.RateLimitOptions.RateLimitKey, str)
-				}
-			}
-		}
+	rc := getRequestContext(ctx.Context())
+	if rc == nil {
+		return "", errors.New("no request context")
 	}
-	return ctx.RateLimitOptions.RateLimitKey
+	str, err := rc.ResolveStringExpression(c.keySuffixProgram)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve key suffix expression: %w", err)
+	}
+	buf := bytes.NewBuffer(make([]byte, 0, len(ctx.RateLimitOptions.RateLimitKey)+len(str)+1))
+	_, _ = buf.WriteString(ctx.RateLimitOptions.RateLimitKey)
+	_ = buf.WriteByte(':')
+	_, _ = buf.WriteString(str)
+	return buf.String(), nil
 }
 
 func (c *CosmoRateLimiter) RejectStatusCode() int {
