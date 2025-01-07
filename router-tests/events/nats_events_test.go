@@ -21,6 +21,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/hasura/go-graphql-client"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 )
@@ -572,6 +573,7 @@ func TestNatsEvents(t *testing.T) {
 			var requestCompleted atomic.Bool
 
 			go func() {
+				defer requestCompleted.Store(true)
 				client := http.Client{}
 				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 				require.NoError(t, err)
@@ -606,8 +608,6 @@ func TestNatsEvents(t *testing.T) {
 				line, _, err = reader.ReadLine()
 				require.NoError(t, err)
 				require.Equal(t, "", string(line))
-
-				requestCompleted.Store(true)
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -1490,15 +1490,18 @@ func TestNatsEvents(t *testing.T) {
 
 				if oldCount == 1 {
 					var gqlErr graphql.Errors
-					require.ErrorAs(t, errValue, &gqlErr)
-					require.Equal(t, "Invalid message received", gqlErr[0].Message)
-				} else if oldCount == 2 || oldCount == 4 {
-					require.NoError(t, errValue)
-					require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
+					assert.ErrorAs(t, errValue, &gqlErr)
+					assert.Equal(t, "Invalid message received", gqlErr[0].Message)
+				} else if oldCount == 2 {
+					assert.NoError(t, errValue)
+					assert.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
 				} else if oldCount == 3 {
 					var gqlErr graphql.Errors
-					require.ErrorAs(t, errValue, &gqlErr)
-					require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.", gqlErr[0].Message)
+					assert.ErrorAs(t, errValue, &gqlErr)
+					assert.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.", gqlErr[0].Message)
+				} else if oldCount == 4 {
+					assert.NoError(t, errValue)
+					assert.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
 				}
 
 				return nil

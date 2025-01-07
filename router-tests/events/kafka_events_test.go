@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/cosmo/router/core"
 	"net/http"
 	"sync/atomic"
@@ -411,8 +412,8 @@ func TestKafkaEvents(t *testing.T) {
 
 		assertLineEquals := func(t *testing.T, reader *bufio.Reader, expected string) {
 			line, _, err := reader.ReadLine()
-			require.NoError(t, err)
-			require.Equal(t, expected, string(line))
+			assert.NoError(t, err)
+			assert.Equal(t, expected, string(line))
 		}
 
 		assertMultipartPrefix := func(t *testing.T, reader *bufio.Reader) {
@@ -421,7 +422,19 @@ func TestKafkaEvents(t *testing.T) {
 			assertLineEquals(t, reader, "")
 		}
 
-		var multipartHeartbeatInterval = time.Second
+		requireLineEquals := func(t *testing.T, reader *bufio.Reader, expected string) {
+			line, _, err := reader.ReadLine()
+			require.NoError(t, err)
+			require.Equal(t, expected, string(line))
+		}
+
+		requireMultipartPrefix := func(t *testing.T, reader *bufio.Reader) {
+			requireLineEquals(t, reader, "--graphql")
+			requireLineEquals(t, reader, "Content-Type: application/json")
+			requireLineEquals(t, reader, "")
+		}
+
+		var multipartHeartbeatInterval = time.Second * 5
 
 		t.Run("subscribe sync", func(t *testing.T) {
 			t.Parallel()
@@ -453,7 +466,7 @@ func TestKafkaEvents(t *testing.T) {
 					defer resp.Body.Close()
 					reader := bufio.NewReader(resp.Body)
 
-					require.Eventually(t, func() bool {
+					assert.Eventually(t, func() bool {
 						return produced.Load() == 1
 					}, time.Second*10, time.Millisecond*100)
 					assertMultipartPrefix(t, reader)
@@ -464,7 +477,7 @@ func TestKafkaEvents(t *testing.T) {
 					assertLineEquals(t, reader, "{}")
 					consumed.Add(1)
 
-					require.Eventually(t, func() bool {
+					assert.Eventually(t, func() bool {
 						return produced.Load() == 2
 					}, time.Second*10, time.Millisecond*100)
 					assertMultipartPrefix(t, reader)
@@ -519,8 +532,8 @@ func TestKafkaEvents(t *testing.T) {
 				defer resp.Body.Close()
 				reader := bufio.NewReader(resp.Body)
 
-				assertMultipartPrefix(t, reader)
-				assertLineEquals(t, reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
+				requireMultipartPrefix(t, reader)
+				requireLineEquals(t, reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
 
 				xEnv.WaitForSubscriptionCount(0, time.Second*10)
 				xEnv.WaitForConnectionCount(0, time.Second*10)
