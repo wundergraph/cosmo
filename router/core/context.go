@@ -2,12 +2,14 @@ package core
 
 import (
 	"context"
-	"github.com/wundergraph/cosmo/router/internal/expr"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/expr-lang/expr/vm"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 
 	"github.com/wundergraph/astjson"
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
@@ -250,6 +252,14 @@ type requestContext struct {
 	telemetry *requestTelemetryAttributes
 	// expressionContext is the context that will be provided to a compiled expression in order to retrieve data via dynamic expressions
 	expressionContext expr.Context
+}
+
+func (c *requestContext) ResolveStringExpression(expression *vm.Program) (string, error) {
+	return expr.ResolveStringExpression(expression, c.expressionContext)
+}
+
+func (c *requestContext) ResolveBoolExpression(expression *vm.Program) (bool, error) {
+	return expr.ResolveBoolExpression(expression, c.expressionContext)
 }
 
 func (c *requestContext) Operation() OperationContext {
