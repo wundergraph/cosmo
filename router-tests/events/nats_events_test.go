@@ -1490,14 +1490,14 @@ func TestNatsEvents(t *testing.T) {
 
 				if oldCount == 1 {
 					var gqlErr graphql.Errors
-					assert.ErrorAs(t, errValue, &gqlErr)
+					require.ErrorAs(t, errValue, &gqlErr)
 					assert.Equal(t, "Invalid message received", gqlErr[0].Message)
 				} else if oldCount == 2 {
 					assert.NoError(t, errValue)
 					assert.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
 				} else if oldCount == 3 {
 					var gqlErr graphql.Errors
-					assert.ErrorAs(t, errValue, &gqlErr)
+					require.ErrorAs(t, errValue, &gqlErr)
 					assert.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.", gqlErr[0].Message)
 				} else if oldCount == 4 {
 					assert.NoError(t, errValue)
