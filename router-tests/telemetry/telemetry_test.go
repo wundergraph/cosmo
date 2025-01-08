@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"regexp"
 	"runtime"
@@ -4041,7 +4042,7 @@ func TestTelemetry(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, `{"data":{"rootFieldWithListArg":["a"]}}`, res.Body)
-			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+			assert.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 
 			sn = exporter.GetSpans().Snapshots()
 
