@@ -3,16 +3,16 @@ package authentication
 import (
 	"context"
 	"fmt"
-	"github.com/MicahParks/jwkset"
-	"github.com/MicahParks/keyfunc/v3"
-	"github.com/wundergraph/cosmo/router/internal/httpclient"
-	"go.uber.org/zap"
-	"golang.org/x/time/rate"
 	"net/http"
 	"net/url"
 	"time"
 
+	"github.com/MicahParks/jwkset"
+	"github.com/MicahParks/keyfunc/v3"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/wundergraph/cosmo/router/internal/httpclient"
+	"go.uber.org/zap"
+	"golang.org/x/time/rate"
 )
 
 type TokenDecoder interface {
@@ -65,7 +65,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				l.Error("Failed to refresh HTTP JWK Set from remote HTTP resource.", zap.Error(err))
 			},
 			RefreshInterval: c.RefreshInterval,
-			Storage:         nil,
+			Storage:         NewValidationStore(nil, c.AllowedAlgorithms),
 		}
 
 		store, err := jwkset.NewStorageFromHTTP(ur, jwksetHTTPStorageOptions)

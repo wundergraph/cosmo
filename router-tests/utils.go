@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"github.com/MicahParks/jwkset"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -40,7 +41,9 @@ func RequireSpanWithName(t *testing.T, exporter *tracetest2.InMemoryExporter, na
 }
 
 func configureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) {
-	authServer, err := jwks.NewServer(t)
+	rsaCrypto, err := jwks.NewRSACrypto("", jwkset.AlgRS256, 2048)
+	require.NoError(t, err)
+	authServer, err := jwks.NewServerWithCrypto(t, rsaCrypto)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
 	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
