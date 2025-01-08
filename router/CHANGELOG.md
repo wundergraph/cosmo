@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.160.0](https://github.com/wundergraph/cosmo/compare/router@0.159.1...router@0.160.0) (2025-01-07)
+
+### Bug Fixes
+
+* bump timeout in server to address responseheadertimeout flake ([#1493](https://github.com/wundergraph/cosmo/issues/1493)) ([c2f2131](https://github.com/wundergraph/cosmo/commit/c2f2131ca12a9ca830a9a675c3b6b1493c618247)) (@df-wg)
+
+### Features
+
+* improve rate limiting with better customization ([#1476](https://github.com/wundergraph/cosmo/issues/1476)) ([ffcb634](https://github.com/wundergraph/cosmo/commit/ffcb63426bf123568edaa206c2a4736ff48ebfe9)) (@jensneuse)
+* return error when subgraphs return incompatible results ([#1490](https://github.com/wundergraph/cosmo/issues/1490)) ([7c4f209](https://github.com/wundergraph/cosmo/commit/7c4f209ffc33fb98f87ce24b87b96847d934e664)) (@jensneuse)
+
 ## [0.159.1](https://github.com/wundergraph/cosmo/compare/router@0.159.0...router@0.159.1) (2025-01-06)
 
 ### Bug Fixes

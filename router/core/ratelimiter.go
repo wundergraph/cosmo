@@ -1,14 +1,18 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"sync"
 
+	"github.com/expr-lang/expr/vm"
 	"github.com/go-redis/redis_rate/v10"
 	"github.com/redis/go-redis/v9"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
@@ -19,21 +23,37 @@ var (
 type CosmoRateLimiterOptions struct {
 	RedisClient *redis.Client
 	Debug       bool
+
+	RejectStatusCode int
+
+	KeySuffixExpression string
 }
 
-func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) *CosmoRateLimiter {
+func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, err error) {
 	limiter := redis_rate.NewLimiter(opts.RedisClient)
-	return &CosmoRateLimiter{
-		client:  opts.RedisClient,
-		limiter: limiter,
-		debug:   opts.Debug,
+	rl = &CosmoRateLimiter{
+		client:           opts.RedisClient,
+		limiter:          limiter,
+		debug:            opts.Debug,
+		rejectStatusCode: opts.RejectStatusCode,
 	}
+	if opts.KeySuffixExpression != "" {
+		rl.keySuffixProgram, err = expr.CompileStringExpression(opts.KeySuffixExpression)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return rl, nil
 }
 
 type CosmoRateLimiter struct {
 	client  *redis.Client
 	limiter *redis_rate.Limiter
 	debug   bool
+
+	rejectStatusCode int
+
+	keySuffixProgram *vm.Program
 }
 
 func (c *CosmoRateLimiter) RateLimitPreFetch(ctx *resolve.Context, info *resolve.FetchInfo, input json.RawMessage) (result *resolve.RateLimitDeny, err error) {
@@ -46,11 +66,15 @@ func (c *CosmoRateLimiter) RateLimitPreFetch(ctx *resolve.Context, info *resolve
 		Burst:  ctx.RateLimitOptions.Burst,
 		Period: ctx.RateLimitOptions.Period,
 	}
-	allow, err := c.limiter.AllowN(ctx.Context(), ctx.RateLimitOptions.RateLimitKey, limit, requestRate)
+	key, err := c.generateKey(ctx)
 	if err != nil {
 		return nil, err
 	}
-	c.setRateLimitStats(ctx, requestRate, allow.Remaining, allow.RetryAfter.Milliseconds(), allow.ResetAfter.Milliseconds())
+	allow, err := c.limiter.AllowN(ctx.Context(), key, limit, requestRate)
+	if err != nil {
+		return nil, err
+	}
+	c.setRateLimitStats(ctx, key, requestRate, allow.Remaining, allow.RetryAfter.Milliseconds(), allow.ResetAfter.Milliseconds())
 	if allow.Allowed >= requestRate {
 		return nil, nil
 	}
@@ -60,11 +84,35 @@ func (c *CosmoRateLimiter) RateLimitPreFetch(ctx *resolve.Context, info *resolve
 	return &resolve.RateLimitDeny{}, nil
 }
 
+func (c *CosmoRateLimiter) generateKey(ctx *resolve.Context) (string, error) {
+	if c.keySuffixProgram == nil {
+		return ctx.RateLimitOptions.RateLimitKey, nil
+	}
+	rc := getRequestContext(ctx.Context())
+	if rc == nil {
+		return "", errors.New("no request context")
+	}
+	str, err := rc.ResolveStringExpression(c.keySuffixProgram)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve key suffix expression: %w", err)
+	}
+	buf := bytes.NewBuffer(make([]byte, 0, len(ctx.RateLimitOptions.RateLimitKey)+len(str)+1))
+	_, _ = buf.WriteString(ctx.RateLimitOptions.RateLimitKey)
+	_ = buf.WriteByte(':')
+	_, _ = buf.WriteString(str)
+	return buf.String(), nil
+}
+
+func (c *CosmoRateLimiter) RejectStatusCode() int {
+	return c.rejectStatusCode
+}
+
 type RateLimitStats struct {
-	RequestRate            int   `json:"requestRate"`
-	Remaining              int   `json:"remaining"`
-	RetryAfterMilliseconds int64 `json:"retryAfterMs"`
-	ResetAfterMilliseconds int64 `json:"resetAfterMs"`
+	Key                    string `json:"key,omitempty"`
+	RequestRate            int    `json:"requestRate"`
+	Remaining              int    `json:"remaining"`
+	RetryAfterMilliseconds int64  `json:"retryAfterMs"`
+	ResetAfterMilliseconds int64  `json:"resetAfterMs"`
 }
 
 func (c *CosmoRateLimiter) RenderResponseExtension(ctx *resolve.Context, out io.Writer) error {
@@ -98,17 +146,20 @@ func (c *CosmoRateLimiter) statsJSON(ctx *resolve.Context) ([]byte, error) {
 	if c.debug {
 		stats.ResetAfterMilliseconds = 1234
 		stats.RetryAfterMilliseconds = 1234
+	} else {
+		stats.Key = "" // hide key when not in debug mode
 	}
 	return json.Marshal(stats)
 }
 
-func (c *CosmoRateLimiter) setRateLimitStats(ctx *resolve.Context, requestRate, remaining int, retryAfter, resetAfter int64) {
+func (c *CosmoRateLimiter) setRateLimitStats(ctx *resolve.Context, key string, requestRate, remaining int, retryAfter, resetAfter int64) {
 	v := ctx.Context().Value(rateLimitStatsCtxKey{})
 	if v == nil {
 		return
 	}
 	statsCtx := v.(*rateLimitStatsCtx)
 	statsCtx.mux.Lock()
+	statsCtx.stats.Key = key
 	statsCtx.stats.RequestRate = statsCtx.stats.RequestRate + requestRate
 	statsCtx.stats.Remaining = remaining
 	statsCtx.stats.RetryAfterMilliseconds = retryAfter
