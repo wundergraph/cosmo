@@ -245,7 +245,7 @@ func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) *resolve.Co
 	ctx.SetRateLimiter(h.rateLimiter)
 	ctx.RateLimitOptions = resolve.RateLimitOptions{
 		Enable:                          true,
-		IncludeStatsInResponseExtension: h.rateLimitConfig.SimpleStrategy.HideStatsFromResponseExtension == false,
+		IncludeStatsInResponseExtension: !h.rateLimitConfig.SimpleStrategy.HideStatsFromResponseExtension,
 		Rate:                            h.rateLimitConfig.SimpleStrategy.Rate,
 		Burst:                           h.rateLimitConfig.SimpleStrategy.Burst,
 		Period:                          h.rateLimitConfig.SimpleStrategy.Period,
