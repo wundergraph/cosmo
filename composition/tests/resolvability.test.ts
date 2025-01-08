@@ -1200,6 +1200,62 @@ describe('Field resolvability tests', () => {
       ),
     );
   });
+
+  test('that an unconditionally external field cannot be used as an implicit key #1.1', () => {
+    const fieldPath = 'query.entity';
+    const entityAncestorData: EntityAncestorData = {
+      fieldSetsByTargetSubgraphName: new Map<string, Set<string>>([[subgraphBN.name, new Set<string>(['id'])]]),
+      subgraphName: subgraphBM.name,
+      typeName: 'Entity',
+    };
+    const rootFieldData = newRootFieldData('Query', 'entity', new Set<string>([subgraphBM.name]));
+    const unresolvableFieldData: UnresolvableFieldData = {
+      fieldName: 'age',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
+        isLeaf: true,
+        name: 'age',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>([subgraphBN.name]),
+      typeName: 'Entity',
+    };
+    const { errors } = federateSubgraphs([subgraphBM, subgraphBN]);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
+      unresolvablePathError(
+        unresolvableFieldData,
+        generateResolvabilityErrorReasons({ entityAncestorData, rootFieldData, unresolvableFieldData }),
+      ),
+    );
+  });
+
+  test('that an unconditionally external field cannot be used as an implicit key #1.2', () => {
+    const fieldPath = 'query.entity';
+    const entityAncestorData: EntityAncestorData = {
+      fieldSetsByTargetSubgraphName: new Map<string, Set<string>>([[subgraphBN.name, new Set<string>(['id'])]]),
+      subgraphName: subgraphBM.name,
+      typeName: 'Entity',
+    };
+    const rootFieldData = newRootFieldData('Query', 'entity', new Set<string>([subgraphBM.name]));
+    const unresolvableFieldData: UnresolvableFieldData = {
+      fieldName: 'age',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
+        isLeaf: true,
+        name: 'age',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>([subgraphBN.name]),
+      typeName: 'Entity',
+    };
+    const { errors } = federateSubgraphs([subgraphBN, subgraphBM]);
+    expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
+    expect(errors![0]).toStrictEqual(
+      unresolvablePathError(
+        unresolvableFieldData,
+        generateResolvabilityErrorReasons({ entityAncestorData, rootFieldData, unresolvableFieldData }),
+      ),
+    );
+  });
 });
 
 const subgraphA: Subgraph = {
@@ -2367,6 +2423,32 @@ const subgraphBL: Subgraph = {
       idTwo: ID!
       age: Int!
       entityTwo: EntityTwo! @shareable
+    }
+  `),
+};
+
+const subgraphBM: Subgraph = {
+  name: 'subgraph-bm',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity!
+    }
+    
+    type Entity {
+      id: ID! @external
+      name: String!
+    }
+  `),
+};
+
+const subgraphBN: Subgraph = {
+  name: 'subgraph-bn',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      age: Int!
     }
   `),
 };

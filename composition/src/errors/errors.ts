@@ -1,12 +1,5 @@
 import { nodeKindToDirectiveLocation } from '../ast/utils';
-import {
-  ConstDirectiveNode,
-  Kind,
-  OperationTypeNode,
-  SchemaExtensionNode,
-  TypeDefinitionNode,
-  TypeExtensionNode,
-} from 'graphql';
+import { ConstDirectiveNode, Kind, OperationTypeNode } from 'graphql';
 import {
   EntityInterfaceFederationData,
   getEntriesNotInHashSet,
@@ -39,7 +32,6 @@ import { ObjectDefinitionData } from '../schema-building/type-definition-data';
 import { InvalidRootTypeFieldEventsDirectiveData } from './utils';
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
 import { UnresolvableFieldData } from '../resolvability-graph/utils';
-import { FieldSetDirective } from '../schema-building/utils';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -1538,18 +1530,18 @@ export function externalInterfaceFieldsError(typeName: string, fieldNames: Array
 }
 
 export function nonExternalConditionalFieldError(
-  originCoords: string,
+  directiveCoords: string,
   subgraphName: string,
   targetCoords: string,
   fieldSet: string,
-  fieldSetDirective: FieldSetDirective,
+  fieldSetDirectiveName: string,
 ): Error {
   return new Error(
-    `The field "${originCoords}" in subgraph "${subgraphName}" defines a "@${fieldSetDirective}" directive` +
-      ` with the following field set:\n "${fieldSet}".` +
+    `The field "${directiveCoords}" in subgraph "${subgraphName}" defines a "@${fieldSetDirectiveName}"` +
+      ` directive with the following field set:\n "${fieldSet}".` +
       `\nHowever, neither the field "${targetCoords}" nor any of its field set ancestors are declared @external.` +
-      `\nConsequently, "${targetCoords}" is already provided by subgraph "${subgraphName}" and should not form part of` +
-      ` a "@${fieldSetDirective}" directive field set.`,
+      `\nConsequently, "${targetCoords}" is already provided by subgraph "${subgraphName}" and should not form part` +
+      ` of a "@${fieldSetDirectiveName}" directive field set.`,
   );
 }
 
@@ -1604,5 +1596,18 @@ export function invalidExternalDirectiveError(fieldCoords: string): Error {
       ` be declared "@external" if it is part of a "@key", "@provides", or "@requires" field set, or the field is` +
       ` necessary to satisfy an Interface implementation. In the case that none of these conditions is true, the` +
       ` "@external" directive should be removed.`,
+  );
+}
+
+export function fieldAlreadyProvidedErrorMessage(
+  fieldCoords: string,
+  subgraphName: string,
+  directiveName: string,
+): string {
+  return (
+    `The field "${fieldCoords}" is unconditionally provided by subgraph "${subgraphName}" and should not form` +
+    ` part of any "@${directiveName}" field set. Although "${fieldCoords}" is declared "@external", it is part of` +
+    ` a "@key" directive on an extension type. Such fields are only declared "@external" for legacy syntactical` +
+    ` reasons and are not internally considered "@external".`
   );
 }

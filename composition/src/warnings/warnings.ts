@@ -1,5 +1,4 @@
 import { QUOTATION_JOIN } from '../utils/string-constants';
-import { FieldSetDirective } from '../schema-building/utils';
 
 export type WarningSubgraphData = {
   name: string;
@@ -73,20 +72,20 @@ export function externalInterfaceFieldsWarning(
 }
 
 export function nonExternalConditionalFieldWarning(
-  originCoords: string,
+  directiveCoords: string,
   subgraphName: string,
   targetCoords: string,
   fieldSet: string,
-  fieldSetDirective: FieldSetDirective,
+  fieldSetDirectiveName: string,
 ): Warning {
   return new Warning({
     message:
       versionOneWarningPropagationMessage(subgraphName) +
-      `The field "${originCoords}" in subgraph "${subgraphName}" defines a "@${fieldSetDirective}" directive with` +
+      `The field "${directiveCoords}" in subgraph "${subgraphName}" defines a "@${fieldSetDirectiveName}" directive with` +
       ` the following field set:\n "${fieldSet}".` +
       `\nHowever, neither the field "${targetCoords}" nor any of its field set ancestors are declared @external.` +
       `\nConsequently, "${targetCoords}" is already provided by subgraph "${subgraphName}" and should not form part` +
-      ` of a "@${fieldSetDirective}" directive field set.`,
+      ` of a "@${fieldSetDirectiveName}" directive field set.`,
     subgraph: {
       name: subgraphName,
     },
@@ -146,6 +145,27 @@ export function externalEntityExtensionKeyFieldWarning(
       `"\nPlease note fields that form part of` +
       ` entity extension "@key" field sets are always provided in that subgraph. Any such "@external" declarations` +
       ` are unnecessary relics of Federation Version 1 syntax and are effectively ignored.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function fieldAlreadyProvidedWarning(
+  fieldCoords: string,
+  directiveName: string,
+  directiveCoords: string,
+  subgraphName: string,
+): Warning {
+  return new Warning({
+    message:
+      versionOneWarningPropagationMessage(subgraphName) +
+      `The field "${fieldCoords}" is unconditionally provided by subgraph "${subgraphName}" and should not form` +
+      ` part of any "@${directiveName}" field set.` +
+      `\nHowever, "${fieldCoords}" forms part of the "@${directiveName}" field set defined "${directiveCoords}".` +
+      `\nAlthough "${fieldCoords}" is declared "@external", it is part of` +
+      ` a "@key" directive on an extension type. Such fields are only declared "@external" for legacy syntactical` +
+      ` reasons and are not internally considered "@external".`,
     subgraph: {
       name: subgraphName,
     },

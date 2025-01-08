@@ -27,7 +27,7 @@ import {
   EnumDefinitionData,
   EnumValueData,
   ExtensionType,
-  ExternalData,
+  ExternalFieldData,
   FieldData,
   InputObjectDefinitionData,
   InputValueData,
@@ -92,6 +92,7 @@ import {
   INT_SCALAR,
   KEY,
   MUTATION,
+  PERIOD,
   PERSISTED_CLIENT_DIRECTIVES,
   QUERY,
   REASON,
@@ -115,7 +116,8 @@ import {
 import { INHERITABLE_DIRECTIVE_NAMES, V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME } from '../utils/constants';
 import {
   FieldConfiguration,
-  FieldSetCondition,
+  FieldSetConditionData,
+  FieldSetConditionRouterData,
   SubscriptionFilterValue,
 } from '../router-configuration/router-configuration';
 import { printTypeNode } from '@graphql-tools/merge';
@@ -487,9 +489,7 @@ export function addFieldDataByNode(
   const { isExternal, isShareable } = isNodeExternalOrShareable(node, !isSubgraphVersionTwo, directivesByDirectiveName);
   const fieldData: FieldData = {
     argumentDataByArgumentName: argumentDataByArgumentName,
-    isExternalBySubgraphName: new Map<string, ExternalData>([
-      [subgraphName, { isExternal, isTrueExternal: isExternal }],
-    ]),
+    isExternalBySubgraphName: new Map<string, ExternalFieldData>([[subgraphName, newExternalFieldData(isExternal)]]),
     isInaccessible: directivesByDirectiveName.has(INACCESSIBLE),
     isShareableBySubgraphName: new Map<string, boolean>([[subgraphName, isShareable]]),
     node: getMutableFieldNode(node, fieldPath, errors),
@@ -1213,7 +1213,8 @@ export function validateExternalAndShareable(fieldData: FieldData, invalidFieldN
      * 1. the field is external
      * 2. the field is overridden by another subgraph (in which case it has not been upserted)
      */
-    if (fieldData.isExternalBySubgraphName.get(subgraphName)?.isTrueExternal) {
+    const externalFieldData = fieldData.isExternalBySubgraphName.get(subgraphName);
+    if (externalFieldData && !externalFieldData.isUnconditionallyProvided) {
       externalFieldSubgraphNames.push(subgraphName);
       continue;
     }
@@ -1333,19 +1334,45 @@ export function getParentTypeName(parentData: CompositeOutputData): string {
   return parentData.name;
 }
 
-export enum FieldSetDirective {
-  PROVIDES = 'provides',
-  REQUIRES = 'requires',
-}
-
 export type ConditionalFieldData = {
-  providedBy: Array<FieldSetCondition>;
-  requiredBy: Array<FieldSetCondition>;
+  providedBy: Array<FieldSetConditionData>;
+  requiredBy: Array<FieldSetConditionData>;
 };
 
 export function newConditionalFieldData(): ConditionalFieldData {
   return {
     providedBy: [],
     requiredBy: [],
+  };
+}
+
+export function newExternalFieldData(isDefinedExternal: boolean): ExternalFieldData {
+  return {
+    isDefinedExternal,
+    isUnconditionallyProvided: !isDefinedExternal,
+    providedPaths: new Set<string>(),
+  };
+}
+
+export type KeyFieldConditionData = {
+  fieldCoordinatesPath: Array<string>;
+  preEntityFieldCoordinates: Set<string>;
+  fieldPath: Array<string>;
+  typePath: Array<string>;
+};
+
+export function concatenatePath(fieldPath: Array<string>, parentTypeName?: string): string {
+  if (parentTypeName) {
+    return `${parentTypeName}.${fieldPath.join(PERIOD)}`;
+  }
+  return fieldPath.join(PERIOD);
+}
+
+export function newFieldSetConditionRouterData(
+  data: FieldSetConditionData | KeyFieldConditionData,
+): FieldSetConditionRouterData {
+  return {
+    fieldCoordinatesPath: data.fieldCoordinatesPath,
+    fieldPath: data.fieldPath,
   };
 }

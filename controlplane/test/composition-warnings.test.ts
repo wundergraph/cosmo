@@ -1,13 +1,11 @@
 import {
-  externalInterfaceFieldsWarning, FieldSetDirective,
+  externalInterfaceFieldsWarning,
   invalidOverrideTargetSubgraphNameWarning,
-  NOT_APPLICABLE, nonExternalConditionalFieldWarning,
+  nonExternalConditionalFieldWarning, REQUIRES,
 } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { parse } from 'graphql/index.js';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { composeSubgraphs } from '../src/core/composition/composition.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { SetupTest } from './test-util.js';
 
@@ -191,7 +189,7 @@ describe('Composition warning tests', (ctx) => {
         'products',
         'NestedObject.name',
         'object { nestedObject { name } }',
-        FieldSetDirective.REQUIRES,
+        REQUIRES,
       ).message,
     );
 

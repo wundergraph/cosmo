@@ -49,30 +49,39 @@ export type FieldConfiguration = {
   requiredScopes?: string[][];
 };
 
-export type FieldSetCondition = {
+export type FieldSetConditionData = {
   fieldCoordinatesPath: Array<string>;
   fieldPath: Array<string>;
+  typePath: Array<string>;
 };
 
-export type FieldSetConditionOptions = {
+export type FieldSetConditionDataOptions = {
   fieldCoordinatesPath: Array<string>;
   fieldPath: Array<string>;
+  typePath: Array<string>;
 };
 
 export function newFieldSetConditionData({
   fieldCoordinatesPath,
   fieldPath,
-}: FieldSetConditionOptions): FieldSetCondition {
+  typePath,
+}: FieldSetConditionDataOptions): FieldSetConditionData {
   return {
     fieldCoordinatesPath,
     fieldPath,
+    typePath,
   };
 }
+
+export type FieldSetConditionRouterData = {
+  fieldCoordinatesPath: Array<string>;
+  fieldPath: Array<string>;
+};
 
 export type RequiredFieldConfiguration = {
   fieldName: string;
   selectionSet: string;
-  conditions?: Array<FieldSetCondition>;
+  conditions?: Array<FieldSetConditionRouterData>;
   disableEntityResolver?: boolean;
 };
 

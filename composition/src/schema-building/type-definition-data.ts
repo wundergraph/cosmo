@@ -48,15 +48,22 @@ export type EnumValueData = {
   description?: StringValueNode;
 };
 
-export type ExternalData = {
-  isExternal: boolean;
-  isTrueExternal: boolean;
+export type ExternalFieldData = {
+  // Indiscriminate representation of whether  @external is defined on the field.
+  isDefinedExternal: boolean;
+  /*
+   * A field with an @external directive definition may still be unconditionally provided.
+   * For example, entity extension key fields are determined to be unconditionally resolvable.
+   * */
+  isUnconditionallyProvided: boolean;
+  // The paths by which the external field is provided.
+  providedPaths: Set<string>;
 };
 
 export type FieldData = {
   argumentDataByArgumentName: Map<string, InputValueData>;
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
-  isExternalBySubgraphName: Map<string, ExternalData>;
+  isExternalBySubgraphName: Map<string, ExternalFieldData>;
   isInaccessible: boolean;
   isShareableBySubgraphName: Map<string, boolean>;
   name: string;

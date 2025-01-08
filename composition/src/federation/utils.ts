@@ -1,9 +1,9 @@
 import { ConstDirectiveNode, DocumentNode, GraphQLSchema } from 'graphql';
 import {
-  ConfigurationData,
   FieldConfiguration,
-  FieldSetCondition,
+  newFieldSetConditionData,
   RequiredFieldConfiguration,
+  FieldSetConditionRouterData,
 } from '../router-configuration/router-configuration';
 import { InternalSubgraph, SubgraphConfig } from '../subgraph/subgraph';
 import {
@@ -13,7 +13,13 @@ import {
   ObjectDefinitionData,
   ParentDefinitionData,
 } from '../schema-building/type-definition-data';
-import { addIterableValuesToSet, AuthorizationData, EntityData, EntityInterfaceFederationData } from '../utils/utils';
+import {
+  AuthorizationData,
+  EntityData,
+  EntityInterfaceFederationData,
+  getOrThrowError,
+  getValueOrDefault,
+} from '../utils/utils';
 import { Graph } from '../resolvability-graph/graph';
 import { getTypeNodeNamedTypeName, MutableFieldNode } from '../schema-building/ast';
 import { BREAK, Kind, visit } from 'graphql/index';
@@ -21,8 +27,14 @@ import { BASE_SCALARS } from '../utils/constants';
 import { isKindAbstract, safeParse } from '../ast/utils';
 import { getNormalizedFieldSet } from '../normalization/utils';
 import { GraphNode } from '../resolvability-graph/graph-nodes';
-import { ConditionalFieldData } from '../schema-building/utils';
+import {
+  ConditionalFieldData,
+  concatenatePath,
+  KeyFieldConditionData,
+  newFieldSetConditionRouterData,
+} from '../schema-building/utils';
 import { Warning } from '../warnings/warnings';
+import { PROVIDES, REQUIRES } from '../utils/string-constants';
 
 export type FederationFactoryOptions = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -105,8 +117,8 @@ export type InterfaceObjectForInternalGraphOptions = {
 };
 
 export type VisitFieldSetOptions = {
-  conditionalFieldDataByCoordinates: Map<string, ConditionalFieldData>;
-  configurationData: ConfigurationData;
+  conditionalFieldDataByCoords: Map<string, ConditionalFieldData>;
+  subgraphName: string;
   fieldSets: Set<string>;
   implicitKeys: Array<RequiredFieldConfiguration>;
   objectData: ObjectDefinitionData | InterfaceDefinitionData;
@@ -114,14 +126,36 @@ export type VisitFieldSetOptions = {
   graphNode?: GraphNode;
 };
 
+export type ContractTagOptions = {
+  tagNamesToExclude: Set<string>;
+  tagNamesToInclude: Set<string>;
+};
+
+export function newContractTagOptionsFromArrays(
+  tagNamesToExclude: Array<string>,
+  tagNamesToInclude: Array<string>,
+): ContractTagOptions {
+  return {
+    tagNamesToExclude: new Set<string>(tagNamesToExclude),
+    tagNamesToInclude: new Set<string>(tagNamesToInclude),
+  };
+}
+
+export function getConditionalFieldSetDirectiveName(isProvides: boolean): string {
+  if (isProvides) {
+    return PROVIDES;
+  }
+  return REQUIRES;
+}
+
 export function validateImplicitFieldSets({
-  conditionalFieldDataByCoordinates,
-  configurationData,
+  conditionalFieldDataByCoords,
   fieldSets,
+  graphNode,
   implicitKeys,
   objectData,
   parentDefinitionDataByTypeName,
-  graphNode,
+  subgraphName,
 }: VisitFieldSetOptions) {
   for (const fieldSet of fieldSets) {
     // Create a new selection set so that the value can be parsed as a new DocumentNode
@@ -132,8 +166,9 @@ export function validateImplicitFieldSets({
     }
     const parentDatas: CompositeOutputData[] = [objectData];
     const definedFields: Set<string>[] = [];
-    const keyFieldNames = new Set<string>();
-    const fieldSetConditions: Array<FieldSetCondition> = [];
+    const potentialFieldSetConditions = new Map<string, Map<string, KeyFieldConditionData>>();
+    const conditionByPreEntityPath = new Map<string, KeyFieldConditionData>();
+    let conditionalFieldCount = 0;
     let currentDepth = -1;
     let shouldDefineSelectionSet = true;
     let shouldAddKeyFieldSet = true;
@@ -157,27 +192,77 @@ export function validateImplicitFieldSets({
           const fieldName = node.name.value;
           const fieldData = parentData.fieldDataByFieldName.get(fieldName);
           // undefined if the field does not exist on the parent
-          if (!fieldData || fieldData.argumentDataByArgumentName.size || definedFields[currentDepth].has(fieldName)) {
+          if (
+            !fieldData ||
+            fieldData.argumentDataByArgumentName.size > 0 ||
+            definedFields[currentDepth].has(fieldName)
+          ) {
             shouldAddKeyFieldSet = false;
             return BREAK;
           }
-          const conditionalData = conditionalFieldDataByCoordinates.get(
-            `${fieldData.renamedParentTypeName}.${fieldName}`,
+          const externalFieldData = getOrThrowError(
+            fieldData.isExternalBySubgraphName,
+            subgraphName,
+            `${fieldData.originalParentTypeName}.${fieldName}.isExternalBySubgraphName`,
           );
+          const conditionalData = conditionalFieldDataByCoords.get(`${fieldData.renamedParentTypeName}.${fieldName}`);
+          if (!externalFieldData.isUnconditionallyProvided && !conditionalData?.providedBy.length) {
+            shouldAddKeyFieldSet = false;
+            return BREAK;
+          }
+          // Whether the field is *ever* satisfiable within the entity.
+          let isProvidable = false;
           if (conditionalData) {
-            if (conditionalData.providedBy.length > 0) {
-              fieldSetConditions.push(...conditionalData.providedBy);
-            } else if (conditionalData.requiredBy.length > 0) {
-              shouldAddKeyFieldSet = false;
-              return BREAK;
+            let isUnconditionallyProvided = false;
+            for (const fieldSetCondition of conditionalData.providedBy) {
+              const parentTypeName = fieldSetCondition.typePath[0];
+              /*
+               * parentDatas contains each parent type data on the current path within the entity.
+               * If one of these parentDatas is the parent of the field that defines @provides for a key field,
+               * that key field is provided within the entity itself and can *always* be satisfied within the entity.
+               * This means the key field is essentially unconditional in its contribution to an implicit key.
+               *  */
+              for (let i = 0; i < parentDatas.length; i++) {
+                if (parentTypeName === parentDatas[i].name) {
+                  isUnconditionallyProvided = true;
+                  break;
+                }
+              }
+
+              for (let i = 1; i < fieldSetCondition.fieldCoordinatesPath.length; i++) {
+                const childTypeName = fieldSetCondition.typePath[i];
+                if (childTypeName !== objectData.name) {
+                  continue;
+                }
+                isProvidable = true;
+                // The @provides path before entering the entity type (start to current depth).
+                const preEntityPath = concatenatePath(fieldSetCondition.fieldPath.slice(0, i), parentTypeName);
+                // The @provides path after entering the entity type (current depth to end).
+                const postEntityPath = concatenatePath(fieldSetCondition.fieldPath.slice(i));
+                const condition: KeyFieldConditionData = {
+                  fieldCoordinatesPath: fieldSetCondition.fieldCoordinatesPath,
+                  preEntityFieldCoordinates: new Set<string>(fieldSetCondition.fieldCoordinatesPath.slice(0, i)),
+                  fieldPath: fieldSetCondition.fieldPath,
+                  typePath: fieldSetCondition.typePath,
+                };
+                getValueOrDefault(conditionByPreEntityPath, preEntityPath, () => condition);
+                getValueOrDefault(
+                  potentialFieldSetConditions,
+                  preEntityPath,
+                  () => new Map<string, KeyFieldConditionData>(),
+                ).set(postEntityPath, condition);
+                break;
+              }
+            }
+            if (!isUnconditionallyProvided) {
+              if (!isProvidable) {
+                shouldAddKeyFieldSet = false;
+                return BREAK;
+              }
+              conditionalFieldCount += 1;
             }
           }
           definedFields[currentDepth].add(fieldName);
-          // Depth 0 is the original parent type
-          // If a field is external, but it's part of a key FieldSet, it will be included in the root configuration
-          if (currentDepth === 0) {
-            keyFieldNames.add(fieldName);
-          }
           const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
           // The base scalars are not in the parents map
           if (BASE_SCALARS.has(namedTypeName)) {
@@ -236,32 +321,55 @@ export function validateImplicitFieldSets({
     if (!shouldAddKeyFieldSet) {
       continue;
     }
-    // Add any top-level fields that compose the key in case they are external
-    addIterableValuesToSet(keyFieldNames, configurationData.fieldNames);
+    const validFieldSetConditions: Array<FieldSetConditionRouterData> = [];
+    for (const [preEntityPath, leafByPostEntityPath] of potentialFieldSetConditions) {
+      // It is not yet known whether the current path ia a super-condition or a sub-condition.
+      const superCondition = conditionByPreEntityPath.get(preEntityPath);
+      if (!superCondition) {
+        continue;
+      }
+      if (leafByPostEntityPath.size === conditionalFieldCount) {
+        validFieldSetConditions.push(newFieldSetConditionRouterData(superCondition));
+        continue;
+      }
+      for (const [otherPreEntityPath, otherLeafConditionByPostEntityPath] of potentialFieldSetConditions) {
+        // Do not compare a condition to itself.
+        if (preEntityPath === otherPreEntityPath) {
+          continue;
+        }
+        const subCondition = conditionByPreEntityPath.get(otherPreEntityPath);
+        if (!subCondition) {
+          continue;
+        }
+        /*
+         * If the root field coordinates of the potential sub-condition is not within the potential super-condition
+         * path, then it cannot be a sub-condition of the potential super-condition.
+         */
+        if (!superCondition.preEntityFieldCoordinates.has(subCondition.fieldCoordinatesPath[0])) {
+          continue;
+        }
+        // Now that a sub-condition has been determined, add its own provided key fields to the super-condition.
+        for (const [postEntityPath, leafCondition] of otherLeafConditionByPostEntityPath) {
+          if (!leafByPostEntityPath.get(postEntityPath)) {
+            leafByPostEntityPath.set(postEntityPath, leafCondition);
+          }
+        }
+        // If all conditional key fields are provided, the implicit key is satisfied on the super-condition path.
+        if (leafByPostEntityPath.size === conditionalFieldCount) {
+          validFieldSetConditions.push(newFieldSetConditionData(superCondition));
+          break;
+        }
+      }
+    }
     const normalizedFieldSet = getNormalizedFieldSet(documentNode);
     implicitKeys.push({
       fieldName: '',
       selectionSet: normalizedFieldSet,
-      ...(fieldSetConditions.length > 0 ? { conditions: fieldSetConditions } : {}),
+      ...(validFieldSetConditions.length > 0 ? { conditions: validFieldSetConditions } : {}),
       disableEntityResolver: true,
     });
     if (graphNode) {
       graphNode.satisfiedFieldSets.add(normalizedFieldSet);
     }
   }
-}
-
-export type ContractTagOptions = {
-  tagNamesToExclude: Set<string>;
-  tagNamesToInclude: Set<string>;
-};
-
-export function newContractTagOptionsFromArrays(
-  tagNamesToExclude: Array<string>,
-  tagNamesToInclude: Array<string>,
-): ContractTagOptions {
-  return {
-    tagNamesToExclude: new Set<string>(tagNamesToExclude),
-    tagNamesToInclude: new Set<string>(tagNamesToInclude),
-  };
 }

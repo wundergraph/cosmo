@@ -567,51 +567,6 @@ describe('Entity tests', () => {
       );
     });
 
-    test('that external fields that compose an adopted implicit entity key are included in the router configuration', () => {
-      const { errors, federationResult } = federateSubgraphs([subgraphJ, subgraphN]);
-      expect(errors).toBeUndefined();
-      const subgraphConfigBySubgraphName = federationResult?.subgraphConfigBySubgraphName;
-      const j = subgraphConfigBySubgraphName?.get('subgraph-j');
-      expect(j).toBeDefined();
-      const n = subgraphConfigBySubgraphName?.get('subgraph-n');
-      expect(n).toBeDefined();
-      expect(j!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
-          [
-            'Entity',
-            {
-              fieldNames: new Set<string>(['id', 'age']),
-              isRootNode: true,
-              keys: [{ fieldName: '', selectionSet: 'id' }],
-              typeName: 'Entity',
-            },
-          ],
-        ]),
-      );
-      expect(n!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
-          [
-            'Query',
-            {
-              fieldNames: new Set<string>(['entity']),
-              isRootNode: true,
-              typeName: 'Query',
-            },
-          ],
-          [
-            'Entity',
-            {
-              externalFieldNames: new Set<string>(['id']),
-              fieldNames: new Set<string>(['name', 'id']),
-              isRootNode: true,
-              keys: [{ disableEntityResolver: true, fieldName: '', selectionSet: 'id' }],
-              typeName: 'Entity',
-            },
-          ],
-        ]),
-      );
-    });
-
     test('that resolvable false is correctly propagated in the ConfigurationData', () => {
       const { errors, federationResult } = federateSubgraphs([subgraphS]);
       expect(errors).toBeUndefined();

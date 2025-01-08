@@ -199,7 +199,7 @@ import {
   FederateTypeResult,
   getMostRestrictiveMergedTypeNode,
 } from '../schema-building/type-merging';
-import { ConstDirectiveNode, ConstObjectValueNode, ListTypeNode, NonNullTypeNode, TypeNode } from 'graphql/index';
+import { ConstDirectiveNode, ConstObjectValueNode, ListTypeNode, NonNullTypeNode, TypeNode, } from 'graphql/index';
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
 import { Graph } from '../resolvability-graph/graph';
 import { GraphNode } from '../resolvability-graph/graph-nodes';
@@ -385,19 +385,19 @@ export class FederationFactory {
     const configurationData = getOrThrowError(
       internalSubgraph.configurationDataByTypeName,
       entityData.typeName,
-      'internalSubgraph.configurationDataByParentTypeName',
+      'internalSubgraph.configurationDataByTypeName',
     );
     const implicitKeys: RequiredFieldConfiguration[] = [];
     const graphNode = this.internalGraph.nodeByNodeName.get(`${this.currentSubgraphName}.${entityData.typeName}`);
     // Any errors in the field sets would be caught when evaluating the explicit entities, so they are ignored here
     validateImplicitFieldSets({
-      conditionalFieldDataByCoordinates: internalSubgraph.conditionalFieldDataByCoordinates,
-      configurationData,
+      conditionalFieldDataByCoords: internalSubgraph.conditionalFieldDataByCoordinates,
       fieldSets: entityData.keyFieldSets,
       graphNode,
       implicitKeys,
       objectData,
       parentDefinitionDataByTypeName,
+      subgraphName: this.currentSubgraphName,
     });
     for (const [typeName, entityInterfaceFederationData] of this.entityInterfaceFederationDataByTypeName) {
       if (!entityInterfaceFederationData.concreteTypeNames?.has(entityData.typeName)) {
@@ -408,13 +408,13 @@ export class FederationFactory {
         continue;
       }
       validateImplicitFieldSets({
-        conditionalFieldDataByCoordinates: internalSubgraph.conditionalFieldDataByCoordinates,
-        configurationData,
+        conditionalFieldDataByCoords: internalSubgraph.conditionalFieldDataByCoordinates,
         fieldSets: interfaceObjectEntityData.keyFieldSets,
+        graphNode,
         implicitKeys,
         objectData,
         parentDefinitionDataByTypeName,
-        graphNode,
+        subgraphName: this.currentSubgraphName,
       });
     }
     if (implicitKeys.length < 1) {
@@ -425,13 +425,20 @@ export class FederationFactory {
       configurationData.keys = implicitKeys;
       return;
     }
-    const existingKeys = new Set<string>(configurationData.keys.map((key) => key.selectionSet));
+    // TODO don't assess non-conditional keys
+    const existingKeyByFieldSet = new Map<string, RequiredFieldConfiguration>(
+      configurationData.keys.map((key) => [key.selectionSet, key]),
+    );
     for (const implicitKey of implicitKeys) {
-      if (existingKeys.has(implicitKey.selectionSet)) {
+      const existingKey = existingKeyByFieldSet.get(implicitKey.selectionSet);
+      if (existingKey) {
+        if (implicitKey.conditions?.length) {
+          existingKey.conditions = implicitKey.conditions;
+        }
         continue;
       }
       configurationData.keys.push(implicitKey);
-      existingKeys.add(implicitKey.selectionSet);
+      // existingKeyByFieldSet.add(implicitKey.selectionSet);
     }
   }
 
@@ -440,6 +447,7 @@ export class FederationFactory {
     interfaceObjectTypeName: string,
     entityData: EntityData,
     graphNode: GraphNode,
+    subgraphName: string,
   ) {
     const parentDefinitionDataByTypeName = internalSubgraph.parentDefinitionDataByTypeName;
     const interfaceObjectData = parentDefinitionDataByTypeName.get(interfaceObjectTypeName);
@@ -458,13 +466,13 @@ export class FederationFactory {
     const implicitKeys: RequiredFieldConfiguration[] = [];
     // Any errors in the field sets would be caught when evaluating the explicit entities, so they are ignored here
     validateImplicitFieldSets({
-      conditionalFieldDataByCoordinates: internalSubgraph.conditionalFieldDataByCoordinates,
-      configurationData,
+      conditionalFieldDataByCoords: internalSubgraph.conditionalFieldDataByCoordinates,
       fieldSets: entityData.keyFieldSets,
-      implicitKeys,
-      objectData: interfaceObjectData,
-      parentDefinitionDataByTypeName,
       graphNode,
+      implicitKeys,
+      parentDefinitionDataByTypeName,
+      objectData: interfaceObjectData,
+      subgraphName,
     });
     if (implicitKeys.length < 1) {
       return;
@@ -1377,6 +1385,7 @@ export class FederationFactory {
       interfaceObjectNode.typeName,
       entityData,
       entityGraphNode,
+      subgraphName,
     );
   }
 
