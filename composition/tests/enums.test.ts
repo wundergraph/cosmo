@@ -524,14 +524,15 @@ describe('Enum tests', () => {
     });
 
     test('that an Enum has subgraphs data', () => {
-      const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphB]);
+      const { errors, federationResult } = federateSubgraphs([subgraphA, subgraphC]);
       expect(errors).toBeUndefined();
 
-      const enumVa = federationResult?.parentDefinitionDataByTypeName.get('Instruction');
-      console.log((enumVa as EnumDefinitionData).enumValueDataByValueName.get('FIGHT')?.subgraphNames);
-      // console.dir(enumVa, {
-      //   depth: null,
-      // });
+      const enumDef = federationResult?.parentDefinitionDataByTypeName.get('Instruction') as EnumDefinitionData;
+
+      expect(enumDef.subgraphNames.size).toBe(2);
+      expect(enumDef.enumValueDataByValueName.get('FIGHT')?.subgraphNames.size).toBe(2);
+      expect(enumDef.enumValueDataByValueName.get('POKEMON')?.subgraphNames.size).toBe(2);
+      expect(enumDef.enumValueDataByValueName.get('ITEM')?.subgraphNames.size).toBe(1);
     });
   });
 });
