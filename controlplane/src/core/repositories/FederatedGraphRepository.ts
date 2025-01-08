@@ -75,6 +75,7 @@ import { SchemaDiff } from '../composition/schemaCheck.js';
 import { AdmissionError } from '../services/AdmissionWebhookController.js';
 import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { unsuccessfulBaseCompositionError } from '../errors/errors.js';
+import { ClickHouseClient } from '../clickhouse/index.js';
 import { ContractRepository } from './ContractRepository.js';
 import { FeatureFlagRepository, SubgraphsToCompose } from './FeatureFlagRepository.js';
 import { GraphCompositionRepository } from './GraphCompositionRepository.js';
@@ -200,6 +201,7 @@ export class FederatedGraphRepository {
       jwtSecret: string;
       cdnBaseUrl: string;
     };
+    chClient: ClickHouseClient;
   }): Promise<
     | {
         compositionErrors: PlainMessage<CompositionError>[];
@@ -317,6 +319,7 @@ export class FederatedGraphRepository {
             cdnBaseUrl: data.admissionConfig.cdnBaseUrl,
           },
           actorId: data.updatedBy,
+          chClient: data.chClient,
         });
 
         return {
@@ -348,6 +351,7 @@ export class FederatedGraphRepository {
       jwtSecret: string;
       cdnBaseUrl: string;
     },
+    chClient: ClickHouseClient,
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
     deploymentErrors: PlainMessage<DeploymentError>[];
@@ -406,6 +410,7 @@ export class FederatedGraphRepository {
             cdnBaseUrl: admissionConfig.cdnBaseUrl,
             webhookJWTSecret: admissionConfig.jwtSecret,
           },
+          chClient,
         });
 
         return {
@@ -423,6 +428,7 @@ export class FederatedGraphRepository {
           cdnBaseUrl: admissionConfig.cdnBaseUrl,
           webhookJWTSecret: admissionConfig.jwtSecret,
         },
+        chClient,
       });
 
       return {
@@ -1447,6 +1453,7 @@ export class FederatedGraphRepository {
     blobStorage,
     admissionConfig,
     actorId,
+    chClient,
   }: {
     federatedGraphs: FederatedGraphDTO[];
     blobStorage: BlobStorage;
@@ -1455,6 +1462,7 @@ export class FederatedGraphRepository {
       cdnBaseUrl: string;
     };
     actorId: string;
+    chClient: ClickHouseClient;
   }) => {
     return this.db.transaction(async (tx) => {
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
@@ -1469,6 +1477,7 @@ export class FederatedGraphRepository {
         subgraphRepo,
         contractRepo,
         graphCompositionRepo,
+        chClient,
       );
 
       const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];

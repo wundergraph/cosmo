@@ -146,6 +146,7 @@ import { getSubgraphByName } from './subgraph/getSubgraphByName.js';
 import { getNamespace } from './namespace/getNamespace.js';
 import { getSubgraphById } from './subgraph/getSubgraphById.js';
 import { getFederatedGraphById } from './federated-graph/getFederatedGraphById.js';
+import { pushCacheWarmerOperation } from './cache-warmer/pushCacheWarmerOperation.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -419,6 +420,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     configureNamespaceGraphPruningConfig: (req, ctx) => {
       return configureNamespaceGraphPruningConfig(opts, req, ctx);
+    },
+
+    pushCacheWarmerOperation: (req, ctx) => {
+      return pushCacheWarmerOperation(opts, req, ctx);
     },
 
     /*
