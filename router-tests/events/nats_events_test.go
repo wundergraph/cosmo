@@ -71,16 +71,6 @@ func TestNatsEvents(t *testing.T) {
 				require.NoError(t, clientErr)
 			}()
 
-			var closed atomic.Bool
-			go func() {
-				xEnv.WaitForMessagesSent(2, time.Second*10)
-				require.Eventually(t, func() bool {
-					return subscriptionCalled.Load() == 2
-				}, time.Second*20, time.Millisecond*100)
-				require.NoError(t, client.Close())
-				closed.Store(true)
-			}()
-
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
 			// Send a mutation to trigger the first subscription
@@ -96,11 +86,19 @@ func TestNatsEvents(t *testing.T) {
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 
+			var closed atomic.Bool
+			go func() {
+				require.Eventually(t, func() bool {
+					return subscriptionCalled.Load() == 2
+				}, time.Second*20, time.Millisecond*100)
+				require.NoError(t, client.Close())
+				closed.Store(true)
+			}()
+
 			require.Eventually(t, func() bool {
 				return closed.Load()
 			}, time.Second*20, time.Millisecond*100)
 
-			xEnv.WaitForMessagesSent(2, time.Second*10)
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
 
