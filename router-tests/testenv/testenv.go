@@ -616,10 +616,9 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		}
 	}
 
-	var routerStartErr = make(chan error, 1)
-	go func() {
-		routerStartErr <- rr.Start(ctx)
-	}()
+	if err := rr.Start(ctx); err != nil {
+		return nil, err
+	}
 
 	graphQLPath := "/graphql"
 	if cfg.OverrideGraphQLPath != "" {
@@ -709,7 +708,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		}
 	}
 
-	waitErr := e.WaitForServer(ctx, e.RouterURL+"/health/live", 100, 10, routerStartErr)
+	waitErr := e.WaitForServer(ctx, e.RouterURL+"/health/live", 100, 10)
 
 	return e, waitErr
 }
@@ -1179,7 +1178,7 @@ type TestResponse struct {
 	Proto    string
 }
 
-func (e *Environment) WaitForServer(ctx context.Context, url string, timeoutMs int, maxAttempts int, routerStartErr chan error) error {
+func (e *Environment) WaitForServer(ctx context.Context, url string, timeoutMs int, maxAttempts int) error {
 	for {
 		if maxAttempts == 0 {
 			return errors.New("timed out waiting for server to be ready")
@@ -1187,8 +1186,6 @@ func (e *Environment) WaitForServer(ctx context.Context, url string, timeoutMs i
 		select {
 		case <-ctx.Done():
 			return errors.New("timed out waiting for router to be ready")
-		case err := <-routerStartErr:
-			return err
 		default:
 			reqCtx, cancelFn := context.WithTimeout(context.Background(), time.Second)
 			req, err := http.NewRequestWithContext(reqCtx, "GET", url, nil)
