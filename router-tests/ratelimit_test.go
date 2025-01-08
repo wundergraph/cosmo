@@ -498,6 +498,177 @@ func TestRateLimit(t *testing.T) {
 			require.Equal(t, fmt.Sprintf(`{"errors":[{"message":"Rate limit exceeded"}],"data":null,"extensions":{"rateLimit":{"key":"%s","requestRate":2,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, key), res.Body)
 		})
 	})
+	t.Run("enabled - above limit - hide stats", func(t *testing.T) {
+		t.Parallel()
+
+		key := uuid.New().String()
+		t.Cleanup(func() {
+			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
+			del := client.Del(context.Background(), key)
+			require.NoError(t, del.Err())
+		})
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithRateLimitConfig(&config.RateLimitConfiguration{
+					Enabled:  true,
+					Strategy: "simple",
+					SimpleStrategy: config.RateLimitSimpleStrategy{
+						Rate:                           2,
+						Burst:                          2,
+						Period:                         time.Second * 2,
+						RejectExceedingRequests:        false,
+						HideStatsFromResponseExtension: true,
+					},
+					Storage: config.RedisConfiguration{
+						Url:       "redis://localhost:6379",
+						KeyPrefix: key,
+					},
+					Debug: true,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			})
+			require.Equal(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+		})
+	})
+	t.Run("enabled - above limit - hide stats - code enabled", func(t *testing.T) {
+		t.Parallel()
+
+		key := uuid.New().String()
+		t.Cleanup(func() {
+			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
+			del := client.Del(context.Background(), key)
+			require.NoError(t, del.Err())
+		})
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithRateLimitConfig(&config.RateLimitConfiguration{
+					Enabled:  true,
+					Strategy: "simple",
+					SimpleStrategy: config.RateLimitSimpleStrategy{
+						Rate:                           1,
+						Burst:                          1,
+						Period:                         time.Second * 2,
+						RejectExceedingRequests:        false,
+						HideStatsFromResponseExtension: true,
+					},
+					Storage: config.RedisConfiguration{
+						Url:       "redis://localhost:6379",
+						KeyPrefix: key,
+					},
+					Debug: true,
+					ErrorExtensionCode: config.RateLimitErrorExtensionCode{
+						Enabled: true,
+						Code:    "RATE_LIMIT_EXCEEDED",
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			})
+			require.Equal(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"Rate limit exceeded for Subgraph 'employees'.","extensions":{"code":"RATE_LIMIT_EXCEEDED"}}],"data":{"employee":null}}`, res.Body)
+		})
+	})
+	t.Run("enabled - above limit - hide stats - code enabled - reject", func(t *testing.T) {
+		t.Parallel()
+
+		key := uuid.New().String()
+		t.Cleanup(func() {
+			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
+			del := client.Del(context.Background(), key)
+			require.NoError(t, del.Err())
+		})
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithRateLimitConfig(&config.RateLimitConfiguration{
+					Enabled:  true,
+					Strategy: "simple",
+					SimpleStrategy: config.RateLimitSimpleStrategy{
+						Rate:                           1,
+						Burst:                          1,
+						Period:                         time.Second * 2,
+						RejectExceedingRequests:        true,
+						HideStatsFromResponseExtension: true,
+					},
+					Storage: config.RedisConfiguration{
+						Url:       "redis://localhost:6379",
+						KeyPrefix: key,
+					},
+					Debug: true,
+					ErrorExtensionCode: config.RateLimitErrorExtensionCode{
+						Enabled: true,
+						Code:    "RATE_LIMIT_EXCEEDED",
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			})
+			require.Equal(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"Rate limit exceeded","extensions":{"code":"RATE_LIMIT_EXCEEDED"}}],"data":null}`, res.Body)
+		})
+	})
+	t.Run("enabled - above limit - hide stats with reject", func(t *testing.T) {
+		t.Parallel()
+
+		key := uuid.New().String()
+		t.Cleanup(func() {
+			client := redis.NewClient(&redis.Options{Addr: "localhost:6379", Password: "test"})
+			del := client.Del(context.Background(), key)
+			require.NoError(t, del.Err())
+		})
+		testenv.Run(t, &testenv.Config{
+			NoRetryClient: true,
+			RouterOptions: []core.Option{
+				core.WithRateLimitConfig(&config.RateLimitConfiguration{
+					Enabled:  true,
+					Strategy: "simple",
+					SimpleStrategy: config.RateLimitSimpleStrategy{
+						Rate:                           1,
+						Burst:                          1,
+						Period:                         time.Second * 2,
+						RejectExceedingRequests:        true,
+						HideStatsFromResponseExtension: true,
+					},
+					Storage: config.RedisConfiguration{
+						Url:       "redis://localhost:6379",
+						KeyPrefix: key,
+					},
+					Debug: true,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			})
+			require.Equal(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+				Variables: json.RawMessage(`{"n":1}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"Rate limit exceeded"}],"data":null}`, res.Body)
+		})
+	})
 }
 
 const (
