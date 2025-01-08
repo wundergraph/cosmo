@@ -8,10 +8,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wundergraph/astjson"
-	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/expr-lang/expr/vm"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 
+	"github.com/wundergraph/astjson"
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"go.opentelemetry.io/otel/attribute"
 
@@ -146,6 +148,11 @@ type requestTelemetryAttributes struct {
 	metricSetAttrs map[string]string
 	// metricSliceAttrs are the attributes for metrics that are string slices and needs to be exploded for prometheus
 	metricSliceAttrs []attribute.KeyValue
+	// mapper is an attribute mapper for context attributes.
+	// It is used to identify attributes that should not be included by default  but can be included if they are
+	// configured in the custom attributes list. The mapper will potentially filter out attributes or include them.
+	// It will also remap the key if configured.
+	mapper *attributeMapper
 
 	// metricsEnabled indicates if metrics are enabled. If false, no metrics attributes will be added
 	metricsEnabled bool
@@ -197,11 +204,8 @@ func (r *requestTelemetryAttributes) addCustomMetricStringAttr(key string, value
 }
 
 func (r *requestTelemetryAttributes) addCommonAttribute(vals ...attribute.KeyValue) {
-	if !r.metricsEnabled && !r.traceEnabled {
-		return
-	}
-	r.metricAttrs = append(r.metricAttrs, vals...)
-	r.traceAttrs = append(r.traceAttrs, vals...)
+	r.addMetricAttribute(vals...)
+	r.addCommonTraceAttribute(vals...)
 }
 
 func (r *requestTelemetryAttributes) addCommonTraceAttribute(vals ...attribute.KeyValue) {
@@ -215,7 +219,8 @@ func (r *requestTelemetryAttributes) addMetricAttribute(vals ...attribute.KeyVal
 	if !r.metricsEnabled {
 		return
 	}
-	r.metricAttrs = append(r.metricAttrs, vals...)
+
+	r.metricAttrs = append(r.metricAttrs, r.mapper.mapAttributes(vals)...)
 }
 
 // requestContext is the default implementation of RequestContext
@@ -245,6 +250,16 @@ type requestContext struct {
 	graphQLErrorCodes []string
 	// telemetry are the base telemetry information of the request
 	telemetry *requestTelemetryAttributes
+	// expressionContext is the context that will be provided to a compiled expression in order to retrieve data via dynamic expressions
+	expressionContext expr.Context
+}
+
+func (c *requestContext) ResolveStringExpression(expression *vm.Program) (string, error) {
+	return expr.ResolveStringExpression(expression, c.expressionContext)
+}
+
+func (c *requestContext) ResolveBoolExpression(expression *vm.Program) (bool, error) {
+	return expr.ResolveBoolExpression(expression, c.expressionContext)
 }
 
 func (c *requestContext) Operation() OperationContext {
@@ -455,8 +470,11 @@ type operationContext struct {
 	name string
 	// opType is the type of the operation (query, mutation, subscription)
 	opType OperationType
-	// Hash is the hash of the operation
+	// hash is the hash of the operation with the normalized content and variables. Used for analytics.
 	hash uint64
+	// internalHash is the hash of the operation with normalized content. Used for engine / executor caching.
+	// we can't use the hash for this due to engine limitations in handling variables with the normalized representation
+	internalHash uint64
 	// Content is the content of the operation
 	content    string
 	variables  *astjson.Value
@@ -590,11 +608,17 @@ type requestContextOptions struct {
 	metricSetAttributes map[string]string
 	metricsEnabled      bool
 	traceEnabled        bool
+	mapper              *attributeMapper
 	w                   http.ResponseWriter
 	r                   *http.Request
 }
 
 func buildRequestContext(opts requestContextOptions) *requestContext {
+
+	rootCtx := expr.Context{
+		Request: expr.LoadRequest(opts.r),
+	}
+
 	return &requestContext{
 		logger:         opts.requestLogger,
 		keys:           map[string]any{},
@@ -605,7 +629,9 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 			metricSetAttrs: opts.metricSetAttributes,
 			metricsEnabled: opts.metricsEnabled,
 			traceEnabled:   opts.traceEnabled,
+			mapper:         opts.mapper,
 		},
-		subgraphResolver: subgraphResolverFromContext(opts.r.Context()),
+		expressionContext: rootCtx,
+		subgraphResolver:  subgraphResolverFromContext(opts.r.Context()),
 	}
 }

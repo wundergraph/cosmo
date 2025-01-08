@@ -1,4 +1,5 @@
 import { QUOTATION_JOIN } from '../utils/string-constants';
+import { DEFAULT_CONSUMER_INACTIVE_THRESHOLD } from '../utils/integer-constants';
 
 export type WarningSubgraphData = {
   name: string;
@@ -166,6 +167,22 @@ export function fieldAlreadyProvidedWarning(
       `\nAlthough "${fieldCoords}" is declared "@external", it is part of` +
       ` a "@key" directive on an extension type. Such fields are only declared "@external" for legacy syntactical` +
       ` reasons and are not internally considered "@external".`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function consumerInactiveThresholdInvalidValueWarning(
+  subgraphName: string,
+  additionalMsg: string = '',
+): Warning {
+  return new Warning({
+    message:
+      `The "consumerInactiveThreshold" argument of type "Int" should be positive and smaller than 2,147,483,648.` +
+      +additionalMsg
+        ? `\n${additionalMsg}`
+        : '',
     subgraph: {
       name: subgraphName,
     },

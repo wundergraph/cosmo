@@ -1,4 +1,4 @@
-package integration_test
+package integration
 
 import (
 	"encoding/json"
@@ -21,7 +21,7 @@ func TestPersistedOperationNotFound(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}`),
 		})
-		require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
 	})
 }
 
@@ -29,26 +29,6 @@ func TestPersistedOperation(t *testing.T) {
 	t.Parallel()
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-		header := make(http.Header)
-		header.Add("graphql-client-name", "my-client")
-		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-			OperationName: []byte(`"Employees"`),
-			Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
-			Header:        header,
-		})
-		require.NoError(t, err)
-		require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
-	})
-}
-
-func TestPersistedOperationWithBlock(t *testing.T) {
-	t.Parallel()
-
-	testenv.Run(t, &testenv.Config{
-		ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-			securityConfiguration.BlockNonPersistedOperations = true
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
 		header := make(http.Header)
 		header.Add("graphql-client-name", "my-client")
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -93,6 +73,66 @@ func TestPersistedOperationPOExtensionNotTransmittedToSubgraph(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 	})
+}
+
+func TestPersistedNormalizationCacheWithMultiOperationDocument(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Should identify correct document after removing unused operations during normalization", func(t *testing.T) {
+
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"A"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "724399f210ef3f16e6e5427a70bb9609ecea7297e99c3e9241d5912d04eabe60"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"a":{"id":1,"details":{"pets":null}}}}`, res.Body)
+			require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+			require.Equal(t, "MISS", res.Response.Header.Get(core.ExecutionPlanCacheHeader))
+
+			header = make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"A"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "724399f210ef3f16e6e5427a70bb9609ecea7297e99c3e9241d5912d04eabe60"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"a":{"id":1,"details":{"pets":null}}}}`, res.Body)
+			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+			require.Equal(t, "HIT", res.Response.Header.Get(core.ExecutionPlanCacheHeader))
+
+			header = make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"B"`),
+				Variables:     []byte(`{"id": 1}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "724399f210ef3f16e6e5427a70bb9609ecea7297e99c3e9241d5912d04eabe60"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"b":{"id":1,"details":{"pets":null}}}}`, res.Body)
+			require.Equal(t, "MISS", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+			require.Equal(t, "MISS", res.Response.Header.Get(core.ExecutionPlanCacheHeader))
+
+			header = make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"B"`),
+				Variables:     []byte(`{"id": 1}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "724399f210ef3f16e6e5427a70bb9609ecea7297e99c3e9241d5912d04eabe60"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"b":{"id":1,"details":{"pets":null}}}}`, res.Body)
+			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+			require.Equal(t, "HIT", res.Response.Header.Get(core.ExecutionPlanCacheHeader))
+		})
+	})
+
 }
 
 func TestPersistedOperationsCache(t *testing.T) {
@@ -145,7 +185,7 @@ func TestPersistedOperationsCache(t *testing.T) {
 			Variables:     []byte(`{"withAligators": false,"withCats": true,"skipDogs": false,"skipMouses": true}`),
 		})
 		require.NoError(t, err)
-		require.Equal(t, `{"errors":[{"message":"persisted query not found","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
+		require.Equal(t, `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
 		require.Equal(t, "", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 		require.Equal(t, "", res.Response.Header.Get(core.ExecutionPlanCacheHeader))
 	}

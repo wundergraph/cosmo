@@ -441,6 +441,7 @@ export function addEnumValueDataByNode(
   directiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
   handledRepeatedDirectivesByHostPath: Map<string, Set<string>>,
   parentTypeName: string,
+  subgraphName: string,
 ) {
   const name = node.name.value;
   enumValueDataByValueName.set(name, {
@@ -457,6 +458,7 @@ export function addEnumValueDataByNode(
     node: getMutableEnumValueNode(node),
     parentTypeName,
     persistedDirectivesData: newPersistedDirectivesData(),
+    subgraphNames: new Set([subgraphName]),
     description: formatDescription(node.description),
   });
 }

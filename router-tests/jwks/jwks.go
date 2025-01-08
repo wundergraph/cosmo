@@ -4,9 +4,8 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
-	"encoding/base64"
-	"encoding/json"
-	"math/big"
+	"github.com/MicahParks/jwkset"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,8 +15,7 @@ import (
 )
 
 const (
-	jwtKeyID          = "123456789"
-	signingMethodType = "RSA" // This should match signingMethod below
+	jwtKeyID = "123456789"
 
 	jwksHTTPPath = "/.well-known/jwks.json"
 )
@@ -29,6 +27,7 @@ var (
 type Server struct {
 	privateKey *rsa.PrivateKey
 	httpServer *httptest.Server
+	storage    jwkset.Storage
 }
 
 func (s *Server) Close() {
@@ -37,45 +36,18 @@ func (s *Server) Close() {
 
 func (s *Server) Token(claims map[string]any) (string, error) {
 	token := jwt.NewWithClaims(signingMethod, jwt.MapClaims(claims))
-	token.Header["kid"] = jwtKeyID
+	token.Header[jwkset.HeaderKID] = jwtKeyID
 	return token.SignedString(s.privateKey)
 }
 
-type jsonWebKeySet struct {
-	Keys []jsonWebKey `json:"keys"`
-}
-
-type jsonWebKey struct {
-	Algorithm string `json:"alg"`
-	Curve     string `json:"crv"`
-	Exponent  string `json:"e"`
-	K         string `json:"k"`
-	ID        string `json:"kid"`
-	Modulus   string `json:"n"`
-	Type      string `json:"kty"`
-	Use       string `json:"use"`
-	X         string `json:"x"`
-	Y         string `json:"y"`
-}
-
 func (s *Server) jwksJSON(w http.ResponseWriter, r *http.Request) {
-	k := jsonWebKey{
-		Type:      signingMethodType,
-		Algorithm: signingMethod.Name,
-		Use:       "sig",
-		ID:        jwtKeyID,
-		Exponent:  base64.URLEncoding.EncodeToString(big.NewInt(int64(s.privateKey.E)).Bytes()),
-		Modulus:   base64.URLEncoding.EncodeToString(s.privateKey.N.Bytes()),
-	}
-	data, err := json.Marshal(jsonWebKeySet{Keys: []jsonWebKey{k}})
+	ctx := context.Background()
+
+	rawJWKS, err := s.storage.JSONPublic(ctx)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to get the server's JWKS.\nError: %s", err)
 	}
-	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(data)
-	if err != nil {
-		panic(err)
-	}
+	_, _ = w.Write(rawJWKS)
 }
 
 func (s *Server) JWKSURL() string {
@@ -99,12 +71,43 @@ func (s *Server) waitForServer(ctx context.Context) error {
 }
 
 func NewServer(t *testing.T) (*Server, error) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	ctx := context.Background()
+
+	// Create a cryptographic key.
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return nil, err
+		t.Fatalf("Failed to generate given key.\nError: %s", err)
 	}
+
+	// Turn the key into a JWK.
+	marshalOptions := jwkset.JWKMarshalOptions{
+		Private: true,
+	}
+	metadata := jwkset.JWKMetadataOptions{
+		ALG: jwkset.AlgRS256,
+		KID: jwtKeyID,
+		USE: jwkset.UseSig,
+	}
+	options := jwkset.JWKOptions{
+		Marshal:  marshalOptions,
+		Metadata: metadata,
+	}
+
+	jwk, err := jwkset.NewJWKFromKey(priv, options)
+	if err != nil {
+		t.Fatalf("Failed to create a JWK from the given key.\nError: %s", err)
+	}
+
+	// Write the JWK to the server's storage.
+	serverStore := jwkset.NewMemoryStorage()
+	err = serverStore.KeyWrite(ctx, jwk)
+	if err != nil {
+		t.Fatalf("Failed to write the JWK to the server's storage.\nError: %s", err)
+	}
+
 	s := &Server{
-		privateKey: privateKey,
+		privateKey: priv,
+		storage:    serverStore,
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc(jwksHTTPPath, s.jwksJSON)

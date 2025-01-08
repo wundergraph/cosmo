@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	otelmetric "go.opentelemetry.io/otel/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
@@ -41,7 +42,18 @@ type engineLoaderHooksRequestContext struct {
 	startTime time.Time
 }
 
-func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.SubgraphAccessLogger) resolve.LoaderHooks {
+func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.SubgraphAccessLogger, tracerProvider *sdktrace.TracerProvider) resolve.LoaderHooks {
+	if tracerProvider != nil {
+		return &engineLoaderHooks{
+			tracer: tracerProvider.Tracer(
+				EngineLoaderHooksScopeName,
+				trace.WithInstrumentationVersion(EngineLoaderHooksScopeVersion),
+			),
+			metricStore:  metricStore,
+			accessLogger: logger,
+		}
+	}
+
 	return &engineLoaderHooks{
 		tracer: otel.GetTracerProvider().Tracer(
 			EngineLoaderHooksScopeName,
@@ -129,10 +141,14 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 			zap.Int("status", responseInfo.StatusCode),
 			zap.Duration("latency", latency),
 		}
-		if responseInfo.Request != nil && responseInfo.Request.URL != nil {
-			fields = append(fields, zap.String("url", responseInfo.Request.URL.String()))
+		path := ds.Name
+		if responseInfo.Request != nil {
+			fields = append(fields, f.accessLogger.RequestFields(responseInfo, fields)...)
+			if responseInfo.Request.URL != nil {
+				path = responseInfo.Request.URL.Path
+			}
 		}
-		f.accessLogger.WriteRequestLog(responseInfo, fields)
+		f.accessLogger.Info(path, fields)
 	}
 
 	if responseInfo.Err != nil {

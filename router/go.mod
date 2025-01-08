@@ -1,12 +1,9 @@
 module github.com/wundergraph/cosmo/router
 
-go 1.21.5
-
-toolchain go1.22.0
+go 1.23
 
 require (
 	connectrpc.com/connect v1.16.2
-	github.com/MicahParks/keyfunc/v2 v2.1.0
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/buger/jsonparser v1.1.1
 	github.com/cespare/xxhash/v2 v2.3.0
@@ -19,7 +16,7 @@ require (
 	github.com/go-redis/redis_rate/v10 v10.0.1
 	github.com/gobwas/ws v1.4.0
 	github.com/goccy/go-yaml v1.13.4
-	github.com/golang-jwt/jwt/v5 v5.2.0
+	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/gorilla/websocket v1.5.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-retryablehttp v0.7.7
@@ -37,7 +34,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.133
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.139
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0
@@ -56,29 +53,35 @@ require (
 	go.uber.org/automaxprocs v1.5.3
 	go.uber.org/zap v1.27.0
 	go.withmatt.com/connect-brotli v0.4.0
-	golang.org/x/sync v0.9.0
-	golang.org/x/sys v0.27.0 // indirect
+	golang.org/x/sync v0.10.0
+	golang.org/x/sys v0.29.0 // indirect
 	google.golang.org/grpc v1.61.0
 	google.golang.org/protobuf v1.34.2
 )
 
 require (
 	github.com/KimMachineGun/automemlimit v0.6.1
+	github.com/MicahParks/jwkset v0.5.19
+	github.com/MicahParks/keyfunc/v3 v3.3.5
 	github.com/bep/debounce v1.2.1
 	github.com/caarlos0/env/v11 v11.1.0
+	github.com/expr-lang/expr v1.16.9
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/klauspost/compress v1.17.9
 	github.com/minio/minio-go/v7 v7.0.74
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.3
-	github.com/wundergraph/astjson v0.0.0-20241108124845-44485579ffa5
+	github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083
+	go.uber.org/ratelimit v0.3.1
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
-	golang.org/x/text v0.19.0
+	golang.org/x/text v0.21.0
+	golang.org/x/time v0.5.0
 )
 
 require (
 	github.com/99designs/gqlgen v0.17.49 // indirect
+	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cilium/ebpf v0.9.1 // indirect
@@ -135,8 +138,8 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.23.1 // indirect
 	go.opentelemetry.io/proto/otlp v1.1.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.28.0 // indirect
-	golang.org/x/net v0.30.0 // indirect
+	golang.org/x/crypto v0.31.0 // indirect
+	golang.org/x/net v0.33.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240102182953-50ed04b92917 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240102182953-50ed04b92917 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect

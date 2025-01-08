@@ -102,6 +102,8 @@ telemetry:
       enabled: true
       router_runtime: true
       graphql_cache: true
+      engine_stats:
+        subscriptions: true
       exclude_metric_labels: []
       exclude_metrics: []
       # If no exporters are defined, the default one is used
@@ -119,6 +121,8 @@ telemetry:
       path: "/metrics"
       listen_addr: "127.0.0.1:8088"
       graphql_cache: true
+      engine_stats:
+        subscriptions: true
       exclude_metrics: []
       exclude_metric_labels: []
 
@@ -146,6 +150,7 @@ traffic_shaping:
   router:
     # Is the maximum size of the request body in MB, mib
     max_request_body_size: 5MB
+    max_header_bytes: 4MiB
   all: # Rules are applied to all subgraph requests.
     # Subgraphs transport options
     request_timeout: 60s
@@ -162,6 +167,9 @@ traffic_shaping:
       max_attempts: 5
       interval: 3s
       max_duration: 10s
+  subgraphs:
+    products: # Will only affect this subgraph
+      request_timeout: 120s
 
 # Header manipulation
 # See "https://cosmo-docs.wundergraph.com/router/proxy-capabilities" for more information

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage"
 	"go.uber.org/zap"
@@ -13,8 +14,6 @@ type PersistedOperation struct {
 	Version int    `json:"version"`
 	Body    string `json:"body"`
 }
-
-var PoNotFoundErr *PersistentOperationNotFoundError
 
 type PersistentOperationNotFoundError struct {
 	ClientName string
@@ -66,7 +65,7 @@ func NewClient(opts *Options) (SaveClient, error) {
 	}, nil
 }
 
-func (c client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, bool, error) {
+func (c *client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, bool, error) {
 	if c.apqClient != nil && c.apqClient.Enabled() {
 		resp, apqErr := c.apqClient.PersistedOperation(ctx, clientName, sha256Hash)
 		if len(resp) > 0 || apqErr != nil {
@@ -83,8 +82,12 @@ func (c client) PersistedOperation(ctx context.Context, clientName string, sha25
 		return nil, c.apqClient != nil, nil
 	}
 
+	var (
+		poNotFound *PersistentOperationNotFoundError
+	)
+
 	content, _, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash)
-	if errors.As(err, &PoNotFoundErr) && c.apqClient != nil {
+	if errors.As(err, &poNotFound) && c.apqClient != nil {
 		// This could well be the first time a client is requesting an APQ operation and the query is attached to the request. Return without error here, and we'll verify the operation later.
 		return content, true, nil
 	}
@@ -97,7 +100,7 @@ func (c client) PersistedOperation(ctx context.Context, clientName string, sha25
 	return content, false, nil
 }
 
-func (c client) SaveOperation(ctx context.Context, clientName, sha256Hash, operationBody string) error {
+func (c *client) SaveOperation(ctx context.Context, clientName, sha256Hash, operationBody string) error {
 	if c.apqClient != nil && c.apqClient.Enabled() {
 		return c.apqClient.SaveOperation(ctx, clientName, sha256Hash, []byte(operationBody))
 	}
@@ -105,7 +108,7 @@ func (c client) SaveOperation(ctx context.Context, clientName, sha256Hash, opera
 	return nil
 }
 
-func (c client) Close() {
+func (c *client) Close() {
 	if c.providerClient != nil {
 		c.providerClient.Close()
 	}

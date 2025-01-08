@@ -1,20 +1,20 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"net/http"
 	"os"
 
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/dustin/go-humanize"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.uber.org/automaxprocs/maxprocs"
-
-	"github.com/wundergraph/cosmo/router/core"
 	"go.uber.org/zap"
 )
 
@@ -27,7 +27,7 @@ type Params struct {
 // NewRouter creates a new router instance.
 //
 // additionalOptions can be used to override default options or options provided in the config.
-func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, error) {
+func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Option) (*core.Router, error) {
 	// Automatically set GOMAXPROCS to avoid CPU throttling on containerized environments
 	_, err := maxprocs.Set(maxprocs.Logger(params.Logger.Sugar().Debugf))
 	if err != nil {
@@ -62,7 +62,12 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			if name == "" {
 				name = fmt.Sprintf("jwks-#%d", i)
 			}
-			tokenDecoder, _ := authentication.NewJwksTokenDecoder(auth.JWKS.URL, auth.JWKS.RefreshInterval)
+			providerLogger := logger.With(zap.String("provider_name", name))
+			tokenDecoder, err := authentication.NewJwksTokenDecoder(ctx, providerLogger, auth.JWKS.URL, auth.JWKS.RefreshInterval)
+			if err != nil {
+				providerLogger.Error("Could not create JWKS token decoder", zap.Error(err))
+				return nil, err
+			}
 			opts := authentication.HttpHeaderAuthenticatorOptions{
 				Name:                name,
 				URL:                 auth.JWKS.URL,
@@ -72,7 +77,8 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 			}
 			authenticator, err := authentication.NewHttpHeaderAuthenticator(opts)
 			if err != nil {
-				logger.Fatal("Could not create HttpHeader authenticator", zap.Error(err), zap.String("name", name))
+				providerLogger.Error("Could not create HttpHeader authenticator", zap.Error(err))
+				return nil, err
 			}
 			authenticators = append(authenticators, authenticator)
 
@@ -84,7 +90,8 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 				}
 				authenticator, err = authentication.NewWebsocketInitialPayloadAuthenticator(opts)
 				if err != nil {
-					logger.Fatal("Could not create WebsocketInitialPayload authenticator", zap.Error(err))
+					providerLogger.Error("Could not create WebsocketInitialPayload authenticator", zap.Error(err))
+					return nil, err
 				}
 				authenticators = append(authenticators, authenticator)
 			}
@@ -124,15 +131,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithHeaderRules(cfg.Headers),
 		core.WithRouterTrafficConfig(&cfg.TrafficShaping.Router),
 		core.WithFileUploadConfig(&cfg.FileUpload),
-		core.WithSubgraphTransportOptions(&core.SubgraphTransportOptions{
-			RequestTimeout:         cfg.TrafficShaping.All.RequestTimeout,
-			ResponseHeaderTimeout:  cfg.TrafficShaping.All.ResponseHeaderTimeout,
-			ExpectContinueTimeout:  cfg.TrafficShaping.All.ExpectContinueTimeout,
-			KeepAliveIdleTimeout:   cfg.TrafficShaping.All.KeepAliveIdleTimeout,
-			DialTimeout:            cfg.TrafficShaping.All.DialTimeout,
-			TLSHandshakeTimeout:    cfg.TrafficShaping.All.TLSHandshakeTimeout,
-			KeepAliveProbeInterval: cfg.TrafficShaping.All.KeepAliveProbeInterval,
-		}),
+		core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(cfg.TrafficShaping)),
 		core.WithSubgraphRetryOptions(
 			cfg.TrafficShaping.All.BackoffJitterRetry.Enabled,
 			cfg.TrafficShaping.All.BackoffJitterRetry.MaxAttempts,
@@ -159,6 +158,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithDevelopmentMode(cfg.DevelopmentMode),
 		core.WithTracing(core.TraceConfigFromTelemetry(&cfg.Telemetry)),
 		core.WithMetrics(core.MetricConfigFromTelemetry(&cfg.Telemetry)),
+		core.WithTelemetryAttributes(cfg.Telemetry.Attributes),
 		core.WithEngineExecutionConfig(cfg.EngineExecutionConfiguration),
 		core.WithCacheControlPolicy(cfg.CacheControl),
 		core.WithSecurityConfig(cfg.SecurityConfiguration),
@@ -170,6 +170,7 @@ func NewRouter(params Params, additionalOptions ...core.Option) (*core.Router, e
 		core.WithEvents(cfg.Events),
 		core.WithRateLimitConfig(&cfg.RateLimit),
 		core.WithClientHeader(cfg.ClientHeader),
+		core.WithCacheWarmupConfig(&cfg.CacheWarmup),
 	}
 
 	// HTTP_PROXY, HTTPS_PROXY and NO_PROXY

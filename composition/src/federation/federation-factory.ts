@@ -199,7 +199,7 @@ import {
   FederateTypeResult,
   getMostRestrictiveMergedTypeNode,
 } from '../schema-building/type-merging';
-import { ConstDirectiveNode, ConstObjectValueNode, ListTypeNode, NonNullTypeNode, TypeNode, } from 'graphql/index';
+import { ConstDirectiveNode, ConstObjectValueNode, ListTypeNode, NonNullTypeNode, TypeNode } from 'graphql/index';
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
 import { Graph } from '../resolvability-graph/graph';
 import { GraphNode } from '../resolvability-graph/graph-nodes';
@@ -574,6 +574,7 @@ export class FederationFactory {
     }
     existingData.appearances += 1;
     setLongestDescription(existingData, incomingData);
+    addIterableValuesToSet(incomingData.subgraphNames, existingData.subgraphNames);
   }
 
   // To facilitate the splitting of tag paths, field arguments do not use the renamedPath property for tagNamesByPath
@@ -1051,6 +1052,7 @@ export class FederationFactory {
     switch (existingData.kind) {
       case Kind.ENUM_TYPE_DEFINITION:
         existingData.appearances += 1;
+        addIterableValuesToSet((incomingData as EnumDefinitionData).subgraphNames, existingData.subgraphNames);
         for (const data of (incomingData as EnumDefinitionData).enumValueDataByValueName.values()) {
           this.upsertEnumValueData(existingData.enumValueDataByValueName, data, isParentInaccessible);
         }
@@ -2397,6 +2399,7 @@ export class FederationFactory {
         federatedGraphAST: newRouterAST,
         federatedGraphSchema: buildASTSchema(newRouterAST, { assumeValid: true, assumeValidSDL: true }),
         federatedGraphClientSchema: newClientSchema,
+        parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
         ...this.getClientSchemaObjectBoolean(),
       },
       warnings: this.warnings,
@@ -2680,6 +2683,7 @@ export class FederationFactory {
         federatedGraphAST: newRouterAST,
         federatedGraphSchema: buildASTSchema(newRouterAST, { assumeValid: true, assumeValidSDL: true }),
         federatedGraphClientSchema: newClientSchema,
+        parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
         ...this.getClientSchemaObjectBoolean(),
       },
       warnings: this.warnings,

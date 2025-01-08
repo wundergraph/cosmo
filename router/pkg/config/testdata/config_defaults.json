@@ -34,6 +34,9 @@
         "Enabled": true,
         "RouterRuntime": true,
         "GraphqlCache": false,
+        "EngineStats": {
+          "Subscriptions": false
+        },
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "Exporters": null
@@ -43,6 +46,9 @@
         "Path": "/metrics",
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": false,
+        "EngineStats": {
+          "Subscriptions": false
+        },
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null
       }
@@ -118,8 +124,10 @@
       "KeepAliveProbeInterval": 30000000000
     },
     "Router": {
-      "MaxRequestBodyBytes": 5000000
-    }
+      "MaxRequestBodyBytes": 5000000,
+      "MaxHeaderBytes": 0
+    },
+    "Subgraphs": null
   },
   "FileUpload": {
     "Enabled": true,
@@ -179,13 +187,20 @@
       "Rate": 10,
       "Burst": 10,
       "Period": 1000000000,
-      "RejectExceedingRequests": false
+      "RejectExceedingRequests": false,
+      "RejectStatusCode": 200,
+      "HideStatsFromResponseExtension": false
     },
     "Storage": {
       "Url": "redis://localhost:6379",
       "KeyPrefix": "cosmo_rate_limit"
     },
-    "Debug": false
+    "Debug": false,
+    "KeySuffixExpression": "",
+    "ErrorExtensionCode": {
+      "Enabled": true,
+      "Code": "RATE_LIMIT_EXCEEDED"
+    }
   },
   "LocalhostFallbackInsideDocker": true,
   "CDN": {
@@ -199,6 +214,14 @@
       "Kafka": null
     }
   },
+  "CacheWarmup": {
+    "Enabled": false,
+    "Source": "filesystem",
+    "Path": "",
+    "Workers": 8,
+    "ItemsPerSecond": 50,
+    "Timeout": 30000000000
+  },
   "RouterConfigPath": "",
   "RouterRegistration": true,
   "OverrideRoutingURL": {
@@ -208,9 +231,18 @@
     "Subgraphs": null
   },
   "SecurityConfiguration": {
-    "BlockMutations": false,
-    "BlockSubscriptions": false,
-    "BlockNonPersistedOperations": false,
+    "BlockMutations": {
+      "Enabled": false,
+      "Condition": ""
+    },
+    "BlockSubscriptions": {
+      "Enabled": false,
+      "Condition": ""
+    },
+    "BlockNonPersistedOperations": {
+      "Enabled": false,
+      "Condition": ""
+    },
     "ComplexityCalculationCache": null,
     "ComplexityLimits": null,
     "DepthLimit": null

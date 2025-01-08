@@ -39,6 +39,7 @@ func (m MyCustomWebsocketModule) Module() core.ModuleInfo {
 func (m MyCustomWebsocketModule) OnOriginResponse(resp *http.Response, ctx core.RequestContext) *http.Response {
 	*m.postHandlerCalled = true
 
+	require.NotNil(m.t, resp)
 	require.Equal(m.t, resp.StatusCode, http.StatusSwitchingProtocols)
 	require.Equal(m.t, resp.Header.Get("Connection"), "Upgrade")
 	require.Equal(m.t, resp.Header.Get("Sec-WebSocket-Protocol"), "graphql-ws")
@@ -49,6 +50,7 @@ func (m MyCustomWebsocketModule) OnOriginResponse(resp *http.Response, ctx core.
 
 func (m MyCustomWebsocketModule) OnOriginRequest(req *http.Request, ctx core.RequestContext) (*http.Request, *http.Response) {
 
+	require.NotNil(m.t, req)
 	require.Equal(m.t, req.Header.Get("Connection"), "Upgrade")
 	require.Equal(m.t, req.Header.Get("Upgrade"), "websocket")
 	require.Equal(m.t, req.Header.Get("Sec-WebSocket-Version"), "13")
@@ -56,7 +58,7 @@ func (m MyCustomWebsocketModule) OnOriginRequest(req *http.Request, ctx core.Req
 	require.NotEmpty(m.t, req.Header.Get("Sec-WebSocket-Key"))
 
 	require.Equal(m.t, ctx.Operation().Name(), "currentTime")
-	require.Equal(m.t, ctx.Operation().Hash(), uint64(13258717046432306894))
+	require.Equal(m.t, ctx.Operation().Hash(), uint64(10840416806766942577))
 	require.Equal(m.t, ctx.Operation().ClientInfo().Name, "my-client")
 	require.Equal(m.t, ctx.Operation().ClientInfo().Version, "1.0.0")
 	require.Equal(m.t, ctx.Operation().Type(), core.OperationTypeSubscription)

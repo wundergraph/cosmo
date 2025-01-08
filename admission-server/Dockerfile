@@ -23,7 +23,7 @@ FROM --platform=${BUILDPLATFORM} node:lts-slim
 
 WORKDIR /app
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 # Fetch built artifacts
 COPY --from=builder /app/pruned .

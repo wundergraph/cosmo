@@ -18,6 +18,9 @@ export default fp<ChPluginOptions>(async function ClickHousePlugin(fastify, opts
   const connection = new ClickHouseClient({
     dsn: opts.dsn,
     logger: opts.logger,
+    httpConfig: {
+      timeout: 60_000,
+    },
   });
 
   fastify.decorate('chHealthcheck', async () => {

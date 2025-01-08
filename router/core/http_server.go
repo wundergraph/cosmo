@@ -29,6 +29,7 @@ type httpServerOptions struct {
 	tlsServerConfig *tls.Config
 	healthcheck     health.Checker
 	baseURL         string
+	maxHeaderBytes  int
 }
 
 func newServer(opts *httpServerOptions) *server {
@@ -37,9 +38,10 @@ func newServer(opts *httpServerOptions) *server {
 		ReadTimeout: 60 * time.Second,
 		// Disable write timeout to keep the connection open until the client closes it
 		// This is required for SSE (Server-Sent-Events) subscriptions to work correctly
-		WriteTimeout: 0,
-		ErrorLog:     zap.NewStdLog(opts.logger),
-		TLSConfig:    opts.tlsServerConfig,
+		WriteTimeout:   0,
+		ErrorLog:       zap.NewStdLog(opts.logger),
+		TLSConfig:      opts.tlsServerConfig,
+		MaxHeaderBytes: opts.maxHeaderBytes,
 	}
 
 	n := &server{
@@ -118,6 +120,8 @@ func (s *server) listenAndServe() error {
 
 func (s *server) Shutdown(ctx context.Context) error {
 	var err error
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	if s.graphServer != nil {
 		err = errors.Join(s.graphServer.Shutdown(ctx))

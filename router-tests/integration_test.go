@@ -1,7 +1,8 @@
-package integration_test
+package integration
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -28,42 +29,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
 const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
-
-func randString(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
-}
-
-type testQuery struct {
-	Name      string
-	Body      string
-	Variables map[string]interface{}
-}
-
-func (t *testQuery) Data() []byte {
-	name := t.Name
-	if name == "" {
-		name = randString(10)
-	}
-	values := map[string]interface{}{
-		"query":         fmt.Sprintf("query %s %s", name, t.Body),
-		"operationName": name,
-	}
-	if len(t.Variables) > 0 {
-		values["variables"] = t.Variables
-	}
-	data, err := json.Marshal(values)
-	if err != nil {
-		panic(err)
-	}
-	return data
-}
 
 func normalizeJSON(tb testing.TB, data []byte) []byte {
 	buf := new(bytes.Buffer)
@@ -324,6 +290,8 @@ func TestAnonymousQuery(t *testing.T) {
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		t.Run("anonymous query", func(t *testing.T) {
+			t.Parallel()
+
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
 			})
@@ -331,6 +299,8 @@ func TestAnonymousQuery(t *testing.T) {
 		})
 
 		t.Run("sequence of queries with different count of variables", func(t *testing.T) {
+			t.Parallel()
+
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query ($a: Float! = 1) { floatField(arg: $a) }`,
 			})
@@ -379,6 +349,29 @@ func TestProxy(t *testing.T) {
 			Query: `{ employees { id } }`,
 		})
 		require.Equal(t, `{"data":{"employees":[{"id":1234}]}}`, res.Body)
+	})
+}
+
+func TestConcurrentBodyRead(t *testing.T) {
+	t.Parallel()
+	expectedData := `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true},"role":{"title":["Founder","CEO"],"departments":["ENGINEERING","MARKETING"]},"hobbies":[{"category":"SPORT"},{"name":"Counter Strike","genres":["FPS"],"yearsOfExperience":20},{"name":"WunderGraph"},{"languages":["GO","TYPESCRIPT"]},{"countriesLived":[{"language":"English"},{"language":"German"}]}]},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false},"role":{"title":["Co-founder","Tech Lead"],"departments":["ENGINEERING"]},"hobbies":[{"category":"STRENGTH_TRAINING"},{"name":"Counter Strike","genres":["FPS"],"yearsOfExperience":0.5},{"languages":["GO","RUST"]}]},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false},"role":{"title":["Co-founder","Head of Growth"],"departments":["MARKETING"]},"hobbies":[{"category":"HIKING"},{"category":"SPORT"},{"name":"Reading"},{"countriesLived":[{"language":"English"},{"language":"Serbian"}]}]},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true},"role":{"title":["Co-founder","COO"],"departments":["OPERATIONS","MARKETING"]},"hobbies":[{"category":"HIKING"},{"planeModels":["Aquila AT01","Cessna C172","Cessna C206","Cirrus SR20","Cirrus SR22","Diamond DA40","Diamond HK36","Diamond DA20","Piper Cub","Pitts Special","Robin DR400"],"yearsOfExperience":20},{"countriesLived":[{"language":"English"},{"language":"German"}]}]},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false},"role":{"title":["Senior GO Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"name":"Building a house"},{"name":"Forumla 1"},{"name":"Raising cats"}]},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false},"role":{"title":["Software Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"name":"Chess","genres":["BOARD"],"yearsOfExperience":9.5},{"name":"Watching anime"}]},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false},"role":{"title":["Software Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"category":"STRENGTH_TRAINING"},{"name":"Miscellaneous","genres":["ADVENTURE","RPG","SIMULATION","STRATEGY"],"yearsOfExperience":17},{"name":"Watching anime"}]},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false},"role":{"title":["Senior Frontend Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"languages":["TYPESCRIPT"]},{"category":"CALISTHENICS"},{"category":"HIKING"},{"category":"STRENGTH_TRAINING"},{"name":"saas-ui"},{"countriesLived":[{"language":"German"},{"language":"Indonesian"},{"language":"Dutch"},{"language":"Portuguese"},{"language":"Spanish"},{"language":"Thai"}]}]},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true},"role":{"title":["Accounting & Finance"],"departments":["OPERATIONS"]},"hobbies":[{"name":"Spending time with the family"}]},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false},"role":{"title":["Software Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"languages":["CSHARP","GO","RUST","TYPESCRIPT"]},{"category":"STRENGTH_TRAINING"},{"name":"Miscellaneous","genres":["ADVENTURE","BOARD","CARD","ROGUELITE","RPG","SIMULATION","STRATEGY"],"yearsOfExperience":25.5},{"countriesLived":[{"language":"English"},{"language":"Korean"},{"language":"Taiwanese"}]}]}]}}`
+
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		goRoutines := 10
+		wg := &sync.WaitGroup{}
+		wg.Add(goRoutines)
+		for i := 0; i < goRoutines; i++ {
+			go func() {
+				defer wg.Done()
+				res, err := xEnv.MakeGraphQLRequestWithContext(context.Background(), testenv.GraphQLRequest{
+					Query: bigEmployeesQuery,
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, res.Response.StatusCode)
+				require.Equal(t, expectedData, res.Body)
+			}()
+		}
+		wg.Wait()
 	})
 }
 
@@ -528,7 +521,7 @@ func TestOperationSelection(t *testing.T) {
 			})
 		})
 
-		t.Run("multiple named operations B", func(t *testing.T) {
+		t.Run("multiple named operations C", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -558,6 +551,7 @@ func TestTestdataQueries(t *testing.T) {
 		}
 
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
 			g := goldie.New(
 				t,
@@ -615,12 +609,12 @@ func TestParallel(t *testing.T) {
 		wg.Add(10)
 		for i := 0; i < 10; i++ {
 			go func() {
+				defer wg.Done()
 				<-trigger
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employee(id:1) { id details { forename surname } } }`,
 				})
 				require.JSONEq(t, expect, res.Body)
-				wg.Done()
 			}()
 		}
 		time.Sleep(10 * time.Millisecond)
@@ -755,54 +749,11 @@ func BenchmarkPb(b *testing.B) {
 	})
 }
 
-func FuzzQuery(f *testing.F) {
-	corpus := []struct {
-		Query     string
-		Variables []byte // As JSON
-	}{
-		{
-			Query: "{ employees { id } }",
-		},
-		{
-			Query: `($team:Department!= MARKETING) {
-				team_mates(team:$team) {
-				  id
-				}
-			  }`,
-			Variables: []byte(`{"team":"MARKETING"}`),
-		},
-		{
-			Query:     `($n:Int!) { employee(id:$n) { id } }`,
-			Variables: []byte(`{"n":4}`),
-		},
-	}
-	for _, tc := range corpus {
-		f.Add(tc.Query, tc.Variables)
-	}
-	f.Fuzz(func(t *testing.T, query string, variables []byte) {
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			var q testQuery
-			if err := json.Unmarshal(variables, &q.Variables); err != nil {
-				// Invalid JSON, mark as uninteresting input
-				t.Skip()
-			}
-			q.Body = query
-
-			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Query:     query,
-				Variables: variables,
-			})
-			require.NoError(t, err)
-			if res.Response.StatusCode != http.StatusOK && res.Response.StatusCode != http.StatusBadRequest {
-				t.Error("unexpected status code", res.Response.StatusCode)
-			}
-		})
-	})
-}
-
 func TestSubgraphOperationMinifier(t *testing.T) {
 	t.Parallel()
 	t.Run("prefer minified version", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.MinifySubgraphOperations = true
@@ -829,6 +780,8 @@ func TestSubgraphOperationMinifier(t *testing.T) {
 		})
 	})
 	t.Run("prefer non-minified when disabled", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
@@ -852,6 +805,8 @@ func TestSubgraphOperationMinifier(t *testing.T) {
 		})
 	})
 	t.Run("minify concurrently without plan cache", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.MinifySubgraphOperations = true
@@ -876,13 +831,13 @@ func TestSubgraphOperationMinifier(t *testing.T) {
 			start := make(chan struct{})
 			for i := 0; i < 100; i++ {
 				go func() {
+					defer wg.Done()
 					<-start
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query:         `query MyQuery {a: employees { ...EmployeeDetails } b: employees { ...EmployeeDetails } c: employees { ...EmployeeDetails } d: employees { ...EmployeeDetails } e: employees { ...EmployeeDetails } } fragment EmployeeDetails on Employee { id details { forename surname hasChildren } }`,
 						OperationName: json.RawMessage(`"MyQuery"`),
 					})
 					require.Equal(t, `{"data":{"a":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"b":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"c":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"d":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}],"e":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true}},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false}},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false}},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true}},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false}}]}}`, res.Body)
-					wg.Done()
 				}()
 			}
 			close(start)
@@ -890,6 +845,8 @@ func TestSubgraphOperationMinifier(t *testing.T) {
 		})
 	})
 	t.Run("prefer non-minified version", func(t *testing.T) {
+		t.Parallel()
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.MinifySubgraphOperations = true
@@ -965,53 +922,6 @@ func TestConcurrentQueriesWithDelay(t *testing.T) {
 			}(ii)
 		}
 		wg.Wait()
-	})
-}
-
-func TestBlockMutations(t *testing.T) {
-	t.Parallel()
-	t.Run("allow", func(t *testing.T) {
-		t.Parallel()
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `mutation { updateEmployeeTag(id: 1, tag: "test") { id tag } }`,
-			})
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"data":{"updateEmployeeTag":{"id":1,"tag":"test"}}}`, res.Body)
-		})
-	})
-	t.Run("block", func(t *testing.T) {
-		t.Parallel()
-		testenv.Run(t, &testenv.Config{
-			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.BlockMutations = true
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `mutation { updateEmployeeTag(id: 1, tag: "test") { id tag } }`,
-			})
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, `{"errors":[{"message":"operation type 'mutation' is blocked"}]}`, res.Body)
-		})
-	})
-}
-
-func TestBlockNonPersistedOperations(t *testing.T) {
-	t.Parallel()
-	t.Run("block", func(t *testing.T) {
-		t.Parallel()
-		testenv.Run(t, &testenv.Config{
-			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.BlockNonPersistedOperations = true
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `mutation { updateEmployeeTag(id: 1, tag: "test") { id tag } }`,
-			})
-			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json")
-			require.Equal(t, `{"errors":[{"message":"non-persisted operation is blocked"}]}`, res.Body)
-		})
 	})
 }
 

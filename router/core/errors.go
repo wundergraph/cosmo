@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"net"
 	"net/http"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/wundergraph/astjson"
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
@@ -32,6 +33,8 @@ const (
 	errorTypeUpgradeFailed
 	errorTypeEDFS
 	errorTypeInvalidWsSubprotocol
+	errorTypeEDFSInvalidMessage
+	errorTypeMergeResult
 )
 
 type (
@@ -46,6 +49,7 @@ type (
 		Authorization json.RawMessage `json:"authorization,omitempty"`
 		Trace         json.RawMessage `json:"trace,omitempty"`
 		StatusCode    int             `json:"statusCode,omitempty"`
+		Code          string          `json:"code,omitempty"`
 	}
 )
 
@@ -74,9 +78,16 @@ func getErrorType(err error) errorType {
 		return errorTypeEDFS
 	}
 	var invalidWsSubprotocolErr graphql_datasource.InvalidWsSubprotocolError
-
 	if errors.As(err, &invalidWsSubprotocolErr) {
 		return errorTypeInvalidWsSubprotocol
+	}
+	var jsonParseErr *astjson.ParseError
+	if errors.As(err, &jsonParseErr) {
+		return errorTypeEDFSInvalidMessage
+	}
+	var mergeResultErr resolve.ErrMergeResult
+	if errors.As(err, &mergeResultErr) {
+		return errorTypeMergeResult
 	}
 	return errorTypeUnknown
 }
@@ -287,7 +298,7 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 	case errors.As(err, &httpErr):
 		writeRequestErrors(r, w, httpErr.StatusCode(), requestErrorsFromHttpError(httpErr), requestLogger)
 	case errors.As(err, &poNotFoundErr):
-		newErr := NewHttpGraphqlError("persisted query not found", "PERSISTED_QUERY_NOT_FOUND", http.StatusOK)
+		newErr := NewHttpGraphqlError("PersistedQueryNotFound", "PERSISTED_QUERY_NOT_FOUND", http.StatusOK)
 		writeRequestErrors(r, w, http.StatusOK, requestErrorsFromHttpError(newErr), requestLogger)
 	case errors.As(err, &reportErr):
 		report := reportErr.Report()

@@ -57,6 +57,7 @@ export type FederationResult = {
   federatedGraphAST: DocumentNode;
   federatedGraphClientSchema: GraphQLSchema;
   federatedGraphSchema: GraphQLSchema;
+  parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
   subgraphConfigBySubgraphName: Map<string, SubgraphConfig>;
   shouldIncludeClientSchema?: boolean;
 };

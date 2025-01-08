@@ -88,6 +88,10 @@ type Mutation struct {
 type Queries struct {
 }
 
+type Thing struct {
+	A string `json:"a"`
+}
+
 type TopSecretFactInput struct {
 	Title       string            `json:"title"`
 	Description string            `json:"description"`

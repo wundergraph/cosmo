@@ -1012,7 +1012,13 @@ export function invalidRootTypeFieldResponseTypesEventDrivenErrorMessage(
 
 export const invalidNatsStreamInputErrorMessage =
   `The "streamConfiguration" argument must be a valid input object with the following form:\n` +
-  `  input edfs__NatsStreamConfiguration {\n    consumerName: String!\n    streamName: String!\n  }`;
+  `  input edfs__NatsStreamConfiguration {\n    consumerInactiveThreshold: Int! = 30\n    consumerName: String!\n    streamName: String!\n  }`;
+
+export function invalidArgumentValueErrorMessage(hostCoords: string, kind: Kind, value?: string): string {
+  return (
+    `The value ` + (value ? `"${value}" ` : ``) + `passed to "${hostCoords}" is not type "${kindToTypeString(kind)}".`
+  );
+}
 
 export function invalidNatsStreamInputFieldsErrorMessage(
   missingRequiredFieldNames: string[],
@@ -1137,11 +1143,11 @@ export const invalidEdfsPublishResultObjectErrorMessage =
 export const undefinedNatsStreamConfigurationInputErrorMessage =
   ` The input object "edfs__NatsStreamConfiguration" must be defined in the event-driven graph to satisfy the` +
   ` "@edfs__natsSubscribe" directive.\n The following input must be defined in the event-driven graph:\n` +
-  `  input edfs__NatsStreamConfiguration {\n   consumerName: String!\n   streamName: String!\n  }`;
+  `  input edfs__NatsStreamConfiguration {\n   consumerInactiveThreshold: Int! = 30\n   consumerName: String!\n   streamName: String!\n  }`;
 
 export const invalidNatsStreamConfigurationDefinitionErrorMessage =
   ` The input object "edfs__NatsStreamConfiguration" that was defined in the Event Driven graph is invalid and must` +
-  ` instead have the following definition:\n  input edfs__NatsStreamConfiguration {\n` +
+  ` instead have the following definition:\n  input edfs__NatsStreamConfiguration {\n   consumerInactiveThreshold: Int! = 30\n` +
   `   consumerName: String!\n   streamName: String!\n  }`;
 
 export function invalidEdfsDirectiveName(directiveName: string): Error {

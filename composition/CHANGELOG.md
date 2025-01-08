@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.34.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.33.1...@wundergraph/composition@0.34.0) (2025-01-08)
+
+### Features
+
+* expose type data and record subgraphs for enums ([#1495](https://github.com/wundergraph/cosmo/issues/1495)) ([9e13f28](https://github.com/wundergraph/cosmo/commit/9e13f28c0a90b0d2f335c9b31f35e728c4a1799c)) (@thisisnithin)
+
+## [0.33.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.33.0...@wundergraph/composition@0.33.1) (2024-12-18)
+
+### Bug Fixes
+
+* edfs__NatsStreamConfiguration validation ([#1456](https://github.com/wundergraph/cosmo/issues/1456)) ([d453eab](https://github.com/wundergraph/cosmo/commit/d453eab5c72dedcb4d9d1c3f5adb11865f7017af)) (@alepane21)
+
+# [0.33.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.32.1...@wundergraph/composition@0.33.0) (2024-12-17)
+
+### Features
+
+* edfs nats create bespoke consumer ([#1443](https://github.com/wundergraph/cosmo/issues/1443)) ([af97af7](https://github.com/wundergraph/cosmo/commit/af97af71af0eb2de20dd5a0e0bc8cc454f1b0e38)) (@alepane21)
+
 ## [0.32.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.32.0...@wundergraph/composition@0.32.1) (2024-12-06)
 
 ### Bug Fixes

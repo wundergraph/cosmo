@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.71.6](https://github.com/wundergraph/cosmo/compare/wgc@0.71.5...wgc@0.71.6) (2025-01-08)
+
+### Bug Fixes
+
+* update the timeouts for clickhouse and platform service ([#1500](https://github.com/wundergraph/cosmo/issues/1500)) ([d425aa1](https://github.com/wundergraph/cosmo/commit/d425aa13568ba94f599a6264619502890030ce02)) (@JivusAyrus)
+
+## [0.71.5](https://github.com/wundergraph/cosmo/compare/wgc@0.71.4...wgc@0.71.5) (2025-01-08)
+
+**Note:** Version bump only for package wgc
+
+## [0.71.4](https://github.com/wundergraph/cosmo/compare/wgc@0.71.3...wgc@0.71.4) (2025-01-06)
+
+**Note:** Version bump only for package wgc
+
+## [0.71.3](https://github.com/wundergraph/cosmo/compare/wgc@0.71.2...wgc@0.71.3) (2024-12-18)
+
+**Note:** Version bump only for package wgc
+
+## [0.71.2](https://github.com/wundergraph/cosmo/compare/wgc@0.71.1...wgc@0.71.2) (2024-12-17)
+
+**Note:** Version bump only for package wgc
+
 ## [0.71.1](https://github.com/wundergraph/cosmo/compare/wgc@0.71.0...wgc@0.71.1) (2024-12-06)
 
 ### Bug Fixes
