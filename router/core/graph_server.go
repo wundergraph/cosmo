@@ -13,7 +13,6 @@ import (
 
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/klauspost/compress/gzip"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
 
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto"
@@ -42,11 +41,13 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/health"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
@@ -76,7 +77,7 @@ type (
 		context                 context.Context
 		cancelFunc              context.CancelFunc
 		pubSubProviders         *EnginePubSubProviders
-		websocketStats          WebSocketsStatistics
+		engineStats             statistics.EngineStatistics
 		playgroundHandler       func(http.Handler) http.Handler
 		publicKey               *ecdsa.PublicKey
 		executionTransport      *http.Transport
@@ -86,12 +87,14 @@ type (
 		mux                     *chi.Mux
 		// inFlightRequests is used to track the number of requests currently being processed
 		// does not include websocket (hijacked) connections
-		inFlightRequests *atomic.Uint64
-		graphMuxList     []*graphMux
-		graphMuxListLock sync.Mutex
-		runtimeMetrics   *rmetric.RuntimeMetrics
-		hostName         string
-		routerListenAddr string
+		inFlightRequests        *atomic.Uint64
+		graphMuxList            []*graphMux
+		graphMuxListLock        sync.Mutex
+		runtimeMetrics          *rmetric.RuntimeMetrics
+		otlpEngineMetrics       *rmetric.EngineMetrics
+		prometheusEngineMetrics *rmetric.EngineMetrics
+		hostName                string
+		routerListenAddr        string
 	}
 )
 
@@ -103,7 +106,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		context:                 ctx,
 		cancelFunc:              cancel,
 		Config:                  &r.Config,
-		websocketStats:          r.WebsocketStats,
+		engineStats:             r.EngineStats,
 		executionTransport:      newHTTPTransport(r.subgraphTransportOptions.TransportTimeoutOptions, proxy),
 		executionTransportProxy: proxy,
 		playgroundHandler:       r.playgroundHandler,
@@ -148,6 +151,10 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		if err := s.runtimeMetrics.Start(); err != nil {
 			return nil, err
 		}
+	}
+
+	if err := s.setupEngineStatistics(); err != nil {
+		return nil, fmt.Errorf("failed to setup engine statistics: %w", err)
 	}
 
 	if s.registrationInfo != nil {
@@ -286,6 +293,41 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 		// Fall back to the base composition
 		baseMux.ServeHTTP(w, r)
 	}, nil
+}
+
+// setupEngineStatistics creates the engine statistics for the server.
+// It creates the OTLP and Prometheus metrics for the engine statistics.
+func (s *graphServer) setupEngineStatistics() (err error) {
+	// We only include the base router config version in the attributes for the engine statistics.
+	// Same approach is used for the runtime metrics.
+	baseAttributes := append([]attribute.KeyValue{
+		otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion)}, s.baseOtelAttributes...)
+
+	s.otlpEngineMetrics, err = rmetric.NewEngineMetrics(
+		s.logger,
+		baseAttributes,
+		s.otlpMeterProvider,
+		s.engineStats,
+		&s.metricConfig.OpenTelemetry.EngineStats,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	s.prometheusEngineMetrics, err = rmetric.NewEngineMetrics(
+		s.logger,
+		baseAttributes,
+		s.promMeterProvider,
+		s.engineStats,
+		&s.metricConfig.Prometheus.EngineStats,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type graphMux struct {
@@ -550,24 +592,26 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	httpRouter := chi.NewRouter()
 
-	baseOtelAttributes := append(
-		[]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)},
-		s.baseOtelAttributes...,
-	)
+	baseOtelAttributes := append([]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)}, s.baseOtelAttributes...)
 
 	if featureFlagName != "" {
 		baseOtelAttributes = append(baseOtelAttributes, otel.WgFeatureFlag.String(featureFlagName))
 	}
 
 	metricsEnabled := s.metricConfig.IsEnabled()
-	traceEnabled := s.traceConfig.Enabled
 
+	// we only enable the attribute mapper if we are not using the default cloud exporter
+	enableAttributeMapper := !(s.metricConfig.IsUsingCloudExporter || rmetric.IsDefaultCloudExporterConfigured(s.metricConfig.OpenTelemetry.Exporters))
+
+	// We might want to remap or exclude known attributes based on the configuration for metrics
+	mapper := newAttributeMapper(enableAttributeMapper, s.metricConfig.Attributes)
+	baseMetricAttributes := mapper.mapAttributes(baseOtelAttributes)
 	// Prometheus metricStore rely on OTLP metricStore
 	if metricsEnabled {
 		m, err := rmetric.NewStore(
 			rmetric.WithPromMeterProvider(s.promMeterProvider),
 			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
-			rmetric.WithBaseAttributes(baseOtelAttributes),
+			rmetric.WithBaseAttributes(baseMetricAttributes),
 			rmetric.WithLogger(s.logger),
 			rmetric.WithProcessStartTime(s.processStartTime),
 			rmetric.WithCardinalityLimit(rmetric.DefaultCardinalityLimit),
@@ -594,7 +638,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return nil, err
 	}
 
-	if err = gm.configureCacheMetrics(s, baseOtelAttributes); err != nil {
+	if err = gm.configureCacheMetrics(s, baseMetricAttributes); err != nil {
 		return nil, err
 	}
 
@@ -629,7 +673,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				requestLogger:       requestLogger,
 				metricSetAttributes: b,
 				metricsEnabled:      metricsEnabled,
-				traceEnabled:        traceEnabled,
+				traceEnabled:        s.traceConfig.Enabled,
+				mapper:              mapper,
 				w:                   w,
 				r:                   r,
 			})
@@ -687,6 +732,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			reqContext := getRequestContext(r.Context())
 
 			reqContext.telemetry.addCommonTraceAttribute(baseOtelAttributes...)
+			reqContext.telemetry.addCommonTraceAttribute(otel.WgRouterConfigVersion.String(routerConfigVersion))
 
 			if commonAttrRequestMapper != nil {
 				reqContext.telemetry.addCommonAttribute(commonAttrRequestMapper(r)...)
@@ -834,7 +880,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			Subgraphs:                configSubgraphs,
 			RouterEngineConfig:       routerEngineConfig,
 			PubSubProviders:          s.pubSubProviders,
-			Reporter:                 s.websocketStats,
+			Reporter:                 s.engineStats,
 			ApolloCompatibilityFlags: s.apolloCompatibilityFlags,
 			HeartbeatInterval:        s.multipartHeartbeatInterval,
 		},
@@ -909,7 +955,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		EnablePersistedOperationCacheResponseHeader: s.engineExecutionConfiguration.Debug.EnablePersistedOperationsCacheResponseHeader,
 		EnableNormalizationCacheResponseHeader:      s.engineExecutionConfiguration.Debug.EnableNormalizationCacheResponseHeader,
 		EnableResponseHeaderPropagation:             s.headerRules != nil,
-		WebSocketStats:                              s.websocketStats,
+		EngineStats:                                 s.engineStats,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
@@ -918,10 +964,15 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	if s.redisClient != nil {
 		handlerOpts.RateLimitConfig = s.rateLimit
-		handlerOpts.RateLimiter = NewCosmoRateLimiter(&CosmoRateLimiterOptions{
-			RedisClient: s.redisClient,
-			Debug:       s.rateLimit.Debug,
+		handlerOpts.RateLimiter, err = NewCosmoRateLimiter(&CosmoRateLimiterOptions{
+			RedisClient:         s.redisClient,
+			Debug:               s.rateLimit.Debug,
+			RejectStatusCode:    s.rateLimit.SimpleStrategy.RejectStatusCode,
+			KeySuffixExpression: s.rateLimit.KeySuffixExpression,
 		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create rate limiter: %w", err)
+		}
 	}
 
 	graphqlHandler := NewGraphQLHandler(handlerOpts)
@@ -984,7 +1035,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			Metrics:                metrics,
 			AccessController:       s.accessController,
 			Logger:                 s.logger,
-			Stats:                  s.websocketStats,
+			Stats:                  s.engineStats,
 			ReadTimeout:            s.engineExecutionConfiguration.WebSocketClientReadTimeout,
 			EnableNetPoll:          s.engineExecutionConfiguration.EnableNetPoll,
 			NetPollTimeout:         s.engineExecutionConfiguration.WebSocketClientPollTimeout,
@@ -1185,6 +1236,20 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	if s.runtimeMetrics != nil {
 		if err := s.runtimeMetrics.Shutdown(); err != nil {
 			s.logger.Error("Failed to shutdown runtime metrics", zap.Error(err))
+			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
+	if s.otlpEngineMetrics != nil {
+		if err := s.otlpEngineMetrics.Shutdown(); err != nil {
+			s.logger.Error("Failed to shutdown OTLP engine metrics", zap.Error(err))
+			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
+	if s.prometheusEngineMetrics != nil {
+		if err := s.prometheusEngineMetrics.Shutdown(); err != nil {
+			s.logger.Error("Failed to shutdown Prometheus engine metrics", zap.Error(err))
 			finalErr = errors.Join(finalErr, err)
 		}
 	}

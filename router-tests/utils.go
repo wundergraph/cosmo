@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"context"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -14,6 +15,13 @@ import (
 const (
 	jwksName = "my-jwks-server"
 )
+
+// NewContextWithCancel creates a new context with a cancel function that is called when the test is done.
+func NewContextWithCancel(t *testing.T) context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	return ctx
+}
 
 func RequireSpanWithName(t *testing.T, exporter *tracetest2.InMemoryExporter, name string) trace.ReadOnlySpan {
 	require.NotNil(t, exporter)
@@ -35,7 +43,7 @@ func configureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) 
 	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
-	tokenDecoder, _ := authentication.NewJwksTokenDecoder(zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{
 		Name:         jwksName,
 		URL:          authServer.JWKSURL(),

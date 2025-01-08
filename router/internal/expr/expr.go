@@ -4,20 +4,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
+	"reflect"
+
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/file"
 	"github.com/expr-lang/expr/vm"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
-	"net/http"
-	"net/url"
-	"reflect"
 )
 
 /**
 * Naming conventions:
 * - Fields are named using camelCase
 * - Methods are named using PascalCase (Required to be exported)
-* - Methods should be exported through the interface to make the contract clear
+* - Methods should be exported through a custom type to avoid exposing accidental methods that can mutate the context
+* - Use interface to expose only the required methods. Blocked by https://github.com/expr-lang/expr/issues/744
 *
 * Principles:
 * The Expr package is used to evaluate expressions in the context of the request or router.
@@ -41,13 +43,6 @@ type Request struct {
 	Header RequestHeaders `expr:"header"`
 }
 
-// RequestHeaders is the interface available for the headers object in expressions.
-type RequestHeaders interface {
-	// Get returns the value of the header with the given key. If the header is not present, an empty string is returned.
-	// The key is case-insensitive and transformed to the canonical format.
-	Get(key string) string
-}
-
 // RequestURL is the context for the URL object in expressions
 // it is limited in scope to the URL object and its components. For convenience, the query parameters are parsed.
 type RequestURL struct {
@@ -62,10 +57,23 @@ type RequestURL struct {
 	Query map[string]string `expr:"query"`
 }
 
+type RequestHeaders struct {
+	Header http.Header `expr:"-"` // Do not expose the full header
+}
+
+// Get returns the value of the header with the given key. If the header is not present, an empty string is returned.
+// The key is case-insensitive and transformed to the canonical format.
+// TODO: Use interface to expose only the required methods. Blocked by https://github.com/expr-lang/expr/issues/744
+func (r RequestHeaders) Get(key string) string {
+	return r.Header.Get(key)
+}
+
 // LoadRequest loads the request object into the context.
 func LoadRequest(req *http.Request) Request {
 	r := Request{
-		Header: req.Header,
+		Header: RequestHeaders{
+			Header: req.Header,
+		},
 	}
 
 	m, _ := url.ParseQuery(req.URL.RawQuery)
@@ -109,25 +117,39 @@ func LoadAuth(ctx context.Context) RequestAuth {
 	}
 }
 
+func compileOptions(extra ...expr.Option) []expr.Option {
+	options := []expr.Option{
+		expr.Env(Context{}),
+	}
+	options = append(options, extra...)
+	return options
+}
+
 // CompileBoolExpression compiles an expression and returns the program. It is used for expressions that return bool.
 // The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
 func CompileBoolExpression(s string) (*vm.Program, error) {
-	v, err := expr.Compile(s, expr.Env(Context{}), expr.AsBool())
+	v, err := expr.Compile(s, compileOptions(expr.AsBool())...)
 	if err != nil {
 		return nil, handleExpressionError(err)
 	}
-
 	return v, nil
 }
 
 // CompileStringExpression compiles an expression and returns the program. It is used for expressions that return strings
 // The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
 func CompileStringExpression(s string) (*vm.Program, error) {
-	v, err := expr.Compile(s, expr.Env(Context{}), expr.AsKind(reflect.String))
+	v, err := expr.Compile(s, compileOptions(expr.AsKind(reflect.String))...)
 	if err != nil {
 		return nil, handleExpressionError(err)
 	}
+	return v, nil
+}
 
+func CompileAnyExpression(s string) (*vm.Program, error) {
+	v, err := expr.Compile(s, compileOptions()...)
+	if err != nil {
+		return nil, handleExpressionError(err)
+	}
 	return v, nil
 }
 

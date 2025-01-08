@@ -34,6 +34,9 @@
         "Enabled": true,
         "RouterRuntime": true,
         "GraphqlCache": false,
+        "EngineStats": {
+          "Subscriptions": false
+        },
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "Exporters": null
@@ -43,6 +46,9 @@
         "Path": "/metrics",
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": false,
+        "EngineStats": {
+          "Subscriptions": false
+        },
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null
       }
@@ -181,13 +187,15 @@
       "Rate": 10,
       "Burst": 10,
       "Period": 1000000000,
-      "RejectExceedingRequests": false
+      "RejectExceedingRequests": false,
+      "RejectStatusCode": 200
     },
     "Storage": {
       "Url": "redis://localhost:6379",
       "KeyPrefix": "cosmo_rate_limit"
     },
-    "Debug": false
+    "Debug": false,
+    "KeySuffixExpression": ""
   },
   "LocalhostFallbackInsideDocker": true,
   "CDN": {

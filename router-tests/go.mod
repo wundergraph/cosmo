@@ -3,8 +3,9 @@ module github.com/wundergraph/cosmo/router-tests
 go 1.23
 
 require (
+	github.com/MicahParks/jwkset v0.5.19
 	github.com/buger/jsonparser v1.1.1
-	github.com/golang-jwt/jwt/v5 v5.2.0
+	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.1
 	github.com/hashicorp/consul/sdk v0.16.1
@@ -23,9 +24,9 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20241210060746-91245ea676ff
-	github.com/wundergraph/cosmo/router v0.0.0-20241213115435-a249dba8c52a
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.136
+	github.com/wundergraph/cosmo/demo v0.0.0-20250106104112-39128d50b761
+	github.com/wundergraph/cosmo/router v0.0.0-20250106104112-39128d50b761
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.138.0.20250106145350-20e4f82cea6b
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
@@ -41,7 +42,7 @@ require (
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/99designs/gqlgen v0.17.49 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
-	github.com/MicahParks/keyfunc/v2 v2.1.0 // indirect
+	github.com/MicahParks/keyfunc/v3 v3.3.5 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/Microsoft/hcsshim v0.11.4 // indirect
 	github.com/agnivade/levenshtein v1.1.1 // indirect
@@ -138,7 +139,7 @@ require (
 	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
 	github.com/urfave/cli/v2 v2.27.2 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.16 // indirect
-	github.com/wundergraph/astjson v0.0.0-20241210135722-15ca0ac078f8 // indirect
+	github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083 // indirect
 	github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 // indirect
@@ -160,7 +161,7 @@ require (
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect

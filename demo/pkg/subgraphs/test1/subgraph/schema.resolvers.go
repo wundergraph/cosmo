@@ -130,6 +130,22 @@ func (r *queryResolver) FloatField(ctx context.Context, arg *float64) (*float64,
 	return arg, nil
 }
 
+// SharedThings is the resolver for the sharedThings field.
+func (r *queryResolver) SharedThings(ctx context.Context, numOfA int, numOfB int) ([]*model.Thing, error) {
+	const MaxNumOfB = 1000 // Define a reasonable maximum value for numOfB
+	if numOfB < 0 || numOfB > MaxNumOfB {
+		return nil, errors.New("numOfB is out of allowed range")
+	}
+	things := make([]*model.Thing, 0, numOfB)
+	for i := 0; i < numOfB; i++ {
+		thing := &model.Thing{
+			B: fmt.Sprintf("b-%d", i),
+		}
+		things = append(things, thing)
+	}
+	return things, nil
+}
+
 // HeaderValue is the resolver for the headerValue field.
 func (r *subscriptionResolver) HeaderValue(ctx context.Context, name string, repeat *int) (<-chan *model.TimestampedString, error) {
 	header := injector.Header(ctx)
@@ -252,6 +268,12 @@ func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subsc
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
 
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//     it when you're done.
+//   - You have helper methods in this file. Move them out to keep these resolver files clean.
 var (
 	aBigObject = &model.ABigObject{
 		AFieldOnABigObject: "a field on a big object - lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt in culpa qui officia deserunt mollit anim id est laborum",

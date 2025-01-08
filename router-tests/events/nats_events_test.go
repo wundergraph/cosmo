@@ -853,7 +853,7 @@ func TestNatsEvents(t *testing.T) {
 			})
 
 			// Send a query to receive the response from the NATS message
-			require.JSONEq(t, `{"data":{"updateEmployeeMyNats": {"success": true}}}`, resOne.Body)
+			require.Equal(t, `{"data":{"updateEmployeeMyNats":{"success":true}}}`, resOne.Body)
 
 			msgOne, err := firstSub.NextMsg(5 * time.Second)
 			require.NoError(t, err)
@@ -868,7 +868,7 @@ func TestNatsEvents(t *testing.T) {
 			})
 
 			// Send a query to receive the response from the NATS message
-			require.JSONEq(t, `{"data":{"updateEmployeeMyNats": {"success": true}}}`, resTwo.Body)
+			require.Equal(t, `{"data":{"updateEmployeeMyNats":{"success":true}}}`, resTwo.Body)
 		})
 	})
 
