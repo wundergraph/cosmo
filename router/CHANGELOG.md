@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.161.1](https://github.com/wundergraph/cosmo/compare/router@0.161.0...router@0.161.1) (2025-01-08)
+
+### Bug Fixes
+
+* provider should be specified in the config.yaml ([#1397](https://github.com/wundergraph/cosmo/issues/1397)) ([7f0f4bb](https://github.com/wundergraph/cosmo/commit/7f0f4bba0b8a1f09787d4cd8f0943a4de761ebb4)) (@alepane21)
+
 # [0.161.0](https://github.com/wundergraph/cosmo/compare/router@0.160.0...router@0.161.0) (2025-01-08)
 
 ### Features
