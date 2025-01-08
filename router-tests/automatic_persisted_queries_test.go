@@ -163,15 +163,10 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 
 	t.Run("redis cache", func(t *testing.T) {
 		var (
-			//redisLocalUrl = "localhost:7000,localhost:7001"
-			redisLocalUrl             = "localhost:6379"
-			redisUrl                  = fmt.Sprintf("redis://%s", redisLocalUrl)
-			redisPassword             = "test"
-			client        rd.RDCloser = redis.NewClient(&redis.Options{Addr: redisLocalUrl, Password: redisPassword})
-			//client        = redis.NewClusterClient(&redis.ClusterOptions{
-			//	Addrs:    strings.Split(redisLocalUrl, ","),
-			//	Password: redisPassword,
-			//})
+			redisLocalUrl = "localhost:6379"
+			redisUrl      = fmt.Sprintf("redis://%s", redisLocalUrl)
+			redisPassword = "test"
+			client        = redis.NewClient(&redis.Options{Addr: redisLocalUrl, Password: redisPassword})
 		)
 		t.Parallel()
 
@@ -375,14 +370,14 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 			t.Parallel()
 
 			redisLocalUrl = "localhost:7000,localhost:7001"
-			client = redis.NewClusterClient(&redis.ClusterOptions{
+			clusterClient := redis.NewClusterClient(&redis.ClusterOptions{
 				Addrs:    strings.Split(redisLocalUrl, ","),
 				Password: redisPassword,
 			})
 
 			key := uuid.New().String()
 			t.Cleanup(func() {
-				del := client.Del(context.Background(), key)
+				del := clusterClient.Del(context.Background(), key)
 				require.NoError(t, del.Err())
 			})
 
