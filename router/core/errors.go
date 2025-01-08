@@ -49,6 +49,7 @@ type (
 		Authorization json.RawMessage `json:"authorization,omitempty"`
 		Trace         json.RawMessage `json:"trace,omitempty"`
 		StatusCode    int             `json:"statusCode,omitempty"`
+		Code          string          `json:"code,omitempty"`
 	}
 )
 
