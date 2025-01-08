@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=./pkg/config/config.schema.json
+
+# See pkg/config/config.go for the full list of configuration options.
+# This file is used to debugging purposes only.
+
+version: "1"
