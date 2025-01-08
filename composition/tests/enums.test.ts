@@ -530,9 +530,22 @@ describe('Enum tests', () => {
       const enumDef = federationResult?.parentDefinitionDataByTypeName.get('Instruction') as EnumDefinitionData;
 
       expect(enumDef.subgraphNames.size).toBe(2);
-      expect(enumDef.enumValueDataByValueName.get('FIGHT')?.subgraphNames.size).toBe(2);
-      expect(enumDef.enumValueDataByValueName.get('POKEMON')?.subgraphNames.size).toBe(2);
-      expect(enumDef.enumValueDataByValueName.get('ITEM')?.subgraphNames.size).toBe(1);
+      expect(enumDef.subgraphNames).toContain(subgraphA.name);
+      expect(enumDef.subgraphNames).toContain(subgraphC.name);
+
+      const fightEnumVal = enumDef.enumValueDataByValueName.get('FIGHT');
+      expect(fightEnumVal?.subgraphNames.size).toBe(2);
+      expect(fightEnumVal?.subgraphNames).toContain(subgraphA.name);
+      expect(fightEnumVal?.subgraphNames).toContain(subgraphC.name);
+
+      const pokemonEnumVal = enumDef.enumValueDataByValueName.get('POKEMON');
+      expect(pokemonEnumVal?.subgraphNames.size).toBe(2);
+      expect(pokemonEnumVal?.subgraphNames).toContain(subgraphA.name);
+      expect(pokemonEnumVal?.subgraphNames).toContain(subgraphC.name);
+
+      const itemEnumVal = enumDef.enumValueDataByValueName.get('ITEM');
+      expect(itemEnumVal?.subgraphNames.size).toBe(1);
+      expect(itemEnumVal?.subgraphNames).toContain(subgraphC.name);
     });
   });
 });
