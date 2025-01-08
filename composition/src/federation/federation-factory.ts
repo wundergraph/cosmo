@@ -566,6 +566,7 @@ export class FederationFactory {
     }
     existingData.appearances += 1;
     setLongestDescription(existingData, incomingData);
+    addIterableValuesToSet(incomingData.subgraphNames, existingData.subgraphNames);
   }
 
   // To facilitate the splitting of tag paths, field arguments do not use the renamedPath property for tagNamesByPath
