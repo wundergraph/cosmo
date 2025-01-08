@@ -41,7 +41,7 @@ func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
 			Password: opts.Password,
 		})
 		if !isFunctioningClient(rdb) {
-			return rdb, fmt.Errorf("failed to create a functioning redis client")
+			return rdb, fmt.Errorf("failed to create a functioning redis client. Ensure that you have provided multiple cluster URLs for a cluster client")
 		}
 	}
 
