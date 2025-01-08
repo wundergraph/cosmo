@@ -34,7 +34,7 @@ FROM --platform=${BUILDPLATFORM} node:lts-alpine
 
 WORKDIR /app
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 # Fetch built artifacts
 COPY --from=builder /app/pruned .
