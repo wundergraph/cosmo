@@ -19,9 +19,9 @@ jobs:
       matrix:
         # build and publish in parallel: linux/386, linux/amd64, linux/arm64, darwin/amd64, darwin/arm64
         goos: [linux, darwin]
-        goarch: ["386", amd64, arm64]
+        goarch: ['386', amd64, arm64]
         exclude:
-          - goarch: "386"
+          - goarch: '386'
             goos: darwin
 
     steps:
@@ -35,8 +35,8 @@ jobs:
       - uses: winterjung/split@v2
         id: split
         with:
-          separator: "@"
-          msg: "${{ github.event.release.tag_name }}"
+          separator: '@'
+          msg: '${{ github.event.release.tag_name }}'
 
       - name: Set BUILD_TIME env
         run: echo BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ') >> ${GITHUB_ENV}
@@ -48,13 +48,13 @@ jobs:
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
           # Where to run `go build .`
-          project_path: "aws-lambda-router/cmd"
+          project_path: 'aws-lambda-router/cmd'
           # Convention from AWS Lambda
-          binary_name: "bootstrap"
+          binary_name: 'bootstrap'
           pre_command: export CGO_ENABLED=0
           build_flags: -trimpath
           # -w = omits the DWARF symbol table, effectively removing debugging information. Reduces binary size by ~30%.
-          ldflags: -w -extldflags -static -X "github.com/wundergraph/cosmo/aws-lambda-router/internal.Version=${{ steps.split.outputs._1 }}" -X "github.com/wundergraph/cosmo/aws-lambda-router/internal.Date=${{ env.BUILD_TIME }}" -X "github.com/wundergraph/cosmo/aws-lambda-router/internal.Commit=${{ github.sha }}"
+          ldflags: -w -extldflags -static -X "github.com/cabiri.io/cosmo/aws-lambda-router/internal.Version=${{ steps.split.outputs._1 }}" -X "github.com/cabiri.io/cosmo/aws-lambda-router/internal.Date=${{ env.BUILD_TIME }}" -X "github.com/cabiri.io/cosmo/aws-lambda-router/internal.Commit=${{ github.sha }}"
           overwrite: true
           extra_files: LICENSE
           #release_tag: aws-lambda-router@0.1.0

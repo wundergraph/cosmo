@@ -51,8 +51,8 @@ jobs:
 
       - name: Publish packages & Create Github Releases
         run: |
-          git config --global user.email "bot@wundergraph.com"
-          git config --global user.name "hardworker-bot"
+          git config --global user.email "bot@cabiri.io"
+          git config --global user.name "cabiri-bot"
           pnpm whoami
           pnpm release
         env:

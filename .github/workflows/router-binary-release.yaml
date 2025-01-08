@@ -19,9 +19,9 @@ jobs:
       matrix:
         # build and publish in parallel: linux/386, linux/amd64, linux/arm64, windows/386, windows/amd64, darwin/amd64, darwin/arm64
         goos: [linux, windows, darwin]
-        goarch: ["386", amd64, arm64]
+        goarch: ['386', amd64, arm64]
         exclude:
-          - goarch: "386"
+          - goarch: '386'
             goos: darwin
           - goarch: arm64
             goos: windows
@@ -37,8 +37,8 @@ jobs:
       - uses: winterjung/split@v2
         id: split
         with:
-          separator: "@"
-          msg: "${{ github.event.release.tag_name }}"
+          separator: '@'
+          msg: '${{ github.event.release.tag_name }}'
 
       - name: Set BUILD_TIME env
         run: echo BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ') >> ${GITHUB_ENV}
@@ -50,11 +50,11 @@ jobs:
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
           # Where to run `go build .`
-          project_path: "router/cmd/router"
-          binary_name: "router"
+          project_path: 'router/cmd/router'
+          binary_name: 'router'
           pre_command: export CGO_ENABLED=0
           build_flags: -trimpath
-          ldflags: -extldflags -static -X "github.com/wundergraph/cosmo/router/core.Version=${{ steps.split.outputs._1 }}" -X "github.com/wundergraph/cosmo/router/core.Date=${{ env.BUILD_TIME }}" -X "github.com/wundergraph/cosmo/router/core.Commit=${{ github.sha }}"
+          ldflags: -extldflags -static -X "github.com/cabiri.io/cosmo/router/core.Version=${{ steps.split.outputs._1 }}" -X "github.com/cabiri.io/cosmo/router/core.Date=${{ env.BUILD_TIME }}" -X "github.com/cabiri.io/cosmo/router/core.Commit=${{ github.sha }}"
           overwrite: true
           extra_files: LICENSE
           #release_tag: router@0.14.0

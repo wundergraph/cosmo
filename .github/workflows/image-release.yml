@@ -100,9 +100,8 @@ jobs:
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.name }}:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.name }}:buildcache,mode=max
           platforms: linux/amd64,linux/arm64
-          outputs:
-            type=image,name=target,annotation-index.org.opencontainers.image.description=${{ inputs.name }}
-            type=image,name=target,annotation-index.org.opencontainers.image.source=https://github.com/wundergraph/cosmo
+          outputs: type=image,name=target,annotation-index.org.opencontainers.image.description=${{ inputs.name }}
+            type=image,name=target,annotation-index.org.opencontainers.image.source=https://github.com/cabiri.io/cosmo
             type=image,name=target,annotation-index.org.opencontainers.image.licenses=Apache-2.0
           build-args: |
             VERSION=${{ inputs.tag }}

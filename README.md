@@ -1,3 +1,18 @@
+# Cosmo: The Cabiri Remix
+
+This repository is a fork of [cosmo/wundergraph](https://github.com/wundergraph/cosmo/), patching in extra capabilities not yet supported by the original project. This includes:
+
+For `aws-lambda-router`:
+
+- Removing response compression to avoid double compression by API Gateway (https://github.com/wundergraph/cosmo/issues/904)
+- Adding support for configuration of Cosmo Router in AWS Lambda via `config.yaml` (https://github.com/wundergraph/cosmo/issues/872)
+
+---
+
+The `README` contents for the original project follow below.
+
+---
+
 <p align="center">
 <img width="350" src="./docs/assets/logo.png"/>
 </p>

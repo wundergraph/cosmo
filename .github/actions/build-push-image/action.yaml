@@ -1,36 +1,36 @@
-name: "Build and Push Image (PR only)"
-description: "This action to build and push docker image for CI in Pull Request only."
+name: 'Build and Push Image (PR only)'
+description: 'This action to build and push docker image for CI in Pull Request only.'
 inputs:
   image_description:
-    description: "The description of the container"
+    description: 'The description of the container'
   image_name:
-    description: "The name of the container"
+    description: 'The name of the container'
     required: true
   token:
-    description: "The token to use for the GitHub container registry"
+    description: 'The token to use for the GitHub container registry'
     required: true
   dockerfile:
-    description: "The Dockerfile to use"
-    default: "Dockerfile"
+    description: 'The Dockerfile to use'
+    default: 'Dockerfile'
   docker_context:
-    description: "The Docker context to use"
-    default: "."
+    description: 'The Docker context to use'
+    default: '.'
   docker_username:
-    description: "The username to use for the Docker container registry"
+    description: 'The username to use for the Docker container registry'
   docker_password:
-    description: "The password to use for the Docker container registry"
+    description: 'The password to use for the Docker container registry'
   image_platforms:
-    description: "The platforms to build the image for"
-    default: "linux/amd64,linux/arm64"
+    description: 'The platforms to build the image for'
+    default: 'linux/amd64,linux/arm64'
   push:
-    description: "Whether to push the image to the GitHub container registry"
-    default: "true"
+    description: 'Whether to push the image to the GitHub container registry'
+    default: 'true'
   load_Image:
     description: "Whether to make the image locally available to the build. Doesn't work with multi-platform builds"
-    default: "false"
+    default: 'false'
 
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
     - name: Log in to Docker Container registry (With write access)
       uses: docker/login-action@v3
@@ -91,7 +91,7 @@ runs:
         load: ${{ inputs.load_Image == 'true' }}
         outputs:
           type=image,name=target,annotation-index.org.opencontainers.image.description=${{ inputs.image_description }}
-          type=image,name=target,annotation-index.org.opencontainers.image.source=https://github.com/wundergraph/cosmo
+          type=image,name=target,annotation-index.org.opencontainers.image.source=https://github.com/cabiri.io/cosmo
           type=image,name=target,annotation-index.org.opencontainers.image.licenses=Apache-2.0
         build-args: |
           VERSION=${{ github.sha }}

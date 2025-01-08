@@ -3,7 +3,7 @@ Important: Before developing new features, please open an issue to discuss your 
 
 Thank you for your contribution! Please provide a detailed description below and ensure you've met all the requirements.
 
-Contributors Guide: https://github.com/wundergraph/cosmo/blob/main/CONTRIBUTING.md
+Contributors Guide: https://github.com/cabiri.io/cosmo/blob/main/CONTRIBUTING.md
 
 Squashed commit messages must follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) standard to facilitate changelog generation.
 
@@ -30,8 +30,8 @@ Please describe in detail the impact of this change. Attach screenshots if appli
 - [ ] I have discussed my proposed changes in an issue and have received approval to proceed.
 - [ ] I have followed the coding standards of the project.
 - [ ] Tests or benchmarks have been added or updated.
-- [ ] Documentation has been updated on [https://github.com/wundergraph/cosmo-docs](https://github.com/wundergraph/cosmo-docs).
-- [ ] I have read the [Contributors Guide](https://github.com/wundergraph/cosmo/blob/main/CONTRIBUTING.md).
+- [ ] Documentation has been updated on [https://github.com/cabiri.io/cosmo-docs](https://github.com/cabiri.io/cosmo-docs).
+- [ ] I have read the [Contributors Guide](https://github.com/cabiri.io/cosmo/blob/main/CONTRIBUTING.md).
 
 <!--
 Please add any additional information or context regarding your changes here.

@@ -1,17 +1,40 @@
 # Releasing
 
+## `cabiri-io/cosmo` fork changes to release process
+
+The `cabiri-io/cosmo` fork is primarily interested in patching the `router` and `aws-lambda-router` subprojects of `cosmo`. Therefore, the release process has been stripped back compared to `wundergraph/cosmo`. Other workflows which are not required have been disabled to prevent them being accidentally ran.
+
+To release a new version of `aws-lambda-router`:
+
+- Create a branch, make your changes, raise & merge a PR to `main`
+  - Ensure that you include a manual increment to the version number in `aws-lambda-version/package.json`
+- Increment the version of `aws-lambda-router`:
+  ```
+  # on main branch:
+  VERSION=$(cat ./aws-lambda-router/package.json | jq -r .version) && gh release create aws-lambda-router@$VERSION -t "aws-lambda-router@$VERSION" --generate-notes
+  ```
+- The creation of the release will trigger the `aws-router-binary-release.yaml` workflow, which will generate the new binaries and attach them to the release. This will be accessible to download from `https://github.com/cabiri-io/cosmo/releases/download/aws-lambda-router%40$VERSION/bootstrap-aws-lambda-router@$VERSION-linux-arm64.tar.gz`
+
+> NOTE: version numbers for `aws-lambda-router` in this fork start at `0.1.0`.
+
+---
+
+The release docs for the original project follow below.
+
+---
+
 ## Monorepo
 
 Release the full monorepo with all packages and services can be done by triggering a single GitHub Action workflow.
 
 1. [Trigger the Release workflow](https://github.com/wundergraph/cosmo/actions/workflows/release.yaml): This will create GitHub releases and tags for all components. For services that are not published to NPM but to GitHub container registry, Lerna will trigger a `postversion` npm hooks that triggers the [Build and Release Image](https://github.com/wundergraph/cosmo/actions/workflows/image-release.yml) workflow. This workflow will build and tag all images:
-    - `latest`: Only when the workflow was triggered on the default branch, the `latest` tag will be created.
-    - `short-sha`: The short SHA of the commit that triggered the release workflow will be tagged e.g `sha-d7f7524`.
-    - `git-tag`: The git tag that was updated by Lerna in the `package.json` will be tagged e.g. `0.4.2`
-    - `buildcache`: This tag will be used by the Docker GitHub Action to cache the build step. This tag will be overwritten on every release.
+   - `latest`: Only when the workflow was triggered on the default branch, the `latest` tag will be created.
+   - `short-sha`: The short SHA of the commit that triggered the release workflow will be tagged e.g `sha-d7f7524`.
+   - `git-tag`: The git tag that was updated by Lerna in the `package.json` will be tagged e.g. `0.4.2`
+   - `buildcache`: This tag will be used by the Docker GitHub Action to cache the build step. This tag will be overwritten on every release.
 2. After the release, you can validate the release by:
-    1. checking the [GitHub Cosmo Packages](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
-    2. checking the [GitHub Cosmo Releases](https://github.com/wundergraph/cosmo/releases)
+   1. checking the [GitHub Cosmo Packages](https://github.com/orgs/wundergraph/packages?repo_name=cosmo)
+   2. checking the [GitHub Cosmo Releases](https://github.com/wundergraph/cosmo/releases)
 
 ## Release Automation
 

@@ -1,6 +1,6 @@
 {
   "name": "aws-lambda-router",
-  "version": "0.38.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Placeholder package to simplify versioning and releasing with lerna.",
   "keywords": [
@@ -12,8 +12,8 @@
     "serverless"
   ],
   "author": {
-    "name": "WunderGraph Maintainers",
-    "email": "info@wundergraph.com"
+    "name": "Cabiri",
+    "email": "hello@cabiri.io"
   },
   "license": "Apache-2.0"
 }

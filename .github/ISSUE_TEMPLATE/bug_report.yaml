@@ -7,7 +7,7 @@ body:
       value: |
         Thank you for taking the time to complete this bug report! Please ensure that you fill out the entire form below, offering as much context as possible to assist us in triaging and swiftly locating the source of the bug.
 
-        Before submitting a bug, please make sure to search through the [existing bugs](https://github.com/wundergraph/cosmo/issues) to check if an existing issue already addresses your problem.
+        Before submitting a bug, please make sure to search through the [existing bugs](https://github.com/cabiri.io/cosmo/issues) to check if an existing issue already addresses your problem.
   - type: dropdown
     id: component
     attributes:
@@ -58,7 +58,7 @@ body:
         Otherwise, please attach a minimum reproduction through a GitHub repository that includes
         essential information such as the relevant subgraph SDLs.
         Please also make sure that the instructions for the reproduction are clear, tested, and fully accurate.
-        
+
         ## Description
 
         ## Steps to Reproduce

@@ -42,9 +42,9 @@ jobs:
           commit_message: 'chore: update helm docs and prepare release'
           file_pattern: 'helm/**/*.md'
           token: ${{ secrets.GH_TOKEN_HELM_RELEASES }}
-          commit_user_name: hardworker-bot
-          commit_user_email: bot@wundergraph.com
-          commit_author: hardworker-bot <bot@wundergraph.com>
+          commit_user_name: cabiri-bot
+          commit_user_email: bot@cabiri.io
+          commit_author: cabiri-bot <bot@cabiri.io>
           create_branch: false
           skip_checkout: true
           # see: https://github.com/stefanzweifel/git-auto-commit-action?tab=readme-ov-file#custom-file_pattern-changed-files-but-seeing-working-tree-clean-nothing-to-commit-in-the-logs

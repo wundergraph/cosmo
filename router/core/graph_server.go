@@ -11,9 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/klauspost/compress/gzhttp"
-	"github.com/klauspost/compress/gzip"
-
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto"
 	"github.com/go-chi/chi/v5"
@@ -201,25 +198,10 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
 	}
 
-	wrapper, err := gzhttp.NewWrapper(
-		gzhttp.MinSize(1024*4), // 4KB
-		gzhttp.CompressionLevel(gzip.DefaultCompression),
-		gzhttp.ContentTypes(CompressibleContentTypes),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create gzip wrapper: %w", err)
-	}
-
 	/**
 	* A group where we can selectively apply middlewares to the graphql endpoint
 	 */
 	httpRouter.Group(func(cr chi.Router) {
-
-		// We are applying it conditionally because compressing 3MB playground is still slow even with stdlib gzip
-		cr.Use(func(h http.Handler) http.Handler {
-			return wrapper(h)
-		})
-
 		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
 		cr.Mount(r.graphqlPath, multiGraphHandler)
 

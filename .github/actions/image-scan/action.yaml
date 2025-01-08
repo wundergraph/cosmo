@@ -1,8 +1,8 @@
-name: "Image Vulnerability Scan"
-description: "This action performs a Trivy scan on the image and adds a PR comment with the results."
+name: 'Image Vulnerability Scan'
+description: 'This action performs a Trivy scan on the image and adds a PR comment with the results.'
 inputs:
   name:
-    description: "The name of service"
+    description: 'The name of service'
     required: true
 
   github_token:
@@ -14,11 +14,11 @@ inputs:
     required: false
 
   image_ref:
-    description: "The name of the container"
+    description: 'The name of the container'
     required: true
 
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -48,12 +48,11 @@ runs:
       with:
         message: |
           # ${{ inputs.name }} image scan passed
-          :white_check_mark: No security [vulnerabilities](https://github.com/wundergraph/cosmo/security/code-scanning?query=pr%3A${{ github.event.number }}+is%3Aopen+tool%3ATrivy) found in image:
-          
+          :white_check_mark: No security [vulnerabilities](https://github.com/cabiri.io/cosmo/security/code-scanning?query=pr%3A${{ github.event.number }}+is%3Aopen+tool%3ATrivy) found in image:
+
           ```
           ${{ inputs.image_ref }}
           ```
-
 
     - uses: mshick/add-pr-comment@v2
       if: failure() && steps.scan.outcome == 'failure'
@@ -61,11 +60,11 @@ runs:
         message: |
           # ${{ inputs.name }} image scan failed
           :x: Security vulnerabilities found in image:
-          
+
           ```
           ${{ inputs.image_ref }}
           ```
-          
-          Please check the security [vulnerabilities](https://github.com/wundergraph/cosmo/security/code-scanning?query=pr%3A${{ github.event.number }}+is%3Aopen+tool%3ATrivy) found in the PR.
-          
+
+          Please check the security [vulnerabilities](https://github.com/cabiri.io/cosmo/security/code-scanning?query=pr%3A${{ github.event.number }}+is%3Aopen+tool%3ATrivy) found in the PR.
+
           If you believe this is a false positive, please add the vulnerability to the `.trivyignore` file and re-run the scan.
