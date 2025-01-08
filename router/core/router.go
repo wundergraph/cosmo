@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 	"net"
 	"net/http"
 	"net/url"
@@ -196,7 +197,7 @@ type (
 		fileUploadConfig                *config.FileUpload
 		accessController                *AccessController
 		retryOptions                    retrytransport.RetryOptions
-		redisClient                     *redis.Client
+		redisClient                     rd.RDCloser
 		processStartTime                time.Time
 		developmentMode                 bool
 		healthcheck                     health.Checker
@@ -840,12 +841,15 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
-		options, err := redis.ParseURL(r.Config.rateLimit.Storage.Url)
+		var err error
+		r.redisClient, err = rd.NewRedisCloser(&rd.RedisCloserOptions{
+			URL:    r.Config.rateLimit.Storage.Url,
+			Logger: r.logger,
+		})
 		if err != nil {
-			return fmt.Errorf("failed to parse the redis connection url: %w", err)
+			return fmt.Errorf("failed to create redis client: %w", err)
 		}
 
-		r.redisClient = redis.NewClient(options)
 	}
 
 	if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
