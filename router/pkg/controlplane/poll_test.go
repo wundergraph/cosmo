@@ -34,7 +34,7 @@ func Test_Poller(t *testing.T) {
 	})
 }
 
-func Test_RandomDurationBetween(t *testing.T) {
+func Test_RandomDuration(t *testing.T) {
 	t.Run("should return durations within acceptable range", func(t *testing.T) {
 		max := 10 * time.Millisecond
 
