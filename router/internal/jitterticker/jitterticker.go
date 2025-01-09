@@ -35,8 +35,6 @@ func NewTicker(interval time.Duration, maxJitter time.Duration) *Ticker {
 	}
 
 	go func() {
-		defer close(c)
-
 		for {
 			time.Sleep(ticker.getDelay())
 

@@ -38,6 +38,17 @@ func Test_JitterTicker(t *testing.T) {
 			assert.LessOrEqual(t, duration, interval+1*time.Millisecond)
 		}
 	})
+
+	t.Run("should stop correctly", func(t *testing.T) {
+		interval := 20 * time.Millisecond
+		maxJitter := 10 * time.Millisecond
+
+		ticker := NewTicker(interval, maxJitter)
+
+		go collectTickDurations(ticker, 25)
+
+		ticker.Stop()
+	})
 }
 
 func collectTickDurations(ticker *Ticker, count int) []time.Duration {
