@@ -9,11 +9,9 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"path"
 
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
-
 	"go.opentelemetry.io/otel/codes"
 	semconv12 "go.opentelemetry.io/otel/semconv/v1.12.0"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -24,10 +22,7 @@ import (
 var _ CacheWarmupSource = (*CDNSource)(nil)
 
 type CDNSource struct {
-	cdnURL *url.URL
-	// path is an optional path which is used to specify the name of the file.
-	// defaults to operations.json
-	path                string
+	cdnURL              *url.URL
 	authenticationToken string
 	//	// federatedGraphID is the ID of the federated graph that was obtained
 	//	// from the token, already url-escaped
@@ -42,7 +37,7 @@ type cdnWarmupOperations struct {
 	Operations []*CacheWarmupItem `json:"operations"`
 }
 
-func NewCDNSource(endpoint, token, featureFlag string, logger *zap.Logger) (*CDNSource, error) {
+func NewCDNSource(endpoint, token string, logger *zap.Logger) (*CDNSource, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
@@ -57,14 +52,8 @@ func NewCDNSource(endpoint, token, featureFlag string, logger *zap.Logger) (*CDN
 		logger = zap.NewNop()
 	}
 
-	path := "operations.json"
-	if featureFlag != "" {
-		path = fmt.Sprintf("%s/%s", featureFlag, path)
-	}
-
 	return &CDNSource{
 		cdnURL:              u,
-		path:                path,
 		authenticationToken: token,
 		federatedGraphID:    claims.FederatedGraphID,
 		organizationID:      claims.OrganizationID,
@@ -76,10 +65,9 @@ func (c *CDNSource) LoadItems(ctx context.Context, log *zap.Logger) ([]*CacheWar
 	span := trace.SpanFromContext(ctx)
 	defer span.End()
 
-	operationBasePath := fmt.Sprintf("/%s/%s/cache_warmup/", c.organizationID, c.federatedGraphID)
-	operationPath := path.Join(operationBasePath, c.path)
+	operationsPath := fmt.Sprintf("/%s/%s/cache_warmup/operations.json", c.organizationID, c.federatedGraphID)
 
-	operationURL := c.cdnURL.ResolveReference(&url.URL{Path: operationPath})
+	operationURL := c.cdnURL.ResolveReference(&url.URL{Path: operationsPath})
 	log.Debug("Loading cache warmup config", zap.String("url", operationURL.String()))
 
 	req, err := http.NewRequestWithContext(ctx, "GET", operationURL.String(), nil)

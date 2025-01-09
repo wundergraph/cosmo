@@ -929,7 +929,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		case "s3":
 			return nil, fmt.Errorf("s3 cache warmup is not supported yet")
 		case "cdn":
-			cdnSource, err := NewCDNSource(s.Config.cdnConfig.URL, s.graphApiToken, featureFlagName, s.logger)
+			cdnSource, err := NewCDNSource(s.Config.cdnConfig.URL, s.graphApiToken, s.logger)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create cdn source: %w", err)
 			}

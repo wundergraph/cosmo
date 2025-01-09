@@ -399,6 +399,8 @@ func TestCacheWarmup(t *testing.T) {
 		// keep in sync with testdata/cache_warmup/cdn/operation.json
 		cdnOperationCount := int64(4)
 		cdnPOCount := int64(1)
+		featureOperationCount := int64(1)
+		invalidOperationCount := int64(1)
 
 		t.Run("cache warmup disabled with CDN config", func(t *testing.T) {
 			t.Parallel()
@@ -438,14 +440,14 @@ func TestCacheWarmup(t *testing.T) {
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
 					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						QueryNormalizationMisses:          cdnOperationCount,
+						QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount,
 						QueryNormalizationHits:            3,
 						PersistedQueryNormalizationMisses: cdnPOCount,
 						PersistedQueryNormalizationHits:   0,
-						ValidationMisses:                  cdnOperationCount,
-						ValidationHits:                    4,
-						PlanMisses:                        cdnOperationCount,
-						PlanHits:                          4,
+						ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
+						ValidationHits:                    3,
+						PlanMisses:                        cdnOperationCount + cdnPOCount,
+						PlanHits:                          3,
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -466,6 +468,9 @@ func TestCacheWarmup(t *testing.T) {
 
 		t.Run("should correctly warm the cache with data from the operation.json and hit persisted operations", func(t *testing.T) {
 			t.Parallel()
+
+			expected := `{"data":{"employees":[{"details":{"forename":"Jens","hasChildren":true,"location":{"key":{"name":"Germany"}},"maritalStatus":"MARRIED","middlename":"","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Neuse"}},{"details":{"forename":"Dustin","hasChildren":false,"location":{"key":{"name":"Germany"}},"maritalStatus":"ENGAGED","middlename":"Klaus","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Deus"}},{"details":{"forename":"Stefan","hasChildren":false,"location":{"key":{"name":"America"}},"maritalStatus":"ENGAGED","middlename":"","nationality":"AMERICAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"REPTILE","gender":"UNKNOWN","name":"Snappy","__typename":"Alligator","dangerous":"yes"}],"surname":"Avram"}},{"details":{"forename":"Björn","hasChildren":true,"location":{"key":{"name":"Germany"}},"maritalStatus":"MARRIED","middlename":"Volker","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Abby","__typename":"Dog","breed":"GOLDEN_RETRIEVER"},{"class":"MAMMAL","gender":"MALE","name":"Survivor","__typename":"Pony"}],"surname":"Schwenzer"}},{"details":{"forename":"Sergiy","hasChildren":false,"location":{"key":{"name":"Ukraine"}},"maritalStatus":"ENGAGED","middlename":"","nationality":"UKRAINIAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Blotch","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Grayone","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Rusty","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"FEMALE","name":"Manya","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"MALE","name":"Peach","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"MALE","name":"Panda","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"FEMALE","name":"Mommy","__typename":"Cat","type":"STREET"},{"class":"MAMMAL","gender":"FEMALE","name":"Terry","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"FEMALE","name":"Tilda","__typename":"Cat","type":"HOME"},{"class":"MAMMAL","gender":"MALE","name":"Vasya","__typename":"Cat","type":"HOME"}],"surname":"Petrunin"}},{"details":{"forename":"Suvij","hasChildren":false,"location":{"key":{"name":"India"}},"maritalStatus":null,"middlename":"","nationality":"INDIAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Surya"}},{"details":{"forename":"Nithin","hasChildren":false,"location":{"key":{"name":"India"}},"maritalStatus":null,"middlename":"","nationality":"INDIAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Kumar"}},{"details":{"forename":"Eelco","hasChildren":false,"location":{"key":{"name":"Netherlands"}},"maritalStatus":null,"middlename":"","nationality":"DUTCH","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"UNKNOWN","name":"Vanson","__typename":"Mouse"}],"surname":"Wiersma"}},{"details":{"forename":"Alexandra","hasChildren":true,"location":{"key":{"name":"Germany"}},"maritalStatus":"MARRIED","middlename":"","nationality":"GERMAN","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":null,"surname":"Neuse"}},{"details":{"forename":"David","hasChildren":false,"location":{"key":{"name":"England"}},"maritalStatus":"MARRIED","middlename":null,"nationality":"ENGLISH","pastLocations":[{"country":{"key":{"name":"America"}},"name":"Ohio","type":"city"},{"country":{"key":{"name":"England"}},"name":"London","type":"city"}],"pets":[{"class":"MAMMAL","gender":"FEMALE","name":"Pepper","__typename":"Cat","type":"HOME"}],"surname":"Stutt"}}]}}`
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
@@ -475,14 +480,14 @@ func TestCacheWarmup(t *testing.T) {
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
 					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						QueryNormalizationMisses:          cdnOperationCount,
+						QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount,
 						QueryNormalizationHits:            0,
 						PersistedQueryNormalizationMisses: cdnPOCount,
 						PersistedQueryNormalizationHits:   1,
-						ValidationMisses:                  cdnOperationCount,
-						ValidationHits:                    2,
-						PlanMisses:                        cdnOperationCount,
-						PlanHits:                          2,
+						ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
+						ValidationHits:                    1,
+						PlanMisses:                        cdnOperationCount + cdnPOCount,
+						PlanHits:                          1,
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -490,15 +495,16 @@ func TestCacheWarmup(t *testing.T) {
 				header.Add("graphql-client-name", "my-client")
 				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					OperationName: []byte(`"Employees"`),
-					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "1167510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
 					Header:        header,
 				})
+
 				require.NoError(t, err)
-				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+				require.Equal(t, expected, res.Body)
 			})
 		})
 
-		t.Run("should correctly warm the feature flag cache", func(t *testing.T) {
+		t.Run("should correctly also warm the feature flag cache", func(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
@@ -508,23 +514,25 @@ func TestCacheWarmup(t *testing.T) {
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
 					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						QueryNormalizationMisses:          cdnOperationCount,
+						QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount,
 						QueryNormalizationHits:            0,
 						PersistedQueryNormalizationMisses: cdnPOCount,
 						PersistedQueryNormalizationHits:   0,
-						ValidationMisses:                  cdnOperationCount,
-						ValidationHits:                    1,
-						PlanMisses:                        cdnOperationCount,
-						PlanHits:                          1,
+						ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
+						ValidationHits:                    0,
+						PlanMisses:                        cdnOperationCount + cdnPOCount,
+						PlanHits:                          0,
 					},
 					FeatureFlagAssertions: map[string]testenv.CacheMetricsAssertion{
 						"myff": {
-							QueryNormalizationMisses: cdnOperationCount,
-							QueryNormalizationHits:   1,
-							ValidationMisses:         cdnOperationCount,
-							ValidationHits:           1,
-							PlanMisses:               cdnOperationCount,
-							PlanHits:                 1,
+							QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount,
+							QueryNormalizationHits:            1,
+							PersistedQueryNormalizationMisses: cdnPOCount,
+							PersistedQueryNormalizationHits:   0,
+							ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
+							ValidationHits:                    1,
+							PlanMisses:                        cdnOperationCount + featureOperationCount + featureOperationCount,
+							PlanHits:                          1,
 						},
 					},
 				},
