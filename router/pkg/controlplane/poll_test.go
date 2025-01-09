@@ -7,6 +7,30 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func Test_Poller(t *testing.T) {
+	t.Run("creating with invalid parameters should panic", func(t *testing.T) {
+		assert.Panics(t, func() {
+			NewPoll(-1*time.Second, 0*time.Second)
+		})
+
+		assert.Panics(t, func() {
+			NewPoll(1*time.Second, -1*time.Second)
+		})
+
+		assert.Panics(t, func() {
+			NewPoll(0*time.Second, 1*time.Second)
+		})
+	})
+
+	t.Run("stopping should work correctly", func(t *testing.T) {
+		p := NewPoll(1*time.Second, 0*time.Second)
+
+		err := p.Stop()
+
+		assert.NoError(t, err)
+	})
+}
+
 func Test_RandomDurationBetween(t *testing.T) {
 	t.Run("should return durations within acceptable range", func(t *testing.T) {
 		max := 10 * time.Millisecond

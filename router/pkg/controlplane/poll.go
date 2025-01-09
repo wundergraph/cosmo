@@ -27,10 +27,7 @@ func NewPoll(interval time.Duration, maxJitter time.Duration) *Poll {
 		maxJitter: maxJitter,
 	}
 
-	if interval < 0 {
-		panic("negative interval")
-	}
-
+	// maxJitter must be positive, otherwise the random duration function will panic
 	if maxJitter < 0 {
 		panic("negative max jitter")
 	}
