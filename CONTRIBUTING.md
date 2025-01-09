@@ -15,8 +15,8 @@ This guide assumes you have already installed the following software:
 - Node.js [LTS](https://nodejs.org/en/about/releases/). You can also pnpm to [install](https://pnpm.io/cli/env) Node.js.
 - [docker desktop](https://docs.docker.com/desktop/) (includes: engine, buildkit & compose) **or**:
 - [docker engine](https://docs.docker.com/engine/) with:
-    - [docker buildkit](https://docs.docker.com/build/buildkit/), with optionally: [docker buildx plugin](https://docs.docker.com/build/install-buildx/)
-    - [docker compose plugin](https://docs.docker.com/compose/install/#scenario-two-install-the-compose-plugin)
+  - [docker buildkit](https://docs.docker.com/build/buildkit/), with optionally: [docker buildx plugin](https://docs.docker.com/build/install-buildx/)
+  - [docker compose plugin](https://docs.docker.com/compose/install/#scenario-two-install-the-compose-plugin)
 
 ## Monorepo
 
@@ -39,7 +39,7 @@ Ready! You can now start contributing to the WunderGraph Cosmo repository. Feel 
 
 ## Go workspace
 
-According to best practices, we don't commit the `go.work` or `go.sum` files. Those files are personal to each developer. As a result, we use the `go.mod` file to manage the dependencies and overwrites. You can still create `go.work` file in the root of the repository if you are feeling more comfortable with it or to improve tooling support.
+According to best practices, we don't commit the `go.work` or `go.work.sum` files. Those files are personal to each developer. As a result, we use the `go.mod` file to manage the dependencies and overwrites. You can still create `go.work` file in the root of the repository if you are feeling more comfortable with it or to improve tooling support.
 
 ### Example
 
