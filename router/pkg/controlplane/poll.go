@@ -56,6 +56,9 @@ func (c *Poll) Subscribe(ctx context.Context, handler func()) {
 				// the next tick will be skipped. This is how a timer
 				// is implemented in the standard library.
 
+				// Add jitter to the interval
+				// This is to prevent all clients from hitting the server at exactly the same time,
+				// which could cause a burst load issue
 				time.Sleep(randomDuration(c.maxJitter))
 
 				handler()
