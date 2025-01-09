@@ -75,7 +75,7 @@ func randomDuration(max time.Duration) time.Duration {
 
 	// rand.Int63n will panic if its argument <= 0
 	if max == 0 {
-		return 0 * time.Millisecond
+		return 0
 	}
 
 	return time.Duration(rand.Int63n(int64(max)))
