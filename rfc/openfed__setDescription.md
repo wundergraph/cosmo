@@ -112,7 +112,7 @@ For example:
 For these two subgraphs, should the result be:
 1. `@openfed__setDescription` is only considered for the explicit location on which it is defined:
 ```graphql
-# subgraph B
+# federated graph
 
   """
   A.Query description.
@@ -127,7 +127,7 @@ For these two subgraphs, should the result be:
 
 2. `@openfed__setDescription` is "inherited" by its children:
 ```graphql
-# subgraph A
+# federated graph
 
   """
   A.Query description.
