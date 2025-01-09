@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'pathe';
@@ -38,6 +39,7 @@ export const config = {
   checkAuthor: process.env.COSMO_VCS_AUTHOR || '',
   checkCommitSha: process.env.COSMO_VCS_COMMIT || '',
   checkBranch: process.env.COSMO_VCS_BRANCH || '',
+  requestId: randomUUID(),
 };
 
 export const getBaseHeaders = (): HeadersInit => {
@@ -45,5 +47,6 @@ export const getBaseHeaders = (): HeadersInit => {
     'user-agent': `cosmo-cli/${info.version}`,
     authorization: 'Bearer ' + config.apiKey,
     'cosmo-org-slug': getLoginDetails()?.organizationSlug || '',
+    'x-request-id': config.requestId,
   };
 };
