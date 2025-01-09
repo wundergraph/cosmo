@@ -168,6 +168,7 @@
   "ShutdownDelay": 60000000000,
   "GracePeriod": 30000000000,
   "PollInterval": 10000000000,
+  "PollJitter": 0,
   "HealthCheckPath": "/health",
   "ReadinessCheckPath": "/health/ready",
   "LivenessCheckPath": "/health/live",
