@@ -161,14 +161,9 @@ func WithLogger(logger *zap.Logger) Option {
 	}
 }
 
-func WithPollInterval(interval time.Duration) Option {
+func WithConfigPolling(interval time.Duration, jitter time.Duration) Option {
 	return func(s *configPoller) {
 		s.pollInterval = interval
-	}
-}
-
-func WithPollJitter(jitter time.Duration) Option {
-	return func(s *configPoller) {
 		s.pollJitter = jitter
 	}
 }
