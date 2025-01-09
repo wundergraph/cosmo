@@ -19,7 +19,7 @@ export default fp<ChPluginOptions>(async function ClickHousePlugin(fastify, opts
     dsn: opts.dsn,
     logger: opts.logger,
     httpConfig: {
-      timeout: 20_000,
+      timeout: 60_000,
     },
   });
 

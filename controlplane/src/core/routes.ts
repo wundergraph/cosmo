@@ -51,7 +51,7 @@ export interface RouterOptions {
   cdnBaseUrl: string;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {
-  maxTimeoutMs: 25_000,
+  maxTimeoutMs: 80_000,
   jsonOptions: {
     emitDefaultValues: true,
   },

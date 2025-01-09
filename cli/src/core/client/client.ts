@@ -38,6 +38,7 @@ export const CreateClient = (opts: ClientOptions): Client => {
 
     // Interceptors apply to all calls running through this transport.
     interceptors: [],
+    defaultTimeoutMs: 75_000,
   });
 
   return {
