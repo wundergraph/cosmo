@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.119.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.119.0...controlplane@0.119.1) (2025-01-08)
+
+### Bug Fixes
+
+* update the timeouts for clickhouse and platform service ([#1500](https://github.com/wundergraph/cosmo/issues/1500)) ([d425aa1](https://github.com/wundergraph/cosmo/commit/d425aa13568ba94f599a6264619502890030ce02)) (@JivusAyrus)
+
+# [0.119.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.118.7...controlplane@0.119.0) (2025-01-08)
+
+### Features
+
+* expose type data and record subgraphs for enums ([#1495](https://github.com/wundergraph/cosmo/issues/1495)) ([9e13f28](https://github.com/wundergraph/cosmo/commit/9e13f28c0a90b0d2f335c9b31f35e728c4a1799c)) (@thisisnithin)
+
+## [0.118.7](https://github.com/wundergraph/cosmo/compare/controlplane@0.118.6...controlplane@0.118.7) (2025-01-06)
+
+### Bug Fixes
+
+* add regex validation to graph names and routing urls ([#1450](https://github.com/wundergraph/cosmo/issues/1450)) ([e5b1c8f](https://github.com/wundergraph/cosmo/commit/e5b1c8fb33a41fc808067bb6495a43f74b60b314)) (@JivusAyrus)
+
+## [0.118.6](https://github.com/wundergraph/cosmo/compare/controlplane@0.118.5...controlplane@0.118.6) (2025-01-06)
+
+### Bug Fixes
+
+* use gauge metric type for router uptime metric ([#1485](https://github.com/wundergraph/cosmo/issues/1485)) ([94b0125](https://github.com/wundergraph/cosmo/commit/94b01252d6be2848b98449fb29a0bd63dcd980d3)) (@StarpTech)
+
 ## [0.118.5](https://github.com/wundergraph/cosmo/compare/controlplane@0.118.4...controlplane@0.118.5) (2025-01-02)
 
 ### Bug Fixes

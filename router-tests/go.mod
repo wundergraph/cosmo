@@ -24,9 +24,9 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20241221185529-4a72dedc4466
-	github.com/wundergraph/cosmo/router v0.0.0-20241221185529-4a72dedc4466
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.136
+	github.com/wundergraph/cosmo/demo v0.0.0-20250107115408-cdd3d47d6424
+	github.com/wundergraph/cosmo/router v0.0.0-20250107115408-cdd3d47d6424
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.139
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
@@ -139,7 +139,7 @@ require (
 	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
 	github.com/urfave/cli/v2 v2.27.2 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.16 // indirect
-	github.com/wundergraph/astjson v0.0.0-20241210135722-15ca0ac078f8 // indirect
+	github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083 // indirect
 	github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 // indirect
@@ -161,7 +161,7 @@ require (
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect

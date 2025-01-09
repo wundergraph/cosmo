@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
+	"reflect"
+
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/file"
 	"github.com/expr-lang/expr/vm"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
-	"net/http"
-	"net/url"
-	"reflect"
 )
 
 /**
@@ -116,25 +117,39 @@ func LoadAuth(ctx context.Context) RequestAuth {
 	}
 }
 
+func compileOptions(extra ...expr.Option) []expr.Option {
+	options := []expr.Option{
+		expr.Env(Context{}),
+	}
+	options = append(options, extra...)
+	return options
+}
+
 // CompileBoolExpression compiles an expression and returns the program. It is used for expressions that return bool.
 // The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
 func CompileBoolExpression(s string) (*vm.Program, error) {
-	v, err := expr.Compile(s, expr.Env(Context{}), expr.AsBool())
+	v, err := expr.Compile(s, compileOptions(expr.AsBool())...)
 	if err != nil {
 		return nil, handleExpressionError(err)
 	}
-
 	return v, nil
 }
 
 // CompileStringExpression compiles an expression and returns the program. It is used for expressions that return strings
 // The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
 func CompileStringExpression(s string) (*vm.Program, error) {
-	v, err := expr.Compile(s, expr.Env(Context{}), expr.AsKind(reflect.String))
+	v, err := expr.Compile(s, compileOptions(expr.AsKind(reflect.String))...)
 	if err != nil {
 		return nil, handleExpressionError(err)
 	}
+	return v, nil
+}
 
+func CompileAnyExpression(s string) (*vm.Program, error) {
+	v, err := expr.Compile(s, compileOptions()...)
+	if err != nil {
+		return nil, handleExpressionError(err)
+	}
 	return v, nil
 }
 

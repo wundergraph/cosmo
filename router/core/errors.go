@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
+	"net/http"
+
 	"github.com/hashicorp/go-multierror"
 	"github.com/wundergraph/astjson"
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
@@ -17,8 +20,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-	"net"
-	"net/http"
 )
 
 type errorType int
@@ -33,6 +34,7 @@ const (
 	errorTypeEDFS
 	errorTypeInvalidWsSubprotocol
 	errorTypeEDFSInvalidMessage
+	errorTypeMergeResult
 )
 
 type (
@@ -47,6 +49,7 @@ type (
 		Authorization json.RawMessage `json:"authorization,omitempty"`
 		Trace         json.RawMessage `json:"trace,omitempty"`
 		StatusCode    int             `json:"statusCode,omitempty"`
+		Code          string          `json:"code,omitempty"`
 	}
 )
 
@@ -81,6 +84,10 @@ func getErrorType(err error) errorType {
 	var jsonParseErr *astjson.ParseError
 	if errors.As(err, &jsonParseErr) {
 		return errorTypeEDFSInvalidMessage
+	}
+	var mergeResultErr resolve.ErrMergeResult
+	if errors.As(err, &mergeResultErr) {
+		return errorTypeMergeResult
 	}
 	return errorTypeUnknown
 }

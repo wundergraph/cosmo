@@ -362,13 +362,20 @@
       "Rate": 60,
       "Burst": 60,
       "Period": 60000000000,
-      "RejectExceedingRequests": true
+      "RejectExceedingRequests": true,
+      "RejectStatusCode": 200,
+      "HideStatsFromResponseExtension": false
     },
     "Storage": {
       "Url": "redis://:test@localhost:6379",
       "KeyPrefix": "cosmo_rate_limit"
     },
-    "Debug": false
+    "Debug": false,
+    "KeySuffixExpression": "",
+    "ErrorExtensionCode": {
+      "Enabled": true,
+      "Code": "RATE_LIMIT_EXCEEDED"
+    }
   },
   "LocalhostFallbackInsideDocker": true,
   "CDN": {

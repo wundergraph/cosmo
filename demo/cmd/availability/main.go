@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/availability"
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/availability"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler/debug"
