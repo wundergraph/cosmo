@@ -964,10 +964,15 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	if s.redisClient != nil {
 		handlerOpts.RateLimitConfig = s.rateLimit
-		handlerOpts.RateLimiter = NewCosmoRateLimiter(&CosmoRateLimiterOptions{
-			RedisClient: s.redisClient,
-			Debug:       s.rateLimit.Debug,
+		handlerOpts.RateLimiter, err = NewCosmoRateLimiter(&CosmoRateLimiterOptions{
+			RedisClient:         s.redisClient,
+			Debug:               s.rateLimit.Debug,
+			RejectStatusCode:    s.rateLimit.SimpleStrategy.RejectStatusCode,
+			KeySuffixExpression: s.rateLimit.KeySuffixExpression,
 		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create rate limiter: %w", err)
+		}
 	}
 
 	graphqlHandler := NewGraphQLHandler(handlerOpts)
@@ -1126,6 +1131,11 @@ func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig
 					break
 				}
 			}
+
+			_, ok = s.pubSubProviders.nats[providerID]
+			if !ok {
+				return fmt.Errorf("failed to find Nats provider with ID \"%s\". Ensure the provider definition is part of the config", providerID)
+			}
 		}
 
 		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetKafka() {
@@ -1153,6 +1163,11 @@ func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig
 
 					break
 				}
+			}
+
+			_, ok = s.pubSubProviders.kafka[providerID]
+			if !ok {
+				return fmt.Errorf("failed to find Kafka provider with ID \"%s\". Ensure the provider definition is part of the config", providerID)
 			}
 		}
 

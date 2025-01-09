@@ -25,7 +25,8 @@ func TestLocalKafka(t *testing.T) {
 
 	t.Run("subscribe async", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
-			EnableKafka: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsJSONTemplate,
+			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// ensureTopicExists(t, xEnv, "employeeUpdated", "employeeUpdatedTwo")
 			produceKafkaMessage(t, xEnv, "employeeUpdatedTwo", `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
@@ -46,7 +47,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			EnableKafka: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -106,7 +108,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			EnableKafka: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -191,7 +194,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			EnableKafka: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -257,7 +261,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			EnableKafka: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -348,7 +353,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			EnableKafka: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.EnableNetPoll = false
 				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
@@ -429,7 +435,8 @@ func TestKafkaEvents(t *testing.T) {
 			topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 			testenv.Run(t, &testenv.Config{
-				EnableKafka: true,
+				RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+				EnableKafka:              true,
 				RouterOptions: []core.Option{
 					core.WithMultipartHeartbeatInterval(multipartHeartbeatInterval),
 				},
@@ -501,7 +508,8 @@ func TestKafkaEvents(t *testing.T) {
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
 			testenv.Run(t, &testenv.Config{
-				EnableKafka: true,
+				RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+				EnableKafka:              true,
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.BlockSubscriptions = config.BlockOperationConfiguration{
 						Enabled: true,
@@ -534,7 +542,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			EnableKafka: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -594,7 +603,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			EnableKafka: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -653,7 +663,8 @@ func TestKafkaEvents(t *testing.T) {
 		subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
 		testenv.Run(t, &testenv.Config{
-			EnableKafka: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 				securityConfiguration.BlockSubscriptions = config.BlockOperationConfiguration{
 					Enabled: true,
@@ -696,7 +707,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			EnableKafka: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -826,7 +838,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			EnableKafka: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -939,7 +952,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			EnableKafka: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -1052,7 +1066,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			EnableKafka: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)
@@ -1119,7 +1134,8 @@ func TestKafkaEvents(t *testing.T) {
 		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
 
 		testenv.Run(t, &testenv.Config{
-			EnableKafka: true,
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			ensureTopicExists(t, xEnv, topics...)

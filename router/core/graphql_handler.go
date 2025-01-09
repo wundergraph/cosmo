@@ -245,12 +245,16 @@ func (h *GraphQLHandler) configureRateLimiting(ctx *resolve.Context) *resolve.Co
 	ctx.SetRateLimiter(h.rateLimiter)
 	ctx.RateLimitOptions = resolve.RateLimitOptions{
 		Enable:                          true,
-		IncludeStatsInResponseExtension: true,
+		IncludeStatsInResponseExtension: !h.rateLimitConfig.SimpleStrategy.HideStatsFromResponseExtension,
 		Rate:                            h.rateLimitConfig.SimpleStrategy.Rate,
 		Burst:                           h.rateLimitConfig.SimpleStrategy.Burst,
 		Period:                          h.rateLimitConfig.SimpleStrategy.Period,
 		RateLimitKey:                    h.rateLimitConfig.Storage.KeyPrefix,
 		RejectExceedingRequests:         h.rateLimitConfig.SimpleStrategy.RejectExceedingRequests,
+		ErrorExtensionCode: resolve.RateLimitErrorExtensionCode{
+			Enabled: h.rateLimitConfig.ErrorExtensionCode.Enabled,
+			Code:    h.rateLimitConfig.ErrorExtensionCode.Code,
+		},
 	}
 	return WithRateLimiterStats(ctx)
 }
@@ -284,20 +288,27 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		response.Errors[0].Message = errMerge.Error()
 	case errorTypeRateLimit:
 		response.Errors[0].Message = "Rate limit exceeded"
-		buf := bytes.NewBuffer(make([]byte, 0, 1024))
-		err = h.rateLimiter.RenderResponseExtension(ctx, buf)
-		if err != nil {
-			requestLogger.Error("unable to render rate limit stats", zap.Error(err))
-			if isHttpResponseWriter {
-				httpWriter.WriteHeader(http.StatusInternalServerError)
+		if h.rateLimitConfig.ErrorExtensionCode.Enabled {
+			response.Errors[0].Extensions = &Extensions{
+				Code: h.rateLimitConfig.ErrorExtensionCode.Code,
 			}
-			return
 		}
-		response.Extensions = &Extensions{
-			RateLimit: buf.Bytes(),
+		if !h.rateLimitConfig.SimpleStrategy.HideStatsFromResponseExtension {
+			buf := bytes.NewBuffer(make([]byte, 0, 1024))
+			err = h.rateLimiter.RenderResponseExtension(ctx, buf)
+			if err != nil {
+				requestLogger.Error("unable to render rate limit stats", zap.Error(err))
+				if isHttpResponseWriter {
+					httpWriter.WriteHeader(http.StatusInternalServerError)
+				}
+				return
+			}
+			response.Extensions = &Extensions{
+				RateLimit: buf.Bytes(),
+			}
 		}
 		if isHttpResponseWriter {
-			httpWriter.WriteHeader(http.StatusOK) // Always return 200 OK when we return a well-formed response
+			httpWriter.WriteHeader(h.rateLimiter.RejectStatusCode())
 		}
 	case errorTypeUnauthorized:
 		response.Errors[0].Message = "Unauthorized"
