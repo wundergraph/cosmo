@@ -3,6 +3,8 @@ package controlplane
 import (
 	"context"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/jitterticker"
 )
 
 type Poller interface {
@@ -14,18 +16,15 @@ type Poller interface {
 }
 
 type Poll struct {
-	pollInterval time.Duration
-	ticker       *time.Ticker
+	ticker *jitterticker.Ticker
 }
 
 // NewPoll creates a new poller that emits events at the given interval
 // and executes the given handler function in a separate goroutine.
-func NewPoll(interval time.Duration) Poller {
-	p := &Poll{
-		pollInterval: interval,
-	}
+func NewPoll(interval time.Duration, maxJitter time.Duration) Poller {
+	p := &Poll{}
 
-	p.ticker = time.NewTicker(p.pollInterval)
+	p.ticker = jitterticker.NewTicker(interval, maxJitter)
 
 	return p
 }
@@ -38,7 +37,6 @@ func (c *Poll) Stop() error {
 }
 
 func (c *Poll) Subscribe(ctx context.Context, handler func()) {
-
 	go func() {
 		for {
 			select {
