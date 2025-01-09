@@ -656,7 +656,7 @@ export class Composer {
     });
 
     const cacheWarmerOperationsBytes = Buffer.from(cacheWarmerOperations.toJsonString(), 'utf8');
-    const path = `${organizationId}/${federatedGraphId}/cache-warmup/operations.json`;
+    const path = `${organizationId}/${federatedGraphId}/cache_warmup/operations.json`;
     try {
       await blobStorage.putObject<S3RouterConfigMetadata>({
         key: path,

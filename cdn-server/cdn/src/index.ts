@@ -231,7 +231,7 @@ const cacheOperations = (storage: BlobStorage) => {
     let blobObject: BlobObject;
 
     try {
-      blobObject = await storage.getObject({ context: c, key });
+      blobObject = await storage.getObject({ context: c, key, cacheControl: 'no-cache' });
     } catch (e: any) {
       if (e instanceof BlobNotFoundError) {
         return c.notFound();
@@ -264,5 +264,7 @@ export const cdn = <E extends Env, S extends Schema = {}, BasePath extends strin
     .get(draftRouterConfigs, draftRouterConfig(opts.blobStorage));
 
   const cacheOperationsPath = '/:organization_id/:federated_graph_id/cache_warmup/operations.json';
-  hono.use(cacheOperationsPath, jwtMiddleware(opts.authJwtSecret)).get(operations, cacheOperations(opts.blobStorage));
+  hono
+    .use(cacheOperationsPath, jwtMiddleware(opts.authJwtSecret))
+    .get(cacheOperationsPath, cacheOperations(opts.blobStorage));
 };
