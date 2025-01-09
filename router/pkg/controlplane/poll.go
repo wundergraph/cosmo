@@ -56,7 +56,7 @@ func (c *Poll) Subscribe(ctx context.Context, handler func()) {
 				// the next tick will be skipped. This is how a timer
 				// is implemented in the standard library.
 
-				time.Sleep(randomDurationBetween(c.maxJitter))
+				time.Sleep(randomDuration(c.maxJitter))
 
 				handler()
 			}
@@ -64,8 +64,8 @@ func (c *Poll) Subscribe(ctx context.Context, handler func()) {
 	}()
 }
 
-// randomDurationBetween returns a random duration between min and max
-func randomDurationBetween(max time.Duration) time.Duration {
+// randomDuration returns a random duration between 0 and max
+func randomDuration(max time.Duration) time.Duration {
 	if max < 0 {
 		panic("negative duration")
 	}

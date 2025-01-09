@@ -49,7 +49,7 @@ func Test_RandomDurationBetween(t *testing.T) {
 	t.Run("should return 0 when max is 0", func(t *testing.T) {
 		max := 0 * time.Millisecond
 
-		duration := randomDurationBetween(max)
+		duration := randomDuration(max)
 
 		assert.Equal(t, 0*time.Millisecond, duration)
 	})
@@ -59,7 +59,7 @@ func sampleRandomDurations(count int, max time.Duration) []time.Duration {
 	durations := make([]time.Duration, count)
 
 	for i := 0; i < count; i++ {
-		durations[i] = randomDurationBetween(max)
+		durations[i] = randomDuration(max)
 	}
 
 	return durations
