@@ -31,6 +31,8 @@ import {
 } from '../services/AdmissionWebhookController.js';
 import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
 import * as schema from '../../db/schema.js';
+import { ClickHouseClient } from '../clickhouse/index.js';
+import { CacheWarmerRepository } from '../repositories/CacheWarmerRepository.js';
 import { composeSubgraphs, composeSubgraphsWithContracts } from './composition.js';
 import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult } from './schemaCheck.js';
 
@@ -183,6 +185,7 @@ export class Composer {
     private subgraphRepo: SubgraphRepository,
     private contractRepo: ContractRepository,
     private graphCompositionRepository: GraphCompositionRepository,
+    private chClient: ClickHouseClient,
   ) {}
 
   composeRouterConfigWithFeatureFlags({
@@ -395,6 +398,12 @@ export class Composer {
     const baseRouterConfig = this.composeRouterConfigWithFeatureFlags({
       featureFlagRouterExecutionConfigByFeatureFlagName,
       baseCompositionRouterExecutionConfig,
+    });
+
+    await this.fetchAndUploadCacheWarmerOperations({
+      blobStorage,
+      federatedGraphId,
+      organizationId,
     });
 
     const { errors } = await this.uploadRouterConfig({
@@ -628,5 +637,37 @@ export class Composer {
 
       return [filteredSubgraphs, subgraphsToBeComposed];
     });
+  }
+
+  async fetchAndUploadCacheWarmerOperations({
+    blobStorage,
+    federatedGraphId,
+    organizationId,
+  }: {
+    blobStorage: BlobStorage;
+    federatedGraphId: string;
+    organizationId: string;
+  }) {
+    const cacheWarmerRepo = new CacheWarmerRepository(this.chClient, this.db);
+    const cacheWarmerOperations = await cacheWarmerRepo.computeCacheWarmerOperations({
+      federatedGraphId,
+      organizationId,
+      rangeInHours: 24 * 7,
+    });
+
+    const cacheWarmerOperationsBytes = Buffer.from(cacheWarmerOperations.toJsonString(), 'utf8');
+    const path = `${organizationId}/${federatedGraphId}/cache-warmup/operations.json`;
+    try {
+      await blobStorage.putObject<S3RouterConfigMetadata>({
+        key: path,
+        body: cacheWarmerOperationsBytes,
+        contentType: 'application/json; charset=utf-8',
+      });
+    } catch (err: any) {
+      this.logger.error(
+        err,
+        `Failed to upload the cache warmer operations for ${federatedGraphId} to the blob storage`,
+      );
+    }
   }
 }

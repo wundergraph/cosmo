@@ -153,6 +153,7 @@ export function publishMonograph(
           cdnBaseUrl: opts.cdnBaseUrl,
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
+        opts.chClient!,
       );
 
     for (const graph of updatedFederatedGraphs) {

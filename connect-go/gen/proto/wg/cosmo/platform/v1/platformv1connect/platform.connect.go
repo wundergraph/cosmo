@@ -457,6 +457,9 @@ const (
 	// PlatformServiceGetSubgraphByIdProcedure is the fully-qualified name of the PlatformService's
 	// GetSubgraphById RPC.
 	PlatformServiceGetSubgraphByIdProcedure = "/wg.cosmo.platform.v1.PlatformService/GetSubgraphById"
+	// PlatformServicePushCacheWarmerOperationProcedure is the fully-qualified name of the
+	// PlatformService's PushCacheWarmerOperation RPC.
+	PlatformServicePushCacheWarmerOperationProcedure = "/wg.cosmo.platform.v1.PlatformService/PushCacheWarmerOperation"
 	// PlatformServiceGetBillingPlansProcedure is the fully-qualified name of the PlatformService's
 	// GetBillingPlans RPC.
 	PlatformServiceGetBillingPlansProcedure = "/wg.cosmo.platform.v1.PlatformService/GetBillingPlans"
@@ -615,6 +618,7 @@ var (
 	platformServiceGetFeatureFlagsByFederatedGraphMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("GetFeatureFlagsByFederatedGraph")
 	platformServiceGetFederatedGraphByIdMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphById")
 	platformServiceGetSubgraphByIdMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphById")
+	platformServicePushCacheWarmerOperationMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("PushCacheWarmerOperation")
 	platformServiceGetBillingPlansMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetBillingPlans")
 	platformServiceCreateCheckoutSessionMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("CreateCheckoutSession")
 	platformServiceCreateBillingPortalSessionMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("CreateBillingPortalSession")
@@ -884,6 +888,8 @@ type PlatformServiceClient interface {
 	GetFederatedGraphById(context.Context, *connect.Request[v1.GetFederatedGraphByIdRequest]) (*connect.Response[v1.GetFederatedGraphByIdResponse], error)
 	// GetSubgraphById returns the subgraph by id.
 	GetSubgraphById(context.Context, *connect.Request[v1.GetSubgraphByIdRequest]) (*connect.Response[v1.GetSubgraphByIdResponse], error)
+	// PushCacheWarmerOperation adds a operation to the list of cache warmer operations.
+	PushCacheWarmerOperation(context.Context, *connect.Request[v1.PushCacheWarmerOperationRequest]) (*connect.Response[v1.PushCacheWarmerOperationResponse], error)
 	// Billing
 	// -----------------------------------------------------------------------------------------------------------------------------
 	// Return the available billing plans
@@ -1759,6 +1765,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceGetSubgraphByIdMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		pushCacheWarmerOperation: connect.NewClient[v1.PushCacheWarmerOperationRequest, v1.PushCacheWarmerOperationResponse](
+			httpClient,
+			baseURL+PlatformServicePushCacheWarmerOperationProcedure,
+			connect.WithSchema(platformServicePushCacheWarmerOperationMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		getBillingPlans: connect.NewClient[v1.GetBillingPlansRequest, v1.GetBillingPlansResponse](
 			httpClient,
 			baseURL+PlatformServiceGetBillingPlansProcedure,
@@ -1929,6 +1941,7 @@ type platformServiceClient struct {
 	getFeatureFlagsByFederatedGraph       *connect.Client[v1.GetFeatureFlagsByFederatedGraphRequest, v1.GetFeatureFlagsByFederatedGraphResponse]
 	getFederatedGraphById                 *connect.Client[v1.GetFederatedGraphByIdRequest, v1.GetFederatedGraphByIdResponse]
 	getSubgraphById                       *connect.Client[v1.GetSubgraphByIdRequest, v1.GetSubgraphByIdResponse]
+	pushCacheWarmerOperation              *connect.Client[v1.PushCacheWarmerOperationRequest, v1.PushCacheWarmerOperationResponse]
 	getBillingPlans                       *connect.Client[v1.GetBillingPlansRequest, v1.GetBillingPlansResponse]
 	createCheckoutSession                 *connect.Client[v1.CreateCheckoutSessionRequest, v1.CreateCheckoutSessionResponse]
 	createBillingPortalSession            *connect.Client[v1.CreateBillingPortalSessionRequest, v1.CreateBillingPortalSessionResponse]
@@ -2664,6 +2677,11 @@ func (c *platformServiceClient) GetSubgraphById(ctx context.Context, req *connec
 	return c.getSubgraphById.CallUnary(ctx, req)
 }
 
+// PushCacheWarmerOperation calls wg.cosmo.platform.v1.PlatformService.PushCacheWarmerOperation.
+func (c *platformServiceClient) PushCacheWarmerOperation(ctx context.Context, req *connect.Request[v1.PushCacheWarmerOperationRequest]) (*connect.Response[v1.PushCacheWarmerOperationResponse], error) {
+	return c.pushCacheWarmerOperation.CallUnary(ctx, req)
+}
+
 // GetBillingPlans calls wg.cosmo.platform.v1.PlatformService.GetBillingPlans.
 func (c *platformServiceClient) GetBillingPlans(ctx context.Context, req *connect.Request[v1.GetBillingPlansRequest]) (*connect.Response[v1.GetBillingPlansResponse], error) {
 	return c.getBillingPlans.CallUnary(ctx, req)
@@ -2947,6 +2965,8 @@ type PlatformServiceHandler interface {
 	GetFederatedGraphById(context.Context, *connect.Request[v1.GetFederatedGraphByIdRequest]) (*connect.Response[v1.GetFederatedGraphByIdResponse], error)
 	// GetSubgraphById returns the subgraph by id.
 	GetSubgraphById(context.Context, *connect.Request[v1.GetSubgraphByIdRequest]) (*connect.Response[v1.GetSubgraphByIdResponse], error)
+	// PushCacheWarmerOperation adds a operation to the list of cache warmer operations.
+	PushCacheWarmerOperation(context.Context, *connect.Request[v1.PushCacheWarmerOperationRequest]) (*connect.Response[v1.PushCacheWarmerOperationResponse], error)
 	// Billing
 	// -----------------------------------------------------------------------------------------------------------------------------
 	// Return the available billing plans
@@ -3818,6 +3838,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceGetSubgraphByIdMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServicePushCacheWarmerOperationHandler := connect.NewUnaryHandler(
+		PlatformServicePushCacheWarmerOperationProcedure,
+		svc.PushCacheWarmerOperation,
+		connect.WithSchema(platformServicePushCacheWarmerOperationMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceGetBillingPlansHandler := connect.NewUnaryHandler(
 		PlatformServiceGetBillingPlansProcedure,
 		svc.GetBillingPlans,
@@ -4126,6 +4152,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetFederatedGraphByIdHandler.ServeHTTP(w, r)
 		case PlatformServiceGetSubgraphByIdProcedure:
 			platformServiceGetSubgraphByIdHandler.ServeHTTP(w, r)
+		case PlatformServicePushCacheWarmerOperationProcedure:
+			platformServicePushCacheWarmerOperationHandler.ServeHTTP(w, r)
 		case PlatformServiceGetBillingPlansProcedure:
 			platformServiceGetBillingPlansHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateCheckoutSessionProcedure:
@@ -4705,6 +4733,10 @@ func (UnimplementedPlatformServiceHandler) GetFederatedGraphById(context.Context
 
 func (UnimplementedPlatformServiceHandler) GetSubgraphById(context.Context, *connect.Request[v1.GetSubgraphByIdRequest]) (*connect.Response[v1.GetSubgraphByIdResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetSubgraphById is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) PushCacheWarmerOperation(context.Context, *connect.Request[v1.PushCacheWarmerOperationRequest]) (*connect.Response[v1.PushCacheWarmerOperationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.PushCacheWarmerOperation is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetBillingPlans(context.Context, *connect.Request[v1.GetBillingPlansRequest]) (*connect.Response[v1.GetBillingPlansResponse], error) {

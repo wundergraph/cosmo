@@ -218,6 +218,33 @@ const draftRouterConfig = (storage: BlobStorage) => {
   };
 };
 
+const cacheOperations = (storage: BlobStorage) => {
+  return async (c: Context) => {
+    const organizationId = c.get('authenticatedOrganizationId');
+    const federatedGraphId = c.get('authenticatedFederatedGraphId');
+
+    if (organizationId !== c.req.param('organization_id') || federatedGraphId !== c.req.param('federated_graph_id')) {
+      return c.text('Bad Request', 400);
+    }
+
+    const key = `${organizationId}/${federatedGraphId}/cache_warmup/operations.json`;
+    let blobObject: BlobObject;
+
+    try {
+      blobObject = await storage.getObject({ context: c, key });
+    } catch (e: any) {
+      if (e instanceof BlobNotFoundError) {
+        return c.notFound();
+      }
+      throw e;
+    }
+
+    return stream(c, async (stream) => {
+      await stream.pipe(blobObject.stream);
+    });
+  };
+};
+
 // eslint-disable-next-line @typescript-eslint/ban-types
 export const cdn = <E extends Env, S extends Schema = {}, BasePath extends string = '/'>(
   hono: Hono<E, S, BasePath>,
@@ -235,4 +262,7 @@ export const cdn = <E extends Env, S extends Schema = {}, BasePath extends strin
   hono
     .use(draftRouterConfigs, jwtMiddleware(opts.authAdmissionJwtSecret))
     .get(draftRouterConfigs, draftRouterConfig(opts.blobStorage));
+
+  const cacheOperationsPath = '/:organization_id/:federated_graph_id/cache_warmup/operations.json';
+  hono.use(cacheOperationsPath, jwtMiddleware(opts.authJwtSecret)).get(operations, cacheOperations(opts.blobStorage));
 };

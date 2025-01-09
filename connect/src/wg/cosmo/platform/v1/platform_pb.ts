@@ -19097,3 +19097,107 @@ export class GetNamespaceResponse extends Message<GetNamespaceResponse> {
   }
 }
 
+/**
+ * @generated from message wg.cosmo.platform.v1.PushCacheWarmerOperationRequest
+ */
+export class PushCacheWarmerOperationRequest extends Message<PushCacheWarmerOperationRequest> {
+  /**
+   * @generated from field: string federatedGraphName = 1;
+   */
+  federatedGraphName = "";
+
+  /**
+   * @generated from field: string operationContent = 2;
+   */
+  operationContent = "";
+
+  /**
+   * @generated from field: string operationName = 3;
+   */
+  operationName = "";
+
+  /**
+   * @generated from field: string operationPersistedId = 4;
+   */
+  operationPersistedId = "";
+
+  /**
+   * @generated from field: string clientName = 5;
+   */
+  clientName = "";
+
+  /**
+   * @generated from field: string namespace = 6;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<PushCacheWarmerOperationRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.PushCacheWarmerOperationRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "operationContent", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "operationName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "operationPersistedId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "clientName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PushCacheWarmerOperationRequest {
+    return new PushCacheWarmerOperationRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PushCacheWarmerOperationRequest {
+    return new PushCacheWarmerOperationRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PushCacheWarmerOperationRequest {
+    return new PushCacheWarmerOperationRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PushCacheWarmerOperationRequest | PlainMessage<PushCacheWarmerOperationRequest> | undefined, b: PushCacheWarmerOperationRequest | PlainMessage<PushCacheWarmerOperationRequest> | undefined): boolean {
+    return proto3.util.equals(PushCacheWarmerOperationRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.PushCacheWarmerOperationResponse
+ */
+export class PushCacheWarmerOperationResponse extends Message<PushCacheWarmerOperationResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<PushCacheWarmerOperationResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.PushCacheWarmerOperationResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PushCacheWarmerOperationResponse {
+    return new PushCacheWarmerOperationResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PushCacheWarmerOperationResponse {
+    return new PushCacheWarmerOperationResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PushCacheWarmerOperationResponse {
+    return new PushCacheWarmerOperationResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PushCacheWarmerOperationResponse | PlainMessage<PushCacheWarmerOperationResponse> | undefined, b: PushCacheWarmerOperationResponse | PlainMessage<PushCacheWarmerOperationResponse> | undefined): boolean {
+    return proto3.util.equals(PushCacheWarmerOperationResponse, a, b);
+  }
+}
+

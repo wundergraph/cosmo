@@ -209,6 +209,7 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
       // This is so that other changes that we can in fact inspect are not skipped over in the schema check.
       return null;
     }
+
     // Safe to ignore
     case ChangeType.DirectiveAdded:
     case ChangeType.FieldArgumentDescriptionChanged:
