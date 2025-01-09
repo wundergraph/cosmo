@@ -4,7 +4,7 @@ author: David Stutt
 ---
 
 This RFC proposes a new directive, `@openfed__setDescription`, which aims to deliver the following:
-1. Propagate a specific description to the federated graph
+1. Propagate a specific description to the federated graph.
 2. Propagate a description to the federated graph that is different to the description on the subgraph 
 (internal/private vs. external/public).
 3. Choose not to propagate any descriptions to the federated graph at all.
@@ -19,12 +19,12 @@ In the event that multiple shared definitions define a description, the rules th
 simple:
 1. Store the first description encountered.
 2. If a longer description (by character length) is encountered, update the record to this longer description.
-3. If a another description of the same length is encountered, keep the current description record (which will be the 
+3. If another description of the same length is encountered, keep the current description record (which will be the 
 same length).
-4. Propagate the description to the federated graph.
+4. Propagate the description in the record to the federated graph.
 
-Customers have requested the ability to have more granular control over which description should be propagated to the
-federated graph, if any.
+Customers have requested more granular control over which description should be propagated to the federated graph, 
+if any.
 
 # Proposal
 
@@ -244,7 +244,7 @@ Subgraphs:
   """
   A.Query description.
   """
-  type Query @setDescription {
+  type Query {
     """
     A.Query.dummy description.
     """
@@ -264,7 +264,7 @@ Subgraphs:
 ```
 Result:
 ```graphql
-# subgraph B
+# federated graph
 
   """
   B.Query extension description set by content argument.
@@ -279,30 +279,6 @@ Result:
 
 3. Composition error due to a single instance declaring more than one public description.
 Subgraphs:
-```graphql
-# subgraph A
-
-  """
-  A.Query description.
-  """
-  type Query @setDescription {
-    dummy: String! @shareable
-  }
-```
-
-```graphql
-# subgraph B
-
-  """
-  B.Query description.
-  """
-  type Query @setDescription {
-    dummy: String! @shareable
-  }
-```
-Result:
-
-3. Subgraphs
 ```graphql
 # subgraph A
 
