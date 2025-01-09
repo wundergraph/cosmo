@@ -2,9 +2,8 @@ package controlplane
 
 import (
 	"context"
+	"math/rand"
 	"time"
-
-	"github.com/wundergraph/cosmo/router/internal/jitterticker"
 )
 
 type Poller interface {
@@ -16,15 +15,27 @@ type Poller interface {
 }
 
 type Poll struct {
-	ticker *jitterticker.Ticker
+	ticker *time.Ticker
+
+	maxJitter time.Duration
 }
 
 // NewPoll creates a new poller that emits events at the given interval
 // and executes the given handler function in a separate goroutine.
-func NewPoll(interval time.Duration, maxJitter time.Duration) Poller {
-	p := &Poll{}
+func NewPoll(interval time.Duration, maxJitter time.Duration) *Poll {
+	p := &Poll{
+		maxJitter: maxJitter,
+	}
 
-	p.ticker = jitterticker.NewTicker(interval, maxJitter)
+	if interval < 0 {
+		panic("negative interval")
+	}
+
+	if maxJitter < 0 {
+		panic("negative max jitter")
+	}
+
+	p.ticker = time.NewTicker(interval)
 
 	return p
 }
@@ -47,8 +58,25 @@ func (c *Poll) Subscribe(ctx context.Context, handler func()) {
 				// If the current handler is still in progress
 				// the next tick will be skipped. This is how a timer
 				// is implemented in the standard library.
+
+				time.Sleep(randomDurationBetween(c.maxJitter))
+
 				handler()
 			}
 		}
 	}()
+}
+
+// randomDurationBetween returns a random duration between min and max
+func randomDurationBetween(max time.Duration) time.Duration {
+	if max < 0 {
+		panic("negative duration")
+	}
+
+	// rand.Int63n will panic if its argument <= 0
+	if max == 0 {
+		return 0 * time.Millisecond
+	}
+
+	return time.Duration(rand.Int63n(int64(max)))
 }
