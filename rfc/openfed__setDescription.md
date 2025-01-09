@@ -1,9 +1,9 @@
 ---
-title: "@openfed__setDescription: Propagate specific descriptions to the federated graph"
+title: "@openfed__description: Propagate specific descriptions to the federated graph"
 author: David Stutt
 ---
 
-This RFC proposes a new directive, `@openfed__setDescription`, which aims to deliver the following:
+This RFC proposes a new directive, `@openfed__description`, which aims to deliver the following:
 1. Propagate a specific description to the federated graph.
 2. Propagate a description to the federated graph that is different to the description on the subgraph 
 (internal/private vs. external/public).
@@ -28,14 +28,14 @@ if any.
 
 # Proposal
 
-A new directive, `@openfed__setDescription`, aims to facilitate all desired granularity for how and when descriptions
+A new directive, `@openfed__description`, aims to facilitate all desired granularity for how and when descriptions
 are propagated to the federated graph.
 
 ## Definition
 
 The potential definition of the directive:
 ```graphql
-  directive @openfed__setDescription(public: Boolean! = true, content: String) on 
+  directive @openfed__description(public: Boolean! = true, override: String) on 
     ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION 
     | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | SCHEMA | UNION
 ```
@@ -49,13 +49,14 @@ The directive definition proposes two arguments.
 ### public
 - Required but defaults to `true`.
 - Declares whether the description is to be propagated in the federated graph.
-- On any given instance of a shared definition, only one `@openfed__setDescription` instance may set `public` to
+- On any given instance of a shared definition, only one `@openfed__description` instance may set `public` to
 `true` or there will be a composition error.
-- If `public` is set to `false`, the description will _never_ be propagated to the federated graph.
+- If `public` is set to `false`, that description instance will _never_ be propagated to the federated graph.
 This means the description instance will effectively be completely ignored by federation, 
 _e.g._, even when following "normal" WunderGraph Cosmo description rules.
+Description instances defined in other subgraphs can still be propagated.
 
-### content
+### override
 - Optional.
 - Does nothing if the `public` argument is set to `false`.
 - Allows the definition of a new description, _e.g._, one that is different to the actual description in the subgraph
@@ -69,16 +70,16 @@ The following is a list of considerations and/or potential discussion points:
 ## Single source of precedence/single public description
 The federated graph can only define a single description.
 This description is "normally" the longest description (the first of that length in a tie).
-If the `@openfed__setDescription` defines the argument `public` as `true` (the default value), that description will be 
+If the `@openfed__description` defines the argument `public` as `true` (the default value), that description will be 
 propagated to the federated graph.
-If the `@openfed__setDescription` defines the argument `content`, the value of the content argument will "override"
-what the "original" description.
-If more than one shared definition instance defines the `@openfed__setDescription` `public` argument as `true`, a
+If the `@openfed__description` defines the argument `override`, the value of the argument will "override" the "original" 
+description.
+If more than one shared definition instance defines the `@openfed__description` `public` argument as `true`, a
 composition error will be returned.
 Only one shared definition instance may declare a public description.
 
 ## Parent level vs. child level
-If `@openfed__setDescription` is defined on a parent level, _e.g._, an `Object type`, should all its children (_i.e._,
+If `@openfed__description` is defined on a parent level, _e.g._, an `Object type`, should all its children (_i.e._,
 fields) "inherit" the public declaration?
 For example:
 ```graphql
@@ -87,7 +88,7 @@ For example:
   """
   A.Query description.
   """
-  type Query @openfed__setDescription {
+  type Query @openfed__description {
     """
     A.Query.dummy description.
     """
@@ -110,7 +111,7 @@ For example:
 ```
 
 For these two subgraphs, should the result be:
-1. `@openfed__setDescription` is only considered for the explicit location on which it is defined:
+1. `@openfed__description` is only considered for the explicit location on which it is defined:
 ```graphql
 # federated graph
 
@@ -125,7 +126,7 @@ For these two subgraphs, should the result be:
   }
 ```
 
-2. `@openfed__setDescription` is "inherited" by its children:
+2. `@openfed__description` is "inherited" by its children:
 ```graphql
 # federated graph
 
@@ -166,19 +167,19 @@ Subgraphs:
     """
     A.entity.id description that should be private/subgraph-only.
     """
-    id: ID! @openfed__setDescription(public: false)
+    id: ID! @openfed__description(public: false)
   ): Entity
 }
 
   """
   A.Entity description that is overridden by the directive.
   """
-  type Entity @key(fields: "id") @openfed_setDescription(content: "A.Entity description from content argument.") {
+  type Entity @key(fields: "id") @openfed_description(override: "A.Entity description from override argument.") {
   """
   A.Entity.id description that should be private/subgraph only.
   """
-  id: ID! @openfed__setDescription(public: false)
-  name: String! @openfed_setDescription(content: "A.Entity.name description from content argument.")
+  id: ID! @openfed__description(public: false)
+  name: String! @openfed_description(override: "A.Entity.name description from override argument.")
   }
 ```
 
@@ -195,11 +196,11 @@ Subgraphs:
   """
   B.Entity description that is effectively ignored.
   """
-  type Entity @key(fields: "id") @openfed_setDescription(public: false, content: "This is also ignored.") {
+  type Entity @key(fields: "id") @openfed_description(public: false, override: "This is also ignored.") {
     """
     B.Entity.id description that should be private/subgraph only.
     """
-    id: ID! @openfed__setDescription(public: false)
+    id: ID! @openfed__description(public: false)
     """
     B.Entity.name description that is not propagated due to the directive on A.Entity.name.
     """
@@ -224,12 +225,12 @@ Result:
   }
     
   """
-  A.Entity description from content argument.
+  A.Entity description from override argument.
   """
   type Entity {
     id: ID!
     """
-    A.Entity.name description from content argument.
+    A.Entity.name description from override argument.
     """
     name: String!
     fullName: String!
@@ -255,7 +256,7 @@ Subgraphs:
 ```graphql
 # subgraph B
 
-  extend type Query @setDescription(content: "B.Query extension description set by content argument.") {
+  extend type Query @description(override: "B.Query extension description set by override argument.") {
     """
     B.Query.dummy description.
     """
@@ -267,7 +268,7 @@ Result:
 # federated graph
 
   """
-  B.Query extension description set by content argument.
+  B.Query extension description set by override argument.
   """
   type Query {
     """
@@ -285,7 +286,7 @@ Subgraphs:
   """
   A.Query description.
   """
-  type Query @setDescription {
+  type Query @description {
     dummy: String! @shareable
   }
 ```
@@ -296,7 +297,7 @@ Subgraphs:
   """
   B.Query description.
   """
-  type Query @setDescription {
+  type Query @description {
     dummy: String! @shareable
   }
 ```
