@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=./pkg/config/config.schema.json
+
+# See pkg/config/config.go for the full list of configuration options.
+# This file is used for the demo environment
+
+version: "1"
+
+events:
+  providers:
+    nats:
+      - id: default
+        url: "nats://localhost:4222"
+      - id: my-nats
+        url: "nats://localhost:4222"
+    kafka:
+      - id: my-kafka
+        brokers:
+          - "localhost:9092"
