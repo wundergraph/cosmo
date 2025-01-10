@@ -2015,7 +2015,7 @@ export const cacheWarmerOpeartions = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     planningTime: real('planning_time'),
     // is true if the operation is added by the user
-    isManuallyAdded: boolean('is_manually_added').default(false),
+    isManuallyAdded: boolean('is_manually_added').default(false).notNull(),
     createdById: uuid('created_by_id').references(() => users.id, {
       onDelete: 'set null',
     }),

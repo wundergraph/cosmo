@@ -778,6 +778,13 @@
       "when": 1736281651488,
       "tag": "0110_smooth_hannibal_king",
       "breakpoints": true
+    },
+    {
+      "idx": 111,
+      "version": "7",
+      "when": 1736449982732,
+      "tag": "0111_loud_bastion",
+      "breakpoints": true
     }
   ]
 }

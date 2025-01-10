@@ -6,10 +6,10 @@ import {
   OperationRequest,
   PersistedQuery,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { and, eq } from 'drizzle-orm';
+import { and, count, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
-import { cacheWarmerOpeartions } from '../../db/schema.js';
+import { cacheWarmerOpeartions, users } from '../../db/schema.js';
 import { DateRange } from '../../types/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { getDateRange, isoDateRangeToTimestamps } from './analytics/util.js';
@@ -59,8 +59,8 @@ export class CacheWarmerRepository {
         MAX(MaxDuration) AS planningTime
       FROM ${this.client.database}.operation_planning_metrics_5_30
       WHERE Timestamp >= startDate AND Timestamp <= endDate
-        AND OrganizationID = '${organizationId}'
-        AND FederatedGraphID = '${federatedGraphId}'
+      AND FederatedGraphID = '${federatedGraphId}'
+      AND OrganizationID = '${organizationId}'
       GROUP BY OperationHash, OperationName, OperationPersistedID, ClientName, ClientVersion
       ORDER BY planningTime DESC LIMIT 100
     `;
@@ -121,9 +121,10 @@ export class CacheWarmerRepository {
     const computedOperations: Operation[] = [];
     const dbCacheWarmerOperations: DBCacheWarmerOperation[] = [];
 
-    const manuallyAddedOperations = await this.getManuallyAddedCacheWarmerOperations({
+    const manuallyAddedOperations = await this.getCacheWarmerOperations({
       organizationId: props.organizationId,
       federatedGraphId: props.federatedGraphId,
+      isManuallyAdded: true,
     });
 
     for (const operation of manuallyAddedOperations) {
@@ -302,29 +303,77 @@ export class CacheWarmerRepository {
     );
   }
 
-  public getManuallyAddedCacheWarmerOperations({
+  public getCacheWarmerOperations({
+    organizationId,
+    federatedGraphId,
+    isManuallyAdded,
+    limit,
+    offset,
+  }: {
+    organizationId: string;
+    federatedGraphId: string;
+    isManuallyAdded?: boolean;
+    limit?: number;
+    offset?: number;
+  }) {
+    const query = this.db
+      .select({
+        id: cacheWarmerOpeartions.id,
+        operationName: cacheWarmerOpeartions.operationName,
+        operationContent: cacheWarmerOpeartions.operationContent,
+        operationPersistedID: cacheWarmerOpeartions.operationPersistedID,
+        operationHash: cacheWarmerOpeartions.operationHash,
+        clientName: cacheWarmerOpeartions.clientName,
+        clientVersion: cacheWarmerOpeartions.clientVersion,
+        planningTime: cacheWarmerOpeartions.planningTime,
+        isManuallyAdded: cacheWarmerOpeartions.isManuallyAdded,
+        createdAt: cacheWarmerOpeartions.createdAt,
+        createdBy: users.email,
+      })
+      .from(cacheWarmerOpeartions)
+      .leftJoin(users, eq(users.id, cacheWarmerOpeartions.createdById))
+      .where(
+        and(
+          eq(cacheWarmerOpeartions.organizationId, organizationId),
+          eq(cacheWarmerOpeartions.federatedGraphId, federatedGraphId),
+          isManuallyAdded === undefined ? undefined : eq(cacheWarmerOpeartions.isManuallyAdded, isManuallyAdded),
+        ),
+      );
+    if (limit) {
+      query.limit(limit);
+    }
+    if (offset) {
+      query.offset(offset);
+    }
+
+    return query.execute();
+  }
+
+  public async getCacheWarmerOperationsCount({
     organizationId,
     federatedGraphId,
   }: {
     organizationId: string;
     federatedGraphId: string;
   }) {
-    return this.db
+    const operationsCount = await this.db
       .select({
-        operationName: cacheWarmerOpeartions.operationName,
-        operationContent: cacheWarmerOpeartions.operationContent,
-        operationPersistedID: cacheWarmerOpeartions.operationPersistedID,
-        clientName: cacheWarmerOpeartions.clientName,
-        clientVersion: cacheWarmerOpeartions.clientVersion,
+        count: count(),
       })
       .from(cacheWarmerOpeartions)
       .where(
         and(
           eq(cacheWarmerOpeartions.organizationId, organizationId),
           eq(cacheWarmerOpeartions.federatedGraphId, federatedGraphId),
-          eq(cacheWarmerOpeartions.isManuallyAdded, true),
         ),
-      );
+      )
+      .execute();
+
+    if (operationsCount.length === 0) {
+      return 0;
+    }
+
+    return operationsCount[0].count;
   }
 
   // deleted all the computed cache warmer operations of a federated graph.
