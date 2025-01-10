@@ -6,7 +6,7 @@ import {
   OperationRequest,
   PersistedQuery,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { and, count, eq } from 'drizzle-orm';
+import { and, count, desc, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { cacheWarmerOpeartions, users } from '../../db/schema.js';
@@ -45,6 +45,7 @@ export class CacheWarmerRepository {
   }: ComputeCacheWarmerOperationsProps) {
     const parsedDateRange = isoDateRangeToTimestamps(dateRange, rangeInHours);
     const [start, end] = getDateRange(parsedDateRange);
+    const quantile = 0.9;
 
     const query = `
       WITH
@@ -56,11 +57,22 @@ export class CacheWarmerRepository {
         OperationPersistedID as operationPersistedID,
         ClientName as clientName,
         ClientVersion as clientVersion,
-        MAX(MaxDuration) AS planningTime
+        func_rank(${quantile}, BucketCounts) as rank,
+        func_rank_bucket_lower_index(rank, BucketCounts) as b,
+        round(func_histogram_v2(
+            rank,
+            b,
+            BucketCounts,
+            anyLast(ExplicitBounds)
+        ), 2) as planningTime,
+
+        -- Histogram aggregations
+        sumForEachMerge(BucketCounts) as BucketCounts
       FROM ${this.client.database}.operation_planning_metrics_5_30
       WHERE Timestamp >= startDate AND Timestamp <= endDate
       AND FederatedGraphID = '${federatedGraphId}'
       AND OrganizationID = '${organizationId}'
+      AND OperationName != 'IntrospectionQuery'
       GROUP BY OperationHash, OperationName, OperationPersistedID, ClientName, ClientVersion
       ORDER BY planningTime DESC LIMIT 100
     `;
@@ -338,7 +350,9 @@ export class CacheWarmerRepository {
           eq(cacheWarmerOpeartions.federatedGraphId, federatedGraphId),
           isManuallyAdded === undefined ? undefined : eq(cacheWarmerOpeartions.isManuallyAdded, isManuallyAdded),
         ),
-      );
+      )
+      .orderBy(desc(cacheWarmerOpeartions.planningTime));
+
     if (limit) {
       query.limit(limit);
     }
