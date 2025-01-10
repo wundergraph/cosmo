@@ -14,6 +14,9 @@ import {
   TableWrapper,
 } from "../ui/table";
 import Link from "next/link";
+import { use, useContext } from "react";
+import { GraphContext } from "../layout/graph-layout";
+import { useUser } from "@/hooks/use-user";
 
 export const CacheOperationsTable = ({
   operations,
@@ -23,6 +26,8 @@ export const CacheOperationsTable = ({
   totalCount: number;
 }) => {
   const router = useRouter();
+  const user = useUser();
+  const graphData = useContext(GraphContext);
 
   const pageNumber = router.query.page
     ? parseInt(router.query.page as string)
@@ -98,7 +103,7 @@ export const CacheOperationsTable = ({
                         className="table-action"
                       >
                         <Link
-                          href={`/${router.query.organizationSlug}/${router.query.namespace}/graph/${router.query.slug}/cache-operations?operationId=${id}`}
+                          href={`/${user?.currentOrganization.slug}/${graphData?.graph?.namespace}/graph/${graphData?.graph?.name}/cache-operations?operationId=${id}`}
                         >
                           Details
                         </Link>

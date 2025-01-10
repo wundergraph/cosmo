@@ -11,6 +11,9 @@ import { Kbd } from "../ui/kbd";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../ui/sheet";
 import { Spacer } from "../ui/spacer";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { useUser } from "@/hooks/use-user";
+import { useContext } from "react";
+import { GraphContext } from "../layout/graph-layout";
 
 export const CacheDetailsSheet: React.FC<any> = ({
   operations,
@@ -141,10 +144,9 @@ export const CacheOperationDetails = ({
 }: {
   operation: CacheWarmerOperation;
 }) => {
-  const { query } = useRouter();
-  const organizationSlug = query.organizationSlug as string;
-  const namespace = query.namespace as string;
-  const slug = query.slug as string;
+  const user = useUser();
+  const graphData = useContext(GraphContext);
+
   const {
     operationContent,
     clientName,
@@ -233,7 +235,9 @@ export const CacheOperationDetails = ({
                 <TooltipTrigger asChild>
                   <Button variant="outline" size="icon" asChild>
                     <Link
-                      href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${encodeURIComponent(
+                      href={`/${user?.currentOrganization.slug}/${graphData
+                        ?.graph?.namespace}/graph/${graphData?.graph
+                        ?.name}/playground?operation=${encodeURIComponent(
                         operationContent || "",
                       )}}`}
                     >
