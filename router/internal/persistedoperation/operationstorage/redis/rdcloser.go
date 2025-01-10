@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
+	"io"
 	"strings"
 )
 
+// RDCloser is an interface that combines the redis.Cmdable and io.Closer interfaces, ensuring that we can close the
+// client connection.
 type RDCloser interface {
 	redis.Cmdable
-	Close() error
+	io.Closer
 }
 
 type RedisCloserOptions struct {
@@ -24,7 +27,7 @@ func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
 	if !strings.Contains(opts.URL, ",") {
 		options, err := redis.ParseURL(opts.URL)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse the redis connection url %s: %w", opts.URL, err)
+			return nil, fmt.Errorf("failed to parse the redis connection url: %w", err)
 		}
 
 		if opts.Password != "" {
@@ -41,7 +44,7 @@ func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
 			Password: opts.Password,
 		})
 		if !isFunctioningClient(rdb) {
-			return rdb, fmt.Errorf("failed to create a functioning redis client. Ensure that you have provided multiple cluster URLs for a cluster client")
+			return rdb, fmt.Errorf("failed to create a functioning redis client")
 		}
 	}
 
