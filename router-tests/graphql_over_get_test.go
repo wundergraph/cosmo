@@ -96,7 +96,7 @@ func TestOperationsOverGET(t *testing.T) {
 				core.WithGraphQLPath("/custom-graphql"),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Default path for creating requests ist /graphql if not updated with `OverrideGraphQLPath`
+			// Default path for creating requests is /graphql if not updated with `OverrideGraphQLPath`
 			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
 				OperationName: []byte(`Employees`),
 				Query:         `query Employees { employees { id } }`,
@@ -115,7 +115,7 @@ func TestOperationsOverGET(t *testing.T) {
 				core.WithGraphQLPath("/"),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Default path for creating requests ist /graphql if not updated with `OverrideGraphQLPath`
+			// Default path for creating requests is /graphql if not updated with `OverrideGraphQLPath`
 			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
 				OperationName: []byte(`Employees`),
 				Query:         `query Employees { employees { id } }`,
@@ -134,7 +134,7 @@ func TestOperationsOverGET(t *testing.T) {
 				core.WithGraphQLPath("/*"),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Default path for creating requests ist /graphql if not updated with `OverrideGraphQLPath`
+			// Default path for creating requests is /graphql if not updated with `OverrideGraphQLPath`
 			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
 				OperationName: []byte(`Employees`),
 				Query:         `query Employees { employees { id } }`,
