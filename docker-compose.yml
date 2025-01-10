@@ -212,6 +212,7 @@ services:
     networks:
       - primary
     profiles:
+      - dev
       - edfs
 
   redis:
@@ -260,6 +261,7 @@ services:
       ALLOW_PLAINTEXT_LISTENER: yes
       KAFKA_KRAFT_CLUSTER_ID: XkpGZQ27R3eTl3OdTm2LYA # 16 byte base64-encoded UUID
     profiles:
+      - dev
       - edfs
 
 # This network is shared between this file and docker-compose.full.yml to
