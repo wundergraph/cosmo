@@ -13,6 +13,7 @@ import {
   TableRow,
   TableWrapper,
 } from "../ui/table";
+import Link from "next/link";
 
 export const CacheOperationsTable = ({
   operations,
@@ -96,7 +97,11 @@ export const CacheOperationsTable = ({
                         size="sm"
                         className="table-action"
                       >
-                        View
+                        <Link
+                          href={`/${router.query.organizationSlug}/${router.query.namespace}/graph/${router.query.slug}/cache-operations?operationId=${id}`}
+                        >
+                          Details
+                        </Link>
                       </Button>
                     </TableCell>
                   </TableRow>

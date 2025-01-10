@@ -1,3 +1,4 @@
+import { CacheDetailsSheet } from "@/components/cache/cache-details-sheet";
 import { CacheOperationsTable } from "@/components/cache/operations-table";
 import { EmptyState } from "@/components/empty-state";
 import {
@@ -46,6 +47,10 @@ const CacheOperationsPage: NextPageWithLayout = () => {
     onSuccess: (d) => {
       if (d.response?.code === EnumStatusCode.OK) {
         refetch();
+        toast({
+          description: "Cache warmer operations recomputed successfully.",
+          duration: 1500,
+        });
       } else {
         toast({
           description:
@@ -101,6 +106,7 @@ const CacheOperationsPage: NextPageWithLayout = () => {
         operations={data.operations}
         totalCount={data.totalCount}
       />
+      <CacheDetailsSheet operations={data.operations} />
     </div>
   );
 };
