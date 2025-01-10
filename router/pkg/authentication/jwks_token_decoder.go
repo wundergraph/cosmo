@@ -3,16 +3,16 @@ package authentication
 import (
 	"context"
 	"fmt"
-	"github.com/MicahParks/jwkset"
-	"github.com/MicahParks/keyfunc/v3"
-	"github.com/wundergraph/cosmo/router/internal/httpclient"
-	"go.uber.org/zap"
-	"golang.org/x/time/rate"
 	"net/http"
 	"net/url"
 	"time"
 
+	"github.com/MicahParks/jwkset"
+	"github.com/MicahParks/keyfunc/v3"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/wundergraph/cosmo/router/internal/httpclient"
+	"go.uber.org/zap"
+	"golang.org/x/time/rate"
 )
 
 type TokenDecoder interface {
@@ -38,42 +38,50 @@ func (j *jwksTokenDecoder) Decode(tokenString string) (Claims, error) {
 	return Claims(claims), nil
 }
 
-func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, u string, refreshInterval time.Duration) (TokenDecoder, error) {
+type JWKSConfig struct {
+	URL               string
+	RefreshInterval   time.Duration
+	AllowedAlgorithms []string
+}
 
-	logger = logger.With(zap.String("url", u))
+func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKSConfig) (TokenDecoder, error) {
 
-	// Create the JWK Set HTTP client.
 	remoteJWKSets := make(map[string]jwkset.Storage)
 
-	ur, err := url.ParseRequestURI(u)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse given URL %q: %w", u, err)
-	}
-	jwksetHTTPStorageOptions := jwkset.HTTPClientStorageOptions{
-		Client:             httpclient.NewRetryableHTTPClient(logger),
-		Ctx:                ctx, // Used to end background refresh goroutine.
-		HTTPExpectedStatus: http.StatusOK,
-		HTTPMethod:         http.MethodGet,
-		HTTPTimeout:        15 * time.Second,
-		RefreshErrorHandler: func(ctx context.Context, err error) {
-			logger.Error("Failed to refresh HTTP JWK Set from remote HTTP resource.", zap.Error(err))
-		},
-		RefreshInterval: refreshInterval,
-		Storage:         nil,
-	}
-	store, err := jwkset.NewStorageFromHTTP(ur, jwksetHTTPStorageOptions)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP client storage for JWK provider: %w", err)
+	for _, c := range configs {
+		l := logger.With(zap.String("url", c.URL))
+		ur, err := url.ParseRequestURI(c.URL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse given URL %q: %w", c.URL, err)
+		}
+
+		jwksetHTTPStorageOptions := jwkset.HTTPClientStorageOptions{
+			Client:             httpclient.NewRetryableHTTPClient(l),
+			Ctx:                ctx, // Used to end background refresh goroutine.
+			HTTPExpectedStatus: http.StatusOK,
+			HTTPMethod:         http.MethodGet,
+			HTTPTimeout:        15 * time.Second,
+			RefreshErrorHandler: func(ctx context.Context, err error) {
+				l.Error("Failed to refresh HTTP JWK Set from remote HTTP resource.", zap.Error(err))
+			},
+			RefreshInterval: c.RefreshInterval,
+			Storage:         NewValidationStore(logger, nil, c.AllowedAlgorithms),
+		}
+
+		store, err := jwkset.NewStorageFromHTTP(ur, jwksetHTTPStorageOptions)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create HTTP client storage for JWK provider: %w", err)
+		}
+
+		remoteJWKSets[ur.String()] = store
 	}
 
-	remoteJWKSets[ur.String()] = store
-
-	// Create the JWK Set containing HTTP clients and given keys.
 	jwksetHTTPClientOptions := jwkset.HTTPClientOptions{
 		HTTPURLs:          remoteJWKSets,
 		PrioritizeHTTP:    false,
 		RefreshUnknownKID: rate.NewLimiter(rate.Every(5*time.Minute), 1),
 	}
+
 	combined, err := jwkset.NewHTTPClient(jwksetHTTPClientOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP client storage for JWK provider: %w", err)

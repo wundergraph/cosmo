@@ -210,15 +210,23 @@ headers:
 # Authentication and Authorization
 # See https://cosmo-docs.wundergraph.com/router/authentication-and-authorization for more information
 authentication:
-  providers:
-    - name: My Auth Provider # Optional, used for error messages and diagnostics
-      jwks: # JWKS provider configuration
-        url: https://example.com/.well-known/jwks.json # URL to load the JWKS from
+  jwt:
+    jwks:
+      - url: "https://example.com/.well-known/jwks.json"
         refresh_interval: 1m
-        header_names:
-          - Authorization # Optional
-        header_value_prefixes:
-          - Bearer # Optional
+        algorithms: ["RS256"]
+      - url: "https://example.com/.well-known/jwks2.json"
+        refresh_interval: 2m
+        algorithms: ["RS256", "HS256"]
+      - url: "https://example.com/.well-known/jwks3.json"
+    header_name: Authorization
+    header_value_prefix: Bearer
+    header_sources:
+      - type: header
+        name: X-Authorization
+        value_prefix: Bearer
+      - type: cookie
+        name: authz
 
 authorization:
   require_authentication: false # Set to true to disable requests without authentication
