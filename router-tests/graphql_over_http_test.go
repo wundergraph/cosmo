@@ -239,4 +239,83 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.StatusCode)
 		})
 	})
+
+	t.Run("requests with custom Path", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			OverrideGraphQLPath: "/custom-graphql",
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Run("valid request should return 200 with custom path", func(t *testing.T) {
+				t.Parallel()
+				header := http.Header{
+					"Content-Type": []string{"application/json"},
+					"Accept":       []string{"application/json"},
+				}
+				body := []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{"criteria":{"nationality":"GERMAN"}}}`)
+				res, err := xEnv.MakeRequest("POST", "/custom-graphql", header, bytes.NewReader(body))
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, res.StatusCode)
+				data, err := io.ReadAll(res.Body)
+				require.NoError(t, err)
+				require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, string(data))
+			})
+
+			t.Run("valid request should return 404 with custom path", func(t *testing.T) {
+				t.Parallel()
+				header := http.Header{
+					"Content-Type": []string{"application/json"},
+					"Accept":       []string{"application/json"},
+				}
+				body := []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{"criteria":{"nationality":"GERMAN"}}}`)
+				res, err := xEnv.MakeRequest("POST", "/graphql", header, bytes.NewReader(body))
+				require.NoError(t, err)
+				require.Equal(t, http.StatusNotFound, res.StatusCode)
+			})
+
+		})
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithGraphQLPath("/*"),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Run("valid request should return status 200 when wildcard was defined for path", func(t *testing.T) {
+				t.Parallel()
+
+				header := http.Header{
+					"Content-Type": []string{"application/json"},
+					"Accept":       []string{"application/json"},
+				}
+
+				body := []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{"criteria":{"nationality":"GERMAN"}}}`)
+				res, err := xEnv.MakeRequest("POST", "/graphql", header, bytes.NewReader(body))
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, res.StatusCode)
+				data, err := io.ReadAll(res.Body)
+				require.NoError(t, err)
+				require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, string(data))
+			})
+		})
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithGraphQLPath("/"),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Run("valid request should return status 404 when no wildcard was defined on root path", func(t *testing.T) {
+				t.Parallel()
+
+				header := http.Header{
+					"Content-Type": []string{"application/json"},
+					"Accept":       []string{"application/json"},
+				}
+
+				body := []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{"criteria":{"nationality":"GERMAN"}}}`)
+				res, err := xEnv.MakeRequest("POST", "/graphql", header, bytes.NewReader(body))
+				require.NoError(t, err)
+				require.Equal(t, http.StatusNotFound, res.StatusCode)
+			})
+		})
+	})
 }
