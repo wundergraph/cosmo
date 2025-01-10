@@ -1,12 +1,5 @@
 import { nodeKindToDirectiveLocation } from '../ast/utils';
-import {
-  ConstDirectiveNode,
-  Kind,
-  OperationTypeNode,
-  SchemaExtensionNode,
-  TypeDefinitionNode,
-  TypeExtensionNode,
-} from 'graphql';
+import { ConstDirectiveNode, Kind, OperationTypeNode } from 'graphql';
 import {
   EntityInterfaceFederationData,
   getEntriesNotInHashSet,
@@ -39,7 +32,6 @@ import { ObjectDefinitionData } from '../schema-building/type-definition-data';
 import { InvalidRootTypeFieldEventsDirectiveData } from './utils';
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
 import { UnresolvableFieldData } from '../resolvability-graph/utils';
-import { FieldSetDirective } from '../schema-building/utils';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -51,13 +43,6 @@ export function multipleNamedTypeDefinitionError(
   return new Error(
     `The named type "${typeName}" is defined as both types "${firstTypeString}" and "${secondTypeString}".` +
       `\nHowever, there must be only one type named "${typeName}".`,
-  );
-}
-
-export function incompatibleExtensionError(typeName: string, baseKind: Kind, extensionKind: Kind) {
-  return new Error(
-    `Extension error:\n Incompatible types: ` +
-      `"${typeName}" is type "${baseKind}", but an extension of the same name is type "${extensionKind}.`,
   );
 }
 
@@ -116,15 +101,6 @@ export function incompatibleSharedEnumError(parentName: string): Error {
   );
 }
 
-// The @extends directive means a TypeDefinitionNode is possible
-export function incompatibleExtensionKindsError(
-  node: TypeDefinitionNode | TypeExtensionNode | SchemaExtensionNode,
-  existingKind: Kind,
-) {
-  const name = node.kind === Kind.SCHEMA_EXTENSION ? 'schema' : node.name.value;
-  return new Error(`Expected extension "${name}" to be type ${existingKind} but received ${node.kind}.`);
-}
-
 export function invalidSubgraphNamesError(names: string[], invalidNameErrorMessages: string[]): Error {
   let message = 'Subgraphs to be federated must each have a unique, non-empty name.';
   if (names.length > 0) {
@@ -141,16 +117,16 @@ export function duplicateDirectiveDefinitionError(directiveName: string) {
 }
 
 export function duplicateEnumValueDefinitionError(enumTypeName: string, valueName: string): Error {
-  return new Error(`The Enum "${enumTypeName}" must only define the Enum Value definition "${valueName}" once.`);
+  return new Error(`The Enum "${enumTypeName}" must only define the Enum value definition "${valueName}" once.`);
 }
 
 export function duplicateFieldDefinitionError(typeString: string, typeName: string, fieldName: string): Error {
-  return new Error(`The ${typeString} "${typeName}" must only define the Field definition "${fieldName}" once.`);
+  return new Error(`The ${typeString} "${typeName}" must only define the field definition "${fieldName}" once.`);
 }
 
 export function duplicateInputFieldDefinitionError(inputObjectTypeName: string, fieldName: string): Error {
   return new Error(
-    `The Input Object "${inputObjectTypeName}" must only define the Input Field definition "${fieldName}" once.`,
+    `The Input Object "${inputObjectTypeName}" must only define the Input field definition "${fieldName}" once.`,
   );
 }
 
@@ -159,7 +135,7 @@ export function duplicateImplementedInterfaceError(typeString: string, typeName:
 }
 
 export function duplicateUnionMemberDefinitionError(unionTypeName: string, memberName: string): Error {
-  return new Error(`The Union "${unionTypeName}" must only define the Union Member "${memberName}" once.`);
+  return new Error(`The Union "${unionTypeName}" must only define the Union member "${memberName}" once.`);
 }
 
 export function duplicateTypeDefinitionError(type: string, typeName: string): Error {
@@ -192,16 +168,16 @@ export function noBaseScalarDefinitionError(typeName: string): Error {
 }
 
 export function noDefinedUnionMembersError(unionTypeName: string): Error {
-  return new Error(`The Union "${unionTypeName}" must define at least one Union Member.`);
+  return new Error(`The Union "${unionTypeName}" must define at least one Union member.`);
 }
 
 export function noDefinedEnumValuesError(enumTypeName: string): Error {
-  return new Error(`The Enum "${enumTypeName}" must define at least one Enum Value.`);
+  return new Error(`The Enum "${enumTypeName}" must define at least one Enum value.`);
 }
 
 export function operationDefinitionError(typeName: string, operationType: OperationTypeNode, actualType: Kind): Error {
   return new Error(
-    `Expected the response type "${typeName}" for operation "${operationType}" to be type object but received "${actualType}.`,
+    `Expected the response type "${typeName}" for operation "${operationType}" to be type Object but received "${actualType}.`,
   );
 }
 
@@ -237,7 +213,7 @@ export function invalidFieldShareabilityError(objectData: ObjectDefinitionData, 
     }
   }
   return new Error(
-    `The object "${parentTypeName}" defines the same fields in multiple subgraphs without the "@shareable" directive:` +
+    `The Object "${parentTypeName}" defines the same fields in multiple subgraphs without the "@shareable" directive:` +
       `${errorMessages.join('\n')}`,
   );
 }
@@ -439,14 +415,6 @@ export const federationFactoryInitializationFatalError = new Error(
   'Fatal: FederationFactory was unsuccessfully initialized.',
 );
 
-export function unexpectedParentKindErrorMessage(
-  parentTypeName: string,
-  expectedTypeString: string,
-  actualTypeString: string,
-): string {
-  return ` Expected "${parentTypeName}" to be type ${expectedTypeString} but received "${actualTypeString}".`;
-}
-
 export function unexpectedParentKindForChildError(
   parentTypeName: string,
   expectedTypeString: string,
@@ -522,7 +490,7 @@ export function invalidInterfaceImplementationError(
     const unimplementedFieldsLength = implementationErrors.unimplementedFields.length;
     if (unimplementedFieldsLength) {
       message +=
-        `  The following Field${unimplementedFieldsLength > 1 ? 's are' : ' is'} not implemented: "` +
+        `  The following field${unimplementedFieldsLength > 1 ? 's are' : ' is'} not implemented: "` +
         implementationErrors.unimplementedFields.join('", "') +
         '"\n';
     }
@@ -530,10 +498,10 @@ export function invalidInterfaceImplementationError(
       const unimplementedArgumentsSize = invalidFieldImplementation.unimplementedArguments.size;
       const invalidArgumentsLength = invalidFieldImplementation.invalidImplementedArguments.length;
       const invalidAdditionalArgumentsSize = invalidFieldImplementation.invalidAdditionalArguments.size;
-      message += `  The Field "${fieldName}" is invalid because:\n`;
+      message += `  The field "${fieldName}" is invalid because:\n`;
       if (unimplementedArgumentsSize) {
         message +=
-          `   The following Argument${unimplementedArgumentsSize > 1 ? 's are' : ' is'} not implemented: "` +
+          `   The following argument${unimplementedArgumentsSize > 1 ? 's are' : ' is'} not implemented: "` +
           [...invalidFieldImplementation.unimplementedArguments].join('", "') +
           '"\n';
       }
@@ -541,17 +509,17 @@ export function invalidInterfaceImplementationError(
         message += `   The following implemented argument${invalidArgumentsLength > 1 ? 's are' : ' is'} invalid:\n`;
         for (const invalidArgument of invalidFieldImplementation.invalidImplementedArguments) {
           message +=
-            `    The Argument "${invalidArgument.argumentName}" must define type "` +
+            `    The argument "${invalidArgument.argumentName}" must define type "` +
             invalidArgument.expectedType +
             `" and not "${invalidArgument.actualType}"\n`;
         }
       }
       if (invalidAdditionalArgumentsSize) {
         message +=
-          `   If a Field from an Interface is implemented, any additional Arguments that were not defined` +
-          ` on the original Interface Field must be optional (nullable).\n`;
+          `   If a field from an Interface is implemented, any additional arguments that were not defined` +
+          ` on the original Interface field must be optional (nullable).\n`;
         message +=
-          `    The following additional Argument` +
+          `    The following additional argument` +
           (invalidFieldImplementation.invalidAdditionalArguments.size > 1 ? `s are` : ` is`) +
           ` not defined as optional: "` +
           [...invalidFieldImplementation.invalidAdditionalArguments].join(`", "`) +
@@ -560,7 +528,7 @@ export function invalidInterfaceImplementationError(
       if (invalidFieldImplementation.implementedResponseType) {
         message +=
           `   The implemented response type "${invalidFieldImplementation.implementedResponseType}" is not` +
-          ` a valid subset (equally or more restrictive) of the response type "` +
+          ` a valid subtype (equally or more restrictive) of the response type "` +
           invalidFieldImplementation.originalResponseType +
           `" for "${interfaceName}.${fieldName}".\n`;
       }
@@ -669,7 +637,7 @@ export function unknownTypeInFieldSetErrorMessage(
   responseTypeName: string,
 ): string {
   return (
-    ` The following field set is invalid:\n  "${fieldSet}"\n` +
+    ` The following field field set is invalid:\n  "${fieldSet}"\n` +
     ` This is because "${fieldPath}" returns the unknown type "${responseTypeName}".`
   );
 }
@@ -709,7 +677,7 @@ export function undefinedFieldInFieldSetErrorMessage(
 ): string {
   return (
     ` The following field set is invalid:\n  "${fieldSet}"\n` +
-    ` This is because of the selection set corresponding to the Field coordinates "${parentTypeName}.${fieldName}".\n` +
+    ` This is because of the selection set corresponding to the field coordinates "${parentTypeName}.${fieldName}".\n` +
     ` The type "${parentTypeName}" does not define a field named "${fieldName}".`
   );
 }
@@ -730,7 +698,7 @@ export function unparsableFieldSetSelectionErrorMessage(fieldSet: string, fieldN
 }
 
 export function undefinedObjectLikeParentError(parentTypeName: string): Error {
-  return new Error(` Expected an object/interface or object/interface extension named "${parentTypeName}" to exist.`);
+  return new Error(` Expected an Object/Interface definition or extension named "${parentTypeName}" to exist.`);
 }
 
 export function unexpectedArgumentErrorMessage(fieldSet: string, fieldPath: string, argumentName: string): string {
@@ -764,17 +732,10 @@ export function duplicateFieldInFieldSetErrorMessage(fieldSet: string, fieldPath
   );
 }
 
-export function invalidConfigurationDataErrorMessage(typeName: string, fieldName: string, fieldSet: string): string {
-  return (
-    ` Expected ConfigurationData to exist for type "${typeName}" when adding field "${fieldName}"` +
-    `  while validating field set "${fieldSet}".`
-  );
-}
-
 export function incompatibleTypeWithProvidesErrorMessage(fieldCoordinates: string, responseType: string): string {
   return (
-    ` A "@provides" directive is declared on Field "${fieldCoordinates}".\n` +
-    ` However, the response type "${responseType}" is not an Object not Interface.`
+    ` A "@provides" directive is declared on field "${fieldCoordinates}".\n` +
+    ` However, the response type "${responseType}" is not an Object nor Interface.`
   );
 }
 
@@ -824,7 +785,7 @@ export function invalidInlineFragmentTypeErrorMessage(
     ` This is because an inline fragment with the type condition "${typeConditionName}" is defined on the` +
     ` selection set corresponding to the ` +
     getSelectionSetLocation(fieldCoordinatesPath, selectionSetTypeName, true) +
-    ` However, "${selectionSetTypeName}" is not an abstract (interface or union) type.\n` +
+    ` However, "${selectionSetTypeName}" is not an abstract (Interface or Union) type.\n` +
     ` Consequently, the only valid type condition at this selection set would be "${selectionSetTypeName}".`
   );
 }
@@ -862,7 +823,7 @@ export function invalidInlineFragmentTypeConditionTypeErrorMessage(
     ` This is because an inline fragment with the type condition "${typeConditionName}" is defined on the` +
     ` selection set corresponding to the ` +
     getSelectionSetLocation(fieldCoordinatesPath, selectionSetTypeName) +
-    ` However, "${typeConditionName}" is type "${typeConditionTypeString}" when types "interface" or "object" would` +
+    ` However, "${typeConditionName}" is type "${typeConditionTypeString}" when types "Interface" or "Object" would` +
     ` be expected.`
   );
 }
@@ -1132,8 +1093,8 @@ export function nonExternalKeyFieldNamesEventDrivenErrorMessage(
 ): string {
   let message =
     ` The following field` +
-    (nonExternalKeyFieldNameByFieldPath.size > 1 ? 's' : '') +
-    ` compose part of an entity's primary key but are not declared "@external":\n`;
+    (nonExternalKeyFieldNameByFieldPath.size > 1 ? 's compose' : ' composes') +
+    ` part of an entity's primary key but are not declared "@external":\n`;
   for (const [fieldPath, fieldName] of nonExternalKeyFieldNameByFieldPath) {
     message += `  field "${fieldName}" defined on path "${fieldPath}"\n`;
   }
@@ -1546,9 +1507,9 @@ export function allExternalFieldInstancesError(
   subgraphNamesByFieldName: Map<string, Array<string>>,
 ): Error {
   let message =
-    `The Object "${typeName}" is invalid because the following Field definition` +
+    `The Object "${typeName}" is invalid because the following field definition` +
     (subgraphNamesByFieldName.size > 1 ? 's are' : ' is') +
-    ` declared "@external" on all instances of that Field:\n`;
+    ` declared "@external" on all instances of that field:\n`;
   for (const [fieldName, subgraphNames] of subgraphNamesByFieldName) {
     message +=
       ` "${fieldName}" in subgraph` +
@@ -1575,18 +1536,18 @@ export function externalInterfaceFieldsError(typeName: string, fieldNames: Array
 }
 
 export function nonExternalConditionalFieldError(
-  originCoords: string,
+  directiveCoords: string,
   subgraphName: string,
   targetCoords: string,
   fieldSet: string,
-  fieldSetDirective: FieldSetDirective,
+  fieldSetDirectiveName: string,
 ): Error {
   return new Error(
-    `The Field "${originCoords}" in subgraph "${subgraphName}" defines a "@${fieldSetDirective}" directive` +
-      ` with the following field set:\n "${fieldSet}".` +
+    `The field "${directiveCoords}" in subgraph "${subgraphName}" defines a "@${fieldSetDirectiveName}"` +
+      ` directive with the following field set:\n "${fieldSet}".` +
       `\nHowever, neither the field "${targetCoords}" nor any of its field set ancestors are declared @external.` +
-      `\nConsequently, "${targetCoords}" is already provided by subgraph "${subgraphName}" and should not form part of` +
-      ` a "@${fieldSetDirective}" directive field set.`,
+      `\nConsequently, "${targetCoords}" is already provided by subgraph "${subgraphName}" and should not form part` +
+      ` of a "@${fieldSetDirectiveName}" directive field set.`,
   );
 }
 
@@ -1598,7 +1559,7 @@ export function incompatibleFederatedFieldNamedTypeError(
   for (const [namedTypeName, subgraphNames] of subgraphNamesByNamedTypeName) {
     const names = [...subgraphNames];
     instances.push(
-      ` The Named Type "${namedTypeName}" is returned by the following subgraph` +
+      ` The named type "${namedTypeName}" is returned by the following subgraph` +
         (names.length > 1 ? `s` : ``) +
         `: "` +
         names.join(QUOTATION_JOIN) +
@@ -1606,15 +1567,15 @@ export function incompatibleFederatedFieldNamedTypeError(
     );
   }
   return new Error(
-    `Each instance of a shared Field must resolve identically across subgraphs.\n` +
-      `The Field "${fieldCoordinates}" could not be federated due to incompatible types across subgraphs.\n` +
+    `Each instance of a shared field must resolve identically across subgraphs.\n` +
+      `The field "${fieldCoordinates}" could not be federated due to incompatible types across subgraphs.\n` +
       `The discrepancies are as follows:\n` +
       instances.join(`\n`),
   );
 }
 
 export function unknownNamedTypeErrorMessage(fieldCoordinates: string, namedTypeName: string): string {
-  return `The Field "${fieldCoordinates}" returns the unknown named type "${namedTypeName}".`;
+  return `The field "${fieldCoordinates}" returns the unknown named type "${namedTypeName}".`;
 }
 
 export function unknownNamedTypeError(fieldCoordinates: string, namedTypeName: string): Error {
@@ -1623,7 +1584,7 @@ export function unknownNamedTypeError(fieldCoordinates: string, namedTypeName: s
 
 export function unknownFieldDataError(fieldCoordinates: string): Error {
   return new Error(
-    `Could not find FieldData for Field "${fieldCoordinates}"\n.` +
+    `Could not find FieldData for field "${fieldCoordinates}"\n.` +
       `This should never happen. Please report this issue on GitHub.`,
   );
 }
@@ -1637,9 +1598,22 @@ export function unexpectedNonCompositeOutputTypeError(namedTypeName: string, act
 
 export function invalidExternalDirectiveError(fieldCoords: string): Error {
   return new Error(
-    `The Object Field "${fieldCoords}" is invalidly declared "@external". An Object Field should only` +
-      ` be declared "@external" if it is part of a "@key", "@provides", or "@requires" FieldSet, or the Field is` +
+    `The Object field "${fieldCoords}" is invalidly declared "@external". An Object field should only` +
+      ` be declared "@external" if it is part of a "@key", "@provides", or "@requires" field set, or the field is` +
       ` necessary to satisfy an Interface implementation. In the case that none of these conditions is true, the` +
       ` "@external" directive should be removed.`,
+  );
+}
+
+export function fieldAlreadyProvidedErrorMessage(
+  fieldCoords: string,
+  subgraphName: string,
+  directiveName: string,
+): string {
+  return (
+    `The field "${fieldCoords}" is unconditionally provided by subgraph "${subgraphName}" and should not form` +
+    ` part of any "@${directiveName}" field set. Although "${fieldCoords}" is declared "@external", it is part of` +
+    ` a "@key" directive on an extension type. Such fields are only declared "@external" for legacy syntactical` +
+    ` reasons and are not internally considered "@external".`
   );
 }

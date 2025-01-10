@@ -4,7 +4,6 @@ import {
   EnumTypeDefinitionNode,
   EnumTypeExtensionNode,
   FieldNode,
-  InlineFragmentNode,
   InputObjectTypeDefinitionNode,
   InputObjectTypeExtensionNode,
   InterfaceTypeDefinitionNode,

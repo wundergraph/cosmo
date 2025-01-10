@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import {
   allExternalFieldInstancesError,
+  ConfigurationData,
   EXTERNAL,
+  externalEntityExtensionKeyFieldWarning,
   externalInterfaceFieldsError,
   externalInterfaceFieldsWarning,
   federateSubgraphs,
@@ -9,9 +11,8 @@ import {
   invalidExternalDirectiveError,
   invalidExternalFieldWarning,
   invalidRepeatedDirectiveErrorMessage,
-  NOT_APPLICABLE,
   normalizeSubgraph,
-  normalizeSubgraphFromString,
+  NOT_APPLICABLE,
   parse,
   requiresDefinedOnNonEntityFieldWarning,
   Subgraph,
@@ -26,31 +27,8 @@ import {
 
 describe('@external directive tests', () => {
   describe('Normalization tests', () => {
-    // TODO external validation  (fieldset)
-    test('that @external declared on the object level applies to its defined fields #1.1', () => {
-      const { errors, normalizationResult } = normalizeSubgraphFromString(`
-        type Object {
-          externalFieldOne(argOne: String!, argTwo: Boolean!): String @external
-          nonExternalFieldOne: Boolean!
-        }
-        
-        extend type Object @external {
-          externalFieldTwo: Int!
-          externalFieldThree: Float
-        }
-        
-        extend type Object @external {
-          """
-            This is the description for Object.externalFieldFour
-          """
-          externalFieldFour: String!
-        }
-        
-        extend type Object {
-          nonExternalFieldTwo(argOne: Int, """This is a description for Object.nonExternalFieldTwo.argTwo""" argTwo: Boolean!): Float!
-          nonExternalFieldThree: Boolean
-        }
-      `);
+    test('that @external declared on the Object level applies to its defined Fields #1', () => {
+      const { errors, normalizationResult, warnings } = normalizeSubgraph(subgraphN.definitions, subgraphN.name);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
         normalizeString(
@@ -73,32 +51,15 @@ describe('@external directive tests', () => {
           `,
         ),
       );
+      expect(warnings).toHaveLength(4);
+      expect(warnings[0]).toStrictEqual(invalidExternalFieldWarning('Object.externalFieldOne', subgraphN.name));
+      expect(warnings[1]).toStrictEqual(invalidExternalFieldWarning('Object.externalFieldTwo', subgraphN.name));
+      expect(warnings[2]).toStrictEqual(invalidExternalFieldWarning('Object.externalFieldThree', subgraphN.name));
+      expect(warnings[3]).toStrictEqual(invalidExternalFieldWarning('Object.externalFieldFour', subgraphN.name));
     });
 
-    test('that @external declared on the object level applies to all its defined fields #1.2', () => {
-      const { errors, normalizationResult } = normalizeSubgraphFromString(`
-        extend type Object @external {
-          """
-            This is the description for Object.externalFieldFour
-          """
-          externalFieldFour: String!
-        }
-        
-        extend type Object {
-          nonExternalFieldTwo(argOne: Int, """This is a description for Object.nonExternalFieldTwo.argTwo""" argTwo: Boolean!): Float!
-          nonExternalFieldThree: Boolean
-        }
-        
-        extend type Object @external {
-          externalFieldTwo: Int!
-          externalFieldThree: Float
-        }
-        
-        type Object {
-          externalFieldOne(argOne: String!, argTwo: Boolean!): String @external
-          nonExternalFieldOne: Boolean!
-        }
-      `);
+    test('that @external declared on the Object level applies to all its defined Fields #2', () => {
+      const { errors, normalizationResult, warnings } = normalizeSubgraph(subgraphO.definitions, subgraphO.name);
       expect(errors).toBeUndefined();
       expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
         normalizeString(
@@ -121,6 +82,11 @@ describe('@external directive tests', () => {
           `,
         ),
       );
+      expect(warnings).toHaveLength(4);
+      expect(warnings[0]).toStrictEqual(invalidExternalFieldWarning('Object.externalFieldFour', subgraphO.name));
+      expect(warnings[1]).toStrictEqual(invalidExternalFieldWarning('Object.externalFieldTwo', subgraphO.name));
+      expect(warnings[2]).toStrictEqual(invalidExternalFieldWarning('Object.externalFieldThree', subgraphO.name));
+      expect(warnings[3]).toStrictEqual(invalidExternalFieldWarning('Object.externalFieldOne', subgraphO.name));
     });
 
     test('that @external declared on both the parent and field level is not repeated', () => {
@@ -142,7 +108,7 @@ describe('@external directive tests', () => {
     });
 
     test('that an error is returned if @external is repeated on the same level', () => {
-      const { errors, normalizationResult } = normalizeSubgraph(subgraphG.definitions);
+      const { errors } = normalizeSubgraph(subgraphG.definitions);
       expect(errors).toHaveLength(1);
       expect(errors).toStrictEqual([
         invalidDirectiveError(EXTERNAL, 'Entity.field', [
@@ -970,6 +936,405 @@ describe('@external directive tests', () => {
         ),
       );
     });
+
+    test('that unique direct @external key fields on V1 entity extensions are valid', () => {
+      const { errors, federationResult, warnings } = federateSubgraphs([subgraphP, subgraphQ]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionOneRouterDefinitions +
+            `
+            type Entity {
+              id: ID!
+              name: String!
+            }
+
+            type Query {
+              entity: Entity!
+            }
+          `,
+        ),
+      );
+      expect(warnings).toHaveLength(2);
+      expect(warnings[0]).toStrictEqual(
+        externalEntityExtensionKeyFieldWarning('Entity', 'id', ['Entity.id'], subgraphQ.name),
+      );
+      expect(warnings[1]).toStrictEqual(
+        externalEntityExtensionKeyFieldWarning('Entity', 'name', ['Entity.name'], subgraphQ.name),
+      );
+      const q = federationResult!.subgraphConfigBySubgraphName.get(subgraphQ.name);
+      expect(q).toBeDefined();
+      expect(q!.configurationDataByTypeName).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entity']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'name']),
+              isRootNode: true,
+              keys: [
+                { fieldName: '', selectionSet: 'id' },
+                { fieldName: '', selectionSet: 'name' },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+        ]),
+      );
+    });
+
+    // Apollo returns an error for only this case, but it's not meaningful nor necessary.
+    // For consistency, we apply the same behaviour for the other cases of @external on extensions.
+    test('that unique nested @external key fields on V1 entity extensions are valid', () => {
+      const { errors, federationResult, warnings } = federateSubgraphs([subgraphP, subgraphR]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionOneRouterDefinitions +
+            `
+            type Entity {
+              id: ID!
+              object: Object!
+            }
+            
+            type Object {
+              id: ID!
+            }
+
+            type Query {
+              entity: Entity!
+            }
+          `,
+        ),
+      );
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toStrictEqual(
+        externalEntityExtensionKeyFieldWarning('Entity', 'object { id }', ['Object.id'], subgraphR.name),
+      );
+      const r = federationResult!.subgraphConfigBySubgraphName.get(subgraphR.name);
+      expect(r).toBeDefined();
+      expect(r!.configurationDataByTypeName).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entity']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object']),
+              isRootNode: true,
+              keys: [
+                { fieldName: '', selectionSet: 'id' },
+                { fieldName: '', selectionSet: 'object { id }' },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+        ]),
+      );
+    });
+
+    test('that unique direct @external key fields on V1 entities with @extends are valid', () => {
+      const { errors, federationResult, warnings } = federateSubgraphs([subgraphP, subgraphS]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionOneRouterDefinitions +
+            `
+            type Entity {
+              id: ID!
+              name: String!
+            }
+
+            type Query {
+              entity: Entity!
+            }
+          `,
+        ),
+      );
+      expect(warnings).toHaveLength(2);
+      expect(warnings[0]).toStrictEqual(
+        externalEntityExtensionKeyFieldWarning('Entity', 'id', ['Entity.id'], subgraphS.name),
+      );
+      expect(warnings[1]).toStrictEqual(
+        externalEntityExtensionKeyFieldWarning('Entity', 'name', ['Entity.name'], subgraphS.name),
+      );
+    });
+
+    test('that unique nested @external key fields on V1 entities with @extends are valid', () => {
+      const { errors, federationResult, warnings } = federateSubgraphs([subgraphP, subgraphT]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionOneRouterDefinitions +
+            `
+            type Entity {
+              id: ID!
+              object: Object!
+            }
+            
+            type Object {
+              id: ID!
+            }
+
+            type Query {
+              entity: Entity!
+            }
+          `,
+        ),
+      );
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toStrictEqual(
+        externalEntityExtensionKeyFieldWarning('Entity', 'object { id }', ['Object.id'], subgraphT.name),
+      );
+    });
+
+    test('that errors are returned for unique direct @external key fields on V1 entities', () => {
+      const { errors } = federateSubgraphs([subgraphU]);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(
+        allExternalFieldInstancesError(
+          'Entity',
+          new Map<string, Array<string>>([
+            ['id', [subgraphU.name]],
+            ['name', [subgraphU.name]],
+          ]),
+        ),
+      );
+    });
+
+    test('that errors are returned for unique nested @external key fields on V1 entities', () => {
+      const { errors } = federateSubgraphs([subgraphV]);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(
+        allExternalFieldInstancesError('Object', new Map<string, Array<string>>([['id', [subgraphV.name]]])),
+      );
+    });
+
+    //V2
+    test('that unique direct @external key fields on V2 entity extensions are valid', () => {
+      const { errors, federationResult, warnings } = federateSubgraphs([subgraphP, subgraphW]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+            type Entity {
+              id: ID!
+              name: String!
+            }
+
+            type Query {
+              entity: Entity!
+            }
+            
+            scalar openfed__Scope
+          `,
+        ),
+      );
+      expect(warnings).toHaveLength(2);
+      expect(warnings[0]).toStrictEqual(
+        externalEntityExtensionKeyFieldWarning('Entity', 'id', ['Entity.id'], subgraphW.name),
+      );
+      expect(warnings[1]).toStrictEqual(
+        externalEntityExtensionKeyFieldWarning('Entity', 'name', ['Entity.name'], subgraphW.name),
+      );
+      const w = federationResult!.subgraphConfigBySubgraphName.get(subgraphW.name);
+      expect(w).toBeDefined();
+      expect(w!.configurationDataByTypeName).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entity']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'name']),
+              isRootNode: true,
+              keys: [
+                { fieldName: '', selectionSet: 'id' },
+                { fieldName: '', selectionSet: 'name' },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+        ]),
+      );
+    });
+
+    test('that unique nested @external key fields on V2 entity extensions are valid', () => {
+      const { errors, federationResult, warnings } = federateSubgraphs([subgraphP, subgraphX]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+            type Entity {
+              id: ID!
+              object: Object!
+            }
+            
+            type Object {
+              id: ID!
+            }
+
+            type Query {
+              entity: Entity!
+            }
+
+            scalar openfed__Scope
+          `,
+        ),
+      );
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toStrictEqual(
+        externalEntityExtensionKeyFieldWarning('Entity', 'object { id }', ['Object.id'], subgraphX.name),
+      );
+      const x = federationResult!.subgraphConfigBySubgraphName.get(subgraphX.name);
+      expect(x).toBeDefined();
+      expect(x!.configurationDataByTypeName).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entity']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object']),
+              isRootNode: true,
+              keys: [
+                { fieldName: '', selectionSet: 'id' },
+                { fieldName: '', selectionSet: 'object { id }' },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+        ]),
+      );
+    });
+
+    test('that unique direct @external key fields on V2 entities with @extends are valid', () => {
+      const { errors, federationResult, warnings } = federateSubgraphs([subgraphP, subgraphY]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+            type Entity {
+              id: ID!
+              name: String!
+            }
+
+            type Query {
+              entity: Entity!
+            }
+
+            scalar openfed__Scope
+          `,
+        ),
+      );
+      expect(warnings).toHaveLength(2);
+      expect(warnings[0]).toStrictEqual(
+        externalEntityExtensionKeyFieldWarning('Entity', 'id', ['Entity.id'], subgraphY.name),
+      );
+      expect(warnings[1]).toStrictEqual(
+        externalEntityExtensionKeyFieldWarning('Entity', 'name', ['Entity.name'], subgraphY.name),
+      );
+    });
+
+    test('that unique nested @external key fields on V2 entities with @extends are valid', () => {
+      const { errors, federationResult, warnings } = federateSubgraphs([subgraphP, subgraphZ]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+        normalizeString(
+          versionTwoRouterDefinitions +
+            `
+            type Entity {
+              id: ID!
+              object: Object!
+            }
+            
+            type Object {
+              id: ID!
+            }
+
+            type Query {
+              entity: Entity!
+            }
+
+            scalar openfed__Scope
+          `,
+        ),
+      );
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toStrictEqual(
+        externalEntityExtensionKeyFieldWarning('Entity', 'object { id }', ['Object.id'], subgraphZ.name),
+      );
+    });
+
+    test('that errors are returned for unique direct @external key fields on V2 entities', () => {
+      const { errors } = federateSubgraphs([subgraphAA]);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(
+        allExternalFieldInstancesError(
+          'Entity',
+          new Map<string, Array<string>>([
+            ['id', [subgraphAA.name]],
+            ['name', [subgraphAA.name]],
+          ]),
+        ),
+      );
+    });
+
+    test('that errors are returned for unique nested @external key fields on V2 entities', () => {
+      const { errors } = federateSubgraphs([subgraphAB]);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(
+        allExternalFieldInstancesError('Object', new Map<string, Array<string>>([['id', [subgraphAB.name]]])),
+      );
+    });
   });
 });
 
@@ -1171,6 +1536,276 @@ const subgraphM: Subgraph = {
     extend type Entity @key(fields: "id") {
       id: ID! @external
       name: String! @external
+    }
+  `),
+};
+
+const subgraphN: Subgraph = {
+  name: 'subgraph-n',
+  url: '',
+  definitions: parse(`
+      type Object {
+        externalFieldOne(argOne: String!, argTwo: Boolean!): String @external
+        nonExternalFieldOne: Boolean!
+      }
+      
+      extend type Object @external {
+        externalFieldTwo: Int!
+        externalFieldThree: Float
+      }
+      
+      extend type Object @external {
+        """
+          This is the description for Object.externalFieldFour
+        """
+        externalFieldFour: String!
+      }
+      
+      extend type Object {
+        nonExternalFieldTwo(argOne: Int, """This is a description for Object.nonExternalFieldTwo.argTwo""" argTwo: Boolean!): Float!
+        nonExternalFieldThree: Boolean
+      }
+  `),
+};
+
+const subgraphO: Subgraph = {
+  name: 'subgraph-o',
+  url: '',
+  definitions: parse(`
+    extend type Object @external {
+      """
+      This is the description for Object.externalFieldFour
+      """
+      externalFieldFour: String!
+    }
+
+    extend type Object {
+      nonExternalFieldTwo(argOne: Int, """This is a description for Object.nonExternalFieldTwo.argTwo""" argTwo: Boolean!): Float!
+      nonExternalFieldThree: Boolean
+    }
+
+    extend type Object @external {
+      externalFieldTwo: Int!
+      externalFieldThree: Float
+    }
+
+    type Object {
+      externalFieldOne(argOne: String!, argTwo: Boolean!): String @external
+      nonExternalFieldOne: Boolean!
+    }
+  `),
+};
+
+const subgraphP: Subgraph = {
+  name: 'subgraph-p',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+    }
+  `),
+};
+
+const subgraphQ: Subgraph = {
+  name: 'subgraph-q',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity!
+    }
+    
+    extend type Entity @key(fields: "id") @key(fields: "name") {
+      id: ID! @external
+      name: String! @external
+    }
+  `),
+};
+
+const subgraphR: Subgraph = {
+  name: 'subgraph-r',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity!
+    }
+    
+    extend type Entity @key(fields: "id") @key(fields: "object { id }") {
+      id: ID!
+      object: Object!
+    }
+    
+    type Object {
+      id: ID! @external
+    }
+  `),
+};
+
+const subgraphS: Subgraph = {
+  name: 'subgraph-s',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity!
+    }
+    
+    type Entity @extends @key(fields: "id") @key(fields: "name") {
+      id: ID! @external
+      name: String! @external
+    }
+  `),
+};
+
+const subgraphT: Subgraph = {
+  name: 'subgraph-t',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity!
+    }
+    
+    type Entity @extends @key(fields: "id") @key(fields: "object { id }") {
+      id: ID!
+      object: Object!
+    }
+    
+    type Object {
+      id: ID! @external
+    }
+  `),
+};
+
+const subgraphU: Subgraph = {
+  name: 'subgraph-u',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity!
+    }
+    
+    type Entity @key(fields: "id") @key(fields: "name") {
+      id: ID! @external
+      name: String! @external
+    }
+  `),
+};
+
+const subgraphV: Subgraph = {
+  name: 'subgraph-v',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity!
+    }
+    
+    type Entity @key(fields: "id") @key(fields: "object { id }") {
+      id: ID!
+      object: Object!
+    }
+    
+    type Object {
+      id: ID! @external
+    }
+  `),
+};
+
+const subgraphW: Subgraph = {
+  name: 'subgraph-w',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      entity: Entity!
+    }
+    
+    extend type Entity @key(fields: "id") @key(fields: "name") {
+      id: ID! @external
+      name: String! @external
+    }
+  `),
+};
+
+const subgraphX: Subgraph = {
+  name: 'subgraph-x',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      entity: Entity!
+    }
+    
+    extend type Entity @key(fields: "id") @key(fields: "object { id }") {
+      id: ID!
+      object: Object!
+    }
+    
+    type Object {
+      id: ID! @external
+    }
+  `),
+};
+
+const subgraphY: Subgraph = {
+  name: 'subgraph-y',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      entity: Entity!
+    }
+    
+    type Entity @extends @key(fields: "id") @key(fields: "name") {
+      id: ID! @external
+      name: String! @external
+    }
+  `),
+};
+
+const subgraphZ: Subgraph = {
+  name: 'subgraph-z',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      entity: Entity!
+    }
+    
+    type Entity @extends @key(fields: "id") @key(fields: "object { id }") {
+      id: ID!
+      object: Object!
+    }
+    
+    type Object {
+      id: ID! @external
+    }
+  `),
+};
+
+const subgraphAA: Subgraph = {
+  name: 'subgraph-aa',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      entity: Entity!
+    }
+    
+    type Entity @key(fields: "id") @key(fields: "name") {
+      id: ID! @external
+      name: String! @external
+    }
+  `),
+};
+
+const subgraphAB: Subgraph = {
+  name: 'subgraph-ab',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      entity: Entity!
+    }
+    
+    type Entity @key(fields: "id") @key(fields: "object { id }") {
+      id: ID!
+      object: Object!
+    }
+    
+    type Object {
+      id: ID! @external
     }
   `),
 };

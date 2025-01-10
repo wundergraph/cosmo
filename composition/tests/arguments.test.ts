@@ -26,7 +26,7 @@ import { FIELD } from '../src';
 
 describe('Argument federation tests', () => {
   const argumentName = 'input';
-  const prefix = 'Argument "input"';
+  const prefix = 'argument "input"';
   const argumentPath = 'Object.field(input: ...)';
 
   test('that equal arguments merge', () => {
@@ -302,7 +302,7 @@ describe('Argument federation tests', () => {
     expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
       subgraphValidationError('subgraph', [
-        incompatibleInputValueDefaultValueTypeError('Argument "input"', 'Object.field(input: ...)', 'String!', 'null'),
+        incompatibleInputValueDefaultValueTypeError('argument "input"', 'Object.field(input: ...)', 'String!', 'null'),
       ]),
     );
   });
@@ -313,7 +313,7 @@ describe('Argument federation tests', () => {
     expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
       subgraphValidationError('subgraph', [
-        incompatibleInputValueDefaultValueTypeError('Argument "input"', 'Object.field(input: ...)', 'String', '1'),
+        incompatibleInputValueDefaultValueTypeError('argument "input"', 'Object.field(input: ...)', 'String', '1'),
       ]),
     );
   });
