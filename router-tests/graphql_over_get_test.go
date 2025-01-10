@@ -3,6 +3,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"golang.org/x/net/html"
 	"net/http"
 	"sync"
 	"testing"
@@ -144,6 +145,38 @@ func TestOperationsOverGET(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.Response.StatusCode)
 			require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
 
+		})
+	})
+
+	t.Run("Should serve both graphql and playground on the same path", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			OverrideGraphQLPath: "/", // Default playground handler path
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// We could see that successful graphql queries have been made in the previous tests
+			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+				OperationName: []byte(`Employees`),
+				Query:         `query Employees { employees { id } }`,
+			})
+
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+
+			// If the graphql path and the playground path is the same, the playground will be mounted as a middleware and served based on the Accept header
+			// The accept header must be text/html to get the playground
+			header := http.Header{
+				"Accept": {"text/html; charset=utf-8"}, // simulate simplified browser request
+			}
+
+			httpRes, err := xEnv.MakeRequest(http.MethodGet, "/", header, nil)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, httpRes.StatusCode)
+
+			defer func() { _ = httpRes.Body.Close() }()
+			_, err = html.Parse(httpRes.Body)
+			require.NoError(t, err)
 		})
 	})
 }
