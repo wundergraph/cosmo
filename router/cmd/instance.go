@@ -251,25 +251,30 @@ func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Co
 		return nil, err
 	}
 
-	// create a list of header names to parse
+	// create a map for the `httpHeaderAuthenticator`
+	headerSourceMap := map[string][]string{
+		jwtConf.HeaderName: {jwtConf.HeaderValuePrefix},
+	}
 
-	headerSources := []string{jwtConf.HeaderName}
-	headerPrefixes := []string{jwtConf.HeaderValuePrefix}
+	// The `websocketInitialPayloadAuthenticator` has one key and uses a flat list of prefixes
+	prefixSet := make(map[string]struct{})
+
 	for _, s := range jwtConf.HeaderSources {
 		if s.Type != "header" {
 			continue
 		}
 
-		headerSources = append(headerSources, s.Name)
-		headerPrefixes = append(headerPrefixes, s.ValuePrefix)
+		if _, ok := headerSourceMap[s.Name]; !ok {
+			headerSourceMap[s.Name] = append(headerSourceMap[s.Name], s.ValuePrefix)
+		}
+
+		prefixSet[s.ValuePrefix] = struct{}{}
 	}
 
-	// TODO we might want to have Cookies as well.
 	opts := authentication.HttpHeaderAuthenticatorOptions{
-		Name:                "jwks",
-		HeaderNames:         headerSources,
-		HeaderValuePrefixes: headerPrefixes,
-		TokenDecoder:        tokenDecoder,
+		Name:                 "jwks",
+		HeaderSourcePrefixes: headerSourceMap,
+		TokenDecoder:         tokenDecoder,
 	}
 
 	authenticator, err := authentication.NewHttpHeaderAuthenticator(opts)
@@ -281,6 +286,11 @@ func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Co
 	authenticators = append(authenticators, authenticator)
 
 	if cfg.WebSocket.Authentication.FromInitialPayload.Enabled {
+		headerPrefixes := make([]string, 0, len(prefixSet))
+		for prefix := range prefixSet {
+			headerPrefixes = append(headerPrefixes, prefix)
+		}
+
 		opts := authentication.WebsocketInitialPayloadAuthenticatorOptions{
 			TokenDecoder:        tokenDecoder,
 			Key:                 cfg.WebSocket.Authentication.FromInitialPayload.Key,
