@@ -2,11 +2,12 @@ import fs from 'node:fs';
 import { join } from 'node:path';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { normalizeString } from '@wundergraph/composition/tests/utils/utils.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { unsuccessfulBaseCompositionError } from '../src/core/errors/errors.js';
+import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import {
   assertFeatureFlagExecutionConfig,
   assertNumberOfCompositions,
@@ -23,7 +24,24 @@ import {
 
 let dbname = '';
 
+vi.mock('../src/core/clickhouse/index.js', () => {
+  const ClickHouseClient = vi.fn();
+  ClickHouseClient.prototype.queryPromise = vi.fn();
+
+  return { ClickHouseClient };
+});
+
 describe('Contract tests', (ctx) => {
+  let chClient: ClickHouseClient;
+
+  beforeEach(() => {
+    chClient = new ClickHouseClient();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -33,7 +51,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that a contract is created for a federated graph with excluded tags', async () => {
-    const { client, server, blobStorage } = await SetupTest({ dbname });
+    const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -88,7 +106,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that a contract is created for a federated graph with included tags', async () => {
-    const { client, server, blobStorage } = await SetupTest({ dbname });
+    const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -143,7 +161,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that an error is returned if a contract is created with both excluded and included tags', async () => {
-    const { client, server, blobStorage } = await SetupTest({ dbname });
+    const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -183,7 +201,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that the exclude tags of a contract are updated', async () => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -236,7 +254,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that the include tags of a contract are updated', async () => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -289,7 +307,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that an error is returned if a contract is updated with both excludes and includes', async () => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -342,7 +360,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that contract tags are updated from exclude to include', async () => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -395,7 +413,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that contract tags are updated from include to exclude', async () => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -448,7 +466,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that contract routing url and readme is updated', async () => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -521,7 +539,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that contract is deleted upon deleting source federated graph', async () => {
-    const { client, server, blobStorage } = await SetupTest({ dbname });
+    const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -575,7 +593,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that label matcher update on source federated graph propagates to contract graphs with exclude tags', async () => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -627,7 +645,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that label matcher update on source federated graph propagates to contract graphs with include tags', async () => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -679,7 +697,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that label matcher update should not be possible for contract graphs', async () => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -721,7 +739,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that moving source federated graph moves contract graph', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -773,7 +791,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that moving contract federated graph is not allowed', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -818,7 +836,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that contract graph for a monograph is also a monograph', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const monographName = genID('monograph');
     const contractGraphName = genID('contract');
@@ -852,7 +870,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that moving source monograph also moves contract graph', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const monographName = genID('monograph');
     const contractGraphName = genID('contract');
@@ -897,7 +915,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that contract is deleted upon deleting source monograph', async (testContext) => {
-    const { client, server, blobStorage } = await SetupTest({ dbname });
+    const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
 
     const monographName = genID('monograph');
     const contractGraphName = genID('contract');
@@ -946,7 +964,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that contract is migrated upon migrating monograph', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const monographName = genID('monograph');
     const contractGraphName = genID('contract');
@@ -985,7 +1003,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that publishing subgraph recomposes contract with exclude tags', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -1043,7 +1061,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that publishing subgraph recomposes contract with include tags', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -1096,7 +1114,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that deleting subgraph recomposes contract with exclude tags', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -1163,7 +1181,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that deleting subgraph recomposes contract with include tags', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -1225,7 +1243,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that moving a constituent subgraph recomposes its contract', async () => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -1297,7 +1315,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that publishing a monograph recomposes its contract', async () => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const monographName = genID('monograph');
     const contractGraphName = genID('contract');
@@ -1358,7 +1376,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that updating label matchers of a source federated graph recomposes its contract', async () => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -1438,7 +1456,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that a contract is not produced if its source graph does not compose successfully', async () => {
-    const { client, server, blobStorage } = await SetupTest({ dbname });
+    const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
 
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
@@ -1500,7 +1518,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that updating a contract whose source graph has not successfully composed produces a composition error', async () => {
-    const { client, server, blobStorage } = await SetupTest({ dbname });
+    const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
 
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
@@ -1598,7 +1616,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that a contract with exclude tags uploads the correct client schema to the router', async () => {
-    const { client, server, blobStorage } = await SetupTest({ dbname });
+    const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
 
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
@@ -1846,7 +1864,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that a contract with include tags uploads the correct client schema to the router', async () => {
-    const { client, server, blobStorage } = await SetupTest({ dbname });
+    const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
 
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
