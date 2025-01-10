@@ -3,7 +3,6 @@ package integration
 import (
 	"context"
 	"encoding/json"
-	"golang.org/x/net/html"
 	"net/http"
 	"sync"
 	"testing"
@@ -12,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
+	"golang.org/x/net/html"
 )
 
 func TestOperationsOverGET(t *testing.T) {
