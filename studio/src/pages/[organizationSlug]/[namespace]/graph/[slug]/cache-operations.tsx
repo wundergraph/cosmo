@@ -43,7 +43,7 @@ const CacheOperationsPage: NextPageWithLayout = () => {
     },
   );
 
-  const { mutate } = useMutation(computeCacheWarmerOperations, {
+  const { mutate, isPending } = useMutation(computeCacheWarmerOperations, {
     onSuccess: (d) => {
       if (d.response?.code === EnumStatusCode.OK) {
         refetch();
@@ -97,6 +97,7 @@ const CacheOperationsPage: NextPageWithLayout = () => {
           onClick={() => {
             mutate({ federatedGraphName, namespace });
           }}
+          disabled={isPending}
         >
           <UpdateIcon />
           Recompute

@@ -113,8 +113,6 @@ export class CacheWarmerRepository {
       SELECT OperationContent as operationContent
       FROM ${this.client.database}.gql_metrics_operations
       WHERE OperationHash = '${operationHash}'
-        AND FederatedGraphID = '${federatedGraphID}'
-        AND OrganizationID = '${organizationID}'
       LIMIT 1 SETTINGS use_query_cache = true, query_cache_ttl = 2629800
     `;
 
