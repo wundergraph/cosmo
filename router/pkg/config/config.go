@@ -404,7 +404,6 @@ type JWKSConfiguration struct {
 	RefreshInterval time.Duration `yaml:"refresh_interval" envDefault:"1m"`
 }
 
-// TODO Change name to TokenSource maybe?
 type HeaderSource struct {
 	Type        string `yaml:"type"`
 	Name        string `yaml:"name"`

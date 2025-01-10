@@ -65,7 +65,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				l.Error("Failed to refresh HTTP JWK Set from remote HTTP resource.", zap.Error(err))
 			},
 			RefreshInterval: c.RefreshInterval,
-			Storage:         NewValidationStore(nil, c.AllowedAlgorithms),
+			Storage:         NewValidationStore(logger, nil, c.AllowedAlgorithms),
 		}
 
 		store, err := jwkset.NewStorageFromHTTP(ur, jwksetHTTPStorageOptions)
