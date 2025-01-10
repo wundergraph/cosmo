@@ -1484,7 +1484,7 @@
                   "type": {
                     "type": "string",
                     "description": "The type of the source. The supported types are 'header', 'cookie'.",
-                    "enum": ["header", "cookie"]
+                    "enum": ["header"]
                   },
                   "name": {
                     "type": "string",

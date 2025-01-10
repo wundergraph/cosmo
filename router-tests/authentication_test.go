@@ -843,21 +843,6 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 		})
 	})
 
-	t.Run("should fail to create TokenDecoder with RSA algorithm when only HS256 is allowed", func(t *testing.T) {
-		t.Parallel()
-
-		authServer, err := jwks.NewServer(t)
-		require.NoError(t, err)
-		t.Cleanup(authServer.Close)
-
-		_, err = authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(),
-			[]authentication.JWKSConfig{
-				toJWKSConfig(authServer.JWKSURL(), time.Second*5, "HS256"), // Allow only HS256. RSA should be denied
-			},
-		)
-
-		require.Error(t, err)
-	})
 }
 
 func TestAlgorithmMismatch(t *testing.T) {
@@ -1162,14 +1147,18 @@ func TestSupportedAlgorithms(t *testing.T) {
 		require.Equal(t, http.StatusUnauthorized, res.StatusCode)
 	}
 
-	testSetup := func(t *testing.T, crypto jwks.Crypto) (string, []authentication.Authenticator) {
+	testSetup := func(t *testing.T, crypto jwks.Crypto, allowedAlgorithms ...string) (string, []authentication.Authenticator) {
 		t.Helper()
 
 		authServer, err := jwks.NewServerWithCrypto(t, crypto)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
 
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+		tokenDecoder, err := authentication.NewJwksTokenDecoder(
+			NewContextWithCancel(t),
+			zap.NewNop(),
+			[]authentication.JWKSConfig{
+				toJWKSConfig(authServer.JWKSURL(), time.Second*5, allowedAlgorithms...)})
 		require.NoError(t, err)
 
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
@@ -1421,6 +1410,32 @@ func TestSupportedAlgorithms(t *testing.T) {
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				testAuthentication(t, xEnv, token)
 			})
+		})
+	})
+
+	t.Run("Should not be able to add JWKS with an algorithm that was not allowed", func(t *testing.T) {
+		t.Parallel()
+
+		rsaCrypto, err := jwks.NewRSACrypto("", jwkset.AlgRS256, 2048)
+		require.NoError(t, err)
+
+		// We are adding an RSA key but only allow HMAC
+		token, authenticators := testSetup(t, rsaCrypto, jwkset.AlgHS256.String())
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should fail
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer func() { _ = res.Body.Close() }()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
 		})
 	})
 

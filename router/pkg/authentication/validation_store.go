@@ -4,15 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	
+
 	"github.com/MicahParks/jwkset"
+	"go.uber.org/zap"
 )
 
 var _ jwkset.Storage = (*validationStore)(nil)
 
 type validationStore struct {
-	algs  map[string]struct{}
-	inner jwkset.Storage
+	logger *zap.Logger
+	algs   map[string]struct{}
+	inner  jwkset.Storage
 }
 
 var supportedAlgorithms = map[string]struct{}{
@@ -31,28 +33,37 @@ var supportedAlgorithms = map[string]struct{}{
 	"EdDSA": {},
 }
 
-func NewValidationStore(inner jwkset.Storage, algs []string) jwkset.Storage {
+func NewValidationStore(logger *zap.Logger, inner jwkset.Storage, algs []string) jwkset.Storage {
 	if inner == nil {
 		inner = jwkset.NewMemoryStorage()
 	}
 
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
 	algSet := make(map[string]struct{}, len(algs))
 
+	store := &validationStore{
+		logger: logger,
+		inner:  inner,
+		algs:   supportedAlgorithms,
+	}
+
 	if len(algs) == 0 {
-		return &validationStore{
-			algs:  supportedAlgorithms,
-			inner: inner,
-		}
+		return store
 	}
 
 	for _, alg := range algs {
+		if _, ok := supportedAlgorithms[alg]; !ok {
+			logger.Warn("Unsupported algorithm", zap.String("algorithm", alg))
+			continue
+		}
 		algSet[alg] = struct{}{}
 	}
 
-	return &validationStore{
-		algs:  algSet,
-		inner: inner,
-	}
+	store.algs = algSet
+	return store
 }
 
 func (v *validationStore) KeyDelete(ctx context.Context, keyID string) (ok bool, err error) {
@@ -94,7 +105,11 @@ func (v *validationStore) KeyReadAll(ctx context.Context) ([]jwkset.JWK, error) 
 func (v *validationStore) KeyWrite(ctx context.Context, jwk jwkset.JWK) error {
 	jwkMarshal := jwk.Marshal()
 	if _, ok := v.algs[jwkMarshal.ALG.String()]; !ok {
-		return fmt.Errorf("key with ID %q has an unsupported algorithm %s", jwkMarshal.KID, jwkMarshal.ALG.String())
+		// We should not return an error here. If JWKS are configured for multiple applications, we should only add the
+		// supported keys to the token decoder store and not prevent the refresh entirely.
+		// In case we are receiving a key with an unsupported algorithm we log a warning instead.
+		v.logger.Warn("Skipping key with unsupported algorithm", zap.String("keyID", jwkMarshal.KID), zap.String("algorithm", jwkMarshal.ALG.String()))
+		return nil
 	}
 
 	return v.inner.KeyWrite(ctx, jwk)
