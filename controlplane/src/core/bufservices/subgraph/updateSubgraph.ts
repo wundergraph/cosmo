@@ -196,6 +196,7 @@ export function updateSubgraph(
           cdnBaseUrl: opts.cdnBaseUrl,
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
+        opts.chClient!,
       );
 
     await auditLogRepo.addAuditLog({

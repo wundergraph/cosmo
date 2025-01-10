@@ -146,6 +146,9 @@ import { getSubgraphByName } from './subgraph/getSubgraphByName.js';
 import { getNamespace } from './namespace/getNamespace.js';
 import { getSubgraphById } from './subgraph/getSubgraphById.js';
 import { getFederatedGraphById } from './federated-graph/getFederatedGraphById.js';
+import { pushCacheWarmerOperation } from './cache-warmer/pushCacheWarmerOperation.js';
+import { getCacheWarmerOperations } from './cache-warmer/getCacheWarmerOperations.js';
+import { computeCacheWarmerOperations } from './cache-warmer/computeCacheWarmerOperations.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -419,6 +422,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     configureNamespaceGraphPruningConfig: (req, ctx) => {
       return configureNamespaceGraphPruningConfig(opts, req, ctx);
+    },
+
+    pushCacheWarmerOperation: (req, ctx) => {
+      return pushCacheWarmerOperation(opts, req, ctx);
     },
 
     /*
@@ -724,6 +731,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     deletePlaygroundScript: (req, ctx) => {
       return deletePlaygroundScript(opts, req, ctx);
+    },
+
+    getCacheWarmerOperations: (req, ctx) => {
+      return getCacheWarmerOperations(opts, req, ctx);
+    },
+
+    computeCacheWarmerOperations: (req, ctx) => {
+      return computeCacheWarmerOperations(opts, req, ctx);
     },
 
     // apis used by the terraform provider

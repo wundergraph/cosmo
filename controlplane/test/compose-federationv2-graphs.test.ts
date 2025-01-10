@@ -2,14 +2,31 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import * as prettier from 'prettier';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
 
+vi.mock('../src/core/clickhouse/index.js', () => {
+  const ClickHouseClient = vi.fn();
+  ClickHouseClient.prototype.queryPromise = vi.fn();
+
+  return { ClickHouseClient };
+});
+
 describe('ComposeFederationV2Graphs', (ctx) => {
+  let chClient: ClickHouseClient;
+
+  beforeEach(() => {
+    chClient = new ClickHouseClient();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -19,7 +36,7 @@ describe('ComposeFederationV2Graphs', (ctx) => {
   });
 
   test('Compose these federation v2 subgraph schemas(pandas, products, reviews, users)', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const pandasSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV2/pandas.graphql'));
     const productsSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV2/products.graphql'));

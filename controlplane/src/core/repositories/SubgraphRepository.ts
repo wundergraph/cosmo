@@ -38,6 +38,7 @@ import {
 import { BlobStorage } from '../blobstorage/index.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { hasLabelsChanged, normalizeLabels } from '../util.js';
+import { ClickHouseClient } from '../clickhouse/index.js';
 import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
@@ -211,6 +212,7 @@ export class SubgraphRepository {
       webhookJWTSecret: string;
       cdnBaseUrl: string;
     },
+    chClient: ClickHouseClient,
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
     compositionWarnings: PlainMessage<CompositionWarning>[];
@@ -423,6 +425,7 @@ export class SubgraphRepository {
         blobStorage,
         admissionConfig,
         actorId: data.updatedBy,
+        chClient,
       });
 
       compositionErrors.push(...cErrors);
@@ -453,6 +456,7 @@ export class SubgraphRepository {
       jwtSecret: string;
       cdnBaseUrl: string;
     },
+    chClient: ClickHouseClient,
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
     updatedFederatedGraphs: FederatedGraphDTO[];
@@ -503,6 +507,7 @@ export class SubgraphRepository {
           cdnBaseUrl: admissionConfig.cdnBaseUrl,
         },
         actorId: data.updatedBy,
+        chClient,
       });
 
       return { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings };

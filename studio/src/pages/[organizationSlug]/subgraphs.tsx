@@ -64,7 +64,7 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
     } else if (error || data?.response?.code !== EnumStatusCode.OK) {
       content = (
         <EmptyState
-          icon={<ExclamationTriangleIcon />}
+          icon={<ExclamationTriangleIcon className="h-12 w-12" />}
           title="Could not retrieve subgraphs"
           description={
             data?.response?.details || error?.message || "Please try again"
@@ -92,7 +92,7 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
     ) {
       content = (
         <EmptyState
-          icon={<ExclamationTriangleIcon />}
+          icon={<ExclamationTriangleIcon className="h-12 w-12" />}
           title="Could not retrieve feature subgraphs"
           description={
             featureSubgraphsData?.response?.details ||

@@ -37,7 +37,7 @@ describe('CheckSubgraphSchema', (ctx) => {
   });
 
   test('Should be able to create a subgraph, publish the schema and then check with new schema', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();

@@ -133,6 +133,7 @@ export function updateFederatedGraph(
         cdnBaseUrl: opts.cdnBaseUrl,
         jwtSecret: opts.admissionWebhookJWTSecret,
       },
+      chClient: opts.chClient!,
     });
 
     if (result?.deploymentErrors) {

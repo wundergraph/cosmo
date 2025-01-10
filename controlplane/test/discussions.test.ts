@@ -1,13 +1,14 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { TestContext, afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { TestContext, afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
 
-const seed = async (testContext: TestContext) => {
-  const { client, server } = await SetupTest({ dbname });
+const seed = async (testContext: TestContext, chClient?: ClickHouseClient) => {
+  const { client, server } = await SetupTest({ dbname, chClient });
 
   const subgraphName = genID('subgraph1');
   const fedGraphName = genID('fedGraph');
@@ -55,7 +56,24 @@ const seed = async (testContext: TestContext) => {
   return { client, server, graph, subgraphs, schemaVersionId: versionId };
 };
 
+vi.mock('../src/core/clickhouse/index.js', () => {
+  const ClickHouseClient = vi.fn();
+  ClickHouseClient.prototype.queryPromise = vi.fn();
+
+  return { ClickHouseClient };
+});
+
 describe('Discussions', (ctx) => {
+  let chClient: ClickHouseClient;
+
+  beforeEach(() => {
+    chClient = new ClickHouseClient();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -65,7 +83,7 @@ describe('Discussions', (ctx) => {
   });
 
   test('Should create discussion', async (testContext) => {
-    const { client, server, graph, schemaVersionId } = await seed(testContext);
+    const { client, server, graph, schemaVersionId } = await seed(testContext, chClient);
 
     const discussionRes = await client.createDiscussion({
       contentJson: `{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Test"}]}]}`,
@@ -87,7 +105,7 @@ describe('Discussions', (ctx) => {
   });
 
   test('Should update discussion comment', async (testContext) => {
-    const { client, server, graph, schemaVersionId } = await seed(testContext);
+    const { client, server, graph, schemaVersionId } = await seed(testContext, chClient);
 
     const discussionRes = await client.createDiscussion({
       contentJson: `{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Test"}]}]}`,
@@ -124,7 +142,7 @@ describe('Discussions', (ctx) => {
   });
 
   test('Should be able to delete reply and discussion correctly', async (testContext) => {
-    const { client, server, graph, schemaVersionId } = await seed(testContext);
+    const { client, server, graph, schemaVersionId } = await seed(testContext, chClient);
 
     const discussionRes = await client.createDiscussion({
       contentJson: `{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Test"}]}]}`,
@@ -188,7 +206,7 @@ describe('Discussions', (ctx) => {
   });
 
   test('Should be able to get correct reference schemas', async (testContext) => {
-    const { client, server, graph, schemaVersionId, subgraphs } = await seed(testContext);
+    const { client, server, graph, schemaVersionId, subgraphs } = await seed(testContext, chClient);
 
     const discussionRes = await client.createDiscussion({
       contentJson: `{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Test"}]}]}`,

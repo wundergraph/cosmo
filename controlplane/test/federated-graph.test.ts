@@ -1,12 +1,30 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
 
+vi.mock('../src/core/clickhouse/index.js', () => {
+  const ClickHouseClient = vi.fn();
+  ClickHouseClient.prototype.queryPromise = vi.fn();
+
+  return { ClickHouseClient };
+});
+
 describe('Federated Graph', (ctx) => {
+  let chClient: ClickHouseClient;
+
+  beforeEach(() => {
+    chClient = new ClickHouseClient();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -16,7 +34,7 @@ describe('Federated Graph', (ctx) => {
   });
 
   test('Should be able to create a federated graph from subgraphs with matching labels', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraph1Name = genID('subgraph1');
     const fedGraphName = genID('fedGraph');
@@ -62,7 +80,7 @@ describe('Federated Graph', (ctx) => {
   });
 
   test('Should be able to add subgraphs to an existing Federated Graph based on matching labels', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraph1Name = genID('subgraph1');
     const fedGraphName = genID('fedGraph');
@@ -108,7 +126,7 @@ describe('Federated Graph', (ctx) => {
   });
 
   test('Subgraphs should not be composed into a federated graph until it is published', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -154,7 +172,7 @@ describe('Federated Graph', (ctx) => {
   });
 
   test('Should be able to fetch federated schema after publishing one of the two subgraphs, and after publishing both the subgraphs', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -233,7 +251,7 @@ describe('Federated Graph', (ctx) => {
   });
 
   test('Should not be able to fetch federated schema before publishing the subgraphs and after publishing, deleting the subgraphs', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');

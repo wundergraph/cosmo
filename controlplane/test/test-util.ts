@@ -43,6 +43,7 @@ import { NewBillingPlan } from '../src/db/models.js';
 import { DeactivateOrganizationQueue } from '../src/core/workers/DeactivateOrganizationWorker.js';
 import { DeleteUserQueue } from '../src/core/workers/DeleteUserQueue.js';
 import { ReactivateOrganizationQueue } from '../src/core/workers/ReactivateOrganizationWorker.js';
+import { CacheWarmerQueue } from '../src/core/workers/CacheWarmerWorker.js';
 
 export const DEFAULT_ROUTER_URL = 'http://localhost:3002';
 export const DEFAULT_SUBGRAPH_URL_ONE = 'http://localhost:4001';
@@ -131,6 +132,7 @@ export const SetupTest = async function ({
   const deactivateOrganizationQueue = new DeactivateOrganizationQueue(log, server.redisForQueue);
   const deleteUserQueue = new DeleteUserQueue(log, server.redisForQueue);
   const reactivateOrganizationQueue = new ReactivateOrganizationQueue(log, server.redisForQueue);
+  const cacheWarmerQueue = new CacheWarmerQueue(log, server.redisForQueue);
 
   const blobStorage = new InMemoryBlobStorage();
   await server.register(fastifyConnectPlugin, {
@@ -160,6 +162,7 @@ export const SetupTest = async function ({
         deactivateOrganizationQueue,
         reactivateOrganizationQueue,
         deleteUserQueue,
+        cacheWarmerQueue,
       },
     }),
   });
