@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { compressionBrotli, compressionGzip, createConnectTransport } from '@connectrpc/connect-node';
 import { createPromiseClient, type Interceptor, PromiseClient } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
@@ -20,15 +21,23 @@ export interface Client {
 }
 
 /**
- * Interceptor printing the request ID to help with debugging, when a request results in an error.
+ * Interceptor generating a request ID on requests to the server.
  */
 export const requestIdInterceptor: Interceptor = (next) => async (req) => {
+  const requestId = randomUUID();
+
+  req.header.set('x-request-id', requestId);
+
+  const timeStamp = new Date().toISOString();
   const res = await next(req);
 
   if ((res.message?.response as Response)?.code === EnumStatusCode.ERR) {
     console.log(pc.yellow('---'));
     console.log(pc.yellow('Something went wrong while processing a request for this command.'));
-    console.log(pc.yellow(`Request ID: ${config.requestId}`));
+    console.log();
+    console.log(pc.yellow(`Request ID: ${requestId}`));
+    console.log(pc.yellow(`Request sent at: ${timeStamp}`));
+    console.log(pc.yellow(`RPC Method: ${res.method.name}`));
     console.log(pc.yellow('---'));
   }
 
