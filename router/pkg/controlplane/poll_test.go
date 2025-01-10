@@ -53,6 +53,14 @@ func Test_RandomDuration(t *testing.T) {
 
 		assert.Equal(t, 0*time.Millisecond, duration)
 	})
+
+	t.Run("should panic when max is less than zero", func(t *testing.T) {
+		max := -1 * time.Millisecond
+
+		assert.Panics(t, func() {
+			randomDuration(max)
+		})
+	})
 }
 
 func sampleRandomDurations(count int, max time.Duration) []time.Duration {
