@@ -13,6 +13,7 @@ export interface ClientOptions {
   baseUrl: string;
   apiKey?: string;
   proxyUrl?: string;
+  interceptors?: Interceptor[];
 }
 
 export interface Client {
@@ -66,7 +67,7 @@ export const CreateClient = (opts: ClientOptions): Client => {
     sendCompression: compressionBrotli,
 
     // Interceptors apply to all calls running through this transport.
-    interceptors: [requestIdInterceptor],
+    interceptors: [requestIdInterceptor, ...(opts.interceptors || [])],
     defaultTimeoutMs: 75_000,
   });
 
