@@ -606,10 +606,11 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 
 	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{
-		Name:                jwksName,
-		HeaderNames:         []string{headerName},
-		HeaderValuePrefixes: []string{headerValuePrefix},
-		TokenDecoder:        tokenDecoder,
+		Name: jwksName,
+		HeaderSourcePrefixes: map[string][]string{
+			headerName: {headerValuePrefix},
+		},
+		TokenDecoder: tokenDecoder,
 	}
 	authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 	require.NoError(t, err)
@@ -741,18 +742,22 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	tokenDecoder1, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer1.JWKSURL(), time.Second*5)})
 	authenticator1HeaderValuePrefixes := []string{"Provider1"}
 	authenticator1, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
-		Name:                "1",
-		HeaderValuePrefixes: authenticator1HeaderValuePrefixes,
-		TokenDecoder:        tokenDecoder1,
+		Name: "1",
+		HeaderSourcePrefixes: map[string][]string{
+			"Authorization": authenticator1HeaderValuePrefixes,
+		},
+		TokenDecoder: tokenDecoder1,
 	})
 	require.NoError(t, err)
 
 	tokenDecoder2, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer2.JWKSURL(), time.Second*5)})
 	authenticator2HeaderValuePrefixes := []string{"", "Provider2"}
 	authenticator2, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
-		Name:                "2",
-		HeaderValuePrefixes: authenticator2HeaderValuePrefixes,
-		TokenDecoder:        tokenDecoder2,
+		Name: "2",
+		HeaderSourcePrefixes: map[string][]string{
+			"Authorization": authenticator2HeaderValuePrefixes,
+		},
+		TokenDecoder: tokenDecoder2,
 	})
 	require.NoError(t, err)
 	authenticators := []authentication.Authenticator{authenticator1, authenticator2}
