@@ -238,8 +238,8 @@ export const CacheOperationDetails = ({
                       href={`/${user?.currentOrganization.slug}/${graphData
                         ?.graph?.namespace}/graph/${graphData?.graph
                         ?.name}/playground?operation=${encodeURIComponent(
-                        operationContent || "",
-                      )}}`}
+                        operationContent,
+                      )}`}
                     >
                       <PlayIcon className="h-5" />
                     </Link>
