@@ -221,11 +221,11 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		})
 
 		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
-		cr.Mount(r.graphqlPath, multiGraphHandler)
+		cr.Handle(r.graphqlPath, multiGraphHandler)
 
 		if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled && r.webSocketConfiguration.AbsintheProtocol.Enabled {
 			// Mount the Absinthe protocol handler for WebSockets
-			httpRouter.Mount(r.webSocketConfiguration.AbsintheProtocol.HandlerPath, multiGraphHandler)
+			httpRouter.Handle(r.webSocketConfiguration.AbsintheProtocol.HandlerPath, multiGraphHandler)
 		}
 	})
 
@@ -1081,9 +1081,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	httpRouter.Use(s.routerMiddlewares...)
 
 	// GraphQL over POST
-	httpRouter.Post("/", graphqlHandler.ServeHTTP)
+	httpRouter.Post(s.graphqlPath, graphqlHandler.ServeHTTP)
 	// GraphQL over GET
-	httpRouter.Get("/", graphqlHandler.ServeHTTP)
+	httpRouter.Get(s.graphqlPath, graphqlHandler.ServeHTTP)
 
 	gm.mux = httpRouter
 
