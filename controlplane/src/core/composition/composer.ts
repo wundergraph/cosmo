@@ -33,6 +33,7 @@ import { GraphCompositionRepository } from '../repositories/GraphCompositionRepo
 import * as schema from '../../db/schema.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { CacheWarmerRepository } from '../repositories/CacheWarmerRepository.js';
+import { NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { composeSubgraphs, composeSubgraphsWithContracts } from './composition.js';
 import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult } from './schemaCheck.js';
 
@@ -400,11 +401,17 @@ export class Composer {
       baseCompositionRouterExecutionConfig,
     });
 
-    await this.fetchAndUploadCacheWarmerOperations({
-      blobStorage,
-      federatedGraphId,
-      organizationId,
-    });
+    const federatedGraph = await this.federatedGraphRepo.byId(federatedGraphId);
+    const namespaceRepository = new NamespaceRepository(this.db, organizationId);
+    const namespace = await namespaceRepository.byId(federatedGraph!.namespaceId);
+
+    if (namespace?.enableCacheWarmer) {
+      await this.fetchAndUploadCacheWarmerOperations({
+        blobStorage,
+        federatedGraphId,
+        organizationId,
+      });
+    }
 
     const { errors } = await this.uploadRouterConfig({
       blobStorage,

@@ -10,7 +10,7 @@ import { CacheWarmerRepository } from '../../../core/repositories/CacheWarmerRep
 import { ContractRepository } from '../../../core/repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../../core/repositories/FederatedGraphRepository.js';
 import { GraphCompositionRepository } from '../../../core/repositories/GraphCompositionRepository.js';
-import { DefaultNamespace } from '../../../core/repositories/NamespaceRepository.js';
+import { DefaultNamespace, NamespaceRepository } from '../../../core/repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../../core/repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
@@ -33,6 +33,7 @@ export function pushCacheWarmerOperation(
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
     const graphCompositionRepo = new GraphCompositionRepository(logger, opts.db);
+    const namespaceRepository = new NamespaceRepository(opts.db, authContext.organizationId);
     const composer = new Composer(
       logger,
       opts.db,
@@ -51,6 +52,16 @@ export function pushCacheWarmerOperation(
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: `Federated graph '${req.federatedGraphName}' not found`,
+        },
+      };
+    }
+
+    const namespace = await namespaceRepository.byId(federatedGraph!.namespaceId);
+    if (!namespace?.enableCacheWarmer) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Cache Warmer is not enabled for the namespace`,
         },
       };
     }
