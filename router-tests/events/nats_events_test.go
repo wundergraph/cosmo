@@ -21,6 +21,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/hasura/go-graphql-client"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 )
@@ -71,15 +72,6 @@ func TestNatsEvents(t *testing.T) {
 				require.NoError(t, clientErr)
 			}()
 
-			var closed atomic.Bool
-			go func() {
-				require.Eventually(t, func() bool {
-					return subscriptionCalled.Load() == 2
-				}, time.Second*20, time.Millisecond*100)
-				require.NoError(t, client.Close())
-				closed.Store(true)
-			}()
-
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
 			// Send a mutation to trigger the first subscription
@@ -95,11 +87,19 @@ func TestNatsEvents(t *testing.T) {
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 
+			var closed atomic.Bool
+			go func() {
+				require.Eventually(t, func() bool {
+					return subscriptionCalled.Load() == 2
+				}, time.Second*20, time.Millisecond*100)
+				require.NoError(t, client.Close())
+				closed.Store(true)
+			}()
+
 			require.Eventually(t, func() bool {
 				return closed.Load()
 			}, time.Second*20, time.Millisecond*100)
 
-			xEnv.WaitForMessagesSent(2, time.Second*10)
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 			xEnv.WaitForConnectionCount(0, time.Second*10)
 
@@ -581,6 +581,7 @@ func TestNatsEvents(t *testing.T) {
 			var requestCompleted atomic.Bool
 
 			go func() {
+				defer requestCompleted.Store(true)
 				client := http.Client{}
 				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 				require.NoError(t, err)
@@ -615,8 +616,6 @@ func TestNatsEvents(t *testing.T) {
 				line, _, err = reader.ReadLine()
 				require.NoError(t, err)
 				require.Equal(t, "", string(line))
-
-				requestCompleted.Store(true)
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
@@ -1240,7 +1239,7 @@ func TestNatsEvents(t *testing.T) {
 				require.Equal(t, float64(8), payload.Data.FilteredEmployeeUpdated.ID)
 				require.Equal(t, "Nithin", payload.Data.FilteredEmployeeUpdated.Details.Forename)
 				require.Equal(t, "Kumar", payload.Data.FilteredEmployeeUpdated.Details.Surname)
-				consumed.Add(2) // should skip two messages
+				consumed.Add(3) // should skip two messages
 
 				require.Eventually(t, func() bool {
 					return produced.Load() == 12
@@ -1265,9 +1264,8 @@ func TestNatsEvents(t *testing.T) {
 			// Events 1, 3, 4, 5, 7, 8, and 11 should be included
 			for i := uint32(1); i < 13; i++ {
 				require.Eventually(t, func() bool {
-					return consumed.Load() >= i-1
+					return consumed.Load() >= i
 				}, time.Second*10, time.Millisecond*100)
-
 				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename":"Employee"}`, i)))
 				require.NoError(t, err)
 				err = xEnv.NatsConnectionDefault.Flush()
@@ -1276,7 +1274,7 @@ func TestNatsEvents(t *testing.T) {
 			}
 
 			require.Eventually(t, func() bool {
-				return consumed.Load() == 11 && produced.Load() == 13
+				return consumed.Load() == 12 && produced.Load() == 13
 			}, time.Second*10, time.Millisecond*100)
 		})
 	})
@@ -1511,14 +1509,17 @@ func TestNatsEvents(t *testing.T) {
 				if oldCount == 1 {
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
-					require.Equal(t, "Invalid message received", gqlErr[0].Message)
-				} else if oldCount == 2 || oldCount == 4 {
-					require.NoError(t, errValue)
-					require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
+					assert.Equal(t, "Invalid message received", gqlErr[0].Message)
+				} else if oldCount == 2 {
+					assert.NoError(t, errValue)
+					assert.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
 				} else if oldCount == 3 {
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
-					require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.", gqlErr[0].Message)
+					assert.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.", gqlErr[0].Message)
+				} else if oldCount == 4 {
+					assert.NoError(t, errValue)
+					assert.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
 				}
 
 				return nil

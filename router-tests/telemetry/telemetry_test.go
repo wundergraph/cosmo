@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"regexp"
 	"runtime"
@@ -209,6 +210,7 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 			err = conn.ReadJSON(&res)
 			require.NoError(t, err)
 
+			xEnv.WaitForMinMessagesSent(1, time.Second*5)
 			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
 				Subscriptions: 1,
 				Connections:   1,
@@ -220,6 +222,7 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 			err = conn.ReadJSON(&complete)
 			require.NoError(t, err)
 
+			xEnv.WaitForMinMessagesSent(2, time.Second*5)
 			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
 				Subscriptions: 1,
 				Connections:   1,
@@ -288,6 +291,7 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 			wg.Wait()
 
 			xEnv.WaitForSubscriptionCount(2, time.Second*5)
+			xEnv.WaitForTriggerCount(1, time.Second*5)
 
 			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
 				Subscriptions: 2,
@@ -300,6 +304,7 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 			err := conn1.ReadJSON(&res)
 			require.NoError(t, err)
 
+			xEnv.WaitForMinMessagesSent(1, time.Second*5)
 			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
 				Subscriptions: 2,
 				Connections:   2,
@@ -310,6 +315,7 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 			err = conn2.ReadJSON(&res)
 			require.NoError(t, err)
 
+			xEnv.WaitForMinMessagesSent(2, time.Second*5)
 			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
 				Subscriptions: 2,
 				Connections:   2,
@@ -324,6 +330,7 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 			err = conn2.ReadJSON(&complete)
 			require.NoError(t, err)
 
+			xEnv.WaitForMinMessagesSent(4, time.Second*5)
 			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
 				Subscriptions: 2,
 				Connections:   2,
@@ -4035,7 +4042,7 @@ func TestTelemetry(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, `{"data":{"rootFieldWithListArg":["a"]}}`, res.Body)
-			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+			assert.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 
 			sn = exporter.GetSpans().Snapshots()
 
