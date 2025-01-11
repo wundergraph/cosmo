@@ -158,7 +158,8 @@
         {
           "id": "field-pruning-grace-period",
           "limit": 30
-        }
+        },
+        {"id": "cache-warmer", "description": "Cache Warmer"}
       ]
     }
   }

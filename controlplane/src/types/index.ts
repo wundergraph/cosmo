@@ -653,4 +653,5 @@ export interface NamespaceDTO {
   organizationId: string;
   enableLinting: boolean;
   enableGraphPruning: boolean;
+  enableCacheWarmer: boolean;
 }

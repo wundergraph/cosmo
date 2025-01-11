@@ -1,0 +1,1 @@
+ALTER TABLE "namespaces" ADD COLUMN "enable_cache_warming" boolean DEFAULT false NOT NULL;

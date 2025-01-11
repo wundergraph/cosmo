@@ -469,6 +469,7 @@ export const namespaces = pgTable(
     }),
     enableLinting: boolean('enable_linting').default(false).notNull(),
     enableGraphPruning: boolean('enable_graph_pruning').default(false).notNull(),
+    enableCacheWarming: boolean('enable_cache_warming').default(false).notNull(),
   },
   (t) => {
     return {

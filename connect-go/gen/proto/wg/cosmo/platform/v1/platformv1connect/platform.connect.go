@@ -466,6 +466,12 @@ const (
 	// PlatformServiceComputeCacheWarmerOperationsProcedure is the fully-qualified name of the
 	// PlatformService's ComputeCacheWarmerOperations RPC.
 	PlatformServiceComputeCacheWarmerOperationsProcedure = "/wg.cosmo.platform.v1.PlatformService/ComputeCacheWarmerOperations"
+	// PlatformServiceEnableCacheWarmerProcedure is the fully-qualified name of the PlatformService's
+	// EnableCacheWarmer RPC.
+	PlatformServiceEnableCacheWarmerProcedure = "/wg.cosmo.platform.v1.PlatformService/EnableCacheWarmer"
+	// PlatformServiceGetCacheWarmerConfigProcedure is the fully-qualified name of the PlatformService's
+	// GetCacheWarmerConfig RPC.
+	PlatformServiceGetCacheWarmerConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/GetCacheWarmerConfig"
 	// PlatformServiceGetBillingPlansProcedure is the fully-qualified name of the PlatformService's
 	// GetBillingPlans RPC.
 	PlatformServiceGetBillingPlansProcedure = "/wg.cosmo.platform.v1.PlatformService/GetBillingPlans"
@@ -627,6 +633,8 @@ var (
 	platformServicePushCacheWarmerOperationMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("PushCacheWarmerOperation")
 	platformServiceGetCacheWarmerOperationsMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("GetCacheWarmerOperations")
 	platformServiceComputeCacheWarmerOperationsMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("ComputeCacheWarmerOperations")
+	platformServiceEnableCacheWarmerMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("EnableCacheWarmer")
+	platformServiceGetCacheWarmerConfigMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("GetCacheWarmerConfig")
 	platformServiceGetBillingPlansMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetBillingPlans")
 	platformServiceCreateCheckoutSessionMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("CreateCheckoutSession")
 	platformServiceCreateBillingPortalSessionMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("CreateBillingPortalSession")
@@ -902,6 +910,10 @@ type PlatformServiceClient interface {
 	GetCacheWarmerOperations(context.Context, *connect.Request[v1.GetCacheWarmerOperationsRequest]) (*connect.Response[v1.GetCacheWarmerOperationsResponse], error)
 	// ComputeCacheWarmerOperations computes the list of cache warmer operations.
 	ComputeCacheWarmerOperations(context.Context, *connect.Request[v1.ComputeCacheWarmerOperationsRequest]) (*connect.Response[v1.ComputeCacheWarmerOperationsResponse], error)
+	// EnableCacheWarmer enables cache warmer for the namespace passed.
+	EnableCacheWarmer(context.Context, *connect.Request[v1.EnableCacheWarmerRequest]) (*connect.Response[v1.EnableCacheWarmerResponse], error)
+	// GetCacheWarmerConfig gets the config of cache warming for that namespace.
+	GetCacheWarmerConfig(context.Context, *connect.Request[v1.GetCacheWarmerConfigRequest]) (*connect.Response[v1.GetCacheWarmerConfigResponse], error)
 	// Billing
 	// -----------------------------------------------------------------------------------------------------------------------------
 	// Return the available billing plans
@@ -1795,6 +1807,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceComputeCacheWarmerOperationsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		enableCacheWarmer: connect.NewClient[v1.EnableCacheWarmerRequest, v1.EnableCacheWarmerResponse](
+			httpClient,
+			baseURL+PlatformServiceEnableCacheWarmerProcedure,
+			connect.WithSchema(platformServiceEnableCacheWarmerMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getCacheWarmerConfig: connect.NewClient[v1.GetCacheWarmerConfigRequest, v1.GetCacheWarmerConfigResponse](
+			httpClient,
+			baseURL+PlatformServiceGetCacheWarmerConfigProcedure,
+			connect.WithSchema(platformServiceGetCacheWarmerConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		getBillingPlans: connect.NewClient[v1.GetBillingPlansRequest, v1.GetBillingPlansResponse](
 			httpClient,
 			baseURL+PlatformServiceGetBillingPlansProcedure,
@@ -1968,6 +1992,8 @@ type platformServiceClient struct {
 	pushCacheWarmerOperation              *connect.Client[v1.PushCacheWarmerOperationRequest, v1.PushCacheWarmerOperationResponse]
 	getCacheWarmerOperations              *connect.Client[v1.GetCacheWarmerOperationsRequest, v1.GetCacheWarmerOperationsResponse]
 	computeCacheWarmerOperations          *connect.Client[v1.ComputeCacheWarmerOperationsRequest, v1.ComputeCacheWarmerOperationsResponse]
+	enableCacheWarmer                     *connect.Client[v1.EnableCacheWarmerRequest, v1.EnableCacheWarmerResponse]
+	getCacheWarmerConfig                  *connect.Client[v1.GetCacheWarmerConfigRequest, v1.GetCacheWarmerConfigResponse]
 	getBillingPlans                       *connect.Client[v1.GetBillingPlansRequest, v1.GetBillingPlansResponse]
 	createCheckoutSession                 *connect.Client[v1.CreateCheckoutSessionRequest, v1.CreateCheckoutSessionResponse]
 	createBillingPortalSession            *connect.Client[v1.CreateBillingPortalSessionRequest, v1.CreateBillingPortalSessionResponse]
@@ -2719,6 +2745,16 @@ func (c *platformServiceClient) ComputeCacheWarmerOperations(ctx context.Context
 	return c.computeCacheWarmerOperations.CallUnary(ctx, req)
 }
 
+// EnableCacheWarmer calls wg.cosmo.platform.v1.PlatformService.EnableCacheWarmer.
+func (c *platformServiceClient) EnableCacheWarmer(ctx context.Context, req *connect.Request[v1.EnableCacheWarmerRequest]) (*connect.Response[v1.EnableCacheWarmerResponse], error) {
+	return c.enableCacheWarmer.CallUnary(ctx, req)
+}
+
+// GetCacheWarmerConfig calls wg.cosmo.platform.v1.PlatformService.GetCacheWarmerConfig.
+func (c *platformServiceClient) GetCacheWarmerConfig(ctx context.Context, req *connect.Request[v1.GetCacheWarmerConfigRequest]) (*connect.Response[v1.GetCacheWarmerConfigResponse], error) {
+	return c.getCacheWarmerConfig.CallUnary(ctx, req)
+}
+
 // GetBillingPlans calls wg.cosmo.platform.v1.PlatformService.GetBillingPlans.
 func (c *platformServiceClient) GetBillingPlans(ctx context.Context, req *connect.Request[v1.GetBillingPlansRequest]) (*connect.Response[v1.GetBillingPlansResponse], error) {
 	return c.getBillingPlans.CallUnary(ctx, req)
@@ -3008,6 +3044,10 @@ type PlatformServiceHandler interface {
 	GetCacheWarmerOperations(context.Context, *connect.Request[v1.GetCacheWarmerOperationsRequest]) (*connect.Response[v1.GetCacheWarmerOperationsResponse], error)
 	// ComputeCacheWarmerOperations computes the list of cache warmer operations.
 	ComputeCacheWarmerOperations(context.Context, *connect.Request[v1.ComputeCacheWarmerOperationsRequest]) (*connect.Response[v1.ComputeCacheWarmerOperationsResponse], error)
+	// EnableCacheWarmer enables cache warmer for the namespace passed.
+	EnableCacheWarmer(context.Context, *connect.Request[v1.EnableCacheWarmerRequest]) (*connect.Response[v1.EnableCacheWarmerResponse], error)
+	// GetCacheWarmerConfig gets the config of cache warming for that namespace.
+	GetCacheWarmerConfig(context.Context, *connect.Request[v1.GetCacheWarmerConfigRequest]) (*connect.Response[v1.GetCacheWarmerConfigResponse], error)
 	// Billing
 	// -----------------------------------------------------------------------------------------------------------------------------
 	// Return the available billing plans
@@ -3897,6 +3937,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceComputeCacheWarmerOperationsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceEnableCacheWarmerHandler := connect.NewUnaryHandler(
+		PlatformServiceEnableCacheWarmerProcedure,
+		svc.EnableCacheWarmer,
+		connect.WithSchema(platformServiceEnableCacheWarmerMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetCacheWarmerConfigHandler := connect.NewUnaryHandler(
+		PlatformServiceGetCacheWarmerConfigProcedure,
+		svc.GetCacheWarmerConfig,
+		connect.WithSchema(platformServiceGetCacheWarmerConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceGetBillingPlansHandler := connect.NewUnaryHandler(
 		PlatformServiceGetBillingPlansProcedure,
 		svc.GetBillingPlans,
@@ -4211,6 +4263,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetCacheWarmerOperationsHandler.ServeHTTP(w, r)
 		case PlatformServiceComputeCacheWarmerOperationsProcedure:
 			platformServiceComputeCacheWarmerOperationsHandler.ServeHTTP(w, r)
+		case PlatformServiceEnableCacheWarmerProcedure:
+			platformServiceEnableCacheWarmerHandler.ServeHTTP(w, r)
+		case PlatformServiceGetCacheWarmerConfigProcedure:
+			platformServiceGetCacheWarmerConfigHandler.ServeHTTP(w, r)
 		case PlatformServiceGetBillingPlansProcedure:
 			platformServiceGetBillingPlansHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateCheckoutSessionProcedure:
@@ -4802,6 +4858,14 @@ func (UnimplementedPlatformServiceHandler) GetCacheWarmerOperations(context.Cont
 
 func (UnimplementedPlatformServiceHandler) ComputeCacheWarmerOperations(context.Context, *connect.Request[v1.ComputeCacheWarmerOperationsRequest]) (*connect.Response[v1.ComputeCacheWarmerOperationsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ComputeCacheWarmerOperations is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) EnableCacheWarmer(context.Context, *connect.Request[v1.EnableCacheWarmerRequest]) (*connect.Response[v1.EnableCacheWarmerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.EnableCacheWarmer is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetCacheWarmerConfig(context.Context, *connect.Request[v1.GetCacheWarmerConfigRequest]) (*connect.Response[v1.GetCacheWarmerConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetCacheWarmerConfig is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetBillingPlans(context.Context, *connect.Request[v1.GetBillingPlansRequest]) (*connect.Response[v1.GetBillingPlansResponse], error) {

@@ -149,6 +149,8 @@ import { getFederatedGraphById } from './federated-graph/getFederatedGraphById.j
 import { pushCacheWarmerOperation } from './cache-warmer/pushCacheWarmerOperation.js';
 import { getCacheWarmerOperations } from './cache-warmer/getCacheWarmerOperations.js';
 import { computeCacheWarmerOperations } from './cache-warmer/computeCacheWarmerOperations.js';
+import { enableCacheWarmer } from './cache-warmer/enableCacheWarmer.js';
+import { getCacheWarmerConfig } from './cache-warmer/getCacheWarmerConfig.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -739,6 +741,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     computeCacheWarmerOperations: (req, ctx) => {
       return computeCacheWarmerOperations(opts, req, ctx);
+    },
+
+    enableCacheWarmer: (req, ctx) => {
+      return enableCacheWarmer(opts, req, ctx);
+    },
+
+    getCacheWarmerConfig: (req, ctx) => {
+      return getCacheWarmerConfig(opts, req, ctx);
     },
 
     // apis used by the terraform provider

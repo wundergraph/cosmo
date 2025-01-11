@@ -7,7 +7,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { CacheWarmerRepository } from '../../../core/repositories/CacheWarmerRepository.js';
 import { FederatedGraphRepository } from '../../../core/repositories/FederatedGraphRepository.js';
-import { DefaultNamespace } from '../../../core/repositories/NamespaceRepository.js';
+import { DefaultNamespace, NamespaceRepository } from '../../../core/repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
@@ -26,6 +26,7 @@ export function getCacheWarmerOperations(
 
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const cacheWarmerRepo = new CacheWarmerRepository(opts.chClient!, opts.db);
+    const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
     const federatedGraph = await fedGraphRepo.byName(req.federatedGraphName, req.namespace, {
       supportsFederation: true,
@@ -38,6 +39,32 @@ export function getCacheWarmerOperations(
         },
         operations: [],
         totalCount: 0,
+        isCacheWarmerEnabled: false,
+      };
+    }
+
+    const namespace = await namespaceRepo.byName(req.namespace);
+    if (!namespace) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Namespace '${req.namespace}' not found`,
+        },
+        operations: [],
+        totalCount: 0,
+        isCacheWarmerEnabled: false,
+      };
+    }
+
+    if (!namespace.enableCacheWarmer) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Cache Warmer is not enabled for namespace '${req.namespace}'`,
+        },
+        operations: [],
+        totalCount: 0,
+        isCacheWarmerEnabled: false,
       };
     }
 
@@ -71,6 +98,7 @@ export function getCacheWarmerOperations(
         createdBy: op.createdBy || '',
       })),
       totalCount: operationsCount,
+      isCacheWarmerEnabled: namespace.enableCacheWarmer,
     };
   });
 }
