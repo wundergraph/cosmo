@@ -2611,9 +2611,7 @@ func TestRuntimeTelemetry(t *testing.T) {
 				Name:        "server.uptime",
 				Description: "Seconds since the server started. Resets between router config changes.",
 				Unit:        "s",
-				Data: metricdata.Sum[int64]{
-					Temporality: metricdata.CumulativeTemporality,
-					IsMonotonic: true,
+				Data: metricdata.Gauge[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(
