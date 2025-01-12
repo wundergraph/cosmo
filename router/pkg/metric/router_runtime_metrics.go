@@ -189,7 +189,7 @@ func (r *RuntimeMetrics) Start() error {
 		return err
 	}
 
-	serverUptime, err := r.meter.Int64ObservableCounter(
+	serverUptime, err := r.meter.Int64ObservableGauge(
 		"server.uptime",
 		otelmetric.WithUnit("s"),
 		otelmetric.WithDescription("Seconds since the server started. Resets between router config changes."),
