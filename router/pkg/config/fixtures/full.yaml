@@ -225,7 +225,7 @@ authentication:
       - type: header
         name: X-Authorization
         value_prefix: Bearer
-      - type: cookie
+      - type: header
         name: authz
 
 authorization:

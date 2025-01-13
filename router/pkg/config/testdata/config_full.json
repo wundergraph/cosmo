@@ -368,7 +368,7 @@
           "ValuePrefix": "Bearer"
         },
         {
-          "Type": "cookie",
+          "Type": "header",
           "Name": "authz",
           "ValuePrefix": ""
         }
