@@ -22,6 +22,7 @@ import {
   computeCacheWarmerOperations,
   getCacheWarmerOperations,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { formatDistanceToNow } from "date-fns";
 import debounce from "debounce";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
@@ -43,6 +44,7 @@ const CacheOperationsPage: NextPageWithLayout = () => {
   const { toast } = useToast();
 
   const [recomputeDisabled, setRecomputeDisabled] = useState(false);
+  const [lastComputedAt, setLastComputedAt] = useState<Date | null>(null);
 
   const { data, isLoading, error, refetch } = useQuery(
     getCacheWarmerOperations,
@@ -57,12 +59,19 @@ const CacheOperationsPage: NextPageWithLayout = () => {
     },
   );
 
-  const debounceRecompute = debounce(
-    () => {
-      setRecomputeDisabled(false);
-    },
-    2000,
-  );
+  useEffect(() => {
+    if (!data) return;
+    const computedAt = data.operations.find(
+      (op) => op.isManuallyAdded === false,
+    )?.createdAt;
+    if (computedAt) {
+      setLastComputedAt(new Date(computedAt));
+    }
+  }, [data]);
+
+  const debounceRecompute = debounce(() => {
+    setRecomputeDisabled(false);
+  }, 2000);
 
   const { mutate, isPending } = useMutation(computeCacheWarmerOperations, {
     onSuccess: (d) => {
@@ -154,19 +163,28 @@ const CacheOperationsPage: NextPageWithLayout = () => {
   return (
     <div className="flex h-full flex-col gap-y-3">
       <div className="flex justify-end">
-        <Button
-          variant="outline"
-          className="flex gap-x-2"
-          onClick={() => {
-            mutate({ federatedGraphName, namespace });
-          }}
-          disabled={isPending || recomputeDisabled}
-        >
-          <UpdateIcon className={cn("",{
-            "animate-spin": isPending,
-          })} />
-          Recompute
-        </Button>
+        <div className="flex items-center gap-x-3">
+          {lastComputedAt && (
+            <p className="text-sm font-semibold text-muted-foreground">{`Last computed ${formatDistanceToNow(new Date(lastComputedAt), {
+              addSuffix: true,
+            })}`}</p>
+          )}
+          <Button
+            variant="outline"
+            className="flex gap-x-2"
+            onClick={() => {
+              mutate({ federatedGraphName, namespace });
+            }}
+            disabled={isPending || recomputeDisabled}
+          >
+            <UpdateIcon
+              className={cn("", {
+                "animate-spin": isPending,
+              })}
+            />
+            Recompute
+          </Button>
+        </div>
       </div>
       <CacheOperationsTable
         operations={data.operations}
