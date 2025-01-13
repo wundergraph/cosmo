@@ -158,7 +158,7 @@ jobs:
             router-tests/go.sum
       - name: Run Integration tests
         working-directory: ./router-tests
-        run: make test test_params="--timeout=5m"
+        run: make test test_params="--timeout=5m --parallel 10"
 
   image_scan:
     if: github.event.pull_request.head.repo.full_name == github.repository
