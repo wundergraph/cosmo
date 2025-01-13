@@ -13,7 +13,7 @@ import { useMutation, useQuery } from "@connectrpc/connect-query";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
-  enableCacheWarmer,
+  configureCacheWarmer,
   getCacheWarmerConfig,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useRouter } from "next/router";
@@ -24,7 +24,7 @@ const CacheWarmerPage: NextPageWithLayout = () => {
   const user = useUser();
   const namespace = router.query.namespace as string;
   const cacheWarmerFeature = useFeature("cache-warmer");
-  const { mutate } = useMutation(enableCacheWarmer);
+  const { mutate } = useMutation(configureCacheWarmer);
   const { toast } = useToast();
 
   const { data, isLoading, refetch, error } = useQuery(getCacheWarmerConfig, {
