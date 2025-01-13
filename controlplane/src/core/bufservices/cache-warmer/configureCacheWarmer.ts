@@ -2,21 +2,21 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-    EnableCacheWarmerRequest,
-    EnableCacheWarmerResponse
+    ConfigureCacheWarmerRequest,
+    ConfigureCacheWarmerResponse
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
-export function enableCacheWarmer(
+export function configureCacheWarmer(
   opts: RouterOptions,
-  req: EnableCacheWarmerRequest,
+  req: ConfigureCacheWarmerRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<EnableCacheWarmerResponse>> {
+): Promise<PlainMessage<ConfigureCacheWarmerResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<EnableCacheWarmerResponse>>(ctx, logger, async () => {
+  return handleError<PlainMessage<ConfigureCacheWarmerResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

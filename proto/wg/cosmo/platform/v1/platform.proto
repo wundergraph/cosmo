@@ -2467,12 +2467,12 @@ message ComputeCacheWarmerOperationsResponse {
   Response response = 1;
 }
 
-message EnableCacheWarmerRequest {
+message ConfigureCacheWarmerRequest {
   string namespace = 1;
   bool enableCacheWarmer = 2;
 }
 
-message EnableCacheWarmerResponse {
+message ConfigureCacheWarmerResponse {
   Response response = 1;
 }
 
@@ -2798,8 +2798,8 @@ service PlatformService {
   rpc GetCacheWarmerOperations(GetCacheWarmerOperationsRequest) returns (GetCacheWarmerOperationsResponse) {}
   // ComputeCacheWarmerOperations computes the list of cache warmer operations.
   rpc ComputeCacheWarmerOperations(ComputeCacheWarmerOperationsRequest) returns (ComputeCacheWarmerOperationsResponse) {}
-  // EnableCacheWarmer enables cache warmer for the namespace passed.
-  rpc EnableCacheWarmer(EnableCacheWarmerRequest) returns (EnableCacheWarmerResponse) {}
+  // ConfigureCacheWarmer enables cache warmer for the namespace passed.
+  rpc ConfigureCacheWarmer(ConfigureCacheWarmerRequest) returns (ConfigureCacheWarmerResponse) {}
   // GetCacheWarmerConfig gets the config of cache warming for that namespace.
   rpc GetCacheWarmerConfig(GetCacheWarmerConfigRequest) returns (GetCacheWarmerConfigResponse) {}
 
