@@ -1,6 +1,7 @@
 import { afterEach, describe, test, expect, vi } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { requestIdInterceptor } from '../src/core/client/client.js';
+import { expectUuid } from './utils/utils.js';
 
 let mockedId = 'mocked-id';
 
@@ -78,8 +79,7 @@ describe('requestIdInterceptor()', () => {
 
     // Check if the generated UUID is valid
     expect(setHeaders).toHaveProperty('x-request-id');
-
-    expect(setHeaders['x-request-id'], "must be a valid UUID").toMatch(/^[\da-f]{8}-[\da-f]{4}-[0-5][\da-f]{3}-[089ab][\da-f]{3}-[\da-f]{12}$/i);
+    expectUuid(setHeaders['x-request-id']);
 
     // Re-mock node:crypto after the test
     vi.mock('node:crypto', () => ({

@@ -4,10 +4,11 @@ import { Response, WhoAmIResponse } from '@wundergraph/cosmo-connect/dist/platfo
 import { CreateClient } from '../src/core/client/client.js';
 import WhoAmI from '../src/commands/auth/commands/whoami.js';
 import { config } from '../src/core/config.js';
+import { expectUuid } from './utils/utils.js';
 
 
 const interceptor = (req) => {
-  expect(req.header.get('x-request-id'), "must be a valid UUID").toMatch(/^[\da-f]{8}-[\da-f]{4}-[0-5][\da-f]{3}-[089ab][\da-f]{3}-[\da-f]{12}$/i);
+  expectUuid(req.header.get('x-request-id'));
 
   return {
     message: new WhoAmIResponse({
