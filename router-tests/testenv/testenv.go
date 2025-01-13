@@ -356,7 +356,17 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	if cfg.AssertCacheMetrics != nil {
-		metricReader = metric.NewManualReader()
+		if cfg.MetricReader != nil {
+			manualReader, ok := cfg.MetricReader.(*metric.ManualReader)
+			if ok {
+				metricReader = manualReader
+			} else {
+				t.Fatalf("The specified metric reader is not of type ManualReader")
+			}
+		}
+		if metricReader == nil {
+			metricReader = metric.NewManualReader()
+		}
 		cfg.MetricReader = metricReader
 		cfg.MetricOptions.EnableOTLPRouterCache = true
 		if cfg.ModifyRouterConfig == nil {
