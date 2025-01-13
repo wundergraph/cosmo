@@ -79,7 +79,7 @@ export const enrichLogger = (
   logger: FastifyBaseLogger,
   authContext: Partial<AuthContext & GraphKeyAuthContext>,
 ) => {
-  const requestId = (ctx.requestHeader.get('x-request-id') as string) ?? randomUUID();
+  const requestId = ctx.requestHeader.get('x-request-id') ?? randomUUID();
 
   const newLogger = logger.child({
     service: ctx.service.typeName,
