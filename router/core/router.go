@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -59,6 +61,8 @@ type IPAnonymizationMethod string
 const (
 	Hash   IPAnonymizationMethod = "hash"
 	Redact IPAnonymizationMethod = "redact"
+	// CompatibilityThreshold should ONLY be updated if there is a breaking change in the router execution config.
+	CompatibilityThreshold = 1
 )
 
 var CompressibleContentTypes = []string{
@@ -1088,6 +1092,38 @@ func (r *Router) Start(ctx context.Context) error {
 				if err != nil {
 					r.logger.Error("Failed to serialize config file", zap.Error(err))
 					return nil
+				}
+
+				/* Older versions of composition will not populate a compatibility version.
+				 * Currently, all "old" router execution configurations are compatible as there have been no breaking
+				 * changes.
+				 * Upon the first breaking change to the execution config, an unpopulated compatbility version will
+				 * also be unsupported (and the logic below will need to change).
+				 */
+				if cfg.CompatibilityVersion != "" {
+					/* A compatibility version is composed thus: <compatibility threshold>:<composition version>
+					 * A router version will support a range of compatibility thresholds.
+					 * In the event the execution config exceeds the compatibility threshold supported by the router,
+					 * an error will request the router version be upgraded.
+					 */
+					segments := strings.Split(cfg.CompatibilityVersion, ":")
+					if len(segments) != 2 {
+						r.logger.Error("Failed to parse compatibility version", zap.String("compatibility_version", cfg.CompatibilityVersion))
+						return nil
+					}
+					threshold, err := strconv.ParseInt(segments[0], 10, 32)
+					if err != nil {
+						r.logger.Error("Failed to parse compatibility threshold of compatibility version", zap.String("compatibility_version", cfg.CompatibilityVersion))
+						return nil
+					}
+					if threshold > CompatibilityThreshold {
+						r.logger.Error(
+							fmt.Sprintf("This router version only supports the router execution configuration compatibility threshold <= %d. Please upgrade your router version.", CompatibilityThreshold),
+							zap.Int64("compatibility_threshold", threshold),
+							zap.String("composition_version", segments[1]),
+						)
+						return nil
+					}
 				}
 
 				if err := r.newServer(ctx, cfg); err != nil {

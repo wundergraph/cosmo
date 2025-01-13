@@ -70,7 +70,7 @@ import {
   newParentTagData,
   ParentTagData,
   SubscriptionFilterData,
-  validateImplicitFieldSets,
+  validateImplicitKeyFieldSets,
 } from './utils';
 import { InternalSubgraph, Subgraph, SubgraphConfig } from '../subgraph/subgraph';
 import {
@@ -390,9 +390,9 @@ export class FederationFactory {
     const implicitKeys: RequiredFieldConfiguration[] = [];
     const graphNode = this.internalGraph.nodeByNodeName.get(`${this.currentSubgraphName}.${entityData.typeName}`);
     // Any errors in the field sets would be caught when evaluating the explicit entities, so they are ignored here
-    validateImplicitFieldSets({
+    validateImplicitKeyFieldSets({
       conditionalFieldDataByCoords: internalSubgraph.conditionalFieldDataByCoordinates,
-      fieldSets: entityData.keyFieldSets,
+      entityData,
       graphNode,
       implicitKeys,
       objectData,
@@ -407,9 +407,9 @@ export class FederationFactory {
       if (!interfaceObjectEntityData) {
         continue;
       }
-      validateImplicitFieldSets({
+      validateImplicitKeyFieldSets({
         conditionalFieldDataByCoords: internalSubgraph.conditionalFieldDataByCoordinates,
-        fieldSets: interfaceObjectEntityData.keyFieldSets,
+        entityData: interfaceObjectEntityData,
         graphNode,
         implicitKeys,
         objectData,
@@ -465,9 +465,9 @@ export class FederationFactory {
     );
     const implicitKeys: RequiredFieldConfiguration[] = [];
     // Any errors in the field sets would be caught when evaluating the explicit entities, so they are ignored here
-    validateImplicitFieldSets({
+    validateImplicitKeyFieldSets({
       conditionalFieldDataByCoords: internalSubgraph.conditionalFieldDataByCoordinates,
-      fieldSets: entityData.keyFieldSets,
+      entityData,
       graphNode,
       implicitKeys,
       parentDefinitionDataByTypeName,

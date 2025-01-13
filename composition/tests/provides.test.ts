@@ -79,7 +79,7 @@ describe('@provides directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-          ` On "Object.entity":\n - ` +
+          ` On "Object.entity":\n -` +
             invalidInlineFragmentTypeErrorMessage(
               '... on Interface { name }',
               ['Object.entity'],
@@ -191,7 +191,7 @@ describe('@provides directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-          ` On "Object.entity":\n - ` +
+          ` On "Object.entity":\n -` +
             invalidInlineFragmentTypeConditionErrorMessage(
               'interface { ... on AnotherObject { name } }',
               ['Entity.interface'],
@@ -248,8 +248,7 @@ describe('@provides directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-          ` On "Object.entity":\n - ` +
-            invalidSelectionOnUnionErrorMessage('union { name }', ['Entity.union'], 'Union'),
+          ` On "Object.entity":\n -` + invalidSelectionOnUnionErrorMessage('union { name }', ['Entity.union'], 'Union'),
         ]),
       );
       expect(warnings).toHaveLength(0);
@@ -261,7 +260,7 @@ describe('@provides directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-          ` On "Object.entity":\n - ` +
+          ` On "Object.entity":\n -` +
             invalidInlineFragmentTypeConditionErrorMessage(
               'union { ... on YetAnotherObject { name } }',
               ['Entity.union'],
@@ -982,7 +981,7 @@ describe('@provides directive tests', () => {
       expect(errors![0]).toStrictEqual(
         subgraphValidationError(af.name, [
           invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-            ` On "Entity.object":\n - ` + fieldAlreadyProvidedErrorMessage(`Object.id`, af.name, PROVIDES),
+            ` On "Entity.object":\n -` + fieldAlreadyProvidedErrorMessage(`Object.id`, af.name, PROVIDES),
           ]),
         ]),
       );

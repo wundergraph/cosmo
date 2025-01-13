@@ -1256,6 +1256,29 @@ describe('Field resolvability tests', () => {
       ),
     );
   });
+
+  // @TODO
+  test('that an entity can be a key target without ever being a key source', () => {
+    const { federationResult, errors } = federateSubgraphs([subgraphBO, subgraphBP]);
+    expect(errors).toBeUndefined();
+    expect(federationResult).toBeDefined();
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionOneRouterDefinitions +
+          `
+          type Entity {
+            age: Int!
+            id: ID!
+            name: String!
+          }
+          
+          type Query {
+            entities: [Entity!]!
+          }
+        `,
+      ),
+    );
+  });
 });
 
 const subgraphA: Subgraph = {
@@ -2446,6 +2469,32 @@ const subgraphBN: Subgraph = {
   name: 'subgraph-bn',
   url: '',
   definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      age: Int!
+    }
+  `),
+};
+
+const subgraphBO: Subgraph = {
+  name: 'subgraph-bo',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID! @external
+      name: String!
+    }
+  `),
+};
+
+const subgraphBP: Subgraph = {
+  name: 'subgraph-bp',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entities: [Entity!]!
+    }
+
     type Entity @key(fields: "id") {
       id: ID!
       age: Int!

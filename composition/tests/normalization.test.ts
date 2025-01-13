@@ -951,7 +951,7 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors![0].message).toStrictEqual(
-      `The following "provides" directive is invalid:\n On "Review.user" —` +
+      `The following "provides" directive is invalid:\n On "Review.user":\n -` +
         undefinedFieldInFieldSetErrorMessage('age', 'User', 'age'),
     );
   });
@@ -1060,7 +1060,7 @@ describe('Normalization tests', () => {
     expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
       invalidProvidesOrRequiresDirectivesError('requires', [
-        ` On "Product.shippingCost" —` + undefinedFieldInFieldSetErrorMessage('age', 'Product', 'age'),
+        ` On "Product.shippingCost":\n -` + undefinedFieldInFieldSetErrorMessage('age', 'Product', 'age'),
       ]),
     );
   });
@@ -1374,7 +1374,7 @@ describe('Normalization tests', () => {
     );
   });
 
-  test('that if an object without its fields are passed in composite keys gives an error', () => {
+  test('that if an object without its fields are passed in composite keys gives an error #1.1', () => {
     const { errors } = normalizeSubgraphFromString(`
        type Entity @key(fields: "id email") @key(fields: "id organization { id details }") {
          id: ID!
@@ -1396,6 +1396,94 @@ describe('Normalization tests', () => {
     expect(errors![0]).toStrictEqual(
       invalidKeyDirectivesError('Entity', [
         invalidSelectionSetErrorMessage('id organization { id details }', ['Organization.details'], 'Details', OBJECT),
+      ]),
+    );
+  });
+
+  test('that if an object without its fields are passed in composite keys gives an error #1.2', () => {
+    const { errors } = normalizeSubgraphFromString(`
+       type Entity @key(fields: "id email") @key(fields: "id organization { details id }") {
+         id: ID!
+         email: ID!
+         organization: Organization!
+        }
+        
+        type Organization {
+         id: String!
+         details: Details
+        }
+        
+        type Details {
+         id: ID!
+         name: String!
+        }
+    `);
+    expect(errors).toBeDefined();
+    expect(errors![0]).toStrictEqual(
+      invalidKeyDirectivesError('Entity', [
+        invalidSelectionSetErrorMessage('id organization { details id }', ['Organization.details'], 'Details', OBJECT),
+      ]),
+    );
+  });
+
+  test('that if an object without its fields are passed in composite keys gives an error #2.1', () => {
+    const { errors } = normalizeSubgraphFromString(`
+       type Entity @key(fields: "id email") @key(fields: "id organization { uuid details }") {
+         id: ID!
+         email: ID!
+         organization: Organization!
+        }
+        
+        type Organization {
+         uuid: String!
+         details: Details
+        }
+        
+        type Details {
+         id: ID!
+         name: String!
+        }
+    `);
+    expect(errors).toBeDefined();
+    expect(errors![0]).toStrictEqual(
+      invalidKeyDirectivesError('Entity', [
+        invalidSelectionSetErrorMessage(
+          'id organization { uuid details }',
+          ['Organization.details'],
+          'Details',
+          OBJECT,
+        ),
+      ]),
+    );
+  });
+
+  test('that if an object without its fields are passed in composite keys gives an error #2.2', () => {
+    const { errors } = normalizeSubgraphFromString(`
+       type Entity @key(fields: "id email") @key(fields: "id organization { details uuid }") {
+         id: ID!
+         email: ID!
+         organization: Organization!
+        }
+        
+        type Organization {
+         uuid: String!
+         details: Details
+        }
+        
+        type Details {
+         id: ID!
+         name: String!
+        }
+    `);
+    expect(errors).toBeDefined();
+    expect(errors![0]).toStrictEqual(
+      invalidKeyDirectivesError('Entity', [
+        invalidSelectionSetErrorMessage(
+          'id organization { details uuid }',
+          ['Organization.details'],
+          'Details',
+          OBJECT,
+        ),
       ]),
     );
   });
@@ -1496,7 +1584,8 @@ describe('Normalization tests', () => {
       normalizeString(`
       directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
       directive @composeDirective(name: String!) repeatable on SCHEMA
-      directive @extends on INTERFACE | OBJECTdirective @external on FIELD_DEFINITION | OBJECT
+      directive @extends on INTERFACE | OBJECT
+      directive @external on FIELD_DEFINITION | OBJECT
       directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
       directive @interfaceObject on OBJECT
       directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT

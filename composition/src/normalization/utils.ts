@@ -13,7 +13,6 @@ import {
   ARGUMENT_DEFINITION_UPPER,
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
-  EXTERNAL,
   FIELD_DEFINITION_UPPER,
   FIELD_UPPER,
   FIELDS,
@@ -39,18 +38,16 @@ import {
   unexpectedDirectiveLocationError,
 } from '../errors/errors';
 import { EDFS_ARGS_REGEXP } from '../utils/constants';
-import { ConfigurationData, RequiredFieldConfiguration } from '../router-configuration/router-configuration';
-import { CompositeOutputData, FieldData, InputValueData } from '../schema-building/type-definition-data';
+import { RequiredFieldConfiguration } from '../router-configuration/router-configuration';
+import { CompositeOutputData, InputValueData } from '../schema-building/type-definition-data';
 
 export type KeyFieldSetData = {
-  isUnresolvableByKeyFieldSet: Map<string, boolean>;
+  documentNode: DocumentNode;
+  isConditionalSource: boolean;
+  isUnresolvable: boolean;
+  normalizedFieldSet: string;
+  rawFieldSet: string;
 };
-
-export function newKeyFieldSetData(): KeyFieldSetData {
-  return {
-    isUnresolvableByKeyFieldSet: new Map<string, boolean>(),
-  };
-}
 
 export type FieldSetData = {
   provides: Map<string, string>;
@@ -190,27 +187,6 @@ export type InputValidationContainer = {
   hasUnhandledError: boolean;
   typeString: string;
 };
-
-export function addFieldNamesToConfigurationData(
-  fieldDataByFieldName: Map<string, FieldData>,
-  configurationData: ConfigurationData,
-) {
-  const externalFieldNames = new Set<string>();
-  for (const [fieldName, fieldData] of fieldDataByFieldName) {
-    if (fieldData.directivesByDirectiveName.has(EXTERNAL)) {
-      if (configurationData.externalFieldNames) {
-        configurationData.externalFieldNames.add(fieldName);
-      } else {
-        externalFieldNames.add(fieldName);
-      }
-    } else {
-      configurationData.fieldNames.add(fieldName);
-    }
-  }
-  if (externalFieldNames.size > 0) {
-    configurationData.externalFieldNames = externalFieldNames;
-  }
-}
 
 export function extractFieldSetValue(name: string, map: Map<string, string>, directives?: ConstDirectiveNode[]) {
   // ALl directive validation errors are accounted for later

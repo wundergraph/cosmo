@@ -360,12 +360,6 @@ describe('openfed_FieldSet tests', () => {
             'Object',
             {
               fieldNames: new Set<string>(['id', 'name']),
-              requires: [
-                {
-                  fieldName: 'name',
-                  selectionSet: 'id',
-                },
-              ],
               isRootNode: false,
               typeName: 'Object',
             },
@@ -407,7 +401,7 @@ describe('openfed_FieldSet tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
-          ` On "Entity.age" —` + invalidInlineFragmentTypeErrorMessage('... on I { name }', [], 'I', 'Entity'),
+          ` On "Entity.age":\n -` + invalidInlineFragmentTypeErrorMessage('... on I { name }', [], 'I', 'Entity'),
         ]),
       );
     });
@@ -507,7 +501,7 @@ describe('openfed_FieldSet tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
-          ` On "Entity.age" —` +
+          ` On "Entity.age":\n -` +
             invalidInlineFragmentTypeConditionErrorMessage(
               'interface { ... on Object { age } }',
               ['Entity.interface'],
@@ -579,7 +573,7 @@ describe('openfed_FieldSet tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
-          ` On "Entity.name" —` + invalidSelectionOnUnionErrorMessage('union { name }', ['Entity.union'], 'U'),
+          ` On "Entity.name":\n -` + invalidSelectionOnUnionErrorMessage('union { name }', ['Entity.union'], 'U'),
         ]),
       );
     });
@@ -607,7 +601,7 @@ describe('openfed_FieldSet tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
-          ` On "Entity.age" —` +
+          ` On "Entity.age":\n -` +
             invalidInlineFragmentTypeConditionErrorMessage(
               'union { ... on AnotherObject { age } }',
               ['Entity.union'],
@@ -952,9 +946,9 @@ describe('openfed_FieldSet tests', () => {
         ),
       );
       expect(warnings[0].subgraph.name).toBe('subgraph-f');
-      const e = federationResult!.subgraphConfigBySubgraphName.get(subgraphE.name);
-      expect(e).toBeDefined();
-      expect(e!.configurationDataByTypeName).toStrictEqual(
+      const eConfig = federationResult!.subgraphConfigBySubgraphName.get(subgraphE.name);
+      expect(eConfig).toBeDefined();
+      expect(eConfig!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -997,9 +991,9 @@ describe('openfed_FieldSet tests', () => {
           ],
         ]),
       );
-      const f = federationResult!.subgraphConfigBySubgraphName.get(subgraphF.name);
-      expect(f).toBeDefined();
-      expect(f!.configurationDataByTypeName).toStrictEqual(
+      const fConfig = federationResult!.subgraphConfigBySubgraphName.get(subgraphF.name);
+      expect(fConfig).toBeDefined();
+      expect(fConfig!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Query',
@@ -1028,12 +1022,6 @@ describe('openfed_FieldSet tests', () => {
                   disableEntityResolver: true,
                   fieldName: '',
                   selectionSet: 'id object { nestedObject { name } }',
-                },
-              ],
-              requires: [
-                {
-                  fieldName: 'name',
-                  selectionSet: 'object { nestedObject { name } }',
                 },
               ],
               typeName: 'Entity',

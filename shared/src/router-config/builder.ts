@@ -20,6 +20,7 @@ import {
   RouterConfig,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import pkg from '../../package.json' assert { type: 'json' };
 import { configurationDatasToDataSourceConfiguration, generateFieldConfigurations } from './graphql-configuration.js';
 import { normalizationFailureError } from './errors.js';
 
@@ -215,5 +216,6 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       name: s.name,
       routingUrl: s.url,
     })),
+    compatibilityVersion: `1:${pkg.dependencies['@wundergraph/composition']}`,
   });
 };

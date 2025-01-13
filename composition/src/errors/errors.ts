@@ -1611,7 +1611,7 @@ export function fieldAlreadyProvidedErrorMessage(
   directiveName: string,
 ): string {
   return (
-    `The field "${fieldCoords}" is unconditionally provided by subgraph "${subgraphName}" and should not form` +
+    ` The field "${fieldCoords}" is unconditionally provided by subgraph "${subgraphName}" and should not form` +
     ` part of any "@${directiveName}" field set. Although "${fieldCoords}" is declared "@external", it is part of` +
     ` a "@key" directive on an extension type. Such fields are only declared "@external" for legacy syntactical` +
     ` reasons and are not internally considered "@external".`

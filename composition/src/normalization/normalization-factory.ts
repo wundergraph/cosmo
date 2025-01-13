@@ -379,7 +379,7 @@ export class NormalizationFactory {
   lastParentNodeKind: Kind = Kind.NULL;
   lastChildNodeKind: Kind = Kind.NULL;
   leafTypeNamesWithAuthorizationDirectives = new Set<string>();
-  keyFieldSetDataByTypeName = new Map<string, KeyFieldSetData>();
+  keyFieldSetDatasByTypeName = new Map<string, Map<string, KeyFieldSetData>>();
   keyFieldNamesByParentTypeName = new Map<string, Set<string>>();
   operationTypeNodeByTypeName = new Map<string, OperationTypeNode>();
   originalParentTypeName = '';
@@ -1054,8 +1054,7 @@ export class NormalizationFactory {
     });
   }
 
-  extractKeyFieldSets(node: CompositeOutputNode, keyFieldSetData: KeyFieldSetData) {
-    const isUnresolvableByRawKeyFieldSet = keyFieldSetData.isUnresolvableByKeyFieldSet;
+  extractKeyFieldSets(node: CompositeOutputNode, keyFieldSetDataByFieldSet: Map<string, KeyFieldSetData>) {
     const parentTypeName = node.name.value;
     if (!node.directives?.length) {
       // This should never happen
@@ -1071,7 +1070,7 @@ export class NormalizationFactory {
         errorMessages.push(undefinedRequiredArgumentsErrorMessage(KEY, parentTypeName, [FIELDS]));
         continue;
       }
-      let keyFieldSet;
+      let rawFieldSet;
       let isUnresolvable = false;
       for (const arg of directive.arguments) {
         if (arg.name.value === RESOLVABLE) {
@@ -1081,18 +1080,38 @@ export class NormalizationFactory {
           continue;
         }
         if (arg.name.value !== FIELDS) {
-          keyFieldSet = undefined;
+          rawFieldSet = undefined;
           break;
         }
         if (arg.value.kind !== Kind.STRING) {
-          keyFieldSet = undefined;
+          rawFieldSet = undefined;
           errorMessages.push(invalidKeyDirectiveArgumentErrorMessage(arg.value.kind));
           break;
         }
-        keyFieldSet = arg.value.value;
+        rawFieldSet = arg.value.value;
       }
-      if (keyFieldSet !== undefined) {
-        isUnresolvableByRawKeyFieldSet.set(keyFieldSet, isUnresolvable);
+      if (rawFieldSet === undefined) {
+        continue;
+      }
+      const { error, documentNode } = safeParse('{' + rawFieldSet + '}');
+      if (error || !documentNode) {
+        errorMessages.push(unparsableFieldSetErrorMessage(rawFieldSet, error));
+        continue;
+      }
+      const normalizedFieldSet = getNormalizedFieldSet(documentNode);
+      const keyFieldSetData = keyFieldSetDataByFieldSet.get(normalizedFieldSet);
+      if (keyFieldSetData) {
+        /// @TODO
+        this.warnings.push();
+        keyFieldSetData.isUnresolvable ||= isUnresolvable;
+      } else {
+        keyFieldSetDataByFieldSet.set(normalizedFieldSet, {
+          documentNode,
+          isConditionalSource: false,
+          isUnresolvable,
+          normalizedFieldSet,
+          rawFieldSet,
+        });
       }
     }
     if (errorMessages.length) {
@@ -1683,11 +1702,11 @@ export class NormalizationFactory {
   }
 
   validateEventDrivenKeyDefinition(typeName: string, invalidKeyFieldSetsByEntityTypeName: Map<string, string[]>) {
-    const keyFieldSetData = this.keyFieldSetDataByTypeName.get(typeName);
-    if (!keyFieldSetData) {
+    const keyFieldSetDataByFieldSet = this.keyFieldSetDatasByTypeName.get(typeName);
+    if (!keyFieldSetDataByFieldSet) {
       return;
     }
-    for (const [keyFieldSet, isUnresolvable] of keyFieldSetData.isUnresolvableByKeyFieldSet) {
+    for (const [keyFieldSet, { isUnresolvable }] of keyFieldSetDataByFieldSet) {
       if (isUnresolvable) {
         continue;
       }
@@ -1905,6 +1924,7 @@ export class NormalizationFactory {
     }
   }
 
+  // TODO
   validateConditionalFieldSet(
     selectionSetParentData: CompositeOutputData,
     fieldSet: string,
@@ -2321,12 +2341,11 @@ export class NormalizationFactory {
        * For V2 subgraphs, this will propagate as an error; for V1 subgraphs, this will propagate as a warning.
        * */
       if (errorMessages.length > 0) {
-        allErrorMessages.push(` On "${fieldCoords}":\n - ` + errorMessages.join(HYPHEN_JOIN));
+        allErrorMessages.push(` On "${fieldCoords}":\n -` + errorMessages.join(HYPHEN_JOIN));
         continue;
       }
       if (configuration) {
         configurations.push(configuration);
-        continue;
       }
     }
     if (allErrorMessages.length > 0) {
@@ -2356,9 +2375,26 @@ export class NormalizationFactory {
     }
   }
 
+  isKeyFieldUnconditionallyProvided(
+    rootEntityData: CompositeOutputData,
+    parentData: CompositeOutputData,
+    keyFieldName: string,
+  ): boolean {
+    const isRootEntityExtension = rootEntityData.extensionType !== ExtensionType.NONE;
+    if (rootEntityData.name === parentData.name) {
+      return isRootEntityExtension;
+    }
+    const isParentExtension = parentData.extensionType !== ExtensionType.NONE;
+    const keyFieldNames = this.keyFieldNamesByParentTypeName.get(parentData.name);
+    if (!keyFieldNames) {
+      return false;
+    }
+    return keyFieldNames.has(keyFieldName) && isParentExtension;
+  }
+
   propagateValidKeyFieldSetConfigurations(
     entityParentData: CompositeOutputData,
-    nonResolvableByKeyFieldSet: Map<string, boolean>,
+    keyFieldSetDataByFieldSet: Map<string, KeyFieldSetData>,
   ) {
     const nf = this;
     const isEntityInterface = nf.entityInterfaceDataByTypeName.has(entityParentData.name);
@@ -2370,30 +2406,25 @@ export class NormalizationFactory {
     const entityDataNode = isEntityInterface ? undefined : nf.internalGraph.addEntityDataNode(entityParentData.name);
     const graphNode = nf.internalGraph.addOrUpdateNode(entityParentData.name);
     // Entity extension fields are effectively never @external, so propagate a warning.
-    const externalExtensionFieldCoordsByFieldSet = new Map<string, Set<string>>();
-    for (const [fieldSet, disableEntityResolver] of nonResolvableByKeyFieldSet) {
-      // Create a new selection set so that the value can be parsed as a new DocumentNode
-      const { error, documentNode } = safeParse('{' + fieldSet + '}');
-      if (error || !documentNode) {
-        errorMessages.push(unparsableFieldSetErrorMessage(fieldSet, error));
-        continue;
-      }
-      const parentWithFieldsDatas: CompositeOutputData[] = [entityParentData];
+    const externalExtensionFieldCoordsByRawFieldSet = new Map<string, Set<string>>();
+    for (const [keyFieldSet, keyFieldSetData] of keyFieldSetDataByFieldSet) {
+      const parentDatas: CompositeOutputData[] = [entityParentData];
       const definedFields: Array<Set<string>> = [];
       const currentPath: Array<string> = [];
       const keyFieldSetPaths = new Set<string>();
       let currentDepth = -1;
       let shouldDefineSelectionSet = true;
       let lastFieldName = '';
-      visit(documentNode, {
+      let isConditionalSource = false;
+      visit(keyFieldSetData.documentNode, {
         Argument: {
           enter(node) {
             // Fields that define arguments are never allowed in a key FieldSet
             // However, at this stage, it actually means the argument is undefined on the field
             errorMessages.push(
               unexpectedArgumentErrorMessage(
-                fieldSet,
-                `${parentWithFieldsDatas[currentDepth].name}.${lastFieldName}`,
+                keyFieldSetData.rawFieldSet,
+                `${parentDatas[currentDepth].name}.${lastFieldName}`,
                 node.name.value,
               ),
             );
@@ -2402,38 +2433,50 @@ export class NormalizationFactory {
         },
         Field: {
           enter(node) {
-            const grandparentData = parentWithFieldsDatas[currentDepth - 1];
-            const parentData = parentWithFieldsDatas[currentDepth];
+            const parentData = parentDatas[currentDepth];
             const parentTypeName = parentData.name;
-            const fieldName = node.name.value;
-            const fieldCoords = `${parentTypeName}.${fieldName}`;
-            nf.unvalidatedExternalFieldCoords.delete(fieldCoords);
-            // If an object-like was just visited, a selection set should have been entered
+            // If a composite type was just visited, a selection set should have been entered
             if (shouldDefineSelectionSet) {
+              const lastFieldCoords = `${parentTypeName}.${lastFieldName}`;
+              const lastFieldData = parentData.fieldDataByFieldName.get(lastFieldName);
+              if (!lastFieldData) {
+                errorMessages.push(
+                  undefinedFieldInFieldSetErrorMessage(keyFieldSetData.rawFieldSet, lastFieldCoords, lastFieldName),
+                );
+                return BREAK;
+              }
+              const lastFieldNamedTypeName = getTypeNodeNamedTypeName(lastFieldData.node.type);
+              // If the child is not found, it's a base scalar. Undefined types would have already been handled.
+              const namedTypeData = nf.parentDefinitionDataByTypeName.get(lastFieldNamedTypeName);
+              const namedTypeKind = namedTypeData ? namedTypeData.kind : Kind.SCALAR_TYPE_DEFINITION;
               errorMessages.push(
                 invalidSelectionSetErrorMessage(
-                  fieldSet,
-                  [`${grandparentData.name}.${lastFieldName}`],
-                  parentTypeName,
-                  kindToTypeString(parentData.kind),
+                  keyFieldSetData.rawFieldSet,
+                  [lastFieldCoords],
+                  lastFieldNamedTypeName,
+                  kindToTypeString(namedTypeKind),
                 ),
               );
               return BREAK;
             }
+            const fieldName = node.name.value;
+            const fieldCoords = `${parentTypeName}.${fieldName}`;
+            nf.unvalidatedExternalFieldCoords.delete(fieldCoords);
             lastFieldName = fieldName;
             const fieldData = parentData.fieldDataByFieldName.get(fieldName);
             // undefined if the field does not exist on the parent
             if (!fieldData) {
-              errorMessages.push(undefinedFieldInFieldSetErrorMessage(fieldSet, parentTypeName, fieldName));
+              errorMessages.push(
+                undefinedFieldInFieldSetErrorMessage(keyFieldSetData.rawFieldSet, parentTypeName, fieldName),
+              );
               return BREAK;
             }
-            // TODO navigate already provided keys
             if (fieldData.argumentDataByArgumentName.size) {
-              errorMessages.push(argumentsInKeyFieldSetErrorMessage(fieldSet, fieldCoords));
+              errorMessages.push(argumentsInKeyFieldSetErrorMessage(keyFieldSetData.rawFieldSet, fieldCoords));
               return BREAK;
             }
             if (definedFields[currentDepth].has(fieldName)) {
-              errorMessages.push(duplicateFieldInFieldSetErrorMessage(fieldSet, fieldCoords));
+              errorMessages.push(duplicateFieldInFieldSetErrorMessage(keyFieldSetData.rawFieldSet, fieldCoords));
               return BREAK;
             }
             currentPath.push(fieldName);
@@ -2451,15 +2494,26 @@ export class NormalizationFactory {
              * However, if the subgraph is an EDG, the @external state should be kept regardless of extension.
              * */
             const externalData = fieldData.isExternalBySubgraphName.get(nf.subgraphName);
-            if (
-              nf.edfsDirectiveReferences.size < 1 &&
-              entityParentData.extensionType !== ExtensionType.NONE &&
-              externalData?.isDefinedExternal
-            ) {
+            if (nf.edfsDirectiveReferences.size < 1 && externalData?.isDefinedExternal) {
+              /*
+               * The key field is unconditionally provided if all the following are true:
+               * 1. The root entity is an extension type.
+               * 2. The parent of the key field (which might still be the root entity) is also an entity.
+               * 3. The parent of the key field is an extension type.
+               * 4. The key field is also a key field for the parent entity.
+               */
+              if (nf.isKeyFieldUnconditionallyProvided(entityParentData, parentData, fieldName)) {
+                isConditionalSource = true;
+                keyFieldSetData.isConditionalSource = true;
+                return BREAK;
+              }
+              // A key field on an entity extension is always provided
               externalData.isUnconditionallyProvided = true;
-              getValueOrDefault(externalExtensionFieldCoordsByFieldSet, fieldSet, () => new Set<string>()).add(
-                fieldCoords,
-              );
+              getValueOrDefault(
+                externalExtensionFieldCoordsByRawFieldSet,
+                keyFieldSetData.rawFieldSet,
+                () => new Set<string>(),
+              ).add(fieldCoords);
             }
             getValueOrDefault(nf.keyFieldNamesByParentTypeName, parentTypeName, () => new Set<string>()).add(fieldName);
             const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
@@ -2473,19 +2527,21 @@ export class NormalizationFactory {
             const namedTypeData = nf.parentDefinitionDataByTypeName.get(namedTypeName);
             if (!namedTypeData) {
               // Should not be possible to receive this error
-              errorMessages.push(unknownTypeInFieldSetErrorMessage(fieldSet, fieldCoords, namedTypeName));
+              errorMessages.push(
+                unknownTypeInFieldSetErrorMessage(keyFieldSetData.rawFieldSet, fieldCoords, namedTypeName),
+              );
               return BREAK;
             }
             if (namedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION) {
               shouldDefineSelectionSet = true;
-              parentWithFieldsDatas.push(namedTypeData);
+              parentDatas.push(namedTypeData);
               return;
             }
             // interfaces and unions are invalid in a key directive
             if (isKindAbstract(namedTypeData.kind)) {
               errorMessages.push(
                 abstractTypeInKeyFieldSetErrorMessage(
-                  fieldSet,
+                  keyFieldSetData.rawFieldSet,
                   fieldCoords,
                   namedTypeName,
                   kindToTypeString(namedTypeData.kind),
@@ -2506,13 +2562,15 @@ export class NormalizationFactory {
         SelectionSet: {
           enter() {
             if (!shouldDefineSelectionSet) {
-              const parentData = parentWithFieldsDatas[currentDepth];
+              const parentData = parentDatas[currentDepth];
               const parentTypeName = parentData.name;
-              const fieldCoordinates = `${parentTypeName}.${lastFieldName}`;
+              const fieldCoords = `${parentTypeName}.${lastFieldName}`;
               // If the last field is not an object-like
               const fieldData = parentData.fieldDataByFieldName.get(lastFieldName);
               if (!fieldData) {
-                errorMessages.push(undefinedFieldInFieldSetErrorMessage(fieldSet, fieldCoordinates, lastFieldName));
+                errorMessages.push(
+                  undefinedFieldInFieldSetErrorMessage(keyFieldSetData.rawFieldSet, fieldCoords, lastFieldName),
+                );
                 return BREAK;
               }
               const fieldNamedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
@@ -2521,8 +2579,8 @@ export class NormalizationFactory {
               const namedTypeKind = namedTypeData ? namedTypeData.kind : Kind.SCALAR_TYPE_DEFINITION;
               errorMessages.push(
                 invalidSelectionSetDefinitionErrorMessage(
-                  fieldSet,
-                  [fieldCoordinates],
+                  keyFieldSetData.rawFieldSet,
+                  [fieldCoords],
                   fieldNamedTypeName,
                   kindToTypeString(namedTypeKind),
                 ),
@@ -2531,21 +2589,21 @@ export class NormalizationFactory {
             }
             currentDepth += 1;
             shouldDefineSelectionSet = false;
-            if (currentDepth < 0 || currentDepth >= parentWithFieldsDatas.length) {
-              errorMessages.push(unparsableFieldSetSelectionErrorMessage(fieldSet, lastFieldName));
+            if (currentDepth < 0 || currentDepth >= parentDatas.length) {
+              errorMessages.push(unparsableFieldSetSelectionErrorMessage(keyFieldSetData.rawFieldSet, lastFieldName));
               return BREAK;
             }
             definedFields.push(new Set<string>());
           },
           leave() {
             if (shouldDefineSelectionSet) {
-              const grandparentData = parentWithFieldsDatas[currentDepth];
+              const grandparentData = parentDatas[currentDepth];
               const grandparentTypeName = grandparentData.name;
-              const parentData = parentWithFieldsDatas[currentDepth + 1];
+              const parentData = parentDatas[currentDepth + 1];
               const fieldCoordinates = `${grandparentTypeName}.${lastFieldName}`;
               errorMessages.push(
                 invalidSelectionSetErrorMessage(
-                  fieldSet,
+                  keyFieldSetData.rawFieldSet,
                   [fieldCoordinates],
                   parentData.name,
                   kindToTypeString(parentData.kind),
@@ -2555,31 +2613,30 @@ export class NormalizationFactory {
             }
             // Empty selection sets would be a parse error, so it is unnecessary to handle them
             currentDepth -= 1;
-            parentWithFieldsDatas.pop();
+            parentDatas.pop();
             definedFields.pop();
           },
         },
       });
-      if (errorMessages.length > 0) {
+      if (errorMessages.length > 0 || isConditionalSource) {
         continue;
       }
-      const normalizedFieldSet = getNormalizedFieldSet(documentNode);
       keyConfigurations.push({
         fieldName: '',
-        selectionSet: normalizedFieldSet,
-        ...(disableEntityResolver ? { disableEntityResolver: true } : {}),
+        selectionSet: keyFieldSet,
+        ...(keyFieldSetData.isUnresolvable ? { disableEntityResolver: true } : {}),
       });
-      graphNode.satisfiedFieldSets.add(normalizedFieldSet);
-      if (disableEntityResolver) {
+      graphNode.satisfiedFieldSets.add(keyFieldSet);
+      if (keyFieldSetData.isUnresolvable) {
         continue;
       }
-      entityDataNode?.addTargetSubgraphByFieldSet(normalizedFieldSet, nf.subgraphName);
+      entityDataNode?.addTargetSubgraphByFieldSet(keyFieldSet, nf.subgraphName);
       // allKeyFieldSetPaths.push(keyFieldSetPaths);
     }
-    if (externalExtensionFieldCoordsByFieldSet.size > 0) {
-      for (const [fieldSet, fieldCoords] of externalExtensionFieldCoordsByFieldSet) {
+    if (externalExtensionFieldCoordsByRawFieldSet.size > 0) {
+      for (const [rawFieldSet, fieldCoords] of externalExtensionFieldCoordsByRawFieldSet) {
         this.warnings.push(
-          externalEntityExtensionKeyFieldWarning(entityTypeName, fieldSet, [...fieldCoords], this.subgraphName),
+          externalEntityExtensionKeyFieldWarning(entityTypeName, rawFieldSet, [...fieldCoords], this.subgraphName),
         );
       }
     }
@@ -2595,7 +2652,7 @@ export class NormalizationFactory {
   }
 
   handleKeyConfigurations() {
-    for (const [parentTypeName, keyFieldSetData] of this.keyFieldSetDataByTypeName) {
+    for (const [parentTypeName, keyFieldSetDataByFieldSet] of this.keyFieldSetDatasByTypeName) {
       const parentData = this.parentDefinitionDataByTypeName.get(parentTypeName);
       if (
         !parentData ||
@@ -2604,7 +2661,7 @@ export class NormalizationFactory {
         this.errors.push(undefinedObjectLikeParentError(parentTypeName));
         continue;
       }
-      this.propagateValidKeyFieldSetConfigurations(parentData, keyFieldSetData.isUnresolvableByKeyFieldSet);
+      this.propagateValidKeyFieldSetConfigurations(parentData, keyFieldSetDataByFieldSet);
     }
   }
 
@@ -3044,8 +3101,16 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationContain
       }
       addIterableValuesToSet(incomingConcreteTypeNames, existingConcreteTypeNames);
     }
-    for (const entityData of normalizationResult.entityDataByTypeName.values()) {
-      upsertEntityData(entityDataByTypeName, entityData);
+    for (const [typeName, entityData] of normalizationResult.entityDataByTypeName) {
+      const keyFieldSetDataByFieldSet = entityData.keyFieldSetDatasBySubgraphName.get(subgraphName);
+      if (!keyFieldSetDataByFieldSet) {
+        continue;
+      }
+      upsertEntityData(entityDataByTypeName, {
+        keyFieldSetDataByFieldSet,
+        typeName,
+        subgraphName,
+      });
     }
     if (subgraph.name) {
       internalSubgraphBySubgraphName.set(subgraphName, {

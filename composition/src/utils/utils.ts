@@ -1,4 +1,4 @@
-import { ConstDirectiveNode, ConstValueNode, FieldDefinitionNode, Kind, StringValueNode } from 'graphql';
+import { ConstDirectiveNode, ConstValueNode, DocumentNode, FieldDefinitionNode, Kind, StringValueNode } from 'graphql';
 import {
   BOOLEAN_SCALAR,
   ENUM,
@@ -21,6 +21,7 @@ import { invalidKeyFatalError } from '../errors/errors';
 import { EnumTypeNode, InterfaceTypeNode, ObjectTypeNode, ScalarTypeNode, stringToNameNode } from '../ast/utils';
 import { FieldConfiguration } from '../router-configuration/router-configuration';
 import { FieldData } from '../schema-building/type-definition-data';
+import { KeyFieldSetData } from '../normalization/utils';
 
 export function areSetsEqual<T>(set: Set<T>, other: Set<T>): boolean {
   if (set.size !== other.size) {
@@ -406,31 +407,6 @@ export type InvalidEntityInterface = {
   concreteTypeNames: Set<string>;
 };
 
-class StackSet {
-  set = new Set<string>();
-  stack: string[] = [];
-
-  constructor(value: string) {
-    this.push(value);
-  }
-
-  has(value: string): boolean {
-    return this.set.has(value);
-  }
-
-  push(value: string) {
-    this.stack.push(value);
-    this.set.add(value);
-  }
-
-  pop() {
-    const value = this.stack.pop();
-    if (value) {
-      this.set.delete(value);
-    }
-  }
-}
-
 export function getValueOrDefault<K, V>(map: Map<K, V>, key: K, constructor: () => V): V {
   const existingValue = map.get(key);
   if (existingValue) {
@@ -442,46 +418,74 @@ export function getValueOrDefault<K, V>(map: Map<K, V>, key: K, constructor: () 
 }
 
 export type EntityData = {
-  fieldNames: Set<string>;
-  keyFieldSets: Set<string>;
+  keyFieldSetDatasBySubgraphName: Map<string, Map<string, KeyFieldSetData>>;
+  documentNodeByKeyFieldSet: Map<string, DocumentNode>;
   subgraphNames: Set<string>;
   typeName: string;
 };
 
-export type EntityDataParams = {
+export type EntityDataOptions = {
+  keyFieldSetDataByFieldSet: Map<string, KeyFieldSetData>;
+  subgraphName: string;
   typeName: string;
-  fieldNames?: Iterable<string>;
-  keyFieldSets?: Iterable<string>;
-  subgraphNames?: Iterable<string>;
 };
 
-export function newEntityData(params: EntityDataParams): EntityData {
+export function newEntityData({ keyFieldSetDataByFieldSet, subgraphName, typeName }: EntityDataOptions): EntityData {
+  const keyFieldSetDatasBySubgraphName = new Map<string, Map<string, KeyFieldSetData>>([
+    [subgraphName, keyFieldSetDataByFieldSet],
+  ]);
+  const documentNodeByKeyFieldSet = new Map<string, DocumentNode>();
+  for (const [keyFieldSet, { documentNode, isUnresolvable }] of keyFieldSetDataByFieldSet) {
+    // Do not propagate invalid key targets
+    if (isUnresolvable) {
+      continue;
+    }
+    documentNodeByKeyFieldSet.set(keyFieldSet, documentNode);
+  }
   return {
-    fieldNames: new Set<string>(params.fieldNames),
-    keyFieldSets: new Set<string>(params.keyFieldSets),
-    subgraphNames: new Set<string>(params.subgraphNames),
-    typeName: params.typeName,
+    keyFieldSetDatasBySubgraphName,
+    documentNodeByKeyFieldSet,
+    subgraphNames: new Set<string>([subgraphName]),
+    typeName,
   };
 }
 
-function addEntityDataProperties(source: EntityData | EntityDataParams, target: EntityData) {
-  addIterableValuesToSet(source.fieldNames || [], target.fieldNames);
-  addIterableValuesToSet(source.keyFieldSets || [], target.keyFieldSets);
-  addIterableValuesToSet(source.subgraphNames || [], target.subgraphNames);
+export function updateEntityData(
+  entityData: EntityData,
+  { keyFieldSetDataByFieldSet, subgraphName }: EntityDataOptions,
+) {
+  entityData.subgraphNames.add(subgraphName);
+  const existingKeyFieldSetDataByFieldSet = entityData.keyFieldSetDatasBySubgraphName.get(subgraphName);
+  if (!existingKeyFieldSetDataByFieldSet) {
+    entityData.keyFieldSetDatasBySubgraphName.set(subgraphName, keyFieldSetDataByFieldSet);
+    for (const [keyFieldSet, { documentNode, isUnresolvable }] of keyFieldSetDataByFieldSet) {
+      // Do not propagate invalid key targets
+      if (isUnresolvable) {
+        continue;
+      }
+      entityData.documentNodeByKeyFieldSet.set(keyFieldSet, documentNode);
+    }
+    return;
+  }
+  for (const [keyFieldSet, keyFieldSetData] of keyFieldSetDataByFieldSet) {
+    // Do not propagate invalid key targets
+    if (!keyFieldSetData.isUnresolvable) {
+      entityData.documentNodeByKeyFieldSet.set(keyFieldSet, keyFieldSetData.documentNode);
+    }
+    const existingKeyFieldSetData = existingKeyFieldSetDataByFieldSet.get(keyFieldSet);
+    if (existingKeyFieldSetData) {
+      existingKeyFieldSetData.isUnresolvable ||= keyFieldSetData.isUnresolvable;
+      continue;
+    }
+    existingKeyFieldSetDataByFieldSet.set(keyFieldSet, keyFieldSetData);
+  }
 }
 
-export function upsertEntityDataProperties(entityDataByTypeName: Map<string, EntityData>, params: EntityDataParams) {
-  const existingData = entityDataByTypeName.get(params.typeName);
+export function upsertEntityData(entityDataByTypeName: Map<string, EntityData>, options: EntityDataOptions) {
+  const existingData = entityDataByTypeName.get(options.typeName);
   existingData
-    ? addEntityDataProperties(params, existingData)
-    : entityDataByTypeName.set(params.typeName, newEntityData(params));
-}
-
-export function upsertEntityData(entityDataByTypeName: Map<string, EntityData>, incomingData: EntityData) {
-  const existingData = entityDataByTypeName.get(incomingData.typeName);
-  existingData
-    ? addEntityDataProperties(incomingData, existingData)
-    : entityDataByTypeName.set(incomingData.typeName, incomingData);
+    ? updateEntityData(existingData, options)
+    : entityDataByTypeName.set(options.typeName, newEntityData(options));
 }
 
 export type FieldAuthorizationData = {
