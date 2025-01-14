@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS "cache_warmer_operations" (
 	"created_by_id" uuid
 );
 --> statement-breakpoint
+ALTER TABLE "namespaces" ADD COLUMN "enable_cache_warming" boolean DEFAULT false NOT NULL;--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "cache_warmer_operations" ADD CONSTRAINT "cache_warmer_operations_organization_id_organizations_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organizations"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION

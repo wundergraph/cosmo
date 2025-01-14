@@ -1,5 +1,5 @@
 {
-  "id": "0020bd27-4379-44f7-95e5-c31c00440441",
+  "id": "8de5c635-e9ae-4a21-ae0e-9118c8e68abe",
   "prevId": "63d22ed0-c00e-4b16-b1bc-a8be665f9732",
   "version": "7",
   "dialect": "postgresql",
@@ -3170,6 +3170,13 @@
         },
         "enable_graph_pruning": {
           "name": "enable_graph_pruning",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "enable_cache_warming": {
+          "name": "enable_cache_warming",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
