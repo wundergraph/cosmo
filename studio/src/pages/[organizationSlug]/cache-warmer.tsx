@@ -17,7 +17,7 @@ import {
   getCacheWarmerConfig,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const CacheWarmerPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -31,9 +31,12 @@ const CacheWarmerPage: NextPageWithLayout = () => {
     namespace: namespace || "default",
   });
 
-  const [cacheWarmerEnabled, setCacheWarmerEnabled] = useState(
-    data?.isCacheWarmerEnabled || false,
-  );
+  const [cacheWarmerEnabled, setCacheWarmerEnabled] = useState(false);
+
+  useEffect(() => {
+    if (!data || data?.response?.code !== EnumStatusCode.OK) return;
+    setCacheWarmerEnabled(data.isCacheWarmerEnabled);
+  }, [data]);
 
   if (isLoading) {
     return <Loader fullscreen />;
@@ -75,7 +78,7 @@ const CacheWarmerPage: NextPageWithLayout = () => {
             setCacheWarmerEnabled(checked);
             mutate(
               {
-                enableCacheWarmer: true,
+                enableCacheWarmer: checked,
                 namespace: namespace || "default",
               },
               {
