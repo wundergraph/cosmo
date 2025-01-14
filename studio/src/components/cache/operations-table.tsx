@@ -114,7 +114,12 @@ export const CacheOperationsTable = ({
               )
             ) : (
               <TableRow>
-                <TableCell className="h-24 text-center">No results.</TableCell>
+                <TableCell
+                  colSpan={7}
+                  className="h-20 text-center"
+                >
+                  No results.
+                </TableCell>
               </TableRow>
             )}
           </TableBody>
