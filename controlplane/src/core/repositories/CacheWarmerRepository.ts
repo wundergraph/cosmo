@@ -101,28 +101,37 @@ export class CacheWarmerRepository {
   }
 
   public async getOperationContent({
-    operationHash,
+    operationHashes,
     federatedGraphID,
     organizationID,
   }: {
-    operationHash: string;
+    operationHashes: string[];
     federatedGraphID: string;
     organizationID: string;
   }) {
     const query = `
-      SELECT OperationContent as operationContent
+      SELECT 
+        OperationContent as operationContent, 
+        OperationHash as operationHash
       FROM ${this.client.database}.gql_metrics_operations
-      WHERE OperationHash = '${operationHash}'
-      LIMIT 1 SETTINGS use_query_cache = true, query_cache_ttl = 2629800
+      WHERE OperationHash IN (${operationHashes.map((hash) => `'${hash}'`).join(',')})
+      GROUP BY
+        OperationContent,
+        OperationHash
     `;
 
     const res = await this.client.queryPromise(query);
 
-    if (Array.isArray(res) && res.length > 0) {
-      return res[0].operationContent;
+    const operationContentMap = new Map<string, string>();
+
+    if (Array.isArray(res)) {
+      for (const row of res) {
+        operationContentMap.set(row.operationHash, row.operationContent);
+      }
+      return operationContentMap;
     }
 
-    return '';
+    return operationContentMap;
   }
 
   public async computeCacheWarmerOperations(props: ComputeCacheWarmerOperationsProps): Promise<CacheWarmerOperations> {
@@ -179,6 +188,13 @@ export class CacheWarmerRepository {
       }
     }
 
+    const operationHashes = topOperationsByPlanningTime.map((op) => op.operationHash);
+    const operationContentMap = await this.getOperationContent({
+      operationHashes,
+      federatedGraphID: props.federatedGraphId,
+      organizationID: props.organizationId,
+    });
+
     for (const operation of topOperationsByPlanningTime) {
       let operationRequest: OperationRequest;
 
@@ -216,11 +232,7 @@ export class CacheWarmerRepository {
         continue;
       }
 
-      const operationContent = await this.getOperationContent({
-        operationHash: operation.operationHash,
-        federatedGraphID: props.federatedGraphId,
-        organizationID: props.organizationId,
-      });
+      const operationContent = operationContentMap.get(operation.operationHash);
 
       if (!operationContent) {
         continue;
