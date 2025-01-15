@@ -108,10 +108,10 @@ func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 func RunWithError(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) error {
 	t.Helper()
 	env, err := createTestEnv(t, cfg)
+	t.Cleanup(env.Shutdown)
 	if err != nil {
 		return err
 	}
-	t.Cleanup(env.Shutdown)
 	f(t, env)
 	if cfg.AssertCacheMetrics != nil {
 		assertCacheMetrics(t, env, *cfg.AssertCacheMetrics)
@@ -626,9 +626,8 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		}
 	}
 
-	if err := rr.Start(ctx); err != nil {
-		return nil, err
-	}
+	var startErr error
+	startErr = rr.Start(ctx)
 
 	graphQLPath := "/graphql"
 	if cfg.OverrideGraphQLPath != "" {
@@ -716,6 +715,10 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		if ok {
 			e.routerConfigVersionMyFF = myFF.Version
 		}
+	}
+
+	if startErr != nil {
+		return e, startErr
 	}
 
 	waitErr := e.WaitForServer(ctx, e.RouterURL+"/health/live", 100, 10)
