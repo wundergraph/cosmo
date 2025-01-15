@@ -626,8 +626,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		}
 	}
 
-	var startErr error
-	startErr = rr.Start(ctx)
+	startErr := rr.Start(ctx)
 
 	graphQLPath := "/graphql"
 	if cfg.OverrideGraphQLPath != "" {
