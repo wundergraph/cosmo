@@ -20,7 +20,8 @@ export type FeatureIds =
   | 'ai'
   | 'oidc'
   | 'scim'
-  | 'field-pruning-grace-period';
+  | 'field-pruning-grace-period'
+  | 'cache-warmer';
 
 export type Features = {
   [key in FeatureIds]: Feature;
