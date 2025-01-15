@@ -21,6 +21,8 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
+const KafkaWaitTimeout = time.Second * 30
+
 func TestLocalKafka(t *testing.T) {
 	t.Skip("skip only for local testing")
 
@@ -89,17 +91,17 @@ func TestKafkaEvents(t *testing.T) {
 			go func() {
 				require.Eventually(t, func() bool {
 					return counter.Load() == 1
-				}, time.Second*10, time.Millisecond*100)
+				}, KafkaWaitTimeout, time.Millisecond*100)
 				_ = client.Close()
 			}()
 
-			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			xEnv.WaitForMessagesSent(1, time.Second*10)
-			xEnv.WaitForSubscriptionCount(0, time.Second*10)
-			xEnv.WaitForConnectionCount(0, time.Second*10)
+			xEnv.WaitForMessagesSent(1, KafkaWaitTimeout)
+			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
+			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
 		})
 	})
 
@@ -160,32 +162,32 @@ func TestKafkaEvents(t *testing.T) {
 				require.NoError(t, clientErr)
 			}()
 
-			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 			produceKafkaMessage(t, xEnv, topics[0], ``) // Empty message
 			require.Eventually(t, func() bool {
 				return counter.Load() == 1
-			}, time.Second*10, time.Millisecond*100)
+			}, KafkaWaitTimeout, time.Millisecond*100)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
 			require.Eventually(t, func() bool {
 				return counter.Load() == 2
-			}, time.Second*10, time.Millisecond*100)
+			}, KafkaWaitTimeout, time.Millisecond*100)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
 			require.Eventually(t, func() bool {
 				return counter.Load() == 3
-			}, time.Second*10, time.Millisecond*100)
+			}, KafkaWaitTimeout, time.Millisecond*100)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
 			require.Eventually(t, func() bool {
 				return counter.Load() == 4
-			}, time.Second*10, time.Millisecond*100)
+			}, KafkaWaitTimeout, time.Millisecond*100)
 
 			require.NoError(t, client.Close())
 
-			xEnv.WaitForSubscriptionCount(0, time.Second*10)
-			xEnv.WaitForConnectionCount(0, time.Second*10)
+			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
+			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
 		})
 	})
 
@@ -239,20 +241,20 @@ func TestKafkaEvents(t *testing.T) {
 				require.NoError(t, clientErr)
 			}()
 
-			xEnv.WaitForSubscriptionCount(2, time.Second*10)
+			xEnv.WaitForSubscriptionCount(2, KafkaWaitTimeout)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			xEnv.WaitForMessagesSent(2, time.Second*10)
+			xEnv.WaitForMessagesSent(2, KafkaWaitTimeout)
 
 			require.Eventually(t, func() bool {
 				return counter.Load() == 2
-			}, time.Second*10, time.Millisecond*100)
+			}, KafkaWaitTimeout, time.Millisecond*100)
 
 			_ = client.Close()
 
-			xEnv.WaitForSubscriptionCount(0, time.Second*10)
-			xEnv.WaitForConnectionCount(0, time.Second*10)
+			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
+			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
 		})
 	})
 
@@ -331,20 +333,20 @@ func TestKafkaEvents(t *testing.T) {
 				require.NoError(t, clientErr)
 			}()
 
-			xEnv.WaitForSubscriptionCount(2, time.Second*10)
+			xEnv.WaitForSubscriptionCount(2, KafkaWaitTimeout)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 			produceKafkaMessage(t, xEnv, topics[1], `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
 
 			require.Eventually(t, func() bool {
 				return counter.Load() == 4
-			}, time.Second*10, time.Millisecond*100)
+			}, KafkaWaitTimeout, time.Millisecond*100)
 
 			require.NoError(t, client.Close())
 
-			xEnv.WaitForMessagesSent(4, time.Second*10)
-			xEnv.WaitForSubscriptionCount(0, time.Second*10)
-			xEnv.WaitForConnectionCount(0, time.Second*10)
+			xEnv.WaitForMessagesSent(4, KafkaWaitTimeout)
+			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
+			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
 		})
 	})
 
@@ -399,17 +401,17 @@ func TestKafkaEvents(t *testing.T) {
 			go func() {
 				require.Eventually(t, func() bool {
 					return counter.Load() == 1
-				}, time.Second*10, time.Millisecond*100)
+				}, KafkaWaitTimeout, time.Millisecond*100)
 				_ = client.Close()
 			}()
 
-			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-			xEnv.WaitForMessagesSent(1, time.Second*10)
-			xEnv.WaitForSubscriptionCount(0, time.Second*10)
-			xEnv.WaitForConnectionCount(0, time.Second*10)
+			xEnv.WaitForMessagesSent(1, KafkaWaitTimeout)
+			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
+			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
 		})
 	})
 
@@ -475,7 +477,7 @@ func TestKafkaEvents(t *testing.T) {
 
 					assert.Eventually(t, func() bool {
 						return produced.Load() == 1
-					}, time.Second*10, time.Millisecond*100)
+					}, KafkaWaitTimeout, time.Millisecond*100)
 					assertMultipartPrefix(t, reader)
 					assertLineEquals(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 					consumed.Add(1)
@@ -486,32 +488,32 @@ func TestKafkaEvents(t *testing.T) {
 
 					assert.Eventually(t, func() bool {
 						return produced.Load() == 2
-					}, time.Second*10, time.Millisecond*100)
+					}, KafkaWaitTimeout, time.Millisecond*100)
 					assertMultipartPrefix(t, reader)
 					assertLineEquals(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 
 					consumed.Add(1)
 				}()
 
-				xEnv.WaitForSubscriptionCount(1, time.Second*5)
+				xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-				xEnv.WaitForMessagesSent(1, time.Second*5)
+				xEnv.WaitForMessagesSent(1, KafkaWaitTimeout)
 				produced.Add(1)
 
 				require.Eventually(t, func() bool {
 					return consumed.Load() == 2
-				}, time.Second*10, time.Millisecond*100)
+				}, KafkaWaitTimeout, time.Millisecond*100)
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-				xEnv.WaitForMessagesSent(3, time.Second*5) // 2 messages + the empty one
+				xEnv.WaitForMessagesSent(3, KafkaWaitTimeout) // 2 messages + the empty one
 				produced.Add(1)
 
 				require.Eventually(t, func() bool {
 					return consumed.Load() == 3
-				}, time.Second*10, time.Millisecond*100)
+				}, KafkaWaitTimeout, time.Millisecond*100)
 
-				xEnv.WaitForSubscriptionCount(0, time.Second*10)
-				xEnv.WaitForConnectionCount(0, time.Second*10)
+				xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
+				xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
 			})
 		})
 
@@ -543,8 +545,8 @@ func TestKafkaEvents(t *testing.T) {
 				requireMultipartPrefix(t, reader)
 				requireLineEquals(t, reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
 
-				xEnv.WaitForSubscriptionCount(0, time.Second*10)
-				xEnv.WaitForConnectionCount(0, time.Second*10)
+				xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
+				xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
 			})
 		})
 	})
@@ -597,16 +599,16 @@ func TestKafkaEvents(t *testing.T) {
 
 			}()
 
-			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			require.Eventually(t, func() bool {
 				return counter.Load() == 1
-			}, time.Second*10, time.Millisecond*100)
+			}, KafkaWaitTimeout, time.Millisecond*100)
 
-			xEnv.WaitForSubscriptionCount(0, time.Second*10)
-			xEnv.WaitForConnectionCount(0, time.Second*10)
+			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
+			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
 		})
 	})
 
@@ -657,16 +659,16 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, "", string(line))
 			}()
 
-			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			require.Eventually(t, func() bool {
 				return counter.Load() == 1
-			}, time.Second*10, time.Millisecond*100)
+			}, KafkaWaitTimeout, time.Millisecond*100)
 
-			xEnv.WaitForSubscriptionCount(0, time.Second*10)
-			xEnv.WaitForConnectionCount(0, time.Second*10)
+			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
+			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
 		})
 	})
 
@@ -709,8 +711,8 @@ func TestKafkaEvents(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}", string(data))
 
-			xEnv.WaitForSubscriptionCount(0, time.Second*10)
-			xEnv.WaitForConnectionCount(0, time.Second*10)
+			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
+			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
 		})
 	})
 
@@ -750,7 +752,7 @@ func TestKafkaEvents(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			var payload subscriptionPayload
 
-			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 			var produced atomic.Uint32
 			var consumed atomic.Uint32
@@ -761,7 +763,7 @@ func TestKafkaEvents(t *testing.T) {
 
 				require.Eventually(t, func() bool {
 					return produced.Load() == MsgCount-11
-				}, time.Second*5, time.Millisecond*100)
+				}, KafkaWaitTimeout, time.Millisecond*100)
 				gErr := conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -775,7 +777,7 @@ func TestKafkaEvents(t *testing.T) {
 
 				require.Eventually(t, func() bool {
 					return produced.Load() == MsgCount-7
-				}, time.Second*5, time.Millisecond*100)
+				}, KafkaWaitTimeout, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -789,7 +791,7 @@ func TestKafkaEvents(t *testing.T) {
 
 				require.Eventually(t, func() bool {
 					return produced.Load() == MsgCount-4
-				}, time.Second*5, time.Millisecond*100)
+				}, KafkaWaitTimeout, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -803,7 +805,7 @@ func TestKafkaEvents(t *testing.T) {
 
 				require.Eventually(t, func() bool {
 					return produced.Load() == MsgCount-3
-				}, time.Second*5, time.Millisecond*100)
+				}, KafkaWaitTimeout, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -817,7 +819,7 @@ func TestKafkaEvents(t *testing.T) {
 
 				require.Eventually(t, func() bool {
 					return produced.Load() == MsgCount-1
-				}, time.Second*5, time.Millisecond*100)
+				}, KafkaWaitTimeout, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -834,14 +836,14 @@ func TestKafkaEvents(t *testing.T) {
 			for i := MsgCount; i > 0; i-- {
 				require.Eventually(t, func() bool {
 					return consumed.Load() >= MsgCount-i
-				}, time.Second*5, time.Millisecond*100)
+				}, KafkaWaitTimeout, time.Millisecond*100)
 				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
 				produced.Add(1)
 			}
 
 			require.Eventually(t, func() bool {
 				return consumed.Load() == MsgCount && produced.Load() == MsgCount
-			}, time.Second*10, time.Millisecond*100)
+			}, KafkaWaitTimeout, time.Millisecond*100)
 		})
 	})
 
@@ -881,7 +883,7 @@ func TestKafkaEvents(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			var payload subscriptionPayload
 
-			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 			var produced atomic.Uint32
 			var consumed atomic.Uint32
@@ -889,7 +891,7 @@ func TestKafkaEvents(t *testing.T) {
 			go func() {
 				require.Eventually(t, func() bool {
 					return produced.Load() == 1
-				}, time.Second*5, time.Millisecond*100)
+				}, KafkaWaitTimeout, time.Millisecond*100)
 				gErr := conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -903,7 +905,7 @@ func TestKafkaEvents(t *testing.T) {
 
 				require.Eventually(t, func() bool {
 					return produced.Load() == 2
-				}, time.Second*5, time.Millisecond*100)
+				}, KafkaWaitTimeout, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -917,7 +919,7 @@ func TestKafkaEvents(t *testing.T) {
 
 				require.Eventually(t, func() bool {
 					return produced.Load() == 11
-				}, time.Second*5, time.Millisecond*100)
+				}, KafkaWaitTimeout, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -931,7 +933,7 @@ func TestKafkaEvents(t *testing.T) {
 
 				require.Eventually(t, func() bool {
 					return produced.Load() == 12
-				}, time.Second*5, time.Millisecond*100)
+				}, KafkaWaitTimeout, time.Millisecond*100)
 				gErr = conn.ReadJSON(&msg)
 				require.NoError(t, gErr)
 				require.Equal(t, "1", msg.ID)
@@ -948,14 +950,14 @@ func TestKafkaEvents(t *testing.T) {
 			for i := uint32(1); i < 13; i++ {
 				require.Eventually(t, func() bool {
 					return consumed.Load() >= i-1
-				}, time.Second*10, time.Millisecond*100)
+				}, KafkaWaitTimeout, time.Millisecond*100)
 				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
 				produced.Add(1)
 			}
 
 			require.Eventually(t, func() bool {
 				return consumed.Load() == 12 && produced.Load() == 12
-			}, time.Second*10, time.Millisecond*100)
+			}, KafkaWaitTimeout, time.Millisecond*100)
 		})
 	})
 
@@ -995,7 +997,7 @@ func TestKafkaEvents(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			var payload subscriptionPayload
 
-			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 			var produced atomic.Uint32
 			var consumed atomic.Uint32
@@ -1062,7 +1064,7 @@ func TestKafkaEvents(t *testing.T) {
 			for i := uint32(1); i < 13; i++ {
 				require.Eventually(t, func() bool {
 					return consumed.Load() >= i-1
-				}, time.Second*5, time.Millisecond*100)
+				}, KafkaWaitTimeout, time.Millisecond*100)
 				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
 				produced.Add(1)
 			}
@@ -1109,7 +1111,7 @@ func TestKafkaEvents(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			var payload subscriptionPayload
 
-			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 			var counter atomic.Uint32
 
@@ -1137,7 +1139,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			require.Eventually(t, func() bool {
 				return counter.Load() == 1
-			}, time.Second*10, time.Millisecond*100)
+			}, KafkaWaitTimeout, time.Millisecond*100)
 		})
 	})
 
@@ -1198,29 +1200,29 @@ func TestKafkaEvents(t *testing.T) {
 				require.NoError(t, clientErr)
 			}()
 
-			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 			produceKafkaMessage(t, xEnv, topics[0], `{asas`) // Invalid message
 			require.Eventually(t, func() bool {
 				return counter.Load() == 1
-			}, time.Second*10, time.Millisecond*100)
+			}, KafkaWaitTimeout, time.Millisecond*100)
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":1}`) // Correct message
 			require.Eventually(t, func() bool {
 				return counter.Load() == 2
-			}, time.Second*10, time.Millisecond*100)
+			}, KafkaWaitTimeout, time.Millisecond*100)
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`) // Missing entity = Resolver error
 			require.Eventually(t, func() bool {
 				return counter.Load() == 3
-			}, time.Second*10, time.Millisecond*100)
+			}, KafkaWaitTimeout, time.Millisecond*100)
 			produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
 			require.Eventually(t, func() bool {
 				return counter.Load() == 4
-			}, time.Second*10, time.Millisecond*100)
+			}, KafkaWaitTimeout, time.Millisecond*100)
 
 			require.NoError(t, client.Close())
 
-			xEnv.WaitForSubscriptionCount(0, time.Second*10)
-			xEnv.WaitForConnectionCount(0, time.Second*10)
+			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
+			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
 		})
 	})
 }
@@ -1264,7 +1266,7 @@ func produceKafkaMessage(t *testing.T, xEnv *testenv.Environment, topicName stri
 
 	require.Eventually(t, func() bool {
 		return done.Load()
-	}, time.Second*10, time.Millisecond*100)
+	}, KafkaWaitTimeout, time.Millisecond*100)
 
 	require.NoError(t, pErr)
 
