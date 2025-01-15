@@ -8,6 +8,7 @@ import {
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { OrganizationRepository } from '../../../core/repositories/OrganizationRepository.js';
 
 export function configureCacheWarmer(
   opts: RouterOptions,
@@ -19,6 +20,7 @@ export function configureCacheWarmer(
   return handleError<PlainMessage<ConfigureCacheWarmerResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
+    const organizationRepo = new OrganizationRepository(logger, opts.db);
 
     if (!authContext.hasWriteAccess) {
       return {
@@ -36,6 +38,19 @@ export function configureCacheWarmer(
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: `Namespace '${req.namespace}' not found`,
+        },
+      };
+    }
+
+    const cacheWarmerFeature = await organizationRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'cache-warmer',
+    });
+    if (!cacheWarmerFeature?.enabled) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Upgrade to a enterprise plan to enable cache warmer`,
         },
       };
     }
