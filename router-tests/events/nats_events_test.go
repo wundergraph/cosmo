@@ -357,6 +357,7 @@ func TestNatsEvents(t *testing.T) {
 					Query: `mutation { updateAvailability(employeeID: 3, isAvailable: true) { id } }`,
 				})
 				require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
+				xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 				produced.Add(1)
 
 				require.Eventually(t, func() bool {
