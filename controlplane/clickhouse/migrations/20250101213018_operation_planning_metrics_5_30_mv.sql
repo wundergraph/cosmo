@@ -24,7 +24,7 @@ SELECT
     maxSimpleState(Max) AS MaxDuration
 FROM otel_metrics_histogram
 -- Only works with the same bounds for all buckets. If bounds are different, we can't add them together
-WHERE ScopeName = 'cosmo.router' AND ScopeVersion = '0.0.1' AND MetricName = 'router.graphql.operation.planning_time' AND Attributes [ 'wg.subgraph.id' ] = '' AND OrganizationID != '' AND FederatedGraphID != ''
+WHERE ScopeName = 'cosmo.router' AND ScopeVersion = '0.0.1' AND MetricName = 'router.graphql.operation.planning_time' AND OrganizationID != '' AND FederatedGraphID != ''
 GROUP BY
     OperationName,
     OperationHash,
