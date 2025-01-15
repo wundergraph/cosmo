@@ -8602,8 +8602,10 @@ func TestTelemetry(t *testing.T) {
 				require.Equal(t, `{"errors":[{"message":"The total number of fields 2 exceeds the limit allowed (1)"}]}`, failedRes2.Body)
 
 				testSpan2 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
-				require.Contains(t, testSpan2.Attributes(), otel.WgQueryTotalFields.Int(2))
-				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
+				assert.Contains(t, testSpan2.Attributes(), otel.WgQueryTotalFields.Int(2))
+				assert.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
+				assert.Equal(t, codes.Unset, testSpan2.Status().Code)
+				assert.Equal(t, []sdktrace.Event(nil), testSpan2.Events())
 				exporter.Reset()
 
 				successRes := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
