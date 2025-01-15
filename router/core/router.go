@@ -6,14 +6,15 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/propagation"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"sync"
 	"time"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 
@@ -129,6 +130,7 @@ type (
 	RouterConfigPollerConfig struct {
 		config.ExecutionConfig
 		PollInterval time.Duration
+		PollJitter   time.Duration
 		GraphSignKey string
 	}
 
@@ -618,7 +620,6 @@ func (r *Router) listenAndServe(cfg *nodev1.RouterConfig) error {
 }
 
 func (r *Router) initModules(ctx context.Context) error {
-
 	moduleList := make([]ModuleInfo, 0, len(modules)+len(r.customModules))
 
 	for _, module := range modules {
@@ -974,7 +975,6 @@ func (r *Router) buildClients() error {
 			StorageConfig: &provider,
 			Prefix:        r.automaticPersistedQueriesConfig.Storage.ObjectPrefix,
 		})
-
 		if err != nil {
 			return err
 		}
@@ -1184,7 +1184,6 @@ func (r *Router) Start(ctx context.Context) error {
 // Shutdown gracefully shuts down the router. It blocks until the server is shutdown.
 // If the router is already shutdown, the method returns immediately without error.
 func (r *Router) Shutdown(ctx context.Context) (err error) {
-
 	if !r.shutdown.CompareAndSwap(false, true) {
 		return nil
 	}
@@ -1873,7 +1872,6 @@ func buildAttributesMap(attributes []config.CustomAttribute) map[string]string {
 
 // buildHeaderAttributesMapper returns a function that maps custom attributes to the request headers.
 func buildHeaderAttributesMapper(attributes []config.CustomAttribute) func(req *http.Request) []attribute.KeyValue {
-
 	if len(attributes) == 0 {
 		return nil
 	}

@@ -2612,15 +2612,13 @@ func TestRuntimeTelemetry(t *testing.T) {
 
 			metricServerUptime := getMetricByName(runtimeScope, "server.uptime")
 			require.NotNil(t, metricServerUptime)
-			metricServerUptimeDataType := metricServerUptime.Data.(metricdata.Sum[int64])
+			metricServerUptimeDataType := metricServerUptime.Data.(metricdata.Gauge[int64])
 			require.Len(t, metricServerUptimeDataType.DataPoints, 1)
 			serverUptimeMetric := metricdata.Metrics{
 				Name:        "server.uptime",
 				Description: "Seconds since the server started. Resets between router config changes.",
 				Unit:        "s",
-				Data: metricdata.Sum[int64]{
-					Temporality: metricdata.CumulativeTemporality,
-					IsMonotonic: true,
+				Data: metricdata.Gauge[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(

@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.162.0](https://github.com/wundergraph/cosmo/compare/router@0.161.1...router@0.162.0) (2025-01-11)
+
+### Bug Fixes
+
+* add edfs to the demo environment ([#1505](https://github.com/wundergraph/cosmo/issues/1505)) ([2a70c94](https://github.com/wundergraph/cosmo/commit/2a70c94246aa120ea836f658733190b31fc9175f)) (@alepane21)
+* full demo broken in main branch ([#1508](https://github.com/wundergraph/cosmo/issues/1508)) ([beab806](https://github.com/wundergraph/cosmo/commit/beab806571f5a760fc899e10d7742ca606cd031d)) (@alepane21)
+
+### Features
+
+* **router:** optionally add jitter to config polling interval ([#1506](https://github.com/wundergraph/cosmo/issues/1506)) ([1d67742](https://github.com/wundergraph/cosmo/commit/1d677429e3fae397d4c1e03cd69636521bbe80c8)) (@endigma)
+
 ## [0.161.1](https://github.com/wundergraph/cosmo/compare/router@0.161.0...router@0.161.1) (2025-01-08)
 
 ### Bug Fixes
