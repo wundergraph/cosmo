@@ -225,8 +225,6 @@ func (s *MetricsService) prepareClickhouseBatches(
 				su.OperationInfo.Hash,
 				strings.ToLower(su.OperationInfo.Type.String()),
 				su.RequestDocument,
-				item.Claims.OrganizationID,
-				item.Claims.FederatedGraphID,
 			)
 
 			if err != nil {
