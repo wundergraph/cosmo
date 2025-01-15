@@ -120,6 +120,10 @@ const CacheOperationsPage: NextPageWithLayout = () => {
     );
   }
 
+  if (isLoading) {
+    return <Loader fullscreen />;
+  }
+
   if (!data?.isCacheWarmerEnabled) {
     return (
       <EmptyState
@@ -139,10 +143,6 @@ const CacheOperationsPage: NextPageWithLayout = () => {
         }
       />
     );
-  }
-
-  if (isLoading) {
-    return <Loader fullscreen />;
   }
 
   if (error || data?.response?.code !== EnumStatusCode.OK) {
@@ -165,9 +165,12 @@ const CacheOperationsPage: NextPageWithLayout = () => {
       <div className="flex justify-end">
         <div className="flex items-center gap-x-3">
           {lastComputedAt && (
-            <p className="text-sm font-semibold text-muted-foreground">{`Last computed ${formatDistanceToNow(new Date(lastComputedAt), {
-              addSuffix: true,
-            })}`}</p>
+            <p className="text-sm font-semibold text-muted-foreground">{`Last computed ${formatDistanceToNow(
+              new Date(lastComputedAt),
+              {
+                addSuffix: true,
+              },
+            )}`}</p>
           )}
           <Button
             variant="outline"
