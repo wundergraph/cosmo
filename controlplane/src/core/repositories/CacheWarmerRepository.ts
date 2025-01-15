@@ -64,10 +64,7 @@ export class CacheWarmerRepository {
             b,
             BucketCounts,
             anyLast(ExplicitBounds)
-        ), 2) as planningTime,
-
-        -- Histogram aggregations
-        sumForEachMerge(BucketCounts) as BucketCounts
+        ), 2) as planningTime
       FROM ${this.client.database}.operation_planning_metrics_5_30
       WHERE Timestamp >= startDate AND Timestamp <= endDate
       AND FederatedGraphID = '${federatedGraphId}'
