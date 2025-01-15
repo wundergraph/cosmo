@@ -49,7 +49,6 @@ import {
   createReactivateOrganizationWorker,
   ReactivateOrganizationQueue,
 } from './workers/ReactivateOrganizationWorker.js';
-import { CacheWarmerQueue, createCacheWarmerWorker } from './workers/CacheWarmerWorker.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -369,18 +368,6 @@ export default async function build(opts: BuildConfig) {
     }),
   );
 
-  const cacheWarmerQueue = new CacheWarmerQueue(logger, fastify.redisForQueue);
-  bullWorkers.push(
-    createCacheWarmerWorker({
-      redisConnection: fastify.redisForWorker,
-      db: fastify.db,
-      logger,
-      blobStorage,
-      cacheWarmerQueue,
-      chClient: fastify.ch,
-    }),
-  );
-
   // required to verify webhook payloads
   await fastify.register(import('fastify-raw-body'), {
     field: 'rawBody',
@@ -484,7 +471,6 @@ export default async function build(opts: BuildConfig) {
         deactivateOrganizationQueue,
         reactivateOrganizationQueue,
         deleteUserQueue,
-        cacheWarmerQueue,
       },
       stripeSecretKey: opts.stripe?.secret,
       admissionWebhookJWTSecret: opts.admissionWebhook.secret,
