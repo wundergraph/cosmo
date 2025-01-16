@@ -14,6 +14,8 @@ import { DefaultNamespace, NamespaceRepository } from '../../../core/repositorie
 import { SubgraphRepository } from '../../../core/repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { OperationsRepository } from '../../../core/repositories/OperationsRepository.js';
+import { OrganizationRepository } from '../../../core/repositories/OrganizationRepository.js';
 
 export function pushCacheWarmerOperation(
   opts: RouterOptions,
@@ -29,11 +31,36 @@ export function pushCacheWarmerOperation(
     req.namespace = req.namespace || DefaultNamespace;
 
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-    const cacheWarmerRepo = new CacheWarmerRepository(opts.chClient!, opts.db);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
     const graphCompositionRepo = new GraphCompositionRepository(logger, opts.db);
     const namespaceRepository = new NamespaceRepository(opts.db, authContext.organizationId);
+    const organizationRepo = new OrganizationRepository(logger, opts.db);
+
+    if (!authContext.hasWriteAccess) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `The user doesnt have the permissions to perform this operation`,
+        },
+      };
+    }
+
+    const cacheWarmerFeature = await organizationRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'cache-warmer',
+    });
+    if (!cacheWarmerFeature?.enabled) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Upgrade to a enterprise plan to enable cache warmer`,
+        },
+        isCacheWarmerEnabled: false,
+      };
+    }
+
+    const cacheWarmerRepo = new CacheWarmerRepository(opts.chClient!, opts.db);
     const composer = new Composer(
       logger,
       opts.db,
@@ -64,6 +91,20 @@ export function pushCacheWarmerOperation(
           details: `Cache Warmer is not enabled for the namespace`,
         },
       };
+    }
+
+    if (req.operationPersistedId) {
+      const operationsRepository = new OperationsRepository(opts.db, federatedGraph.id);
+      const existingPersistedOperation = await operationsRepository.getPersistedOperation(req.operationPersistedId);
+
+      if (!existingPersistedOperation) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: `Operation with persistedID '${req.operationPersistedId}' doesn't exists`,
+          },
+        };
+      }
     }
 
     await cacheWarmerRepo.addCacheWarmerOperations({
