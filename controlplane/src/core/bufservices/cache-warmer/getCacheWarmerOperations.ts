@@ -10,6 +10,7 @@ import { FederatedGraphRepository } from '../../../core/repositories/FederatedGr
 import { DefaultNamespace, NamespaceRepository } from '../../../core/repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { OrganizationRepository } from '../../../core/repositories/OrganizationRepository.js';
 
 export function getCacheWarmerOperations(
   opts: RouterOptions,
@@ -27,6 +28,23 @@ export function getCacheWarmerOperations(
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const cacheWarmerRepo = new CacheWarmerRepository(opts.chClient!, opts.db);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+    const organizationRepo = new OrganizationRepository(logger, opts.db);
+
+    const cacheWarmerFeature = await organizationRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'cache-warmer',
+    });
+    if (!cacheWarmerFeature?.enabled) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Upgrade to a enterprise plan to enable cache warmer`,
+        },
+        operations: [],
+        totalCount: 0,
+        isCacheWarmerEnabled: false,
+      };
+    }
 
     const federatedGraph = await fedGraphRepo.byName(req.federatedGraphName, req.namespace, {
       supportsFederation: true,

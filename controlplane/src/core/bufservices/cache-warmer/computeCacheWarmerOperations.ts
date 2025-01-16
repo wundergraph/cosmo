@@ -14,6 +14,7 @@ import { DefaultNamespace, NamespaceRepository } from '../../../core/repositorie
 import { SubgraphRepository } from '../../../core/repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { OrganizationRepository } from '../../../core/repositories/OrganizationRepository.js';
 
 export function computeCacheWarmerOperations(
   opts: RouterOptions,
@@ -33,6 +34,7 @@ export function computeCacheWarmerOperations(
     const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
     const graphCompositionRepo = new GraphCompositionRepository(logger, opts.db);
     const namespaceRepository = new NamespaceRepository(opts.db, authContext.organizationId);
+    const organizationRepo = new OrganizationRepository(logger, opts.db);
     const composer = new Composer(
       logger,
       opts.db,
@@ -42,6 +44,28 @@ export function computeCacheWarmerOperations(
       graphCompositionRepo,
       opts.chClient!,
     );
+
+    const cacheWarmerFeature = await organizationRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'cache-warmer',
+    });
+    if (!cacheWarmerFeature?.enabled) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Upgrade to a enterprise plan to enable cache warmer`,
+        },
+      };
+    }
+
+    if (!authContext.hasWriteAccess) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `The user doesnt have the permissions to perform this operation`,
+        },
+      };
+    }
 
     const federatedGraph = await fedGraphRepo.byName(req.federatedGraphName, req.namespace, {
       supportsFederation: true,

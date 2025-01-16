@@ -31,17 +31,6 @@ export function configureCacheWarmer(
       };
     }
 
-    const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
-    const namespace = await namespaceRepo.byName(req.namespace);
-    if (!namespace) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `Namespace '${req.namespace}' not found`,
-        },
-      };
-    }
-
     const cacheWarmerFeature = await organizationRepo.getFeature({
       organizationId: authContext.organizationId,
       featureId: 'cache-warmer',
@@ -51,6 +40,17 @@ export function configureCacheWarmer(
         response: {
           code: EnumStatusCode.ERR,
           details: `Upgrade to a enterprise plan to enable cache warmer`,
+        },
+      };
+    }
+
+    const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+    const namespace = await namespaceRepo.byName(req.namespace);
+    if (!namespace) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Namespace '${req.namespace}' not found`,
         },
       };
     }

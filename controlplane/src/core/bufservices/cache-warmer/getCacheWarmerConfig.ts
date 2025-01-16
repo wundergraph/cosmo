@@ -8,6 +8,7 @@ import {
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { OrganizationRepository } from '../../../core/repositories/OrganizationRepository.js';
 
 export function getCacheWarmerConfig(
   opts: RouterOptions,
@@ -19,8 +20,23 @@ export function getCacheWarmerConfig(
   return handleError<PlainMessage<GetCacheWarmerConfigResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
-
+    const organizationRepo = new OrganizationRepository(logger, opts.db);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+
+    const cacheWarmerFeature = await organizationRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'cache-warmer',
+    });
+    if (!cacheWarmerFeature?.enabled) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Upgrade to a enterprise plan to enable cache warmer`,
+        },
+        isCacheWarmerEnabled: false,
+      };
+    }
+
     const namespace = await namespaceRepo.byName(req.namespace);
     if (!namespace) {
       return {
