@@ -77,13 +77,17 @@ export function pushCacheWarmerOperation(
 
     if (req.operationPersistedId) {
       const operationsRepository = new OperationsRepository(opts.db, federatedGraph.id);
-      const existingPersistedOperation = await operationsRepository.getPersistedOperation(req.operationPersistedId);
+      const existingPersistedOperation = await operationsRepository.getPersistedOperation({
+        operationId: req.operationPersistedId,
+        clientName: req.clientName,
+        operationName: req.operationName,
+      });
 
       if (!existingPersistedOperation) {
         return {
           response: {
             code: EnumStatusCode.ERR,
-            details: `Operation with persistedID '${req.operationPersistedId}' doesn't exist.`,
+            details: `Operation with persistedID '${req.operationPersistedId}'${req.clientName ? `, with client name '${req.clientName}'` : ''}${req.operationName ? ` and with operation name '${req.operationName}'` : ''} doesn't exist.`,
           },
         };
       }
