@@ -110,7 +110,7 @@ const CacheOperationsPage: NextPageWithLayout = () => {
         actions={
           <Button
             onClick={() => {
-              router.push(`/${router.query.organizationSlug}/billing`);
+              router.push(`/${user?.currentOrganization.slug}/billing`);
             }}
           >
             Upgrade
@@ -134,7 +134,7 @@ const CacheOperationsPage: NextPageWithLayout = () => {
           <Button
             onClick={() => {
               router.push(
-                `/${router.query.organizationSlug}/cache-warmer?namespace=${router.query.namespace}`,
+                `/${user?.currentOrganization.slug}/cache-warmer?namespace=${router.query.namespace}`,
               );
             }}
           >
