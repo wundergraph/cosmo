@@ -103,7 +103,13 @@ export const CacheOperationsTable = ({
                         className="table-action"
                       >
                         <Link
-                          href={`/${user?.currentOrganization.slug}/${graphData?.graph?.namespace}/graph/${graphData?.graph?.name}/cache-operations?operationId=${id}`}
+                          href={{
+                            pathname: `/${user?.currentOrganization.slug}/${graphData?.graph?.namespace}/graph/${graphData?.graph?.name}/cache-operations`,
+                            query: {
+                              ...router.query,
+                              operationId: id,
+                            },
+                          }}
                         >
                           Details
                         </Link>
@@ -114,10 +120,7 @@ export const CacheOperationsTable = ({
               )
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={7}
-                  className="h-20 text-center"
-                >
+                <TableCell colSpan={7} className="h-20 text-center">
                   No results.
                 </TableCell>
               </TableRow>

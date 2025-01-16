@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../ui/sheet";
 import { Spacer } from "../ui/spacer";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { useUser } from "@/hooks/use-user";
-import { useContext } from "react";
+import { useContext, useEffect, useState } from "react";
 import { GraphContext } from "../layout/graph-layout";
 
 export const CacheDetailsSheet: React.FC<any> = ({
@@ -21,12 +21,23 @@ export const CacheDetailsSheet: React.FC<any> = ({
   operations: CacheWarmerOperation[];
 }) => {
   const router = useRouter();
-
   const operationId = router.query.operationId as string;
 
-  const index = operations.findIndex(
-    (r: CacheWarmerOperation) => r.id === operationId,
+  const [index, setIndex] = useState(
+    operations.findIndex((r: CacheWarmerOperation) => r.id === operationId),
   );
+
+  useEffect(() => {
+    if (!operationId) {
+      return;
+    }
+    const operationIndex = operations.findIndex(
+      (r: CacheWarmerOperation) => r.id === operationId,
+    );
+    setIndex(operationIndex);
+  }, [operationId, operations]);
+
+  console.log("operations", operations, operationId, index);
 
   const nextTrace = () => {
     if (index + 1 < operations.length) {
@@ -65,6 +76,10 @@ export const CacheDetailsSheet: React.FC<any> = ({
     {},
     [operationId],
   );
+
+  if (!operationId) {
+    return null;
+  }
 
   return (
     <Sheet
@@ -133,7 +148,7 @@ export const CacheDetailsSheet: React.FC<any> = ({
 
           <Spacer />
         </SheetHeader>
-        {operationId && <CacheOperationDetails operation={operations[index]} />}
+        {operationId && index !== -1 && <CacheOperationDetails operation={operations[index]} />}
       </SheetContent>
     </Sheet>
   );
