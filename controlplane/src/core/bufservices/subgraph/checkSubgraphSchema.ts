@@ -256,7 +256,7 @@ export function checkSubgraphSchema(
       subgraphRepo,
       contractRepo,
       graphCompostionRepo,
-      opts.chClient!,
+      opts.chClient,
     );
 
     const result = req.delete

@@ -186,7 +186,7 @@ export class Composer {
     private subgraphRepo: SubgraphRepository,
     private contractRepo: ContractRepository,
     private graphCompositionRepository: GraphCompositionRepository,
-    private chClient: ClickHouseClient,
+    private chClient?: ClickHouseClient,
   ) {}
 
   composeRouterConfigWithFeatureFlags({
@@ -405,11 +405,13 @@ export class Composer {
     const namespaceRepository = new NamespaceRepository(this.db, organizationId);
     const namespace = await namespaceRepository.byId(federatedGraph!.namespaceId);
 
-    if (namespace?.enableCacheWarmer) {
-      await this.fetchAndUploadCacheWarmerOperations({
+    if (namespace?.enableCacheWarmer && this.chClient) {
+      const cacheWarmerRepo = new CacheWarmerRepository(this.chClient, this.db);
+      await cacheWarmerRepo.fetchAndUploadCacheWarmerOperations({
         blobStorage,
         federatedGraphId,
         organizationId,
+        logger: this.logger,
       });
     }
 
@@ -644,37 +646,5 @@ export class Composer {
 
       return [filteredSubgraphs, subgraphsToBeComposed];
     });
-  }
-
-  async fetchAndUploadCacheWarmerOperations({
-    blobStorage,
-    federatedGraphId,
-    organizationId,
-  }: {
-    blobStorage: BlobStorage;
-    federatedGraphId: string;
-    organizationId: string;
-  }) {
-    const cacheWarmerRepo = new CacheWarmerRepository(this.chClient, this.db);
-    const cacheWarmerOperations = await cacheWarmerRepo.computeCacheWarmerOperations({
-      federatedGraphId,
-      organizationId,
-      rangeInHours: 24 * 7,
-    });
-
-    const cacheWarmerOperationsBytes = Buffer.from(cacheWarmerOperations.toJsonString(), 'utf8');
-    const path = `${organizationId}/${federatedGraphId}/cache_warmup/operations.json`;
-    try {
-      await blobStorage.putObject<S3RouterConfigMetadata>({
-        key: path,
-        body: cacheWarmerOperationsBytes,
-        contentType: 'application/json; charset=utf-8',
-      });
-    } catch (err: any) {
-      this.logger.error(
-        err,
-        `Failed to upload the cache warmer operations for ${federatedGraphId} to the blob storage`,
-      );
-    }
   }
 }

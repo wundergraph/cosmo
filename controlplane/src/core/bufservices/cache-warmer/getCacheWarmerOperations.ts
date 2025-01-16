@@ -26,7 +26,6 @@ export function getCacheWarmerOperations(
     req.namespace = req.namespace || DefaultNamespace;
 
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-    const cacheWarmerRepo = new CacheWarmerRepository(opts.chClient!, opts.db);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const organizationRepo = new OrganizationRepository(logger, opts.db);
 
@@ -86,6 +85,19 @@ export function getCacheWarmerOperations(
       };
     }
 
+    if (!opts.chClient) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `ClickHouse client is not available`,
+        },
+        operations: [],
+        totalCount: 0,
+        isCacheWarmerEnabled: false,
+      };
+    }
+
+    const cacheWarmerRepo = new CacheWarmerRepository(opts.chClient, opts.db);
     const operations = await cacheWarmerRepo.getCacheWarmerOperations({
       organizationId: authContext.organizationId,
       federatedGraphId: federatedGraph.id,

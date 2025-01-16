@@ -31,9 +31,6 @@ export function pushCacheWarmerOperation(
     req.namespace = req.namespace || DefaultNamespace;
 
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-    const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
-    const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
-    const graphCompositionRepo = new GraphCompositionRepository(logger, opts.db);
     const namespaceRepository = new NamespaceRepository(opts.db, authContext.organizationId);
     const organizationRepo = new OrganizationRepository(logger, opts.db);
 
@@ -59,17 +56,6 @@ export function pushCacheWarmerOperation(
         isCacheWarmerEnabled: false,
       };
     }
-
-    const cacheWarmerRepo = new CacheWarmerRepository(opts.chClient!, opts.db);
-    const composer = new Composer(
-      logger,
-      opts.db,
-      fedGraphRepo,
-      subgraphRepo,
-      contractRepo,
-      graphCompositionRepo,
-      opts.chClient!,
-    );
 
     const federatedGraph = await fedGraphRepo.byName(req.federatedGraphName, req.namespace, {
       supportsFederation: true,
@@ -107,6 +93,16 @@ export function pushCacheWarmerOperation(
       }
     }
 
+    if (!opts.chClient) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `ClickHouse client is not available`,
+        },
+      };
+    }
+
+    const cacheWarmerRepo = new CacheWarmerRepository(opts.chClient!, opts.db);
     await cacheWarmerRepo.addCacheWarmerOperations({
       federatedGraphId: federatedGraph.id,
       organizationId: authContext.organizationId,
@@ -122,10 +118,11 @@ export function pushCacheWarmerOperation(
       ],
     });
 
-    await composer.fetchAndUploadCacheWarmerOperations({
+    await cacheWarmerRepo.fetchAndUploadCacheWarmerOperations({
       blobStorage: opts.blobStorage,
       federatedGraphId: federatedGraph.id,
       organizationId: authContext.organizationId,
+      logger,
     });
 
     return {

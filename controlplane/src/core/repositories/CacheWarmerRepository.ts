@@ -8,10 +8,13 @@ import {
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { and, count, desc, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { FastifyBaseLogger } from 'fastify';
 import * as schema from '../../db/schema.js';
 import { cacheWarmerOpeartions, users } from '../../db/schema.js';
 import { DateRange } from '../../types/index.js';
+import { BlobStorage } from '../blobstorage/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
+import { S3RouterConfigMetadata } from '../composition/composer.js';
 import { getDateRange, isoDateRangeToTimestamps } from './analytics/util.js';
 
 interface ComputeCacheWarmerOperationsProps {
@@ -416,5 +419,36 @@ export class CacheWarmerRepository {
           eq(cacheWarmerOpeartions.isManuallyAdded, false),
         ),
       );
+  }
+
+  public async fetchAndUploadCacheWarmerOperations({
+    blobStorage,
+    federatedGraphId,
+    organizationId,
+    logger,
+  }: {
+    blobStorage: BlobStorage;
+    federatedGraphId: string;
+    organizationId: string;
+    logger: FastifyBaseLogger;
+  }) {
+    const cacheWarmerRepo = new CacheWarmerRepository(this.client, this.db);
+    const cacheWarmerOperations = await cacheWarmerRepo.computeCacheWarmerOperations({
+      federatedGraphId,
+      organizationId,
+      rangeInHours: 24 * 7,
+    });
+
+    const cacheWarmerOperationsBytes = Buffer.from(cacheWarmerOperations.toJsonString(), 'utf8');
+    const path = `${organizationId}/${federatedGraphId}/cache_warmup/operations.json`;
+    try {
+      await blobStorage.putObject<S3RouterConfigMetadata>({
+        key: path,
+        body: cacheWarmerOperationsBytes,
+        contentType: 'application/json; charset=utf-8',
+      });
+    } catch (err: any) {
+      logger.error(err, `Failed to upload the cache warmer operations for ${federatedGraphId} to the blob storage`);
+    }
   }
 }
