@@ -88,7 +88,7 @@ export function getCacheWarmerOperations(
     if (!opts.chClient) {
       return {
         response: {
-          code: EnumStatusCode.ERR,
+          code: EnumStatusCode.ERR_UPGRADE_PLAN,
           details: `ClickHouse client is not available`,
         },
         operations: [],

@@ -10,7 +10,7 @@ import { useUser } from "@/hooks/use-user";
 import { NextPageWithLayout } from "@/lib/page";
 import { checkUserAccess } from "@/lib/utils";
 import { useMutation, useQuery } from "@connectrpc/connect-query";
-import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { ExclamationTriangleIcon, InfoCircledIcon } from "@radix-ui/react-icons";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   configureCacheWarmer,
@@ -41,15 +41,39 @@ const CacheWarmerPage: NextPageWithLayout = () => {
   if (isLoading) {
     return <Loader fullscreen />;
   }
-  if (error || !data || data?.response?.code !== EnumStatusCode.OK) {
+  if (
+    error ||
+    !data ||
+    (data?.response?.code !== EnumStatusCode.OK &&
+      data?.response?.code !== EnumStatusCode.ERR_UPGRADE_PLAN)
+  ) {
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon className="h-12 w-12" />}
-        title="Could not retrieve the lint policy of the namesapce"
+        title="Could not retrieve the cache warmer config of the namesapce"
         description={
           data?.response?.details || error?.message || "Please try again"
         }
         actions={<Button onClick={() => refetch()}>Retry</Button>}
+      />
+    );
+  }
+
+  if (data?.response?.code === EnumStatusCode.ERR_UPGRADE_PLAN) {
+    return (
+      <EmptyState
+        icon={<InfoCircledIcon className="h-12 w-12" />}
+        title="Cache Warmer is not available"
+        description="Please upgrade to the enterprise plan to use the cache warmer."
+        actions={
+          <Button
+            onClick={() => {
+              router.push(`/${user?.currentOrganization.slug}/billing`);
+            }}
+          >
+            Upgrade
+          </Button>
+        }
       />
     );
   }

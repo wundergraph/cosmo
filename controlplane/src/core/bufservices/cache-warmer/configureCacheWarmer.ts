@@ -38,7 +38,7 @@ export function configureCacheWarmer(
     if (!cacheWarmerFeature?.enabled) {
       return {
         response: {
-          code: EnumStatusCode.ERR,
+          code: EnumStatusCode.ERR_UPGRADE_PLAN,
           details: `Upgrade to a enterprise plan to enable cache warmer`,
         },
       };
