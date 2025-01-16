@@ -5,17 +5,13 @@ import {
   PushCacheWarmerOperationRequest,
   PushCacheWarmerOperationResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { Composer } from '../../../core/composition/composer.js';
 import { CacheWarmerRepository } from '../../../core/repositories/CacheWarmerRepository.js';
-import { ContractRepository } from '../../../core/repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../../core/repositories/FederatedGraphRepository.js';
-import { GraphCompositionRepository } from '../../../core/repositories/GraphCompositionRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../../core/repositories/NamespaceRepository.js';
-import { SubgraphRepository } from '../../../core/repositories/SubgraphRepository.js';
-import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OperationsRepository } from '../../../core/repositories/OperationsRepository.js';
 import { OrganizationRepository } from '../../../core/repositories/OrganizationRepository.js';
+import type { RouterOptions } from '../../routes.js';
+import { enrichLogger, getLogger, handleError } from '../../util.js';
 
 export function pushCacheWarmerOperation(
   opts: RouterOptions,
