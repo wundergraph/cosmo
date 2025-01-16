@@ -2,15 +2,18 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
 	"github.com/wundergraph/astjson"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/ratelimit"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type CacheWarmupItem struct {
@@ -19,11 +22,11 @@ type CacheWarmupItem struct {
 }
 
 type CacheWarmupSource interface {
-	LoadItems(ctx context.Context, log *zap.Logger) ([]*CacheWarmupItem, error)
+	LoadItems(ctx context.Context, log *zap.Logger) ([]*nodev1.Operation, error)
 }
 
 type CacheWarmupProcessor interface {
-	ProcessOperation(ctx context.Context, item *CacheWarmupItem) error
+	ProcessOperation(ctx context.Context, item *nodev1.Operation) error
 }
 
 type CacheWarmupConfig struct {
@@ -110,7 +113,7 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 		zap.Int("items", len(items)),
 	)
 
-	defaultClientInfo := &ClientInfo{}
+	defaultClientInfo := &nodev1.ClientInfo{}
 
 	done := ctx.Done()
 	index := make(chan int, len(items))
@@ -209,13 +212,25 @@ type CacheWarmupPlanningProcessor struct {
 	trackSchemaUsage   bool
 }
 
-func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, item *CacheWarmupItem) error {
+func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, operation *nodev1.Operation) error {
 
 	var (
 		isAPQ bool
 	)
 
 	k, err := c.operationProcessor.NewIndependentKit()
+	if err != nil {
+		return err
+	}
+
+	protoMessage, err := protojson.Marshal(operation)
+	if err != nil {
+		return err
+	}
+
+	item := &CacheWarmupItem{}
+
+	err = json.Unmarshal(protoMessage, item)
 	if err != nil {
 		return err
 	}
