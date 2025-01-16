@@ -239,6 +239,9 @@ const cacheOperations = (storage: BlobStorage) => {
       throw e;
     }
 
+    c.header('Content-Type', 'application/json; charset=UTF-8');
+    c.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+
     return stream(c, async (stream) => {
       await stream.pipe(blobObject.stream);
     });
