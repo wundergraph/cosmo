@@ -379,17 +379,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		metricReader = metric.NewManualReader()
 		cfg.MetricReader = metricReader
 		cfg.MetricOptions.EnableOTLPRouterCache = true
-		//if cfg.ModifyRouterConfig == nil {
-		//	cfg.ModifyRouterConfig = func(cfg *nodev1.RouterConfig) {
-		//		cfg.FeatureFlagConfigs = nil
-		//	}
-		//} else {
-		//	old := cfg.ModifyRouterConfig
-		//	cfg.ModifyRouterConfig = func(cfg *nodev1.RouterConfig) {
-		//		old(cfg)
-		//		cfg.FeatureFlagConfigs = nil
-		//	}
-		//}
 	}
 
 	ctx, cancel := context.WithCancelCause(context.Background())
