@@ -2,8 +2,8 @@ package core
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
+	"google.golang.org/protobuf/encoding/protojson"
 	"time"
 
 	"github.com/wundergraph/astjson"
@@ -13,12 +13,11 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/ratelimit"
 	"go.uber.org/zap"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type CacheWarmupItem struct {
-	Request GraphQLRequest `json:"request"`
-	Client  *ClientInfo    `json:"client"`
+	Request GraphQLRequest
+	Client  *ClientInfo
 }
 
 type CacheWarmupSource interface {
@@ -223,16 +222,24 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return err
 	}
 
-	protoMessage, err := protojson.Marshal(operation)
-	if err != nil {
-		return err
+	var s []byte
+	if operation.Request.GetExtensions() != nil {
+		s, err = protojson.Marshal(operation.Request.GetExtensions())
+		if err != nil {
+			return err
+		}
 	}
 
-	item := &CacheWarmupItem{}
-
-	err = json.Unmarshal(protoMessage, item)
-	if err != nil {
-		return err
+	item := &CacheWarmupItem{
+		Request: GraphQLRequest{
+			Query:         operation.Request.GetQuery(),
+			OperationName: operation.Request.GetOperationName(),
+			Extensions:    s,
+		},
+		Client: &ClientInfo{
+			Name:    operation.GetClient().GetName(),
+			Version: operation.GetClient().GetVersion(),
+		},
 	}
 
 	k.parsedOperation.Request = item.Request
