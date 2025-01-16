@@ -453,16 +453,16 @@ describe('CDN handlers', () => {
 
     test('it returns the cache warmer operations', async () => {
       const operationContents = JSON.stringify({
-  operations: [
-    {
-      request: {
-        operationName: "AB",
-        query: "query AB($a: Int!){employeeAsList(id: $a){tag id derivedMood products}}"
-      },
-      client: { name: "unknown", version: "missing" }
-    },
-  ]
-});
+        operations: [
+          {
+            request: {
+              operationName: 'AB',
+              query: 'query AB($a: Int!){employeeAsList(id: $a){tag id derivedMood products}}',
+            },
+            client: { name: 'unknown', version: 'missing' },
+          },
+        ],
+      });
 
       blobStorage.objects.set(requestPath, {
         buffer: Buffer.from(operationContents),
