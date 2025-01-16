@@ -101,7 +101,7 @@ export function pushCacheWarmerOperation(
         return {
           response: {
             code: EnumStatusCode.ERR,
-            details: `Operation with persistedID '${req.operationPersistedId}' doesn't exists`,
+            details: `Operation with persistedID '${req.operationPersistedId}' doesn't exist.`,
           },
         };
       }
