@@ -36,7 +36,7 @@ export function getCacheWarmerOperations(
     if (!cacheWarmerFeature?.enabled) {
       return {
         response: {
-          code: EnumStatusCode.ERR,
+          code: EnumStatusCode.ERR_UPGRADE_PLAN,
           details: `Upgrade to a enterprise plan to enable cache warmer`,
         },
         operations: [],
@@ -88,7 +88,7 @@ export function getCacheWarmerOperations(
     if (!opts.chClient) {
       return {
         response: {
-          code: EnumStatusCode.ERR_UPGRADE_PLAN,
+          code: EnumStatusCode.ERR,
           details: `ClickHouse client is not available`,
         },
         operations: [],
