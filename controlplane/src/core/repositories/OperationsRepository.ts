@@ -88,6 +88,36 @@ export class OperationsRepository {
     return operations;
   }
 
+  public async getPersistedOperation(operationId: string): Promise<PersistedOperationDTO | undefined> {
+    const operationResult = await this.db.query.federatedGraphPersistedOperations.findFirst({
+      where: and(
+        eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
+        eq(federatedGraphPersistedOperations.operationId, operationId),
+      ),
+      with: {
+        createdBy: true,
+        updatedBy: true,
+      },
+    });
+
+    if (!operationResult) {
+      return undefined;
+    }
+
+    return {
+      id: operationResult.id,
+      operationId: operationResult.operationId,
+      hash: operationResult.hash,
+      filePath: operationResult.filePath,
+      createdAt: operationResult.createdAt.toISOString(),
+      lastUpdatedAt: operationResult?.updatedAt?.toISOString() || '',
+      createdBy: operationResult.createdBy?.email,
+      lastUpdatedBy: operationResult.updatedBy?.email ?? '',
+      contents: operationResult.operationContent ?? '',
+      operationNames: operationResult.operationNames ?? [],
+    };
+  }
+
   public async registerClient(clientName: string, userId: string): Promise<string> {
     if (!clientName) {
       throw new Error('client name is empty');
