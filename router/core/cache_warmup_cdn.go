@@ -3,9 +3,10 @@ package core
 import (
 	"compress/gzip"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 	"io"
 	"net/http"
 	"net/url"
@@ -33,10 +34,6 @@ type CDNSource struct {
 	httpClient     *http.Client
 }
 
-type cdnWarmupOperations struct {
-	Operations []*CacheWarmupItem `json:"operations"`
-}
-
 func NewCDNSource(endpoint, token string, logger *zap.Logger) (*CDNSource, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
@@ -61,7 +58,7 @@ func NewCDNSource(endpoint, token string, logger *zap.Logger) (*CDNSource, error
 	}, nil
 }
 
-func (c *CDNSource) LoadItems(ctx context.Context, log *zap.Logger) ([]*CacheWarmupItem, error) {
+func (c *CDNSource) LoadItems(ctx context.Context, log *zap.Logger) ([]*nodev1.Operation, error) {
 	span := trace.SpanFromContext(ctx)
 	defer span.End()
 
@@ -114,12 +111,13 @@ func (c *CDNSource) LoadItems(ctx context.Context, log *zap.Logger) ([]*CacheWar
 		return nil, err
 	}
 
-	var warmupOperations cdnWarmupOperations
-	if err := json.Unmarshal(body, &warmupOperations); err != nil {
+	var warmupOperations nodev1.CacheWarmerOperations
+	unmarshalOpts := protojson.UnmarshalOptions{DiscardUnknown: true}
+	if err := unmarshalOpts.Unmarshal(body, &warmupOperations); err != nil {
 		return nil, err
 	}
 
-	return warmupOperations.Operations, nil
+	return warmupOperations.GetOperations(), nil
 
 }
 

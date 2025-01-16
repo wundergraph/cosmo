@@ -7,7 +7,9 @@ import (
 	"os"
 	"path/filepath"
 
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type FileSystemSourceConfig struct {
@@ -24,9 +26,9 @@ type FileSystemSource struct {
 	RootPath string
 }
 
-func (f *FileSystemSource) LoadItems(_ context.Context, log *zap.Logger) ([]*CacheWarmupItem, error) {
+func (f *FileSystemSource) LoadItems(_ context.Context, log *zap.Logger) ([]*nodev1.Operation, error) {
 
-	var items []*CacheWarmupItem
+	var items []*nodev1.Operation
 
 	err := filepath.Walk(f.RootPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -49,8 +51,8 @@ func (f *FileSystemSource) LoadItems(_ context.Context, log *zap.Logger) ([]*Cac
 			}
 			items = append(items, item)
 		case ".gql", ".graphql", ".graphqls":
-			items = append(items, &CacheWarmupItem{
-				Request: GraphQLRequest{
+			items = append(items, &nodev1.Operation{
+				Request: &nodev1.OperationRequest{
 					Query: string(data),
 				},
 			})
@@ -68,8 +70,8 @@ func (f *FileSystemSource) LoadItems(_ context.Context, log *zap.Logger) ([]*Cac
 	return items, nil
 }
 
-func (f *FileSystemSource) readJSON(data []byte) (*CacheWarmupItem, error) {
-	item := &CacheWarmupItem{}
+func (f *FileSystemSource) readJSON(data []byte) (*nodev1.Operation, error) {
+	item := &nodev1.Operation{}
 	iface := map[string]any{}
 	err := json.Unmarshal(data, &iface)
 	if err != nil {
@@ -82,7 +84,7 @@ func (f *FileSystemSource) readJSON(data []byte) (*CacheWarmupItem, error) {
 		}
 		return item, nil
 	}
-	err = json.Unmarshal(data, &item)
+	err = protojson.Unmarshal(data, item)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON: %w", err)
 	}
