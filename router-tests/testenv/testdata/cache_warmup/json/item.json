@@ -1,5 +1,9 @@
 {
-  "request": {
-    "query": "query { employees { id details { forename surname } isAvailable } }"
-  }
+  "operations": [
+    {
+      "request": {
+        "query": "query { employees { id details { forename surname } isAvailable } }"
+      }
+    }
+  ]
 }

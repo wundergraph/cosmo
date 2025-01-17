@@ -115,6 +115,7 @@ export function moveFederatedGraph(
           cdnBaseUrl: opts.cdnBaseUrl,
           jwtSecret: opts.admissionWebhookJWTSecret,
         },
+        opts.chClient!,
       );
 
       const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
@@ -152,6 +153,7 @@ export function moveFederatedGraph(
             cdnBaseUrl: opts.cdnBaseUrl,
             jwtSecret: opts.admissionWebhookJWTSecret,
           },
+          opts.chClient!,
         );
 
         allCompositionErrors.push(...contractErrors);

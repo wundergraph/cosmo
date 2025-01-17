@@ -1,12 +1,20 @@
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { joinLabel } from '@wundergraph/cosmo-shared';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { joinLabel } from '@wundergraph/cosmo-shared';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
 
 type Client = Awaited<ReturnType<typeof SetupTest>>['client'];
+
+vi.mock('../src/core/clickhouse/index.js', () => {
+  const ClickHouseClient = vi.fn();
+  ClickHouseClient.prototype.queryPromise = vi.fn();
+
+  return { ClickHouseClient };
+});
 
 const setupFederatedGraph = async (fedGraphName: string, client: Client) => {
   const subgraph1Name = genID('subgraph1');
@@ -42,6 +50,16 @@ const setupFederatedGraph = async (fedGraphName: string, client: Client) => {
 };
 
 describe('Persisted operations', (ctx) => {
+  let chClient: ClickHouseClient;
+
+  beforeEach(() => {
+    chClient = new ClickHouseClient();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -51,7 +69,7 @@ describe('Persisted operations', (ctx) => {
   });
 
   test('Should be able to publish persisted operations', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 
@@ -68,7 +86,7 @@ describe('Persisted operations', (ctx) => {
   });
 
   test('Should not publish persisted operations without a client ID', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 
@@ -84,7 +102,7 @@ describe('Persisted operations', (ctx) => {
   });
 
   test('Should not publish persisted operations with invalid queries', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 
@@ -100,7 +118,7 @@ describe('Persisted operations', (ctx) => {
   });
 
   test('Should not publish persisted operations with an invalid federated graph name', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 
@@ -116,7 +134,7 @@ describe('Persisted operations', (ctx) => {
   });
 
   test('Should store persisted operations in blob storage', async (testContext) => {
-    const { client, server, blobStorage } = await SetupTest({ dbname });
+    const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 
@@ -148,7 +166,7 @@ describe('Persisted operations', (ctx) => {
   });
 
   test('Should delete persisted operations from blob storage when the federated graph is deleted', async (testContext) => {
-    const { client, server, blobStorage } = await SetupTest({ dbname });
+    const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 

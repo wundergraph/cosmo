@@ -1,12 +1,30 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
 
+vi.mock('../src/core/clickhouse/index.js', () => {
+  const ClickHouseClient = vi.fn();
+  ClickHouseClient.prototype.queryPromise = vi.fn();
+
+  return { ClickHouseClient };
+});
+
 describe('DeleteFederatedGraph', (ctx) => {
+  let chClient: ClickHouseClient;
+
+  beforeEach(() => {
+    chClient = new ClickHouseClient();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -16,7 +34,7 @@ describe('DeleteFederatedGraph', (ctx) => {
   });
 
   test('Should be able to create a subgraph, publish the schema, create a federated graph and then delete a federated graph', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph');

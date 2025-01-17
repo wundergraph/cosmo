@@ -1,8 +1,9 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { unsuccessfulBaseCompositionError } from '../src/core/errors/errors.js';
+import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { createFederatedGraph, createThenPublishSubgraph, SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -17,7 +18,24 @@ type Query {
   hello: String!
 }`;
 
+vi.mock('../src/core/clickhouse/index.js', () => {
+  const ClickHouseClient = vi.fn();
+  ClickHouseClient.prototype.queryPromise = vi.fn();
+
+  return { ClickHouseClient };
+});
+
 describe('Namespace tests', (ctx) => {
+  let chClient: ClickHouseClient;
+
+  beforeEach(() => {
+    chClient = new ClickHouseClient();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -27,7 +45,7 @@ describe('Namespace tests', (ctx) => {
   });
 
   test('Creates graphs in the correct namespace', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -168,7 +186,7 @@ describe('Namespace tests', (ctx) => {
   });
 
   test('Deleting namespace should delete all graphs in it', async (testContext) => {
-    const { client, server, blobStorage } = await SetupTest({ dbname });
+    const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -263,7 +281,7 @@ describe('Namespace tests', (ctx) => {
   });
 
   test('Move federated graph to different namespace', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -343,7 +361,7 @@ describe('Namespace tests', (ctx) => {
   });
 
   test('Move subgraph to different namespace', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -398,12 +416,10 @@ describe('Namespace tests', (ctx) => {
     expect(moveRes.compositionErrors).toHaveLength(4);
     expect(moveRes.compositionErrors[0].federatedGraphName).toBe(fedGraph2Name);
     expect(moveRes.compositionErrors[1].federatedGraphName).toBe(fedGraph2Name);
-    expect(moveRes.compositionErrors[1])
-      .toStrictEqual(unsuccessfulBaseCompositionError(fedGraph2Name, dev));
+    expect(moveRes.compositionErrors[1]).toStrictEqual(unsuccessfulBaseCompositionError(fedGraph2Name, dev));
     expect(moveRes.compositionErrors[2].federatedGraphName).toBe(fedGraph3Name);
     expect(moveRes.compositionErrors[3].federatedGraphName).toBe(fedGraph3Name);
-    expect(moveRes.compositionErrors[3])
-      .toStrictEqual(unsuccessfulBaseCompositionError(fedGraph3Name, dev));
+    expect(moveRes.compositionErrors[3]).toStrictEqual(unsuccessfulBaseCompositionError(fedGraph3Name, dev));
 
     /* VERIFY */
     const subgraphsInDevAfterMove = await client.getSubgraphs({

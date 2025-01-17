@@ -766,13 +766,22 @@ type ApolloCompatibilityReplaceInvalidVarErrors struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_ENABLED"`
 }
 
+type CacheWarmupSource struct {
+	Filesystem *CacheWarmupFileSystemSource `yaml:"filesystem,omitempty"`
+}
+
+type CacheWarmupFileSystemSource struct {
+	Path string `yaml:"path" env:"CACHE_WARMUP_SOURCE_FILESYSTEM_PATH"`
+}
+
+type CacheWarmupCDNSource struct{}
+
 type CacheWarmupConfiguration struct {
-	Enabled        bool          `yaml:"enabled" envDefault:"false" env:"CACHE_WARMUP_ENABLED"`
-	Source         string        `yaml:"source" envDefault:"filesystem" env:"CACHE_WARMUP_SOURCE"`
-	Path           string        `yaml:"path" env:"CACHE_WARMUP_PATH"`
-	Workers        int           `yaml:"workers" envDefault:"8" env:"CACHE_WARMUP_WORKERS"`
-	ItemsPerSecond int           `yaml:"items_per_second" envDefault:"50" env:"CACHE_WARMUP_ITEMS_PER_SECOND"`
-	Timeout        time.Duration `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
+	Enabled        bool              `yaml:"enabled" envDefault:"false" env:"CACHE_WARMUP_ENABLED"`
+	Source         CacheWarmupSource `yaml:"source"  env:"CACHE_WARMUP_SOURCE"`
+	Workers        int               `yaml:"workers" envDefault:"8" env:"CACHE_WARMUP_WORKERS"`
+	ItemsPerSecond int               `yaml:"items_per_second" envDefault:"50" env:"CACHE_WARMUP_ITEMS_PER_SECOND"`
+	Timeout        time.Duration     `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
 }
 
 type Config struct {
