@@ -85,7 +85,7 @@ export function pushCacheWarmerOperation(
       };
     }
 
-    let clientName: string = '';
+    let clientName = '';
 
     if (req.operationPersistedId) {
       const operationsRepository = new OperationsRepository(opts.db, federatedGraph.id);
@@ -153,7 +153,7 @@ export function pushCacheWarmerOperation(
       organizationId: authContext.organizationId,
       persistedId: req.operationPersistedId,
       operationContent: req.operationContent,
-      clientName: clientName,
+      clientName,
     });
 
     if (exists) {
@@ -175,7 +175,7 @@ export function pushCacheWarmerOperation(
           name: req.operationName,
           persistedId: req.operationPersistedId,
           content: req.operationContent,
-          clientName: clientName,
+          clientName,
         },
       ],
     });

@@ -284,7 +284,7 @@ export class CacheWarmerRepository {
     });
   }
 
-  public async operationExists({
+  public operationExists({
     organizationId,
     federatedGraphId,
     persistedId,
