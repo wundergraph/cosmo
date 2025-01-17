@@ -25,11 +25,11 @@ var _ CacheWarmupSource = (*CDNSource)(nil)
 type CDNSource struct {
 	cdnURL              *url.URL
 	authenticationToken string
-	//	// federatedGraphID is the ID of the federated graph that was obtained
-	//	// from the token, already url-escaped
+	// federatedGraphID is the ID of the federated graph that was obtained
+	// from the token, already url-escaped
 	federatedGraphID string
-	//	// organizationID is the ID of the organization for this graph that was obtained
-	//	// from the token, already url-escaped
+	// organizationID is the ID of the organization for this graph that was obtained
+	// from the token, already url-escaped
 	organizationID string
 	httpClient     *http.Client
 }
@@ -118,7 +118,6 @@ func (c *CDNSource) LoadItems(ctx context.Context, log *zap.Logger) ([]*nodev1.O
 	}
 
 	return warmupOperations.GetOperations(), nil
-
 }
 
 func (c *CDNSource) readResponse(resp *http.Response) ([]byte, error) {

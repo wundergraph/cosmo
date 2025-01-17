@@ -2422,8 +2422,7 @@ message PushCacheWarmerOperationRequest {
   string operationContent = 2;
   string operationName = 3;
   string operationPersistedId = 4;
-  string clientName = 5;
-  string namespace = 6;
+  string namespace = 5;
 }
 
 message PushCacheWarmerOperationResponse {

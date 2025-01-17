@@ -4,7 +4,13 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { PlainMessage } from '@bufbuild/protobuf';
 import * as schema from '../../db/schema.js';
 import { federatedGraphClients, federatedGraphPersistedOperations, users } from '../../db/schema.js';
-import { ClientDTO, PersistedOperationDTO, SchemaChangeType, UpdatedPersistedOperation } from '../../types/index.js';
+import {
+  ClientDTO,
+  PersistedOperationDTO,
+  PersistedOperationWithClientDTO,
+  SchemaChangeType,
+  UpdatedPersistedOperation,
+} from '../../types/index.js';
 
 export class OperationsRepository {
   constructor(
@@ -90,13 +96,9 @@ export class OperationsRepository {
 
   public async getPersistedOperation({
     operationId,
-    operationName,
-    clientName,
   }: {
     operationId: string;
-    operationName?: string;
-    clientName?: string;
-  }): Promise<PersistedOperationDTO | undefined> {
+  }): Promise<PersistedOperationWithClientDTO | undefined> {
     const users1 = aliasedTable(users, 'users1');
     const users2 = aliasedTable(users, 'users2');
 
@@ -110,6 +112,7 @@ export class OperationsRepository {
         updatedAt: federatedGraphPersistedOperations.updatedAt,
         operationContent: federatedGraphPersistedOperations.operationContent,
         operationNames: federatedGraphPersistedOperations.operationNames,
+        clientName: federatedGraphClients.name,
         createdBy: users1.email,
         updatedBy: users2.email,
       })
@@ -121,8 +124,6 @@ export class OperationsRepository {
         and(
           eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
           eq(federatedGraphPersistedOperations.operationId, operationId),
-          clientName ? eq(federatedGraphClients.name, clientName) : undefined,
-          operationName ? eq(federatedGraphPersistedOperations.operationNames, [operationName]) : undefined,
         ),
       );
 
@@ -140,7 +141,7 @@ export class OperationsRepository {
       createdBy: operationResult[0].createdBy ?? '',
       lastUpdatedBy: operationResult[0].updatedBy ?? '',
       contents: operationResult[0].operationContent ?? '',
-      operationNames: operationResult[0].operationNames ?? [],
+      clientName: operationResult[0].clientName,
     };
   }
 

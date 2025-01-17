@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"encoding/json"
 	"net/http"
 	"testing"
 	"time"
@@ -33,8 +32,11 @@ func TestCacheWarmup(t *testing.T) {
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,
-						Source:  "filesystem",
-						Path:    "testenv/testdata/cache_warmup/simple",
+						Source: config.CacheWarmupSource{
+							Filesystem: &config.CacheWarmupFileSystemSource{
+								Path: "testenv/testdata/cache_warmup/simple",
+							},
+						},
 					}),
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
@@ -72,8 +74,11 @@ func TestCacheWarmup(t *testing.T) {
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,
-						Source:  "filesystem",
-						Path:    "testenv/testdata/cache_warmup/invalid",
+						Source: config.CacheWarmupSource{
+							Filesystem: &config.CacheWarmupFileSystemSource{
+								Path: "testenv/testdata/cache_warmup/invalid",
+							},
+						},
 					}),
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
@@ -99,8 +104,11 @@ func TestCacheWarmup(t *testing.T) {
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,
-						Source:  "filesystem",
-						Path:    "testenv/testdata/cache_warmup/json",
+						Source: config.CacheWarmupSource{
+							Filesystem: &config.CacheWarmupFileSystemSource{
+								Path: "testenv/testdata/cache_warmup/json",
+							},
+						},
 					}),
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
@@ -148,70 +156,17 @@ func TestCacheWarmup(t *testing.T) {
 				require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
 			})
 		})
-		t.Run("cache warmup json with variables", func(t *testing.T) {
-			t.Parallel()
-			testenv.Run(t, &testenv.Config{
-				RouterOptions: []core.Option{
-					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
-						Enabled: true,
-						Source:  "filesystem",
-						Path:    "testenv/testdata/cache_warmup/json_variables",
-					}),
-				},
-				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
-					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						QueryNormalizationMisses: 1,
-						QueryNormalizationHits:   1,
-						ValidationMisses:         1,
-						ValidationHits:           1,
-						PlanMisses:               1,
-						PlanHits:                 1,
-					},
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query:     `query($id: Int!) { employee(id: $id) { id } }`,
-					Variables: json.RawMessage(`{"id": 1}`),
-				})
-				require.Equal(t, `{"data":{"employee":{"id":1}}}`, res.Body)
-			})
-		})
-		t.Run("cache warmup json with variables mismatch", func(t *testing.T) {
-			t.Parallel()
-			testenv.Run(t, &testenv.Config{
-				RouterOptions: []core.Option{
-					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
-						Enabled: true,
-						Source:  "filesystem",
-						Path:    "testenv/testdata/cache_warmup/json_variables",
-					}),
-				},
-				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
-					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						QueryNormalizationMisses: 1,
-						QueryNormalizationHits:   1,
-						ValidationMisses:         1,
-						ValidationHits:           1,
-						PlanMisses:               1,
-						PlanHits:                 1,
-					},
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query:     `query($id: Int!) { employee(id: $id) { id } }`,
-					Variables: json.RawMessage(`{"id": 2}`),
-				})
-				require.Equal(t, `{"data":{"employee":{"id":2}}}`, res.Body)
-			})
-		})
 		t.Run("cache warmup persisted operation", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,
-						Source:  "filesystem",
-						Path:    "testenv/testdata/cache_warmup/json_po",
+						Source: config.CacheWarmupSource{
+							Filesystem: &config.CacheWarmupFileSystemSource{
+								Path: "testenv/testdata/cache_warmup/json_po",
+							},
+						},
 					}),
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
@@ -249,8 +204,11 @@ func TestCacheWarmup(t *testing.T) {
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,
-						Source:  "filesystem",
-						Path:    "testenv/testdata/cache_warmup/json_po",
+						Source: config.CacheWarmupSource{
+							Filesystem: &config.CacheWarmupFileSystemSource{
+								Path: "testenv/testdata/cache_warmup/json_po",
+							},
+						},
 					}),
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
@@ -281,8 +239,11 @@ func TestCacheWarmup(t *testing.T) {
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,
-						Source:  "filesystem",
-						Path:    "testenv/testdata/cache_warmup/json_po_multi_operations",
+						Source: config.CacheWarmupSource{
+							Filesystem: &config.CacheWarmupFileSystemSource{
+								Path: "testenv/testdata/cache_warmup/json_po_multi_operations",
+							},
+						},
 					}),
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
@@ -323,9 +284,12 @@ func TestCacheWarmup(t *testing.T) {
 				RouterOptions: []core.Option{
 					core.WithLogger(logger),
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
-						Enabled:        true,
-						Source:         "filesystem",
-						Path:           "testenv/testdata/cache_warmup/rate_limit",
+						Enabled: true,
+						Source: config.CacheWarmupSource{
+							Filesystem: &config.CacheWarmupFileSystemSource{
+								Path: "testenv/testdata/cache_warmup/rate_limit",
+							},
+						},
 						Workers:        4,
 						ItemsPerSecond: 10,
 						Timeout:        time.Second * 5,
@@ -361,9 +325,12 @@ func TestCacheWarmup(t *testing.T) {
 				},
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
-						Enabled:        true,
-						Source:         "filesystem",
-						Path:           "testenv/testdata/cache_warmup/simple",
+						Enabled: true,
+						Source: config.CacheWarmupSource{
+							Filesystem: &config.CacheWarmupFileSystemSource{
+								Path: "testenv/testdata/cache_warmup/simple",
+							},
+						},
 						Workers:        2,
 						ItemsPerSecond: 100,
 					}),
@@ -408,7 +375,6 @@ func TestCacheWarmup(t *testing.T) {
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: false,
-						Source:  "cdn",
 					}),
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
@@ -435,7 +401,6 @@ func TestCacheWarmup(t *testing.T) {
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,
-						Source:  "cdn",
 					}),
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
@@ -475,7 +440,6 @@ func TestCacheWarmup(t *testing.T) {
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,
-						Source:  "cdn",
 					}),
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
@@ -509,7 +473,6 @@ func TestCacheWarmup(t *testing.T) {
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,
-						Source:  "cdn",
 					}),
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{

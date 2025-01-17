@@ -10,7 +10,7 @@ import { and, count, desc, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import * as schema from '../../db/schema.js';
-import { cacheWarmerOpeartions, users } from '../../db/schema.js';
+import { cacheWarmerOperations, users } from '../../db/schema.js';
 import { DateRange } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
@@ -88,14 +88,7 @@ export class CacheWarmerRepository {
     }[] = await this.client.queryPromise(query);
 
     if (Array.isArray(res)) {
-      return res.map((p) => ({
-        operationHash: p.operationHash,
-        operationName: p.operationName,
-        operationPersistedID: p.operationPersistedID,
-        clientName: p.clientName,
-        clientVersion: p.clientVersion,
-        planningTime: p.planningTime,
-      }));
+      return res;
     }
 
     return [];
@@ -103,8 +96,8 @@ export class CacheWarmerRepository {
 
   public async getOperationContent({
     operationHashes,
-    federatedGraphID,
-    organizationID,
+    federatedGraphID, // TODO; Update view to get operations scoped to the federated graph
+    organizationID, // TODO; Update view to get operations scoped to the organization
   }: {
     operationHashes: string[];
     federatedGraphID: string;
@@ -187,6 +180,12 @@ export class CacheWarmerRepository {
           }),
         );
       }
+    }
+
+    if (topOperationsByPlanningTime.length === 0) {
+      return new CacheWarmerOperations({
+        operations: computedOperations,
+      });
     }
 
     const operationHashes = topOperationsByPlanningTime.map((op) => op.operationHash);
@@ -285,6 +284,37 @@ export class CacheWarmerRepository {
     });
   }
 
+  public async operationExists({
+    organizationId,
+    federatedGraphId,
+    persistedId,
+    operationContent,
+    clientName,
+  }: {
+    organizationId: string;
+    federatedGraphId: string;
+    clientName?: string;
+    persistedId?: string;
+    operationContent?: string;
+  }) {
+    return this.db
+      .select({
+        id: cacheWarmerOperations.id,
+      })
+      .from(cacheWarmerOperations)
+      .where(
+        and(
+          eq(cacheWarmerOperations.organizationId, organizationId),
+          eq(cacheWarmerOperations.federatedGraphId, federatedGraphId),
+          operationContent ? eq(cacheWarmerOperations.operationContent, operationContent) : undefined,
+          persistedId ? eq(cacheWarmerOperations.operationPersistedID, persistedId) : undefined,
+          clientName ? eq(cacheWarmerOperations.clientName, clientName) : undefined,
+        ),
+      )
+      .execute()
+      .then((res) => res.length > 0);
+  }
+
   public async addCacheWarmerOperations({
     organizationId,
     federatedGraphId,
@@ -299,7 +329,7 @@ export class CacheWarmerRepository {
       content?: string;
       hash?: string;
       name?: string;
-      persistedID?: string;
+      persistedId?: string;
       clientName?: string;
       clientVersion?: string;
       planningTime?: number;
@@ -309,21 +339,21 @@ export class CacheWarmerRepository {
     if (!operations || operations.length === 0) {
       return;
     }
-    await this.db.insert(cacheWarmerOpeartions).values(
-      operations.map((operation) => ({
-        federatedGraphId,
-        organizationId,
-        isManuallyAdded,
-        operationContent: operation.content || null,
-        operationHash: operation.hash || null,
-        operationName: operation.name || null,
-        operationPersistedID: operation.persistedID || null,
-        clientName: operation.clientName || null,
-        clientVersion: operation.clientVersion || null,
-        planningTime: operation.planningTime,
-        createdById,
-      })),
-    );
+    const data = operations.map((operation) => ({
+      federatedGraphId,
+      organizationId,
+      isManuallyAdded,
+      operationContent: operation.content || null,
+      operationHash: operation.hash || null,
+      operationName: operation.name || null,
+      operationPersistedID: operation.persistedId || null,
+      clientName: operation.clientName || null,
+      clientVersion: operation.clientVersion || null,
+      planningTime: operation.planningTime,
+      createdById,
+    }));
+
+    await this.db.insert(cacheWarmerOperations).values(data);
   }
 
   public getCacheWarmerOperations({
@@ -341,28 +371,28 @@ export class CacheWarmerRepository {
   }) {
     const query = this.db
       .select({
-        id: cacheWarmerOpeartions.id,
-        operationName: cacheWarmerOpeartions.operationName,
-        operationContent: cacheWarmerOpeartions.operationContent,
-        operationPersistedID: cacheWarmerOpeartions.operationPersistedID,
-        operationHash: cacheWarmerOpeartions.operationHash,
-        clientName: cacheWarmerOpeartions.clientName,
-        clientVersion: cacheWarmerOpeartions.clientVersion,
-        planningTime: cacheWarmerOpeartions.planningTime,
-        isManuallyAdded: cacheWarmerOpeartions.isManuallyAdded,
-        createdAt: cacheWarmerOpeartions.createdAt,
+        id: cacheWarmerOperations.id,
+        operationName: cacheWarmerOperations.operationName,
+        operationContent: cacheWarmerOperations.operationContent,
+        operationPersistedID: cacheWarmerOperations.operationPersistedID,
+        operationHash: cacheWarmerOperations.operationHash,
+        clientName: cacheWarmerOperations.clientName,
+        clientVersion: cacheWarmerOperations.clientVersion,
+        planningTime: cacheWarmerOperations.planningTime,
+        isManuallyAdded: cacheWarmerOperations.isManuallyAdded,
+        createdAt: cacheWarmerOperations.createdAt,
         createdBy: users.email,
       })
-      .from(cacheWarmerOpeartions)
-      .leftJoin(users, eq(users.id, cacheWarmerOpeartions.createdById))
+      .from(cacheWarmerOperations)
+      .leftJoin(users, eq(users.id, cacheWarmerOperations.createdById))
       .where(
         and(
-          eq(cacheWarmerOpeartions.organizationId, organizationId),
-          eq(cacheWarmerOpeartions.federatedGraphId, federatedGraphId),
-          isManuallyAdded === undefined ? undefined : eq(cacheWarmerOpeartions.isManuallyAdded, isManuallyAdded),
+          eq(cacheWarmerOperations.organizationId, organizationId),
+          eq(cacheWarmerOperations.federatedGraphId, federatedGraphId),
+          isManuallyAdded === undefined ? undefined : eq(cacheWarmerOperations.isManuallyAdded, isManuallyAdded),
         ),
       )
-      .orderBy(desc(cacheWarmerOpeartions.planningTime));
+      .orderBy(desc(cacheWarmerOperations.planningTime));
 
     if (limit) {
       query.limit(limit);
@@ -385,11 +415,11 @@ export class CacheWarmerRepository {
       .select({
         count: count(),
       })
-      .from(cacheWarmerOpeartions)
+      .from(cacheWarmerOperations)
       .where(
         and(
-          eq(cacheWarmerOpeartions.organizationId, organizationId),
-          eq(cacheWarmerOpeartions.federatedGraphId, federatedGraphId),
+          eq(cacheWarmerOperations.organizationId, organizationId),
+          eq(cacheWarmerOperations.federatedGraphId, federatedGraphId),
         ),
       )
       .execute();
@@ -411,12 +441,12 @@ export class CacheWarmerRepository {
     federatedGraphId: string;
   }) {
     await this.db
-      .delete(cacheWarmerOpeartions)
+      .delete(cacheWarmerOperations)
       .where(
         and(
-          eq(cacheWarmerOpeartions.organizationId, organizationId),
-          eq(cacheWarmerOpeartions.federatedGraphId, federatedGraphId),
-          eq(cacheWarmerOpeartions.isManuallyAdded, false),
+          eq(cacheWarmerOperations.organizationId, organizationId),
+          eq(cacheWarmerOperations.federatedGraphId, federatedGraphId),
+          eq(cacheWarmerOperations.isManuallyAdded, false),
         ),
       );
   }

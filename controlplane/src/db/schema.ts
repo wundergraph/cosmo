@@ -1997,7 +1997,7 @@ export const playgroundScripts = pgTable(
   },
 );
 
-export const cacheWarmerOpeartions = pgTable(
+export const cacheWarmerOperations = pgTable(
   'cache_warmer_operations', // cwo
   {
     id: uuid('id').notNull().primaryKey().defaultRandom(),

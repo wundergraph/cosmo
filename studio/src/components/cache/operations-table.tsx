@@ -46,7 +46,7 @@ export const CacheOperationsTable = ({
               <TableHead className="px-4">Actor</TableHead>
               <TableHead className="text-center">Is Persisted</TableHead>
               <TableHead className="text-center">Is Manually Added</TableHead>
-              <TableHead className="px-4">Planning Time (in ms)</TableHead>
+              <TableHead className="px-4">Planning Time P90 (ms)</TableHead>
               <TableHead className="text-center">Details</TableHead>
             </TableRow>
           </TableHeader>

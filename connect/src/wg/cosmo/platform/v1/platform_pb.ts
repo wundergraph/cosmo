@@ -19122,12 +19122,7 @@ export class PushCacheWarmerOperationRequest extends Message<PushCacheWarmerOper
   operationPersistedId = "";
 
   /**
-   * @generated from field: string clientName = 5;
-   */
-  clientName = "";
-
-  /**
-   * @generated from field: string namespace = 6;
+   * @generated from field: string namespace = 5;
    */
   namespace = "";
 
@@ -19143,8 +19138,7 @@ export class PushCacheWarmerOperationRequest extends Message<PushCacheWarmerOper
     { no: 2, name: "operationContent", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "operationName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "operationPersistedId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "clientName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PushCacheWarmerOperationRequest {

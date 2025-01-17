@@ -2,8 +2,6 @@ package core
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -44,12 +42,12 @@ func (f *FileSystemSource) LoadItems(_ context.Context, log *zap.Logger) ([]*nod
 		ext := filepath.Ext(path)
 		switch ext {
 		case ".json":
-			item, err := f.readJSON(data)
-			if err != nil {
-				log.Warn("Ignoring file with invalid JSON", zap.String("path", path), zap.Error(err))
-				return nil
+			var warmupOperations nodev1.CacheWarmerOperations
+			unmarshalOpts := protojson.UnmarshalOptions{DiscardUnknown: true}
+			if err := unmarshalOpts.Unmarshal(data, &warmupOperations); err != nil {
+				return err
 			}
-			items = append(items, item)
+			items = append(items, warmupOperations.GetOperations()...)
 		case ".gql", ".graphql", ".graphqls":
 			items = append(items, &nodev1.Operation{
 				Request: &nodev1.OperationRequest{
@@ -68,25 +66,4 @@ func (f *FileSystemSource) LoadItems(_ context.Context, log *zap.Logger) ([]*nod
 	}
 
 	return items, nil
-}
-
-func (f *FileSystemSource) readJSON(data []byte) (*nodev1.Operation, error) {
-	item := &nodev1.Operation{}
-	iface := map[string]any{}
-	err := json.Unmarshal(data, &iface)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON: %w", err)
-	}
-	if _, ok := iface["query"]; ok {
-		err = json.Unmarshal(data, &item.Request)
-		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal JSON: %w", err)
-		}
-		return item, nil
-	}
-	err = protojson.Unmarshal(data, item)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON: %w", err)
-	}
-	return item, nil
 }

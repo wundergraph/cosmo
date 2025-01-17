@@ -7,10 +7,6 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../../core/config.js';
 
-const collect = (value: string, previous: string[]): string[] => {
-  return [...previous, value];
-};
-
 export default (opts: BaseCommandOptions) => {
   const command = new Command('push');
   command.description('Pushes new cache warmer operations to the registry');
@@ -19,8 +15,10 @@ export default (opts: BaseCommandOptions) => {
     'The name of the federated graph or monograph on which the check operations are stored.',
   );
   command.option('-n, --namespace [string]', 'The namespace of the federated graph or monograph.');
-  command.option('-c, --client <client-name>', 'The name of the client ');
-  command.option('-o, --operation-name <operation-name>', 'The name of the operation.');
+  command.option(
+    '-o, --operation-name <operation-name>',
+    'The name of the operation. Only needed when working with multi-operation document.',
+  );
   command.option(
     '-p, --persisted-operation-id <persisted-operation-id>',
     'The id of the persisted operation to be pushed. If both the file and the persisted operation id are provided, the persisted operation id will be used.',
@@ -35,8 +33,12 @@ export default (opts: BaseCommandOptions) => {
       command.error(pc.red('No operation file or the id of persisted operation provided'));
     }
 
+    if (options.persistedOperationId && options.file) {
+      command.error(pc.red('Only the persisted operation id or the file can be specified'));
+    }
+
     let operation: string | undefined;
-    if (options.file && !options.persistedOperationId) {
+    if (options.file) {
       const operationFile = resolve(options.file);
       if (!existsSync(operationFile)) {
         program.error(
@@ -63,7 +65,6 @@ export default (opts: BaseCommandOptions) => {
         operationContent: operation,
         operationName: options.operationName,
         operationPersistedId: options.persistedOperationId,
-        clientName: options.client,
         namespace: options.namespace,
       },
       { headers: getBaseHeaders() },

@@ -148,7 +148,9 @@ export const CacheDetailsSheet: React.FC<any> = ({
 
           <Spacer />
         </SheetHeader>
-        {operationId && index !== -1 && <CacheOperationDetails operation={operations[index]} />}
+        {operationId && index !== -1 && (
+          <CacheOperationDetails operation={operations[index]} />
+        )}
       </SheetContent>
     </Sheet>
   );
@@ -173,6 +175,9 @@ export const CacheOperationDetails = ({
 
   return (
     <div>
+      <div className="mb-3 mt-4">
+        <div className="mb-1">Operation Details</div>
+      </div>
       <div className=" rounded-md border p-3 text-sm">
         <table className="table-auto">
           <tbody>

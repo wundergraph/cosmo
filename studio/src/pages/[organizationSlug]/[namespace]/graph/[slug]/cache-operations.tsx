@@ -25,7 +25,9 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import debounce from "debounce";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { docsBaseURL } from "@/lib/constants";
 
 const CacheOperationsPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -162,31 +164,48 @@ const CacheOperationsPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex h-full flex-col gap-y-3">
-      <div className="flex justify-end">
-        <div className="flex items-center gap-x-3">
-          {lastComputedAt && (
-            <p className="text-sm font-semibold text-muted-foreground">{`Last computed ${formatDistanceToNow(
-              new Date(lastComputedAt),
-              {
-                addSuffix: true,
-              },
-            )}`}</p>
-          )}
-          <Button
-            variant="outline"
-            className="flex gap-x-2"
-            onClick={() => {
-              mutate({ federatedGraphName, namespace });
-            }}
-            disabled={isPending || recomputeDisabled}
-          >
-            <UpdateIcon
-              className={cn("", {
-                "animate-spin": isPending,
-              })}
-            />
-            Recompute
-          </Button>
+      <div className="flex items-center justify-between">
+        <div className="items-start">
+          <p className="text-sm text-muted-foreground">
+            Operations provided to the router to warm the cache. Manually added
+            operation have priority over the top 100 operations computed by
+            planning time.{" "}
+            <Link
+              href={docsBaseURL + "/studio/cache-operations"}
+              className="text-primary"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Learn more
+            </Link>
+          </p>
+        </div>
+        <div className="flex justify-end">
+          <div className="flex items-center gap-x-3">
+            {lastComputedAt && (
+              <p className="text-xs text-muted-foreground">{`Last computed ${formatDistanceToNow(
+                new Date(lastComputedAt),
+                {
+                  addSuffix: true,
+                },
+              )}`}</p>
+            )}
+            <Button
+              variant="outline"
+              className="flex gap-x-2"
+              onClick={() => {
+                mutate({ federatedGraphName, namespace });
+              }}
+              disabled={isPending || recomputeDisabled}
+            >
+              <UpdateIcon
+                className={cn("", {
+                  "animate-spin": isPending,
+                })}
+              />
+              Recompute
+            </Button>
+          </div>
         </div>
       </div>
       <CacheOperationsTable

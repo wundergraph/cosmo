@@ -1,3 +1,4 @@
+import { parse } from 'graphql';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -75,24 +76,6 @@ export function pushCacheWarmerOperation(
       };
     }
 
-    if (req.operationPersistedId) {
-      const operationsRepository = new OperationsRepository(opts.db, federatedGraph.id);
-      const existingPersistedOperation = await operationsRepository.getPersistedOperation({
-        operationId: req.operationPersistedId,
-        clientName: req.clientName,
-        operationName: req.operationName,
-      });
-
-      if (!existingPersistedOperation) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: `Operation with persistedID '${req.operationPersistedId}'${req.clientName ? `, with client name '${req.clientName}'` : ''}${req.operationName ? ` and with operation name '${req.operationName}'` : ''} doesn't exist.`,
-          },
-        };
-      }
-    }
-
     if (!opts.chClient) {
       return {
         response: {
@@ -102,7 +85,86 @@ export function pushCacheWarmerOperation(
       };
     }
 
+    let clientName: string = '';
+
+    if (req.operationPersistedId) {
+      const operationsRepository = new OperationsRepository(opts.db, federatedGraph.id);
+      const existingPersistedOperation = await operationsRepository.getPersistedOperation({
+        operationId: req.operationPersistedId,
+      });
+
+      if (!existingPersistedOperation) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: `Persisted Operation with ID ${req.operationPersistedId} does not exist`,
+          },
+        };
+      }
+
+      clientName = existingPersistedOperation.clientName;
+    }
+
+    if (req.operationContent) {
+      try {
+        const node = parse(req.operationContent);
+
+        if (node.definitions.length === 0) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Operation is not valid GraphQL: No definitions found`,
+            },
+          };
+        }
+
+        // check if operation name is provided and if it matches with any of the operation names in the operation content
+        if (req.operationName) {
+          const operationNames = node.definitions.map((def) => {
+            if (def.kind === 'OperationDefinition') {
+              return def.name?.value;
+            }
+            return undefined;
+          });
+
+          if (!operationNames.includes(req.operationName)) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `An operation definition with the name '${req.operationName}' was not found in the provided operation content`,
+              },
+            };
+          }
+        }
+      } catch (e: any) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: `GraphQL operation is not valid GraphQL: ${e}`,
+          },
+        };
+      }
+    }
+
     const cacheWarmerRepo = new CacheWarmerRepository(opts.chClient!, opts.db);
+
+    const exists = await cacheWarmerRepo.operationExists({
+      federatedGraphId: federatedGraph.id,
+      organizationId: authContext.organizationId,
+      persistedId: req.operationPersistedId,
+      operationContent: req.operationContent,
+      clientName: clientName,
+    });
+
+    if (exists) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Operation already exists`,
+        },
+      };
+    }
+
     await cacheWarmerRepo.addCacheWarmerOperations({
       federatedGraphId: federatedGraph.id,
       organizationId: authContext.organizationId,
@@ -111,9 +173,9 @@ export function pushCacheWarmerOperation(
       operations: [
         {
           name: req.operationName,
-          persistedID: req.operationPersistedId,
+          persistedId: req.operationPersistedId,
           content: req.operationContent,
-          clientName: req.clientName,
+          clientName: clientName,
         },
       ],
     });

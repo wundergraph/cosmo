@@ -1,6 +1,0 @@
-{
-  "query": "query($id: Int!) { employee(id: $id) { id } }",
-  "variables": {
-    "id": 1
-  }
-}

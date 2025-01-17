@@ -217,8 +217,9 @@
   },
   "CacheWarmup": {
     "Enabled": false,
-    "Source": "filesystem",
-    "Path": "",
+    "Source": {
+      "Filesystem": null
+    },
     "Workers": 8,
     "ItemsPerSecond": 50,
     "Timeout": 30000000000

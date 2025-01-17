@@ -39,7 +39,7 @@ type CacheWarmupConfig struct {
 
 func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 	w := &cacheWarmup{
-		log:            cfg.Log,
+		log:            cfg.Log.With(zap.String("component", "cache_warmup")),
 		source:         cfg.Source,
 		workers:        cfg.Workers,
 		itemsPerSecond: cfg.ItemsPerSecond,
@@ -55,7 +55,7 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 	if cfg.Timeout <= 0 {
 		w.timeout = time.Second * 30
 	}
-	cfg.Log.Info("Cache warmup - start",
+	w.log.Info("Warmup started",
 		zap.Int("workers", cfg.Workers),
 		zap.Int("items_per_second", cfg.ItemsPerSecond),
 		zap.Duration("timeout", cfg.Timeout),
@@ -64,20 +64,20 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 	completed, err := w.run(ctx)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
-			cfg.Log.Error("Cache warmup - timeout",
+			w.log.Error("Warmup timeout",
 				zap.Error(err),
 				zap.Int("processed_items", completed),
 				zap.String("tip", "Consider to increase the timeout, increase the number of workers, increase the items per second limit, or reduce the number of items to process"),
 			)
 			return err
 		}
-		cfg.Log.Error("Cache warmup - error",
+		w.log.Error("Warmup error",
 			zap.Error(err),
 			zap.Int("processed_items", completed),
 		)
 		return err
 	}
-	cfg.Log.Info("Cache warmup - completed",
+	w.log.Info("Warmup completed",
 		zap.Int("processed_items", completed),
 		zap.Duration("duration", time.Since(start)),
 	)
@@ -104,11 +104,11 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 	}
 
 	if len(items) == 0 {
-		w.log.Info("Cache warmup - no items to process")
+		w.log.Debug("No items to process")
 		return 0, nil
 	}
 
-	w.log.Info("Cache warmup - items loaded, starting processing",
+	w.log.Info("Starting processing",
 		zap.Int("items", len(items)),
 	)
 
@@ -175,7 +175,7 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 			return processed, ctx.Err()
 		case <-itemCompleted:
 			if processed%100 == 0 {
-				w.log.Info("Cache warmup - processed items",
+				w.log.Info("Processing completed",
 					zap.Int("processed_items", processed),
 				)
 			}
