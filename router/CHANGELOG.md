@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.163.0](https://github.com/wundergraph/cosmo/compare/router@0.162.0...router@0.163.0) (2025-01-17)
+
+### Bug Fixes
+
+* **router:** remove wildcard from router graphql path ([#1509](https://github.com/wundergraph/cosmo/issues/1509)) ([e6f4b9b](https://github.com/wundergraph/cosmo/commit/e6f4b9bf9d642d39933528dd1654a9c9d969e565)) (@Noroth)
+* use gauge for server.uptime metric ([#1510](https://github.com/wundergraph/cosmo/issues/1510)) ([77a16d2](https://github.com/wundergraph/cosmo/commit/77a16d203f04ef8d93878e5f28f6e08575313145)) (@StarpTech)
+
+### Features
+
+* cache warmer ([#1501](https://github.com/wundergraph/cosmo/issues/1501)) ([948edd2](https://github.com/wundergraph/cosmo/commit/948edd23e6d0ee968c91edd1a9e9943c3405ac2d)) (@JivusAyrus)
+
 # [0.162.0](https://github.com/wundergraph/cosmo/compare/router@0.161.1...router@0.162.0) (2025-01-11)
 
 ### Bug Fixes
