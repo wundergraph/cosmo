@@ -21,7 +21,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option(
     '-p, --persisted-operation-id <persisted-operation-id>',
-    'The id of the persisted operation to be pushed. If both the file and the persisted operation id are provided, the persisted operation id will be used.',
+    'The id of the persisted operation to be pushed.',
   );
   command.option(
     '-f, --file <file>',
