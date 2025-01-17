@@ -31,6 +31,9 @@ import {
 } from '../services/AdmissionWebhookController.js';
 import { GraphCompositionRepository } from '../repositories/GraphCompositionRepository.js';
 import * as schema from '../../db/schema.js';
+import { ClickHouseClient } from '../clickhouse/index.js';
+import { CacheWarmerRepository } from '../repositories/CacheWarmerRepository.js';
+import { NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { composeSubgraphs, composeSubgraphsWithContracts } from './composition.js';
 import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult } from './schemaCheck.js';
 
@@ -183,6 +186,7 @@ export class Composer {
     private subgraphRepo: SubgraphRepository,
     private contractRepo: ContractRepository,
     private graphCompositionRepository: GraphCompositionRepository,
+    private chClient?: ClickHouseClient,
   ) {}
 
   composeRouterConfigWithFeatureFlags({
@@ -396,6 +400,20 @@ export class Composer {
       featureFlagRouterExecutionConfigByFeatureFlagName,
       baseCompositionRouterExecutionConfig,
     });
+
+    const federatedGraph = await this.federatedGraphRepo.byId(federatedGraphId);
+    const namespaceRepository = new NamespaceRepository(this.db, organizationId);
+    const namespace = await namespaceRepository.byId(federatedGraph!.namespaceId);
+
+    if (namespace?.enableCacheWarmer && this.chClient) {
+      const cacheWarmerRepo = new CacheWarmerRepository(this.chClient, this.db);
+      await cacheWarmerRepo.fetchAndUploadCacheWarmerOperations({
+        blobStorage,
+        federatedGraphId,
+        organizationId,
+        logger: this.logger,
+      });
+    }
 
     const { errors } = await this.uploadRouterConfig({
       blobStorage,

@@ -54,7 +54,7 @@ func Main() {
 
 	logger := logging.New(!result.Config.JSONLog, result.Config.DevelopmentMode, logLevel).
 		With(
-			zap.String("component", "@wundergraph/router"),
+			zap.String("service", "@wundergraph/router"),
 			zap.String("service_version", core.Version),
 		)
 

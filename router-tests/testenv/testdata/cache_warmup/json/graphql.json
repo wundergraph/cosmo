@@ -1,3 +1,9 @@
 {
-  "query": "query { employees { id details { forename } } }"
+  "operations": [
+    {
+      "request": {
+        "query": "query { employees { id details { forename } } }"
+      }
+    }
+  ]
 }

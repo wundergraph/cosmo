@@ -1,9 +1,13 @@
 {
-  "request": {
-    "query": "query { employees { id details { forename surname } } }"
-  },
-  "client": {
-    "name": "test",
-    "version": "1.0.0"
-  }
+  "operations": [
+    {
+      "request": {
+        "query": "query { employees { id details { forename surname } } }"
+      },
+      "client": {
+        "name": "test",
+        "version": "1.0.0"
+      }
+    }
+  ]
 }

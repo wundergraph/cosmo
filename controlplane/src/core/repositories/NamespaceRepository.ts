@@ -27,6 +27,7 @@ export class NamespaceRepository {
       enableLinting: namespace.enableLinting,
       organizationId: namespace.organizationId,
       createdBy: namespace.createdBy || undefined,
+      enableCacheWarmer: namespace.enableCacheWarming,
     };
   }
 
@@ -46,6 +47,7 @@ export class NamespaceRepository {
       enableLinting: namespace.enableLinting,
       organizationId: namespace.organizationId,
       createdBy: namespace.createdBy || undefined,
+      enableCacheWarmer: namespace.enableCacheWarming,
     };
   }
 
@@ -116,6 +118,15 @@ export class NamespaceRepository {
       .update(schema.namespaces)
       .set({
         enableGraphPruning: data.enableGraphPruning,
+      })
+      .where(and(eq(schema.namespaces.id, data.id), eq(schema.namespaces.organizationId, this.organizationId)));
+  }
+
+  public async toggleEnableCacheWarmer(data: { id: string; enableCacheWarming: boolean }) {
+    await this.db
+      .update(schema.namespaces)
+      .set({
+        enableCacheWarming: data.enableCacheWarming,
       })
       .where(and(eq(schema.namespaces.id, data.id), eq(schema.namespaces.organizationId, this.organizationId)));
   }

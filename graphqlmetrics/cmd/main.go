@@ -34,7 +34,7 @@ func main() {
 	isDebug := cfg.LogLevel == "debug"
 	logger := logging.New(!cfg.JSONLog, isDebug, logLevel).
 		With(
-			zap.String("component", "@wundergraph/graphqlmetrics"),
+			zap.String("service", "@wundergraph/graphqlmetrics"),
 			zap.String("service_version", core.Version),
 		)
 

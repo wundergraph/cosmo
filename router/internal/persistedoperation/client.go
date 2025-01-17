@@ -21,7 +21,7 @@ type PersistentOperationNotFoundError struct {
 }
 
 func (e PersistentOperationNotFoundError) Error() string {
-	return fmt.Sprintf("operation %s for client %s not found", e.Sha256Hash, e.ClientName)
+	return fmt.Sprintf("operation '%s' for client '%s' not found", e.Sha256Hash, e.ClientName)
 }
 
 type Client interface {

@@ -1,14 +1,32 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../../src/core/test-util.js';
 import { SetupTest } from '../test-util.js';
+import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
 
 let dbname = '';
 
+vi.mock('../src/core/clickhouse/index.js', () => {
+  const ClickHouseClient = vi.fn();
+  ClickHouseClient.prototype.queryPromise = vi.fn();
+
+  return { ClickHouseClient };
+});
+
 describe('Subgraph', (ctx) => {
+  let chClient: ClickHouseClient;
+
+  beforeEach(() => {
+    chClient = new ClickHouseClient();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -18,7 +36,7 @@ describe('Subgraph', (ctx) => {
   });
 
   test('Should be able to create a subgraph and publish the schema', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();

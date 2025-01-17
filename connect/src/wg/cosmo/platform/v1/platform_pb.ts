@@ -19097,3 +19097,548 @@ export class GetNamespaceResponse extends Message<GetNamespaceResponse> {
   }
 }
 
+/**
+ * @generated from message wg.cosmo.platform.v1.PushCacheWarmerOperationRequest
+ */
+export class PushCacheWarmerOperationRequest extends Message<PushCacheWarmerOperationRequest> {
+  /**
+   * @generated from field: string federatedGraphName = 1;
+   */
+  federatedGraphName = "";
+
+  /**
+   * @generated from field: string operationContent = 2;
+   */
+  operationContent = "";
+
+  /**
+   * @generated from field: string operationName = 3;
+   */
+  operationName = "";
+
+  /**
+   * @generated from field: string operationPersistedId = 4;
+   */
+  operationPersistedId = "";
+
+  /**
+   * @generated from field: string namespace = 5;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<PushCacheWarmerOperationRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.PushCacheWarmerOperationRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "operationContent", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "operationName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "operationPersistedId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PushCacheWarmerOperationRequest {
+    return new PushCacheWarmerOperationRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PushCacheWarmerOperationRequest {
+    return new PushCacheWarmerOperationRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PushCacheWarmerOperationRequest {
+    return new PushCacheWarmerOperationRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PushCacheWarmerOperationRequest | PlainMessage<PushCacheWarmerOperationRequest> | undefined, b: PushCacheWarmerOperationRequest | PlainMessage<PushCacheWarmerOperationRequest> | undefined): boolean {
+    return proto3.util.equals(PushCacheWarmerOperationRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.PushCacheWarmerOperationResponse
+ */
+export class PushCacheWarmerOperationResponse extends Message<PushCacheWarmerOperationResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<PushCacheWarmerOperationResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.PushCacheWarmerOperationResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PushCacheWarmerOperationResponse {
+    return new PushCacheWarmerOperationResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PushCacheWarmerOperationResponse {
+    return new PushCacheWarmerOperationResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PushCacheWarmerOperationResponse {
+    return new PushCacheWarmerOperationResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PushCacheWarmerOperationResponse | PlainMessage<PushCacheWarmerOperationResponse> | undefined, b: PushCacheWarmerOperationResponse | PlainMessage<PushCacheWarmerOperationResponse> | undefined): boolean {
+    return proto3.util.equals(PushCacheWarmerOperationResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetCacheWarmerOperationsRequest
+ */
+export class GetCacheWarmerOperationsRequest extends Message<GetCacheWarmerOperationsRequest> {
+  /**
+   * @generated from field: string federatedGraphName = 1;
+   */
+  federatedGraphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: int32 limit = 3;
+   */
+  limit = 0;
+
+  /**
+   * @generated from field: int32 offset = 4;
+   */
+  offset = 0;
+
+  constructor(data?: PartialMessage<GetCacheWarmerOperationsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetCacheWarmerOperationsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCacheWarmerOperationsRequest {
+    return new GetCacheWarmerOperationsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCacheWarmerOperationsRequest {
+    return new GetCacheWarmerOperationsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCacheWarmerOperationsRequest {
+    return new GetCacheWarmerOperationsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCacheWarmerOperationsRequest | PlainMessage<GetCacheWarmerOperationsRequest> | undefined, b: GetCacheWarmerOperationsRequest | PlainMessage<GetCacheWarmerOperationsRequest> | undefined): boolean {
+    return proto3.util.equals(GetCacheWarmerOperationsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CacheWarmerOperation
+ */
+export class CacheWarmerOperation extends Message<CacheWarmerOperation> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string operationContent = 2;
+   */
+  operationContent = "";
+
+  /**
+   * @generated from field: string operationName = 3;
+   */
+  operationName = "";
+
+  /**
+   * @generated from field: string operationPersistedId = 4;
+   */
+  operationPersistedId = "";
+
+  /**
+   * @generated from field: string operationHash = 5;
+   */
+  operationHash = "";
+
+  /**
+   * @generated from field: string clientName = 6;
+   */
+  clientName = "";
+
+  /**
+   * @generated from field: string clientVersion = 7;
+   */
+  clientVersion = "";
+
+  /**
+   * @generated from field: float planningTime = 8;
+   */
+  planningTime = 0;
+
+  /**
+   * @generated from field: bool isManuallyAdded = 9;
+   */
+  isManuallyAdded = false;
+
+  /**
+   * @generated from field: string createdAt = 10;
+   */
+  createdAt = "";
+
+  /**
+   * @generated from field: string createdBy = 11;
+   */
+  createdBy = "";
+
+  constructor(data?: PartialMessage<CacheWarmerOperation>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CacheWarmerOperation";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "operationContent", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "operationName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "operationPersistedId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "operationHash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "clientName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "clientVersion", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "planningTime", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 9, name: "isManuallyAdded", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 10, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 11, name: "createdBy", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CacheWarmerOperation {
+    return new CacheWarmerOperation().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CacheWarmerOperation {
+    return new CacheWarmerOperation().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CacheWarmerOperation {
+    return new CacheWarmerOperation().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CacheWarmerOperation | PlainMessage<CacheWarmerOperation> | undefined, b: CacheWarmerOperation | PlainMessage<CacheWarmerOperation> | undefined): boolean {
+    return proto3.util.equals(CacheWarmerOperation, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetCacheWarmerOperationsResponse
+ */
+export class GetCacheWarmerOperationsResponse extends Message<GetCacheWarmerOperationsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CacheWarmerOperation operations = 2;
+   */
+  operations: CacheWarmerOperation[] = [];
+
+  /**
+   * @generated from field: int32 total_count = 3;
+   */
+  totalCount = 0;
+
+  /**
+   * @generated from field: bool isCacheWarmerEnabled = 4;
+   */
+  isCacheWarmerEnabled = false;
+
+  constructor(data?: PartialMessage<GetCacheWarmerOperationsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetCacheWarmerOperationsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "operations", kind: "message", T: CacheWarmerOperation, repeated: true },
+    { no: 3, name: "total_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "isCacheWarmerEnabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCacheWarmerOperationsResponse {
+    return new GetCacheWarmerOperationsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCacheWarmerOperationsResponse {
+    return new GetCacheWarmerOperationsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCacheWarmerOperationsResponse {
+    return new GetCacheWarmerOperationsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCacheWarmerOperationsResponse | PlainMessage<GetCacheWarmerOperationsResponse> | undefined, b: GetCacheWarmerOperationsResponse | PlainMessage<GetCacheWarmerOperationsResponse> | undefined): boolean {
+    return proto3.util.equals(GetCacheWarmerOperationsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.ComputeCacheWarmerOperationsRequest
+ */
+export class ComputeCacheWarmerOperationsRequest extends Message<ComputeCacheWarmerOperationsRequest> {
+  /**
+   * @generated from field: string federatedGraphName = 1;
+   */
+  federatedGraphName = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<ComputeCacheWarmerOperationsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.ComputeCacheWarmerOperationsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ComputeCacheWarmerOperationsRequest {
+    return new ComputeCacheWarmerOperationsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ComputeCacheWarmerOperationsRequest {
+    return new ComputeCacheWarmerOperationsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ComputeCacheWarmerOperationsRequest {
+    return new ComputeCacheWarmerOperationsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ComputeCacheWarmerOperationsRequest | PlainMessage<ComputeCacheWarmerOperationsRequest> | undefined, b: ComputeCacheWarmerOperationsRequest | PlainMessage<ComputeCacheWarmerOperationsRequest> | undefined): boolean {
+    return proto3.util.equals(ComputeCacheWarmerOperationsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.ComputeCacheWarmerOperationsResponse
+ */
+export class ComputeCacheWarmerOperationsResponse extends Message<ComputeCacheWarmerOperationsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<ComputeCacheWarmerOperationsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.ComputeCacheWarmerOperationsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ComputeCacheWarmerOperationsResponse {
+    return new ComputeCacheWarmerOperationsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ComputeCacheWarmerOperationsResponse {
+    return new ComputeCacheWarmerOperationsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ComputeCacheWarmerOperationsResponse {
+    return new ComputeCacheWarmerOperationsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ComputeCacheWarmerOperationsResponse | PlainMessage<ComputeCacheWarmerOperationsResponse> | undefined, b: ComputeCacheWarmerOperationsResponse | PlainMessage<ComputeCacheWarmerOperationsResponse> | undefined): boolean {
+    return proto3.util.equals(ComputeCacheWarmerOperationsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.ConfigureCacheWarmerRequest
+ */
+export class ConfigureCacheWarmerRequest extends Message<ConfigureCacheWarmerRequest> {
+  /**
+   * @generated from field: string namespace = 1;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: bool enableCacheWarmer = 2;
+   */
+  enableCacheWarmer = false;
+
+  constructor(data?: PartialMessage<ConfigureCacheWarmerRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.ConfigureCacheWarmerRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "enableCacheWarmer", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ConfigureCacheWarmerRequest {
+    return new ConfigureCacheWarmerRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ConfigureCacheWarmerRequest {
+    return new ConfigureCacheWarmerRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ConfigureCacheWarmerRequest {
+    return new ConfigureCacheWarmerRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ConfigureCacheWarmerRequest | PlainMessage<ConfigureCacheWarmerRequest> | undefined, b: ConfigureCacheWarmerRequest | PlainMessage<ConfigureCacheWarmerRequest> | undefined): boolean {
+    return proto3.util.equals(ConfigureCacheWarmerRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.ConfigureCacheWarmerResponse
+ */
+export class ConfigureCacheWarmerResponse extends Message<ConfigureCacheWarmerResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<ConfigureCacheWarmerResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.ConfigureCacheWarmerResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ConfigureCacheWarmerResponse {
+    return new ConfigureCacheWarmerResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ConfigureCacheWarmerResponse {
+    return new ConfigureCacheWarmerResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ConfigureCacheWarmerResponse {
+    return new ConfigureCacheWarmerResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ConfigureCacheWarmerResponse | PlainMessage<ConfigureCacheWarmerResponse> | undefined, b: ConfigureCacheWarmerResponse | PlainMessage<ConfigureCacheWarmerResponse> | undefined): boolean {
+    return proto3.util.equals(ConfigureCacheWarmerResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetCacheWarmerConfigRequest
+ */
+export class GetCacheWarmerConfigRequest extends Message<GetCacheWarmerConfigRequest> {
+  /**
+   * @generated from field: string namespace = 1;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<GetCacheWarmerConfigRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetCacheWarmerConfigRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCacheWarmerConfigRequest {
+    return new GetCacheWarmerConfigRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCacheWarmerConfigRequest {
+    return new GetCacheWarmerConfigRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCacheWarmerConfigRequest {
+    return new GetCacheWarmerConfigRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCacheWarmerConfigRequest | PlainMessage<GetCacheWarmerConfigRequest> | undefined, b: GetCacheWarmerConfigRequest | PlainMessage<GetCacheWarmerConfigRequest> | undefined): boolean {
+    return proto3.util.equals(GetCacheWarmerConfigRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetCacheWarmerConfigResponse
+ */
+export class GetCacheWarmerConfigResponse extends Message<GetCacheWarmerConfigResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: bool isCacheWarmerEnabled = 2;
+   */
+  isCacheWarmerEnabled = false;
+
+  constructor(data?: PartialMessage<GetCacheWarmerConfigResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetCacheWarmerConfigResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "isCacheWarmerEnabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCacheWarmerConfigResponse {
+    return new GetCacheWarmerConfigResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCacheWarmerConfigResponse {
+    return new GetCacheWarmerConfigResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCacheWarmerConfigResponse {
+    return new GetCacheWarmerConfigResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCacheWarmerConfigResponse | PlainMessage<GetCacheWarmerConfigResponse> | undefined, b: GetCacheWarmerConfigResponse | PlainMessage<GetCacheWarmerConfigResponse> | undefined): boolean {
+    return proto3.util.equals(GetCacheWarmerConfigResponse, a, b);
+  }
+}
+

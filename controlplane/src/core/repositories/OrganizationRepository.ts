@@ -1241,6 +1241,7 @@ export class OrganizationRepository {
       oidc: false,
       ai: false,
       scim: false,
+      'cache-warmer': false,
     };
 
     for (const feature of features) {

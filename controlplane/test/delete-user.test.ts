@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { pino } from 'pino';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -15,6 +15,7 @@ import { AuthContext } from '../src/types/index.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel, TestUser, UserTestData } from '../src/core/test-util.js';
 import { OidcRepository } from '../src/core/repositories/OidcRepository.js';
+import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import {
   createFederatedGraph,
   createThenPublishSubgraph,
@@ -137,7 +138,24 @@ const createTempUser = async (
   }
 };
 
+vi.mock('../src/core/clickhouse/index.js', () => {
+  const ClickHouseClient = vi.fn();
+  ClickHouseClient.prototype.queryPromise = vi.fn();
+
+  return { ClickHouseClient };
+});
+
 describe.sequential('Delete user tests', (ctx) => {
+  let chClient: ClickHouseClient;
+
+  beforeEach(() => {
+    chClient = new ClickHouseClient();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -227,7 +245,7 @@ describe.sequential('Delete user tests', (ctx) => {
   });
 
   test('Compositions retains created by user email', async (testContext) => {
-    const { client, server, users, keycloakClient, authenticator, realm } = await SetupTest({ dbname });
+    const { client, server, users, keycloakClient, authenticator, realm } = await SetupTest({ dbname, chClient });
     const mainUserContext = users[TestUser.adminAliceCompanyA];
     const tempUserContext = await createTempUser(server.db, keycloakClient, realm, mainUserContext.organizationSlug);
 

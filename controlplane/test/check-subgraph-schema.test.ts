@@ -2,7 +2,11 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { addSeconds, formatISO, subDays } from 'date-fns';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, Mock, test, vi } from 'vitest';
-import { invalidOverrideTargetSubgraphNameWarning, noBaseDefinitionForExtensionError, OBJECT } from '@wundergraph/composition';
+import {
+  invalidOverrideTargetSubgraphNameWarning,
+  noBaseDefinitionForExtensionError,
+  OBJECT,
+} from '@wundergraph/composition';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { SchemaChangeType } from '../src/types/index.js';
@@ -37,7 +41,7 @@ describe('CheckSubgraphSchema', (ctx) => {
   });
 
   test('Should be able to create a subgraph, publish the schema and then check with new schema', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph1');
     const label = genUniqueLabel();
@@ -85,7 +89,7 @@ describe('CheckSubgraphSchema', (ctx) => {
   });
 
   test('Should be able to create a federated graph,subgraph, publish the schema and then check the new schema for composition errors', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph1');
@@ -129,7 +133,7 @@ describe('CheckSubgraphSchema', (ctx) => {
   });
 
   test('Should be able to create a federated graph,subgraph, publish the schema and then check the new schema for composition warning', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph1');
@@ -163,15 +167,13 @@ describe('CheckSubgraphSchema', (ctx) => {
     const checkResp = await client.checkSubgraphSchema({
       subgraphName,
       namespace: DEFAULT_NAMESPACE,
-      schema: Uint8Array.from(
-        Buffer.from(
-          'type Query { hello: String! @override(from: "employees") }',
-        ),
-      ),
+      schema: Uint8Array.from(Buffer.from('type Query { hello: String! @override(from: "employees") }')),
     });
     expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
     expect(checkResp.compositionWarnings).toHaveLength(1);
-    expect(checkResp.compositionWarnings[0].message).toBe(invalidOverrideTargetSubgraphNameWarning('employees', 'Query', ['hello'], subgraphName).message);
+    expect(checkResp.compositionWarnings[0].message).toBe(
+      invalidOverrideTargetSubgraphNameWarning('employees', 'Query', ['hello'], subgraphName).message,
+    );
 
     await server.close();
   });

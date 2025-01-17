@@ -1,10 +1,16 @@
 import { OverrideChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
+import { aliasedTable, and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { PlainMessage } from '@bufbuild/protobuf';
 import * as schema from '../../db/schema.js';
-import { federatedGraphClients, federatedGraphPersistedOperations } from '../../db/schema.js';
-import { ClientDTO, PersistedOperationDTO, SchemaChangeType, UpdatedPersistedOperation } from '../../types/index.js';
+import { federatedGraphClients, federatedGraphPersistedOperations, users } from '../../db/schema.js';
+import {
+  ClientDTO,
+  PersistedOperationDTO,
+  PersistedOperationWithClientDTO,
+  SchemaChangeType,
+  UpdatedPersistedOperation,
+} from '../../types/index.js';
 
 export class OperationsRepository {
   constructor(
@@ -86,6 +92,57 @@ export class OperationsRepository {
       });
     }
     return operations;
+  }
+
+  public async getPersistedOperation({
+    operationId,
+  }: {
+    operationId: string;
+  }): Promise<PersistedOperationWithClientDTO | undefined> {
+    const users1 = aliasedTable(users, 'users1');
+    const users2 = aliasedTable(users, 'users2');
+
+    const operationResult = await this.db
+      .select({
+        id: federatedGraphPersistedOperations.id,
+        operationId: federatedGraphPersistedOperations.operationId,
+        hash: federatedGraphPersistedOperations.hash,
+        filePath: federatedGraphPersistedOperations.filePath,
+        createdAt: federatedGraphPersistedOperations.createdAt,
+        updatedAt: federatedGraphPersistedOperations.updatedAt,
+        operationContent: federatedGraphPersistedOperations.operationContent,
+        operationNames: federatedGraphPersistedOperations.operationNames,
+        clientName: federatedGraphClients.name,
+        createdBy: users1.email,
+        updatedBy: users2.email,
+      })
+      .from(federatedGraphPersistedOperations)
+      .innerJoin(federatedGraphClients, eq(federatedGraphClients.id, federatedGraphPersistedOperations.clientId))
+      .leftJoin(users1, eq(users1.id, federatedGraphPersistedOperations.createdById))
+      .leftJoin(users2, eq(users2.id, federatedGraphPersistedOperations.updatedById))
+      .where(
+        and(
+          eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
+          eq(federatedGraphPersistedOperations.operationId, operationId),
+        ),
+      );
+
+    if (operationResult.length === 0) {
+      return undefined;
+    }
+
+    return {
+      id: operationResult[0].id,
+      operationId: operationResult[0].operationId,
+      hash: operationResult[0].hash,
+      filePath: operationResult[0].filePath,
+      createdAt: operationResult[0].createdAt.toISOString(),
+      lastUpdatedAt: operationResult[0]?.updatedAt?.toISOString() || '',
+      createdBy: operationResult[0].createdBy ?? '',
+      lastUpdatedBy: operationResult[0].updatedBy ?? '',
+      contents: operationResult[0].operationContent ?? '',
+      clientName: operationResult[0].clientName,
+    };
   }
 
   public async registerClient(clientName: string, userId: string): Promise<string> {

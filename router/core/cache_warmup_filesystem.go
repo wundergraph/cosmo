@@ -2,12 +2,12 @@ package core
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type FileSystemSourceConfig struct {
@@ -24,9 +24,9 @@ type FileSystemSource struct {
 	RootPath string
 }
 
-func (f *FileSystemSource) LoadItems(_ context.Context, log *zap.Logger) ([]*CacheWarmupItem, error) {
+func (f *FileSystemSource) LoadItems(_ context.Context, log *zap.Logger) ([]*nodev1.Operation, error) {
 
-	var items []*CacheWarmupItem
+	var items []*nodev1.Operation
 
 	err := filepath.Walk(f.RootPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -42,15 +42,15 @@ func (f *FileSystemSource) LoadItems(_ context.Context, log *zap.Logger) ([]*Cac
 		ext := filepath.Ext(path)
 		switch ext {
 		case ".json":
-			item, err := f.readJSON(data)
-			if err != nil {
-				log.Warn("Ignoring file with invalid JSON", zap.String("path", path), zap.Error(err))
-				return nil
+			var warmupOperations nodev1.CacheWarmerOperations
+			unmarshalOpts := protojson.UnmarshalOptions{DiscardUnknown: true}
+			if err := unmarshalOpts.Unmarshal(data, &warmupOperations); err != nil {
+				return err
 			}
-			items = append(items, item)
+			items = append(items, warmupOperations.GetOperations()...)
 		case ".gql", ".graphql", ".graphqls":
-			items = append(items, &CacheWarmupItem{
-				Request: GraphQLRequest{
+			items = append(items, &nodev1.Operation{
+				Request: &nodev1.OperationRequest{
 					Query: string(data),
 				},
 			})
@@ -66,25 +66,4 @@ func (f *FileSystemSource) LoadItems(_ context.Context, log *zap.Logger) ([]*Cac
 	}
 
 	return items, nil
-}
-
-func (f *FileSystemSource) readJSON(data []byte) (*CacheWarmupItem, error) {
-	item := &CacheWarmupItem{}
-	iface := map[string]any{}
-	err := json.Unmarshal(data, &iface)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON: %w", err)
-	}
-	if _, ok := iface["query"]; ok {
-		err = json.Unmarshal(data, &item.Request)
-		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal JSON: %w", err)
-		}
-		return item, nil
-	}
-	err = json.Unmarshal(data, &item)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal JSON: %w", err)
-	}
-	return item, nil
 }
