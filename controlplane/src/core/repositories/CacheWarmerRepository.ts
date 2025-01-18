@@ -95,20 +95,30 @@ export class CacheWarmerRepository {
   }
 
   public async getOperationContent({
+    rangeInHours,
+    dateRange,
     operationHashes,
     federatedGraphID, // TODO; Update view to get operations scoped to the federated graph
     organizationID, // TODO; Update view to get operations scoped to the organization
   }: {
+    rangeInHours?: number;
+    dateRange?: DateRange;
     operationHashes: string[];
     federatedGraphID: string;
     organizationID: string;
   }) {
+    const parsedDateRange = isoDateRangeToTimestamps(dateRange, rangeInHours);
+    const [start, end] = getDateRange(parsedDateRange);
+
     const query = `
+     WITH
+        toDateTime('${start}') AS startDate,
+        toDateTime('${end}') AS endDate
       SELECT 
         OperationContent as operationContent, 
         OperationHash as operationHash
       FROM ${this.client.database}.gql_metrics_operations
-      WHERE OperationHash IN (${operationHashes.map((hash) => `'${hash}'`).join(',')})
+      WHERE Timestamp >= startDate AND Timestamp <= endDate AND OperationHash IN (${operationHashes.map((hash) => `'${hash}'`).join(',')})
       GROUP BY
         OperationContent,
         OperationHash
@@ -193,6 +203,7 @@ export class CacheWarmerRepository {
       operationHashes,
       federatedGraphID: props.federatedGraphId,
       organizationID: props.organizationId,
+      rangeInHours: 24 * 7,
     });
 
     for (const operation of topOperationsByPlanningTime) {
