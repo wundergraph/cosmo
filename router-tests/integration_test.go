@@ -101,6 +101,9 @@ func TestExecutionPlanCache(t *testing.T) {
 	t.Parallel()
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		/**
+		* MISS - First seen
+		 */
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
 			Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
@@ -110,6 +113,9 @@ func TestExecutionPlanCache(t *testing.T) {
 		require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
 		require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
 
+		/**
+		* HIT - Exact same query as above
+		 */
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
 			Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
@@ -119,12 +125,15 @@ func TestExecutionPlanCache(t *testing.T) {
 		require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
 		require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
 
+		/**
+		* HIT - Same query but with different default argument value. After engine normalization, it is the same.
+		 */
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			Query: `query Find($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
 		})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, res.Response.StatusCode)
-		require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+		require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
 		require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
 		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 			Query: `query Find($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
@@ -133,6 +142,28 @@ func TestExecutionPlanCache(t *testing.T) {
 		require.Equal(t, http.StatusOK, res.Response.StatusCode)
 		require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
 		require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+
+		/**
+		* MISS - because the query is different, only forename is requested from details
+		 */
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			Query: `query Find($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename}}}`,
+		})
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, res.Response.StatusCode)
+		require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+		require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David"}}]}}`, res.Body)
+
+		/**
+		* HIT - Exact same query as above
+		 */
+		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			Query: `query Find($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename}}}`,
+		})
+		require.NoError(t, err)
+		require.Equal(t, http.StatusOK, res.Response.StatusCode)
+		require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+		require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David"}}]}}`, res.Body)
 	})
 }
 

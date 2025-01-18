@@ -121,7 +121,7 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 		return nil
 	}
 
-	operationID := opContext.internalHash
+	operationID := opContext.hash
 	// try to get a prepared plan for this operation ID from the cache
 	cachedPlan, ok := p.planCache.Get(operationID)
 	if ok && cachedPlan != nil {
