@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"go.uber.org/zap"
 )
 
 func TestCacheWarmup(t *testing.T) {
@@ -17,6 +18,9 @@ func TestCacheWarmup(t *testing.T) {
 
 	t.Run("cache warmup tests for filesystem", func(t *testing.T) {
 		t.Parallel()
+
+		const employeeWarmedQueryCount = 1
+
 		t.Run("cache warmup disabled", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -28,6 +32,9 @@ func TestCacheWarmup(t *testing.T) {
 		})
 		t.Run("cache warmup enabled", func(t *testing.T) {
 			t.Parallel()
+
+			const employeeQueryCount = 2
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
@@ -41,12 +48,12 @@ func TestCacheWarmup(t *testing.T) {
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
 					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						QueryNormalizationMisses: 3,
+						QueryNormalizationMisses: 3 + employeeWarmedQueryCount + employeeQueryCount,
 						QueryNormalizationHits:   4,
-						ValidationMisses:         3,
-						ValidationHits:           4,
-						PlanMisses:               3,
-						PlanHits:                 4,
+						ValidationMisses:         3 + employeeWarmedQueryCount,
+						ValidationHits:           4 + employeeQueryCount,
+						PlanMisses:               3 + employeeWarmedQueryCount,
+						PlanHits:                 4 + employeeQueryCount,
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -66,6 +73,19 @@ func TestCacheWarmup(t *testing.T) {
 					Query: `query { employees { id details { forename surname } } }`,
 				})
 				require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query m($id: Int!){ employee(id: $id) { id details { forename surname } } }`,
+					Variables: []byte(`{"id": 1}`),
+				})
+				require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
+				require.Equal(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employee(id: 2) { id details { forename surname } } }`,
+				})
+				require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
+				require.Equal(t, `{"data":{"employee":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}}`, res.Body)
 			})
 		})
 		t.Run("cache warmup invalid files", func(t *testing.T) {
@@ -337,13 +357,13 @@ func TestCacheWarmup(t *testing.T) {
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
 					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						QueryNormalizationMisses: 3,
+						QueryNormalizationMisses: 3 + employeeWarmedQueryCount,
 						QueryNormalizationHits:   2,
-						ValidationMisses:         3,
+						ValidationMisses:         3 + employeeWarmedQueryCount,
 						ValidationHits:           2,
-						QueryHashMisses:          3,
+						QueryHashMisses:          3 + employeeWarmedQueryCount,
 						QueryHashHits:            2,
-						PlanMisses:               3,
+						PlanMisses:               3 + employeeWarmedQueryCount,
 						PlanHits:                 2,
 					},
 				},
@@ -363,8 +383,8 @@ func TestCacheWarmup(t *testing.T) {
 	t.Run("cache warmup tests for cdn", func(t *testing.T) {
 		t.Parallel()
 
-		// keep in sync with testdata/cache_warmup/cdn/operation.json
-		cdnOperationCount := int64(4)
+		// keep in sync with testenv/testdata/cache_warmup/cdn/operation.json
+		cdnOperationCount := int64(5)
 		cdnPOCount := int64(1)
 		featureOperationCount := int64(1)
 		invalidOperationCount := int64(1)
@@ -397,6 +417,7 @@ func TestCacheWarmup(t *testing.T) {
 
 		t.Run("should correctly warm the cache with data from the operation.json file", func(t *testing.T) {
 			t.Parallel()
+			const employeeQueryCount = 2
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
@@ -405,14 +426,16 @@ func TestCacheWarmup(t *testing.T) {
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
 					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount,
+						// we have additional 2 misses for the employeeQueryCount - because their content differs from what we have in cdn
+						// this will be possible to solve only by having operation variants populated
+						QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount + employeeQueryCount,
 						QueryNormalizationHits:            3,
 						PersistedQueryNormalizationMisses: cdnPOCount,
 						PersistedQueryNormalizationHits:   0,
 						ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
-						ValidationHits:                    3,
+						ValidationHits:                    3 + employeeQueryCount,
 						PlanMisses:                        cdnOperationCount + cdnPOCount,
-						PlanHits:                          3,
+						PlanHits:                          3 + employeeQueryCount,
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -428,6 +451,24 @@ func TestCacheWarmup(t *testing.T) {
 					Query: `query { employees { id details { forename surname } } }`,
 				})
 				require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+
+				// For the next 2 queries below we will:
+				// - miss normalization cache
+				// - hit validation cache
+				// - hit plan cache
+
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query m($id: Int!){ employee(id: $id) { id details { forename surname } } }`,
+					Variables: []byte(`{"id": 1}`),
+				})
+				require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
+				require.Equal(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employee(id: 2) { id details { forename surname } } }`,
+				})
+				require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
+				require.Equal(t, `{"data":{"employee":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}}`, res.Body)
 			})
 		})
 
