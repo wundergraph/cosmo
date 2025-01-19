@@ -28,7 +28,7 @@ interface DBCacheWarmerOperation {
   content?: string;
   hash?: string;
   name?: string;
-  persistedID?: string;
+  persistedId?: string;
   clientName?: string;
   clientVersion?: string;
   planningTime?: number;
@@ -49,6 +49,7 @@ export class CacheWarmerRepository {
     const parsedDateRange = isoDateRangeToTimestamps(dateRange, rangeInHours);
     const [start, end] = getDateRange(parsedDateRange);
     const quantile = 0.9;
+    const minPlanningTimeInMs = 0;
 
     const query = `
       WITH
@@ -58,8 +59,8 @@ export class CacheWarmerRepository {
         OperationHash as operationHash,
         OperationName as operationName,
         OperationPersistedID as operationPersistedID,
-        ClientName as clientName,
-        ClientVersion as clientVersion,
+        if(ClientName = 'unknown', '', ClientName) as clientName,
+        if(ClientVersion = 'missing', '', ClientVersion) as clientVersion,
         func_rank(${quantile}, BucketCounts) as rank,
         func_rank_bucket_lower_index(rank, BucketCounts) as b,
         round(func_histogram_v2(
@@ -75,6 +76,7 @@ export class CacheWarmerRepository {
       AND OrganizationID = '${organizationId}'
       AND OperationName != 'IntrospectionQuery'
       GROUP BY OperationHash, OperationName, OperationPersistedID, ClientName, ClientVersion
+      HAVING planningTime > ${minPlanningTimeInMs}
       ORDER BY planningTime DESC LIMIT 100
     `;
 
@@ -235,7 +237,7 @@ export class CacheWarmerRepository {
         dbCacheWarmerOperations.push({
           name: operation.operationName,
           hash: operation.operationHash,
-          persistedID: operation.operationPersistedID,
+          persistedId: operation.operationPersistedID,
           clientName: operation.clientName,
           clientVersion: operation.clientVersion,
           planningTime: operation.planningTime,
@@ -253,7 +255,7 @@ export class CacheWarmerRepository {
         content: operationContent,
         name: operation.operationName,
         hash: operation.operationHash,
-        persistedID: operation.operationPersistedID,
+        persistedId: operation.operationPersistedID,
         clientName: operation.clientName,
         clientVersion: operation.clientVersion,
         planningTime: operation.planningTime,

@@ -8,6 +8,8 @@ import {
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
+// Get operation content by hash
+// TODO: Specify daterange to improve clickhouse performance
 export function getOperationContent(
   opts: RouterOptions,
   req: GetOperationContentRequest,
@@ -38,6 +40,16 @@ export function getOperationContent(
     const result = await opts.chClient.queryPromise(query);
 
     if (!Array.isArray(result)) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: 'Requested operation not found',
+        },
+        operationContent: '',
+      };
+    }
+
+    if (result.length === 0) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
