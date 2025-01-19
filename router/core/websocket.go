@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/expr"
 	"net"
 	"net/http"
 	"regexp"
@@ -15,28 +14,29 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gorilla/websocket"
-	"github.com/wundergraph/astjson"
-	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"go.opentelemetry.io/otel/attribute"
-
 	"github.com/buger/jsonparser"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-	"golang.org/x/sync/semaphore"
-
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
+	"github.com/gorilla/websocket"
 	"github.com/tidwall/gjson"
+	"go.opentelemetry.io/otel/attribute"
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
+	"golang.org/x/sync/semaphore"
+
+	"github.com/wundergraph/astjson"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
+
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/wsproto"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
-	"go.uber.org/atomic"
-	"go.uber.org/zap"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
 var (
@@ -815,7 +815,6 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 		return nil, nil, err
 	}
 
-	opContext.internalHash = operationKit.parsedOperation.InternalID
 	opContext.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
 	if err := operationKit.NormalizeVariables(); err != nil {
@@ -823,7 +822,14 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 		return nil, nil, err
 	}
 
+	if err := operationKit.RemapVariables(); err != nil {
+		opContext.normalizationTime = time.Since(startNormalization)
+		return nil, nil, err
+	}
+
 	opContext.hash = operationKit.parsedOperation.ID
+	opContext.internalHash = operationKit.parsedOperation.InternalID
+	opContext.remapVariables = operationKit.parsedOperation.RemapVariables
 
 	opContext.normalizationTime = time.Since(startNormalization)
 	opContext.content = operationKit.parsedOperation.NormalizedRepresentation
@@ -834,7 +840,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 	startValidation := time.Now()
 
-	if _, err := operationKit.Validate(h.plannerOptions.ExecutionOptions.SkipLoader); err != nil {
+	if _, err := operationKit.Validate(h.plannerOptions.ExecutionOptions.SkipLoader, opContext.remapVariables); err != nil {
 		opContext.validationTime = time.Since(startValidation)
 		return nil, nil, err
 	}
@@ -910,6 +916,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 			ID:     h.initRequestID,
 		},
 		RenameTypeNames: h.graphqlHandler.executor.RenameTypeNames,
+		RemapVariables:  operationCtx.remapVariables,
 		TracingOptions:  operationCtx.traceOptions,
 		Extensions:      operationCtx.extensions,
 	}
