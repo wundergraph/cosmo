@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.120.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.120.1...controlplane@0.120.2) (2025-01-19)
+
+### Bug Fixes
+
+* **cache operation:** swallow cache errors and other improvements ([#1515](https://github.com/wundergraph/cosmo/issues/1515)) ([d959e2c](https://github.com/wundergraph/cosmo/commit/d959e2c9fb492cc7c73d89f61c31f3bad2ac5706)) (@StarpTech)
+
 ## [0.120.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.120.0...controlplane@0.120.1) (2025-01-18)
 
 ### Bug Fixes
