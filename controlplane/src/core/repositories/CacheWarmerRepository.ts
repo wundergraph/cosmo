@@ -59,8 +59,8 @@ export class CacheWarmerRepository {
         OperationHash as operationHash,
         OperationName as operationName,
         OperationPersistedID as operationPersistedID,
-        ClientName as clientName,
-        ClientVersion as clientVersion,
+        if(ClientName = 'unknown', '', ClientName) as clientName,
+        if(ClientVersion = 'missing', '', ClientVersion) as clientVersion,
         func_rank(${quantile}, BucketCounts) as rank,
         func_rank_bucket_lower_index(rank, BucketCounts) as b,
         round(func_histogram_v2(
