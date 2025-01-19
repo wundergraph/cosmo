@@ -56,6 +56,12 @@
       "request": {
         "query": "query { employees { id } nonExistentField }"
       }
+    },
+    {
+      "hint": "This is normalized representation of an employee query",
+      "request": {
+        "query": "query($a: Int!){employee(id: $a){id details {forename surname}}}"
+      }
     }
   ]
 }

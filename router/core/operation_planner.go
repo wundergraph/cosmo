@@ -4,8 +4,6 @@ import (
 	"errors"
 	"strconv"
 
-	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
-	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
 	"golang.org/x/sync/singleflight"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -13,6 +11,9 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+
+	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
 )
 
 type planWithMetaData struct {

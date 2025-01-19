@@ -3,16 +3,18 @@ package core
 import (
 	"context"
 	"errors"
-	"google.golang.org/protobuf/encoding/protojson"
 	"time"
 
-	"github.com/wundergraph/astjson"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/ratelimit"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/encoding/protojson"
+
+	"github.com/wundergraph/astjson"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 type CacheWarmupItem struct {
@@ -276,7 +278,12 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return err
 	}
 
-	_, err = k.Validate(true)
+	err = k.RemapVariables()
+	if err != nil {
+		return err
+	}
+
+	_, err = k.Validate(true, k.parsedOperation.RemapVariables)
 	if err != nil {
 		return err
 	}
