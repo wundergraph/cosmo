@@ -487,12 +487,12 @@ func TestCacheWarmup(t *testing.T) {
 					BaseGraphAssertions: testenv.CacheMetricsAssertion{
 						QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount,
 						QueryNormalizationHits:            0,
-						PersistedQueryNormalizationMisses: cdnPOCount,
+						PersistedQueryNormalizationMisses: cdnPOCount + 2,
 						PersistedQueryNormalizationHits:   1,
 						ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
-						ValidationHits:                    1,
+						ValidationHits:                    2,
 						PlanMisses:                        cdnOperationCount + cdnPOCount,
-						PlanHits:                          1,
+						PlanHits:                          2,
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -506,6 +506,15 @@ func TestCacheWarmup(t *testing.T) {
 
 				require.NoError(t, err)
 				require.Equal(t, expected, res.Body)
+
+				res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					OperationName: []byte(`"A"`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "e24399f210ef3f16e6e5427a70bb9609ecea7297e99c3e9241d5912d04eabe60"}}`),
+					Header:        header,
+				})
+				require.NoError(t, err)
+				require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
+				require.Equal(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
 			})
 		})
 
