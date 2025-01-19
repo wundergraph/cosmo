@@ -916,6 +916,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 			ID:     h.initRequestID,
 		},
 		RenameTypeNames: h.graphqlHandler.executor.RenameTypeNames,
+		RemapVariables:  operationCtx.remapVariables,
 		TracingOptions:  operationCtx.traceOptions,
 		Extensions:      operationCtx.extensions,
 	}
