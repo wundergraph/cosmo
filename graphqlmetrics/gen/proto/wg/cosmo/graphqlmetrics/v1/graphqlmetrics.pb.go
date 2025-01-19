@@ -132,7 +132,7 @@ type SchemaUsageInfo struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// RequestDocument is the GraphQL request document
+	// RequestDocument is the fully normalized GraphQL request document
 	RequestDocument string `protobuf:"bytes,1,opt,name=RequestDocument,proto3" json:"RequestDocument,omitempty"`
 	// TypeFieldMetrics is the list of used fields in the request document
 	TypeFieldMetrics []*TypeFieldUsageInfo `protobuf:"bytes,2,rep,name=TypeFieldMetrics,proto3" json:"TypeFieldMetrics,omitempty"`
