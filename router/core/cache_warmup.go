@@ -3,16 +3,18 @@ package core
 import (
 	"context"
 	"errors"
-	"google.golang.org/protobuf/encoding/protojson"
 	"time"
 
+	"google.golang.org/protobuf/encoding/protojson"
+
 	"github.com/wundergraph/astjson"
+	"go.uber.org/ratelimit"
+	"go.uber.org/zap"
+
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"go.uber.org/ratelimit"
-	"go.uber.org/zap"
 )
 
 type CacheWarmupItem struct {
@@ -276,7 +278,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return err
 	}
 
-	_, err = k.Validate(true)
+	_, err = k.Validate(true, nil)
 	if err != nil {
 		return err
 	}

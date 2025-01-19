@@ -53,8 +53,9 @@ type ParsedOperation struct {
 	Sha256Hash string
 	// Type is a string representing the operation type. One of
 	// "query", "mutation", "subscription"
-	Type      string
-	Variables *fastjson.Object
+	Type           string
+	Variables      *fastjson.Object
+	RemapVariables map[string]string
 	// Files is a list of files, an interface representing the file data needed to be passed forward.
 	Files []httpclient.File
 	// NormalizedRepresentation is the normalized representation of the operation
@@ -131,6 +132,7 @@ type parseKit struct {
 	sha256Hash          hash.Hash
 	staticNormalizer    *astnormalization.OperationNormalizer
 	variablesNormalizer *astnormalization.VariablesNormalizer
+	variablesRemapper   *astnormalization.VariablesMapper
 	printer             *astprinter.Printer
 	normalizedOperation *bytes.Buffer
 	variablesValidator  *variablesvalidation.VariablesValidator
@@ -641,16 +643,6 @@ func (o *OperationKit) normalizePersistedOperation(clientName string, isApq bool
 		}
 	}
 
-	// Hash the normalized operation with the static operation name to avoid different IDs for the same operation
-	err = o.kit.printer.Print(o.kit.doc, o.kit.keyGen)
-	if err != nil {
-		return false, errors.WithStack(fmt.Errorf("normalizePersistedOperation failed generating operation hash: %w", err))
-	}
-
-	// Generate the operation ID
-	o.parsedOperation.InternalID = o.kit.keyGen.Sum64()
-	o.kit.keyGen.Reset()
-
 	// Print the operation with the original operation name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
 	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
@@ -691,7 +683,6 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 		entry, ok := o.cache.normalizationCache.Get(cacheKey)
 		if ok {
 			o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
-			o.parsedOperation.InternalID = entry.operationID
 			o.parsedOperation.Type = entry.operationType
 			o.parsedOperation.NormalizationCacheHit = true
 			err = o.setAndParseOperationDoc()
@@ -720,9 +711,6 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	if err != nil {
 		return false, errors.WithStack(fmt.Errorf("normalizeNonPersistedOperation (uncached) failed generating operation hash: %w", err))
 	}
-
-	// Generate the operation ID
-	o.parsedOperation.InternalID = o.kit.keyGen.Sum64()
 
 	// Print the operation with the original operation name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
@@ -818,6 +806,69 @@ func (o *OperationKit) NormalizeVariables() error {
 
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
+
+	return nil
+}
+
+func (o *OperationKit) RemapVariables() error {
+	before := len(o.kit.doc.Input.RawBytes)
+
+	report := &operationreport.Report{}
+	variablesMap := o.kit.variablesRemapper.NormalizeOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
+	if report.HasErrors() {
+		return &reportError{
+			report: report,
+		}
+	}
+	o.parsedOperation.RemapVariables = variablesMap
+
+	// Hash the normalized operation with the static operation name to avoid different IDs for the same operation
+	err := o.kit.printer.Print(o.kit.doc, o.kit.keyGen)
+	if err != nil {
+		return errors.WithStack(fmt.Errorf("RemapVariables failed generating operation hash: %w", err))
+	}
+
+	// Print the operation without the operation name to get the pure normalized form
+	// Afterward we can calculate the operation ID that is used as a stable identifier for analytics
+
+	o.kit.normalizedOperation.Reset()
+	// store the original name of the operation
+	nameRef := o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name
+
+	staticNameRef := o.kit.doc.Input.AppendInputBytes([]byte(""))
+	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = staticNameRef
+
+	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
+	if err != nil {
+		return err
+	}
+	// Reset the doc with the original name
+	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = nameRef
+
+	o.kit.keyGen.Reset()
+	_, err = o.kit.keyGen.Write(o.kit.normalizedOperation.Bytes())
+	if err != nil {
+		return err
+	}
+
+	// Generate the operation ID
+	o.parsedOperation.InternalID = o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
+
+	// If the normalized form of the operation didn't change, we don't need to print it again
+	after := len(o.kit.doc.Input.RawBytes)
+	if after == before {
+		return nil
+	}
+
+	o.kit.normalizedOperation.Reset()
+
+	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
+	if err != nil {
+		return err
+	}
+
+	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 
 	return nil
 }
@@ -970,12 +1021,12 @@ func (o *OperationKit) writeSkipIncludeCacheKeyToKeyGen(skipIncludeVariableNames
 }
 
 // Validate validates the operation variables.
-func (o *OperationKit) Validate(skipLoader bool) (cacheHit bool, err error) {
+func (o *OperationKit) Validate(skipLoader bool, remapVariables map[string]string) (cacheHit bool, err error) {
 	if !skipLoader {
 		// in case we're skipping the loader, it means that we won't execute the operation
 		// this means that we don't need to validate the variables as they are not used
 		// this is useful to return a query plan without having to provide variables
-		err = o.kit.variablesValidator.Validate(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.doc.Input.Variables)
+		err = o.kit.variablesValidator.ValidateWithRemap(o.kit.doc, o.operationProcessor.executor.ClientSchema, o.kit.doc.Input.Variables, remapVariables)
 		if err != nil {
 			var invalidVarErr *variablesvalidation.InvalidVariableError
 			if errors.As(err, &invalidVarErr) {
@@ -1123,6 +1174,7 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 			astnormalization.WithRemoveUnusedVariables(),
 		),
 		variablesNormalizer: astnormalization.NewVariablesNormalizer(),
+		variablesRemapper:   astnormalization.NewVariablesMapper(),
 		printer:             &astprinter.Printer{},
 		normalizedOperation: &bytes.Buffer{},
 		variablesValidator: variablesvalidation.NewVariablesValidator(variablesvalidation.VariablesValidatorOptions{

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/expr"
 	"net"
 	"net/http"
 	"regexp"
@@ -15,19 +14,26 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/wundergraph/cosmo/router/internal/expr"
+
 	"github.com/gorilla/websocket"
 	"github.com/wundergraph/astjson"
-	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/otel/attribute"
 
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+
 	"github.com/buger/jsonparser"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"golang.org/x/sync/semaphore"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/tidwall/gjson"
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
+
 	"github.com/wundergraph/cosmo/router/internal/wsproto"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -35,8 +41,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
-	"go.uber.org/atomic"
-	"go.uber.org/zap"
 )
 
 var (
@@ -834,7 +838,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 	startValidation := time.Now()
 
-	if _, err := operationKit.Validate(h.plannerOptions.ExecutionOptions.SkipLoader); err != nil {
+	if _, err := operationKit.Validate(h.plannerOptions.ExecutionOptions.SkipLoader, nil); err != nil {
 		opContext.validationTime = time.Since(startValidation)
 		return nil, nil, err
 	}

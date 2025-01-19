@@ -9,19 +9,22 @@ import (
 	"time"
 
 	"github.com/expr-lang/expr/vm"
+
 	"github.com/wundergraph/cosmo/router/internal/expr"
 
 	"github.com/wundergraph/astjson"
+	"go.opentelemetry.io/otel/attribute"
+
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
-	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 type contextKey int
@@ -472,9 +475,11 @@ type operationContext struct {
 	opType OperationType
 	// hash is the hash of the operation with the normalized content and variables. Used for analytics.
 	hash uint64
-	// internalHash is the hash of the operation with normalized content. Used for engine / executor caching.
+	// internalHash is the hash of the operation with the fully normalized content. Used for engine / executor caching.
 	// we can't use the hash for this due to engine limitations in handling variables with the normalized representation
 	internalHash uint64
+	// remapVariables is a map of variables that have been remapped to the new names
+	remapVariables map[string]string
 	// Content is the content of the operation
 	content    string
 	variables  *astjson.Value
