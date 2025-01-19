@@ -83,11 +83,13 @@ export const CodeViewer = ({
   code,
   disableLinking,
   className,
+  prettyPrint = true,
   language = "graphql",
 }: {
   code: string;
   disableLinking?: boolean;
   className?: string;
+  prettyPrint?: boolean;
   language?: "graphql" | "json";
 }) => {
   const router = useRouter();
@@ -99,6 +101,10 @@ export const CodeViewer = ({
   useEffect(() => {
     const set = async (source: string) => {
       try {
+        if (!prettyPrint) {
+          setContent(source);
+          return;
+        }
         const res = await prettier.format(source, {
           parser: language,
           plugins: [graphQLPlugin, estreePlugin, babelPlugin],

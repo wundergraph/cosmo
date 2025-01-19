@@ -247,7 +247,8 @@ export const CacheOperationDetails = ({
               code={operationContent}
               language="graphql"
               disableLinking
-              className="scrollbar-custom w-3/6 overflow-auto"
+              prettyPrint={false}
+              className="scrollbar-custom overflow-auto"
             />
 
             <div className="px-2 py-2">
