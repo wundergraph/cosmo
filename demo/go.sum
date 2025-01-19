@@ -305,12 +305,12 @@ github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083 h1:8/D7f8gKxTB
 github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083/go.mod h1:eOTL6acwctsN4F3b7YE+eE2t8zcJ/doLm9sZzsxxxrE=
 github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d h1:NEUrhuqOaTO1dpW8pz2tu6dKbQAqFvgiF/m4NXdzZm0=
 github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d/go.mod h1:9I3gPMAlAY+m1/cFL20iN7XHTyuZd3VT5ijccdU/FsI=
-github.com/wundergraph/cosmo/router v0.0.0-20250107115408-cdd3d47d6424 h1:X+gTrBNOXyS1b6PjOs7iJspQiBpxqlmX91PpDL5qdgw=
-github.com/wundergraph/cosmo/router v0.0.0-20250107115408-cdd3d47d6424/go.mod h1:XR62DDeHO2/vGppFRFlLGB2qLIViiUu1zg9vmYOo87M=
+github.com/wundergraph/cosmo/router v0.0.0-20250119144343-c44c4b1bc63b h1:wWDI3C9TUXuVMw94TGnwkLV4azb+/sNvLPN3iN3Az8Q=
+github.com/wundergraph/cosmo/router v0.0.0-20250119144343-c44c4b1bc63b/go.mod h1:ihXB+wzcSUfdgiFCzqykSiulRVyZXmY62O6EJBgMJsA=
 github.com/wundergraph/cosmo/router-tests v0.0.0-20241213115435-a249dba8c52a h1:GVLe85f5g+G0IOorDBBNTfm5Ua9DO0vuVY7ReSTOEbQ=
 github.com/wundergraph/cosmo/router-tests v0.0.0-20241213115435-a249dba8c52a/go.mod h1:I+SFviFnd3BHlPmYn+ckmzQyDB9+/c8RZJo4t6VQAds=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.138.0.20250106145350-20e4f82cea6b h1:DnIV7YVjrPcrJj2awt8M1F++ql6EfC0hB0Or0m4OXx4=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.138.0.20250106145350-20e4f82cea6b/go.mod h1:B7eV0Qh8Lop9QzIOQcsvKp3S0ejfC6mgyWoJnI917yQ=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.139.0.20250119131122-682a31fa0e4d h1:o7oP0spr6QR5A+vz5OZZ/SJJAnVBL71kNHm+D/sbD9M=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.139.0.20250119131122-682a31fa0e4d/go.mod h1:B7eV0Qh8Lop9QzIOQcsvKp3S0ejfC6mgyWoJnI917yQ=
 github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 h1:+qGGcbkzsfDQNPPe9UDgpxAWQrhbbBXOYJFQDq/dtJw=
 github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913/go.mod h1:4aEEwZQutDLsQv2Deui4iYQ6DWTxR14g6m8Wv88+Xqk=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
