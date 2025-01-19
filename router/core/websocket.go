@@ -14,33 +14,29 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/internal/expr"
-
-	"github.com/gorilla/websocket"
-	"github.com/wundergraph/astjson"
-	"go.opentelemetry.io/otel/attribute"
-
-	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-
 	"github.com/buger/jsonparser"
-	"golang.org/x/sync/semaphore"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
+	"github.com/gorilla/websocket"
 	"github.com/tidwall/gjson"
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
+	"golang.org/x/sync/semaphore"
 
+	"github.com/wundergraph/astjson"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
+
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/wsproto"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
 var (

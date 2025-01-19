@@ -9,22 +9,18 @@ import (
 	"time"
 
 	"github.com/expr-lang/expr/vm"
-
-	"github.com/wundergraph/cosmo/router/internal/expr"
-
-	"github.com/wundergraph/astjson"
 	"go.opentelemetry.io/otel/attribute"
-
-	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
-
-	"github.com/wundergraph/cosmo/router/pkg/authentication"
-	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
-
 	"go.uber.org/zap"
 
+	"github.com/wundergraph/astjson"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+
+	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
 type contextKey int

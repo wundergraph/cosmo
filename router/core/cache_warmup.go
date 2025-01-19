@@ -5,16 +5,16 @@ import (
 	"errors"
 	"time"
 
+	"go.uber.org/ratelimit"
+	"go.uber.org/zap"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/wundergraph/astjson"
-	"go.uber.org/ratelimit"
-	"go.uber.org/zap"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 type CacheWarmupItem struct {
