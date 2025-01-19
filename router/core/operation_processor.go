@@ -812,8 +812,6 @@ func (o *OperationKit) NormalizeVariables() error {
 }
 
 func (o *OperationKit) RemapVariables() error {
-	before := len(o.kit.doc.Input.RawBytes)
-
 	report := &operationreport.Report{}
 	variablesMap := o.kit.variablesRemapper.NormalizeOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
 	if report.HasErrors() {
@@ -856,14 +854,7 @@ func (o *OperationKit) RemapVariables() error {
 	o.parsedOperation.InternalID = o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()
 
-	// If the normalized form of the operation didn't change, we don't need to print it again
-	after := len(o.kit.doc.Input.RawBytes)
-	if after == before {
-		return nil
-	}
-
 	o.kit.normalizedOperation.Reset()
-
 	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
 		return err
