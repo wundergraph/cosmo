@@ -815,7 +815,6 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 		return nil, nil, err
 	}
 
-	opContext.internalHash = operationKit.parsedOperation.InternalID
 	opContext.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
 	if err := operationKit.NormalizeVariables(); err != nil {
@@ -823,7 +822,14 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 		return nil, nil, err
 	}
 
+	if err := operationKit.RemapVariables(); err != nil {
+		opContext.normalizationTime = time.Since(startNormalization)
+		return nil, nil, err
+	}
+
 	opContext.hash = operationKit.parsedOperation.ID
+	opContext.internalHash = operationKit.parsedOperation.InternalID
+	opContext.remapVariables = operationKit.parsedOperation.RemapVariables
 
 	opContext.normalizationTime = time.Since(startNormalization)
 	opContext.content = operationKit.parsedOperation.NormalizedRepresentation
@@ -834,7 +840,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 	startValidation := time.Now()
 
-	if _, err := operationKit.Validate(h.plannerOptions.ExecutionOptions.SkipLoader, nil); err != nil {
+	if _, err := operationKit.Validate(h.plannerOptions.ExecutionOptions.SkipLoader, opContext.remapVariables); err != nil {
 		opContext.validationTime = time.Since(startValidation)
 		return nil, nil, err
 	}
