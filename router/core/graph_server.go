@@ -936,7 +936,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 		err = WarmupCaches(ctx, warmupConfig)
 		if err != nil {
-			return nil, fmt.Errorf("failed to warmup caches: %w", err)
+			// We don't want to fail the server if the cache warmup fails
+			s.logger.Error("Failed to warmup caches. It will retry after server restart or graph execution config update", zap.Error(err))
 		}
 	}
 
