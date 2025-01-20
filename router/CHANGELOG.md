@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.164.1](https://github.com/wundergraph/cosmo/compare/router@0.164.0...router@0.164.1) (2025-01-20)
+
+### Bug Fixes
+
+* **router:** write proper line endings and header for multipart ([#1517](https://github.com/wundergraph/cosmo/issues/1517)) ([c09ecf4](https://github.com/wundergraph/cosmo/commit/c09ecf4ba01977fc1e8bef9383d68600a5d886f9)) (@df-wg)
+
 # [0.164.0](https://github.com/wundergraph/cosmo/compare/router@0.163.1...router@0.164.0) (2025-01-19)
 
 ### Features
