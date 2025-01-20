@@ -20,6 +20,7 @@ const (
 	jsonContent          = "application/json"
 	sseMimeType          = "text/event-stream"
 	heartbeat            = "{}"
+	multipartContent     = multipartMime + "; boundary=" + multipartBoundary
 )
 
 type HttpFlushWriter struct {
@@ -165,7 +166,7 @@ func setSubscriptionHeaders(wgParams SubscriptionParams, r *http.Request, w http
 	}
 
 	if wgParams.UseMultipart {
-		w.Header().Set("Content-Type", jsonContent)
+		w.Header().Set("Content-Type", multipartContent)
 		if r.ProtoMajor == 1 {
 			w.Header().Set("Transfer-Encoding", "chunked")
 		}
@@ -206,7 +207,7 @@ func GetWriterPrefix(sse bool, multipart bool) string {
 	if sse {
 		flushBreak = "event: next\ndata: "
 	} else if multipart {
-		flushBreak = "--" + multipartBoundary + "\nContent-Type: " + jsonContent + "\n\n"
+		flushBreak = "\r\n--" + multipartBoundary + "\nContent-Type: " + jsonContent + "\r\n\r\n"
 	}
 
 	return flushBreak
