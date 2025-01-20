@@ -921,21 +921,23 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			ItemsPerSecond: s.Config.cacheWarmup.ItemsPerSecond,
 			Timeout:        s.Config.cacheWarmup.Timeout,
 		}
-		switch s.Config.cacheWarmup.Source {
-		case "filesystem":
+
+		if s.Config.cacheWarmup.Source.Filesystem != nil {
 			warmupConfig.Source = NewFileSystemSource(&FileSystemSourceConfig{
-				RootPath: s.Config.cacheWarmup.Path,
+				RootPath: s.Config.cacheWarmup.Source.Filesystem.Path,
 			})
-		case "s3":
-			return nil, fmt.Errorf("s3 cache warmup is not supported yet")
-		case "cdn":
-			return nil, fmt.Errorf("cdn cache warmup is not supported yet")
-		default:
-			return nil, fmt.Errorf("invalid cache warmup source: %s, valid sources are: filesystem, s3, cdn", s.Config.cacheWarmup.Source)
+		} else {
+			cdnSource, err := NewCDNSource(s.Config.cdnConfig.URL, s.graphApiToken, s.logger)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create cdn source: %w", err)
+			}
+			warmupConfig.Source = cdnSource
 		}
+
 		err = WarmupCaches(ctx, warmupConfig)
 		if err != nil {
-			return nil, fmt.Errorf("failed to warmup caches: %w", err)
+			// We don't want to fail the server if the cache warmup fails
+			s.logger.Error("Failed to warmup caches. It will retry after server restart or graph execution config update", zap.Error(err))
 		}
 	}
 

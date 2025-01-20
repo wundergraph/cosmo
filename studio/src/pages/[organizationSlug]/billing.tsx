@@ -34,6 +34,7 @@ import { useRouter } from "next/router";
 import React, { useEffect } from "react";
 import { PiCheck } from "react-icons/pi";
 import { checkUserAccess } from "@/lib/utils";
+import Link from "next/link";
 
 const billingContactLink = process.env.NEXT_PUBLIC_BILLING_CONTACT_LINK;
 
@@ -337,7 +338,17 @@ const UpgradeButton = ({
   }
 
   if (plan.price === -1) {
-    return <Button variant="secondary">Contact us</Button>;
+    return (
+      <Button variant="secondary" asChild>
+        <Link
+          href="https://wundergraph.com/contact/sales"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Contact us
+        </Link>
+      </Button>
+    );
   }
 
   if (isDowngrade) {

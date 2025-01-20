@@ -135,6 +135,7 @@ export function deleteFeatureFlag(
           cdnBaseUrl: opts.cdnBaseUrl,
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
+        chClient: opts.chClient!,
       });
 
       compositionErrors.push(...composition.compositionErrors);

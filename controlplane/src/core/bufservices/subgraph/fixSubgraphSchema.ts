@@ -34,7 +34,15 @@ export function fixSubgraphSchema(
     const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
     const graphCompostionRepo = new GraphCompositionRepository(logger, opts.db);
 
-    const composer = new Composer(logger, opts.db, fedGraphRepo, subgraphRepo, contractRepo, graphCompostionRepo);
+    const composer = new Composer(
+      logger,
+      opts.db,
+      fedGraphRepo,
+      subgraphRepo,
+      contractRepo,
+      graphCompostionRepo,
+      opts.chClient,
+    );
 
     req.namespace = req.namespace || DefaultNamespace;
 

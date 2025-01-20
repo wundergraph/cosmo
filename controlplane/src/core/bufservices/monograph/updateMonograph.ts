@@ -150,6 +150,7 @@ export function updateMonograph(
         },
         admissionWebhookURL: req.admissionWebhookURL,
         admissionWebhookSecret: req.admissionWebhookSecret,
+        chClient: opts.chClient!,
       });
 
       await subgraphRepo.update(
@@ -172,6 +173,7 @@ export function updateMonograph(
           cdnBaseUrl: opts.cdnBaseUrl,
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
+        opts.chClient!,
       );
 
       await auditLogRepo.addAuditLog({

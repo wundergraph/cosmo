@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.8.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-cdn@0.7.1...@wundergraph/cosmo-cdn@0.8.0) (2025-01-17)
+
+### Features
+
+* cache warmer ([#1501](https://github.com/wundergraph/cosmo/issues/1501)) ([948edd2](https://github.com/wundergraph/cosmo/commit/948edd23e6d0ee968c91edd1a9e9943c3405ac2d)) (@JivusAyrus)
+
 ## [0.7.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-cdn@0.7.0...@wundergraph/cosmo-cdn@0.7.1) (2024-12-06)
 
 ### Bug Fixes

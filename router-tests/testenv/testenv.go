@@ -99,7 +99,11 @@ func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	t.Cleanup(env.Shutdown)
 	f(t, env)
 	if cfg.AssertCacheMetrics != nil {
-		assertCacheMetrics(t, env, *cfg.AssertCacheMetrics)
+		assertCacheMetrics(t, env, cfg.AssertCacheMetrics.BaseGraphAssertions, "")
+
+		for ff, v := range cfg.AssertCacheMetrics.FeatureFlagAssertions {
+			assertCacheMetrics(t, env, v, ff)
+		}
 	}
 }
 
@@ -114,7 +118,7 @@ func RunWithError(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environm
 	}
 	f(t, env)
 	if cfg.AssertCacheMetrics != nil {
-		assertCacheMetrics(t, env, *cfg.AssertCacheMetrics)
+		assertCacheMetrics(t, env, cfg.AssertCacheMetrics.BaseGraphAssertions, "")
 	}
 
 	return nil
@@ -131,11 +135,16 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 	b.StartTimer()
 	f(b, env)
 	if cfg.AssertCacheMetrics != nil {
-		assertCacheMetrics(b, env, *cfg.AssertCacheMetrics)
+		assertCacheMetrics(b, env, cfg.AssertCacheMetrics.BaseGraphAssertions, "")
+
+		for ff, v := range cfg.AssertCacheMetrics.FeatureFlagAssertions {
+			assertCacheMetrics(b, env, v, ff)
+		}
 	}
+
 }
 
-func assertCacheMetrics(t testing.TB, env *Environment, expected CacheMetricsAssertion) {
+func assertCacheMetrics(t testing.TB, env *Environment, expected CacheMetricsAssertion, featureFlag string) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
 	defer cancel()
@@ -161,6 +170,12 @@ func assertCacheMetrics(t testing.TB, env *Environment, expected CacheMetricsAss
 					if !ok {
 						continue
 					}
+
+					ff, isFF := dp.Attributes.Value("wg.feature_flag")
+					if isFF && featureFlag == "" || ff.AsString() != featureFlag {
+						continue
+					}
+
 					cacheType := ct.AsString()
 					hm := tp.AsString()
 					switch {
@@ -259,8 +274,13 @@ type Config struct {
 	EnableKafka                        bool
 	SubgraphAccessLogsEnabled          bool
 	SubgraphAccessLogFields            []config.CustomAttribute
-	AssertCacheMetrics                 *CacheMetricsAssertion
+	AssertCacheMetrics                 *CacheMetricsAssertions
 	DisableSimulateCloudExporter       bool
+}
+
+type CacheMetricsAssertions struct {
+	BaseGraphAssertions   CacheMetricsAssertion
+	FeatureFlagAssertions map[string]CacheMetricsAssertion
 }
 
 type CacheMetricsAssertion struct {
@@ -369,17 +389,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		}
 		cfg.MetricReader = metricReader
 		cfg.MetricOptions.EnableOTLPRouterCache = true
-		if cfg.ModifyRouterConfig == nil {
-			cfg.ModifyRouterConfig = func(cfg *nodev1.RouterConfig) {
-				cfg.FeatureFlagConfigs = nil
-			}
-		} else {
-			old := cfg.ModifyRouterConfig
-			cfg.ModifyRouterConfig = func(cfg *nodev1.RouterConfig) {
-				old(cfg)
-				cfg.FeatureFlagConfigs = nil
-			}
-		}
 	}
 
 	ctx, cancel := context.WithCancelCause(context.Background())

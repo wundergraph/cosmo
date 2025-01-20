@@ -425,6 +425,7 @@ func TestKafkaEvents(t *testing.T) {
 		}
 
 		assertMultipartPrefix := func(t *testing.T, reader *bufio.Reader) {
+			assertLineEquals(t, reader, "")
 			assertLineEquals(t, reader, "--graphql")
 			assertLineEquals(t, reader, "Content-Type: application/json")
 			assertLineEquals(t, reader, "")
