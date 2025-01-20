@@ -14,7 +14,7 @@ type PlaygroundOptions struct {
 type Playground struct {
 	next          http.Handler
 	opts          *PlaygroundOptions
-	templateBytes []byte
+	templateBytes *[]byte
 }
 
 func NewPlayground(opts *PlaygroundOptions) func(http.Handler) http.Handler {
@@ -30,7 +30,8 @@ func NewPlayground(opts *PlaygroundOptions) func(http.Handler) http.Handler {
 
 func (p *Playground) initPlayground() {
 	tpl := strings.Replace(p.opts.Html, "{{graphqlURL}}", p.opts.GraphqlURL, -1)
-	p.templateBytes = []byte(tpl)
+	play := []byte(tpl)
+	p.templateBytes = &play
 }
 
 func (p *Playground) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -44,8 +45,8 @@ func (p *Playground) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Content-Length", strconv.Itoa(len(p.templateBytes)))
+	w.Header().Set("Content-Length", strconv.Itoa(len(*p.templateBytes)))
 
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(p.templateBytes)
+	_, _ = w.Write(*p.templateBytes)
 }
