@@ -365,12 +365,15 @@
         {
           "Type": "header",
           "Name": "X-Authorization",
-          "ValuePrefix": "Bearer"
+          "ValuePrefixes": [
+            "Bearer",
+            "Token"
+          ]
         },
         {
           "Type": "header",
           "Name": "authz",
-          "ValuePrefix": ""
+          "ValuePrefixes": null
         }
       ]
     }

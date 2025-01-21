@@ -264,11 +264,11 @@ func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Co
 			continue
 		}
 
-		if _, ok := headerSourceMap[s.Name]; !ok {
-			headerSourceMap[s.Name] = append(headerSourceMap[s.Name], s.ValuePrefix)
+		for _, prefix := range s.ValuePrefixes {
+			headerSourceMap[s.Name] = append(headerSourceMap[s.Name], prefix)
+			prefixSet[prefix] = struct{}{}
 		}
 
-		prefixSet[s.ValuePrefix] = struct{}{}
 	}
 
 	opts := authentication.HttpHeaderAuthenticatorOptions{

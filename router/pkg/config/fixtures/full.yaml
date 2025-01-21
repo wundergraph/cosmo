@@ -224,7 +224,7 @@ authentication:
     header_sources:
       - type: header
         name: X-Authorization
-        value_prefix: Bearer
+        value_prefixes: [Bearer, Token]
       - type: header
         name: authz
 

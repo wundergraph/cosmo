@@ -1438,7 +1438,6 @@ func TestSupportedAlgorithms(t *testing.T) {
 			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
 		})
 	})
-
 }
 
 func TestAuthenticationOverWebsocket(t *testing.T) {

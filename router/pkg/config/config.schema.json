@@ -1492,9 +1492,12 @@
                     "format": "http-header",
                     "examples": ["X-Authorization"]
                   },
-                  "value_prefix": {
-                    "type": "string",
-                    "description": "The prefix of the header value. The prefix is used to extract the token from the header value."
+                  "value_prefixes": {
+                    "type": "array",
+                    "description": "The prefixes of the header value. The prefixes are used to extract the token from the header value.",
+                    "items": {
+                      "type": "string"
+                    }
                   }
                 },
                 "required": ["type", "name"]

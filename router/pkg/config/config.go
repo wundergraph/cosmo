@@ -405,9 +405,9 @@ type JWKSConfiguration struct {
 }
 
 type HeaderSource struct {
-	Type        string `yaml:"type"`
-	Name        string `yaml:"name"`
-	ValuePrefix string `yaml:"value_prefix"`
+	Type          string   `yaml:"type"`
+	Name          string   `yaml:"name"`
+	ValuePrefixes []string `yaml:"value_prefixes"`
 }
 
 type JWTAuthenticationConfiguration struct {
