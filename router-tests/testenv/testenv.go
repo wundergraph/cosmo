@@ -407,7 +407,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		ec.TimeKey = "time"
 
 		syncer := zapcore.AddSync(os.Stderr)
-		cfg.Logger = logging.NewZapLogger(syncer, false, true, zapcore.DebugLevel)
+		cfg.Logger = logging.NewZapLogger(syncer, false, true, zapcore.WarnLevel)
 	}
 
 	if cfg.AccessLogger == nil {

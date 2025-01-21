@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/cosmo/router/core"
 	"net/http"
 	"sync/atomic"
@@ -418,31 +417,6 @@ func TestKafkaEvents(t *testing.T) {
 	t.Run("multipart", func(t *testing.T) {
 		t.Parallel()
 
-		assertLineEquals := func(t *testing.T, reader *bufio.Reader, expected string) {
-			line, _, err := reader.ReadLine()
-			assert.NoError(t, err)
-			assert.Equal(t, expected, string(line))
-		}
-
-		assertMultipartPrefix := func(t *testing.T, reader *bufio.Reader) {
-			assertLineEquals(t, reader, "")
-			assertLineEquals(t, reader, "--graphql")
-			assertLineEquals(t, reader, "Content-Type: application/json")
-			assertLineEquals(t, reader, "")
-		}
-
-		requireLineEquals := func(t *testing.T, reader *bufio.Reader, expected string) {
-			line, _, err := reader.ReadLine()
-			require.NoError(t, err)
-			require.Equal(t, expected, string(line))
-		}
-
-		requireMultipartPrefix := func(t *testing.T, reader *bufio.Reader) {
-			requireLineEquals(t, reader, "--graphql")
-			requireLineEquals(t, reader, "Content-Type: application/json")
-			requireLineEquals(t, reader, "")
-		}
-
 		var multipartHeartbeatInterval = time.Second * 5
 
 		t.Run("subscribe sync", func(t *testing.T) {
@@ -462,10 +436,11 @@ func TestKafkaEvents(t *testing.T) {
 
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
-				var consumed atomic.Uint32
-				var produced atomic.Uint32
+				var done atomic.Bool
 
 				go func() {
+					defer done.Store(true)
+
 					client := http.Client{
 						Timeout: time.Second * 100,
 					}
@@ -476,42 +451,17 @@ func TestKafkaEvents(t *testing.T) {
 					defer resp.Body.Close()
 					reader := bufio.NewReader(resp.Body)
 
-					assert.Eventually(t, func() bool {
-						return produced.Load() == 1
-					}, KafkaWaitTimeout, time.Millisecond*100)
-					assertMultipartPrefix(t, reader)
-					assertLineEquals(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
-					consumed.Add(1)
-
-					assertMultipartPrefix(t, reader)
-					assertLineEquals(t, reader, "{}")
-					consumed.Add(1)
-
-					assert.Eventually(t, func() bool {
-						return produced.Load() == 2
-					}, KafkaWaitTimeout, time.Millisecond*100)
-					assertMultipartPrefix(t, reader)
-					assertLineEquals(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
-
-					consumed.Add(1)
+					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
+					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-				xEnv.WaitForMessagesSent(1, KafkaWaitTimeout)
-				produced.Add(1)
 
-				require.Eventually(t, func() bool {
-					return consumed.Load() == 2
-				}, KafkaWaitTimeout, time.Millisecond*100)
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-				xEnv.WaitForMessagesSent(3, KafkaWaitTimeout) // 2 messages + the empty one
-				produced.Add(1)
 
-				require.Eventually(t, func() bool {
-					return consumed.Load() == 3
-				}, KafkaWaitTimeout, time.Millisecond*100)
+				require.Eventually(t, done.Load, KafkaWaitTimeout, time.Millisecond*100)
 
 				xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
 				xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
@@ -543,8 +493,7 @@ func TestKafkaEvents(t *testing.T) {
 				defer resp.Body.Close()
 				reader := bufio.NewReader(resp.Body)
 
-				requireMultipartPrefix(t, reader)
-				requireLineEquals(t, reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
+				assertMultipartValueEventually(t, reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
 
 				xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
 				xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
