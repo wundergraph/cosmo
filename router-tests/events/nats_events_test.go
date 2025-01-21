@@ -108,6 +108,10 @@ func TestNatsEvents(t *testing.T) {
 			})
 			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, resOne.Body)
 
+			assert.Eventually(t, func() bool {
+				return subscriptionCalled.Load() == 1
+			}, NatsWaitTimeout, time.Millisecond*100)
+
 			// Trigger the first subscription via NATS
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
 			require.NoError(t, err)
@@ -363,6 +367,10 @@ func TestNatsEvents(t *testing.T) {
 					Query: `mutation { updateAvailability(employeeID: 3, isAvailable: true) { id } }`,
 				})
 				require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
+
+				require.Eventually(t, func() bool {
+					return consumed.Load() == 1
+				}, NatsWaitTimeout, time.Millisecond*100)
 
 				// Trigger the subscription via NATS
 				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
