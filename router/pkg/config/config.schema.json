@@ -1091,7 +1091,7 @@
           "default": "/",
           "description": "The path of the GraphQL Playground. The GraphQL Playground is a web-based GraphQL IDE that allows you to interact with the GraphQL API. The default value is '/'."
         },
-        "limit": {
+        "concurrency_limit": {
           "type": "integer",
           "description": "The concurrency limit for loading the playground. This shouldn't impact normal usage.",
           "default": 10,

@@ -855,7 +855,7 @@ type Config struct {
 type PlaygroundConfig struct {
 	Enabled          bool   `yaml:"enabled" envDefault:"true" env:"PLAYGROUND_ENABLED"`
 	Path             string `yaml:"path" envDefault:"/" env:"PLAYGROUND_PATH"`
-	ConcurrencyLimit int    `yaml:"limit,omitempty" envDefault:"10" env:"PLAYGROUND_CONCURRENCY_LIMIT"`
+	ConcurrencyLimit int    `yaml:"concurrency_limit,omitempty" envDefault:"10" env:"PLAYGROUND_CONCURRENCY_LIMIT"`
 }
 
 type LoadResult struct {

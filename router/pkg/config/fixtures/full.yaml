@@ -14,7 +14,7 @@ playground_path: "/"
 playground:
   enabled: false
   path: "/my-playground"
-  limit: 1500
+  concurrency_limit: 1500
 introspection_enabled: true
 json_log: true
 shutdown_delay: 15s
