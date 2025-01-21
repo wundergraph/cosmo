@@ -11,6 +11,10 @@ listen_addr: "localhost:3002"
 controlplane_url: "https://cosmo-cp.wundergraph.com"
 playground_enabled: true
 playground_path: "/"
+playground:
+  enabled: false
+  path: "/my-playground"
+  limit: 1500
 introspection_enabled: true
 json_log: true
 shutdown_delay: 15s

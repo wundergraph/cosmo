@@ -34,7 +34,7 @@ func NewPlayground(opts *PlaygroundOptions) func(http.Handler) http.Handler {
 		p := &Playground{
 			next: next,
 			opts: opts,
-			sem:  semaphore.NewWeighted(opts.ConcurrencyLimit),
+			sem:  semaphore.NewWeighted(limit),
 		}
 		p.initPlayground()
 		return p

@@ -827,7 +827,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		}),
 		core.WithGraphApiToken(graphApiToken),
 		core.WithDevelopmentMode(true),
-		core.WithPlayground(true),
+		core.WithPlaygroundConfig(config.PlaygroundConfig{Enabled: true}),
 		core.WithEngineExecutionConfig(engineExecutionConfig),
 		core.WithSecurityConfig(cfg.SecurityConfiguration),
 		core.WithCacheControlPolicy(cfg.CacheControl),
