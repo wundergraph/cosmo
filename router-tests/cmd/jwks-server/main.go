@@ -1,4 +1,8 @@
 /*
+[NOTE]
+> For mor information on authentication and authorization, see the router documentation at
+> https://cosmo-docs.wundergraph.com/router/authentication-and-authorization
+
 This simple JWKS server can be used to test the router.
 Start the server before running an instance of the router to simulate JWKS integration with the router setup through instance.go.
 
