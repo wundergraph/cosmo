@@ -739,6 +739,7 @@ type ApolloCompatibilityFlags struct {
 	SuppressFetchErrors           ApolloCompatibilitySuppressFetchErrors           `yaml:"suppress_fetch_errors"`
 	ReplaceUndefinedOpFieldErrors ApolloCompatibilityReplaceUndefinedOpFieldErrors `yaml:"replace_undefined_op_field_errors"`
 	ReplaceInvalidVarErrors       ApolloCompatibilityReplaceInvalidVarErrors       `yaml:"replace_invalid_var_errors"`
+	SkipEnumValueValidation       ApolloCompatibilitySkipEnumValueValidation       `yaml:"skip_enum_value_validation"`
 }
 
 type ApolloCompatibilityValueCompletion struct {
@@ -764,6 +765,10 @@ type ApolloCompatibilityReplaceUndefinedOpFieldErrors struct {
 
 type ApolloCompatibilityReplaceInvalidVarErrors struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_ENABLED"`
+}
+
+type ApolloCompatibilitySkipEnumValueValidation struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_SKIP_ENUM_VALUE_VALIDATION_ENABLED"`
 }
 
 type CacheWarmupSource struct {
