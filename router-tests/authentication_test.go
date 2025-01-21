@@ -1125,26 +1125,29 @@ func TestMultipleKeys(t *testing.T) {
 func TestSupportedAlgorithms(t *testing.T) {
 	t.Parallel()
 
-	testAuthentication := func(t *testing.T, xEnv *testenv.Environment, token string) {
-		t.Helper()
-
-		// Operations with a token should succeed
-		header := http.Header{
+	authHeader := func(token string) http.Header {
+		return http.Header{
 			"Authorization": []string{"Bearer " + token},
 		}
+	}
+
+	testRequest := func(t *testing.T, xEnv *testenv.Environment, header http.Header, expectSuccess bool) string {
+		t.Helper()
+
 		res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
 		require.NoError(t, err)
 		defer res.Body.Close()
-		require.Equal(t, http.StatusOK, res.StatusCode)
-		require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+
+		if expectSuccess {
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+		} else {
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+		}
+
 		data, err := io.ReadAll(res.Body)
 		require.NoError(t, err)
-		require.Equal(t, employeesExpectedData, string(data))
-
-		// Operation without a token should fail
-		res, err = xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(employeesQuery))
-		require.NoError(t, err)
-		require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+		return string(data)
 	}
 
 	testSetup := func(t *testing.T, crypto jwks.Crypto, allowedAlgorithms ...string) (string, []authentication.Authenticator) {
@@ -1192,7 +1195,19 @@ func TestSupportedAlgorithms(t *testing.T) {
 					core.WithAccessController(core.NewAccessController(authenticators, true)),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				testAuthentication(t, xEnv, token)
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
 			})
 		})
 
@@ -1209,7 +1224,19 @@ func TestSupportedAlgorithms(t *testing.T) {
 					core.WithAccessController(core.NewAccessController(authenticators, true)),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				testAuthentication(t, xEnv, token)
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
 			})
 		})
 
@@ -1226,7 +1253,19 @@ func TestSupportedAlgorithms(t *testing.T) {
 					core.WithAccessController(core.NewAccessController(authenticators, true)),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				testAuthentication(t, xEnv, token)
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
 			})
 		})
 
@@ -1243,7 +1282,19 @@ func TestSupportedAlgorithms(t *testing.T) {
 					core.WithAccessController(core.NewAccessController(authenticators, true)),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				testAuthentication(t, xEnv, token)
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
 			})
 		})
 
@@ -1260,7 +1311,19 @@ func TestSupportedAlgorithms(t *testing.T) {
 					core.WithAccessController(core.NewAccessController(authenticators, true)),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				testAuthentication(t, xEnv, token)
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
 			})
 		})
 
@@ -1277,7 +1340,19 @@ func TestSupportedAlgorithms(t *testing.T) {
 					core.WithAccessController(core.NewAccessController(authenticators, true)),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				testAuthentication(t, xEnv, token)
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
 			})
 		})
 	})
@@ -1298,7 +1373,19 @@ func TestSupportedAlgorithms(t *testing.T) {
 					core.WithAccessController(core.NewAccessController(authenticators, true)),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				testAuthentication(t, xEnv, token)
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
 			})
 		})
 
@@ -1315,7 +1402,19 @@ func TestSupportedAlgorithms(t *testing.T) {
 					core.WithAccessController(core.NewAccessController(authenticators, true)),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				testAuthentication(t, xEnv, token)
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
 			})
 		})
 
@@ -1332,7 +1431,19 @@ func TestSupportedAlgorithms(t *testing.T) {
 					core.WithAccessController(core.NewAccessController(authenticators, true)),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				testAuthentication(t, xEnv, token)
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
 			})
 		})
 	})
@@ -1353,7 +1464,19 @@ func TestSupportedAlgorithms(t *testing.T) {
 					core.WithAccessController(core.NewAccessController(authenticators, true)),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				testAuthentication(t, xEnv, token)
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
 			})
 		})
 	})
@@ -1374,7 +1497,19 @@ func TestSupportedAlgorithms(t *testing.T) {
 					core.WithAccessController(core.NewAccessController(authenticators, true)),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				testAuthentication(t, xEnv, token)
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
 			})
 		})
 
@@ -1391,7 +1526,19 @@ func TestSupportedAlgorithms(t *testing.T) {
 					core.WithAccessController(core.NewAccessController(authenticators, true)),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				testAuthentication(t, xEnv, token)
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
 			})
 		})
 
@@ -1408,7 +1555,19 @@ func TestSupportedAlgorithms(t *testing.T) {
 					core.WithAccessController(core.NewAccessController(authenticators, true)),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				testAuthentication(t, xEnv, token)
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
 			})
 		})
 	})
