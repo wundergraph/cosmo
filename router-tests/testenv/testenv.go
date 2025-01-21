@@ -393,6 +393,27 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	ctx, cancel := context.WithCancelCause(context.Background())
 
+	var (
+		logObserver *observer.ObservedLogs
+	)
+
+	if oc := cfg.LogObservation; oc.Enabled {
+		var zCore zapcore.Core
+		zCore, logObserver = observer.New(oc.LogLevel)
+		cfg.Logger = logging.NewZapLoggerWithCore(zCore, true)
+	} else {
+		ec := zap.NewProductionEncoderConfig()
+		ec.EncodeDuration = zapcore.SecondsDurationEncoder
+		ec.TimeKey = "time"
+
+		syncer := zapcore.AddSync(os.Stderr)
+		cfg.Logger = logging.NewZapLogger(syncer, false, true, zapcore.DebugLevel)
+	}
+
+	if cfg.AccessLogger == nil {
+		cfg.AccessLogger = cfg.Logger
+	}
+
 	counters := &SubgraphRequestCount{
 		Global:       atomic.NewInt64(0),
 		Employees:    atomic.NewInt64(0),
@@ -417,7 +438,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	getPubSubName := GetPubSubNameFn(pubSubPrefix)
 
 	employees := &Subgraph{
-		handler:          subgraphs.EmployeesHandler(subgraphOptions(ctx, t, natsSetup, getPubSubName)),
+		handler:          subgraphs.EmployeesHandler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
 		middleware:       cfg.Subgraphs.Employees.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -427,7 +448,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	family := &Subgraph{
-		handler:          subgraphs.FamilyHandler(subgraphOptions(ctx, t, natsSetup, getPubSubName)),
+		handler:          subgraphs.FamilyHandler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
 		middleware:       cfg.Subgraphs.Family.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -437,7 +458,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	hobbies := &Subgraph{
-		handler:          subgraphs.HobbiesHandler(subgraphOptions(ctx, t, natsSetup, getPubSubName)),
+		handler:          subgraphs.HobbiesHandler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
 		middleware:       cfg.Subgraphs.Hobbies.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -447,7 +468,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	products := &Subgraph{
-		handler:          subgraphs.ProductsHandler(subgraphOptions(ctx, t, natsSetup, getPubSubName)),
+		handler:          subgraphs.ProductsHandler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
 		middleware:       cfg.Subgraphs.Products.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -457,7 +478,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	productsFg := &Subgraph{
-		handler:          subgraphs.ProductsFGHandler(subgraphOptions(ctx, t, natsSetup, getPubSubName)),
+		handler:          subgraphs.ProductsFGHandler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
 		middleware:       cfg.Subgraphs.ProductsFg.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -467,7 +488,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	test1 := &Subgraph{
-		handler:          subgraphs.Test1Handler(subgraphOptions(ctx, t, natsSetup, getPubSubName)),
+		handler:          subgraphs.Test1Handler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
 		middleware:       cfg.Subgraphs.Test1.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -477,7 +498,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	availability := &Subgraph{
-		handler:          subgraphs.AvailabilityHandler(subgraphOptions(ctx, t, natsSetup, getPubSubName)),
+		handler:          subgraphs.AvailabilityHandler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
 		middleware:       cfg.Subgraphs.Availability.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -487,7 +508,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	mood := &Subgraph{
-		handler:          subgraphs.MoodHandler(subgraphOptions(ctx, t, natsSetup, getPubSubName)),
+		handler:          subgraphs.MoodHandler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
 		middleware:       cfg.Subgraphs.Mood.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -497,7 +518,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	countries := &Subgraph{
-		handler:          subgraphs.CountriesHandler(subgraphOptions(ctx, t, natsSetup, getPubSubName)),
+		handler:          subgraphs.CountriesHandler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
 		middleware:       cfg.Subgraphs.Countries.Middleware,
 		globalMiddleware: cfg.Subgraphs.GlobalMiddleware,
 		globalCounter:    counters.Global,
@@ -570,27 +591,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		retryClient.RetryWaitMin = 100 * time.Millisecond
 
 		client = retryClient.StandardClient()
-	}
-
-	var (
-		logObserver *observer.ObservedLogs
-	)
-
-	if oc := cfg.LogObservation; oc.Enabled {
-		var zCore zapcore.Core
-		zCore, logObserver = observer.New(oc.LogLevel)
-		cfg.Logger = logging.NewZapLoggerWithCore(zCore, true)
-	} else {
-		ec := zap.NewProductionEncoderConfig()
-		ec.EncodeDuration = zapcore.SecondsDurationEncoder
-		ec.TimeKey = "time"
-
-		syncer := zapcore.AddSync(os.Stderr)
-		cfg.Logger = logging.NewZapLogger(syncer, false, true, zapcore.ErrorLevel)
-	}
-
-	if cfg.AccessLogger == nil {
-		cfg.AccessLogger = cfg.Logger
 	}
 
 	kafkaStarted.Wait()
@@ -1887,7 +1887,7 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 	}
 }
 
-func subgraphOptions(ctx context.Context, t testing.TB, natsData *NatsData, pubSubName func(string) string) *subgraphs.SubgraphOptions {
+func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, natsData *NatsData, pubSubName func(string) string) *subgraphs.SubgraphOptions {
 	if natsData == nil {
 		return &subgraphs.SubgraphOptions{
 			NatsPubSubByProviderID: map[string]pubsub_datasource.NatsPubSub{},
@@ -1896,13 +1896,10 @@ func subgraphOptions(ctx context.Context, t testing.TB, natsData *NatsData, pubS
 	}
 	natsPubSubByProviderID := make(map[string]pubsub_datasource.NatsPubSub, len(demoNatsProviders))
 	for _, sourceName := range demoNatsProviders {
-		natsConnection, err := nats.Connect(natsData.Server.ClientURL())
+		js, err := jetstream.New(natsData.Connections[0])
 		require.NoError(t, err)
 
-		js, err := jetstream.New(natsConnection)
-		require.NoError(t, err)
-
-		natsPubSubByProviderID[sourceName] = pubsubNats.NewConnector(zap.NewNop(), natsConnection, js, "hostname", "listenaddr").New(ctx)
+		natsPubSubByProviderID[sourceName] = pubsubNats.NewConnector(logger, natsData.Connections[0], js, "hostname", "listenaddr").New(ctx)
 	}
 
 	return &subgraphs.SubgraphOptions{

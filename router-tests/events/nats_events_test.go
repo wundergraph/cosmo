@@ -91,16 +91,14 @@ func TestNatsEvents(t *testing.T) {
 
 			var closed atomic.Bool
 			go func() {
-				require.Eventually(t, func() bool {
+				defer closed.Store(true)
+				assert.Eventually(t, func() bool {
 					return subscriptionCalled.Load() == 2
 				}, NatsWaitTimeout, time.Millisecond*100)
-				require.NoError(t, client.Close())
-				closed.Store(true)
+				assert.NoError(t, client.Close())
 			}()
 
-			require.Eventually(t, func() bool {
-				return closed.Load()
-			}, NatsWaitTimeout, time.Millisecond*100)
+			assert.Eventually(t, closed.Load, NatsWaitTimeout, time.Millisecond*100)
 
 			xEnv.WaitForSubscriptionCount(0, NatsWaitTimeout)
 			xEnv.WaitForConnectionCount(0, NatsWaitTimeout)
@@ -139,7 +137,7 @@ func TestNatsEvents(t *testing.T) {
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
 				oldCount := counter.Load()
-				counter.Add(1)
+				defer counter.Add(1)
 
 				if oldCount == 0 {
 					var gqlErr graphql.Errors
@@ -170,25 +168,31 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
-			xEnv.WaitForMessagesSent(1, NatsWaitTimeout)
+			require.Eventually(t, func() bool {
+				return counter.Load() == 1
+			}, NatsWaitTimeout, time.Millisecond*100)
 
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
-			xEnv.WaitForMessagesSent(2, NatsWaitTimeout)
+			require.Eventually(t, func() bool {
+				return counter.Load() == 2
+			}, NatsWaitTimeout, time.Millisecond*100)
 
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","update":{"name":"foo"}}`)) // Missing id
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
-			xEnv.WaitForMessagesSent(3, NatsWaitTimeout)
+
+			require.Eventually(t, func() bool {
+				return counter.Load() == 3
+			}, NatsWaitTimeout, time.Millisecond*100)
 
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
-			xEnv.WaitForMessagesSent(4, NatsWaitTimeout)
 
 			require.Eventually(t, func() bool {
 				return counter.Load() == 4
@@ -317,8 +321,6 @@ func TestNatsEvents(t *testing.T) {
 				var consumed atomic.Uint32
 
 				go func() {
-					defer produced.Add(1)
-
 					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
 					resp, err := xEnv.RouterClient.Do(req)
 					require.NoError(t, err)
@@ -334,6 +336,9 @@ func TestNatsEvents(t *testing.T) {
 					reader := bufio.NewReader(resp.Body)
 
 					// Read the first part
+					require.Eventually(t, func() bool {
+						return produced.Load() == 1
+					}, NatsWaitTimeout, time.Millisecond*100)
 					assertMultipartPrefix(t, reader)
 					assertLineEquals(t, reader, "{\"payload\":{\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}}")
 					consumed.Add(1)
@@ -434,13 +439,12 @@ func TestNatsEvents(t *testing.T) {
 
 				subscribePayload := []byte(`{"query":"subscription { countFor(count: 3) }"}`)
 
-				var counter atomic.Uint32
+				var done atomic.Bool
 
-				var client http.Client
 				go func() {
-					defer counter.Add(1)
+					defer done.Store(true)
 
-					client = http.Client{}
+					client := http.Client{}
 					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
 					resp, err := client.Do(req)
 					require.NoError(t, err)
@@ -462,9 +466,7 @@ func TestNatsEvents(t *testing.T) {
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
-				require.Eventually(t, func() bool {
-					return counter.Load() == 1
-				}, NatsWaitTimeout, time.Millisecond*100)
+				require.Eventually(t, done.Load, NatsWaitTimeout, time.Millisecond*100)
 			})
 		})
 
@@ -638,9 +640,7 @@ func TestNatsEvents(t *testing.T) {
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 
-			require.Eventually(t, func() bool {
-				return requestCompleted.Load()
-			}, NatsWaitTimeout, time.Millisecond*100)
+			require.Eventually(t, requestCompleted.Load, NatsWaitTimeout, time.Millisecond*100)
 		})
 	})
 
@@ -1474,9 +1474,7 @@ func TestNatsEvents(t *testing.T) {
 
 			}
 
-			require.Eventually(t, func() bool {
-				return requestsDone.Load()
-			}, NatsWaitTimeout, time.Millisecond*100)
+			require.Eventually(t, requestsDone.Load, NatsWaitTimeout, time.Millisecond*100)
 		})
 	})
 
@@ -1508,20 +1506,23 @@ func TestNatsEvents(t *testing.T) {
 
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
 				defer consumed.Add(1)
-				oldCount := produced.Load()
+				oldCount := consumed.Load()
+				require.Eventually(t, func() bool {
+					return oldCount == produced.Load()-1
+				}, NatsWaitTimeout, time.Millisecond*100)
 
-				if oldCount == 1 {
+				if oldCount == 0 {
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					assert.Equal(t, "Invalid message received", gqlErr[0].Message)
-				} else if oldCount == 2 {
+				} else if oldCount == 1 {
 					assert.NoError(t, errValue)
 					assert.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
-				} else if oldCount == 3 {
+				} else if oldCount == 2 {
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					assert.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.", gqlErr[0].Message)
-				} else if oldCount == 4 {
+				} else if oldCount == 3 {
 					assert.NoError(t, errValue)
 					assert.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
 				}
