@@ -186,20 +186,6 @@ func (s *server) printTokensForKeys(claims map[string]any) error {
 	return nil
 }
 
-func (s *server) token(claims map[string]any) (string, error) {
-	if len(s.providers) == 0 {
-		return "", jwt.ErrInvalidKey
-	}
-
-	for kid, pr := range s.providers {
-		token := jwt.NewWithClaims(pr.SigningMethod(), jwt.MapClaims(claims))
-		token.Header[jwkset.HeaderKID] = kid
-		return token.SignedString(pr.PrivateKey())
-	}
-
-	return "", jwt.ErrInvalidKey
-}
-
 func (s *server) tokenForKID(kid string, claims map[string]any) (string, error) {
 	provider, ok := s.providers[kid]
 	if !ok {
