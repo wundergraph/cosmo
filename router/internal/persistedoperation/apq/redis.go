@@ -12,7 +12,7 @@ import (
 
 type RedisOptions struct {
 	Logger        *zap.Logger
-	StorageConfig *config.BaseStorageProvider
+	StorageConfig *config.RedisStorageProvider
 	ApqConfig     *config.AutomaticPersistedQueriesConfig
 	Prefix        string
 }
@@ -29,8 +29,9 @@ func NewRedisClient(opts *RedisOptions) (KVClient, error) {
 	}
 
 	rdb, err := rd.NewRedisCloser(&rd.RedisCloserOptions{
-		Logger: opts.Logger,
-		URL:    opts.StorageConfig.URL,
+		Logger:      opts.Logger,
+		URL:         opts.StorageConfig.URL,
+		ClusterUrls: opts.StorageConfig.ClusterURLs,
 	})
 
 	rclient := &redisClient{

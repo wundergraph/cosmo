@@ -843,8 +843,9 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
 		var err error
 		r.redisClient, err = rd.NewRedisCloser(&rd.RedisCloserOptions{
-			URL:    r.Config.rateLimit.Storage.Url,
-			Logger: r.logger,
+			URL:         r.Config.rateLimit.Storage.URL,
+			ClusterUrls: r.Config.rateLimit.Storage.ClusterURLs,
+			Logger:      r.logger,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create redis client: %w", err)
@@ -907,7 +908,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 func (r *Router) buildClients() error {
 	s3Providers := map[string]config.S3StorageProvider{}
 	cdnProviders := map[string]config.BaseStorageProvider{}
-	redisProviders := map[string]config.BaseStorageProvider{}
+	redisProviders := map[string]config.RedisStorageProvider{}
 
 	for _, provider := range r.storageProviders.S3 {
 		if _, ok := s3Providers[provider.ID]; ok {

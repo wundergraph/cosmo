@@ -198,7 +198,8 @@
       "HideStatsFromResponseExtension": false
     },
     "Storage": {
-      "Url": "redis://localhost:6379",
+      "URL": "redis://localhost:6379",
+      "ClusterURLs": null,
       "KeyPrefix": "cosmo_rate_limit"
     },
     "Debug": false,

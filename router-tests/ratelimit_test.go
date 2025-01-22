@@ -52,7 +52,7 @@ func TestRateLimit(t *testing.T) {
 				core.WithRateLimitConfig(&config.RateLimitConfiguration{
 					Enabled: false,
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:1",
+						URL:       "redis://localhost:1",
 						KeyPrefix: "non",
 					},
 				}),
@@ -86,7 +86,7 @@ func TestRateLimit(t *testing.T) {
 						RejectExceedingRequests: false,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URL:       "redis://localhost:6379",
 						KeyPrefix: key,
 					},
 					Debug: true,
@@ -121,7 +121,7 @@ func TestRateLimit(t *testing.T) {
 						RejectExceedingRequests: false,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URL:       "redis://localhost:6379",
 						KeyPrefix: key,
 					},
 					Debug:               true,
@@ -162,7 +162,7 @@ func TestRateLimit(t *testing.T) {
 						RejectExceedingRequests: false,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URL:       "redis://localhost:6379",
 						KeyPrefix: key,
 					},
 					Debug:               true,
@@ -225,7 +225,7 @@ func TestRateLimit(t *testing.T) {
 						RejectExceedingRequests: false,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URL:       "redis://localhost:6379",
 						KeyPrefix: key,
 					},
 					KeySuffixExpression: "request.header.Get('X-Forwarded-For')",
@@ -278,7 +278,7 @@ func TestRateLimit(t *testing.T) {
 						RejectExceedingRequests: false,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URL:       "redis://localhost:6379",
 						KeyPrefix: key,
 					},
 					Debug:               true,
@@ -321,7 +321,7 @@ func TestRateLimit(t *testing.T) {
 						RejectExceedingRequests: false,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URL:       "redis://localhost:6379",
 						KeyPrefix: key,
 					},
 					Debug: true,
@@ -376,7 +376,7 @@ func TestRateLimit(t *testing.T) {
 						RejectExceedingRequests: false,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URL:       "redis://localhost:6379",
 						KeyPrefix: key,
 					},
 					Debug: true,
@@ -410,7 +410,7 @@ func TestRateLimit(t *testing.T) {
 						RejectExceedingRequests: false,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URL:       "redis://localhost:6379",
 						KeyPrefix: key,
 					},
 					Debug: true,
@@ -445,7 +445,7 @@ func TestRateLimit(t *testing.T) {
 						RejectStatusCode:        http.StatusOK,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URL:       "redis://localhost:6379",
 						KeyPrefix: key,
 					},
 					Debug: true,
@@ -483,7 +483,7 @@ func TestRateLimit(t *testing.T) {
 						RejectStatusCode:        http.StatusTooManyRequests,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URL:       "redis://localhost:6379",
 						KeyPrefix: key,
 					},
 					Debug: true,
@@ -520,7 +520,7 @@ func TestRateLimit(t *testing.T) {
 						HideStatsFromResponseExtension: true,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URL:       "redis://localhost:6379",
 						KeyPrefix: key,
 					},
 					Debug: true,
@@ -556,7 +556,7 @@ func TestRateLimit(t *testing.T) {
 						HideStatsFromResponseExtension: true,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URL:       "redis://localhost:6379",
 						KeyPrefix: key,
 					},
 					Debug: true,
@@ -602,7 +602,7 @@ func TestRateLimit(t *testing.T) {
 						HideStatsFromResponseExtension: true,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URL:       "redis://localhost:6379",
 						KeyPrefix: key,
 					},
 					Debug: true,
@@ -649,7 +649,7 @@ func TestRateLimit(t *testing.T) {
 						HideStatsFromResponseExtension: true,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URL:       "redis://localhost:6379",
 						KeyPrefix: key,
 					},
 					Debug: true,
@@ -671,7 +671,6 @@ func TestRateLimit(t *testing.T) {
 	})
 	t.Run("Cluster Mode", func(t *testing.T) {
 		var (
-			clusterUrls     = "redis://localhost:7000,redis://localhost:7001,redis://localhost:7002"
 			clusterUrlSlice = []string{"localhost:7000", "localhost:7001", "localhost:7002"}
 			password        = "test"
 		)
@@ -697,8 +696,8 @@ func TestRateLimit(t *testing.T) {
 							RejectExceedingRequests: false,
 						},
 						Storage: config.RedisConfiguration{
-							Url:       clusterUrls,
-							KeyPrefix: key,
+							ClusterURLs: clusterUrlSlice,
+							KeyPrefix:   key,
 						},
 						Debug: true,
 					}),
@@ -732,8 +731,8 @@ func TestRateLimit(t *testing.T) {
 							RejectExceedingRequests: false,
 						},
 						Storage: config.RedisConfiguration{
-							Url:       clusterUrls,
-							KeyPrefix: key,
+							ClusterURLs: clusterUrlSlice,
+							KeyPrefix:   key,
 						},
 						Debug:               true,
 						KeySuffixExpression: "request.header.Get('X-Forwarded-For')",
@@ -771,8 +770,8 @@ func TestRateLimit(t *testing.T) {
 							RejectExceedingRequests: false,
 						},
 						Storage: config.RedisConfiguration{
-							Url:       clusterUrls,
-							KeyPrefix: key,
+							ClusterURLs: clusterUrlSlice,
+							KeyPrefix:   key,
 						},
 						Debug: true,
 					}),

@@ -275,6 +275,9 @@ rate_limit:
   strategy: "simple"
   storage:
     url: "redis://:test@localhost:6379"
+    cluster_urls:
+      - "test@localhost:8000"
+      - "test2@localhost:8001"
     key_prefix: "cosmo_rate_limit"
   simple_strategy:
     rate: 60
@@ -327,6 +330,9 @@ storage_providers:
       secure: false
   redis:
     - id: "my_redis"
+      cluster_urls:
+        - "test@localhost:8000"
+        - "test2@localhost:8001"
       url: "redis://:test@localhost:6379"
 
 security:

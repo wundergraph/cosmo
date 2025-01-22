@@ -373,7 +373,11 @@
       "HideStatsFromResponseExtension": false
     },
     "Storage": {
-      "Url": "redis://:test@localhost:6379",
+      "URL": "redis://:test@localhost:6379",
+      "ClusterURLs": [
+        "test@localhost:8000",
+        "test2@localhost:8001"
+      ],
       "KeyPrefix": "cosmo_rate_limit"
     },
     "Debug": false,
@@ -594,7 +598,11 @@
     "Redis": [
       {
         "ID": "my_redis",
-        "URL": "redis://:test@localhost:6379"
+        "URL": "redis://:test@localhost:6379",
+        "ClusterURLs": [
+          "test@localhost:8000",
+          "test2@localhost:8001"
+        ]
       }
     ]
   },

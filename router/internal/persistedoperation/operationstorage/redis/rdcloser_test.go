@@ -21,7 +21,7 @@ func TestRedisCloser(t *testing.T) {
 
 		require.NoError(t, err)
 		require.NotNil(t, cl)
-		require.True(t, isFunctioningClient(cl))
+		require.True(t, IsFunctioningClient(cl))
 		require.False(t, isClusterClient(cl))
 	})
 

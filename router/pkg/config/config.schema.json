@@ -63,6 +63,14 @@
                 "type": "string",
                 "description": "The ID of the redis provider. The ID is used to identify the storage provider in the configuration."
               },
+              "cluster_urls": {
+                "type": "array",
+                "description": "The cluster connection URLs. The values are specified as a string with the format 'host:port' (without scheme://). If present, will use cluster URLs instead of the URL to connect",
+                "default": [],
+                "items": {
+                  "type": "string"
+                }
+              },
               "url": {
                 "type": "string",
                 "description": "The URL of the redis storage. The URL is specified as a string with the format 'scheme://host:port, with auth included if necessary'."
@@ -1582,6 +1590,14 @@
               "description": "The connection URL. The value is specified as a string with the format 'scheme://host:port'.",
               "default": "redis://localhost:6379",
               "format": "url"
+            },
+            "cluster_urls": {
+              "type": "array",
+              "description": "The cluster connection URLs. The values are specified as a string with the format 'host:port' (without scheme://). If present, will use cluster URLs instead of the URL to connect",
+              "default": [],
+              "items": {
+                "type": "string"
+              }
             },
             "key_prefix": {
               "type": "string",
