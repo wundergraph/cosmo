@@ -235,8 +235,8 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 	// We mount the playground once here when we don't have a conflict with the websocket handler
 	// If we have a conflict, we mount the playground during building the individual muxes
-	if s.playgroundHandler != nil && s.graphqlPath != s.playgroundPath {
-		httpRouter.Get(r.playgroundPath, s.playgroundHandler(nil).ServeHTTP)
+	if s.playgroundHandler != nil && s.graphqlPath != s.playgroundConfig.Path {
+		httpRouter.Get(r.playgroundConfig.Path, s.playgroundHandler(nil).ServeHTTP)
 	}
 
 	httpRouter.Get(s.healthCheckPath, r.healthcheck.Liveness())
@@ -1049,7 +1049,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 		// When the playground path is equal to the graphql path, we need to handle
 		// ws upgrades and html requests on the same route.
-		if s.playground && s.graphqlPath == s.playgroundPath {
+		if s.playgroundConfig.Enabled && s.graphqlPath == s.playgroundConfig.Path {
 			httpRouter.Use(s.playgroundHandler, wsMiddleware)
 		} else {
 			httpRouter.Use(wsMiddleware)
