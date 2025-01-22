@@ -1901,9 +1901,9 @@ func DeflakeWSReadMessage(t testing.TB, conn *websocket.Conn) (messageType int, 
 	return messageType, p, err
 }
 
-func DeflakeWSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) error {
+func DeflakeWSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
 	for i := 0; i < 5; i++ {
-		err := conn.ReadJSON(v)
+		err = conn.ReadJSON(v)
 		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
 			t.Log("connection reset by peer found, retrying...")
 			time.Sleep(time.Duration(i*100) * time.Millisecond)
@@ -1912,12 +1912,12 @@ func DeflakeWSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) error 
 		break
 	}
 
-	return nil
+	return err
 }
 
-func DeflakeWSWriteMessage(t testing.TB, conn *websocket.Conn, messageType int, data []byte) error {
+func DeflakeWSWriteMessage(t testing.TB, conn *websocket.Conn, messageType int, data []byte) (err error) {
 	for i := 0; i < 5; i++ {
-		err := conn.WriteMessage(messageType, data)
+		err = conn.WriteMessage(messageType, data)
 		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
 			t.Log("connection reset by peer found, retrying...")
 			time.Sleep(time.Duration(i*100) * time.Millisecond)
@@ -1926,12 +1926,12 @@ func DeflakeWSWriteMessage(t testing.TB, conn *websocket.Conn, messageType int, 
 		break
 	}
 
-	return nil
+	return err
 }
 
-func DeflakeWSWriteJSON(t testing.TB, conn *websocket.Conn, v interface{}) error {
+func DeflakeWSWriteJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
 	for i := 0; i < 5; i++ {
-		err := conn.WriteJSON(v)
+		err = conn.WriteJSON(v)
 		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
 			t.Log("connection reset by peer found, retrying...")
 			time.Sleep(time.Duration(i*100) * time.Millisecond)
@@ -1940,7 +1940,7 @@ func DeflakeWSWriteJSON(t testing.TB, conn *websocket.Conn, v interface{}) error
 		break
 	}
 
-	return nil
+	return err
 }
 
 func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, natsData *NatsData, pubSubName func(string) string) *subgraphs.SubgraphOptions {
