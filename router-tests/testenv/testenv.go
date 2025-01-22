@@ -1887,6 +1887,62 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 	}
 }
 
+func DeflakeWSReadMessage(t testing.TB, conn *websocket.Conn) (messageType int, p []byte, err error) {
+	for i := 0; i < 3; i++ {
+		messageType, p, err = conn.ReadMessage()
+		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
+			t.Log("connection reset by peer found, retrying...")
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		break
+	}
+
+	return messageType, p, err
+}
+
+func DeflakeWSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) error {
+	for i := 0; i < 3; i++ {
+		err := conn.ReadJSON(v)
+		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
+			t.Log("connection reset by peer found, retrying...")
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		break
+	}
+
+	return nil
+}
+
+func DeflakeWSWriteMessage(t testing.TB, conn *websocket.Conn, messageType int, data []byte) error {
+	for i := 0; i < 3; i++ {
+		err := conn.WriteMessage(messageType, data)
+		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
+			t.Log("connection reset by peer found, retrying...")
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		break
+	}
+
+	return nil
+}
+
+func DeflakeWSWriteJSON(t testing.TB, conn *websocket.Conn, v interface{}) error {
+	for i := 0; i < 3; i++ {
+		err := conn.WriteJSON(v)
+		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
+			t.Log("connection reset by peer found, retrying...")
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		break
+	}
+
+	return nil
+}
+
 func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, natsData *NatsData, pubSubName func(string) string) *subgraphs.SubgraphOptions {
 	if natsData == nil {
 		return &subgraphs.SubgraphOptions{
