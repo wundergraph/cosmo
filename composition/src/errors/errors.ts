@@ -697,7 +697,7 @@ export function unparsableFieldSetSelectionErrorMessage(fieldSet: string, fieldN
   );
 }
 
-export function undefinedObjectLikeParentError(parentTypeName: string): Error {
+export function undefinedCompositeOutputTypeError(parentTypeName: string): Error {
   return new Error(` Expected an Object/Interface definition or extension named "${parentTypeName}" to exist.`);
 }
 
@@ -914,9 +914,9 @@ export function undefinedEntityInterfaceImplementationsError(
       typeName,
       'entityInterfaceFederationDataByTypeName',
     );
-    const implementedConcreteTypeNames = entityInterfaceDatas.concreteTypeNames!;
+    const implementedConcreteTypeNames = entityInterfaceDatas.concreteTypeNames;
     message +=
-      ` Across all subgraphs, the entity interface "${typeName}" is implemented by the following entity object` +
+      ` Across all subgraphs, the entity interface "${typeName}" is implemented by the following entities` +
       (implementedConcreteTypeNames.size > 1 ? `s` : ``) +
       `:\n  "` +
       Array.from(implementedConcreteTypeNames).join(QUOTATION_JOIN) +
@@ -1615,5 +1615,21 @@ export function fieldAlreadyProvidedErrorMessage(
     ` part of any "@${directiveName}" field set. Although "${fieldCoords}" is declared "@external", it is part of` +
     ` a "@key" directive on an extension type. Such fields are only declared "@external" for legacy syntactical` +
     ` reasons and are not internally considered "@external".`
+  );
+}
+
+export function invalidInterfaceObjectImplementationDefinitionsError(
+  typeName: string,
+  subgraphName: string,
+  implementationTypeNames: Array<string>,
+): Error {
+  return new Error(
+    `The subgraph that defines an entity Interface Object (using "@interfaceObject") must not define any ` +
+      ` implementation types of that interface. However, the subgraph "${subgraphName}" defines the entity Interface` +
+      ` "${typeName}" as an Interface Object alongside the following implementation type` +
+      (implementationTypeNames.length > 1 ? `s` : ``) +
+      ` of "${typeName}":\n "` +
+      implementationTypeNames.join(QUOTATION_JOIN) +
+      `"`,
   );
 }

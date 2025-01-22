@@ -339,22 +339,24 @@ export type GraphFieldData = {
 };
 
 export type EntityInterfaceSubgraphData = {
+  concreteTypeNames: Set<string>;
   fieldDatas: Array<SimpleFieldData>;
   interfaceFieldNames: Set<string>;
   interfaceObjectFieldNames: Set<string>;
   isInterfaceObject: boolean;
+  resolvable: boolean;
   typeName: string;
-  concreteTypeNames?: Set<string>;
 };
 
 // The accumulation of all EntityInterfaceSubgraphData for the type name
 export type EntityInterfaceFederationData = {
+  concreteTypeNames: Set<string>;
+  subgraphDataByTypeName: Map<string, EntityInterfaceSubgraphData>;
   fieldDatasBySubgraphName: Map<string, Array<SimpleFieldData>>;
   interfaceFieldNames: Set<string>;
   interfaceObjectFieldNames: Set<string>;
   interfaceObjectSubgraphs: Set<string>;
   typeName: string;
-  concreteTypeNames?: Set<string>;
 };
 
 export function newEntityInterfaceFederationData(
@@ -362,17 +364,13 @@ export function newEntityInterfaceFederationData(
   subgraphName: string,
 ): EntityInterfaceFederationData {
   return {
-    fieldDatasBySubgraphName: new Map<string, Array<SimpleFieldData>>().set(
-      subgraphName,
-      entityInterfaceData.fieldDatas,
-    ),
+    concreteTypeNames: new Set<string>(entityInterfaceData.concreteTypeNames),
+    subgraphDataByTypeName: new Map<string, EntityInterfaceSubgraphData>([[subgraphName, entityInterfaceData]]),
+    fieldDatasBySubgraphName: new Map<string, Array<SimpleFieldData>>([[subgraphName, entityInterfaceData.fieldDatas]]),
     interfaceFieldNames: new Set<string>(entityInterfaceData.interfaceFieldNames),
     interfaceObjectFieldNames: new Set<string>(entityInterfaceData.interfaceObjectFieldNames),
     interfaceObjectSubgraphs: new Set<string>(entityInterfaceData.isInterfaceObject ? [subgraphName] : []),
     typeName: entityInterfaceData.typeName,
-    ...(entityInterfaceData.isInterfaceObject
-      ? {}
-      : { concreteTypeNames: new Set<string>(entityInterfaceData.concreteTypeNames) }),
   };
 }
 
@@ -381,25 +379,15 @@ export function upsertEntityInterfaceFederationData(
   federationData: EntityInterfaceFederationData,
   subgraphData: EntityInterfaceSubgraphData,
   subgraphName: string,
-): boolean {
+) {
+  addIterableValuesToSet(subgraphData.concreteTypeNames, federationData.concreteTypeNames);
+  federationData.subgraphDataByTypeName.set(subgraphName, subgraphData);
   federationData.fieldDatasBySubgraphName.set(subgraphName, subgraphData.fieldDatas);
   addIterableValuesToSet(subgraphData.interfaceFieldNames, federationData.interfaceFieldNames);
   addIterableValuesToSet(subgraphData.interfaceObjectFieldNames, federationData.interfaceObjectFieldNames);
-  // interface objects should not define any concrete types
   if (subgraphData.isInterfaceObject) {
     federationData.interfaceObjectSubgraphs.add(subgraphName);
-    return false;
   }
-  // the concreteTypeNames set is null if only interfaceObjects have been encountered
-  if (!federationData.concreteTypeNames) {
-    federationData.concreteTypeNames = new Set<string>(subgraphData.concreteTypeNames);
-    return false;
-  }
-  // entity interface concrete types should be consistent
-  return addSetsAndReturnMutationBoolean(
-    subgraphData.concreteTypeNames || new Set<string>(),
-    federationData.concreteTypeNames,
-  );
 }
 
 export type InvalidEntityInterface = {

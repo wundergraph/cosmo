@@ -28,6 +28,7 @@ import {
   invalidImplementedTypeError,
   invalidInputFieldTypeErrorMessage,
   invalidInterfaceImplementationError,
+  invalidInterfaceObjectImplementationDefinitionsError,
   invalidReferencesOfInaccessibleTypeError,
   invalidRequiredInputValueError,
   invalidSubscriptionFieldConditionFieldPathErrorMessage,
@@ -2720,47 +2721,61 @@ function initializeFederationFactory(subgraphs: Subgraph[]): FederationFactoryRe
   }
   const entityInterfaceFederationDataByTypeName = new Map<string, EntityInterfaceFederationData>();
   const invalidEntityInterfacesByTypeName = new Map<string, InvalidEntityInterface[]>();
-  const validEntityInterfaceTypeNames = new Set<string>();
   for (const [subgraphName, internalSubgraph] of internalSubgraphBySubgraphName) {
     for (const [typeName, entityInterfaceData] of internalSubgraph.entityInterfaces) {
-      // Always add each entity interface to the invalid entity interfaces map
-      // If not, earlier checks would not account for implementations not yet seen
-      getValueOrDefault(invalidEntityInterfacesByTypeName, typeName, () => []).push({
-        subgraphName,
-        concreteTypeNames: entityInterfaceData.concreteTypeNames || new Set<string>(),
-      });
       const existingData = entityInterfaceFederationDataByTypeName.get(typeName);
       if (!existingData) {
-        validEntityInterfaceTypeNames.add(typeName);
         entityInterfaceFederationDataByTypeName.set(
           typeName,
           newEntityInterfaceFederationData(entityInterfaceData, subgraphName),
         );
         continue;
       }
-      const areAnyImplementationsUndefined = upsertEntityInterfaceFederationData(
-        existingData,
-        entityInterfaceData,
+      upsertEntityInterfaceFederationData(existingData, entityInterfaceData, subgraphName);
+    }
+  }
+  const entityInterfaceErrors: Array<Error> = [];
+  for (const [typeName, entityInterfaceData] of entityInterfaceFederationDataByTypeName) {
+    const implementations = entityInterfaceData.concreteTypeNames.size;
+    for (const [subgraphName, subgraphData] of entityInterfaceData.subgraphDataByTypeName) {
+      if (!subgraphData.isInterfaceObject) {
+        if (subgraphData.resolvable && subgraphData.concreteTypeNames.size !== implementations) {
+          getValueOrDefault(invalidEntityInterfacesByTypeName, typeName, () => []).push({
+            subgraphName,
+            concreteTypeNames: subgraphData.concreteTypeNames,
+          });
+        }
+        continue;
+      }
+      const parentDefinitionDataByTypeName = getOrThrowError(
+        internalSubgraphBySubgraphName,
         subgraphName,
-      );
-      if (areAnyImplementationsUndefined) {
-        validEntityInterfaceTypeNames.delete(typeName);
+        'internalSubgraphBySubgraphName',
+      ).parentDefinitionDataByTypeName;
+      const invalidTypeNames: Array<string> = [];
+      for (const concreteTypeName of entityInterfaceData.concreteTypeNames) {
+        if (parentDefinitionDataByTypeName.has(concreteTypeName)) {
+          invalidTypeNames.push(concreteTypeName);
+        }
+      }
+      if (invalidTypeNames.length > 0) {
+        entityInterfaceErrors.push(
+          invalidInterfaceObjectImplementationDefinitionsError(typeName, subgraphName, invalidTypeNames),
+        );
       }
     }
   }
-
-  // Remove the valid entity interfaces type names so only genuinely invalid entity interfaces remain
-  for (const typeName of validEntityInterfaceTypeNames) {
-    invalidEntityInterfacesByTypeName.delete(typeName);
-  }
   if (invalidEntityInterfacesByTypeName.size > 0) {
+    entityInterfaceErrors.push(
+      undefinedEntityInterfaceImplementationsError(
+        invalidEntityInterfacesByTypeName,
+        entityInterfaceFederationDataByTypeName,
+      ),
+    );
+  }
+  if (entityInterfaceErrors.length > 0) {
     return {
-      errors: [
-        undefinedEntityInterfaceImplementationsError(
-          invalidEntityInterfacesByTypeName,
-          entityInterfaceFederationDataByTypeName,
-        ),
-      ],
+      errors: entityInterfaceErrors,
       warnings,
     };
   }

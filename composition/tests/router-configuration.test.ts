@@ -413,7 +413,6 @@ describe('Router Configuration tests', () => {
       );
     });
 
-    // @TODO new config for "target only" entity
     test('that FieldSet configuration is generated', () => {
       const { errors, normalizationResult } = normalizeSubgraph(subgraphA.definitions, subgraphA.name);
       expect(errors).toBeUndefined();
@@ -427,6 +426,12 @@ describe('Router Configuration tests', () => {
               externalFieldNames: new Set<string>(['id', 'name']),
               fieldNames: new Set<string>(),
               isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
               typeName: 'Entity',
             },
           ],

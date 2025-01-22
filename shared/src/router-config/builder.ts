@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { createRequire } from 'node:module';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import { ConfigurationData, FieldConfiguration, ROOT_TYPE_NAMES } from '@wundergraph/composition';
 import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
@@ -20,9 +21,10 @@ import {
   RouterConfig,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import pkg from '../../package.json' assert { type: 'json' };
 import { configurationDatasToDataSourceConfiguration, generateFieldConfigurations } from './graphql-configuration.js';
 import { normalizationFailureError } from './errors.js';
+const require = createRequire(import.meta.url);
+const compositionVersion = require('../../package.json').dependencies['@wundergraph/composition'];
 
 export interface Input {
   federatedClientSDL: string;
@@ -216,6 +218,6 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       name: s.name,
       routingUrl: s.url,
     })),
-    compatibilityVersion: `1:${pkg.dependencies['@wundergraph/composition']}`,
+    compatibilityVersion: `1:${compositionVersion}`,
   });
 };

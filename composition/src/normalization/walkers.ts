@@ -133,6 +133,7 @@ export function upsertDirectiveSchemaAndEntityDefinitions(nf: NormalizationFacto
           interfaceFieldNames: new Set<string>(),
           interfaceObjectFieldNames: new Set<string>(),
           isInterfaceObject: false,
+          resolvable: false,
           typeName,
         }));
       },
@@ -161,6 +162,7 @@ export function upsertDirectiveSchemaAndEntityDefinitions(nf: NormalizationFacto
           interfaceFieldNames: new Set<string>(),
           interfaceObjectFieldNames: new Set<string>(),
           isInterfaceObject: false,
+          resolvable: false,
           typeName,
         }));
       },
@@ -173,10 +175,12 @@ export function upsertDirectiveSchemaAndEntityDefinitions(nf: NormalizationFacto
         const typeName = node.name.value;
         if (isNodeInterfaceObject(node)) {
           nf.entityInterfaceDataByTypeName.set(typeName, {
+            concreteTypeNames: new Set<string>(),
             fieldDatas: [],
             interfaceObjectFieldNames: new Set<string>(),
             interfaceFieldNames: new Set<string>(),
             isInterfaceObject: true,
+            resolvable: false,
             typeName,
           });
           nf.internalGraph.addOrUpdateNode(typeName, { isAbstract: true });

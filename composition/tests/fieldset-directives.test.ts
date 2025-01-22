@@ -5,6 +5,7 @@ import {
   ConfigurationData,
   duplicateFieldInFieldSetErrorMessage,
   federateSubgraphs,
+  fieldAlreadyProvidedErrorMessage,
   INTERFACE,
   invalidInlineFragmentTypeConditionErrorMessage,
   invalidInlineFragmentTypeErrorMessage,
@@ -401,7 +402,7 @@ describe('openfed_FieldSet tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
-          ` On "Entity.age":\n -` + invalidInlineFragmentTypeErrorMessage('... on I { name }', [], 'I', 'Entity'),
+          ` On field "Entity.age":\n -` + invalidInlineFragmentTypeErrorMessage('... on I { name }', [], 'I', 'Entity'),
         ]),
       );
     });
@@ -501,7 +502,7 @@ describe('openfed_FieldSet tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
-          ` On "Entity.age":\n -` +
+          ` On field "Entity.age":\n -` +
             invalidInlineFragmentTypeConditionErrorMessage(
               'interface { ... on Object { age } }',
               ['Entity.interface'],
@@ -573,7 +574,7 @@ describe('openfed_FieldSet tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
-          ` On "Entity.name":\n -` + invalidSelectionOnUnionErrorMessage('union { name }', ['Entity.union'], 'U'),
+          ` On field "Entity.name":\n -` + invalidSelectionOnUnionErrorMessage('union { name }', ['Entity.union'], 'U'),
         ]),
       );
     });
@@ -601,7 +602,7 @@ describe('openfed_FieldSet tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
-          ` On "Entity.age":\n -` +
+          ` On field "Entity.age":\n -` +
             invalidInlineFragmentTypeConditionErrorMessage(
               'union { ... on AnotherObject { age } }',
               ['Entity.union'],
@@ -820,6 +821,67 @@ describe('openfed_FieldSet tests', () => {
               typeName: 'ObjectTwo',
             },
           ],
+        ]),
+      );
+    });
+
+    test('that an error is returned if an unconditionally provided V2 field is required', () => {
+      const { errors } = normalizeSubgraph(subgraphR.definitions, subgraphR.name);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(
+        invalidProvidesOrRequiresDirectivesError(REQUIRES, [
+          ' On field "Entity.age":\n -' +
+            fieldAlreadyProvidedErrorMessage('Entity.id', subgraphR.name, REQUIRES) +
+            '\n -' +
+            fieldAlreadyProvidedErrorMessage('Entity.name', subgraphR.name, REQUIRES),
+        ]),
+      );
+    });
+
+    test('that an @external ancestor allows an otherwise unconditionally provided field to be provided', () => {
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphS.definitions, subgraphS.name);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(
+          schemaQueryDefinition +
+            versionTwoDirectiveDefinitions +
+            `
+            type Entity @key(fields: "id") {
+              id: ID!
+              name: String! @requires(fields: "object { name nestedObject { id } }")
+              object: Object! @external
+            }
+
+            type NestedObject @extends @key(fields: "id") {
+              id: ID! @external
+            }
+
+            type Object {
+              name: String!
+              nestedObject: NestedObject! @external
+            }
+
+            type Query {
+              entities: [Entity!]! @shareable
+            }
+
+            scalar openfed__FieldSet
+            
+            scalar openfed__Scope
+          `,
+        ),
+      );
+    });
+
+    test('that an error is returned if the @external ancestor of the required field is an extension key field', () => {
+      const { errors } = normalizeSubgraph(subgraphT.definitions, subgraphT.name);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(
+        invalidProvidesOrRequiresDirectivesError(REQUIRES, [
+          ' On field "Entity.name":\n -' +
+            fieldAlreadyProvidedErrorMessage('NestedObject.id', subgraphT.name, REQUIRES),
         ]),
       );
     });
@@ -1266,6 +1328,85 @@ const subgraphQ: Subgraph = {
 
     type Implementation implements I {
       name: String!
+    }
+  `),
+};
+
+const subgraphR: Subgraph = {
+  name: 'subgraph-r',
+  url: '',
+  definitions: parse(`
+    extend type Entity @key(fields: "id name") {
+      id: ID! @external
+      name: String! @external
+      age: Int! @requires(fields: "id name")
+    }
+    
+    type Query {
+      entities: [Entity!]! @shareable
+    }
+  `),
+};
+
+const subgraphS: Subgraph = {
+  name: 'subgraph-s',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String! @requires(fields: "object { name nestedObject { id } }")
+      object: Object! @external
+    }
+    
+    type NestedObject @extends @key(fields: "id") {
+      id: ID! @external
+    }
+    
+    type Object {
+      name: String!
+      nestedObject: NestedObject! @external
+    }
+    
+    type Query {
+      entities: [Entity!]! @shareable
+    }
+  `),
+};
+
+const subgraphT: Subgraph = {
+  name: 'subgraph-t',
+  url: '',
+  definitions: parse(`
+    extend type Entity @key(fields: "object { id }") {
+      name: String! @requires(fields: "object { nestedObject { id } }")
+      object: Object! @external
+    }
+    
+    type NestedObject @extends @key(fields: "id") {
+      id: ID! @external
+    }
+    
+    type Object {
+      id: ID!
+      nestedObject: NestedObject!
+    }
+    
+    type Query {
+      entities: [Entity!]! @shareable
+    }
+  `),
+};
+
+const subgraphU: Subgraph = {
+  name: 'subgraph-u',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+
+    type Query {
+      entities: [Entity!]! @shareable
     }
   `),
 };

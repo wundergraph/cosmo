@@ -165,7 +165,7 @@ export function validateImplicitKeyFieldSets({
   );
   for (const [keyFieldSet, documentNode] of entityData.documentNodeByKeyFieldSet) {
     const keyFieldSetData = keyFieldSetDataByFieldSet.get(keyFieldSet);
-    if (keyFieldSetData && !keyFieldSetData.isConditionalSource) {
+    if (keyFieldSetData) {
       continue;
     }
     const parentDatas: CompositeOutputData[] = [objectData];

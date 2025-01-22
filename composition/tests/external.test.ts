@@ -509,6 +509,110 @@ describe('@external directive tests', () => {
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
     });
+
+    test('that a nested @external key field that is a key field of its non-extension entity parent is considered unconditionally provided', () => {
+      const { errors, normalizationResult, warnings } = normalizeSubgraph(subgraphAC.definitions, subgraphAC.name);
+      expect(errors).toBeUndefined();
+      expect(normalizationResult).toBeDefined();
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id object { id }',
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Object',
+            },
+          ],
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entities']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+        ]),
+      );
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toStrictEqual(
+        externalEntityExtensionKeyFieldWarning(
+          'Entity',
+          'id object { id }',
+          ['Entity.id', 'Entity.object', 'Object.id'],
+          subgraphAC.name,
+        ),
+      );
+    });
+
+    test('that entities with all @external key fields generate the correct configuration data.', () => {
+      const { errors, normalizationResult, warnings } = normalizeSubgraph(subgraphAD.definitions, subgraphAD.name);
+      expect(errors).toBeUndefined();
+      expect(normalizationResult).toBeDefined();
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              externalFieldNames: new Set<string>(['id', 'object']),
+              fieldNames: new Set<string>(),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id object { id }',
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            'Object',
+            {
+              externalFieldNames: new Set<string>(['id']),
+              fieldNames: new Set<string>(),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Object',
+            },
+          ],
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entities']),
+              isRootNode: true,
+              typeName: 'Query',
+            },
+          ],
+        ]),
+      );
+      expect(warnings).toHaveLength(0);
+    });
   });
 
   describe('Federation tests', () => {
@@ -1805,6 +1909,44 @@ const subgraphAB: Subgraph = {
     }
     
     type Object {
+      id: ID! @external
+    }
+  `),
+};
+
+const subgraphAC: Subgraph = {
+  name: 'subgraph-ac',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      entities: [Entity!]!
+    }
+    
+    extend type Entity @key(fields: "id object { id }") {
+      id: ID! @external
+      object: Object! @external
+    }
+    
+    type Object @key(fields: "id") {
+      id: ID! @external
+    }
+  `),
+};
+
+const subgraphAD: Subgraph = {
+  name: 'subgraph-ad',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      entities: [Entity!]!
+    }
+    
+    type Entity @key(fields: "id object { id }") {
+      id: ID! @external
+      object: Object! @external
+    }
+    
+    type Object @key(fields: "id") {
       id: ID! @external
     }
   `),

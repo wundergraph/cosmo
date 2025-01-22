@@ -79,7 +79,7 @@ describe('@provides directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-          ` On "Object.entity":\n -` +
+          ` On field "Object.entity":\n -` +
             invalidInlineFragmentTypeErrorMessage(
               '... on Interface { name }',
               ['Object.entity'],
@@ -191,7 +191,7 @@ describe('@provides directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-          ` On "Object.entity":\n -` +
+          ` On field "Object.entity":\n -` +
             invalidInlineFragmentTypeConditionErrorMessage(
               'interface { ... on AnotherObject { name } }',
               ['Entity.interface'],
@@ -248,7 +248,8 @@ describe('@provides directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-          ` On "Object.entity":\n -` + invalidSelectionOnUnionErrorMessage('union { name }', ['Entity.union'], 'Union'),
+          ` On field "Object.entity":\n -` +
+            invalidSelectionOnUnionErrorMessage('union { name }', ['Entity.union'], 'Union'),
         ]),
       );
       expect(warnings).toHaveLength(0);
@@ -260,7 +261,7 @@ describe('@provides directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-          ` On "Object.entity":\n -` +
+          ` On field "Object.entity":\n -` +
             invalidInlineFragmentTypeConditionErrorMessage(
               'union { ... on YetAnotherObject { name } }',
               ['Entity.union'],
@@ -571,6 +572,229 @@ describe('@provides directive tests', () => {
       expect(warnings).toHaveLength(1);
       expect(warnings[0]).toStrictEqual(
         nonExternalConditionalFieldWarning(`Query.entity`, t.name, `Object.id`, `object { id }`, PROVIDES),
+      );
+    });
+
+    test('that provided siblings produce the correct configuration data #1', () => {
+      const { errors, normalizationResult, warnings } = normalizeSubgraph(ag.definitions, ag.name);
+      expect(errors).toBeUndefined();
+      expect(warnings).toHaveLength(0);
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entities']),
+              isRootNode: true,
+              typeName: 'Query',
+              provides: [
+                {
+                  fieldName: 'entities',
+                  selectionSet: 'object { id name }',
+                },
+              ],
+            },
+          ],
+          [
+            'Entity',
+            {
+              fieldNames: new Set<string>(['id', 'object']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id object { id name }',
+                  conditions: [
+                    {
+                      fieldCoordinatesPath: ['Query.entities', 'Entity.object', 'Object.id'],
+                      fieldPath: ['entities', 'object', 'id'],
+                    },
+                  ],
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            'Object',
+            {
+              externalFieldNames: new Set<string>(['id', 'name']),
+              fieldNames: new Set<string>(),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+        ]),
+      );
+    });
+
+    test('that provided siblings produce the correct configuration data #2', () => {
+      const { errors, normalizationResult, warnings } = normalizeSubgraph(ah.definitions, ah.name);
+      expect(errors).toBeUndefined();
+      expect(warnings).toHaveLength(0);
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entities']),
+              isRootNode: true,
+              typeName: 'Query',
+              provides: [
+                {
+                  fieldName: 'entities',
+                  selectionSet: 'object { id name }',
+                },
+              ],
+            },
+          ],
+          [
+            'Entity',
+            {
+              externalFieldNames: new Set<string>(['object']),
+              fieldNames: new Set<string>(['id']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id object { id name }',
+                  conditions: [
+                    {
+                      fieldCoordinatesPath: ['Query.entities', 'Entity.object'],
+                      fieldPath: ['entities', 'object'],
+                    },
+                  ],
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            'Object',
+            {
+              fieldNames: new Set<string>(['id', 'name']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+        ]),
+      );
+    });
+
+    test('that provided siblings produce the correct configuration data #3', () => {
+      const { errors, normalizationResult, warnings } = normalizeSubgraph(ai.definitions, ai.name);
+      expect(errors).toBeUndefined();
+      expect(warnings).toHaveLength(0);
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entities']),
+              isRootNode: true,
+              typeName: 'Query',
+              provides: [
+                {
+                  fieldName: 'entities',
+                  selectionSet: 'object { id name }',
+                },
+              ],
+            },
+          ],
+          [
+            'Entity',
+            {
+              externalFieldNames: new Set<string>(['object']),
+              fieldNames: new Set<string>(['id']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id object { id name }',
+                  conditions: [
+                    {
+                      fieldCoordinatesPath: ['Query.entities', 'Entity.object'],
+                      fieldPath: ['entities', 'object'],
+                    },
+                  ],
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            'Object',
+            {
+              externalFieldNames: new Set<string>(['id']),
+              fieldNames: new Set<string>(['name']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+        ]),
+      );
+    });
+
+    test('that provided siblings produce the correct configuration data #4', () => {
+      const { errors, normalizationResult, warnings } = normalizeSubgraph(aj.definitions, aj.name);
+      expect(errors).toBeUndefined();
+      expect(warnings).toHaveLength(0);
+      expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Query',
+            {
+              fieldNames: new Set<string>(['entities']),
+              isRootNode: true,
+              typeName: 'Query',
+              provides: [
+                {
+                  fieldName: 'entities',
+                  selectionSet: 'object { id nestedObject { id } }',
+                },
+              ],
+            },
+          ],
+          [
+            'Entity',
+            {
+              externalFieldNames: new Set<string>(['object']),
+              fieldNames: new Set<string>(['id']),
+              isRootNode: true,
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id object { id nestedObject { id } }',
+                  conditions: [
+                    {
+                      fieldCoordinatesPath: ['Query.entities', 'Entity.object'],
+                      fieldPath: ['entities', 'object'],
+                    },
+                  ],
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+          [
+            'NestedObject',
+            {
+              externalFieldNames: new Set<string>(['id']),
+              fieldNames: new Set<string>(),
+              isRootNode: false,
+              typeName: 'NestedObject',
+            },
+          ],
+          [
+            'Object',
+            {
+              externalFieldNames: new Set<string>(['id']),
+              fieldNames: new Set<string>(['nestedObject']),
+              isRootNode: false,
+              typeName: 'Object',
+            },
+          ],
+        ]),
       );
     });
 
@@ -981,7 +1205,7 @@ describe('@provides directive tests', () => {
       expect(errors![0]).toStrictEqual(
         subgraphValidationError(af.name, [
           invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-            ` On "Entity.object":\n -` + fieldAlreadyProvidedErrorMessage(`Object.id`, af.name, PROVIDES),
+            ` On field "Entity.object":\n -` + fieldAlreadyProvidedErrorMessage(`Object.id`, af.name, PROVIDES),
           ]),
         ]),
       );
@@ -1684,6 +1908,90 @@ const af: Subgraph = {
 
     extend type Object @key(fields: "id") {
       id: ID! @external
+    }
+  `),
+};
+
+const ag: Subgraph = {
+  name: 'ag',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entities: [Entity!]! @provides(fields: "object { id name }") @shareable
+    }
+
+    type Entity @key(fields: "id object { id name }") {
+      id: ID!
+      object: Object!
+    }
+
+    type Object {
+      id: ID! @external
+      name: String! @external
+    }
+  `),
+};
+
+const ah: Subgraph = {
+  name: 'ah',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entities: [Entity!]! @provides(fields: "object { id name }") @shareable
+    }
+
+    type Entity @key(fields: "id object { id name }") {
+      id: ID!
+      object: Object! @external
+    }
+
+    type Object {
+      id: ID!
+      name: String!
+    }
+  `),
+};
+
+const ai: Subgraph = {
+  name: 'ai',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entities: [Entity!]! @provides(fields: "object { id name }") @shareable
+    }
+
+    type Entity @key(fields: "id object { id name }") {
+      id: ID!
+      object: Object! @external
+    }
+
+    type Object {
+      id: ID! @external
+      name: String!
+    }
+  `),
+};
+
+const aj: Subgraph = {
+  name: 'aj',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entities: [Entity!]! @provides(fields: "object { id nestedObject { id } }") @shareable
+    }
+
+    type Entity @key(fields: "id object { id nestedObject { id } }") {
+      id: ID!
+      object: Object! @external
+    }
+
+    type NestedObject {
+      id: ID! @external
+    }
+    
+    type Object {
+      id: ID! @external
+      nestedObject: NestedObject!
     }
   `),
 };

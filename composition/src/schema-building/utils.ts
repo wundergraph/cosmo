@@ -1331,7 +1331,7 @@ export function getSubscriptionFilterValue(
 
 export function getParentTypeName(parentData: CompositeOutputData): string {
   if (parentData.kind === Kind.OBJECT_TYPE_DEFINITION) {
-    return parentData.renamedTypeName;
+    return parentData.renamedTypeName || parentData.name;
   }
   return parentData.name;
 }

@@ -1,6 +1,5 @@
 import {
   federateSubgraphs,
-  incompatibleObjectExtensionOrphanBaseTypeError,
   incompatibleParentKindMergeError,
   INPUT_OBJECT,
   invalidSubgraphNamesError,

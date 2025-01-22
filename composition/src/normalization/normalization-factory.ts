@@ -165,7 +165,7 @@ import {
   subgraphValidationError,
   subgraphValidationFailureError,
   undefinedFieldInFieldSetErrorMessage,
-  undefinedObjectLikeParentError,
+  undefinedCompositeOutputTypeError,
   undefinedRequiredArgumentsErrorMessage,
   undefinedTypeError,
   unexpectedArgumentErrorMessage,
@@ -234,6 +234,7 @@ import { buildASTSchema } from '../buildASTSchema/buildASTSchema';
 import {
   ConfigurationData,
   EventConfiguration,
+  FieldSetConditionRouterData,
   NatsEventType,
   newFieldSetConditionData,
   RequiredFieldConfiguration,
@@ -270,6 +271,7 @@ import {
 } from '../schema-building/type-definition-data';
 import {
   addPersistedDirectiveDefinitionDataByNode,
+  concatenatePath,
   ConditionalFieldData,
   getCompositeOutputNodeByData,
   getDirectiveValidationErrors,
@@ -280,7 +282,9 @@ import {
   getSchemaNodeByData,
   getUnionNodeByData,
   isTypeValidImplementation,
+  KeyFieldConditionData,
   newConditionalFieldData,
+  newFieldSetConditionRouterData,
   newPersistedDirectivesData,
 } from '../schema-building/utils';
 import {
@@ -357,7 +361,7 @@ export class NormalizationFactory {
   authorizationDataByParentTypeName = new Map<string, AuthorizationData>();
   childName = '';
   concreteTypeNamesByAbstractTypeName = new Map<string, Set<string>>();
-  conditionalFieldDataByCoordinates = new Map<string, ConditionalFieldData>();
+  conditionalFieldDataByCoords = new Map<string, ConditionalFieldData>();
   configurationDataByParentTypeName = new Map<string, ConfigurationData>();
   customDirectiveDefinitions = new Map<string, DirectiveDefinitionNode>();
   directiveDefinitionByDirectiveName = new Map<string, DirectiveDefinitionNode>();
@@ -375,6 +379,7 @@ export class NormalizationFactory {
   fieldSetDataByTypeName = new Map<string, FieldSetData>();
   heirFieldAuthorizationDataByTypeName = new Map<string, FieldAuthorizationData[]>();
   handledRepeatedDirectivesByHostPath = new Map<string, Set<string>>();
+  invalidOrScopesHostPaths = new Set<string>();
   keyConfigurationsByTypeName = new Map<string, Array<RequiredFieldConfiguration>>();
   lastParentNodeKind: Kind = Kind.NULL;
   lastChildNodeKind: Kind = Kind.NULL;
@@ -387,7 +392,6 @@ export class NormalizationFactory {
   parentDefinitionDataByTypeName = new Map<string, ParentDefinitionData>();
   parentsWithChildArguments = new Set<string>();
   overridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
-  invalidOrScopesHostPaths = new Set<string>();
   schemaDefinition: SchemaData;
   referencedDirectiveNames = new Set<string>();
   referencedTypeNames = new Set<string>();
@@ -1107,7 +1111,6 @@ export class NormalizationFactory {
       } else {
         keyFieldSetDataByFieldSet.set(normalizedFieldSet, {
           documentNode,
-          isConditionalSource: false,
           isUnresolvable,
           normalizedFieldSet,
           rawFieldSet,
@@ -2001,22 +2004,9 @@ export class NormalizationFactory {
           );
           let isFieldConditional = false;
           const isExternal = externalFieldData.isDefinedExternal;
-          if (isExternal) {
-            if (externalFieldData.isUnconditionallyProvided) {
-              // V2 subgraphs return an error when an external key field on an entity extension is provided.
-              if (nf.isSubgraphVersionTwo) {
-                errorMessages.push(
-                  fieldAlreadyProvidedErrorMessage(currentFieldCoords, nf.subgraphName, directiveName),
-                );
-              } else {
-                nf.warnings.push(
-                  fieldAlreadyProvidedWarning(currentFieldCoords, directiveName, directiveCoords, nf.subgraphName),
-                );
-              }
-            } else {
-              isFieldConditional = true;
-              hasConditionalField = true;
-            }
+          if (isExternal && !externalFieldData.isUnconditionallyProvided) {
+            isFieldConditional = true;
+            hasConditionalField = true;
           }
           const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
           // The child could itself be a parent
@@ -2027,6 +2017,18 @@ export class NormalizationFactory {
             namedTypeData?.kind === Kind.SCALAR_TYPE_DEFINITION ||
             namedTypeData?.kind === Kind.ENUM_TYPE_DEFINITION
           ) {
+            if (isExternal && externalAncestors.size < 1 && externalFieldData.isUnconditionallyProvided) {
+              // V2 subgraphs return an error when an external key field on an entity extension is provided.
+              if (nf.isSubgraphVersionTwo) {
+                errorMessages.push(
+                  fieldAlreadyProvidedErrorMessage(currentFieldCoords, nf.subgraphName, directiveName),
+                );
+              } else {
+                nf.warnings.push(
+                  fieldAlreadyProvidedWarning(currentFieldCoords, directiveName, directiveCoords, nf.subgraphName),
+                );
+              }
+            }
             if (externalAncestors.size < 1 && !isExternal) {
               if (nf.isSubgraphVersionTwo) {
                 nf.errors.push(
@@ -2059,7 +2061,7 @@ export class NormalizationFactory {
               return;
             }
             const conditionalFieldData = getValueOrDefault(
-              nf.conditionalFieldDataByCoordinates,
+              nf.conditionalFieldDataByCoords,
               currentFieldCoords,
               newConditionalFieldData,
             );
@@ -2080,7 +2082,7 @@ export class NormalizationFactory {
           }
           if (isFieldConditional) {
             const data = getValueOrDefault(
-              nf.conditionalFieldDataByCoordinates,
+              nf.conditionalFieldDataByCoords,
               currentFieldCoords,
               newConditionalFieldData,
             );
@@ -2341,7 +2343,7 @@ export class NormalizationFactory {
        * For V2 subgraphs, this will propagate as an error; for V1 subgraphs, this will propagate as a warning.
        * */
       if (errorMessages.length > 0) {
-        allErrorMessages.push(` On "${fieldCoords}":\n -` + errorMessages.join(HYPHEN_JOIN));
+        allErrorMessages.push(` On field "${fieldCoords}":\n -` + errorMessages.join(HYPHEN_JOIN));
         continue;
       }
       if (configuration) {
@@ -2359,37 +2361,178 @@ export class NormalizationFactory {
     }
   }
 
-  validateAndAddConditionalFieldSetsToConfiguration(parentData: CompositeOutputData, fieldSetData: FieldSetData) {
-    const configurationData = getOrThrowError(
-      this.configurationDataByParentTypeName,
-      getParentTypeName(parentData),
-      'configurationDataByParentTypeName',
-    );
-    const provides = this.validateProvidesOrRequires(parentData, fieldSetData.provides, true);
-    if (provides) {
-      configurationData.provides = provides;
-    }
-    const requires = this.validateProvidesOrRequires(parentData, fieldSetData.requires, false);
-    if (requires) {
-      configurationData.requires = requires;
+  validateAndAddConditionalFieldSetsToConfiguration() {
+    for (const [typeName, fieldSetData] of this.fieldSetDataByTypeName) {
+      const parentData = this.parentDefinitionDataByTypeName.get(typeName);
+      if (
+        !parentData ||
+        (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION && parentData.kind !== Kind.INTERFACE_TYPE_DEFINITION)
+      ) {
+        this.errors.push(undefinedCompositeOutputTypeError(typeName));
+        continue;
+      }
+      const parentTypeName = getParentTypeName(parentData);
+      const configurationData = getValueOrDefault(this.configurationDataByParentTypeName, parentTypeName, () =>
+        this.newConfigurationData(false, parentTypeName),
+      );
+      const provides = this.validateProvidesOrRequires(parentData, fieldSetData.provides, true);
+      if (provides) {
+        configurationData.provides = provides;
+      }
+      const requires = this.validateProvidesOrRequires(parentData, fieldSetData.requires, false);
+      if (requires) {
+        configurationData.requires = requires;
+      }
     }
   }
 
-  isKeyFieldUnconditionallyProvided(
-    rootEntityData: CompositeOutputData,
-    parentData: CompositeOutputData,
-    keyFieldName: string,
-  ): boolean {
-    const isRootEntityExtension = rootEntityData.extensionType !== ExtensionType.NONE;
-    if (rootEntityData.name === parentData.name) {
-      return isRootEntityExtension;
+  evaluateExternalKeyFields() {
+    const invalidTypeNames: Array<string> = [];
+    for (const [entityTypeName, keyFieldSetDataByFieldSet] of this.keyFieldSetDatasByTypeName) {
+      const entityParentData = this.parentDefinitionDataByTypeName.get(entityTypeName);
+      // The parent data should always exist.
+      if (
+        !entityParentData ||
+        (entityParentData.kind !== Kind.OBJECT_TYPE_DEFINITION &&
+          entityParentData.kind !== Kind.INTERFACE_TYPE_DEFINITION)
+      ) {
+        // If somehow the parent data does not exist, prevent the same error occurring by removing that type from the map.
+        invalidTypeNames.push(entityTypeName);
+        this.errors.push(undefinedCompositeOutputTypeError(entityTypeName));
+        continue;
+      }
+      const nf = this;
+      for (const keyFieldSetData of keyFieldSetDataByFieldSet.values()) {
+        const parentDatas: CompositeOutputData[] = [entityParentData];
+        // Entity extension fields are effectively never @external, so propagate a warning.
+        const externalExtensionFieldCoordsByRawFieldSet = new Map<string, Set<string>>();
+        let currentDepth = -1;
+        let shouldDefineSelectionSet = true;
+        visit(keyFieldSetData.documentNode, {
+          Argument: {
+            enter() {
+              return BREAK;
+            },
+          },
+          Field: {
+            enter(node) {
+              const parentData = parentDatas[currentDepth];
+              const parentTypeName = parentData.name;
+              // If a composite type was just visited, a selection set should have been entered
+              if (shouldDefineSelectionSet) {
+                return BREAK;
+              }
+              const fieldName = node.name.value;
+              const fieldCoords = `${parentTypeName}.${fieldName}`;
+              nf.unvalidatedExternalFieldCoords.delete(fieldCoords);
+              const fieldData = parentData.fieldDataByFieldName.get(fieldName);
+              // undefined if the field does not exist on the parent
+              if (!fieldData || fieldData.argumentDataByArgumentName.size) {
+                return BREAK;
+              }
+              // Fields that form part of an entity key are intrinsically shareable
+              fieldData.isShareableBySubgraphName.set(nf.subgraphName, true);
+              /* According to Apollo behaviour:
+               * V1 entities with @extends may define unique nested key fields as @external without restriction.
+               * However, V1 entity extensions (extend keyword) cannot do this.
+               * Instead, an error is returned stating that there must be a non-external definition of the field.
+               * This appears to be a bug where the behaviour is inconsistent.
+               * It doesn't make much sense to enforce "origin fields" only sometimes (or ever, honestly).
+               * Consequently, a decision was made not ever to enforce meaningless origin fields for extensions.
+               *
+               * However, if the subgraph is an EDG, the @external state should be kept regardless of extension.
+               * */
+              const externalFieldData = fieldData.isExternalBySubgraphName.get(nf.subgraphName);
+              if (
+                nf.edfsDirectiveReferences.size < 1 &&
+                externalFieldData &&
+                externalFieldData.isDefinedExternal &&
+                !externalFieldData.isUnconditionallyProvided
+              ) {
+                /*
+                 * The key field is unconditionally provided if all the following are true:
+                 * 1. The root entity is an extension type.
+                 * 2. The parent of the key field (which might still be the root entity) is also an entity.
+                 * 3. The parent of the key field is an extension type.
+                 * 4. The key field is also a key field for the parent entity.
+                 */
+                if (entityParentData.extensionType !== ExtensionType.NONE) {
+                  externalFieldData.isUnconditionallyProvided = true;
+                  getValueOrDefault(
+                    externalExtensionFieldCoordsByRawFieldSet,
+                    keyFieldSetData.rawFieldSet,
+                    () => new Set<string>(),
+                  ).add(fieldCoords);
+                }
+              }
+              getValueOrDefault(nf.keyFieldNamesByParentTypeName, parentTypeName, () => new Set<string>()).add(
+                fieldName,
+              );
+              const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+              // The base scalars are not in the parents map
+              if (BASE_SCALARS.has(namedTypeName)) {
+                return;
+              }
+              // The child could itself be a parent
+              const namedTypeData = nf.parentDefinitionDataByTypeName.get(namedTypeName);
+              if (!namedTypeData) {
+                return BREAK;
+              }
+              if (namedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION) {
+                shouldDefineSelectionSet = true;
+                parentDatas.push(namedTypeData);
+                return;
+              }
+              // interfaces and unions are invalid in a key directive
+              if (isKindAbstract(namedTypeData.kind)) {
+                return BREAK;
+              }
+            },
+          },
+          InlineFragment: {
+            enter() {
+              return BREAK;
+            },
+          },
+          SelectionSet: {
+            enter() {
+              if (!shouldDefineSelectionSet) {
+                return BREAK;
+              }
+              currentDepth += 1;
+              shouldDefineSelectionSet = false;
+              if (currentDepth < 0 || currentDepth >= parentDatas.length) {
+                return BREAK;
+              }
+            },
+            leave() {
+              if (shouldDefineSelectionSet) {
+                shouldDefineSelectionSet = false;
+              }
+              // Empty selection sets would be a parse error, so it is unnecessary to handle them
+              currentDepth -= 1;
+              parentDatas.pop();
+            },
+          },
+        });
+        if (externalExtensionFieldCoordsByRawFieldSet.size < 1) {
+          continue;
+        }
+        for (const [rawFieldSet, fieldCoords] of externalExtensionFieldCoordsByRawFieldSet) {
+          this.warnings.push(
+            externalEntityExtensionKeyFieldWarning(
+              entityParentData.name,
+              rawFieldSet,
+              [...fieldCoords],
+              this.subgraphName,
+            ),
+          );
+        }
+      }
     }
-    const isParentExtension = parentData.extensionType !== ExtensionType.NONE;
-    const keyFieldNames = this.keyFieldNamesByParentTypeName.get(parentData.name);
-    if (!keyFieldNames) {
-      return false;
+    for (const invalidTypeName of invalidTypeNames) {
+      this.keyFieldSetDatasByTypeName.delete(invalidTypeName);
     }
-    return keyFieldNames.has(keyFieldName) && isParentExtension;
   }
 
   propagateValidKeyFieldSetConfigurations(
@@ -2397,25 +2540,29 @@ export class NormalizationFactory {
     keyFieldSetDataByFieldSet: Map<string, KeyFieldSetData>,
   ) {
     const nf = this;
-    const isEntityInterface = nf.entityInterfaceDataByTypeName.has(entityParentData.name);
+    const entityInterfaceData = nf.entityInterfaceDataByTypeName.get(entityParentData.name);
     const entityTypeName = entityParentData.name;
-    const errorMessages: string[] = [];
-    const keyConfigurations: RequiredFieldConfiguration[] = [];
+    const errorMessages: Array<string> = [];
+    const keyConfigurations: Array<RequiredFieldConfiguration> = [];
     // const allKeyFieldSetPaths: Array<Set<string>> = [];
     // If the key is on an entity interface/interface object, an entity data node should not be propagated
-    const entityDataNode = isEntityInterface ? undefined : nf.internalGraph.addEntityDataNode(entityParentData.name);
+    const entityDataNode = entityInterfaceData ? undefined : nf.internalGraph.addEntityDataNode(entityParentData.name);
     const graphNode = nf.internalGraph.addOrUpdateNode(entityParentData.name);
-    // Entity extension fields are effectively never @external, so propagate a warning.
-    const externalExtensionFieldCoordsByRawFieldSet = new Map<string, Set<string>>();
     for (const [keyFieldSet, keyFieldSetData] of keyFieldSetDataByFieldSet) {
+      if (entityInterfaceData) {
+        entityInterfaceData.resolvable ||= !keyFieldSetData.isUnresolvable;
+      }
       const parentDatas: CompositeOutputData[] = [entityParentData];
       const definedFields: Array<Set<string>> = [];
       const currentPath: Array<string> = [];
       const keyFieldSetPaths = new Set<string>();
+      // potentialFieldSetConditions has the form Map<preEntityPath <postEntityPath, KeyFieldConditionData>>.
+      const potentialFieldSetConditions = new Map<string, Map<string, KeyFieldConditionData>>();
+      const conditionByPreEntityPath = new Map<string, KeyFieldConditionData>();
+      let conditionalFieldCount = 0;
       let currentDepth = -1;
       let shouldDefineSelectionSet = true;
       let lastFieldName = '';
-      let isConditionalSource = false;
       visit(keyFieldSetData.documentNode, {
         Argument: {
           enter(node) {
@@ -2461,7 +2608,6 @@ export class NormalizationFactory {
             }
             const fieldName = node.name.value;
             const fieldCoords = `${parentTypeName}.${fieldName}`;
-            nf.unvalidatedExternalFieldCoords.delete(fieldCoords);
             lastFieldName = fieldName;
             const fieldData = parentData.fieldDataByFieldName.get(fieldName);
             // undefined if the field does not exist on the parent
@@ -2493,27 +2639,58 @@ export class NormalizationFactory {
              *
              * However, if the subgraph is an EDG, the @external state should be kept regardless of extension.
              * */
-            const externalData = fieldData.isExternalBySubgraphName.get(nf.subgraphName);
-            if (nf.edfsDirectiveReferences.size < 1 && externalData?.isDefinedExternal) {
-              /*
-               * The key field is unconditionally provided if all the following are true:
-               * 1. The root entity is an extension type.
-               * 2. The parent of the key field (which might still be the root entity) is also an entity.
-               * 3. The parent of the key field is an extension type.
-               * 4. The key field is also a key field for the parent entity.
-               */
-              if (nf.isKeyFieldUnconditionallyProvided(entityParentData, parentData, fieldName)) {
-                isConditionalSource = true;
-                keyFieldSetData.isConditionalSource = true;
-                return BREAK;
+            const externalFieldData = fieldData.isExternalBySubgraphName.get(nf.subgraphName);
+            if (nf.edfsDirectiveReferences.size < 1 && !externalFieldData?.isUnconditionallyProvided) {
+              const conditionalData = nf.conditionalFieldDataByCoords.get(
+                `${fieldData.renamedParentTypeName}.${fieldName}`,
+              );
+              let isProvidable = false;
+              if (conditionalData) {
+                let isUnconditionallyProvided = false;
+                for (const fieldSetCondition of conditionalData.providedBy) {
+                  const parentTypeName = fieldSetCondition.typePath[0];
+                  /*
+                   * parentDatas contains each parent type data on the current path within the entity.
+                   * If one of these parentDatas is the parent of the field that defines @provides for a key field,
+                   * that key field is provided within the entity itself and can *always* be satisfied within the entity.
+                   * This means the key field is essentially unconditional in its contribution to an implicit key.
+                   *  */
+                  for (let i = 0; i < parentDatas.length; i++) {
+                    if (parentTypeName === parentDatas[i].name) {
+                      isUnconditionallyProvided = true;
+                      break;
+                    }
+                  }
+
+                  for (let i = 1; i < fieldSetCondition.fieldCoordinatesPath.length; i++) {
+                    const childTypeName = fieldSetCondition.typePath[i];
+                    if (childTypeName !== entityTypeName) {
+                      continue;
+                    }
+                    isProvidable = true;
+                    // The @provides path before entering the entity type (start to current depth).
+                    const preEntityPath = concatenatePath(fieldSetCondition.fieldPath.slice(0, i), parentTypeName);
+                    // The @provides path after entering the entity type (current depth to end).
+                    const postEntityPath = concatenatePath(fieldSetCondition.fieldPath.slice(i));
+                    const condition: KeyFieldConditionData = {
+                      fieldCoordinatesPath: fieldSetCondition.fieldCoordinatesPath,
+                      preEntityFieldCoordinates: new Set<string>(fieldSetCondition.fieldCoordinatesPath.slice(0, i)),
+                      fieldPath: fieldSetCondition.fieldPath,
+                      typePath: fieldSetCondition.typePath,
+                    };
+                    getValueOrDefault(conditionByPreEntityPath, preEntityPath, () => condition);
+                    getValueOrDefault(
+                      potentialFieldSetConditions,
+                      preEntityPath,
+                      () => new Map<string, KeyFieldConditionData>(),
+                    ).set(postEntityPath, condition);
+                    break;
+                  }
+                }
+                if (!isUnconditionallyProvided && isProvidable) {
+                  conditionalFieldCount += 1;
+                }
               }
-              // A key field on an entity extension is always provided
-              externalData.isUnconditionallyProvided = true;
-              getValueOrDefault(
-                externalExtensionFieldCoordsByRawFieldSet,
-                keyFieldSetData.rawFieldSet,
-                () => new Set<string>(),
-              ).add(fieldCoords);
             }
             getValueOrDefault(nf.keyFieldNamesByParentTypeName, parentTypeName, () => new Set<string>()).add(fieldName);
             const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
@@ -2618,37 +2795,81 @@ export class NormalizationFactory {
           },
         },
       });
-      if (errorMessages.length > 0 || isConditionalSource) {
+      if (errorMessages.length > 0) {
         continue;
+      }
+      const validFieldSetConditions: Array<FieldSetConditionRouterData> = [];
+      for (const [preEntityPath, leafByPostEntityPath] of potentialFieldSetConditions) {
+        // It is not yet known whether the current path ia a super-condition or a sub-condition.
+        const superCondition = conditionByPreEntityPath.get(preEntityPath);
+        if (!superCondition) {
+          continue;
+        }
+        if (leafByPostEntityPath.size === conditionalFieldCount) {
+          validFieldSetConditions.push(newFieldSetConditionRouterData(superCondition));
+          continue;
+        }
+        for (const [otherPreEntityPath, otherLeafConditionByPostEntityPath] of potentialFieldSetConditions) {
+          // Do not compare a condition to itself.
+          if (preEntityPath === otherPreEntityPath) {
+            continue;
+          }
+          const subCondition = conditionByPreEntityPath.get(otherPreEntityPath);
+          if (!subCondition) {
+            continue;
+          }
+          /*
+           * If the root field coordinates of the potential sub-condition is not within the potential super-condition
+           * path, then it cannot be a sub-condition of the potential super-condition.
+           */
+          if (!superCondition.preEntityFieldCoordinates.has(subCondition.fieldCoordinatesPath[0])) {
+            continue;
+          }
+          // Now that a sub-condition has been determined, add its own provided key fields to the super-condition.
+          for (const [postEntityPath, leafCondition] of otherLeafConditionByPostEntityPath) {
+            if (!leafByPostEntityPath.get(postEntityPath)) {
+              leafByPostEntityPath.set(postEntityPath, leafCondition);
+            }
+          }
+          // If all conditional key fields are provided, the implicit key is satisfied on the super-condition path.
+          if (leafByPostEntityPath.size === conditionalFieldCount) {
+            validFieldSetConditions.push(newFieldSetConditionData(superCondition));
+            break;
+          }
+        }
       }
       keyConfigurations.push({
         fieldName: '',
         selectionSet: keyFieldSet,
+        ...(validFieldSetConditions.length > 0 ? { conditions: validFieldSetConditions } : {}),
         ...(keyFieldSetData.isUnresolvable ? { disableEntityResolver: true } : {}),
       });
       graphNode.satisfiedFieldSets.add(keyFieldSet);
+
       if (keyFieldSetData.isUnresolvable) {
         continue;
       }
       entityDataNode?.addTargetSubgraphByFieldSet(keyFieldSet, nf.subgraphName);
       // allKeyFieldSetPaths.push(keyFieldSetPaths);
     }
-    if (externalExtensionFieldCoordsByRawFieldSet.size > 0) {
-      for (const [rawFieldSet, fieldCoords] of externalExtensionFieldCoordsByRawFieldSet) {
-        this.warnings.push(
-          externalEntityExtensionKeyFieldWarning(entityTypeName, rawFieldSet, [...fieldCoords], this.subgraphName),
-        );
-      }
-    }
     if (errorMessages.length) {
       nf.errors.push(invalidKeyDirectivesError(entityTypeName, errorMessages));
-      return;
+      return [];
     }
     // todo
     // nf.internalGraph.addEntityNode(entityTypeName, allKeyFieldSetPaths);
-    if (keyConfigurations.length) {
-      this.keyConfigurationsByTypeName.set(entityTypeName, keyConfigurations);
+    // if (keyConfigurations.length) {
+    //   this.keyConfigurationsByTypeName.set(entityTypeName, keyConfigurations);
+    // }
+    if (keyConfigurations.length < 1) {
+      return;
     }
+    const typeName = getParentTypeName(entityParentData);
+    const configurationData = getValueOrDefault(this.configurationDataByParentTypeName, typeName, () =>
+      this.newConfigurationData(true, typeName),
+    );
+    configurationData.isRootNode = true;
+    configurationData.keys = keyConfigurations;
   }
 
   handleKeyConfigurations() {
@@ -2658,7 +2879,7 @@ export class NormalizationFactory {
         !parentData ||
         (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION && parentData.kind !== Kind.INTERFACE_TYPE_DEFINITION)
       ) {
-        this.errors.push(undefinedObjectLikeParentError(parentTypeName));
+        this.errors.push(undefinedCompositeOutputTypeError(parentTypeName));
         continue;
       }
       this.propagateValidKeyFieldSetConfigurations(parentData, keyFieldSetDataByFieldSet);
@@ -2683,16 +2904,16 @@ export class NormalizationFactory {
     }
   }
 
-  newConfigurationData(isEntity: boolean, renamedTypeName: string, originalTypeName: string): ConfigurationData {
+  newConfigurationData(isEntity: boolean, renamedTypeName: string): ConfigurationData {
     const configurationData: ConfigurationData = {
       fieldNames: new Set<string>(),
       isRootNode: isEntity,
       typeName: renamedTypeName,
     };
-    const keyConfigurations = this.keyConfigurationsByTypeName.get(originalTypeName);
-    if (keyConfigurations) {
-      configurationData.keys = keyConfigurations;
-    }
+    // const keyConfigurations = this.keyConfigurationsByTypeName.get(originalTypeName);
+    // if (keyConfigurations) {
+    //   configurationData.keys = keyConfigurations;
+    // }
     return configurationData;
   }
 
@@ -2784,6 +3005,11 @@ export class NormalizationFactory {
         getSchemaNodeByData(this.schemaDefinition, this.errors, this.directiveDefinitionByDirectiveName),
       );
     }
+    // Check all key field sets for @external fields to assess whether they are conditional
+    this.evaluateExternalKeyFields();
+    // this is where @provides and @requires configurations are added to the ConfigurationData
+    this.validateAndAddConditionalFieldSetsToConfiguration();
+    // this is where @key configurations are added to the ConfigurationData
     this.handleKeyConfigurations();
     for (const [parentTypeName, parentDefinitionData] of this.parentDefinitionDataByTypeName) {
       switch (parentDefinitionData.kind) {
@@ -2847,21 +3073,19 @@ export class NormalizationFactory {
                   );
             }
           }
-          const newParentTypeName =
-            parentDefinitionData.kind === Kind.OBJECT_TYPE_DEFINITION
-              ? parentDefinitionData.renamedTypeName || parentTypeName
-              : parentTypeName;
-          const configurationData = this.newConfigurationData(isEntity, parentTypeName, newParentTypeName);
+          const newParentTypeName = getParentTypeName(parentDefinitionData);
+          const configurationData = getValueOrDefault(this.configurationDataByParentTypeName, newParentTypeName, () =>
+            this.newConfigurationData(isEntity, parentTypeName),
+          );
           const entityInterfaceData = this.entityInterfaceDataByTypeName.get(parentTypeName);
           if (entityInterfaceData) {
             entityInterfaceData.fieldDatas = fieldDatasToSimpleFieldDatas(
               parentDefinitionData.fieldDataByFieldName.values(),
             );
-            entityInterfaceData.concreteTypeNames = getValueOrDefault(
-              this.concreteTypeNamesByAbstractTypeName,
-              parentTypeName,
-              () => new Set<string>(),
-            );
+            const concreteTypeNames = this.concreteTypeNamesByAbstractTypeName.get(parentTypeName);
+            if (concreteTypeNames) {
+              addIterableValuesToSet(concreteTypeNames, entityInterfaceData.concreteTypeNames);
+            }
             configurationData.isInterfaceObject = entityInterfaceData.isInterfaceObject;
             configurationData.entityInterfaceConcreteTypeNames = entityInterfaceData.concreteTypeNames;
           }
@@ -2869,7 +3093,7 @@ export class NormalizationFactory {
           if (events) {
             configurationData.events = events;
           }
-          this.configurationDataByParentTypeName.set(newParentTypeName, configurationData);
+          // this.configurationDataByParentTypeName.set(newParentTypeName, configurationData);
           this.addFieldNamesToConfigurationData(parentDefinitionData.fieldDataByFieldName, configurationData);
           this.validateInterfaceImplementations(parentDefinitionData);
           definitions.push(
@@ -2963,18 +3187,6 @@ export class NormalizationFactory {
         this.errors.push(undefinedTypeError(referencedTypeName));
       }
     }
-    for (const [parentTypeName, fieldSetData] of this.fieldSetDataByTypeName) {
-      const parentData = this.parentDefinitionDataByTypeName.get(parentTypeName);
-      if (
-        !parentData ||
-        (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION && parentData.kind !== Kind.INTERFACE_TYPE_DEFINITION)
-      ) {
-        this.errors.push(undefinedObjectLikeParentError(parentTypeName));
-        continue;
-      }
-      // this is where provides and requires are added to the ConfigurationData
-      this.validateAndAddConditionalFieldSetsToConfiguration(parentData, fieldSetData);
-    }
     const persistedDirectiveDefinitionDataByDirectiveName = new Map<string, PersistedDirectiveDefinitionData>();
     for (const directiveDefinitionNode of this.directiveDefinitionByDirectiveName.values()) {
       // TODO @composeDirective directives would also be handled here
@@ -3019,7 +3231,7 @@ export class NormalizationFactory {
         // configurationDataMap is map of ConfigurationData per type name.
         // It is an Intermediate configuration object that will be converted to an engine configuration in the router
         concreteTypeNamesByAbstractTypeName: this.concreteTypeNamesByAbstractTypeName,
-        conditionalFieldDataByCoordinates: this.conditionalFieldDataByCoordinates,
+        conditionalFieldDataByCoordinates: this.conditionalFieldDataByCoords,
         configurationDataByTypeName: this.configurationDataByParentTypeName,
         entityDataByTypeName: this.entityDataByTypeName,
         entityInterfaces: this.entityInterfaceDataByTypeName,

@@ -43,7 +43,6 @@ import { CompositeOutputData, InputValueData } from '../schema-building/type-def
 
 export type KeyFieldSetData = {
   documentNode: DocumentNode;
-  isConditionalSource: boolean;
   isUnresolvable: boolean;
   normalizedFieldSet: string;
   rawFieldSet: string;

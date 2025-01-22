@@ -1,6 +1,7 @@
 import {
   ConfigurationData,
   EntityInterfaceFederationData,
+  EntityInterfaceSubgraphData,
   federateSubgraphs,
   InvalidEntityInterface,
   SimpleFieldData,
@@ -8,11 +9,16 @@ import {
   undefinedEntityInterfaceImplementationsError,
 } from '../src';
 import { describe, expect, test } from 'vitest';
-import { normalizeString, schemaToSortedNormalizedString, versionTwoRouterDefinitions } from './utils/utils';
+import {
+  normalizeString,
+  schemaToSortedNormalizedString,
+  versionOneRouterDefinitions,
+  versionTwoRouterDefinitions,
+} from './utils/utils';
 
 import { parse } from 'graphql';
 
-describe('Entity Interface Tests', () => {
+describe('Entity Interface tests', () => {
   test('that an @interfaceObject does not need to contribute new fields', () => {
     const { errors, federationResult } = federateSubgraphs([subgraphC, subgraphD]);
     expect(errors).toBeUndefined();
@@ -158,15 +164,47 @@ describe('Entity Interface Tests', () => {
           [
             'Interface',
             {
+              concreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo', 'EntityThree']),
+              subgraphDataByTypeName: new Map<string, EntityInterfaceSubgraphData>(),
               fieldDatasBySubgraphName: new Map<string, Array<SimpleFieldData>>(),
               interfaceFieldNames: new Set<string>(['id', 'name', 'age', 'isEntity']),
               interfaceObjectFieldNames: new Set<string>(),
               interfaceObjectSubgraphs: new Set<string>(),
               typeName: 'Interface',
-              concreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo', 'EntityThree']),
             },
           ],
         ]),
+      ),
+    );
+  });
+
+  test('that an entity Interface with a @key defining resolvable: false does not need to define all implementations', () => {
+    const { federationResult, errors, warnings } = federateSubgraphs([subgraphG, subgraphH]);
+    expect(errors).toBeUndefined();
+    expect(warnings).toHaveLength(0);
+    expect(schemaToSortedNormalizedString(federationResult!.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionOneRouterDefinitions +
+          `
+      type EntityOne implements Interface {
+        id: ID!
+        name: String!
+      }
+
+      type EntityTwo implements Interface {
+        id: ID!
+        name: String!
+      }
+      
+      interface Interface {
+        id: ID!
+        name: String!
+      }
+      
+      type Query {
+        entities: [Interface!]!
+      }
+    `,
       ),
     );
   });
@@ -176,8 +214,6 @@ describe('Entity Interface Tests', () => {
   test.skip('that an error is returned if a type declared with @interfaceObject is not an entity', () => {});
 
   test.skip('that an error is returned if an interface object does not include the same primary keys as its interface definition', () => {});
-
-  test.skip('that an error is returned if the concerete types that implement the entity interface are present in the same graph as the interface object', () => {});
 });
 
 const subgraphA: Subgraph = {
@@ -290,5 +326,44 @@ const subgraphF: Subgraph = {
       id: ID!
       isEntity: Boolean!
     }  
+  `),
+};
+
+const subgraphG: Subgraph = {
+  name: 'subgraph-g',
+  url: '',
+  definitions: parse(`
+    interface Interface @key(fields: "id", resolvable: false) {
+      id: ID!
+    }
+    
+    type EntityOne implements Interface @key(fields: "id") {
+      id: ID!
+    }
+  `),
+};
+
+const subgraphH: Subgraph = {
+  name: 'subgraph-h',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entities: [Interface!]!
+    }
+    
+    interface Interface @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    type EntityOne implements Interface @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+
+    type EntityTwo implements Interface @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
   `),
 };

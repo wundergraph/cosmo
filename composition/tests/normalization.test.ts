@@ -951,7 +951,7 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors![0].message).toStrictEqual(
-      `The following "provides" directive is invalid:\n On "Review.user":\n -` +
+      `The following "provides" directive is invalid:\n On field "Review.user":\n -` +
         undefinedFieldInFieldSetErrorMessage('age', 'User', 'age'),
     );
   });
@@ -1060,7 +1060,7 @@ describe('Normalization tests', () => {
     expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
       invalidProvidesOrRequiresDirectivesError('requires', [
-        ` On "Product.shippingCost":\n -` + undefinedFieldInFieldSetErrorMessage('age', 'Product', 'age'),
+        ` On field "Product.shippingCost":\n -` + undefinedFieldInFieldSetErrorMessage('age', 'Product', 'age'),
       ]),
     );
   });
