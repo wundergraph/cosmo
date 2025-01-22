@@ -177,6 +177,7 @@ type (
 		healthCheckPath                 string
 		readinessCheckPath              string
 		livenessCheckPath               string
+		playgroundConfig                config.PlaygroundConfig
 		cacheControlPolicy              config.CacheControlPolicy
 		routerConfigPollerConfig        *RouterConfigPollerConfig
 		cdnConfig                       config.CDNConfiguration
@@ -259,8 +260,18 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.graphqlWebURL = r.graphqlPath
 	}
 
-	if r.playgroundPath == "" {
-		r.playgroundPath = "/"
+	// this is set via the deprecated method
+	if !r.playground {
+		r.playgroundConfig.Enabled = r.playground
+		r.logger.Warn("The playground_enabled option is deprecated. Use the playground.enabled option in the config instead.")
+	}
+	if r.playgroundPath != "" && r.playgroundPath != "/" {
+		r.playgroundConfig.Path = r.playgroundPath
+		r.logger.Warn("The playground_path option is deprecated. Use the playground.path option in the config instead.")
+	}
+
+	if r.playgroundConfig.Path == "" {
+		r.playgroundConfig.Path = "/"
 	}
 
 	if r.instanceID == "" {
@@ -593,7 +604,7 @@ func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error 
 func (r *Router) listenAndServe(cfg *nodev1.RouterConfig) error {
 	r.logger.Info("Server listening and serving",
 		zap.String("listen_addr", r.listenAddr),
-		zap.Bool("playground", r.playground),
+		zap.Bool("playground", r.playgroundConfig.Enabled),
 		zap.Bool("introspection", r.introspection),
 		zap.String("config_version", cfg.GetVersion()),
 	)
@@ -856,15 +867,16 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		debug.ReportMemoryUsage(ctx, r.logger)
 	}
 
-	if r.playground {
-		playgroundUrl, err := url.JoinPath(r.baseURL, r.playgroundPath)
+	if r.playgroundConfig.Enabled {
+		playgroundUrl, err := url.JoinPath(r.baseURL, r.playgroundConfig.Path)
 		if err != nil {
 			return fmt.Errorf("failed to join playground url: %w", err)
 		}
 		r.logger.Info("Serving GraphQL playground", zap.String("url", playgroundUrl))
 		r.playgroundHandler = graphiql.NewPlayground(&graphiql.PlaygroundOptions{
-			Html:       graphiql.PlaygroundHTML(),
-			GraphqlURL: r.graphqlWebURL,
+			Html:             graphiql.PlaygroundHTML(),
+			GraphqlURL:       r.graphqlWebURL,
+			ConcurrencyLimit: int64(r.playgroundConfig.ConcurrencyLimit),
 		})
 	}
 
@@ -1140,7 +1152,7 @@ func (r *Router) Start(ctx context.Context) error {
 		return err
 	}
 
-	if r.playground {
+	if r.playgroundConfig.Enabled {
 		graphqlEndpointURL, err := url.JoinPath(r.baseURL, r.graphqlPath)
 		if err != nil {
 			return fmt.Errorf("failed to join graphql endpoint url: %w", err)
@@ -1390,6 +1402,13 @@ func WithGraphQLWebURL(p string) Option {
 func WithPlaygroundPath(p string) Option {
 	return func(r *Router) {
 		r.playgroundPath = p
+	}
+}
+
+// WithPlaygroundPath sets the path where the GraphQL Playground is served.
+func WithPlaygroundConfig(c config.PlaygroundConfig) Option {
+	return func(r *Router) {
+		r.playgroundConfig = c
 	}
 }
 
