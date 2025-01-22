@@ -209,7 +209,8 @@ type (
 		tlsServerConfig               *tls.Config
 		tlsConfig                     *TlsConfig
 		telemetryAttributes           []config.CustomAttribute
-		tracePropagators              propagation.TextMapPropagator
+		tracePropagators              []propagation.TextMapPropagator
+		compositePropagator           propagation.TextMapPropagator
 		// Poller
 		configPoller                 configpoller.ConfigPoller
 		selfRegister                 selfregister.SelfRegister
@@ -435,16 +436,10 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	if r.traceConfig.Enabled {
 		if len(r.traceConfig.Propagators) > 0 {
-			propagators, err := rtrace.NewCompositePropagator(r.traceConfig.Propagators...)
+			propagators, err := rtrace.BuildPropagators(r.traceConfig.Propagators...)
 			if err != nil {
 				r.logger.Error("creating propagators", zap.Error(err))
 				return nil, err
-			}
-
-			// Don't set it globally when we use the router in tests.
-			// In practice, setting it globally only makes sense for module development.
-			if r.traceConfig.TestMemoryExporter == nil {
-				otel.SetTextMapPropagator(propagators)
 			}
 
 			r.tracePropagators = propagators
@@ -677,6 +672,13 @@ func (r *Router) initModules(ctx context.Context) error {
 			r.postOriginHandlers = append(r.postOriginHandlers, handler.OnOriginResponse)
 		}
 
+		if handler, ok := moduleInstance.(TracePropagationProvider); ok {
+			modulePropagators := handler.TracePropagators()
+			if len(modulePropagators) > 0 {
+				r.tracePropagators = append(r.tracePropagators, modulePropagators...)
+			}
+		}
+
 		r.modules = append(r.modules, moduleInstance)
 
 		r.logger.Info("Module registered",
@@ -881,6 +883,16 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	// Modules are only initialized once and not on every config change
 	if err := r.initModules(ctx); err != nil {
 		return fmt.Errorf("failed to init user modules: %w", err)
+	}
+
+	if r.traceConfig.Enabled && len(r.tracePropagators) > 0 {
+		r.compositePropagator = propagation.NewCompositeTextMapPropagator(r.tracePropagators...)
+
+		// Don't set it globally when we use the router in tests.
+		// In practice, setting it globally only makes sense for module development.
+		if r.traceConfig.TestMemoryExporter == nil {
+			otel.SetTextMapPropagator(r.compositePropagator)
+		}
 	}
 
 	return nil

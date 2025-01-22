@@ -769,8 +769,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			otelhttp.WithTracerProvider(s.tracerProvider),
 		}
 
-		if s.tracePropagators != nil {
-			middlewareOptions = append(middlewareOptions, otelhttp.WithPropagators(s.tracePropagators))
+		if s.compositePropagator != nil {
+			middlewareOptions = append(middlewareOptions, otelhttp.WithPropagators(s.compositePropagator))
 		}
 
 		traceHandler := rtrace.NewMiddleware(
@@ -867,7 +867,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				},
 			},
 			TracerProvider:                s.tracerProvider,
-			TracePropagators:              s.tracePropagators,
+			TracePropagators:              s.compositePropagator,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
 		},
