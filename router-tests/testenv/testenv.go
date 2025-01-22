@@ -1888,11 +1888,11 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 }
 
 func DeflakeWSReadMessage(t testing.TB, conn *websocket.Conn) (messageType int, p []byte, err error) {
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 5; i++ {
 		messageType, p, err = conn.ReadMessage()
 		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
 			t.Log("connection reset by peer found, retrying...")
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(time.Duration(i*100) * time.Millisecond)
 			continue
 		}
 		break
@@ -1902,11 +1902,11 @@ func DeflakeWSReadMessage(t testing.TB, conn *websocket.Conn) (messageType int, 
 }
 
 func DeflakeWSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) error {
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 5; i++ {
 		err := conn.ReadJSON(v)
 		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
 			t.Log("connection reset by peer found, retrying...")
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(time.Duration(i*100) * time.Millisecond)
 			continue
 		}
 		break
@@ -1916,11 +1916,11 @@ func DeflakeWSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) error 
 }
 
 func DeflakeWSWriteMessage(t testing.TB, conn *websocket.Conn, messageType int, data []byte) error {
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 5; i++ {
 		err := conn.WriteMessage(messageType, data)
 		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
 			t.Log("connection reset by peer found, retrying...")
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(time.Duration(i*100) * time.Millisecond)
 			continue
 		}
 		break
@@ -1930,11 +1930,11 @@ func DeflakeWSWriteMessage(t testing.TB, conn *websocket.Conn, messageType int, 
 }
 
 func DeflakeWSWriteJSON(t testing.TB, conn *websocket.Conn, v interface{}) error {
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 5; i++ {
 		err := conn.WriteJSON(v)
 		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
 			t.Log("connection reset by peer found, retrying...")
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(time.Duration(i*100) * time.Millisecond)
 			continue
 		}
 		break

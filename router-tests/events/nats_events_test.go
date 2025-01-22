@@ -581,10 +581,10 @@ func TestNatsEvents(t *testing.T) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
 
-			var requestCompleted atomic.Bool
+			var done atomic.Bool
 
 			go func() {
-				defer requestCompleted.Store(true)
+				defer done.Store(true)
 				client := http.Client{}
 				req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 				require.NoError(t, err)
@@ -637,7 +637,7 @@ func TestNatsEvents(t *testing.T) {
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 
-			require.Eventually(t, requestCompleted.Load, NatsWaitTimeout, time.Millisecond*100)
+			require.Eventually(t, done.Load, NatsWaitTimeout, time.Millisecond*100)
 		})
 	})
 
