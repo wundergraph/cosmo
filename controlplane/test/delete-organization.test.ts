@@ -1,14 +1,32 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { OidcRepository } from '../src/core/repositories/OidcRepository.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel, TestUser } from '../src/core/test-util.js';
+import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { createFederatedGraph, createThenPublishSubgraph, DEFAULT_NAMESPACE, SetupTest } from './test-util.js';
 
 let dbname = '';
 
+vi.mock('../src/core/clickhouse/index.js', () => {
+  const ClickHouseClient = vi.fn();
+  ClickHouseClient.prototype.queryPromise = vi.fn();
+
+  return { ClickHouseClient };
+});
+
 describe('Delete Organization', (ctx) => {
+  let chClient: ClickHouseClient;
+
+  beforeEach(() => {
+    chClient = new ClickHouseClient();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -20,6 +38,7 @@ describe('Delete Organization', (ctx) => {
   test('Should delete all targets when deleting org', async (testContext) => {
     const { client, server, users, authenticator, blobStorage } = await SetupTest({
       dbname,
+      chClient,
     });
     const mainUserContext = users[TestUser.adminAliceCompanyA];
 

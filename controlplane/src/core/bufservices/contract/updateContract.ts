@@ -141,6 +141,7 @@ export function updateContract(
         jwtSecret: opts.admissionWebhookJWTSecret,
       },
       labelMatchers: [],
+      chClient: opts.chClient!,
     });
 
     const compositionErrors: PlainMessage<CompositionError>[] = [];
@@ -167,6 +168,7 @@ export function updateContract(
         cdnBaseUrl: opts.cdnBaseUrl,
         webhookJWTSecret: opts.admissionWebhookJWTSecret,
       },
+      chClient: opts.chClient!,
     });
 
     compositionErrors.push(...composition.compositionErrors);

@@ -114,6 +114,7 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 		core.WithGraphQLPath(cfg.GraphQLPath),
 		core.WithModulesConfig(cfg.Modules),
 		core.WithGracePeriod(cfg.GracePeriod),
+		core.WithPlaygroundConfig(cfg.PlaygroundConfig),
 		core.WithPlaygroundPath(cfg.PlaygroundPath),
 		core.WithHealthCheckPath(cfg.HealthCheckPath),
 		core.WithLivenessCheckPath(cfg.LivenessCheckPath),
@@ -209,7 +210,6 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 				c.Logger = logging.NewZapAccessLogger(f, cfg.DevelopmentMode, !cfg.JSONLog)
 			}
 		} else if cfg.AccessLogs.Output.Stdout.Enabled {
-
 			if cfg.AccessLogs.Buffer.Enabled {
 				bl, err := logging.NewJSONZapBufferedLogger(logging.BufferedLoggerOptions{
 					WS:            os.Stdout,
@@ -255,6 +255,7 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 		options = append(options, core.WithConfigPollerConfig(&core.RouterConfigPollerConfig{
 			GraphSignKey:    cfg.Graph.SignKey,
 			PollInterval:    cfg.PollInterval,
+			PollJitter:      cfg.PollJitter,
 			ExecutionConfig: cfg.ExecutionConfig,
 		}))
 	}

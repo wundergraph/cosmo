@@ -766,13 +766,22 @@ type ApolloCompatibilityReplaceInvalidVarErrors struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_ENABLED"`
 }
 
+type CacheWarmupSource struct {
+	Filesystem *CacheWarmupFileSystemSource `yaml:"filesystem,omitempty"`
+}
+
+type CacheWarmupFileSystemSource struct {
+	Path string `yaml:"path" env:"CACHE_WARMUP_SOURCE_FILESYSTEM_PATH"`
+}
+
+type CacheWarmupCDNSource struct{}
+
 type CacheWarmupConfiguration struct {
-	Enabled        bool          `yaml:"enabled" envDefault:"false" env:"CACHE_WARMUP_ENABLED"`
-	Source         string        `yaml:"source" envDefault:"filesystem" env:"CACHE_WARMUP_SOURCE"`
-	Path           string        `yaml:"path" env:"CACHE_WARMUP_PATH"`
-	Workers        int           `yaml:"workers" envDefault:"8" env:"CACHE_WARMUP_WORKERS"`
-	ItemsPerSecond int           `yaml:"items_per_second" envDefault:"50" env:"CACHE_WARMUP_ITEMS_PER_SECOND"`
-	Timeout        time.Duration `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
+	Enabled        bool              `yaml:"enabled" envDefault:"false" env:"CACHE_WARMUP_ENABLED"`
+	Source         CacheWarmupSource `yaml:"source"  env:"CACHE_WARMUP_SOURCE"`
+	Workers        int               `yaml:"workers" envDefault:"8" env:"CACHE_WARMUP_WORKERS"`
+	ItemsPerSecond int               `yaml:"items_per_second" envDefault:"50" env:"CACHE_WARMUP_ITEMS_PER_SECOND"`
+	Timeout        time.Duration     `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
 }
 
 type Config struct {
@@ -796,6 +805,7 @@ type Config struct {
 
 	ListenAddr                    string                      `yaml:"listen_addr" envDefault:"localhost:3002" env:"LISTEN_ADDR"`
 	ControlplaneURL               string                      `yaml:"controlplane_url" envDefault:"https://cosmo-cp.wundergraph.com" env:"CONTROLPLANE_URL"`
+	PlaygroundConfig              PlaygroundConfig            `yaml:"playground,omitempty"`
 	PlaygroundEnabled             bool                        `yaml:"playground_enabled" envDefault:"true" env:"PLAYGROUND_ENABLED"`
 	IntrospectionEnabled          bool                        `yaml:"introspection_enabled" envDefault:"true" env:"INTROSPECTION_ENABLED"`
 	QueryPlansEnabled             bool                        `yaml:"query_plans_enabled" envDefault:"true" env:"QUERY_PLANS_ENABLED"`
@@ -804,6 +814,7 @@ type Config struct {
 	ShutdownDelay                 time.Duration               `yaml:"shutdown_delay" envDefault:"60s" env:"SHUTDOWN_DELAY"`
 	GracePeriod                   time.Duration               `yaml:"grace_period" envDefault:"30s" env:"GRACE_PERIOD"`
 	PollInterval                  time.Duration               `yaml:"poll_interval" envDefault:"10s" env:"POLL_INTERVAL"`
+	PollJitter                    time.Duration               `yaml:"poll_jitter" envDefault:"5s" env:"POLL_JITTER"`
 	HealthCheckPath               string                      `yaml:"health_check_path" envDefault:"/health" env:"HEALTH_CHECK_PATH"`
 	ReadinessCheckPath            string                      `yaml:"readiness_check_path" envDefault:"/health/ready" env:"READINESS_CHECK_PATH"`
 	LivenessCheckPath             string                      `yaml:"liveness_check_path" envDefault:"/health/live" env:"LIVENESS_CHECK_PATH"`
@@ -839,6 +850,12 @@ type Config struct {
 	AutomaticPersistedQueries AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
 	ApolloCompatibilityFlags  ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
 	ClientHeader              ClientHeader                    `yaml:"client_header"`
+}
+
+type PlaygroundConfig struct {
+	Enabled          bool   `yaml:"enabled" envDefault:"true" env:"PLAYGROUND_ENABLED"`
+	Path             string `yaml:"path" envDefault:"/" env:"PLAYGROUND_PATH"`
+	ConcurrencyLimit int    `yaml:"concurrency_limit,omitempty" envDefault:"10" env:"PLAYGROUND_CONCURRENCY_LIMIT"`
 }
 
 type LoadResult struct {
@@ -879,7 +896,6 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 
 	isDefaultConfigPath := configFilePath == DefaultConfigPath
 	configFileBytes, err = os.ReadFile(configFilePath)
-
 	if err != nil {
 		if isDefaultConfigPath {
 			cfg.DefaultLoaded = false

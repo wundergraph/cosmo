@@ -17,7 +17,7 @@ message RequestInfo {
 }
 
 message SchemaUsageInfo {
-  // RequestDocument is the GraphQL request document
+  // RequestDocument is the fully normalized GraphQL request document
   string RequestDocument = 1;
   // TypeFieldMetrics is the list of used fields in the request document
   repeated TypeFieldUsageInfo TypeFieldMetrics = 2;

@@ -221,11 +221,11 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		})
 
 		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
-		cr.Mount(r.graphqlPath, multiGraphHandler)
+		cr.Handle(r.graphqlPath, multiGraphHandler)
 
 		if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled && r.webSocketConfiguration.AbsintheProtocol.Enabled {
 			// Mount the Absinthe protocol handler for WebSockets
-			httpRouter.Mount(r.webSocketConfiguration.AbsintheProtocol.HandlerPath, multiGraphHandler)
+			httpRouter.Handle(r.webSocketConfiguration.AbsintheProtocol.HandlerPath, multiGraphHandler)
 		}
 	})
 
@@ -235,8 +235,8 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 	// We mount the playground once here when we don't have a conflict with the websocket handler
 	// If we have a conflict, we mount the playground during building the individual muxes
-	if s.playgroundHandler != nil && s.graphqlPath != s.playgroundPath {
-		httpRouter.Get(r.playgroundPath, s.playgroundHandler(nil).ServeHTTP)
+	if s.playgroundHandler != nil && s.graphqlPath != s.playgroundConfig.Path {
+		httpRouter.Get(r.playgroundConfig.Path, s.playgroundHandler(nil).ServeHTTP)
 	}
 
 	httpRouter.Get(s.healthCheckPath, r.healthcheck.Liveness())
@@ -921,21 +921,23 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			ItemsPerSecond: s.Config.cacheWarmup.ItemsPerSecond,
 			Timeout:        s.Config.cacheWarmup.Timeout,
 		}
-		switch s.Config.cacheWarmup.Source {
-		case "filesystem":
+
+		if s.Config.cacheWarmup.Source.Filesystem != nil {
 			warmupConfig.Source = NewFileSystemSource(&FileSystemSourceConfig{
-				RootPath: s.Config.cacheWarmup.Path,
+				RootPath: s.Config.cacheWarmup.Source.Filesystem.Path,
 			})
-		case "s3":
-			return nil, fmt.Errorf("s3 cache warmup is not supported yet")
-		case "cdn":
-			return nil, fmt.Errorf("cdn cache warmup is not supported yet")
-		default:
-			return nil, fmt.Errorf("invalid cache warmup source: %s, valid sources are: filesystem, s3, cdn", s.Config.cacheWarmup.Source)
+		} else {
+			cdnSource, err := NewCDNSource(s.Config.cdnConfig.URL, s.graphApiToken, s.logger)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create cdn source: %w", err)
+			}
+			warmupConfig.Source = cdnSource
 		}
+
 		err = WarmupCaches(ctx, warmupConfig)
 		if err != nil {
-			return nil, fmt.Errorf("failed to warmup caches: %w", err)
+			// We don't want to fail the server if the cache warmup fails
+			s.logger.Error("Failed to warmup caches. It will retry after server restart or graph execution config update", zap.Error(err))
 		}
 	}
 
@@ -1047,7 +1049,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 		// When the playground path is equal to the graphql path, we need to handle
 		// ws upgrades and html requests on the same route.
-		if s.playground && s.graphqlPath == s.playgroundPath {
+		if s.playgroundConfig.Enabled && s.graphqlPath == s.playgroundConfig.Path {
 			httpRouter.Use(s.playgroundHandler, wsMiddleware)
 		} else {
 			httpRouter.Use(wsMiddleware)
@@ -1081,9 +1083,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	httpRouter.Use(s.routerMiddlewares...)
 
 	// GraphQL over POST
-	httpRouter.Post("/", graphqlHandler.ServeHTTP)
+	httpRouter.Post(s.graphqlPath, graphqlHandler.ServeHTTP)
 	// GraphQL over GET
-	httpRouter.Get("/", graphqlHandler.ServeHTTP)
+	httpRouter.Get(s.graphqlPath, graphqlHandler.ServeHTTP)
 
 	gm.mux = httpRouter
 

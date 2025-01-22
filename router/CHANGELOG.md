@@ -4,6 +4,46 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.164.1](https://github.com/wundergraph/cosmo/compare/router@0.164.0...router@0.164.1) (2025-01-20)
+
+### Bug Fixes
+
+* **router:** write proper line endings and header for multipart ([#1517](https://github.com/wundergraph/cosmo/issues/1517)) ([c09ecf4](https://github.com/wundergraph/cosmo/commit/c09ecf4ba01977fc1e8bef9383d68600a5d886f9)) (@df-wg)
+
+# [0.164.0](https://github.com/wundergraph/cosmo/compare/router@0.163.1...router@0.164.0) (2025-01-19)
+
+### Features
+
+* add variables remapping support ([#1516](https://github.com/wundergraph/cosmo/issues/1516)) ([6bb1231](https://github.com/wundergraph/cosmo/commit/6bb12312db92a0ecbe9907dc3e36ff8b515fa2c4)) (@devsergiy)
+
+## [0.163.1](https://github.com/wundergraph/cosmo/compare/router@0.163.0...router@0.163.1) (2025-01-19)
+
+### Bug Fixes
+
+* **cache operation:** swallow cache errors and other improvements ([#1515](https://github.com/wundergraph/cosmo/issues/1515)) ([d959e2c](https://github.com/wundergraph/cosmo/commit/d959e2c9fb492cc7c73d89f61c31f3bad2ac5706)) (@StarpTech)
+
+# [0.163.0](https://github.com/wundergraph/cosmo/compare/router@0.162.0...router@0.163.0) (2025-01-17)
+
+### Bug Fixes
+
+* **router:** remove wildcard from router graphql path ([#1509](https://github.com/wundergraph/cosmo/issues/1509)) ([e6f4b9b](https://github.com/wundergraph/cosmo/commit/e6f4b9bf9d642d39933528dd1654a9c9d969e565)) (@Noroth)
+* use gauge for server.uptime metric ([#1510](https://github.com/wundergraph/cosmo/issues/1510)) ([77a16d2](https://github.com/wundergraph/cosmo/commit/77a16d203f04ef8d93878e5f28f6e08575313145)) (@StarpTech)
+
+### Features
+
+* cache warmer ([#1501](https://github.com/wundergraph/cosmo/issues/1501)) ([948edd2](https://github.com/wundergraph/cosmo/commit/948edd23e6d0ee968c91edd1a9e9943c3405ac2d)) (@JivusAyrus)
+
+# [0.162.0](https://github.com/wundergraph/cosmo/compare/router@0.161.1...router@0.162.0) (2025-01-11)
+
+### Bug Fixes
+
+* add edfs to the demo environment ([#1505](https://github.com/wundergraph/cosmo/issues/1505)) ([2a70c94](https://github.com/wundergraph/cosmo/commit/2a70c94246aa120ea836f658733190b31fc9175f)) (@alepane21)
+* full demo broken in main branch ([#1508](https://github.com/wundergraph/cosmo/issues/1508)) ([beab806](https://github.com/wundergraph/cosmo/commit/beab806571f5a760fc899e10d7742ca606cd031d)) (@alepane21)
+
+### Features
+
+* **router:** optionally add jitter to config polling interval ([#1506](https://github.com/wundergraph/cosmo/issues/1506)) ([1d67742](https://github.com/wundergraph/cosmo/commit/1d677429e3fae397d4c1e03cd69636521bbe80c8)) (@endigma)
+
 ## [0.161.1](https://github.com/wundergraph/cosmo/compare/router@0.161.0...router@0.161.1) (2025-01-08)
 
 ### Bug Fixes

@@ -2417,6 +2417,73 @@ message GetNamespaceResponse {
   Namespace namespace = 2;
 }
 
+message PushCacheWarmerOperationRequest {
+  string federatedGraphName = 1;
+  string operationContent = 2;
+  string operationName = 3;
+  string operationPersistedId = 4;
+  string namespace = 5;
+}
+
+message PushCacheWarmerOperationResponse {
+  Response response = 1;
+}
+
+message GetCacheWarmerOperationsRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message CacheWarmerOperation {
+  string id = 1;
+  string operationContent = 2;
+  string operationName = 3;
+  string operationPersistedId = 4;
+  string operationHash = 5;
+  string clientName = 6;
+  string clientVersion = 7;
+  float planningTime = 8;
+  bool isManuallyAdded = 9;
+  string createdAt = 10;
+  string createdBy = 11;
+}
+
+message GetCacheWarmerOperationsResponse {
+  Response response = 1;
+  repeated CacheWarmerOperation operations = 2;
+  int32 total_count = 3;
+  bool isCacheWarmerEnabled = 4;
+}
+
+message ComputeCacheWarmerOperationsRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+}
+
+message ComputeCacheWarmerOperationsResponse {
+  Response response = 1;
+}
+
+message ConfigureCacheWarmerRequest {
+  string namespace = 1;
+  bool enableCacheWarmer = 2;
+}
+
+message ConfigureCacheWarmerResponse {
+  Response response = 1;
+}
+
+message GetCacheWarmerConfigRequest {
+  string namespace = 1;
+}
+
+message GetCacheWarmerConfigResponse {
+  Response response = 1;
+  bool isCacheWarmerEnabled = 2;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -2724,6 +2791,16 @@ service PlatformService {
   rpc GetFederatedGraphById(GetFederatedGraphByIdRequest) returns (GetFederatedGraphByIdResponse) {}
   // GetSubgraphById returns the subgraph by id.
   rpc GetSubgraphById(GetSubgraphByIdRequest) returns (GetSubgraphByIdResponse) {}
+  // PushCacheWarmerOperation adds a operation to the list of cache warmer operations.
+  rpc PushCacheWarmerOperation(PushCacheWarmerOperationRequest) returns (PushCacheWarmerOperationResponse) {}
+  // GetCacheWarmerOperations returns the list of cache warmer operations.
+  rpc GetCacheWarmerOperations(GetCacheWarmerOperationsRequest) returns (GetCacheWarmerOperationsResponse) {}
+  // ComputeCacheWarmerOperations computes the list of cache warmer operations.
+  rpc ComputeCacheWarmerOperations(ComputeCacheWarmerOperationsRequest) returns (ComputeCacheWarmerOperationsResponse) {}
+  // ConfigureCacheWarmer enables cache warmer for the namespace passed.
+  rpc ConfigureCacheWarmer(ConfigureCacheWarmerRequest) returns (ConfigureCacheWarmerResponse) {}
+  // GetCacheWarmerConfig gets the config of cache warming for that namespace.
+  rpc GetCacheWarmerConfig(GetCacheWarmerConfigRequest) returns (GetCacheWarmerConfigResponse) {}
 
   //
   // Billing

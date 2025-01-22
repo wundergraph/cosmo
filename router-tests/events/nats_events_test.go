@@ -285,6 +285,7 @@ func TestNatsEvents(t *testing.T) {
 		}
 
 		assertMultipartPrefix := func(t *testing.T, reader *bufio.Reader) {
+			assertLineEquals(t, reader, "")
 			assertLineEquals(t, reader, "--graphql")
 			assertLineEquals(t, reader, "Content-Type: application/json")
 			assertLineEquals(t, reader, "")
@@ -322,7 +323,7 @@ func TestNatsEvents(t *testing.T) {
 					require.Equal(t, http.StatusOK, resp.StatusCode)
 					defer resp.Body.Close()
 
-					require.Equal(t, "application/json", resp.Header.Get("Content-Type"))
+					require.Equal(t, "multipart/mixed; boundary=graphql", resp.Header.Get("Content-Type"))
 					require.Equal(t, "no-cache", resp.Header.Get("Cache-Control"))
 					require.Equal(t, "no", resp.Header.Get("X-Accel-Buffering"))
 

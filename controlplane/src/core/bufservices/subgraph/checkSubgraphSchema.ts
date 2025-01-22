@@ -249,7 +249,15 @@ export function checkSubgraphSchema(
       schemaCheckID,
     });
 
-    const composer = new Composer(logger, opts.db, fedGraphRepo, subgraphRepo, contractRepo, graphCompostionRepo);
+    const composer = new Composer(
+      logger,
+      opts.db,
+      fedGraphRepo,
+      subgraphRepo,
+      contractRepo,
+      graphCompostionRepo,
+      opts.chClient,
+    );
 
     const result = req.delete
       ? await composer.composeWithDeletedSubgraph(subgraph.labels, subgraph.name, subgraph.namespaceId)
