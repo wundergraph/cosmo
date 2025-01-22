@@ -1290,13 +1290,19 @@ func TestNatsEvents(t *testing.T) {
 
 			subscribePayload := []byte(`{"query":"subscription { filteredEmployeeUpdated(id: 1) { id details { forename surname } } }"}`)
 
-			var requestsDone atomic.Bool
+			var done atomic.Bool
+			var producerDone atomic.Bool
+
+			waitForProducer := func() {
+				assert.Eventually(t, producerDone.Load, NatsWaitTimeout, time.Millisecond*100)
+				producerDone.Store(false)
+			}
 
 			tick := make(chan struct{}, 1)
 			timeout := time.After(NatsWaitTimeout)
 
 			go func() {
-				defer requestsDone.Store(true)
+				defer done.Store(true)
 
 				client := http.Client{}
 				req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
@@ -1319,6 +1325,7 @@ func TestNatsEvents(t *testing.T) {
 
 				reader := bufio.NewReader(resp.Body)
 
+				waitForProducer()
 				eventNext, _, gErr := reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "event: next", string(eventNext))
@@ -1335,6 +1342,7 @@ func TestNatsEvents(t *testing.T) {
 					require.Fail(t, "timeout")
 				}
 
+				waitForProducer()
 				eventNext, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "event: next", string(eventNext))
@@ -1351,6 +1359,7 @@ func TestNatsEvents(t *testing.T) {
 					require.Fail(t, "timeout")
 				}
 
+				waitForProducer()
 				eventNext, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "event: next", string(eventNext))
@@ -1367,6 +1376,7 @@ func TestNatsEvents(t *testing.T) {
 					require.Fail(t, "timeout")
 				}
 
+				waitForProducer()
 				eventNext, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "event: next", string(eventNext))
@@ -1383,6 +1393,7 @@ func TestNatsEvents(t *testing.T) {
 					require.Fail(t, "timeout")
 				}
 
+				waitForProducer()
 				eventNext, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "event: next", string(eventNext))
@@ -1399,6 +1410,7 @@ func TestNatsEvents(t *testing.T) {
 					require.Fail(t, "timeout")
 				}
 
+				waitForProducer()
 				eventNext, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "event: next", string(eventNext))
@@ -1415,6 +1427,7 @@ func TestNatsEvents(t *testing.T) {
 					require.Fail(t, "timeout")
 				}
 
+				waitForProducer()
 				eventNext, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "event: next", string(eventNext))
@@ -1431,6 +1444,7 @@ func TestNatsEvents(t *testing.T) {
 					require.Fail(t, "timeout")
 				}
 
+				waitForProducer()
 				eventNext, _, gErr = reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "event: next", string(eventNext))
@@ -1451,6 +1465,8 @@ func TestNatsEvents(t *testing.T) {
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 
+			producerDone.Store(true)
+
 			// Events 1, 3, 4, 5, 7, 8, and 11 should be included
 			for i := 1; i < 13; i++ {
 
@@ -1458,6 +1474,9 @@ func TestNatsEvents(t *testing.T) {
 				case 1, 3, 4, 5, 7, 8, 11:
 					select {
 					case <-tick:
+						assert.Eventually(t, func() bool {
+							return !producerDone.Load()
+						}, NatsWaitTimeout, time.Millisecond*100)
 					case <-timeout:
 						require.Fail(t, "timeout")
 					}
@@ -1469,9 +1488,10 @@ func TestNatsEvents(t *testing.T) {
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 
+				producerDone.Store(true)
 			}
 
-			require.Eventually(t, requestsDone.Load, NatsWaitTimeout, time.Millisecond*100)
+			require.Eventually(t, done.Load, NatsWaitTimeout, time.Millisecond*100)
 		})
 	})
 
