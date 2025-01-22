@@ -1,0 +1,85 @@
+{
+  "operations": [
+    {
+      "request": {
+        "query": "query IncludeQuery($include: Boolean!) {employees { id details @include(if: $include) { forename } } }",
+        "variable_variations": [
+          {
+            "variables": {
+              "include": true
+            }
+          },
+          {
+            "variables": {
+              "include": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "query": "query SkipQuery($skip: Boolean!) {employees { id isAvailable details @skip(if: $skip) { forename surname } } }",
+        "variable_variations": [
+          {
+            "variables": {
+              "skip": true
+            }
+          },
+          {
+            "variables": {
+              "skip": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "query": "query IncludeQuery($include: Boolean!, $skip: Boolean!) { employees { id details { nationality forename @include(if: $include) surname @skip(if: $skip) } } }",
+        "variable_variations": [
+          {
+            "variables": {
+              "skip": true,
+              "include": true
+            }
+          },
+          {
+            "variables": {
+              "skip": false,
+              "include": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "extensions": {
+          "persistedQuery": {
+            "version": 1,
+            "sha256Hash": "persistedSkipInclude"
+          }
+        },
+        "variable_variations": [
+          {
+            "variables": {
+              "skip": true,
+              "include": true
+            }
+          },
+          {
+            "variables": {
+              "skip": false,
+              "include": false
+            }
+          }
+        ]
+      },
+      "client": {
+        "name": "my-client",
+        "version": "missing"
+      }
+    }
+  ]
+}

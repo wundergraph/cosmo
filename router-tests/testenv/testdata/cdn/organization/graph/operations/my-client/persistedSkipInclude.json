@@ -1,0 +1,4 @@
+{
+  "version": 1,
+  "body": "query IncludeQuery($include: Boolean!, $skip: Boolean!) { employees { id details { nationality f: forename @include(if: $include) s: surname @skip(if: $skip) } } }"
+}

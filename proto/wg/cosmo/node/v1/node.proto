@@ -329,6 +329,15 @@ message OperationRequest {
   string operation_name = 1;
   string query = 2;
   Extension extensions = 3;
+  // we're only interested in variables that are relevant for normalization
+  // as such, we only need booleans that are used for skip/include
+  // consequently, variables is a map of key->bool
+  map<string, bool> variables = 4;
+  repeated VariableVariation variable_variations = 5;
+}
+
+message VariableVariation {
+  map<string, bool> variables = 1;
 }
 
 message Extension {

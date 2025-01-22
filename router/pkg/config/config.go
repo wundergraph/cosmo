@@ -421,10 +421,10 @@ type AuthorizationConfiguration struct {
 }
 
 type RateLimitConfiguration struct {
-	Enabled        bool                    `yaml:"enabled" envDefault:"false" env:"RATE_LIMIT_ENABLED"`
-	Strategy       string                  `yaml:"strategy" envDefault:"simple" env:"RATE_LIMIT_STRATEGY"`
-	SimpleStrategy RateLimitSimpleStrategy `yaml:"simple_strategy"`
-	Storage        RedisConfiguration      `yaml:"storage"`
+	Enabled        bool                        `yaml:"enabled" envDefault:"false" env:"RATE_LIMIT_ENABLED"`
+	Strategy       string                      `yaml:"strategy" envDefault:"simple" env:"RATE_LIMIT_STRATEGY"`
+	SimpleStrategy RateLimitSimpleStrategy     `yaml:"simple_strategy"`
+	Storage        RateLimitRedisConfiguration `yaml:"storage"`
 	// Debug ensures that retryAfter and resetAfter are set to stable values for testing
 	// Debug also exposes the rate limit key in the response extension for debugging purposes
 	Debug               bool                        `yaml:"debug" envDefault:"false" env:"RATE_LIMIT_DEBUG"`
@@ -437,7 +437,7 @@ type RateLimitErrorExtensionCode struct {
 	Code    string `yaml:"code" envDefault:"RATE_LIMIT_EXCEEDED" env:"RATE_LIMIT_ERROR_EXTENSION_CODE"`
 }
 
-type RedisConfiguration struct {
+type RateLimitRedisConfiguration struct {
 	Url       string `yaml:"url,omitempty" envDefault:"redis://localhost:6379" env:"RATE_LIMIT_REDIS_URL"`
 	KeyPrefix string `yaml:"key_prefix,omitempty" envDefault:"cosmo_rate_limit" env:"RATE_LIMIT_REDIS_KEY_PREFIX"`
 }

@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -152,13 +153,22 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 					item := items[idx]
 					err := w.processor.ProcessOperation(ctx, item)
 					if err != nil {
-						w.log.Error("Failed to process operation, skipping",
+						fields := []zap.Field{
 							zap.Error(err),
-							zap.String("client_name", item.Client.Name),
-							zap.String("client_version", item.Client.Version),
-							zap.String("query", item.Request.Query),
-							zap.String("operation_name", item.Request.OperationName),
-						)
+						}
+						if item.Client != nil {
+							fields = append(fields,
+								zap.String("client_name", item.Client.Name),
+								zap.String("client_version", item.Client.Version),
+							)
+						}
+						if item.Request != nil {
+							fields = append(fields,
+								zap.String("query", item.Request.Query),
+								zap.String("operation_name", item.Request.OperationName),
+							)
+						}
+						w.log.Error("Failed to process operation, skipping", fields...)
 					}
 					select {
 					case <-done:
@@ -214,6 +224,24 @@ type CacheWarmupPlanningProcessor struct {
 }
 
 func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, operation *nodev1.Operation) error {
+	request := operation.GetRequest()
+	client := operation.GetClient()
+	variations := request.GetVariableVariations()
+	if len(variations) == 0 {
+		return c.processOperation(ctx, request, client)
+	}
+	for _, variation := range variations {
+		variables := variation.GetVariables()
+		request.Variables = variables
+		err := c.processOperation(ctx, request, client)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *CacheWarmupPlanningProcessor) processOperation(ctx context.Context, request *nodev1.OperationRequest, client *nodev1.ClientInfo) error {
 
 	var (
 		isAPQ bool
@@ -225,8 +253,8 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 	}
 
 	var s []byte
-	if operation.Request.GetExtensions() != nil {
-		s, err = protojson.Marshal(operation.Request.GetExtensions())
+	if request.GetExtensions() != nil {
+		s, err = protojson.Marshal(request.GetExtensions())
 		if err != nil {
 			return err
 		}
@@ -234,14 +262,21 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 
 	item := &CacheWarmupItem{
 		Request: GraphQLRequest{
-			Query:         operation.Request.GetQuery(),
-			OperationName: operation.Request.GetOperationName(),
+			Query:         request.GetQuery(),
+			OperationName: request.GetOperationName(),
 			Extensions:    s,
 		},
 		Client: &ClientInfo{
-			Name:    operation.GetClient().GetName(),
-			Version: operation.GetClient().GetVersion(),
+			Name:    client.GetName(),
+			Version: client.GetVersion(),
 		},
+	}
+
+	if request.Variables != nil {
+		item.Request.Variables, err = json.Marshal(request.Variables)
+		if err != nil {
+			return err
+		}
 	}
 
 	k.parsedOperation.Request = item.Request

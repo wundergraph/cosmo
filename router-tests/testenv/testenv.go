@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/consul/sdk/freeport"
 	"io"
 	"log"
 	"math/rand"
@@ -29,6 +28,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/consul/sdk/freeport"
 
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 
@@ -97,12 +98,17 @@ func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 		t.Fatalf("could not create environment: %s", err)
 	}
 	t.Cleanup(env.Shutdown)
+	if cfg.AssertCacheMetrics != nil && cfg.AssertCacheMetrics.Before != nil {
+		assertCacheMetrics(t, env, cfg.AssertCacheMetrics.Before.BaseGraphAssertions, "", "before")
+		for ff, v := range cfg.AssertCacheMetrics.Before.FeatureFlagAssertions {
+			assertCacheMetrics(t, env, v, ff, "before")
+		}
+	}
 	f(t, env)
-	if cfg.AssertCacheMetrics != nil {
-		assertCacheMetrics(t, env, cfg.AssertCacheMetrics.BaseGraphAssertions, "")
-
-		for ff, v := range cfg.AssertCacheMetrics.FeatureFlagAssertions {
-			assertCacheMetrics(t, env, v, ff)
+	if cfg.AssertCacheMetrics != nil && cfg.AssertCacheMetrics.After != nil {
+		assertCacheMetrics(t, env, cfg.AssertCacheMetrics.After.BaseGraphAssertions, "", "after")
+		for ff, v := range cfg.AssertCacheMetrics.After.FeatureFlagAssertions {
+			assertCacheMetrics(t, env, v, ff, "after")
 		}
 	}
 }
@@ -116,9 +122,18 @@ func RunWithError(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environm
 		return err
 	}
 	t.Cleanup(env.Shutdown)
+	if cfg.AssertCacheMetrics != nil && cfg.AssertCacheMetrics.Before != nil {
+		assertCacheMetrics(t, env, cfg.AssertCacheMetrics.Before.BaseGraphAssertions, "", "before")
+		for ff, v := range cfg.AssertCacheMetrics.Before.FeatureFlagAssertions {
+			assertCacheMetrics(t, env, v, ff, "before")
+		}
+	}
 	f(t, env)
-	if cfg.AssertCacheMetrics != nil {
-		assertCacheMetrics(t, env, cfg.AssertCacheMetrics.BaseGraphAssertions, "")
+	if cfg.AssertCacheMetrics != nil && cfg.AssertCacheMetrics.After != nil {
+		assertCacheMetrics(t, env, cfg.AssertCacheMetrics.After.BaseGraphAssertions, "", "after")
+		for ff, v := range cfg.AssertCacheMetrics.After.FeatureFlagAssertions {
+			assertCacheMetrics(t, env, v, ff, "after")
+		}
 	}
 
 	return nil
@@ -132,25 +147,30 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 		b.Fatalf("could not create environment: %s", err)
 	}
 	b.Cleanup(env.Shutdown)
+	if cfg.AssertCacheMetrics != nil && cfg.AssertCacheMetrics.Before != nil {
+		assertCacheMetrics(b, env, cfg.AssertCacheMetrics.Before.BaseGraphAssertions, "", "before")
+		for ff, v := range cfg.AssertCacheMetrics.Before.FeatureFlagAssertions {
+			assertCacheMetrics(b, env, v, ff, "before")
+		}
+	}
 	b.StartTimer()
 	f(b, env)
-	if cfg.AssertCacheMetrics != nil {
-		assertCacheMetrics(b, env, cfg.AssertCacheMetrics.BaseGraphAssertions, "")
-
-		for ff, v := range cfg.AssertCacheMetrics.FeatureFlagAssertions {
-			assertCacheMetrics(b, env, v, ff)
+	if cfg.AssertCacheMetrics != nil && cfg.AssertCacheMetrics.After != nil {
+		assertCacheMetrics(b, env, cfg.AssertCacheMetrics.After.BaseGraphAssertions, "", "after")
+		for ff, v := range cfg.AssertCacheMetrics.After.FeatureFlagAssertions {
+			assertCacheMetrics(b, env, v, ff, "after")
 		}
 	}
 
 }
 
-func assertCacheMetrics(t testing.TB, env *Environment, expected CacheMetricsAssertion, featureFlag string) {
+func assertCacheMetrics(t testing.TB, env *Environment, expected CacheMetricsAssertion, featureFlag, hint string) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
 	defer cancel()
 	rm := metricdata.ResourceMetrics{}
 	err := env.metricReader.Collect(ctx, &rm)
-	require.NoError(t, err)
+	require.NoError(t, err, hint)
 	actual := CacheMetricsAssertion{}
 	for _, sm := range rm.ScopeMetrics {
 		if sm.Scope.Name != "cosmo.router.cache" {
@@ -204,7 +224,7 @@ func assertCacheMetrics(t testing.TB, env *Environment, expected CacheMetricsAss
 			}
 		}
 	}
-	require.Equal(t, expected, actual)
+	require.Equal(t, expected, actual, hint)
 }
 
 type RouterConfig struct {
@@ -274,8 +294,13 @@ type Config struct {
 	EnableKafka                        bool
 	SubgraphAccessLogsEnabled          bool
 	SubgraphAccessLogFields            []config.CustomAttribute
-	AssertCacheMetrics                 *CacheMetricsAssertions
+	AssertCacheMetrics                 *AssertCacheMetrics
 	DisableSimulateCloudExporter       bool
+}
+
+type AssertCacheMetrics struct {
+	Before *CacheMetricsAssertions
+	After  *CacheMetricsAssertions
 }
 
 type CacheMetricsAssertions struct {

@@ -2,11 +2,14 @@ package integration
 
 import (
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -46,14 +49,16 @@ func TestCacheWarmup(t *testing.T) {
 						},
 					}),
 				},
-				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
-					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						QueryNormalizationMisses: 3 + employeeWarmedQueryCount + employeeQueryCount,
-						QueryNormalizationHits:   4,
-						ValidationMisses:         3 + employeeWarmedQueryCount,
-						ValidationHits:           4 + employeeQueryCount,
-						PlanMisses:               3 + employeeWarmedQueryCount,
-						PlanHits:                 4 + employeeQueryCount,
+				AssertCacheMetrics: &testenv.AssertCacheMetrics{
+					After: &testenv.CacheMetricsAssertions{
+						BaseGraphAssertions: testenv.CacheMetricsAssertion{
+							QueryNormalizationMisses: 3 + employeeWarmedQueryCount + employeeQueryCount,
+							QueryNormalizationHits:   4,
+							ValidationMisses:         3 + employeeWarmedQueryCount,
+							ValidationHits:           4 + employeeQueryCount,
+							PlanMisses:               3 + employeeWarmedQueryCount,
+							PlanHits:                 4 + employeeQueryCount,
+						},
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -101,14 +106,16 @@ func TestCacheWarmup(t *testing.T) {
 						},
 					}),
 				},
-				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
-					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						QueryNormalizationMisses: 2,
-						QueryNormalizationHits:   0,
-						ValidationMisses:         2,
-						ValidationHits:           0,
-						PlanMisses:               1,
-						PlanHits:                 0,
+				AssertCacheMetrics: &testenv.AssertCacheMetrics{
+					After: &testenv.CacheMetricsAssertions{
+						BaseGraphAssertions: testenv.CacheMetricsAssertion{
+							QueryNormalizationMisses: 2,
+							QueryNormalizationHits:   0,
+							ValidationMisses:         2,
+							ValidationHits:           0,
+							PlanMisses:               1,
+							PlanHits:                 0,
+						},
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -131,14 +138,16 @@ func TestCacheWarmup(t *testing.T) {
 						},
 					}),
 				},
-				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
-					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						QueryNormalizationMisses: 3,
-						QueryNormalizationHits:   5,
-						ValidationMisses:         3,
-						ValidationHits:           5,
-						PlanMisses:               3,
-						PlanHits:                 5,
+				AssertCacheMetrics: &testenv.AssertCacheMetrics{
+					After: &testenv.CacheMetricsAssertions{
+						BaseGraphAssertions: testenv.CacheMetricsAssertion{
+							QueryNormalizationMisses: 3,
+							QueryNormalizationHits:   5,
+							ValidationMisses:         3,
+							ValidationHits:           5,
+							PlanMisses:               3,
+							PlanHits:                 5,
+						},
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -189,14 +198,16 @@ func TestCacheWarmup(t *testing.T) {
 						},
 					}),
 				},
-				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
-					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						PersistedQueryNormalizationHits:   2,
-						PersistedQueryNormalizationMisses: 1,
-						ValidationHits:                    2,
-						ValidationMisses:                  1,
-						PlanHits:                          2,
-						PlanMisses:                        1,
+				AssertCacheMetrics: &testenv.AssertCacheMetrics{
+					After: &testenv.CacheMetricsAssertions{
+						BaseGraphAssertions: testenv.CacheMetricsAssertion{
+							PersistedQueryNormalizationHits:   2,
+							PersistedQueryNormalizationMisses: 1,
+							ValidationHits:                    2,
+							ValidationMisses:                  1,
+							PlanHits:                          2,
+							PlanMisses:                        1,
+						},
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -231,14 +242,16 @@ func TestCacheWarmup(t *testing.T) {
 						},
 					}),
 				},
-				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
-					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						PersistedQueryNormalizationHits:   0, // 1x warmup miss, 1x request miss because of client mismatch, , 1x request miss because checking with operation name
-						PersistedQueryNormalizationMisses: 3, // same as above
-						ValidationMisses:                  1, // 1x warmup miss, no second miss because client mismatch stops request chain
-						ValidationHits:                    0, // no hits because of client mismatch
-						PlanMisses:                        1, // 1x warmup miss
-						PlanHits:                          0, // no hits because client mismatch stops request chain
+				AssertCacheMetrics: &testenv.AssertCacheMetrics{
+					After: &testenv.CacheMetricsAssertions{
+						BaseGraphAssertions: testenv.CacheMetricsAssertion{
+							PersistedQueryNormalizationHits:   0, // 1x warmup miss, 1x request miss because of client mismatch, , 1x request miss because checking with operation name
+							PersistedQueryNormalizationMisses: 3, // same as above
+							ValidationMisses:                  1, // 1x warmup miss, no second miss because client mismatch stops request chain
+							ValidationHits:                    0, // no hits because of client mismatch
+							PlanMisses:                        1, // 1x warmup miss
+							PlanHits:                          0, // no hits because client mismatch stops request chain
+						},
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -266,14 +279,16 @@ func TestCacheWarmup(t *testing.T) {
 						},
 					}),
 				},
-				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
-					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						PersistedQueryNormalizationHits:   1, // 1x hit after warmup, when called with operation name. No hit from second request because of missing operation name, it recomputes it
-						PersistedQueryNormalizationMisses: 3, // 1x miss during warmup, 1 miss for first operation trying without operation name, 1 miss for second operation trying without operation name
-						ValidationHits:                    2,
-						ValidationMisses:                  1,
-						PlanHits:                          2,
-						PlanMisses:                        1,
+				AssertCacheMetrics: &testenv.AssertCacheMetrics{
+					After: &testenv.CacheMetricsAssertions{
+						BaseGraphAssertions: testenv.CacheMetricsAssertion{
+							PersistedQueryNormalizationHits:   1, // 1x hit after warmup, when called with operation name. No hit from second request because of missing operation name, it recomputes it
+							PersistedQueryNormalizationMisses: 3, // 1x miss during warmup, 1 miss for first operation trying without operation name, 1 miss for second operation trying without operation name
+							ValidationHits:                    2,
+							ValidationMisses:                  1,
+							PlanHits:                          2,
+							PlanMisses:                        1,
+						},
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -315,14 +330,16 @@ func TestCacheWarmup(t *testing.T) {
 						Timeout:        time.Second * 5,
 					}),
 				},
-				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
-					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						QueryNormalizationMisses: 10,
-						QueryNormalizationHits:   1,
-						ValidationMisses:         10,
-						ValidationHits:           1,
-						PlanMisses:               10,
-						PlanHits:                 1,
+				AssertCacheMetrics: &testenv.AssertCacheMetrics{
+					After: &testenv.CacheMetricsAssertions{
+						BaseGraphAssertions: testenv.CacheMetricsAssertion{
+							QueryNormalizationMisses: 10,
+							QueryNormalizationHits:   1,
+							ValidationMisses:         10,
+							ValidationHits:           1,
+							PlanMisses:               10,
+							PlanHits:                 1,
+						},
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -355,16 +372,18 @@ func TestCacheWarmup(t *testing.T) {
 						ItemsPerSecond: 100,
 					}),
 				},
-				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
-					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						QueryNormalizationMisses: 3 + employeeWarmedQueryCount,
-						QueryNormalizationHits:   2,
-						ValidationMisses:         3 + employeeWarmedQueryCount,
-						ValidationHits:           2,
-						QueryHashMisses:          3 + employeeWarmedQueryCount,
-						QueryHashHits:            2,
-						PlanMisses:               3 + employeeWarmedQueryCount,
-						PlanHits:                 2,
+				AssertCacheMetrics: &testenv.AssertCacheMetrics{
+					After: &testenv.CacheMetricsAssertions{
+						BaseGraphAssertions: testenv.CacheMetricsAssertion{
+							QueryNormalizationMisses: 3 + employeeWarmedQueryCount,
+							QueryNormalizationHits:   2,
+							ValidationMisses:         3 + employeeWarmedQueryCount,
+							ValidationHits:           2,
+							QueryHashMisses:          3 + employeeWarmedQueryCount,
+							QueryHashHits:            2,
+							PlanMisses:               3 + employeeWarmedQueryCount,
+							PlanHits:                 2,
+						},
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -376,6 +395,333 @@ func TestCacheWarmup(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.Equal(t, employeesIDData, res.Body)
+			})
+		})
+
+		t.Run("operation with include directive", func(t *testing.T) {
+			t.Parallel()
+
+			data, err := os.ReadFile("testenv/testdata/cache_warmup/skip_include/operations.json")
+			require.NoError(t, err)
+			var warmupOperations nodev1.CacheWarmerOperations
+			unmarshalOpts := protojson.UnmarshalOptions{DiscardUnknown: true}
+			err = unmarshalOpts.Unmarshal(data, &warmupOperations)
+			require.NoError(t, err)
+
+			warmupMisses := int64(0)
+			for _, operation := range warmupOperations.Operations {
+				if operation.Request.VariableVariations == nil {
+					warmupMisses++
+				} else {
+					warmupMisses += int64(len(operation.Request.VariableVariations))
+				}
+			}
+
+			testenv.Run(t, &testenv.Config{
+				ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+					routerConfig.FeatureFlagConfigs = nil
+				},
+				RouterOptions: []core.Option{
+					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+						Enabled: true,
+						Source: config.CacheWarmupSource{
+							Filesystem: &config.CacheWarmupFileSystemSource{
+								Path: "testenv/testdata/cache_warmup/skip_include",
+							},
+						},
+					}),
+				},
+				AssertCacheMetrics: &testenv.AssertCacheMetrics{
+					After: &testenv.CacheMetricsAssertions{
+						BaseGraphAssertions: testenv.CacheMetricsAssertion{
+							PersistedQueryNormalizationMisses: 2,
+							QueryNormalizationMisses:          warmupMisses - 2, // subtract 2 as these are covered by the persisted query normalization
+							QueryNormalizationHits:            2,
+							ValidationMisses:                  warmupMisses,
+							ValidationHits:                    2,
+							PlanMisses:                        warmupMisses,
+							PlanHits:                          2,
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query IncludeQuery($include: Boolean!) {employees { id details @include(if: $include) { forename } } }`,
+					Variables: []byte(`{"include": true}`),
+				})
+				require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens"}},{"id":2,"details":{"forename":"Dustin"}},{"id":3,"details":{"forename":"Stefan"}},{"id":4,"details":{"forename":"Björn"}},{"id":5,"details":{"forename":"Sergiy"}},{"id":7,"details":{"forename":"Suvij"}},{"id":8,"details":{"forename":"Nithin"}},{"id":10,"details":{"forename":"Eelco"}},{"id":11,"details":{"forename":"Alexandra"}},{"id":12,"details":{"forename":"David"}}]}}`, res.Body)
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query IncludeQuery($include: Boolean!) {employees { id details @include(if: $include) { forename } } }`,
+					Variables: []byte(`{"include": false}`),
+				})
+				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+			})
+		})
+
+		t.Run("operation with skip directive", func(t *testing.T) {
+			t.Parallel()
+
+			data, err := os.ReadFile("testenv/testdata/cache_warmup/skip_include/operations.json")
+			require.NoError(t, err)
+			var warmupOperations nodev1.CacheWarmerOperations
+			unmarshalOpts := protojson.UnmarshalOptions{DiscardUnknown: true}
+			err = unmarshalOpts.Unmarshal(data, &warmupOperations)
+			require.NoError(t, err)
+
+			warmupMisses := int64(0)
+			for _, operation := range warmupOperations.Operations {
+				if operation.Request.VariableVariations == nil {
+					warmupMisses++
+				} else {
+					warmupMisses += int64(len(operation.Request.VariableVariations))
+				}
+			}
+
+			testenv.Run(t, &testenv.Config{
+				ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+					routerConfig.FeatureFlagConfigs = nil
+				},
+				RouterOptions: []core.Option{
+					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+						Enabled: true,
+						Source: config.CacheWarmupSource{
+							Filesystem: &config.CacheWarmupFileSystemSource{
+								Path: "testenv/testdata/cache_warmup/skip_include",
+							},
+						},
+					}),
+				},
+				AssertCacheMetrics: &testenv.AssertCacheMetrics{
+					After: &testenv.CacheMetricsAssertions{
+						BaseGraphAssertions: testenv.CacheMetricsAssertion{
+							PersistedQueryNormalizationMisses: 2,
+							QueryNormalizationMisses:          warmupMisses - 2, // subtract 2 as these are covered by the persisted query normalization
+							QueryNormalizationHits:            2,
+							ValidationMisses:                  warmupMisses,
+							ValidationHits:                    2,
+							PlanMisses:                        warmupMisses,
+							PlanHits:                          2,
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query SkipQuery($skip: Boolean!) {employees { id isAvailable details @skip(if: $skip) { forename surname } } }`,
+					Variables: []byte(`{"skip": true}`),
+				})
+				require.Equal(t, `{"data":{"employees":[{"id":1,"isAvailable":false},{"id":2,"isAvailable":false},{"id":3,"isAvailable":false},{"id":4,"isAvailable":false},{"id":5,"isAvailable":false},{"id":7,"isAvailable":false},{"id":8,"isAvailable":false},{"id":10,"isAvailable":false},{"id":11,"isAvailable":false},{"id":12,"isAvailable":false}]}}`, res.Body)
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query SkipQuery($skip: Boolean!) {employees { id isAvailable details @skip(if: $skip) { forename surname } } }`,
+					Variables: []byte(`{"skip": false}`),
+				})
+				require.Equal(t, `{"data":{"employees":[{"id":1,"isAvailable":false,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"isAvailable":false,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"isAvailable":false,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"isAvailable":false,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"isAvailable":false,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"isAvailable":false,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"isAvailable":false,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":10,"isAvailable":false,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"isAvailable":false,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"isAvailable":false,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+			})
+		})
+
+		t.Run("operation with skip and include directive", func(t *testing.T) {
+			t.Parallel()
+
+			data, err := os.ReadFile("testenv/testdata/cache_warmup/skip_include/operations.json")
+			require.NoError(t, err)
+			var warmupOperations nodev1.CacheWarmerOperations
+			unmarshalOpts := protojson.UnmarshalOptions{DiscardUnknown: true}
+			err = unmarshalOpts.Unmarshal(data, &warmupOperations)
+			require.NoError(t, err)
+
+			warmupMisses := int64(0)
+			for _, operation := range warmupOperations.Operations {
+				if operation.Request.VariableVariations == nil {
+					warmupMisses++
+				} else {
+					warmupMisses += int64(len(operation.Request.VariableVariations))
+				}
+			}
+
+			testenv.Run(t, &testenv.Config{
+				ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+					routerConfig.FeatureFlagConfigs = nil
+				},
+				RouterOptions: []core.Option{
+					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+						Enabled: true,
+						Source: config.CacheWarmupSource{
+							Filesystem: &config.CacheWarmupFileSystemSource{
+								Path: "testenv/testdata/cache_warmup/skip_include",
+							},
+						},
+					}),
+				},
+				AssertCacheMetrics: &testenv.AssertCacheMetrics{
+					After: &testenv.CacheMetricsAssertions{
+						BaseGraphAssertions: testenv.CacheMetricsAssertion{
+							PersistedQueryNormalizationMisses: 2,
+							QueryNormalizationMisses:          warmupMisses - 2 + 1, // 1x miss for the missing combination in the cache (3rd request)
+							// subtract 2 as these are covered by the persisted query normalization
+							QueryNormalizationHits: 2,
+							ValidationMisses:       warmupMisses + 1, // 1x miss for the missing combination in the cache (3rd request)
+							ValidationHits:         2,
+							PlanMisses:             warmupMisses + 1, // 1x miss for the missing combination in the cache (3rd request)
+							PlanHits:               2,
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query IncludeQuery($include: Boolean!, $skip: Boolean!) { employees { id details { nationality forename @include(if: $include) surname @skip(if: $skip) } } }`,
+					Variables: []byte(`{"skip": true, "include": true}`),
+				})
+				require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"nationality":"GERMAN","forename":"Jens"}},{"id":2,"details":{"nationality":"GERMAN","forename":"Dustin"}},{"id":3,"details":{"nationality":"AMERICAN","forename":"Stefan"}},{"id":4,"details":{"nationality":"GERMAN","forename":"Björn"}},{"id":5,"details":{"nationality":"UKRAINIAN","forename":"Sergiy"}},{"id":7,"details":{"nationality":"INDIAN","forename":"Suvij"}},{"id":8,"details":{"nationality":"INDIAN","forename":"Nithin"}},{"id":10,"details":{"nationality":"DUTCH","forename":"Eelco"}},{"id":11,"details":{"nationality":"GERMAN","forename":"Alexandra"}},{"id":12,"details":{"nationality":"ENGLISH","forename":"David"}}]}}`, res.Body)
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query IncludeQuery($include: Boolean!, $skip: Boolean!) { employees { id details { nationality forename @include(if: $include) surname @skip(if: $skip) } } }`,
+					Variables: []byte(`{"skip": false, "include": false}`),
+				})
+				require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"nationality":"GERMAN","surname":"Neuse"}},{"id":2,"details":{"nationality":"GERMAN","surname":"Deus"}},{"id":3,"details":{"nationality":"AMERICAN","surname":"Avram"}},{"id":4,"details":{"nationality":"GERMAN","surname":"Schwenzer"}},{"id":5,"details":{"nationality":"UKRAINIAN","surname":"Petrunin"}},{"id":7,"details":{"nationality":"INDIAN","surname":"Surya"}},{"id":8,"details":{"nationality":"INDIAN","surname":"Kumar"}},{"id":10,"details":{"nationality":"DUTCH","surname":"Wiersma"}},{"id":11,"details":{"nationality":"GERMAN","surname":"Neuse"}},{"id":12,"details":{"nationality":"ENGLISH","surname":"Stutt"}}]}}`, res.Body)
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query IncludeQuery($include: Boolean!, $skip: Boolean!) { employees { id details { nationality forename @include(if: $include) surname @skip(if: $skip) } } }`,
+					Variables: []byte(`{"skip": false, "include": true}`), // missing combination in the cache
+				})
+				require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"nationality":"GERMAN","forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"nationality":"GERMAN","forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"nationality":"AMERICAN","forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"nationality":"GERMAN","forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"nationality":"UKRAINIAN","forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"nationality":"INDIAN","forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"nationality":"INDIAN","forename":"Nithin","surname":"Kumar"}},{"id":10,"details":{"nationality":"DUTCH","forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"nationality":"GERMAN","forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"nationality":"ENGLISH","forename":"David","surname":"Stutt"}}]}}`, res.Body)
+			})
+		})
+
+		t.Run("operation with skip and include directive different order should not matter", func(t *testing.T) {
+			t.Parallel()
+
+			data, err := os.ReadFile("testenv/testdata/cache_warmup/skip_include/operations.json")
+			require.NoError(t, err)
+			var warmupOperations nodev1.CacheWarmerOperations
+			unmarshalOpts := protojson.UnmarshalOptions{DiscardUnknown: true}
+			err = unmarshalOpts.Unmarshal(data, &warmupOperations)
+			require.NoError(t, err)
+
+			warmupMisses := int64(0)
+			for _, operation := range warmupOperations.Operations {
+				if operation.Request.VariableVariations == nil {
+					warmupMisses++
+				} else {
+					warmupMisses += int64(len(operation.Request.VariableVariations))
+				}
+			}
+
+			testenv.Run(t, &testenv.Config{
+				ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+					routerConfig.FeatureFlagConfigs = nil
+				},
+				RouterOptions: []core.Option{
+					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+						Enabled: true,
+						Source: config.CacheWarmupSource{
+							Filesystem: &config.CacheWarmupFileSystemSource{
+								Path: "testenv/testdata/cache_warmup/skip_include",
+							},
+						},
+					}),
+				},
+				AssertCacheMetrics: &testenv.AssertCacheMetrics{
+					After: &testenv.CacheMetricsAssertions{
+						BaseGraphAssertions: testenv.CacheMetricsAssertion{
+							PersistedQueryNormalizationMisses: 2,
+							QueryNormalizationMisses:          warmupMisses - 2 + 1, // 1x miss for the missing combination in the cache (3rd request)
+							// subtract 2 as these are covered by the persisted query normalization
+							QueryNormalizationHits: 2,
+							ValidationMisses:       warmupMisses + 1, // 1x miss for the missing combination in the cache (3rd request)
+							ValidationHits:         2,
+							PlanMisses:             warmupMisses + 1, // 1x miss for the missing combination in the cache (3rd request)
+							PlanHits:               2,
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query IncludeQuery($include: Boolean!, $skip: Boolean!) { employees { id details { nationality forename @include(if: $include) surname @skip(if: $skip) } } }`,
+					Variables: []byte(`{"include": true,"skip": true}`),
+				})
+				require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"nationality":"GERMAN","forename":"Jens"}},{"id":2,"details":{"nationality":"GERMAN","forename":"Dustin"}},{"id":3,"details":{"nationality":"AMERICAN","forename":"Stefan"}},{"id":4,"details":{"nationality":"GERMAN","forename":"Björn"}},{"id":5,"details":{"nationality":"UKRAINIAN","forename":"Sergiy"}},{"id":7,"details":{"nationality":"INDIAN","forename":"Suvij"}},{"id":8,"details":{"nationality":"INDIAN","forename":"Nithin"}},{"id":10,"details":{"nationality":"DUTCH","forename":"Eelco"}},{"id":11,"details":{"nationality":"GERMAN","forename":"Alexandra"}},{"id":12,"details":{"nationality":"ENGLISH","forename":"David"}}]}}`, res.Body)
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query IncludeQuery($include: Boolean!, $skip: Boolean!) { employees { id details { nationality forename @include(if: $include) surname @skip(if: $skip) } } }`,
+					Variables: []byte(`{"include": false,"skip": false}`),
+				})
+				require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"nationality":"GERMAN","surname":"Neuse"}},{"id":2,"details":{"nationality":"GERMAN","surname":"Deus"}},{"id":3,"details":{"nationality":"AMERICAN","surname":"Avram"}},{"id":4,"details":{"nationality":"GERMAN","surname":"Schwenzer"}},{"id":5,"details":{"nationality":"UKRAINIAN","surname":"Petrunin"}},{"id":7,"details":{"nationality":"INDIAN","surname":"Surya"}},{"id":8,"details":{"nationality":"INDIAN","surname":"Kumar"}},{"id":10,"details":{"nationality":"DUTCH","surname":"Wiersma"}},{"id":11,"details":{"nationality":"GERMAN","surname":"Neuse"}},{"id":12,"details":{"nationality":"ENGLISH","surname":"Stutt"}}]}}`, res.Body)
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query IncludeQuery($include: Boolean!, $skip: Boolean!) { employees { id details { nationality forename @include(if: $include) surname @skip(if: $skip) } } }`,
+					Variables: []byte(`{"include": true,"skip": false}`), // missing combination in the cache
+				})
+				require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"nationality":"GERMAN","forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"nationality":"GERMAN","forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"nationality":"AMERICAN","forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"nationality":"GERMAN","forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"nationality":"UKRAINIAN","forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"nationality":"INDIAN","forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"nationality":"INDIAN","forename":"Nithin","surname":"Kumar"}},{"id":10,"details":{"nationality":"DUTCH","forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"nationality":"GERMAN","forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"nationality":"ENGLISH","forename":"David","surname":"Stutt"}}]}}`, res.Body)
+			})
+		})
+
+		t.Run("persisted operation with skip include", func(t *testing.T) {
+			t.Parallel()
+
+			data, err := os.ReadFile("testenv/testdata/cache_warmup/skip_include/operations.json")
+			require.NoError(t, err)
+			var warmupOperations nodev1.CacheWarmerOperations
+			unmarshalOpts := protojson.UnmarshalOptions{DiscardUnknown: true}
+			err = unmarshalOpts.Unmarshal(data, &warmupOperations)
+			require.NoError(t, err)
+
+			warmupMisses := int64(0)
+			for _, operation := range warmupOperations.Operations {
+				if operation.Request.VariableVariations == nil {
+					warmupMisses++
+				} else {
+					warmupMisses += int64(len(operation.Request.VariableVariations))
+				}
+			}
+
+			testenv.Run(t, &testenv.Config{
+				ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+					routerConfig.FeatureFlagConfigs = nil
+				},
+				RouterOptions: []core.Option{
+					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+						Enabled: true,
+						Source: config.CacheWarmupSource{
+							Filesystem: &config.CacheWarmupFileSystemSource{
+								Path: "testenv/testdata/cache_warmup/skip_include",
+							},
+						},
+					}),
+				},
+				AssertCacheMetrics: &testenv.AssertCacheMetrics{
+					Before: &testenv.CacheMetricsAssertions{
+						BaseGraphAssertions: testenv.CacheMetricsAssertion{
+							QueryNormalizationMisses:          warmupMisses - 2, // subtract 2 as these are covered by the persisted query normalization
+							PersistedQueryNormalizationMisses: 2,
+							ValidationMisses:                  warmupMisses,
+							PlanMisses:                        warmupMisses,
+						},
+					},
+					After: &testenv.CacheMetricsAssertions{
+						BaseGraphAssertions: testenv.CacheMetricsAssertion{
+							PersistedQueryNormalizationMisses: 2,
+							QueryNormalizationMisses:          warmupMisses - 2, // subtract 2 as these are covered by the persisted query normalization
+							ValidationMisses:                  warmupMisses,
+							PlanMisses:                        warmupMisses,
+
+							PersistedQueryNormalizationHits: 2,
+							ValidationHits:                  2,
+							PlanHits:                        2,
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				header := make(http.Header)
+				header.Add("graphql-client-name", "my-client")
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "persistedSkipInclude"}}`),
+					Header:     header,
+					Variables:  []byte(`{"skip": true, "include": true}`),
+				})
+				require.NoError(t, err)
+				require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"nationality":"GERMAN","f":"Jens"}},{"id":2,"details":{"nationality":"GERMAN","f":"Dustin"}},{"id":3,"details":{"nationality":"AMERICAN","f":"Stefan"}},{"id":4,"details":{"nationality":"GERMAN","f":"Björn"}},{"id":5,"details":{"nationality":"UKRAINIAN","f":"Sergiy"}},{"id":7,"details":{"nationality":"INDIAN","f":"Suvij"}},{"id":8,"details":{"nationality":"INDIAN","f":"Nithin"}},{"id":10,"details":{"nationality":"DUTCH","f":"Eelco"}},{"id":11,"details":{"nationality":"GERMAN","f":"Alexandra"}},{"id":12,"details":{"nationality":"ENGLISH","f":"David"}}]}}`, res.Body)
+				res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "persistedSkipInclude"}}`),
+					Header:     header,
+					Variables:  []byte(`{"skip": false, "include": false}`),
+				})
+				require.NoError(t, err)
+				require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"nationality":"GERMAN","s":"Neuse"}},{"id":2,"details":{"nationality":"GERMAN","s":"Deus"}},{"id":3,"details":{"nationality":"AMERICAN","s":"Avram"}},{"id":4,"details":{"nationality":"GERMAN","s":"Schwenzer"}},{"id":5,"details":{"nationality":"UKRAINIAN","s":"Petrunin"}},{"id":7,"details":{"nationality":"INDIAN","s":"Surya"}},{"id":8,"details":{"nationality":"INDIAN","s":"Kumar"}},{"id":10,"details":{"nationality":"DUTCH","s":"Wiersma"}},{"id":11,"details":{"nationality":"GERMAN","s":"Neuse"}},{"id":12,"details":{"nationality":"ENGLISH","s":"Stutt"}}]}}`, res.Body)
 			})
 		})
 	})
@@ -397,14 +743,16 @@ func TestCacheWarmup(t *testing.T) {
 						Enabled: false,
 					}),
 				},
-				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
-					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						QueryNormalizationMisses: 1,
-						QueryNormalizationHits:   0,
-						ValidationMisses:         1,
-						ValidationHits:           0,
-						PlanMisses:               1,
-						PlanHits:                 0,
+				AssertCacheMetrics: &testenv.AssertCacheMetrics{
+					After: &testenv.CacheMetricsAssertions{
+						BaseGraphAssertions: testenv.CacheMetricsAssertion{
+							QueryNormalizationMisses: 1,
+							QueryNormalizationHits:   0,
+							ValidationMisses:         1,
+							ValidationHits:           0,
+							PlanMisses:               1,
+							PlanHits:                 0,
+						},
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -424,18 +772,20 @@ func TestCacheWarmup(t *testing.T) {
 						Enabled: true,
 					}),
 				},
-				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
-					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						// we have additional 2 misses for the employeeQueryCount - because their content differs from what we have in cdn
-						// this will be possible to solve only by having operation variants populated
-						QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount + employeeQueryCount,
-						QueryNormalizationHits:            3,
-						PersistedQueryNormalizationMisses: cdnPOCount,
-						PersistedQueryNormalizationHits:   0,
-						ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
-						ValidationHits:                    3 + employeeQueryCount,
-						PlanMisses:                        cdnOperationCount + cdnPOCount,
-						PlanHits:                          3 + employeeQueryCount,
+				AssertCacheMetrics: &testenv.AssertCacheMetrics{
+					After: &testenv.CacheMetricsAssertions{
+						BaseGraphAssertions: testenv.CacheMetricsAssertion{
+							// we have additional 2 misses for the employeeQueryCount - because their content differs from what we have in cdn
+							// this will be possible to solve only by having operation variants populated
+							QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount + employeeQueryCount,
+							QueryNormalizationHits:            3,
+							PersistedQueryNormalizationMisses: cdnPOCount,
+							PersistedQueryNormalizationHits:   0,
+							ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
+							ValidationHits:                    3 + employeeQueryCount,
+							PlanMisses:                        cdnOperationCount + cdnPOCount,
+							PlanHits:                          3 + employeeQueryCount,
+						},
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -483,16 +833,18 @@ func TestCacheWarmup(t *testing.T) {
 						Enabled: true,
 					}),
 				},
-				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
-					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount,
-						QueryNormalizationHits:            0,
-						PersistedQueryNormalizationMisses: cdnPOCount + 2,
-						PersistedQueryNormalizationHits:   1,
-						ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
-						ValidationHits:                    2,
-						PlanMisses:                        cdnOperationCount + cdnPOCount,
-						PlanHits:                          2,
+				AssertCacheMetrics: &testenv.AssertCacheMetrics{
+					After: &testenv.CacheMetricsAssertions{
+						BaseGraphAssertions: testenv.CacheMetricsAssertion{
+							QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount,
+							QueryNormalizationHits:            0,
+							PersistedQueryNormalizationMisses: cdnPOCount + 2,
+							PersistedQueryNormalizationHits:   1,
+							ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
+							ValidationHits:                    2,
+							PlanMisses:                        cdnOperationCount + cdnPOCount,
+							PlanHits:                          2,
+						},
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -525,27 +877,29 @@ func TestCacheWarmup(t *testing.T) {
 						Enabled: true,
 					}),
 				},
-				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
-					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount,
-						QueryNormalizationHits:            0,
-						PersistedQueryNormalizationMisses: cdnPOCount,
-						PersistedQueryNormalizationHits:   0,
-						ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
-						ValidationHits:                    0,
-						PlanMisses:                        cdnOperationCount + cdnPOCount,
-						PlanHits:                          0,
-					},
-					FeatureFlagAssertions: map[string]testenv.CacheMetricsAssertion{
-						"myff": {
+				AssertCacheMetrics: &testenv.AssertCacheMetrics{
+					After: &testenv.CacheMetricsAssertions{
+						BaseGraphAssertions: testenv.CacheMetricsAssertion{
 							QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount,
-							QueryNormalizationHits:            1,
+							QueryNormalizationHits:            0,
 							PersistedQueryNormalizationMisses: cdnPOCount,
 							PersistedQueryNormalizationHits:   0,
 							ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
-							ValidationHits:                    1,
-							PlanMisses:                        cdnOperationCount + featureOperationCount + featureOperationCount,
-							PlanHits:                          1,
+							ValidationHits:                    0,
+							PlanMisses:                        cdnOperationCount + cdnPOCount,
+							PlanHits:                          0,
+						},
+						FeatureFlagAssertions: map[string]testenv.CacheMetricsAssertion{
+							"myff": {
+								QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount,
+								QueryNormalizationHits:            1,
+								PersistedQueryNormalizationMisses: cdnPOCount,
+								PersistedQueryNormalizationHits:   0,
+								ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
+								ValidationHits:                    1,
+								PlanMisses:                        cdnOperationCount + featureOperationCount + featureOperationCount,
+								PlanHits:                          1,
+							},
 						},
 					},
 				},
