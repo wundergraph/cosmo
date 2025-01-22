@@ -1483,7 +1483,7 @@
                 "properties": {
                   "type": {
                     "type": "string",
-                    "description": "The type of the source. The supported types are 'header', 'cookie'.",
+                    "description": "The type of the source. The only currently supported type is 'header'.",
                     "enum": ["header"]
                   },
                   "name": {
