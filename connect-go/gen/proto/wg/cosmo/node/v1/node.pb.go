@@ -3116,9 +3116,12 @@ type OperationRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	OperationName      string               `protobuf:"bytes,1,opt,name=operation_name,json=operationName,proto3" json:"operation_name,omitempty"`
-	Query              string               `protobuf:"bytes,2,opt,name=query,proto3" json:"query,omitempty"`
-	Extensions         *Extension           `protobuf:"bytes,3,opt,name=extensions,proto3" json:"extensions,omitempty"`
+	OperationName string     `protobuf:"bytes,1,opt,name=operation_name,json=operationName,proto3" json:"operation_name,omitempty"`
+	Query         string     `protobuf:"bytes,2,opt,name=query,proto3" json:"query,omitempty"`
+	Extensions    *Extension `protobuf:"bytes,3,opt,name=extensions,proto3" json:"extensions,omitempty"`
+	// we're only interested in variables that are relevant for normalization
+	// as such, we only need booleans that are used for skip/include
+	// consequently, variables is a map of key->bool
 	Variables          map[string]bool      `protobuf:"bytes,4,rep,name=variables,proto3" json:"variables,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
 	VariableVariations []*VariableVariation `protobuf:"bytes,5,rep,name=variable_variations,json=variableVariations,proto3" json:"variable_variations,omitempty"`
 }
