@@ -400,6 +400,7 @@ export class FederationFactory {
       parentDefinitionDataByTypeName,
       subgraphName: this.currentSubgraphName,
     });
+    // @TODO this loop can probably be removed if the implementing entities/internal graph are populated before-hand
     for (const [typeName, entityInterfaceFederationData] of this.entityInterfaceFederationDataByTypeName) {
       if (!entityInterfaceFederationData.concreteTypeNames?.has(entityData.typeName)) {
         continue;

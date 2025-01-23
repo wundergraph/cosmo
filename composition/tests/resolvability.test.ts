@@ -2388,7 +2388,7 @@ const subgraphBI: Subgraph = {
 };
 
 const subgraphBJ: Subgraph = {
-  name: 'subgraph-bi',
+  name: 'subgraph-bj',
   url: '',
   definitions: parse(`
     type Interface @key(fields: "id", resolvable: false) @interfaceObject {
