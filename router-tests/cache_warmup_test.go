@@ -678,6 +678,10 @@ func TestCacheWarmupMetrics(t *testing.T) {
 			// Executing the operation. Is exported as an aggregated value
 			require.Equal(t, m.Data.(metricdata.Histogram[float64]).DataPoints[1].Count, uint64(2))
 
+			// Ensure we collected non-zero planning times
+			require.Greater(t, m.Data.(metricdata.Histogram[float64]).DataPoints[0].Sum, float64(0))
+			require.Greater(t, m.Data.(metricdata.Histogram[float64]).DataPoints[1].Sum, float64(0))
+
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, m, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
