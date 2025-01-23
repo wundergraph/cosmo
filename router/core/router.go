@@ -13,46 +13,42 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/propagation"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
-
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
-
 	"connectrpc.com/connect"
-	"github.com/wundergraph/cosmo/router/pkg/watcher"
-
+	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
 	"github.com/redis/go-redis/v9"
-	"github.com/wundergraph/cosmo/router/internal/docker"
-	"github.com/wundergraph/cosmo/router/internal/graphiql"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/propagation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/atomic"
+	"go.uber.org/zap"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/debug"
+	"github.com/wundergraph/cosmo/router/internal/docker"
+	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"go.opentelemetry.io/otel/attribute"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.uber.org/zap"
+	"github.com/wundergraph/cosmo/router/pkg/watcher"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 )
 
 type IPAnonymizationMethod string
@@ -601,17 +597,7 @@ func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error 
 	return nil
 }
 
-func (r *Router) listenAndServe(cfg *nodev1.RouterConfig) error {
-	r.logger.Info("Server listening and serving",
-		zap.String("listen_addr", r.listenAddr),
-		zap.Bool("playground", r.playgroundConfig.Enabled),
-		zap.Bool("introspection", r.introspection),
-		zap.String("config_version", cfg.GetVersion()),
-	)
-
-	// Mark the server as ready
-	r.httpServer.healthcheck.SetReady(true)
-
+func (r *Router) listenAndServe() error {
 	go func() {
 		// Mark the server as not ready when the server is stopped
 		defer r.httpServer.healthcheck.SetReady(false)
@@ -719,13 +705,16 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	}
 
 	r.httpServer = newServer(&httpServerOptions{
-		addr:            r.listenAddr,
-		logger:          r.logger,
-		tlsConfig:       r.tlsConfig,
-		tlsServerConfig: r.tlsServerConfig,
-		healthcheck:     r.healthcheck,
-		baseURL:         r.baseURL,
-		maxHeaderBytes:  int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
+		addr:               r.listenAddr,
+		logger:             r.logger,
+		tlsConfig:          r.tlsConfig,
+		tlsServerConfig:    r.tlsServerConfig,
+		healthcheck:        r.healthcheck,
+		baseURL:            r.baseURL,
+		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
+		livenessCheckPath:  r.livenessCheckPath,
+		readinessCheckPath: r.readinessCheckPath,
+		healthCheckPath:    r.healthCheckPath,
 	})
 
 	// Start the server with the static config without polling
@@ -1066,24 +1055,38 @@ func (r *Router) Start(ctx context.Context) error {
 	}
 
 	r.httpServer = newServer(&httpServerOptions{
-		addr:            r.listenAddr,
-		logger:          r.logger,
-		tlsConfig:       r.tlsConfig,
-		tlsServerConfig: r.tlsServerConfig,
-		healthcheck:     r.healthcheck,
-		baseURL:         r.baseURL,
-		maxHeaderBytes:  int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
+		addr:               r.listenAddr,
+		logger:             r.logger,
+		tlsConfig:          r.tlsConfig,
+		tlsServerConfig:    r.tlsServerConfig,
+		healthcheck:        r.healthcheck,
+		baseURL:            r.baseURL,
+		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
+		livenessCheckPath:  r.livenessCheckPath,
+		readinessCheckPath: r.readinessCheckPath,
+		healthCheckPath:    r.healthCheckPath,
 	})
 
 	// Start the server with the static config without polling
 	if r.staticExecutionConfig != nil {
+		if err := r.listenAndServe(); err != nil {
+			return err
+		}
+
 		if err := r.newServer(ctx, r.staticExecutionConfig); err != nil {
 			return err
 		}
 
-		if err := r.listenAndServe(r.staticExecutionConfig); err != nil {
-			return err
-		}
+		defer func() {
+			r.httpServer.healthcheck.SetReady(true)
+
+			r.logger.Info("Server initialized and ready to serve requests",
+				zap.String("listen_addr", r.listenAddr),
+				zap.Bool("playground", r.playgroundConfig.Enabled),
+				zap.Bool("introspection", r.introspection),
+				zap.String("config_version", r.staticExecutionConfig.Version),
+			)
+		}()
 
 		if r.executionConfig != nil && r.executionConfig.Watch {
 
@@ -1148,6 +1151,11 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to get initial execution config: %w", err)
 	}
 
+	if err := r.listenAndServe(); err != nil {
+		r.logger.Error("Failed to start server with initial config", zap.Error(err))
+		return err
+	}
+
 	if err := r.newServer(ctx, cfg.Config); err != nil {
 		return err
 	}
@@ -1184,11 +1192,6 @@ func (r *Router) Start(ctx context.Context) error {
 		)
 	}
 
-	if err := r.listenAndServe(cfg.Config); err != nil {
-		r.logger.Error("Failed to start server with initial config", zap.Error(err))
-		return err
-	}
-
 	r.configPoller.Subscribe(ctx, func(newConfig *nodev1.RouterConfig, oldVersion string) error {
 		if r.shutdown.Load() {
 			r.logger.Warn("Router is in shutdown state. Skipping config update")
@@ -1201,6 +1204,16 @@ func (r *Router) Start(ctx context.Context) error {
 
 		return nil
 	})
+
+	// Mark the server as ready
+	r.httpServer.healthcheck.SetReady(true)
+
+	r.logger.Info("Server initialized and ready to serve requests",
+		zap.String("listen_addr", r.listenAddr),
+		zap.Bool("playground", r.playgroundConfig.Enabled),
+		zap.Bool("introspection", r.introspection),
+		zap.String("config_version", cfg.Config.GetVersion()),
+	)
 
 	return nil
 }
