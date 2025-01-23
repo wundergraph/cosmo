@@ -122,16 +122,12 @@ describe('CheckFederatedGraph', (ctx) => {
     });
     expect(checkResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
     expect(checkResp.compositionErrors).toHaveLength(2);
-    expect(checkResp.compositionErrors[0].message).toBe(noBaseDefinitionForExtensionError(OBJECT, 'User').message);
-    expect(checkResp.compositionErrors[1].message).toBe(
-      allExternalFieldInstancesError(
-        'User',
-        new Map<string, Array<string>>([
-          ['email', ['products']],
-          ['totalProductsCreated', ['products']],
-        ]),
-      ).message,
-    );
+    expect(checkResp.compositionErrors[0].message)
+      .toBe(noBaseDefinitionForExtensionError(OBJECT, 'User').message);
+    expect(checkResp.compositionErrors[1].message)
+      .toBe(allExternalFieldInstancesError('User', new Map<string, Array<string>>([
+        ['totalProductsCreated', ['products']],
+      ])).message);
 
     await server.close();
   });

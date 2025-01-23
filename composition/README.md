@@ -160,11 +160,10 @@ const subgraphA: Subgraph = {
 | definitions | an AST representation of the subgraph SDL | graphql.DocumentNode |
 
 ### Contributing
-Some GraphQL and Federation jargon should begin with a capitalised letter for clarity, e.g.,:
-- Argument
+When adding or changing error, please ensure GraphQL types begin with a capital letter for clarity:
 - Enum
-- Field
 - Input Object
 - Interface
 - Object
-When adding or changing errors, please begin these terms with a capital letter.
+- Scalar
+- Union

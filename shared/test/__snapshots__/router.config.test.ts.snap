@@ -9,17 +9,17 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
         "kind": "GRAPHQL",
         "rootNodes": [
           {
-            "typeName": "Query",
-            "fieldNames": [
-              "me"
-            ]
-          },
-          {
             "typeName": "User",
             "fieldNames": [
               "id",
               "name",
               "username"
+            ]
+          },
+          {
+            "typeName": "Query",
+            "fieldNames": [
+              "me"
             ]
           }
         ],
@@ -63,18 +63,18 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
         "kind": "GRAPHQL",
         "rootNodes": [
           {
-            "typeName": "Query",
-            "fieldNames": [
-              "topProducts"
-            ]
-          },
-          {
             "typeName": "Product",
             "fieldNames": [
               "upc",
               "name",
               "price",
               "weight"
+            ]
+          },
+          {
+            "typeName": "Query",
+            "fieldNames": [
+              "topProducts"
             ]
           },
           {
@@ -141,22 +141,18 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
           {
             "typeName": "User",
             "fieldNames": [
-              "reviews",
-              "id"
+              "id",
+              "reviews"
             ],
             "externalFieldNames": [
-              "id",
               "username"
             ]
           },
           {
             "typeName": "Product",
             "fieldNames": [
-              "reviews",
-              "upc"
-            ],
-            "externalFieldNames": [
-              "upc"
+              "upc",
+              "reviews"
             ]
           }
         ],
@@ -217,12 +213,11 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
           {
             "typeName": "Product",
             "fieldNames": [
+              "upc",
               "inStock",
-              "shippingEstimate",
-              "upc"
+              "shippingEstimate"
             ],
             "externalFieldNames": [
-              "upc",
               "weight",
               "price"
             ]
@@ -302,7 +297,8 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
       "name": "inventory",
       "routingUrl": "https://wg-federation-demo-inventory.fly.dev/graphql"
     }
-  ]
+  ],
+  "compatibilityVersion": "1:{{$COMPOSITION__VERSION}}"
 }"
 `;
 
@@ -315,15 +311,15 @@ exports[`Router Config Builder > that the federatedClientSDL property is not pro
         "kind": "GRAPHQL",
         "rootNodes": [
           {
-            "typeName": "Query",
-            "fieldNames": [
-              "accounts"
-            ]
-          },
-          {
             "typeName": "Account",
             "fieldNames": [
               "id"
+            ]
+          },
+          {
+            "typeName": "Query",
+            "fieldNames": [
+              "accounts"
             ]
           }
         ],
@@ -436,7 +432,8 @@ exports[`Router Config Builder > that the federatedClientSDL property is not pro
       "name": "products",
       "routingUrl": "https://wg-federation-demo-products.fly.dev/graphql"
     }
-  ]
+  ],
+  "compatibilityVersion": "1:{{$COMPOSITION__VERSION}}"
 }"
 `;
 
@@ -449,15 +446,15 @@ exports[`Router Config Builder > that the federatedClientSDL property is propaga
         "kind": "GRAPHQL",
         "rootNodes": [
           {
-            "typeName": "Query",
-            "fieldNames": [
-              "accounts"
-            ]
-          },
-          {
             "typeName": "Account",
             "fieldNames": [
               "id"
+            ]
+          },
+          {
+            "typeName": "Query",
+            "fieldNames": [
+              "accounts"
             ]
           }
         ],
@@ -571,7 +568,8 @@ exports[`Router Config Builder > that the federatedClientSDL property is propaga
       "name": "products",
       "routingUrl": "https://wg-federation-demo-products.fly.dev/graphql"
     }
-  ]
+  ],
+  "compatibilityVersion": "1:{{$COMPOSITION__VERSION}}"
 }"
 `;
 
@@ -584,15 +582,15 @@ exports[`Router Config Builder > that the federatedClientSDL property is propaga
         "kind": "GRAPHQL",
         "rootNodes": [
           {
-            "typeName": "Query",
-            "fieldNames": [
-              "accounts"
-            ]
-          },
-          {
             "typeName": "Account",
             "fieldNames": [
               "id"
+            ]
+          },
+          {
+            "typeName": "Query",
+            "fieldNames": [
+              "accounts"
             ]
           }
         ],
@@ -706,6 +704,7 @@ exports[`Router Config Builder > that the federatedClientSDL property is propaga
       "name": "products",
       "routingUrl": "https://wg-federation-demo-products.fly.dev/graphql"
     }
-  ]
+  ],
+  "compatibilityVersion": "1:{{$COMPOSITION__VERSION}}"
 }"
 `;

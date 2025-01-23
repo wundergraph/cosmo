@@ -1,8 +1,7 @@
 import {
   externalInterfaceFieldsWarning,
-  FieldSetDirective,
   invalidOverrideTargetSubgraphNameWarning,
-  nonExternalConditionalFieldWarning,
+  nonExternalConditionalFieldWarning, REQUIRES,
 } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
@@ -209,7 +208,7 @@ describe('Composition warning tests', (ctx) => {
         'products',
         'NestedObject.name',
         'object { nestedObject { name } }',
-        FieldSetDirective.REQUIRES,
+        REQUIRES,
       ).message,
     );
 
