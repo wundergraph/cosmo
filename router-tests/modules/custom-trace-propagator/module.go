@@ -3,9 +3,12 @@ package custom_trace_propagator
 import (
 	"context"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/core"
+
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/core"
 )
 
 func init() {
@@ -36,7 +39,9 @@ func (m *CustomTracePropagatorModule) Module() core.ModuleInfo {
 	}
 }
 
-const customPropagatorKey = "customPropagator"
+type ctxKeyCustomPropagator string
+
+const ctxKey = "CustomPropagator"
 
 func (m *CustomTracePropagatorModule) TracePropagators() []propagation.TextMapPropagator {
 	return []propagation.TextMapPropagator{m.Propagator}
@@ -70,32 +75,52 @@ func (c *customPropagator) Inject(ctx context.Context, carrier propagation.TextM
 	c.InjectCalled++
 	var i info
 
-	switch v := ctx.Value(customPropagatorKey).(type) {
+	switch v := ctx.Value(ctxKeyCustomPropagator(ctxKey)).(type) {
 	case *info:
 		i = *v
 	default:
 	}
 
 	i.injectCalled = c.InjectCalled
-	carrier.Set(customPropagatorKey, i.String())
+	carrier.Set(ctxKey, i.String())
 }
 
 func (c *customPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	c.ExtractCalled++
 
-	cStr := carrier.Get(customPropagatorKey)
+	cStr := carrier.Get(ctxKey)
 
 	i := parse(cStr)
 	if i == nil {
 		return ctx
 	}
 
+	// create a fantasy trace ID for testing purposes
+	sID := "acde00000000000000000000eeeeffff"
+
+	tid, err := trace.TraceIDFromHex(sID)
+	if err != nil {
+		return ctx
+	}
+
+	sc := trace.SpanFromContext(ctx).SpanContext()
+
+	ssc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    tid,
+		SpanID:     sc.SpanID(),
+		TraceFlags: sc.TraceFlags(),
+		TraceState: sc.TraceState(),
+		Remote:     sc.IsRemote(),
+	})
+
 	i.extractCalled = c.ExtractCalled
-	return context.WithValue(ctx, customPropagatorKey, i)
+	ctx = context.WithValue(ctx, ctxKeyCustomPropagator(ctxKey), i)
+
+	return trace.ContextWithSpanContext(ctx, ssc)
 }
 
 func (c *customPropagator) Fields() []string {
-	return []string{customPropagatorKey}
+	return []string{ctxKey}
 }
 
 var _ propagation.TextMapPropagator = (*customPropagator)(nil)
