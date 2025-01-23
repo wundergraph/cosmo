@@ -1137,17 +1137,17 @@ describe('Field resolvability tests', () => {
     const fieldPath = 'query.entity';
     const entityAncestorData: EntityAncestorData = {
       fieldSetsByTargetSubgraphName: new Map<string, Set<string>>(),
-      subgraphName: 'subgraph-bh',
+      subgraphName: subgraphBH.name,
       typeName: 'Entity',
     };
-    const rootFieldData = newRootFieldData('Query', 'entity', new Set<string>(['subgraph-bh']));
+    const rootFieldData = newRootFieldData('Query', 'entity', new Set<string>([subgraphBH.name]));
     const unresolvableFieldData: UnresolvableFieldData = {
       fieldName: 'isNew',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
         name: 'isNew',
       } as GraphFieldData),
-      subgraphNames: new Set<string>(['subgraph-bi']),
+      subgraphNames: new Set<string>([subgraphBJ.name]),
       typeName: 'Entity',
     };
     const { errors } = federateSubgraphs([subgraphBH, subgraphBJ]);
