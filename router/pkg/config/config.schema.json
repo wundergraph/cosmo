@@ -2261,6 +2261,11 @@
           "type": "boolean",
           "default": false,
           "description": "Enable appending the operation name to subgraph fetches. This will ensure that the operation name will be included in the corresponding subgraph requests using the following format: $operationName__$subgraphName__$sequenceID."
+        },
+        "max_subscription_workers": {
+          "type": "integer",
+          "default": 1024,
+          "description": "The maximum number of subscription workers. This configuration effectively limits the number of concurrent subscriptions that can be processed by a single instance of the router."
         }
       }
     },

@@ -266,6 +266,7 @@ engine:
   websocket_client_read_timeout: "5s"
   execution_plan_cache_size: 1024
   resolver_max_recyclable_parser_size: 4096
+  max_subscription_workers: 2048
   debug:
     report_websocket_connections: false
     report_memory_usage: false

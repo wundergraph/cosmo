@@ -78,6 +78,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		AllowedSubgraphErrorFields:         opts.RouterEngineConfig.SubgraphErrorPropagation.AllowedFields,
 		MaxRecyclableParserSize:            opts.RouterEngineConfig.Execution.ResolverMaxRecyclableParserSize,
 		MultipartSubHeartbeatInterval:      opts.HeartbeatInterval,
+		MaxSubscriptionWorkers:             opts.RouterEngineConfig.Execution.MaxSubscriptionWorkers,
 	}
 
 	if opts.ApolloCompatibilityFlags.ValueCompletion.Enabled {
