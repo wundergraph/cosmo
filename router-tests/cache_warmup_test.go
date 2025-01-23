@@ -571,7 +571,7 @@ func TestCacheWarmup(t *testing.T) {
 }
 
 func TestCacheWarmupMetrics(t *testing.T) {
-	t.Run("cache warmup emits planning time metrics", func(t *testing.T) {
+	t.Run("should emit planning times metrics during warmup", func(t *testing.T) {
 		t.Parallel()
 
 		metricReader := metric.NewManualReader()
