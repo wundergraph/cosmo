@@ -25,7 +25,7 @@ import { getTypeNodeNamedTypeName, MutableFieldNode } from '../schema-building/a
 import { BREAK, Kind, visit } from 'graphql/index';
 import { BASE_SCALARS } from '../utils/constants';
 import { isKindAbstract } from '../ast/utils';
-import { getNormalizedFieldSet, KeyFieldSetData } from '../normalization/utils';
+import { KeyFieldSetData } from '../normalization/utils';
 import { GraphNode } from '../resolvability-graph/graph-nodes';
 import {
   concatenatePath,
@@ -163,6 +163,7 @@ export function validateImplicitKeyFieldSets({
     subgraphName,
     () => new Map<string, KeyFieldSetData>(),
   );
+  // Only key targets that are resolvable in at least one subgraph are added to documentNodeByKeyFieldSet
   for (const [keyFieldSet, documentNode] of entityData.documentNodeByKeyFieldSet) {
     const keyFieldSetData = keyFieldSetDataByFieldSet.get(keyFieldSet);
     if (keyFieldSetData) {
@@ -326,17 +327,17 @@ export function validateImplicitKeyFieldSets({
       continue;
     }
     const validFieldSetConditions: Array<FieldSetConditionRouterData> = [];
-    for (const [preEntityPath, leafByPostEntityPath] of potentialFieldSetConditions) {
+    for (const [preEntityPath, fieldByPostEntityPath] of potentialFieldSetConditions) {
       // It is not yet known whether the current path ia a super-condition or a sub-condition.
       const superCondition = conditionByPreEntityPath.get(preEntityPath);
       if (!superCondition) {
         continue;
       }
-      if (leafByPostEntityPath.size === conditionalFieldCount) {
+      if (fieldByPostEntityPath.size === conditionalFieldCount) {
         validFieldSetConditions.push(newFieldSetConditionRouterData(superCondition));
         continue;
       }
-      for (const [otherPreEntityPath, otherLeafConditionByPostEntityPath] of potentialFieldSetConditions) {
+      for (const [otherPreEntityPath, otherFieldConditionByPostEntityPath] of potentialFieldSetConditions) {
         // Do not compare a condition to itself.
         if (preEntityPath === otherPreEntityPath) {
           continue;
@@ -353,13 +354,13 @@ export function validateImplicitKeyFieldSets({
           continue;
         }
         // Now that a sub-condition has been determined, add its own provided key fields to the super-condition.
-        for (const [postEntityPath, leafCondition] of otherLeafConditionByPostEntityPath) {
-          if (!leafByPostEntityPath.get(postEntityPath)) {
-            leafByPostEntityPath.set(postEntityPath, leafCondition);
+        for (const [postEntityPath, leafCondition] of otherFieldConditionByPostEntityPath) {
+          if (!fieldByPostEntityPath.get(postEntityPath)) {
+            fieldByPostEntityPath.set(postEntityPath, leafCondition);
           }
         }
         // If all conditional key fields are provided, the implicit key is satisfied on the super-condition path.
-        if (leafByPostEntityPath.size === conditionalFieldCount) {
+        if (fieldByPostEntityPath.size === conditionalFieldCount) {
           validFieldSetConditions.push(newFieldSetConditionData(superCondition));
           break;
         }
@@ -368,8 +369,14 @@ export function validateImplicitKeyFieldSets({
     implicitKeys.push({
       fieldName: '',
       selectionSet: keyFieldSet,
+      disableEntityResolver: true,
       ...(validFieldSetConditions.length > 0 ? { conditions: validFieldSetConditions } : {}),
-      ...(keyFieldSetData ? {} : { disableEntityResolver: true }),
+    });
+    keyFieldSetDataByFieldSet.set(keyFieldSet, {
+      documentNode,
+      isUnresolvable: true,
+      normalizedFieldSet: keyFieldSet,
+      rawFieldSet: keyFieldSet,
     });
     if (graphNode) {
       graphNode.satisfiedFieldSets.add(keyFieldSet);

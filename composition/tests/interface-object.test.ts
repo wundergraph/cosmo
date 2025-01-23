@@ -3,7 +3,7 @@ import { federateSubgraphs, invalidInterfaceObjectImplementationDefinitionsError
 import { parse } from 'graphql';
 
 describe('@interfaceObject tests', () => {
-  test('that an error is returned if implementations are defined alongside an entityInterface Object', () => {
+  test('that an error is returned if implementations are defined alongside an entity declared with @interfaceObject', () => {
     const { errors } = federateSubgraphs([a, b]);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);

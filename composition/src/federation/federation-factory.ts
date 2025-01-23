@@ -426,20 +426,12 @@ export class FederationFactory {
       configurationData.keys = implicitKeys;
       return;
     }
-    // TODO don't assess non-conditional keys
-    const existingKeyByFieldSet = new Map<string, RequiredFieldConfiguration>(
-      configurationData.keys.map((key) => [key.selectionSet, key]),
-    );
+    const existingKeys = new Set<string>(configurationData.keys.map((key) => key.selectionSet));
     for (const implicitKey of implicitKeys) {
-      const existingKey = existingKeyByFieldSet.get(implicitKey.selectionSet);
-      if (existingKey) {
-        if (implicitKey.conditions?.length) {
-          existingKey.conditions = implicitKey.conditions;
-        }
+      if (existingKeys.has(implicitKey.selectionSet)) {
         continue;
       }
       configurationData.keys.push(implicitKey);
-      // existingKeyByFieldSet.add(implicitKey.selectionSet);
     }
   }
 
@@ -489,7 +481,6 @@ export class FederationFactory {
         continue;
       }
       configurationData.keys.push(implicitKey);
-      existingKeys.add(implicitKey.selectionSet);
     }
   }
 

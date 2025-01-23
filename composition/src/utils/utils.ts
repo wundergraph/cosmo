@@ -351,11 +351,11 @@ export type EntityInterfaceSubgraphData = {
 // The accumulation of all EntityInterfaceSubgraphData for the type name
 export type EntityInterfaceFederationData = {
   concreteTypeNames: Set<string>;
-  subgraphDataByTypeName: Map<string, EntityInterfaceSubgraphData>;
   fieldDatasBySubgraphName: Map<string, Array<SimpleFieldData>>;
   interfaceFieldNames: Set<string>;
   interfaceObjectFieldNames: Set<string>;
   interfaceObjectSubgraphs: Set<string>;
+  subgraphDataByTypeName: Map<string, EntityInterfaceSubgraphData>;
   typeName: string;
 };
 
@@ -365,11 +365,11 @@ export function newEntityInterfaceFederationData(
 ): EntityInterfaceFederationData {
   return {
     concreteTypeNames: new Set<string>(entityInterfaceData.concreteTypeNames),
-    subgraphDataByTypeName: new Map<string, EntityInterfaceSubgraphData>([[subgraphName, entityInterfaceData]]),
     fieldDatasBySubgraphName: new Map<string, Array<SimpleFieldData>>([[subgraphName, entityInterfaceData.fieldDatas]]),
     interfaceFieldNames: new Set<string>(entityInterfaceData.interfaceFieldNames),
     interfaceObjectFieldNames: new Set<string>(entityInterfaceData.interfaceObjectFieldNames),
     interfaceObjectSubgraphs: new Set<string>(entityInterfaceData.isInterfaceObject ? [subgraphName] : []),
+    subgraphDataByTypeName: new Map<string, EntityInterfaceSubgraphData>([[subgraphName, entityInterfaceData]]),
     typeName: entityInterfaceData.typeName,
   };
 }

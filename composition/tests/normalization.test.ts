@@ -1374,7 +1374,7 @@ describe('Normalization tests', () => {
     );
   });
 
-  test('that if an object without its fields are passed in composite keys gives an error #1.1', () => {
+  test('that an error is returned if a composite type selection does not define a selection set of its own  #1.1', () => {
     const { errors } = normalizeSubgraphFromString(`
        type Entity @key(fields: "id email") @key(fields: "id organization { id details }") {
          id: ID!
@@ -1400,7 +1400,7 @@ describe('Normalization tests', () => {
     );
   });
 
-  test('that if an object without its fields are passed in composite keys gives an error #1.2', () => {
+  test('that an error is returned if a composite type selection does not define a selection set of its own  #1.2', () => {
     const { errors } = normalizeSubgraphFromString(`
        type Entity @key(fields: "id email") @key(fields: "id organization { details id }") {
          id: ID!
@@ -1426,7 +1426,7 @@ describe('Normalization tests', () => {
     );
   });
 
-  test('that if an object without its fields are passed in composite keys gives an error #2.1', () => {
+  test('that an error is returned if a composite type selection does not define a selection set of its own #2.1', () => {
     const { errors } = normalizeSubgraphFromString(`
        type Entity @key(fields: "id email") @key(fields: "id organization { uuid details }") {
          id: ID!
@@ -1457,7 +1457,7 @@ describe('Normalization tests', () => {
     );
   });
 
-  test('that if an object without its fields are passed in composite keys gives an error #2.2', () => {
+  test('that an error is returned if a composite type selection does not define a selection set of its own  #2.2', () => {
     const { errors } = normalizeSubgraphFromString(`
        type Entity @key(fields: "id email") @key(fields: "id organization { details uuid }") {
          id: ID!

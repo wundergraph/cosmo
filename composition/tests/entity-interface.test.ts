@@ -165,11 +165,11 @@ describe('Entity Interface tests', () => {
             'Interface',
             {
               concreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo', 'EntityThree']),
-              subgraphDataByTypeName: new Map<string, EntityInterfaceSubgraphData>(),
               fieldDatasBySubgraphName: new Map<string, Array<SimpleFieldData>>(),
               interfaceFieldNames: new Set<string>(['id', 'name', 'age', 'isEntity']),
               interfaceObjectFieldNames: new Set<string>(),
               interfaceObjectSubgraphs: new Set<string>(),
+              subgraphDataByTypeName: new Map<string, EntityInterfaceSubgraphData>(),
               typeName: 'Interface',
             },
           ],
