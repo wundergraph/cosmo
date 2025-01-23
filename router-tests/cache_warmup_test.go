@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -587,6 +588,9 @@ func TestCacheWarmupMetrics(t *testing.T) {
 					},
 				}),
 			},
+			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+				routerConfig.FeatureFlagConfigs = nil
+			},
 			AssertCacheMetrics: &testenv.CacheMetricsAssertions{
 				BaseGraphAssertions: testenv.CacheMetricsAssertion{
 					QueryNormalizationMisses: 1,
@@ -640,24 +644,7 @@ func TestCacheWarmupMetrics(t *testing.T) {
 								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
-							Sum: 0,
-						},
-						{
-							Attributes: attribute.NewSet(
-								otel.WgClientName.String(""),
-								otel.WgClientVersion.String(""),
-								// This is a miss, because we just planned it for the feature flag
-								otel.WgEnginePlanCacheHit.Bool(false),
-								otel.WgFeatureFlag.String("myff"),
-								otel.WgOperationHash.String("1163600561566987607"),
-								otel.WgOperationName.String(""),
-								otel.WgOperationType.String("query"),
-								otel.WgRouterClusterName.String(""),
-								otel.WgFederatedGraphID.String("graph"),
-								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
-								otel.WgRouterVersion.String("dev"),
-							),
-							Sum: 0,
+							Count: 1,
 						},
 						{
 							Attributes: attribute.NewSet(
@@ -674,7 +661,7 @@ func TestCacheWarmupMetrics(t *testing.T) {
 								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
 							),
-							Sum: 0,
+							Count: 2,
 						},
 					},
 				},
@@ -682,8 +669,14 @@ func TestCacheWarmupMetrics(t *testing.T) {
 
 			m := *GetMetricByName(metricScope, "router.graphql.operation.planning_time")
 
-			// Warmup 2 times, One for base and one for feature flag + 1 cache hit when making the request
-			require.Len(t, m.Data.(metricdata.Histogram[float64]).DataPoints, 3)
+			// One when warming up the operation and one when executing the operation
+			require.Len(t, m.Data.(metricdata.Histogram[float64]).DataPoints, 2)
+
+			// Warming up the operation
+			require.Equal(t, m.Data.(metricdata.Histogram[float64]).DataPoints[0].Count, uint64(1))
+
+			// Executing the operation. Is exported as an aggregated value
+			require.Equal(t, m.Data.(metricdata.Histogram[float64]).DataPoints[1].Count, uint64(2))
 
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, m, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})

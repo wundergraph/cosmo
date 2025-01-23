@@ -255,6 +255,7 @@ export class CacheWarmerRepository {
         planningTime: operation.planningTime,
         federatedGraphId: props.federatedGraphId,
         organizationId: props.organizationId,
+        operationContent,
         isManuallyAdded: false,
       });
 
