@@ -12,6 +12,7 @@ import {
   websocketSubprotocolEnum,
   webhookDeliveries,
   graphPruningRulesEnum,
+  cacheWarmerOperations,
 } from './schema.js';
 
 export type FederatedGraph = typeof federatedGraphs.$inferSelect;
@@ -26,6 +27,7 @@ export type MemberRole = (typeof memberRoleEnum.enumValues)[number];
 export type LintRuleEnum = (typeof lintRulesEnum.enumValues)[number];
 export type GraphPruningRuleEnum = (typeof graphPruningRulesEnum.enumValues)[number];
 export type WebsocketSubprotocol = (typeof websocketSubprotocolEnum.enumValues)[number];
+export type CacheWarmupOperation = typeof cacheWarmerOperations.$inferInsert;
 
 export type WebhookDeliveryInfo = typeof webhookDeliveries.$inferInsert;
 
