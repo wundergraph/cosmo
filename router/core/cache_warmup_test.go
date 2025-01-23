@@ -26,14 +26,21 @@ type CacheWarmupMockProcessor struct {
 	mux            sync.Mutex
 }
 
-func (c *CacheWarmupMockProcessor) ProcessOperation(ctx context.Context, item *nodev1.Operation) error {
+func (c *CacheWarmupMockProcessor) ProcessOperation(ctx context.Context, item *nodev1.Operation) (*CacheWarmupOperationPlanResult, error) {
 	if c.err != nil {
-		return c.err
+		return nil, c.err
 	}
 	c.mux.Lock()
 	defer c.mux.Unlock()
 	c.processedItems = append(c.processedItems, item)
-	return nil
+	return &CacheWarmupOperationPlanResult{
+		OperationHash: "",
+		OperationName: "",
+		OperationType: "",
+		ClientName:    item.GetClient().Name,
+		ClientVersion: item.GetClient().Version,
+		PlanningTime:  0,
+	}, nil
 }
 
 type CacheWarmupProcessorError struct{}
