@@ -1,6 +1,12 @@
 package integration
 
 import (
+	"context"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"net/http"
 	"testing"
 	"time"
@@ -559,6 +565,127 @@ func TestCacheWarmup(t *testing.T) {
 				require.Equal(t, res.Response.Header.Get("X-Feature-Flag"), "myff")
 				require.JSONEq(t, `{"data":{"employees":[{"id":1,"productCount":5},{"id":2,"productCount":2},{"id":3,"productCount":2},{"id":4,"productCount":3},{"id":5,"productCount":2},{"id":7,"productCount":0},{"id":8,"productCount":2},{"id":10,"productCount":3},{"id":11,"productCount":1},{"id":12,"productCount":4}]}}`, res.Body)
 			})
+		})
+	})
+}
+
+func TestCacheWarmupMetrics(t *testing.T) {
+	t.Run("cache warmup emits planning time metrics", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
+			RouterOptions: []core.Option{
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled: true,
+					Source: config.CacheWarmupSource{
+						Filesystem: &config.CacheWarmupFileSystemSource{
+							Path: "testenv/testdata/cache_warmup/single",
+						},
+					},
+				}),
+			},
+			AssertCacheMetrics: &testenv.CacheMetricsAssertions{
+				BaseGraphAssertions: testenv.CacheMetricsAssertion{
+					QueryNormalizationMisses: 1,
+					QueryNormalizationHits:   2,
+					ValidationMisses:         1,
+					ValidationHits:           2,
+					PlanMisses:               1,
+					PlanHits:                 2,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
+			require.Equal(t, employeesIDData, res.Body)
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+
+			rm := metricdata.ResourceMetrics{}
+			err := metricReader.Collect(context.Background(), &rm)
+
+			require.NoError(t, err)
+			require.Len(t, rm.ScopeMetrics, 2)
+
+			metricScope := GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			require.NotNil(t, metricScope)
+
+			require.Len(t, metricScope.Metrics, 6)
+
+			operationPlanningTimeMetric := metricdata.Metrics{
+				Name:        "router.graphql.operation.planning_time",
+				Description: "Operation planning time in milliseconds",
+				Unit:        "ms",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgClientName.String(""),
+								otel.WgClientVersion.String(""),
+								// This is a miss, because we just planned it
+								otel.WgEnginePlanCacheHit.Bool(false),
+								otel.WgFeatureFlag.String(""),
+								otel.WgOperationHash.String("1163600561566987607"),
+								otel.WgOperationName.String(""),
+								otel.WgOperationType.String("query"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Sum: 0,
+						},
+						{
+							Attributes: attribute.NewSet(
+								otel.WgClientName.String(""),
+								otel.WgClientVersion.String(""),
+								// This is a miss, because we just planned it
+								otel.WgEnginePlanCacheHit.Bool(false),
+								otel.WgFeatureFlag.String("myff"),
+								otel.WgOperationHash.String("1163600561566987607"),
+								otel.WgOperationName.String(""),
+								otel.WgOperationType.String("query"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Sum: 0,
+						},
+						{
+							Attributes: attribute.NewSet(
+								otel.WgClientName.String("unknown"),
+								otel.WgClientVersion.String("missing"),
+								// This is a hit, because we planned it before
+								otel.WgEnginePlanCacheHit.Bool(true),
+								otel.WgOperationHash.String("1163600561566987607"),
+								otel.WgOperationName.String(""),
+								otel.WgOperationProtocol.String("http"),
+								otel.WgOperationType.String("query"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Sum: 0,
+						},
+					},
+				},
+			}
+
+			m := *GetMetricByName(metricScope, "router.graphql.operation.planning_time")
+
+			// Warmup 2 times, One for base and one for feature flag + 1 cache hit when making the request
+			require.Len(t, m.Data.(metricdata.Histogram[float64]).DataPoints, 3)
+
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, m, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
 }

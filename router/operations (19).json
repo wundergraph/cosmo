@@ -1,0 +1,30 @@
+{
+  "operations": [
+    {
+      "request": {
+        "query": "query {\n    findEmployees(criteria: {nationality: ENGLISH}) {\n        id\n\n\n        details {\n            forename\n            surname\n        }\n    }\n}"
+      }
+    },
+    {
+      "request": {
+        "extensions": {
+          "persistedQuery": {
+            "sha256Hash": "74bc91ec76031eace2a9712aadc31302e3ad8109414b8ac186597de879dd9411",
+            "version": 1
+          }
+        }
+      },
+      "client": { "name": "foo22" }
+    },
+    {
+      "request": {
+        "query": "query($a: Int!, $b: Department!, $c: ProductName!, $d: [ProductName!]!, $e: SearchInput, $f: SearchInput){employees {id notes details {forename surname location {key {name}} hasChildren maritalStatus nationality pets {class gender name ... on Cat {type} ... on Dog {breed} ... on Alligator {dangerous}}} role {departments title ... on Engineer {engineerType} ... on Operator {operatorType}} hobbies {... on Exercise {category} ... on Flying {planeModels yearsOfExperience} ... on Gaming {genres name yearsOfExperience} ... on Other {name} ... on Programming {languages} ... on Travelling {countriesLived {key {name}}}} products} employee(id: $a){id details {forename location {key {name}}}} teammates(team: $b){id details {forename} products} productTypes {... on Documentation {url(product: $c) urls(products: $d)} ... on Consultancy {lead {details {forename}} name}} a: findEmployees(criteria: $e){details {forename}} b: findEmployees(criteria: $f){details {forename}}}"
+      }
+    },
+    { "request": { "query": "query($a: SearchInput){findEmployees(criteria: $a){id details {forename surname}}}" } },
+    {
+      "request": { "operationName": "MyDentsuQuery", "query": "query MyDentsuQuery {employees {currentMood}}" },
+      "client": { "name": "dentsu", "version": "1.0.0" }
+    }
+  ]
+}

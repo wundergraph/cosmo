@@ -15,6 +15,7 @@ import { DateRange } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { S3RouterConfigMetadata } from '../composition/composer.js';
+import { CacheWarmupOperation } from '../../db/models.js';
 import { getDateRange, isoDateRangeToTimestamps } from './analytics/util.js';
 
 interface ComputeCacheWarmerOperationsProps {
@@ -22,16 +23,6 @@ interface ComputeCacheWarmerOperationsProps {
   dateRange?: DateRange;
   organizationId: string;
   federatedGraphId: string;
-}
-
-interface DBCacheWarmerOperation {
-  content?: string;
-  hash?: string;
-  name?: string;
-  persistedId?: string;
-  clientName?: string;
-  clientVersion?: string;
-  planningTime?: number;
 }
 
 export class CacheWarmerRepository {
@@ -49,13 +40,14 @@ export class CacheWarmerRepository {
     const parsedDateRange = isoDateRangeToTimestamps(dateRange, rangeInHours);
     const [start, end] = getDateRange(parsedDateRange);
     const quantile = 0.9;
-    const minPlanningTimeInMs = 0;
+    const minPlanningTimeInMs = 1;
 
     const query = `
       WITH
         toDateTime('${start}') AS startDate,
         toDateTime('${end}') AS endDate
       SELECT
+        max(MaxDuration) as maxDuration,
         OperationHash as operationHash,
         OperationName as operationName,
         OperationPersistedID as operationPersistedID,
@@ -76,7 +68,7 @@ export class CacheWarmerRepository {
       AND OrganizationID = '${organizationId}'
       AND OperationName != 'IntrospectionQuery'
       GROUP BY OperationHash, OperationName, OperationPersistedID, ClientName, ClientVersion
-      HAVING planningTime > ${minPlanningTimeInMs}
+      HAVING maxDuration >= ${minPlanningTimeInMs}
       ORDER BY planningTime DESC LIMIT 100
     `;
 
@@ -144,7 +136,7 @@ export class CacheWarmerRepository {
     const topOperationsByPlanningTime = await this.getTopOperationsByPlanningTime(props);
 
     const computedOperations: Operation[] = [];
-    const dbCacheWarmerOperations: DBCacheWarmerOperation[] = [];
+    const dbCacheWarmerOperations: CacheWarmupOperation[] = [];
 
     const manuallyAddedOperations = await this.getCacheWarmerOperations({
       organizationId: props.organizationId,
@@ -235,12 +227,15 @@ export class CacheWarmerRepository {
         );
 
         dbCacheWarmerOperations.push({
-          name: operation.operationName,
-          hash: operation.operationHash,
-          persistedId: operation.operationPersistedID,
+          operationName: operation.operationName,
+          operationHash: operation.operationHash,
+          operationPersistedID: operation.operationPersistedID,
           clientName: operation.clientName,
           clientVersion: operation.clientVersion,
           planningTime: operation.planningTime,
+          federatedGraphId: props.federatedGraphId,
+          organizationId: props.organizationId,
+          isManuallyAdded: false,
         });
         continue;
       }
@@ -252,13 +247,15 @@ export class CacheWarmerRepository {
       }
 
       dbCacheWarmerOperations.push({
-        content: operationContent,
-        name: operation.operationName,
-        hash: operation.operationHash,
-        persistedId: operation.operationPersistedID,
+        operationName: operation.operationName,
+        operationHash: operation.operationHash,
+        operationPersistedID: operation.operationPersistedID,
         clientName: operation.clientName,
         clientVersion: operation.clientVersion,
         planningTime: operation.planningTime,
+        federatedGraphId: props.federatedGraphId,
+        organizationId: props.organizationId,
+        isManuallyAdded: false,
       });
 
       computedOperations.push(
@@ -285,9 +282,6 @@ export class CacheWarmerRepository {
       });
 
       await cacheWarmerRepo.addCacheWarmerOperations({
-        organizationId: props.organizationId,
-        federatedGraphId: props.federatedGraphId,
-        isManuallyAdded: false,
         operations: dbCacheWarmerOperations,
       });
     });
@@ -328,45 +322,12 @@ export class CacheWarmerRepository {
       .then((res) => res.length > 0);
   }
 
-  public async addCacheWarmerOperations({
-    organizationId,
-    federatedGraphId,
-    isManuallyAdded,
-    operations,
-    createdById,
-  }: {
-    organizationId: string;
-    federatedGraphId: string;
-    isManuallyAdded: boolean;
-    operations: {
-      content?: string;
-      hash?: string;
-      name?: string;
-      persistedId?: string;
-      clientName?: string;
-      clientVersion?: string;
-      planningTime?: number;
-    }[];
-    createdById?: string;
-  }) {
+  public async addCacheWarmerOperations({ operations }: { operations: CacheWarmupOperation[] }) {
     if (!operations || operations.length === 0) {
       return;
     }
-    const data = operations.map((operation) => ({
-      federatedGraphId,
-      organizationId,
-      isManuallyAdded,
-      operationContent: operation.content || null,
-      operationHash: operation.hash || null,
-      operationName: operation.name || null,
-      operationPersistedID: operation.persistedId || null,
-      clientName: operation.clientName || null,
-      clientVersion: operation.clientVersion || null,
-      planningTime: operation.planningTime,
-      createdById,
-    }));
 
-    await this.db.insert(cacheWarmerOperations).values(data);
+    await this.db.insert(cacheWarmerOperations).values(operations);
   }
 
   public getCacheWarmerOperations({
