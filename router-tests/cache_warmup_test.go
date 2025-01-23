@@ -610,6 +610,7 @@ func TestCacheWarmupMetrics(t *testing.T) {
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
+			require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
 
 			rm := metricdata.ResourceMetrics{}
 			err := metricReader.Collect(context.Background(), &rm)
