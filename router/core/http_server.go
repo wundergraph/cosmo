@@ -4,11 +4,14 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"github.com/wundergraph/cosmo/router/pkg/health"
-	"go.uber.org/zap"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/pkg/health"
 )
 
 type server struct {
@@ -23,13 +26,16 @@ type server struct {
 }
 
 type httpServerOptions struct {
-	addr            string
-	logger          *zap.Logger
-	tlsConfig       *TlsConfig
-	tlsServerConfig *tls.Config
-	healthcheck     health.Checker
-	baseURL         string
-	maxHeaderBytes  int
+	addr               string
+	logger             *zap.Logger
+	tlsConfig          *TlsConfig
+	tlsServerConfig    *tls.Config
+	healthcheck        health.Checker
+	baseURL            string
+	maxHeaderBytes     int
+	livenessCheckPath  string
+	readinessCheckPath string
+	healthCheckPath    string
 }
 
 func newServer(opts *httpServerOptions) *server {
@@ -44,6 +50,12 @@ func newServer(opts *httpServerOptions) *server {
 		MaxHeaderBytes: opts.maxHeaderBytes,
 	}
 
+	// Create default handler for liveness and readiness
+	httpRouter := chi.NewMux()
+	httpRouter.Get(opts.healthCheckPath, opts.healthcheck.Liveness())
+	httpRouter.Get(opts.livenessCheckPath, opts.healthcheck.Liveness())
+	httpRouter.Get(opts.readinessCheckPath, opts.healthcheck.Readiness())
+
 	n := &server{
 		httpServer:  httpServer,
 		tlsConfig:   opts.tlsConfig,
@@ -51,6 +63,7 @@ func newServer(opts *httpServerOptions) *server {
 		mu:          sync.RWMutex{},
 		healthcheck: opts.healthcheck,
 		baseURL:     opts.baseURL,
+		handler:     httpRouter,
 	}
 
 	httpServer.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +97,7 @@ func (s *server) HttpServer() *http.Server {
 // NOT SAFE FOR CONCURRENT USE.
 func (s *server) SwapGraphServer(ctx context.Context, svr *graphServer) {
 
-	needsShutdown := s.handler != nil
+	needsShutdown := s.handler != nil && s.graphServer != nil
 
 	// Swap the handler immediately, so we can shut down the old server in the same goroutine
 	// and no other config changes can happen in the meantime.
