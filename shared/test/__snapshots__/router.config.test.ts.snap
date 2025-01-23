@@ -298,7 +298,7 @@ exports[`Router Config Builder > Build Subgraph schema > router.config.json 1`] 
       "routingUrl": "https://wg-federation-demo-inventory.fly.dev/graphql"
     }
   ],
-  "compatibilityVersion": "1:workspace:*"
+  "compatibilityVersion": "1:{{$COMPOSITION__VERSION}}"
 }"
 `;
 
@@ -433,7 +433,7 @@ exports[`Router Config Builder > that the federatedClientSDL property is not pro
       "routingUrl": "https://wg-federation-demo-products.fly.dev/graphql"
     }
   ],
-  "compatibilityVersion": "1:workspace:*"
+  "compatibilityVersion": "1:{{$COMPOSITION__VERSION}}"
 }"
 `;
 
@@ -569,7 +569,7 @@ exports[`Router Config Builder > that the federatedClientSDL property is propaga
       "routingUrl": "https://wg-federation-demo-products.fly.dev/graphql"
     }
   ],
-  "compatibilityVersion": "1:workspace:*"
+  "compatibilityVersion": "1:{{$COMPOSITION__VERSION}}"
 }"
 `;
 
@@ -705,6 +705,6 @@ exports[`Router Config Builder > that the federatedClientSDL property is propaga
       "routingUrl": "https://wg-federation-demo-products.fly.dev/graphql"
     }
   ],
-  "compatibilityVersion": "1:workspace:*"
+  "compatibilityVersion": "1:{{$COMPOSITION__VERSION}}"
 }"
 `;

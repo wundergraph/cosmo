@@ -98,3 +98,11 @@ export type ConfigurationData = {
   keys?: RequiredFieldConfiguration[];
   requires?: RequiredFieldConfiguration[];
 };
+
+export function newConfigurationData(isEntity: boolean, renamedTypeName: string): ConfigurationData {
+  return {
+    fieldNames: new Set<string>(),
+    isRootNode: isEntity,
+    typeName: renamedTypeName,
+  };
+}

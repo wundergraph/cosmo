@@ -236,6 +236,7 @@ import {
   EventConfiguration,
   FieldSetConditionRouterData,
   NatsEventType,
+  newConfigurationData,
   newFieldSetConditionData,
   RequiredFieldConfiguration,
 } from '../router-configuration/router-configuration';
@@ -2370,7 +2371,7 @@ export class NormalizationFactory {
       }
       const parentTypeName = getParentTypeName(parentData);
       const configurationData = getValueOrDefault(this.configurationDataByParentTypeName, parentTypeName, () =>
-        this.newConfigurationData(false, parentTypeName),
+        newConfigurationData(false, parentTypeName),
       );
       const provides = this.validateProvidesOrRequires(parentData, fieldSetData.provides, true);
       if (provides) {
@@ -2870,7 +2871,7 @@ export class NormalizationFactory {
       }
       const typeName = getParentTypeName(entityParentData);
       const configurationData = getValueOrDefault(this.configurationDataByParentTypeName, typeName, () =>
-        this.newConfigurationData(true, typeName),
+        newConfigurationData(true, typeName),
       );
       configurationData.isRootNode = true;
       configurationData.keys = keyConfigurations;
@@ -2893,19 +2894,6 @@ export class NormalizationFactory {
     if (externalFieldNames.size > 0) {
       configurationData.externalFieldNames = externalFieldNames;
     }
-  }
-
-  newConfigurationData(isEntity: boolean, renamedTypeName: string): ConfigurationData {
-    const configurationData: ConfigurationData = {
-      fieldNames: new Set<string>(),
-      isRootNode: isEntity,
-      typeName: renamedTypeName,
-    };
-    // const keyConfigurations = this.keyConfigurationsByTypeName.get(originalTypeName);
-    // if (keyConfigurations) {
-    //   configurationData.keys = keyConfigurations;
-    // }
-    return configurationData;
   }
 
   normalize(document: DocumentNode): NormalizationResultContainer {
@@ -3066,7 +3054,7 @@ export class NormalizationFactory {
           }
           const newParentTypeName = getParentTypeName(parentDefinitionData);
           const configurationData = getValueOrDefault(this.configurationDataByParentTypeName, newParentTypeName, () =>
-            this.newConfigurationData(isEntity, parentTypeName),
+            newConfigurationData(isEntity, parentTypeName),
           );
           const entityInterfaceData = this.entityInterfaceDataByTypeName.get(parentTypeName);
           if (entityInterfaceData) {
