@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.99.0](https://github.com/wundergraph/cosmo/compare/studio@0.98.1...studio@0.99.0) (2025-01-23)
+
+### Features
+
+* improve cache warmer ([#1530](https://github.com/wundergraph/cosmo/issues/1530)) ([2e3f0d2](https://github.com/wundergraph/cosmo/commit/2e3f0d2f05f0ecd8c2a39fd1588c5610af22eaed)) (@StarpTech)
+
 ## [0.98.1](https://github.com/wundergraph/cosmo/compare/studio@0.98.0...studio@0.98.1) (2025-01-19)
 
 ### Bug Fixes

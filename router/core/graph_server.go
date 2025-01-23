@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	otelmetric "go.opentelemetry.io/otel/metric"
 	"net/http"
 	"net/url"
 	"strings"
@@ -914,12 +915,31 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			RouterSchema:       executor.RouterSchema,
 			TrackSchemaUsage:   s.graphqlMetricsConfig.Enabled,
 		})
+
 		warmupConfig := &CacheWarmupConfig{
 			Log:            s.logger,
 			Processor:      processor,
 			Workers:        s.Config.cacheWarmup.Workers,
 			ItemsPerSecond: s.Config.cacheWarmup.ItemsPerSecond,
 			Timeout:        s.Config.cacheWarmup.Timeout,
+		}
+
+		warmupConfig.AfterOperation = func(item *CacheWarmupOperationPlanResult) {
+			gm.metricStore.MeasureOperationPlanningTime(ctx,
+				item.PlanningTime,
+				nil,
+				otelmetric.WithAttributes(
+					append([]attribute.KeyValue{
+						otel.WgOperationName.String(item.OperationName),
+						otel.WgClientName.String(item.ClientName),
+						otel.WgClientVersion.String(item.ClientVersion),
+						otel.WgFeatureFlag.String(featureFlagName),
+						otel.WgOperationHash.String(item.OperationHash),
+						otel.WgOperationType.String(item.OperationType),
+						otel.WgEnginePlanCacheHit.Bool(false),
+					}, baseMetricAttributes...)...,
+				),
+			)
 		}
 
 		if s.Config.cacheWarmup.Source.Filesystem != nil {
