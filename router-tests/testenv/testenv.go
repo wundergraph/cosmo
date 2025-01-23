@@ -319,7 +319,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	t.Helper()
 
 	var (
-		metricReader     *metric.ManualReader
 		kafkaAdminClient *kadm.Client
 		kafkaStarted     sync.WaitGroup
 		kafkaClient      *kgo.Client
@@ -370,8 +369,9 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	if cfg.AssertCacheMetrics != nil {
-		metricReader = metric.NewManualReader()
-		cfg.MetricReader = metricReader
+		if cfg.MetricReader == nil {
+			cfg.MetricReader = metric.NewManualReader()
+		}
 		cfg.MetricOptions.EnableOTLPRouterCache = true
 	}
 
@@ -685,7 +685,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		shutdown:                atomic.NewBool(false),
 		logObserver:             logObserver,
 		getPubSubName:           getPubSubName,
-		metricReader:            metricReader,
+		metricReader:            cfg.MetricReader,
 		Servers: []*httptest.Server{
 			employeesServer,
 			familyServer,
@@ -1061,7 +1061,7 @@ type Environment struct {
 	routerConfigVersionMain string
 	routerConfigVersionMyFF string
 
-	metricReader *metric.ManualReader
+	metricReader metric.Reader
 }
 
 func GetPubSubNameFn(prefix string) func(name string) string {
