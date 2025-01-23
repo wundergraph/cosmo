@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.165.1](https://github.com/wundergraph/cosmo/compare/router@0.165.0...router@0.165.1) (2025-01-23)
+
+### Bug Fixes
+
+* remove semaphore from ResolveGraphQLSubscription ([#1532](https://github.com/wundergraph/cosmo/issues/1532)) ([3b3a870](https://github.com/wundergraph/cosmo/commit/3b3a870ad21029b70b5985194948f5f170c38855)) (@alepane21)
+
 # [0.165.0](https://github.com/wundergraph/cosmo/compare/router@0.164.1...router@0.165.0) (2025-01-23)
 
 ### Bug Fixes
