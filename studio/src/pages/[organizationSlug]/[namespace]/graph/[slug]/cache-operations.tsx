@@ -182,14 +182,6 @@ const CacheOperationsPage: NextPageWithLayout = () => {
         </div>
         <div className="flex justify-end">
           <div className="flex items-center gap-x-3">
-            {lastComputedAt && (
-              <p className="text-xs text-muted-foreground">{`Last computed ${formatDistanceToNow(
-                new Date(lastComputedAt),
-                {
-                  addSuffix: true,
-                },
-              )}`}</p>
-            )}
             <Button
               variant="outline"
               className="flex gap-x-2"
@@ -205,6 +197,37 @@ const CacheOperationsPage: NextPageWithLayout = () => {
               />
               Recompute
             </Button>
+          </div>
+        </div>
+      </div>
+      <div className="grid auto-cols-fr grid-flow-col grid-rows-2 gap-4 py-4 md:grid-rows-none">
+        <div className="flex h-full w-full flex-col gap-y-4 rounded-md border px-8 py-6">
+          <h2 className="flex items-center gap-x-2">
+            <span className="leading-none tracking-tight text-muted-foreground">
+              Total Items
+            </span>
+          </h2>
+          <div>
+            <span className="text-xl font-semibold">{data.totalCount}</span>
+          </div>
+        </div>
+        <div className="flex h-full w-full flex-col gap-y-4 rounded-md border px-8 py-6">
+          <h2 className="flex items-center gap-x-2">
+            <span className="leading-none tracking-tight text-muted-foreground">
+              Last Computed
+            </span>
+          </h2>
+          <div>
+            <span className="text-xl font-semibold">
+              {" "}
+              {lastComputedAt && (
+                <p>
+                  {formatDistanceToNow(new Date(lastComputedAt), {
+                    addSuffix: true,
+                  })}
+                </p>
+              )}
+            </span>
           </div>
         </div>
       </div>
