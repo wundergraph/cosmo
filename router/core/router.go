@@ -10,8 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -58,8 +56,6 @@ type IPAnonymizationMethod string
 const (
 	Hash   IPAnonymizationMethod = "hash"
 	Redact IPAnonymizationMethod = "redact"
-	// CompatibilityThreshold should ONLY be updated if there is a breaking change in the router execution config.
-	CompatibilityThreshold = 1
 )
 
 var CompressibleContentTypes = []string{
@@ -1113,9 +1109,9 @@ func (r *Router) Start(ctx context.Context) error {
 				 * Currently, all "old" router execution configurations are compatible as there have been no breaking
 				 * changes.
 				 * Upon the first breaking change to the execution config, an unpopulated compatibility version will
-				 * also be unsupported (and the logic for isRouterCompatibleWithExecutionConfig will need to be updated).
+				 * also be unsupported (and the logic for IsRouterCompatibleWithExecutionConfig will need to be updated).
 				 */
-				if !r.isRouterCompatibleWithExecutionConfig(cfg.CompatibilityVersion) {
+				if !execution_config.IsRouterCompatibleWithExecutionConfig(r.logger, cfg.CompatibilityVersion) {
 					return nil
 				}
 
@@ -1346,36 +1342,6 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 	wg.Wait()
 
 	return err
-}
-
-func (r *Router) isRouterCompatibleWithExecutionConfig(compatibilityVersion string) bool {
-	if compatibilityVersion == "" {
-		return true
-	}
-	/* A compatibility version is composed thus: <compatibility threshold>:<composition version>
-	 * A router version will support a range of compatibility thresholds.
-	 * In the event the execution config exceeds the compatibility threshold supported by the router,
-	 * an error will request the router version be upgraded.
-	 */
-	segments := strings.Split(compatibilityVersion, ":")
-	if len(segments) != 2 {
-		r.logger.Error("Failed to parse compatibility version", zap.String("compatibility_version", compatibilityVersion))
-		return false
-	}
-	threshold, err := strconv.ParseInt(segments[0], 10, 32)
-	if err != nil {
-		r.logger.Error("Failed to parse compatibility threshold of compatibility version", zap.String("compatibility_version", compatibilityVersion))
-		return false
-	}
-	if threshold > CompatibilityThreshold {
-		r.logger.Error(
-			fmt.Sprintf("This router version only supports the router execution configuration compatibility threshold <= %d. Please upgrade your router version.", CompatibilityThreshold),
-			zap.Int64("compatibility_threshold", threshold),
-			zap.String("composition_version", segments[1]),
-		)
-		return false
-	}
-	return true
 }
 
 func WithListenerAddr(addr string) Option {
@@ -1946,7 +1912,7 @@ func buildAttributesMap(attributes []config.CustomAttribute) map[string]string {
 	return result
 }
 
-// buildHeaderAttributesMapper returns a function that maps custom attributes to the request headers.
+// buildHeaderAttributesMapper returns a function that maps custom attributes to the request headers.fi
 func buildHeaderAttributesMapper(attributes []config.CustomAttribute) func(req *http.Request) []attribute.KeyValue {
 	if len(attributes) == 0 {
 		return nil
