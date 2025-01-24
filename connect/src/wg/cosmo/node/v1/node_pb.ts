@@ -330,6 +330,11 @@ export class RouterConfig extends Message<RouterConfig> {
    */
   featureFlagConfigs?: FeatureFlagRouterExecutionConfigs;
 
+  /**
+   * @generated from field: string compatibility_version = 5;
+   */
+  compatibilityVersion = "";
+
   constructor(data?: PartialMessage<RouterConfig>) {
     super();
     proto3.util.initPartial(data, this);
@@ -342,6 +347,7 @@ export class RouterConfig extends Message<RouterConfig> {
     { no: 2, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "subgraphs", kind: "message", T: Subgraph, repeated: true },
     { no: 4, name: "feature_flag_configs", kind: "message", T: FeatureFlagRouterExecutionConfigs, opt: true },
+    { no: 5, name: "compatibility_version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RouterConfig {

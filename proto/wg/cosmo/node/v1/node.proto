@@ -26,6 +26,7 @@ message RouterConfig {
   repeated Subgraph subgraphs = 3;
   // The map of feature flag router execution configs requires a wrapper to be non-breaking
   optional FeatureFlagRouterExecutionConfigs feature_flag_configs = 4;
+  string compatibility_version = 5;
 }
 
 message Response {
