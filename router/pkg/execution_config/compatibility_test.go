@@ -83,16 +83,16 @@ func TestExecutionConfiguration(t *testing.T) {
 	t.Run("return a warning if the execution config version is insufficient", func(t *testing.T) {
 		observed, logs := observer.New(zapcore.DebugLevel)
 		logger := newLogger(observed)
-		nextVersion := int64(ExecutionConfigVersionThreshold + 1)
+		previousVersion := int64(ExecutionConfigVersionThreshold - 1)
 		compVersion := "0.1.0"
-		compatibilityVersion := fmt.Sprintf("%d:%s", nextVersion, compVersion)
-		assert.False(t, IsRouterCompatibleWithExecutionConfig(logger, compatibilityVersion))
+		compatibilityVersion := fmt.Sprintf("%d:%s", previousVersion, compVersion)
+		assert.True(t, IsRouterCompatibleWithExecutionConfig(logger, compatibilityVersion))
 		logsSlice := logs.All()
 		assert.Equal(t, 1, len(logsSlice))
-		assert.Equal(t, executionConfigVersionThresholdExceededError(nextVersion), logsSlice[0].Message)
-		assert.Equal(t, zapcore.ErrorLevel, logsSlice[0].Level)
+		assert.Equal(t, executionConfigVersionInsufficientWarning(previousVersion), logsSlice[0].Message)
+		assert.Equal(t, zapcore.WarnLevel, logsSlice[0].Level)
 		assert.Equal(t, 2, len(logsSlice[0].Context))
-		assert.Equal(t, zap.Int64("execution_config_version", nextVersion), logsSlice[0].Context[0])
+		assert.Equal(t, zap.Int64("execution_config_version", previousVersion), logsSlice[0].Context[0])
 		assert.Equal(t, zap.String("composition_package_version", compVersion), logsSlice[0].Context[1])
 	})
 }
