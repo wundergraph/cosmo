@@ -19,7 +19,7 @@
     "test": "vitest run",
     "lint": "prettier --check src tests",
     "lint:fix": "prettier --write src tests",
-    "postinstall": "node ./scripts/get-composition-version.mjs"
+    "postversion": "node ./scripts/get-composition-version.mjs"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
