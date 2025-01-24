@@ -737,7 +737,6 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		httpOperation.requestLogger.Error("failed to plan operation", zap.Error(err))
 		rtrace.AttachErrToSpan(enginePlanSpan, err)
 
-		requestContext.operation.planningTime = time.Since(startPlanning)
 		if !requestContext.operation.traceOptions.ExcludePlannerStats {
 			httpOperation.traceTimings.EndPlanning()
 		}

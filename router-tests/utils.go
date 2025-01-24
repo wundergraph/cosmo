@@ -5,6 +5,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/trace"
 	tracetest2 "go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.uber.org/zap"
@@ -57,4 +59,29 @@ func configureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) 
 	authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 	require.NoError(t, err)
 	return []authentication.Authenticator{authenticator}, authServer
+}
+
+func AssertAttributeNotInSet(t *testing.T, set attribute.Set, attr attribute.KeyValue) {
+	t.Helper()
+
+	_, ok := set.Value(attr.Key)
+	require.False(t, ok)
+}
+
+func GetMetricByName(scopeMetric *metricdata.ScopeMetrics, name string) *metricdata.Metrics {
+	for _, m := range scopeMetric.Metrics {
+		if m.Name == name {
+			return &m
+		}
+	}
+	return nil
+}
+
+func GetMetricScopeByName(metrics []metricdata.ScopeMetrics, name string) *metricdata.ScopeMetrics {
+	for _, m := range metrics {
+		if m.Scope.Name == name {
+			return &m
+		}
+	}
+	return nil
 }
