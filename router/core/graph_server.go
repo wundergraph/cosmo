@@ -110,7 +110,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	 * also be unsupported (and the logic for IsRouterCompatibleWithExecutionConfig will need to be updated).
 	 */
 	if !execution_config.IsRouterCompatibleWithExecutionConfig(r.logger, routerConfig.CompatibilityVersion) {
-		return nil, fmt.Errorf(`the comapitibility version "%s" is not compatible with this router version`, routerConfig.CompatibilityVersion)
+		return nil, fmt.Errorf(`the compatibility version "%s" is not compatible with this router version`, routerConfig.CompatibilityVersion)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
