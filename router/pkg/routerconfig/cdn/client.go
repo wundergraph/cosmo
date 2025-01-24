@@ -216,9 +216,6 @@ func (cdn *Client) getRouterConfig(ctx context.Context, version string, modified
 		)
 	}
 
-	/*
-	* Serialize the response body to a RouterConfig object
-	 */
 	return body, nil
 }
 

@@ -730,6 +730,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 
 	cfg, err := r.configPoller.GetRouterConfig(ctx)
 	if err != nil {
+
 		return nil, fmt.Errorf("failed to get initial execution config: %w", err)
 	}
 
