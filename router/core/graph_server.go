@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"net/http"
 	"net/url"
@@ -101,6 +102,16 @@ type (
 
 // newGraphServer creates a new server instance.
 func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterConfig, proxy ProxyFunc) (*graphServer, error) {
+
+	/* Older versions of composition will not populate a compatibility version.
+	 * Currently, all "old" router execution configurations are compatible as there have been no breaking
+	 * changes.
+	 * Upon the first breaking change to the execution config, an unpopulated compatibility version will
+	 * also be unsupported (and the logic for IsRouterCompatibleWithExecutionConfig will need to be updated).
+	 */
+	if !execution_config.IsRouterCompatibleWithExecutionConfig(r.logger, routerConfig.CompatibilityVersion) {
+		return nil, fmt.Errorf(`the comapitibility version "%s" is not compatible with this router version`, routerConfig.CompatibilityVersion)
+	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	s := &graphServer{
