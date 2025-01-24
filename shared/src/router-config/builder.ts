@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
-import { ConfigurationData, FieldConfiguration, ROOT_TYPE_NAMES } from '@wundergraph/composition';
+import { COMPOSITION_VERSION, ConfigurationData, FieldConfiguration, ROOT_TYPE_NAMES } from '@wundergraph/composition';
 import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
 import {
   GraphQLSubscriptionProtocol,
@@ -215,5 +215,6 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       name: s.name,
       routingUrl: s.url,
     })),
+    compatibilityVersion: `1:${COMPOSITION_VERSION}`,
   });
 };
