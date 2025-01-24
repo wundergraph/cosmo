@@ -1912,7 +1912,7 @@ func buildAttributesMap(attributes []config.CustomAttribute) map[string]string {
 	return result
 }
 
-// buildHeaderAttributesMapper returns a function that maps custom attributes to the request headers.fi
+// buildHeaderAttributesMapper returns a function that maps custom attributes to the request headers.
 func buildHeaderAttributesMapper(attributes []config.CustomAttribute) func(req *http.Request) []attribute.KeyValue {
 	if len(attributes) == 0 {
 		return nil
