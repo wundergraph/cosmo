@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -35,13 +36,6 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/nats-io/nats.go"
-	"github.com/hashicorp/consul/sdk/freeport"
-
-	"github.com/wundergraph/cosmo/router/pkg/logging"
-
-	"go.uber.org/zap/zaptest/observer"
-
-	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/prometheus/client_golang/prometheus"
@@ -66,8 +60,6 @@ import (
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
-
-	_ "embed"
 )
 
 var ErrEnvironmentClosed = errors.New("test environment closed")

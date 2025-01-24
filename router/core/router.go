@@ -28,9 +28,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
 	"github.com/redis/go-redis/v9"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/atomic"
@@ -43,9 +41,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -59,7 +54,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 )
 
 type IPAnonymizationMethod string
@@ -195,7 +189,7 @@ type (
 		healthCheckPath                  string
 		readinessCheckPath               string
 		livenessCheckPath                string
-		playgroundConfig                config.PlaygroundConfig
+		playgroundConfig                 config.PlaygroundConfig
 		cacheControlPolicy               config.CacheControlPolicy
 		routerConfigPollerConfig         *RouterConfigPollerConfig
 		cdnConfig                        config.CDNConfiguration
@@ -1745,7 +1739,7 @@ func DefaultGraphQLMetricsConfig() *GraphQLMetricsConfig {
 		}{
 			Enabled:     true,
 			MaxDuration: time.Second * 5,
-			Interval:    time.Second, *5,
+			Interval:    time.Second * 5,
 			MaxAttempts: 5,
 		},
 	}

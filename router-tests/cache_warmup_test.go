@@ -2,19 +2,19 @@ package integration
 
 import (
 	"context"
+	"net/http"
+	"os"
+	"testing"
+	"time"
+
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"net/http"
-	"os"
-	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/encoding/protojson"
 
@@ -945,14 +945,16 @@ func TestCacheWarmupMetrics(t *testing.T) {
 			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
 				routerConfig.FeatureFlagConfigs = nil
 			},
-			AssertCacheMetrics: &testenv.CacheMetricsAssertions{
-				BaseGraphAssertions: testenv.CacheMetricsAssertion{
-					QueryNormalizationMisses: 1,
-					QueryNormalizationHits:   2,
-					ValidationMisses:         1,
-					ValidationHits:           2,
-					PlanMisses:               1,
-					PlanHits:                 2,
+			AssertCacheMetrics: &testenv.AssertCacheMetrics{
+				After: &testenv.CacheMetricsAssertions{
+					BaseGraphAssertions: testenv.CacheMetricsAssertion{
+						QueryNormalizationMisses: 1,
+						QueryNormalizationHits:   2,
+						ValidationMisses:         1,
+						ValidationHits:           2,
+						PlanMisses:               1,
+						PlanHits:                 2,
+					},
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {

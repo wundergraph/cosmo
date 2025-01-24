@@ -246,21 +246,29 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 	request := operation.GetRequest()
 	client := operation.GetClient()
 	variations := request.GetVariableVariations()
+	result := &CacheWarmupOperationPlanResult{
+		ClientName:    client.Name,
+		ClientVersion: client.Version,
+	}
 	if len(variations) == 0 {
-		return c.processOperation(ctx, request, client)
+		err := c.processOperation(ctx, request, result, client)
+		if err != nil {
+			return nil, err
+		}
+		return result, nil
 	}
 	for _, variation := range variations {
 		variables := variation.GetVariables()
 		request.Variables = variables
-		res,err := c.processOperation(ctx, request, client)
+		err := c.processOperation(ctx, request, result, client)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return nil
+	return result, nil
 }
 
-func (c *CacheWarmupPlanningProcessor) processOperation(ctx context.Context, request *nodev1.OperationRequest, client *nodev1.ClientInfo) (*CacheWarmupOperationPlanResult, error) {
+func (c *CacheWarmupPlanningProcessor) processOperation(ctx context.Context, request *nodev1.OperationRequest, result *CacheWarmupOperationPlanResult, client *nodev1.ClientInfo) error {
 
 	var (
 		isAPQ bool
@@ -268,14 +276,14 @@ func (c *CacheWarmupPlanningProcessor) processOperation(ctx context.Context, req
 
 	k, err := c.operationProcessor.NewIndependentKit()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var s []byte
 	if request.GetExtensions() != nil {
 		s, err = protojson.Marshal(request.GetExtensions())
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
@@ -302,44 +310,44 @@ func (c *CacheWarmupPlanningProcessor) processOperation(ctx context.Context, req
 
 	err = k.unmarshalOperation()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = k.ComputeOperationSha256()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if k.parsedOperation.IsPersistedOperation {
 		_, isAPQ, err = k.FetchPersistedOperation(ctx, item.Client)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	err = k.Parse()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	_, err = k.NormalizeOperation(item.Client.Name, isAPQ)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = k.NormalizeVariables()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = k.RemapVariables()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	_, err = k.Validate(true, k.parsedOperation.RemapVariables)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if c.complexityLimits != nil {
@@ -370,22 +378,31 @@ func (c *CacheWarmupPlanningProcessor) processOperation(ctx context.Context, req
 
 	opContext.variables, err = astjson.ParseBytes(k.parsedOperation.Request.Variables)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	planningStart := time.Now()
+	start := time.Now()
 
 	err = c.operationPlanner.plan(opContext, planOptions)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &CacheWarmupOperationPlanResult{
-		OperationHash: strconv.FormatUint(k.parsedOperation.ID, 10),
-		OperationName: k.parsedOperation.Request.OperationName,
-		OperationType: k.parsedOperation.Type,
-		ClientName:    item.Client.Name,
-		ClientVersion: item.Client.Version,
-		PlanningTime:  time.Since(planningStart),
-	}, nil
+	if result.PlanningTime == 0 {
+		result.PlanningTime = time.Since(start)
+	}
+
+	if result.OperationHash == "" {
+		result.OperationHash = strconv.FormatUint(k.parsedOperation.ID, 10)
+	}
+
+	if result.OperationName == "" {
+		result.OperationName = k.parsedOperation.Request.OperationName
+	}
+
+	if result.OperationType == "" {
+		result.OperationType = k.parsedOperation.Type
+	}
+
+	return nil
 }

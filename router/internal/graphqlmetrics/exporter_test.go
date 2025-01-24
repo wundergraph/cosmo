@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
+	"github.com/wundergraph/cosmo/router/internal/exporter"
 	"go.uber.org/zap"
 )
 
@@ -19,7 +20,16 @@ type MyClient struct {
 	t                     *testing.T
 	publishedBatches      [][]*graphqlmetricsv1.SchemaUsageInfo
 	publishedAggregations [][]*graphqlmetricsv1.SchemaUsageInfoAggregation
+	publishedWarmups      []*graphqlmetricsv1.NormalizationCacheWarmupDataAggregation
 	mu                    sync.Mutex
+}
+
+func (m *MyClient) PublishNormalizationCacheWarmupData(ctx context.Context, c *connect.Request[graphqlmetricsv1.PublishNormalizationCacheWarmupDataRequest]) (*connect.Response[graphqlmetricsv1.PublishNormalizationCacheWarmupDataResponse], error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	require.Equal(m.t, "Bearer secret", c.Header().Get("Authorization"))
+	m.publishedWarmups = append(m.publishedWarmups, c.Msg.Aggregation)
+	return nil, nil
 }
 
 func (m *MyClient) PublishAggregatedGraphQLMetrics(ctx context.Context, c *connect.Request[graphqlmetricsv1.PublishAggregatedGraphQLRequestMetricsRequest]) (*connect.Response[graphqlmetricsv1.PublishAggregatedGraphQLRequestMetricsResponse], error) {
@@ -53,11 +63,11 @@ func TestExportAggregationSameSchemaUsages(t *testing.T) {
 		zap.NewNop(),
 		c,
 		"secret",
-		&ExporterSettings{
+		&exporter.Settings{
 			BatchSize: batchSize,
 			QueueSize: queueSize,
 			Interval:  500 * time.Millisecond,
-			RetryOptions: RetryOptions{
+			RetryOptions: exporter.RetryOptions{
 				Enabled:     false,
 				MaxDuration: 300 * time.Millisecond,
 				Interval:    100 * time.Millisecond,
@@ -132,11 +142,11 @@ func TestExportBatchesWithUniqueSchemaUsages(t *testing.T) {
 		zap.NewNop(),
 		c,
 		"secret",
-		&ExporterSettings{
+		&exporter.Settings{
 			BatchSize: batchSize,
 			QueueSize: queueSize,
 			Interval:  time.Second * 5,
-			RetryOptions: RetryOptions{
+			RetryOptions: exporter.RetryOptions{
 				Enabled:     false,
 				MaxDuration: 300 * time.Millisecond,
 				Interval:    100 * time.Millisecond,
@@ -201,13 +211,13 @@ func TestForceFlushSync(t *testing.T) {
 		zap.NewNop(),
 		c,
 		"secret",
-		&ExporterSettings{
+		&exporter.Settings{
 			BatchSize: batchSize,
 			QueueSize: queueSize,
 			// Intentionally set to a high value to make sure that the exporter is forced to flush immediately
 			Interval:      5000 * time.Millisecond,
 			ExportTimeout: 5000 * time.Millisecond,
-			RetryOptions: RetryOptions{
+			RetryOptions: exporter.RetryOptions{
 				Enabled:     false,
 				MaxDuration: 300 * time.Millisecond,
 				Interval:    100 * time.Millisecond,
@@ -316,11 +326,11 @@ func TestExportBatchInterval(t *testing.T) {
 		zap.NewNop(),
 		c,
 		"secret",
-		&ExporterSettings{
+		&exporter.Settings{
 			BatchSize: batchSize,
 			QueueSize: queueSize,
 			Interval:  100 * time.Millisecond,
-			RetryOptions: RetryOptions{
+			RetryOptions: exporter.RetryOptions{
 				Enabled:     false,
 				MaxDuration: 300 * time.Millisecond,
 				Interval:    100 * time.Millisecond,
@@ -388,11 +398,11 @@ func TestExportFullQueue(t *testing.T) {
 		zap.NewNop(),
 		c,
 		"secret",
-		&ExporterSettings{
+		&exporter.Settings{
 			BatchSize: batchSize,
 			QueueSize: queueSize,
 			Interval:  500 * time.Millisecond,
-			RetryOptions: RetryOptions{
+			RetryOptions: exporter.RetryOptions{
 				Enabled:     false,
 				MaxDuration: 300 * time.Millisecond,
 				Interval:    100 * time.Millisecond,
