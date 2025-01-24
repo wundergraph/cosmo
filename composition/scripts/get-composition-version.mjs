@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const compositionVersion = '{{$COMPOSITION__VERSION}}';
 
-// From pnpm v10+, hooks will not be supported.
+// From pnpm v10+, modules will explicitly need to set whether a hook is allowed to run.
 if (process.argv[1] === __filename) {
   const json = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json')).toString());
   const version = json.version;
