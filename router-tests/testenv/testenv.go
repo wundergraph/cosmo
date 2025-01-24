@@ -73,6 +73,8 @@ const (
 var (
 	//go:embed testdata/config.json
 	ConfigJSONTemplate string
+	//go:embed testdata/configWithStatic.json
+	ConfigWithStaticJSONTemplate string
 	//go:embed testdata/configWithEdfs.json
 	ConfigWithEdfsJSONTemplate string
 	//go:embed testdata/configWithEdfsKafka.json

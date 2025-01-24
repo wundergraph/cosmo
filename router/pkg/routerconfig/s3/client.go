@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -66,8 +67,7 @@ func NewClient(endpoint string, options *ClientOptions) (routerconfig.Client, er
 	return client, nil
 }
 
-func (c Client) RouterConfig(ctx context.Context, version string, modifiedSince time.Time) (*routerconfig.Response, error) {
-
+func (c Client) getConfigFile(ctx context.Context, version string, modifiedSince time.Time) ([]byte, error) {
 	options := minio.GetObjectOptions{}
 
 	if !modifiedSince.IsZero() {
@@ -89,13 +89,21 @@ func (c Client) RouterConfig(ctx context.Context, version string, modifiedSince 
 	}
 	defer reader.Close()
 
-	body, err := io.ReadAll(reader)
+	return io.ReadAll(reader)
+}
+
+func (c Client) RouterConfig(ctx context.Context, version string, modifiedSince time.Time) (*routerconfig.Response, error) {
+	body, err := c.getConfigFile(ctx, version, modifiedSince)
 	if err != nil {
 		var minioErr minio.ErrorResponse
 		if errors.As(err, &minioErr) && minioErr.StatusCode == http.StatusNotModified {
 			return nil, configpoller.ErrConfigNotModified
+		} else if !strings.Contains(err.Error(), "NoSuchKey") {
+			return nil, err
 		}
-		return nil, err
+
+		// If the config file is not found, we return a starting config.
+		body = routerconfig.GetDefaultConfig()
 	}
 
 	routerConfig, err := execution_config.UnmarshalConfig(body)

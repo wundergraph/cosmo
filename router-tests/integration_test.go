@@ -49,6 +49,19 @@ func TestSimpleQuery(t *testing.T) {
 	})
 }
 
+func TestNoSubgraphConfig(t *testing.T) {
+	t.Parallel()
+
+	testenv.Run(t, &testenv.Config{
+		RouterConfigJSONTemplate: testenv.ConfigWithStaticJSONTemplate,
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `query { hello }`,
+		})
+		require.JSONEq(t, `{"data":{"hello":"world"}}`, res.Body)
+	})
+}
+
 func TestContentTypes(t *testing.T) {
 	t.Parallel()
 
