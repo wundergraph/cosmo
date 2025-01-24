@@ -6,7 +6,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,6 +28,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
+	"github.com/hashicorp/consul/sdk/freeport"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-retryablehttp"
+	"github.com/nats-io/nats.go"
 	"github.com/hashicorp/consul/sdk/freeport"
 
 	"github.com/wundergraph/cosmo/router/pkg/logging"
@@ -38,35 +44,30 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 
 	"github.com/nats-io/nats.go/jetstream"
-
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stretchr/testify/require"
 	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kgo"
-
-	"github.com/google/uuid"
-	"github.com/prometheus/client_golang/prometheus"
-	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
-	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/trace"
-
-	"github.com/hashicorp/go-cleanhttp"
-
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/gorilla/websocket"
-	"github.com/hashicorp/go-retryablehttp"
-	"github.com/nats-io/nats.go"
-	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
+
+	_ "embed"
 )
 
 var ErrEnvironmentClosed = errors.New("test environment closed")
@@ -350,7 +351,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	t.Helper()
 
 	var (
-		metricReader     *metric.ManualReader
 		kafkaAdminClient *kadm.Client
 		kafkaStarted     sync.WaitGroup
 		kafkaClient      *kgo.Client
@@ -401,8 +401,9 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	if cfg.AssertCacheMetrics != nil {
-		metricReader = metric.NewManualReader()
-		cfg.MetricReader = metricReader
+		if cfg.MetricReader == nil {
+			cfg.MetricReader = metric.NewManualReader()
+		}
 		cfg.MetricOptions.EnableOTLPRouterCache = true
 	}
 
@@ -716,7 +717,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		shutdown:                atomic.NewBool(false),
 		logObserver:             logObserver,
 		getPubSubName:           getPubSubName,
-		metricReader:            metricReader,
+		metricReader:            cfg.MetricReader,
 		Servers: []*httptest.Server{
 			employeesServer,
 			familyServer,
@@ -742,7 +743,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		}
 	}
 
-	waitErr := e.WaitForServer(ctx, e.RouterURL+"/health/live", 100, 10)
+	waitErr := e.WaitForServer(ctx, e.RouterURL+"/health/ready", 100, 10)
 
 	return e, waitErr
 }
@@ -853,6 +854,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithGraphApiToken(graphApiToken),
 		core.WithDevelopmentMode(true),
 		core.WithPlayground(true),
+		core.WithPlaygroundConfig(config.PlaygroundConfig{Enabled: true}),
 		core.WithEngineExecutionConfig(engineExecutionConfig),
 		core.WithSecurityConfig(cfg.SecurityConfiguration),
 		core.WithCacheControlPolicy(cfg.CacheControl),
@@ -1091,7 +1093,7 @@ type Environment struct {
 	routerConfigVersionMain string
 	routerConfigVersionMyFF string
 
-	metricReader *metric.ManualReader
+	metricReader metric.Reader
 }
 
 func GetPubSubNameFn(prefix string) func(name string) string {
