@@ -179,8 +179,20 @@ type SubgraphTrafficRequestRule struct {
 }
 
 type GraphqlMetrics struct {
-	Enabled           bool   `yaml:"enabled" envDefault:"true" env:"GRAPHQL_METRICS_ENABLED"`
-	CollectorEndpoint string `yaml:"collector_endpoint" envDefault:"https://cosmo-metrics.wundergraph.com" env:"GRAPHQL_METRICS_COLLECTOR_ENDPOINT"`
+	Enabled           bool                       `yaml:"enabled" envDefault:"true" env:"GRAPHQL_METRICS_ENABLED"`
+	CollectorEndpoint string                     `yaml:"collector_endpoint" envDefault:"https://cosmo-metrics.wundergraph.com" env:"GRAPHQL_METRICS_COLLECTOR_ENDPOINT"`
+	BatchInterval     time.Duration              `yaml:"batch_interval" envDefault:"10s" env:"GRAPHQL_METRICS_BATCH_INTERVAL"`
+	BatchSize         int                        `yaml:"batch_size" envDefault:"1024" env:"GRAPHQL_METRICS_BATCH_SIZE"`
+	QueueSize         int                        `yaml:"queue_size" envDefault:"1024" env:"GRAPHQL_METRICS_QUEUE_SIZE"`
+	ExportTimeout     time.Duration              `yaml:"export_timeout" envDefault:"10s" env:"GRAPHQL_METRICS_EXPORT_TIMEOUT"`
+	RetryOptions      GraphQLMetricsRetryOptions `yaml:"retry_options"`
+}
+
+type GraphQLMetricsRetryOptions struct {
+	Enabled     bool          `yaml:"enabled" envDefault:"true" env:"GRAPHQL_METRICS_RETRY_ENABLED"`
+	MaxDuration time.Duration `yaml:"max_duration" envDefault:"10s" env:"GRAPHQL_METRICS_RETRY_MAX_DURATION"`
+	Interval    time.Duration `yaml:"interval" envDefault:"5s" env:"GRAPHQL_METRICS_RETRY_INTERVAL"`
+	MaxAttempts int           `yaml:"max_attempts" envDefault:"5" env:"GRAPHQL_METRICS_RETRY_MAX_ATTEMPTS"`
 }
 
 type BackoffJitterRetry struct {

@@ -27,10 +27,10 @@ message SchemaUsageInfo {
   SchemaInfo SchemaInfo = 4;
   // ClientInfo is the client info
   ClientInfo ClientInfo = 5;
- // RequestInfo is the request info
+  // RequestInfo is the request info
   RequestInfo RequestInfo = 6;
   // Attributes is a map of attributes that can be used to filter the metrics
-  map<string,string> Attributes = 7;
+  map<string, string> Attributes = 7;
   // ArgumentMetrics is the list of used arguments in the request document
   repeated ArgumentUsageInfo ArgumentMetrics = 8;
   // InputMetrics is the list of used input fields in the request document
@@ -38,8 +38,8 @@ message SchemaUsageInfo {
 }
 
 message SchemaUsageInfoAggregation {
-    SchemaUsageInfo SchemaUsage = 1;
-    uint64 RequestCount = 2;
+  SchemaUsageInfo SchemaUsage = 1;
+  uint64 RequestCount = 2;
 }
 
 message ClientInfo {
@@ -118,8 +118,40 @@ message PublishAggregatedGraphQLRequestMetricsRequest {
 message PublishAggregatedGraphQLRequestMetricsResponse {
 }
 
+message NormalizationCacheWarmupData {
+  NormalizationCacheWarmupDataQuery query = 1;
+  bool Encrypted = 3;
+  map<uint64,VariableVariation> VariableVariations = 4;
+}
+
+message NormalizationCacheWarmupDataQuery {
+  string Query = 1;
+  uint64 Hash = 2;
+}
+
+message VariableVariation {
+  repeated VariableValue VariableValues = 1;
+}
+
+message VariableValue {
+  string Key = 1;
+  bool Value = 2;
+}
+
+message NormalizationCacheWarmupDataAggregation {
+  map<uint64,NormalizationCacheWarmupData> Operations = 1;
+}
+
+message PublishNormalizationCacheWarmupDataRequest {
+  NormalizationCacheWarmupDataAggregation Aggregation = 1;
+}
+
+message PublishNormalizationCacheWarmupDataResponse {
+}
+
 service GraphQLMetricsService {
   // PublishGraphQLMetrics publishes the GraphQL metrics to the metrics service
   rpc PublishGraphQLMetrics(PublishGraphQLRequestMetricsRequest) returns (PublishOperationCoverageReportResponse) {}
   rpc PublishAggregatedGraphQLMetrics(PublishAggregatedGraphQLRequestMetricsRequest) returns (PublishAggregatedGraphQLRequestMetricsResponse) {}
+  rpc PublishNormalizationCacheWarmupData(PublishNormalizationCacheWarmupDataRequest) returns (PublishNormalizationCacheWarmupDataResponse) {}
 }

@@ -486,6 +486,10 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 			return err
 		}
 
+		if h.trackSchemaUsageInfo {
+			requestContext.operation.normalizationWarmupData = operationKit.ExtractNormalizationCacheWarmupData()
+		}
+
 		requestContext.operation.parsingTime = time.Since(startParsing)
 		if !requestContext.operation.traceOptions.ExcludeParseStats {
 			httpOperation.traceTimings.EndParse()

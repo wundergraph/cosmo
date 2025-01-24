@@ -496,9 +496,10 @@ type operationContext struct {
 	persistedOperationCacheHit bool
 	normalizationCacheHit      bool
 
-	typeFieldUsageInfo []*graphqlmetrics.TypeFieldUsageInfo
-	argumentUsageInfo  []*graphqlmetrics.ArgumentUsageInfo
-	inputUsageInfo     []*graphqlmetrics.InputUsageInfo
+	typeFieldUsageInfo      []*graphqlmetrics.TypeFieldUsageInfo
+	argumentUsageInfo       []*graphqlmetrics.ArgumentUsageInfo
+	inputUsageInfo          []*graphqlmetrics.InputUsageInfo
+	normalizationWarmupData *graphqlmetrics.NormalizationCacheWarmupData
 
 	parsingTime       time.Duration
 	validationTime    time.Duration

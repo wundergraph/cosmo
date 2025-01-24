@@ -281,6 +281,67 @@
           "type": "string",
           "description": "The endpoint to which the GraphQL metrics are collected. The endpoint is specified as a string with the format 'scheme://host:port'.",
           "format": "http-url"
+        },
+        "batch_interval": {
+          "type": "string",
+          "description": "The interval at which the metrics are collected. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "10s",
+          "duration": {
+            "minimum": "1s"
+          }
+        },
+        "batch_size": {
+          "type": "integer",
+          "description": "The size of the batch used to buffer the metrics before sending them to the collector. The default value is 1024.",
+          "default": 1024,
+          "minimum": 1
+        },
+        "queue_size": {
+          "type": "integer",
+          "description": "The size of the queue used to buffer the metrics before sending them to the collector. The default value is 1024.",
+          "default": 1024,
+          "minimum": 1
+        },
+        "export_timeout": {
+          "type": "string",
+          "description": "The maximum time to wait for the export to complete. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "10s",
+          "duration": {
+            "minimum": "1s"
+          }
+        },
+        "retry_options": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the retry options. The default value is true.",
+              "default": true
+            },
+            "max_duration": {
+              "type": "string",
+              "description": "The maximum duration to retry the export. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "10s",
+              "duration": {
+                "minimum": "1s"
+              }
+            },
+            "interval": {
+              "type": "string",
+              "description": "The interval at which the export is retried. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+              "default": "5s",
+              "duration": {
+                "minimum": "1s"
+              }
+            },
+            "max_attempts": {
+              "type": "integer",
+              "description": "The maximum number of attempts to retry the export. The default value is 3.",
+              "default": 5,
+              "minimum": 1
+            }
+          }
         }
       }
     },

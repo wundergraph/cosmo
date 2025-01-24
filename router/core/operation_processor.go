@@ -19,7 +19,8 @@ import (
 	"github.com/dgraph-io/ristretto"
 	"github.com/pkg/errors"
 	"github.com/tidwall/sjson"
-	fastjson "github.com/wundergraph/astjson"
+	"github.com/wundergraph/astjson"
+	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/apollocompatibility"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -55,7 +56,7 @@ type ParsedOperation struct {
 	// Type is a string representing the operation type. One of
 	// "query", "mutation", "subscription"
 	Type           string
-	Variables      *fastjson.Object
+	Variables      *astjson.Object
 	RemapVariables map[string]string
 	// Files is a list of files, an interface representing the file data needed to be passed forward.
 	Files []httpclient.File
@@ -311,7 +312,7 @@ func (o *OperationKit) unmarshalOperation() error {
 
 	if o.parsedOperation.Request.Variables != nil {
 		// variables must be a valid JSON object or null
-		variables, err := fastjson.ParseBytes(o.parsedOperation.Request.Variables)
+		variables, err := astjson.ParseBytes(o.parsedOperation.Request.Variables)
 		if err != nil {
 			return &httpGraphqlError{
 				message:    fmt.Sprintf("error parsing variables: %s", err),
@@ -319,12 +320,12 @@ func (o *OperationKit) unmarshalOperation() error {
 			}
 		}
 		switch variables.Type() {
-		case fastjson.TypeNull:
+		case astjson.TypeNull:
 			// set variables to empty object if they are null, so we can later add exported defaults
 			// also, other parts of the engine depend on variables being a valid JSON object
 			o.parsedOperation.Request.Variables = []byte("{}")
-			o.parsedOperation.Variables = fastjson.MustParseBytes(o.parsedOperation.Request.Variables).GetObject()
-		case fastjson.TypeObject:
+			o.parsedOperation.Variables = astjson.MustParseBytes(o.parsedOperation.Request.Variables).GetObject()
+		case astjson.TypeObject:
 			o.parsedOperation.Variables = variables.GetObject()
 		default:
 			return &httpGraphqlError{
@@ -336,7 +337,7 @@ func (o *OperationKit) unmarshalOperation() error {
 		// set variables to empty object if they are null, so we can later add exported defaults
 		// also, other parts of the engine depend on variables being a valid JSON object
 		o.parsedOperation.Request.Variables = []byte("{}")
-		o.parsedOperation.Variables = fastjson.MustParseBytes(o.parsedOperation.Request.Variables).GetObject()
+		o.parsedOperation.Variables = astjson.MustParseBytes(o.parsedOperation.Request.Variables).GetObject()
 	}
 
 	// we're doing string matching on the operation name, so we override null with empty string
@@ -381,7 +382,7 @@ func (o *OperationKit) ComputeOperationSha256() error {
 
 // FetchPersistedOperation fetches the persisted operation from the cache or the client. If the operation is fetched from the cache it returns true.
 // UnmarshalOperationFromBody or UnmarshalOperationFromURL must be called before calling this method.
-func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *ClientInfo) (bool, bool, error) {
+func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *ClientInfo) (skipParse bool, isAPQ bool, err error) {
 	if o.operationProcessor.persistedOperationClient == nil {
 		return false, false, &httpGraphqlError{
 			message:    "could not resolve persisted query, feature is not configured",
@@ -613,6 +614,56 @@ func (o *OperationKit) Parse() error {
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = replaceOperationName
 
 	return nil
+}
+
+func (o *OperationKit) ExtractNormalizationCacheWarmupData() *graphqlmetricsv1.NormalizationCacheWarmupData {
+	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.Request.Query)
+	out := &graphqlmetricsv1.NormalizationCacheWarmupData{
+		Query: &graphqlmetricsv1.NormalizationCacheWarmupDataQuery{
+			Query: o.parsedOperation.Request.Query,
+			Hash:  o.kit.keyGen.Sum64(),
+		},
+		VariableVariations: make(map[uint64]*graphqlmetricsv1.VariableVariation, 1),
+		Encrypted:          false,
+	}
+	o.kit.keyGen.Reset()
+	variables := o.skipIncludeVariableNames()
+	variation := &graphqlmetricsv1.VariableVariation{
+		VariableValues: make([]*graphqlmetricsv1.VariableValue, 0, len(variables)),
+	}
+	if len(variables) != 0 {
+		slices.Sort(variables) // sort the variables to ensure a consistent order
+		for _, key := range variables {
+			_, _ = o.kit.keyGen.WriteString(key)
+			value := o.parsedOperation.Variables.Get(key)
+			if value == nil {
+				_, _ = o.kit.keyGen.WriteString("n")
+				continue
+			}
+			if value.Type() == astjson.TypeTrue {
+				variation.VariableValues = append(variation.VariableValues, &graphqlmetricsv1.VariableValue{
+					Key:   key,
+					Value: true,
+				})
+				_, _ = o.kit.keyGen.WriteString("t")
+				continue
+			}
+			if value.Type() == astjson.TypeFalse {
+				variation.VariableValues = append(variation.VariableValues, &graphqlmetricsv1.VariableValue{
+					Key:   key,
+					Value: false,
+				})
+				_, _ = o.kit.keyGen.WriteString("f")
+				continue
+			} else {
+				_, _ = o.kit.keyGen.WriteString("s")
+			}
+		}
+	}
+	key := o.kit.keyGen.Sum64()
+	out.VariableVariations[key] = variation
+	o.kit.keyGen.Reset()
+	return out
 }
 
 // NormalizeOperation normalizes the operation. After normalization the normalized representation of the operation
@@ -918,11 +969,11 @@ func (o *OperationKit) jsonIsNull(variables []byte) bool {
 	if len(variables) == 4 && unsafebytes.BytesToString(variables) == "null" {
 		return true
 	}
-	value, err := fastjson.ParseBytes(variables)
+	value, err := astjson.ParseBytes(variables)
 	if err != nil {
 		return false
 	}
-	return value.Type() == fastjson.TypeNull
+	return value.Type() == astjson.TypeNull
 }
 
 func (o *OperationKit) persistedOperationCacheKeyHasTtl(clientName string, includeOperationName bool) (bool, []string) {
@@ -998,16 +1049,16 @@ func (o *OperationKit) writeSkipIncludeCacheKeyToKeyGen(skipIncludeVariableNames
 	for i := range skipIncludeVariableNames {
 		value := o.parsedOperation.Variables.Get(skipIncludeVariableNames[i])
 		if value == nil {
-			_, _ = o.kit.keyGen.WriteString("x")
+			_, _ = o.kit.keyGen.WriteString("n")
 			continue
 		}
 		switch value.Type() {
-		case fastjson.TypeTrue:
+		case astjson.TypeTrue:
 			_, _ = o.kit.keyGen.WriteString("t")
-		case fastjson.TypeFalse:
+		case astjson.TypeFalse:
 			_, _ = o.kit.keyGen.WriteString("f")
 		default:
-			_, _ = o.kit.keyGen.WriteString("x")
+			_, _ = o.kit.keyGen.WriteString("s")
 		}
 	}
 }
@@ -1085,7 +1136,7 @@ func (o *OperationKit) ValidateQueryComplexity(complexityLimitConfig *config.Com
 }
 
 func (o *OperationKit) runComplexityComparisons(complexityLimitConfig *config.ComplexityLimits, cachedComplexity ComplexityCacheEntry, isPersisted bool) error {
-	testComparisons := []complexityComparison{}
+	var testComparisons []complexityComparison
 	if complexityLimitConfig.Depth != nil && complexityLimitConfig.Depth.ApplyLimit(isPersisted) {
 		testComparisons = append(testComparisons,
 			complexityComparison{complexityLimitConfig.Depth.Limit, cachedComplexity.Depth, fmt.Sprintf("The query depth %d exceeds the max query depth allowed (%d)", cachedComplexity.Depth, complexityLimitConfig.Depth.Limit)})

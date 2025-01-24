@@ -10,12 +10,13 @@ import (
 	"github.com/cloudflare/backoff"
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
+	"github.com/wundergraph/cosmo/router/internal/exporter"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 )
 
 type Exporter struct {
-	settings *ExporterSettings
+	settings *exporter.Settings
 	logger   *zap.Logger
 	client   graphqlmetricsv1connect.GraphQLMetricsServiceClient
 	apiToken string
@@ -33,55 +34,10 @@ type Exporter struct {
 	cancelAllExportRequests context.CancelFunc
 }
 
-type RetryOptions struct {
-	Enabled     bool
-	MaxDuration time.Duration
-	Interval    time.Duration
-	MaxRetry    int
-}
-
-const (
-	defaultExportTimeout          = time.Duration(10) * time.Second
-	defaultExportRetryMaxDuration = time.Duration(10) * time.Second
-	defaultExportRetryInterval    = time.Duration(5) * time.Second
-	defaultExportMaxRetryAttempts = 5
-	defaultMaxBatchItems          = 1024
-	defaultMaxQueueSize           = 1024 * 10
-	defaultBatchInterval          = time.Duration(10) * time.Second
-)
-
-type ExporterSettings struct {
-	// BatchSize is the maximum number of items to be sent in a single batch.
-	BatchSize int
-	// QueueSize is the maximum number of batches allowed in queue at a given time.
-	QueueSize int
-	// Interval is the interval at which the queue is flushed.
-	Interval time.Duration
-	// Retry is the retry options for the exporter.
-	RetryOptions RetryOptions
-	// ExportTimeout is the timeout for the export request.
-	ExportTimeout time.Duration
-}
-
-func NewDefaultExporterSettings() *ExporterSettings {
-	return &ExporterSettings{
-		BatchSize:     defaultMaxBatchItems,
-		QueueSize:     defaultMaxQueueSize,
-		Interval:      defaultBatchInterval,
-		ExportTimeout: defaultExportTimeout,
-		RetryOptions: RetryOptions{
-			Enabled:     true,
-			MaxRetry:    defaultExportMaxRetryAttempts,
-			MaxDuration: defaultExportRetryMaxDuration,
-			Interval:    defaultExportRetryInterval,
-		},
-	}
-}
-
 // NewExporter creates a new GraphQL metrics exporter. The collectorEndpoint is the endpoint to which the metrics
 // are sent. The apiToken is the token used to authenticate with the collector. The collector supports Brotli compression
 // and retries on failure. Underling queue implementation sends batches of metrics at the specified interval and batch size.
-func NewExporter(logger *zap.Logger, client graphqlmetricsv1connect.GraphQLMetricsServiceClient, apiToken string, settings *ExporterSettings) (*Exporter, error) {
+func NewExporter(logger *zap.Logger, client graphqlmetricsv1connect.GraphQLMetricsServiceClient, apiToken string, settings *exporter.Settings) (*Exporter, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	e := &Exporter{
 		logger:                  logger.With(zap.String("component", "graphqlmetrics_exporter")),

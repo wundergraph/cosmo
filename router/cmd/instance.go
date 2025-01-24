@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/dustin/go-humanize"
@@ -120,6 +121,21 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 		core.WithGraphQLMetrics(&core.GraphQLMetricsConfig{
 			Enabled:           cfg.GraphqlMetrics.Enabled,
 			CollectorEndpoint: cfg.GraphqlMetrics.CollectorEndpoint,
+			BatchSize:         cfg.GraphqlMetrics.BatchSize,
+			BatchInterval:     cfg.GraphqlMetrics.BatchInterval,
+			QueueSize:         cfg.GraphqlMetrics.QueueSize,
+			ExportTimeout:     cfg.GraphqlMetrics.ExportTimeout,
+			RetryOptions: struct {
+				Enabled     bool
+				MaxDuration time.Duration
+				Interval    time.Duration
+				MaxAttempts int
+			}{
+				Enabled:     cfg.GraphqlMetrics.RetryOptions.Enabled,
+				MaxAttempts: cfg.GraphqlMetrics.RetryOptions.MaxAttempts,
+				Interval:    cfg.GraphqlMetrics.RetryOptions.Interval,
+				MaxDuration: cfg.GraphqlMetrics.RetryOptions.MaxDuration,
+			},
 		}),
 		core.WithAnonymization(&core.IPAnonymizationConfig{
 			Enabled: cfg.Compliance.AnonymizeIP.Enabled,
