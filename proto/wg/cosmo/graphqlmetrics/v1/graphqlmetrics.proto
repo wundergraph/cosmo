@@ -125,7 +125,9 @@ message NormalizationCacheWarmupData {
 }
 
 message NormalizationCacheWarmupDataQuery {
+  // Query is the original query sent by the client
   string Query = 1;
+  // Hash is the hash of the fully normalized query
   uint64 Hash = 2;
 }
 
