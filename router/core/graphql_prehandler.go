@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -349,6 +350,16 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		art.SetRequestTracingStats(r.Context(), traceOptions, traceTimings)
+
+		if traceOptions.Enable {
+			reqData := &resolve.RequestData{
+				Method:  r.Method,
+				URL:     r.URL.String(),
+				Headers: r.Header,
+				Body:    json.RawMessage(body),
+			}
+			r = r.WithContext(resolve.SetRequest(r.Context(), reqData))
+		}
 
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
@@ -769,6 +780,11 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	// we could log the query plan only if query plans are calculated
 	if (h.queryPlansEnabled && requestContext.operation.executionOptions.IncludeQueryPlanInResponse) ||
 		h.alwaysIncludeQueryPlan {
+
+		switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
+		case *plan.SynchronousResponsePlan:
+			p.Response.Fetches.NormalizedQuery = operationKit.parsedOperation.NormalizedRepresentation
+		}
 
 		if h.queryPlansLoggingEnabled {
 			switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
