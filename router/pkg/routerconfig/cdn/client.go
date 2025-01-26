@@ -220,24 +220,23 @@ func (cdn *Client) getRouterConfig(ctx context.Context, version string, modified
 }
 
 func (cdn *Client) RouterConfig(ctx context.Context, version string, modifiedSince time.Time) (*routerconfig.Response, error) {
+	res := &routerconfig.Response{}
+
 	body, err := cdn.getRouterConfig(ctx, version, modifiedSince)
 	if err != nil && errors.Is(err, ErrConfigNotFound) {
-		body = routerconfig.GetDefaultConfig()
+		res.Config = routerconfig.GetDefaultConfig()
+		return res, nil
 	} else if err != nil {
 		return nil, err
 	}
 
 	/*
-	* Serialize the response body to a RouterConfig object
+	* Unmarshal the response body to a RouterConfig object
 	 */
 
-	routerConfig, err := execution_config.UnmarshalConfig(body)
+	res.Config, err = execution_config.UnmarshalConfig(body)
 	if err != nil {
 		return nil, fmt.Errorf("could not unmarshal router external router config from CDN: %w", err)
 	}
-
-	res := &routerconfig.Response{}
-	res.Config = routerConfig
-
 	return res, nil
 }

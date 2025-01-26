@@ -93,6 +93,8 @@ func (c Client) getConfigFile(ctx context.Context, version string, modifiedSince
 }
 
 func (c Client) RouterConfig(ctx context.Context, version string, modifiedSince time.Time) (*routerconfig.Response, error) {
+	res := &routerconfig.Response{}
+
 	body, err := c.getConfigFile(ctx, version, modifiedSince)
 	if err != nil {
 		var minioErr minio.ErrorResponse
@@ -102,17 +104,10 @@ func (c Client) RouterConfig(ctx context.Context, version string, modifiedSince 
 			return nil, err
 		}
 
-		// If the config file is not found, we return a starting config.
-		body = routerconfig.GetDefaultConfig()
+		res.Config = routerconfig.GetDefaultConfig()
+		return res, nil
 	}
 
-	routerConfig, err := execution_config.UnmarshalConfig(body)
-	if err != nil {
-		return nil, err
-	}
-
-	result := &routerconfig.Response{}
-	result.Config = routerConfig
-
-	return result, nil
+	res.Config, err = execution_config.UnmarshalConfig(body)
+	return res, err
 }
