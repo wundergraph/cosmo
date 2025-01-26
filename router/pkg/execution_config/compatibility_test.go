@@ -51,7 +51,7 @@ func TestExecutionConfiguration(t *testing.T) {
 		assert.Equal(t, zap.String("compatibility_version", compatibilityVersion), logsSlice[0].Context[0])
 	})
 
-	t.Run("return an error if execution config version is unparsable", func(t *testing.T) {
+	t.Run("return an error if the router compatibility version is unparsable", func(t *testing.T) {
 		observed, logs := observer.New(zapcore.DebugLevel)
 		logger := newLogger(observed)
 		compatibilityVersion := "a:0.1.0"
@@ -64,7 +64,7 @@ func TestExecutionConfiguration(t *testing.T) {
 		assert.Equal(t, zap.String("compatibility_version", compatibilityVersion), logsSlice[0].Context[0])
 	})
 
-	t.Run("return an error if the maximum execution config version threshold of the router is exceeded", func(t *testing.T) {
+	t.Run("return an error if the maximum router compatibility version threshold of the router is exceeded", func(t *testing.T) {
 		observed, logs := observer.New(zapcore.DebugLevel)
 		logger := newLogger(observed)
 		nextVersion := int64(RouterCompatibilityVersionThreshold + 1)
@@ -76,11 +76,11 @@ func TestExecutionConfiguration(t *testing.T) {
 		assert.Equal(t, executionConfigVersionThresholdExceededError(nextVersion), logsSlice[0].Message)
 		assert.Equal(t, zapcore.ErrorLevel, logsSlice[0].Level)
 		assert.Equal(t, 2, len(logsSlice[0].Context))
-		assert.Equal(t, zap.Int64("execution_config_version", nextVersion), logsSlice[0].Context[0])
+		assert.Equal(t, zap.Int64("router_compatibility_version", nextVersion), logsSlice[0].Context[0])
 		assert.Equal(t, zap.String("composition_package_version", compVersion), logsSlice[0].Context[1])
 	})
 
-	t.Run("return a warning if the execution config version is insufficient", func(t *testing.T) {
+	t.Run("return a warning if the router compatibility version is insufficient", func(t *testing.T) {
 		observed, logs := observer.New(zapcore.DebugLevel)
 		logger := newLogger(observed)
 		previousVersion := int64(RouterCompatibilityVersionThreshold - 1)
@@ -92,7 +92,7 @@ func TestExecutionConfiguration(t *testing.T) {
 		assert.Equal(t, executionConfigVersionInsufficientWarning(previousVersion), logsSlice[0].Message)
 		assert.Equal(t, zapcore.WarnLevel, logsSlice[0].Level)
 		assert.Equal(t, 2, len(logsSlice[0].Context))
-		assert.Equal(t, zap.Int64("execution_config_version", previousVersion), logsSlice[0].Context[0])
+		assert.Equal(t, zap.Int64("router_compatibility_version", previousVersion), logsSlice[0].Context[0])
 		assert.Equal(t, zap.String("composition_package_version", compVersion), logsSlice[0].Context[1])
 	})
 }
