@@ -1,0 +1,1 @@
+export const COMPOSITION_VERSION = '{{$COMPOSITION__VERSION}}';

@@ -1117,6 +1117,16 @@ func (r *Router) Start(ctx context.Context) error {
 					return nil
 				}
 
+				/* Older versions of composition will not populate a compatibility version.
+				 * Currently, all "old" router execution configurations are compatible as there have been no breaking
+				 * changes.
+				 * Upon the first breaking change to the execution config, an unpopulated compatibility version will
+				 * also be unsupported (and the logic for IsRouterCompatibleWithExecutionConfig will need to be updated).
+				 */
+				if !execution_config.IsRouterCompatibleWithExecutionConfig(r.logger, cfg.CompatibilityVersion) {
+					return nil
+				}
+
 				if err := r.newServer(ctx, cfg); err != nil {
 					r.logger.Error("Failed to update server with new config", zap.Error(err))
 					return nil
