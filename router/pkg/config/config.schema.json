@@ -830,6 +830,10 @@
                         "type": "string",
                         "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
                       },
+                      "expression": {
+                        "type": "string",
+                        "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used."
+                      },
                       "context_field": {
                         "type": "string",
                         "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
@@ -2594,6 +2598,10 @@
               "response_header": {
                 "type": "string",
                 "description": "The name of the response header from which to extract the value. The value is only extracted for subgraph access logs"
+              },
+              "expression": {
+                "type": "string",
+                "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used."
               },
               "context_field": {
                 "type": "string",
