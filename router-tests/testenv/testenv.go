@@ -87,10 +87,12 @@ var (
 func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	t.Helper()
 	env, err := createTestEnv(t, cfg)
+	if env != nil {
+		t.Cleanup(env.Shutdown)
+	}
 	if err != nil {
 		t.Fatalf("could not create environment: %s", err)
 	}
-	t.Cleanup(env.Shutdown)
 	f(t, env)
 	if cfg.AssertCacheMetrics != nil {
 		assertCacheMetrics(t, env, cfg.AssertCacheMetrics.BaseGraphAssertions, "")
@@ -106,7 +108,9 @@ func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 func RunWithError(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) error {
 	t.Helper()
 	env, err := createTestEnv(t, cfg)
-	t.Cleanup(env.Shutdown)
+	if env != nil {
+		t.Cleanup(env.Shutdown)
+	}
 	if err != nil {
 		return err
 	}
@@ -122,10 +126,12 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 	b.Helper()
 	b.StopTimer()
 	env, err := createTestEnv(b, cfg)
+	if env != nil {
+		b.Cleanup(env.Shutdown)
+	}
 	if err != nil {
 		b.Fatalf("could not create environment: %s", err)
 	}
-	b.Cleanup(env.Shutdown)
 	b.StartTimer()
 	f(b, env)
 	if cfg.AssertCacheMetrics != nil {
