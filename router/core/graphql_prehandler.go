@@ -356,7 +356,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				Method:  r.Method,
 				URL:     r.URL.String(),
 				Headers: r.Header,
-				Body: &resolve.BodyData{
+				Body: resolve.BodyData{
 					Query:         requestContext.operation.rawContent,
 					OperationName: requestContext.operation.name,
 					Variables:     json.RawMessage(requestContext.operation.variables.String()),
