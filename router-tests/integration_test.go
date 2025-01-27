@@ -52,13 +52,11 @@ func TestSimpleQuery(t *testing.T) {
 func TestNoSubgraphConfig(t *testing.T) {
 	t.Parallel()
 
-	testenv.Run(t, &testenv.Config{
-		RouterConfigJSONTemplate: testenv.ConfigWithStaticJSONTemplate,
-	}, func(t *testing.T, xEnv *testenv.Environment) {
+	testenv.RunBasicRouter(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `query { hello }`,
 		})
-		require.JSONEq(t, `{"data":{"hello":"world"}}`, res.Body)
+		require.JSONEq(t, `{"data":{"hello":"Cosmo Router is ready! Follow this guide to deploy your first Supergraph: https://cosmo-docs.wundergraph.com/tutorial/from-zero-to-federation-in-5-steps-using-cosmo"}}`, res.Body)
 	})
 }
 

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	routercmd "github.com/wundergraph/cosmo/router/cmd"
 	"io"
 	"log"
 	"math/rand"
@@ -73,8 +74,6 @@ const (
 var (
 	//go:embed testdata/config.json
 	ConfigJSONTemplate string
-	//go:embed testdata/configWithStatic.json
-	ConfigWithStaticJSONTemplate string
 	//go:embed testdata/configWithEdfs.json
 	ConfigWithEdfsJSONTemplate string
 	//go:embed testdata/configWithEdfsKafka.json
@@ -120,6 +119,21 @@ func RunWithError(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environm
 	return nil
 }
 
+// RunBasicRouter runs the test and fails the test if an error occurs
+func RunBasicRouter(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
+	t.Helper()
+	env := createBasicRouter(t, cfg)
+	t.Cleanup(env.Shutdown)
+	f(t, env)
+	if cfg.AssertCacheMetrics != nil {
+		assertCacheMetrics(t, env, cfg.AssertCacheMetrics.BaseGraphAssertions, "")
+
+		for ff, v := range cfg.AssertCacheMetrics.FeatureFlagAssertions {
+			assertCacheMetrics(t, env, v, ff)
+		}
+	}
+}
+
 func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 	b.Helper()
 	b.StopTimer()
@@ -138,6 +152,16 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 		}
 	}
 
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+func RandString(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
 }
 
 func assertCacheMetrics(t testing.TB, env *Environment, expected CacheMetricsAssertion, featureFlag string) {
@@ -315,6 +339,71 @@ type SubgraphConfig struct {
 type LogObservationConfig struct {
 	Enabled  bool
 	LogLevel zapcore.Level
+}
+
+func createBasicRouter(t testing.TB, cfg *Config) *Environment {
+	t.Helper()
+
+	port := freeport.GetOne(t)
+	listenerAddr := fmt.Sprintf("localhost:%d", port)
+
+	token, err := GenerateJwtToken()
+	require.NoError(t, err)
+	vals := ""
+	for key, val := range map[string]string{
+		"GRAPH_API_TOKEN": token,
+		"LISTEN_ADDR":     listenerAddr,
+	} {
+		vals += fmt.Sprintf("%s=%s\n", key, val)
+	}
+	envFile := filepath.Join(t.TempDir(), RandString(6)+".env")
+	require.NoError(t, os.WriteFile(envFile, []byte(vals), os.ModePerm))
+
+	res, err := config.LoadConfig("", envFile)
+	require.NoError(t, err)
+
+	res.Config.Telemetry.Metrics.OTLP.Enabled = false
+	testCdn := SetupCDNServer(t)
+
+	ctx, cancel := context.WithCancelCause(context.Background())
+	cdnConfig := config.CDNConfiguration{
+		URL:       testCdn.URL,
+		CacheSize: 1024 * 1024,
+	}
+
+	router, err := routercmd.NewRouter(ctx, routercmd.Params{
+		Config: &res.Config,
+		Logger: newTestLogger(),
+	}, core.WithCDN(cdnConfig))
+	require.NoError(t, err)
+	require.NoError(t, router.Start(ctx))
+
+	e := &Environment{
+		t:                       t,
+		graphQLPath:             "/graphql",
+		cfg:                     cfg,
+		routerConfigVersionMain: res.Config.Version,
+		Context:                 ctx,
+		cancel:                  cancel,
+		Router:                  router,
+		RouterURL:               router.BaseURL(),
+		RouterClient:            http.DefaultClient,
+		CDN:                     testCdn,
+		shutdown:                atomic.NewBool(false),
+	}
+
+	require.NoError(t, e.WaitForServer(ctx, e.RouterURL+"/health/ready", 100, 10))
+
+	return e
+}
+
+func newTestLogger() *zap.Logger {
+	ec := zap.NewProductionEncoderConfig()
+	ec.EncodeDuration = zapcore.SecondsDurationEncoder
+	ec.TimeKey = "time"
+
+	syncer := zapcore.AddSync(os.Stderr)
+	return logging.NewZapLogger(syncer, false, true, zapcore.ErrorLevel)
 }
 
 func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
@@ -537,7 +626,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.ModifyRouterConfig(&routerConfig)
 	}
 
-	cdn := setupCDNServer(t)
+	cdn := SetupCDNServer(t)
 
 	if cfg.PrometheusRegistry != nil {
 		cfg.PrometheusPort = ports[0]
@@ -718,6 +807,12 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	return e, waitErr
 }
 
+func GenerateJwtToken() (string, error) {
+	jwtToken := jwt.New(jwt.SigningMethodHS256)
+	jwtToken.Claims = testTokenClaims()
+	return jwtToken.SignedString([]byte("hunter2"))
+}
+
 func configureRouter(listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsData *NatsData) (*core.Router, error) {
 	cfg := config.Config{
 		Graph: config.Graph{},
@@ -742,9 +837,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifyCDNConfig(&cfg.CDN)
 	}
 
-	jwtToken := jwt.New(jwt.SigningMethodHS256)
-	jwtToken.Claims = testTokenClaims()
-	graphApiToken, err := jwtToken.SignedString([]byte("hunter2"))
+	graphApiToken, err := GenerateJwtToken()
 	if err != nil {
 		return nil, err
 	}
@@ -995,7 +1088,7 @@ func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server
 	return s
 }
 
-func setupCDNServer(t testing.TB) *httptest.Server {
+func SetupCDNServer(t testing.TB) *httptest.Server {
 	_, filePath, _, ok := runtime.Caller(0)
 	require.True(t, ok)
 	baseCdnFile := filepath.Join(path.Dir(filePath), "testdata", "cdn")
