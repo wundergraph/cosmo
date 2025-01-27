@@ -33,7 +33,6 @@ export const requestIdInterceptor: Interceptor = (next) => async (req) => {
   const res = await next(req);
 
   if ((res.message?.response as Response)?.code === EnumStatusCode.ERR) {
-    console.error(res);
     console.error(pc.yellow('---'));
     console.error(pc.yellow('Something went wrong while processing a request for this command.'));
     console.error();
