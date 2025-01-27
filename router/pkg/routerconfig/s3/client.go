@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -98,14 +97,16 @@ func (c Client) RouterConfig(ctx context.Context, version string, modifiedSince 
 	body, err := c.getConfigFile(ctx, version, modifiedSince)
 	if err != nil {
 		var minioErr minio.ErrorResponse
-		if errors.As(err, &minioErr) && minioErr.StatusCode == http.StatusNotModified {
-			return nil, configpoller.ErrConfigNotModified
-		} else if !strings.Contains(err.Error(), "NoSuchKey") {
-			return nil, err
+		if errors.As(err, &minioErr) {
+			if minioErr.StatusCode == http.StatusNotModified {
+				return nil, configpoller.ErrConfigNotModified
+			} else if minioErr.Code == "NoSuchKey" {
+				res.Config = routerconfig.GetDefaultConfig()
+				return res, nil
+			}
 		}
 
-		res.Config = routerconfig.GetDefaultConfig()
-		return res, nil
+		return nil, err
 	}
 
 	res.Config, err = execution_config.UnmarshalConfig(body)
