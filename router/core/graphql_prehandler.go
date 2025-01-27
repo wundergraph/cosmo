@@ -352,16 +352,15 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		art.SetRequestTracingStats(r.Context(), traceOptions, traceTimings)
 
 		if traceOptions.Enable {
-			var bodyData resolve.BodyData
-			err := json.Unmarshal(body, &bodyData)
-			if err != nil {
-				requestLogger.Warn("Failed to unmarshal body data in data trace", zap.Error(err))
-			}
 			reqData := &resolve.RequestData{
 				Method:  r.Method,
 				URL:     r.URL.String(),
 				Headers: r.Header,
-				Body:    &bodyData,
+				Body: &resolve.BodyData{
+					Query:         requestContext.operation.rawContent,
+					OperationName: requestContext.operation.name,
+					Variables:     json.RawMessage(requestContext.operation.variables.String()),
+				},
 			}
 			r = r.WithContext(resolve.SetRequest(r.Context(), reqData))
 		}
@@ -628,6 +627,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	requestContext.telemetry.addCommonAttribute(operationHashAttribute)
 	httpOperation.routerSpan.SetAttributes(operationHashAttribute)
 
+	requestContext.operation.rawContent = operationKit.parsedOperation.Request.Query
 	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
 	requestContext.operation.variables, err = variablesParser.ParseBytes(operationKit.parsedOperation.Request.Variables)
 	if err != nil {
