@@ -145,7 +145,7 @@ func (e CatType) String() string {
 	return string(e)
 }
 
-func (e *CatType) UnmarshalGQL(v interface{}) error {
+func (e *CatType) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
@@ -188,7 +188,7 @@ func (e Class) String() string {
 	return string(e)
 }
 
-func (e *Class) UnmarshalGQL(v interface{}) error {
+func (e *Class) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
@@ -233,7 +233,7 @@ func (e DogBreed) String() string {
 	return string(e)
 }
 
-func (e *DogBreed) UnmarshalGQL(v interface{}) error {
+func (e *DogBreed) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
@@ -276,7 +276,7 @@ func (e Gender) String() string {
 	return string(e)
 }
 
-func (e *Gender) UnmarshalGQL(v interface{}) error {
+func (e *Gender) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
@@ -317,7 +317,7 @@ func (e MaritalStatus) String() string {
 	return string(e)
 }
 
-func (e *MaritalStatus) UnmarshalGQL(v interface{}) error {
+func (e *MaritalStatus) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
@@ -368,7 +368,7 @@ func (e Nationality) String() string {
 	return string(e)
 }
 
-func (e *Nationality) UnmarshalGQL(v interface{}) error {
+func (e *Nationality) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
