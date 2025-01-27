@@ -187,7 +187,7 @@ func (e ExerciseType) String() string {
 	return string(e)
 }
 
-func (e *ExerciseType) UnmarshalGQL(v interface{}) error {
+func (e *ExerciseType) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
@@ -240,7 +240,7 @@ func (e GameGenre) String() string {
 	return string(e)
 }
 
-func (e *GameGenre) UnmarshalGQL(v interface{}) error {
+func (e *GameGenre) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
@@ -285,7 +285,7 @@ func (e ProgrammingLanguage) String() string {
 	return string(e)
 }
 
-func (e *ProgrammingLanguage) UnmarshalGQL(v interface{}) error {
+func (e *ProgrammingLanguage) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")

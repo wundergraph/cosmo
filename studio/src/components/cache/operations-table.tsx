@@ -14,9 +14,10 @@ import {
   TableWrapper,
 } from "../ui/table";
 import Link from "next/link";
-import { use, useContext } from "react";
+import { useContext } from "react";
 import { GraphContext } from "../layout/graph-layout";
 import { useUser } from "@/hooks/use-user";
+import { nanoTimestampToTime } from "@/components/analytics/charts";
 
 export const CacheOperationsTable = ({
   operations,
@@ -46,7 +47,7 @@ export const CacheOperationsTable = ({
               <TableHead className="px-4">Actor</TableHead>
               <TableHead className="text-center">Is Persisted</TableHead>
               <TableHead className="text-center">Is Manually Added</TableHead>
-              <TableHead className="px-4">Planning Time P90 (ms)</TableHead>
+              <TableHead className="px-4">Planning Time P90</TableHead>
               <TableHead className="text-center">Details</TableHead>
             </TableRow>
           </TableHeader>
@@ -94,7 +95,9 @@ export const CacheOperationsTable = ({
                       </div>
                     </TableCell>
                     <TableCell className="px-5">
-                      {planningTime || "-"}
+                      {planningTime
+                        ? nanoTimestampToTime(planningTime * 1000000)
+                        : "-"}
                     </TableCell>
                     <TableCell className="text-center">
                       <Button

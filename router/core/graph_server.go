@@ -5,6 +5,8 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	otelmetric "go.opentelemetry.io/otel/metric"
 	"net/http"
 	"net/url"
 	"strings"
@@ -100,6 +102,16 @@ type (
 
 // newGraphServer creates a new server instance.
 func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterConfig, proxy ProxyFunc) (*graphServer, error) {
+
+	/* Older versions of composition will not populate a compatibility version.
+	 * Currently, all "old" router execution configurations are compatible as there have been no breaking
+	 * changes.
+	 * Upon the first breaking change to the execution config, an unpopulated compatibility version will
+	 * also be unsupported (and the logic for IsRouterCompatibleWithExecutionConfig will need to be updated).
+	 */
+	if !execution_config.IsRouterCompatibleWithExecutionConfig(r.logger, routerConfig.CompatibilityVersion) {
+		return nil, fmt.Errorf(`the compatibility version "%s" is not compatible with this router version`, routerConfig.CompatibilityVersion)
+	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	s := &graphServer{
@@ -235,8 +247,8 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 	// We mount the playground once here when we don't have a conflict with the websocket handler
 	// If we have a conflict, we mount the playground during building the individual muxes
-	if s.playgroundHandler != nil && s.graphqlPath != s.playgroundPath {
-		httpRouter.Get(r.playgroundPath, s.playgroundHandler(nil).ServeHTTP)
+	if s.playgroundHandler != nil && s.graphqlPath != s.playgroundConfig.Path {
+		httpRouter.Get(r.playgroundConfig.Path, s.playgroundHandler(nil).ServeHTTP)
 	}
 
 	httpRouter.Get(s.healthCheckPath, r.healthcheck.Liveness())
@@ -914,12 +926,31 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			RouterSchema:       executor.RouterSchema,
 			TrackSchemaUsage:   s.graphqlMetricsConfig.Enabled,
 		})
+
 		warmupConfig := &CacheWarmupConfig{
 			Log:            s.logger,
 			Processor:      processor,
 			Workers:        s.Config.cacheWarmup.Workers,
 			ItemsPerSecond: s.Config.cacheWarmup.ItemsPerSecond,
 			Timeout:        s.Config.cacheWarmup.Timeout,
+		}
+
+		warmupConfig.AfterOperation = func(item *CacheWarmupOperationPlanResult) {
+			gm.metricStore.MeasureOperationPlanningTime(ctx,
+				item.PlanningTime,
+				nil,
+				otelmetric.WithAttributes(
+					append([]attribute.KeyValue{
+						otel.WgOperationName.String(item.OperationName),
+						otel.WgClientName.String(item.ClientName),
+						otel.WgClientVersion.String(item.ClientVersion),
+						otel.WgFeatureFlag.String(featureFlagName),
+						otel.WgOperationHash.String(item.OperationHash),
+						otel.WgOperationType.String(item.OperationType),
+						otel.WgEnginePlanCacheHit.Bool(false),
+					}, baseMetricAttributes...)...,
+				),
+			)
 		}
 
 		if s.Config.cacheWarmup.Source.Filesystem != nil {
@@ -1049,7 +1080,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 		// When the playground path is equal to the graphql path, we need to handle
 		// ws upgrades and html requests on the same route.
-		if s.playground && s.graphqlPath == s.playgroundPath {
+		if s.playgroundConfig.Enabled && s.graphqlPath == s.playgroundConfig.Path {
 			httpRouter.Use(s.playgroundHandler, wsMiddleware)
 		} else {
 			httpRouter.Use(wsMiddleware)
