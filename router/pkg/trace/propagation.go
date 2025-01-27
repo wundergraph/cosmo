@@ -8,7 +8,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 )
 
-func NewCompositePropagator(propagators ...Propagator) (propagation.TextMapPropagator, error) {
+func BuildPropagators(propagators ...Propagator) ([]propagation.TextMapPropagator, error) {
 	var allPropagators []propagation.TextMapPropagator
 	for _, p := range propagators {
 		switch p {
@@ -26,5 +26,5 @@ func NewCompositePropagator(propagators ...Propagator) (propagation.TextMapPropa
 			return nil, fmt.Errorf("unknown trace propagator: %s", p)
 		}
 	}
-	return propagation.NewCompositeTextMapPropagator(allPropagators...), nil
+	return allPropagators, nil
 }
