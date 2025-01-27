@@ -378,6 +378,10 @@ func createRouterWithDefaultConfig(t testing.TB, cfg *Config) *Environment {
 	require.NoError(t, err)
 	require.NoError(t, router.Start(ctx))
 
+	if cfg.ShutdownDelay == 0 {
+		cfg.ShutdownDelay = 30 * time.Second
+	}
+
 	e := &Environment{
 		t:                       t,
 		graphQLPath:             "/graphql",
@@ -390,6 +394,7 @@ func createRouterWithDefaultConfig(t testing.TB, cfg *Config) *Environment {
 		RouterClient:            http.DefaultClient,
 		CDN:                     testCdn,
 		shutdown:                atomic.NewBool(false),
+		shutdownDelay:           cfg.ShutdownDelay,
 	}
 
 	require.NoError(t, e.WaitForServer(ctx, e.RouterURL+"/health/ready", 100, 10))
