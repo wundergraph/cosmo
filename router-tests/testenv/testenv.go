@@ -122,7 +122,7 @@ func RunWithError(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environm
 // RunBasicRouter runs the test and fails the test if an error occurs
 func RunBasicRouter(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	t.Helper()
-	env := createBasicRouter(t, cfg)
+	env := createRouterWithDefaultConfig(t, cfg)
 	t.Cleanup(env.Shutdown)
 	f(t, env)
 	if cfg.AssertCacheMetrics != nil {
@@ -341,7 +341,7 @@ type LogObservationConfig struct {
 	LogLevel zapcore.Level
 }
 
-func createBasicRouter(t testing.TB, cfg *Config) *Environment {
+func createRouterWithDefaultConfig(t testing.TB, cfg *Config) *Environment {
 	t.Helper()
 
 	port := freeport.GetOne(t)
@@ -371,7 +371,7 @@ func createBasicRouter(t testing.TB, cfg *Config) *Environment {
 		CacheSize: 1024 * 1024,
 	}
 
-	router, err := routercmd.NewRouter(ctx, routercmd.Params{
+	router, err := routercmd.NewRouter(context.Background(), routercmd.Params{
 		Config: &res.Config,
 		Logger: newTestLogger(),
 	}, core.WithCDN(cdnConfig))
