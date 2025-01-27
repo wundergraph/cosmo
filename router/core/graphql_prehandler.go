@@ -352,11 +352,16 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		art.SetRequestTracingStats(r.Context(), traceOptions, traceTimings)
 
 		if traceOptions.Enable {
+			var bodyData resolve.BodyData
+			err := json.Unmarshal(body, &bodyData)
+			if err != nil {
+				requestLogger.Warn("Failed to unmarshal body data in data trace", zap.Error(err))
+			}
 			reqData := &resolve.RequestData{
 				Method:  r.Method,
 				URL:     r.URL.String(),
 				Headers: r.Header,
-				Body:    json.RawMessage(body),
+				Body:    &bodyData,
 			}
 			r = r.WithContext(resolve.SetRequest(r.Context(), reqData))
 		}
