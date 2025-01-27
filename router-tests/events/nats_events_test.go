@@ -582,6 +582,12 @@ func TestNatsEvents(t *testing.T) {
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`)
 
 			var done atomic.Bool
+			var producerDone atomic.Bool
+
+			waitForProducer := func() {
+				assert.Eventually(t, producerDone.Load, NatsWaitTimeout, time.Millisecond*100)
+				producerDone.Store(false)
+			}
 
 			go func() {
 				defer done.Store(true)
@@ -600,6 +606,7 @@ func TestNatsEvents(t *testing.T) {
 				defer resp.Body.Close()
 				reader := bufio.NewReader(resp.Body)
 
+				waitForProducer()
 				eventNext, _, err := reader.ReadLine()
 				require.NoError(t, err)
 				require.Equal(t, "event: next", string(eventNext))
@@ -610,6 +617,7 @@ func TestNatsEvents(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "", string(line))
 
+				waitForProducer()
 				eventNext, _, err = reader.ReadLine()
 				require.NoError(t, err)
 				require.Equal(t, "event: next", string(eventNext))
@@ -629,13 +637,21 @@ func TestNatsEvents(t *testing.T) {
 				Query: `mutation { updateAvailability(employeeID: 3, isAvailable: true) { id } }`,
 			})
 			require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, res.Body)
+			err := xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+			producerDone.Store(true)
+
+			assert.Eventually(t, func() bool {
+				return !producerDone.Load()
+			}, NatsWaitTimeout, time.Millisecond*100)
 
 			// Trigger the subscription via NATS
-			err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
 			require.NoError(t, err)
 
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
+			producerDone.Store(true)
 
 			require.Eventually(t, done.Load, NatsWaitTimeout, time.Millisecond*100)
 		})
