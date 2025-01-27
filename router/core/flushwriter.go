@@ -6,6 +6,7 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"strings"
 
 	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -187,10 +188,13 @@ func NegotiateSubscriptionParams(r *http.Request) SubscriptionParams {
 
 	mediaType, _, _ := mime.ParseMediaType(acceptHeader)
 	subscribeOnce := q.Has(WgSubscribeOnceParam)
-	useMultipart := mediaType == multipartMime
+	useMultipart := mediaType == multipartMime || strings.HasPrefix(acceptHeader, multipartMime)
+	// We want to accept both headers in the form (text/event-stream;application/json, which is valid per the RFC,
+	// as well as text/event-stream,application/json which isn't handled by the library)
+	useSse := q.Has(WgSseParam) || mediaType == sseMimeType || strings.HasPrefix(acceptHeader, sseMimeType)
 
 	return SubscriptionParams{
-		UseSse:        q.Has(WgSseParam) || mediaType == sseMimeType,
+		UseSse:        useSse,
 		SubscribeOnce: subscribeOnce,
 		UseMultipart:  useMultipart,
 	}

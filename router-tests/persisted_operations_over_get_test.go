@@ -246,7 +246,7 @@ func TestPersistedSubscriptionOverGET(t *testing.T) {
 				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "a78014f326504cdcc3ed9c4440c989ca0ac7ef237f6379ea7fee0ffde5ea71cb"}}`),
 				Header: map[string][]string{
 					"Content-Type":  {"application/json"},
-					"Accept":        {"text/event-stream"},
+					"Accept":        {"text/event-stream,application/json"},
 					"Connection":    {"keep-alive"},
 					"Cache-Control": {"no-cache"},
 
