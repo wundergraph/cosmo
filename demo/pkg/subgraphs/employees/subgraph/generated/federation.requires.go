@@ -7,7 +7,7 @@ import (
 )
 
 // PopulateConsultancyRequires is the requires populator for the Consultancy entity.
-func (ec *executionContext) PopulateConsultancyRequires(ctx context.Context, entity *model.Consultancy, reps map[string]interface{}) error {
+func (ec *executionContext) PopulateConsultancyRequires(ctx context.Context, entity *model.Consultancy, reps map[string]any) error {
 	if lead, ok := reps["lead"].(map[string]interface{}); ok {
 		if isAvailable, ok := lead["isAvailable"].(bool); ok {
 			entity.IsLeadAvailable = &isAvailable
@@ -17,7 +17,7 @@ func (ec *executionContext) PopulateConsultancyRequires(ctx context.Context, ent
 }
 
 // PopulateEmployeeRequires is the requires populator for the Employee entity.
-func (ec *executionContext) PopulateEmployeeRequires(ctx context.Context, entity *model.Employee, reps map[string]interface{}) error {
+func (ec *executionContext) PopulateEmployeeRequires(ctx context.Context, entity *model.Employee, reps map[string]any) error {
 	if mood, ok := reps["currentMood"].(string); ok {
 		entity.DerivedMood = model.Mood(mood)
 	}
