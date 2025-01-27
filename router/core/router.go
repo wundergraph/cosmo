@@ -17,7 +17,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
-	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
