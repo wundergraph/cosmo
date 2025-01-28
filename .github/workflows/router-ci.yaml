@@ -158,7 +158,7 @@ jobs:
             router-tests/go.sum
       - name: Run Integration tests
         working-directory: ./router-tests
-        run: make test test_params="-run '^Test[^F][^l][^a][^k][^y]' --timeout=5m --parallel 10"
+        run: make test test_params="-run '^Test[^(Flaky)]' --timeout=5m --parallel 10"
       - name: Run Flaky Integration tests
         uses: nick-fields/retry@v3
         with:
