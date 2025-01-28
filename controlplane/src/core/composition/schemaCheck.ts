@@ -1,11 +1,11 @@
-import { Change, ChangeType, CriticalityLevel, diff } from '@graphql-inspector/core';
-import { GraphQLSchema } from 'graphql';
+import { ChangeType, CriticalityLevel, diff, TypeOfChangeType } from '@graphql-inspector/core';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { GraphQLSchema } from 'graphql';
 import { buildSchema } from './composition.js';
 
 export interface SchemaDiff {
   message: string;
-  changeType: ChangeType;
+  changeType: TypeOfChangeType;
   // path is the path to the field or type that changed
   path: string;
   isBreaking: boolean;
