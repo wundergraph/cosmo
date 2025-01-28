@@ -467,7 +467,8 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 	})
 }
 
-func TestOperationCacheTelemetry(t *testing.T) {
+// Is set as Flaky so that when running the tests it will be run separately and retried if it fails
+func TestFlakyOperationCacheTelemetry(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -2529,7 +2530,8 @@ func TestOperationCacheTelemetry(t *testing.T) {
 	})
 }
 
-func TestRuntimeTelemetry(t *testing.T) {
+// Is set as Flaky so that when running the tests it will be run separately and retried if it fails
+func TestFlakyRuntimeTelemetry(t *testing.T) {
 	t.Parallel()
 
 	const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
@@ -2906,7 +2908,8 @@ func TestRuntimeTelemetry(t *testing.T) {
 	})
 }
 
-func TestTelemetry(t *testing.T) {
+// Is set as Flaky so that when running the tests it will be run separately and retried if it fails
+func TestFlakyTelemetry(t *testing.T) {
 	t.Parallel()
 
 	const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`

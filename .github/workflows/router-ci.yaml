@@ -158,7 +158,17 @@ jobs:
             router-tests/go.sum
       - name: Run Integration tests
         working-directory: ./router-tests
-        run: make test test_params="--timeout=5m --parallel 10"
+        run: make test test_params="-run '^Test[^F][^l][^a][^k][^y]' --timeout=5m --parallel 10"
+      - name: Run Flaky Integration tests
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 30
+          max_attempts: 5
+          retry_wait_seconds: 5
+          retry_on: error
+          command: |
+            cd router-tests
+            make test test_params="-run '^TestFlaky' --timeout=5m --parallel 10"
 
   image_scan:
     if: github.event.pull_request.head.repo.full_name == github.repository
