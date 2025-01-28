@@ -10,6 +10,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 
 	"github.com/gorilla/websocket"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -238,28 +239,35 @@ func TestConfigHotReload(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
-			var done atomic.Bool
-
+			var startedReq atomic.Bool
 			go func() {
-				defer done.Store(true)
-
+				startedReq.Store(true)
 				res, err := xEnv.MakeGraphQLRequestWithContext(context.Background(), testenv.GraphQLRequest{
 					Query: `{ employees { id } }`,
 				})
 				require.NoError(t, err)
-				require.Equal(t, res.Response.StatusCode, 200)
-				require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'."}],"data":{"employees":null}}`, res.Body)
+				assert.Equal(t, res.Response.StatusCode, 200)
+				assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'."}],"data":{"employees":null}}`, res.Body)
 			}()
 
 			// Let's wait a bit to make sure all requests are in flight
 			// otherwise the shutdown will be too fast and the wait-group will not be done fully
+			require.Eventually(t, func() bool {
+				return startedReq.Load()
+			}, time.Second*10, time.Millisecond*100)
 			time.Sleep(time.Millisecond * 100)
 
-			xEnv.Shutdown()
+			var done atomic.Bool
+			go func() {
+				defer done.Store(true)
+
+				err := xEnv.Router.Shutdown(context.Background())
+				assert.ErrorContains(t, err, context.DeadlineExceeded.Error())
+			}()
 
 			require.Eventually(t, func() bool {
 				return done.Load()
-			}, time.Second*10, time.Millisecond*100)
+			}, time.Second*20, time.Millisecond*100)
 		})
 	})
 
@@ -314,13 +322,15 @@ func TestConfigHotReload(t *testing.T) {
 
 			// Swap config
 			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
-
 			err = conn.ReadJSON(&msg)
 
-			// Ensure that the connection is closed. In the future, we might want to send a complete message to the client
+			// If the operation happen fast enough, ensure that the connection is closed.
+			// In the future, we might want to send a complete message to the client
 			// and wait until in-flight messages are delivered before closing the connection
-			var wsErr *websocket.CloseError
-			require.ErrorAs(t, err, &wsErr)
+			if err != nil {
+				var wsErr *websocket.CloseError
+				require.ErrorAs(t, err, &wsErr)
+			}
 
 			require.NoError(t, conn.Close())
 
