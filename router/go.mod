@@ -62,7 +62,6 @@ require (
 	github.com/MicahParks/keyfunc/v3 v3.3.5
 	github.com/bep/debounce v1.2.1
 	github.com/caarlos0/env/v11 v11.1.0
-	github.com/dgraph-io/ristretto v0.2.0
 	github.com/dgraph-io/ristretto/v2 v2.1.0
 	github.com/expr-lang/expr v1.16.9
 	github.com/fsnotify/fsnotify v1.7.0
