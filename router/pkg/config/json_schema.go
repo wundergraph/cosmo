@@ -332,12 +332,12 @@ func ValidateConfig(yamlData []byte, schema []byte) error {
 	c.RegisterVocabulary(goDurationVocab())
 	c.RegisterVocabulary(humanBytesVocab())
 
-	err = c.AddResource("https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json", s)
+	err = c.AddResource("https://raw.githubusercontent.com/SkArchon/cosmo/milindadias/access-logging/router/pkg/config/config.schema.json", s)
 	if err != nil {
 		return err
 	}
 
-	sch, err := c.Compile("https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json")
+	sch, err := c.Compile("https://raw.githubusercontent.com/SkArchon/cosmo/milindadias/access-logging/router/pkg/config/config.schema.json")
 	if err != nil {
 		return err
 	}

@@ -41,6 +41,7 @@ type Request struct {
 	Auth   RequestAuth    `expr:"auth"`
 	URL    RequestURL     `expr:"url"`
 	Header RequestHeaders `expr:"header"`
+	Error  error          `expr:"error"`
 }
 
 // RequestURL is the context for the URL object in expressions

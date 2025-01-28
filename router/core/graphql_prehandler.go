@@ -217,7 +217,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		executionOptions, traceOptions, err := h.parseRequestOptions(r, clientInfo, requestLogger)
 		if err != nil {
-			requestContext.error = err
+			AssignErrors(requestContext, err)
 			writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(err), requestLogger)
 			return
 		}
@@ -236,10 +236,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
 			if !h.fileUploadEnabled {
-				requestContext.error = &httpGraphqlError{
+				errorToAssign := &httpGraphqlError{
 					message:    "file upload disabled",
 					statusCode: http.StatusOK,
 				}
+				AssignErrors(requestContext, errorToAssign)
 				writeOperationError(r, w, requestLogger, requestContext.error)
 				return
 			}
@@ -254,7 +255,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			var err error
 			body, files, err = multipartParser.Parse(r, h.getBodyReadBuffer(r.ContentLength))
 			if err != nil {
-				requestContext.error = err
+				AssignErrors(requestContext, err)
 				writeOperationError(r, w, requestLogger, requestContext.error)
 				readMultiPartSpan.End()
 				return
@@ -282,7 +283,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			var err error
 			body, err = h.operationProcessor.ReadBody(r.Body, h.getBodyReadBuffer(r.ContentLength))
 			if err != nil {
-				requestContext.error = err
+				AssignErrors(requestContext, err)
 
 				// Don't produce errors logs here because it can only be client side errors
 				// e.g. too large body, slow client, aborted connection etc.
@@ -308,7 +309,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			validatedReq, err := h.accessController.Access(w, r)
 			if err != nil {
-				requestContext.error = err
+				AssignErrors(requestContext, err)
 				requestLogger.Error("Failed to authenticate request", zap.Error(err))
 
 				// Mark the root span of the router as failed, so we can easily identify failed requests
@@ -341,7 +342,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			body:             body,
 		})
 		if err != nil {
-			requestContext.error = err
+			AssignErrors(requestContext, err)
 			// Mark the root span of the router as failed, so we can easily identify failed requests
 			rtrace.AttachErrToSpan(routerSpan, err)
 

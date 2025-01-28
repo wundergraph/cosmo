@@ -16,6 +16,7 @@ type accessLogger struct {
 	fieldsHandler         ContextFunc
 	baseFields            []zapcore.Field
 	attributes            []config.CustomAttribute
+	exprAttributes        []ExpressionAttribute
 }
 
 type SubgraphAccessLogger struct {
@@ -28,6 +29,7 @@ type SubgraphOptions struct {
 	FieldsHandler         ContextFunc
 	Fields                []zapcore.Field
 	Attributes            []config.CustomAttribute
+	ExprAttributes        []ExpressionAttribute
 }
 
 func NewSubgraphAccessLogger(logger *zap.Logger, opts SubgraphOptions) *SubgraphAccessLogger {
@@ -39,6 +41,7 @@ func NewSubgraphAccessLogger(logger *zap.Logger, opts SubgraphOptions) *Subgraph
 			traceID:               true,
 			fieldsHandler:         opts.FieldsHandler,
 			attributes:            opts.Attributes,
+			exprAttributes:        opts.ExprAttributes,
 		},
 	}
 }
@@ -53,7 +56,7 @@ func (h *SubgraphAccessLogger) RequestFields(respInfo *resolve.ResponseInfo, sub
 		fields = append(fields, zap.String("url", respInfo.Request.URL.String()))
 	}
 	if h.accessLogger.fieldsHandler != nil {
-		fields = append(fields, h.accessLogger.fieldsHandler(h.accessLogger.attributes, respInfo.Err, respInfo.Request, &respInfo.ResponseHeaders)...)
+		fields = append(fields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, respInfo.Err, respInfo.Request, &respInfo.ResponseHeaders)...)
 	}
 
 	return fields

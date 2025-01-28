@@ -3,6 +3,7 @@ package requestlogger
 import (
 	"crypto/sha256"
 	"fmt"
+	"github.com/expr-lang/expr/vm"
 	"github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
@@ -17,7 +18,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type ContextFunc func(fields []config.CustomAttribute, panic any, r *http.Request, rh *http.Header) []zapcore.Field
+type ContextFunc func(logger *zap.Logger, fields []config.CustomAttribute, exprFields []ExpressionAttribute, panic any, r *http.Request, rh *http.Header) []zapcore.Field
 
 // Option provides a functional approach to define
 // configuration for a handler; such as setting the logging
@@ -28,6 +29,12 @@ type (
 	IPAnonymizationConfig struct {
 		Enabled bool
 		Method  IPAnonymizationMethod
+	}
+
+	ExpressionAttribute struct {
+		Key     string
+		Default string
+		Expr    *vm.Program
 	}
 )
 
@@ -55,6 +62,12 @@ func parseOptions(r *handler, opts ...Option) http.Handler {
 func WithAttributes(attributes []config.CustomAttribute) Option {
 	return func(r *handler) {
 		r.accessLogger.attributes = attributes
+	}
+}
+
+func WithExprAttributes(attributes []ExpressionAttribute) Option {
+	return func(r *handler) {
+		r.accessLogger.exprAttributes = attributes
 	}
 }
 
@@ -133,7 +146,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// This is only called on panic so it is safe to call it here again
 			// to gather all the fields that are needed for logging
 			if h.accessLogger.fieldsHandler != nil {
-				fields = append(fields, h.accessLogger.fieldsHandler(h.accessLogger.attributes, err, r, nil)...)
+				fields = append(fields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, err, r, nil)...)
 			}
 
 			if brokenPipe {
@@ -162,7 +175,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.accessLogger.fieldsHandler != nil {
-		resFields = append(resFields, h.accessLogger.fieldsHandler(h.accessLogger.attributes, nil, r, nil)...)
+		resFields = append(resFields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, nil, r, nil)...)
 	}
 
 	h.logger.Info(path, append(fields, resFields...)...)
