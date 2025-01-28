@@ -391,4 +391,101 @@ describe('CDN handlers', () => {
       expect(res.status).toBe(404);
     });
   });
+
+  describe('Test cache warmer opeartions handler', async () => {
+    const federatedGraphId = 'federatedGraphId';
+    const organizationId = 'organizationId';
+    const token = await generateToken(organizationId, federatedGraphId, secretKey);
+    const blobStorage = new InMemoryBlobStorage();
+    const requestPath = `${organizationId}/${federatedGraphId}/cache_warmup/operations.json`;
+
+    const app = new Hono();
+
+    cdn(app, {
+      authJwtSecret: secretKey,
+      authAdmissionJwtSecret: secretAdmissionKey,
+      blobStorage,
+    });
+
+    test('it returns a 401 if no Authorization header is provided', async () => {
+      const res = await app.request(requestPath, {
+        method: 'GET',
+      });
+      expect(res.status).toBe(401);
+    });
+
+    test('it returns a 401 if an invalid Authorization header is provided', async () => {
+      const res = await app.request(requestPath, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token.slice(0, -1)}}`,
+        },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    test('it returns a 401 if the graph or organization ids does not match with the JWT payload', async () => {
+      const res = await app.request(`/foo/bar/operations/cache_warmup/operations.json`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      expect(res.status).toBe(400);
+    });
+
+    test('it returns a 401 if the token has expired', async () => {
+      const token = await new SignJWT({
+        organization_id: organizationId,
+        federated_graph_id: federatedGraphId,
+        exp: Math.floor(Date.now() / 1000) - 60,
+      })
+        .setProtectedHeader({ alg: 'HS256' })
+        .sign(new TextEncoder().encode(secretKey));
+      const res = await app.request(`/foo/bar/cache_warmup/operations.json`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    test('it returns the cache warmer operations', async () => {
+      const operationContents = JSON.stringify({
+        operations: [
+          {
+            request: {
+              operationName: 'AB',
+              query: 'query AB($a: Int!){employeeAsList(id: $a){tag id derivedMood products}}',
+            },
+            client: { name: 'unknown', version: 'missing' },
+          },
+        ],
+      });
+
+      blobStorage.objects.set(requestPath, {
+        buffer: Buffer.from(operationContents),
+      });
+
+      const res = await app.request(requestPath, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe(operationContents);
+    });
+
+    test('it returns a 404 if the persisted operation does not exist', async () => {
+      const res = await app.request(`${organizationId}/${federatedGraphId}/cache_warmup/does_not_exist.json`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      expect(res.status).toBe(404);
+    });
+  });
 });

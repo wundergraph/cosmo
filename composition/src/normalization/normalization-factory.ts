@@ -848,6 +848,7 @@ export class NormalizationFactory {
         return;
       }
       this.setParentDataExtensionType(parentData, extensionType);
+      parentData.subgraphNames.add(this.subgraphName);
       parentData.description ||= formatDescription('description' in node ? node.description : undefined);
       return;
     }
@@ -860,6 +861,7 @@ export class NormalizationFactory {
       name: typeName,
       node: getMutableEnumNode(node.name),
       persistedDirectivesData: newPersistedDirectivesData(),
+      subgraphNames: new Set([this.subgraphName]),
       description: formatDescription('description' in node ? node.description : undefined),
     });
   }

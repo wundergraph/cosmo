@@ -1,6 +1,6 @@
 {
   "name": "wgc",
-  "version": "0.71.4",
+  "version": "0.72.1",
   "description": "The official CLI tool to manage the GraphQL Federation Platform Cosmo",
   "type": "module",
   "main": "dist/index.js",

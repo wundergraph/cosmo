@@ -26,6 +26,7 @@ message RouterConfig {
   repeated Subgraph subgraphs = 3;
   // The map of feature flag router execution configs requires a wrapper to be non-breaking
   optional FeatureFlagRouterExecutionConfigs feature_flag_configs = 4;
+  string compatibility_version = 5;
 }
 
 message Response {
@@ -314,4 +315,33 @@ message SubscriptionFilterCondition {
   optional SubscriptionFieldCondition in = 2;
   optional SubscriptionFilterCondition not = 3;
   repeated SubscriptionFilterCondition or = 4;
+}
+
+message CacheWarmerOperations {
+  repeated Operation operations = 1;
+}
+
+message Operation {
+  OperationRequest request = 1;
+  ClientInfo client = 2;
+}
+
+message OperationRequest {
+  string operation_name = 1;
+  string query = 2;
+  Extension extensions = 3;
+}
+
+message Extension {
+  PersistedQuery persisted_query = 1;
+}
+
+message PersistedQuery {
+  string sha256_hash = 1;
+  int32 version = 2;
+}
+
+message ClientInfo {
+  string name = 1;
+  string version = 2;
 }

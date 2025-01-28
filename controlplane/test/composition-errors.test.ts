@@ -1,25 +1,47 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { parse } from 'graphql';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import {
   ImplementationErrors,
   incompatibleArgumentTypesError,
-  incompatibleParentKindMergeError, INPUT_OBJECT, INTERFACE,
+  incompatibleParentKindMergeError,
+  INPUT_OBJECT,
+  INTERFACE,
   InvalidFieldImplementation,
   invalidInterfaceImplementationError,
-  invalidRequiredInputValueError, noBaseDefinitionForExtensionError,
-  noQueryRootTypeError, OBJECT,
+  invalidRequiredInputValueError,
+  noBaseDefinitionForExtensionError,
+  noQueryRootTypeError,
+  OBJECT,
 } from '@wundergraph/composition';
 import { composeSubgraphs } from '../src/core/composition/composition.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
 
+vi.mock('../src/core/clickhouse/index.js', () => {
+  const ClickHouseClient = vi.fn();
+  ClickHouseClient.prototype.queryPromise = vi.fn();
+
+  return { ClickHouseClient };
+});
+
 describe('Composition error tests', (ctx) => {
+  let chClient: ClickHouseClient;
+
+  beforeEach(() => {
+    chClient = new ClickHouseClient();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -29,7 +51,7 @@ describe('Composition error tests', (ctx) => {
   });
 
   test('that an error is returned if an Object extension orphan remains after federation', async () => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const pandasSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
     const productsSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/products.graphql'));
@@ -180,9 +202,7 @@ describe('Composition error tests', (ctx) => {
 
     const { errors } = composeSubgraphs([subgraph1, subgraph2]);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(
-      incompatibleArgumentTypesError('n', 'Function.g(n: ...)', 'Int', 'String')
-    );
+    expect(errors![0]).toStrictEqual(incompatibleArgumentTypesError('n', 'Function.g(n: ...)', 'Int', 'String'));
   });
 
   test.skip('Should cause composition errors when the @tag definition is invalid', () => {
@@ -422,11 +442,13 @@ describe('Composition error tests', (ctx) => {
 
     const { errors } = composeSubgraphs([subgraph1, subgraph2]);
     expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(invalidRequiredInputValueError(
-      INPUT_OBJECT,
-      'InputA',
-      [{ inputValueName: 'b', missingSubgraphs: ['subgraph1'], requiredSubgraphs: ['subgraph2'] }],
-      false,
-    ));
+    expect(errors![0]).toStrictEqual(
+      invalidRequiredInputValueError(
+        INPUT_OBJECT,
+        'InputA',
+        [{ inputValueName: 'b', missingSubgraphs: ['subgraph1'], requiredSubgraphs: ['subgraph2'] }],
+        false,
+      ),
+    );
   });
 });

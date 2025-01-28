@@ -38,6 +38,7 @@ import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
 import { TitleLayout } from "./title-layout";
+import { FaGripfire } from "react-icons/fa";
 
 export const StarBanner = ({
   isDisabled,
@@ -152,6 +153,11 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         title: "Lint Policy",
         href: basePath + "/lint-policy",
         icon: <MdOutlinePolicy className="h-4 w-4" />,
+      },
+      {
+        title: "Cache Warmer",
+        href: basePath + "/cache-warmer",
+        icon: <FaGripfire className="h-4 w-4" />,
         separator: true,
       },
       {

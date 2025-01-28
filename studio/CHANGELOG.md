@@ -4,6 +4,34 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.99.1](https://github.com/wundergraph/cosmo/compare/studio@0.99.0...studio@0.99.1) (2025-01-24)
+
+**Note:** Version bump only for package studio
+
+# [0.99.0](https://github.com/wundergraph/cosmo/compare/studio@0.98.1...studio@0.99.0) (2025-01-23)
+
+### Features
+
+* improve cache warmer ([#1530](https://github.com/wundergraph/cosmo/issues/1530)) ([2e3f0d2](https://github.com/wundergraph/cosmo/commit/2e3f0d2f05f0ecd8c2a39fd1588c5610af22eaed)) (@StarpTech)
+
+## [0.98.1](https://github.com/wundergraph/cosmo/compare/studio@0.98.0...studio@0.98.1) (2025-01-19)
+
+### Bug Fixes
+
+* **cache operation:** swallow cache errors and other improvements ([#1515](https://github.com/wundergraph/cosmo/issues/1515)) ([d959e2c](https://github.com/wundergraph/cosmo/commit/d959e2c9fb492cc7c73d89f61c31f3bad2ac5706)) (@StarpTech)
+
+# [0.98.0](https://github.com/wundergraph/cosmo/compare/studio@0.97.0...studio@0.98.0) (2025-01-17)
+
+### Features
+
+* cache warmer ([#1501](https://github.com/wundergraph/cosmo/issues/1501)) ([948edd2](https://github.com/wundergraph/cosmo/commit/948edd23e6d0ee968c91edd1a9e9943c3405ac2d)) (@JivusAyrus)
+
+# [0.97.0](https://github.com/wundergraph/cosmo/compare/studio@0.96.4...studio@0.97.0) (2025-01-08)
+
+### Features
+
+* expose type data and record subgraphs for enums ([#1495](https://github.com/wundergraph/cosmo/issues/1495)) ([9e13f28](https://github.com/wundergraph/cosmo/commit/9e13f28c0a90b0d2f335c9b31f35e728c4a1799c)) (@thisisnithin)
+
 ## [0.96.4](https://github.com/wundergraph/cosmo/compare/studio@0.96.3...studio@0.96.4) (2025-01-06)
 
 ### Bug Fixes

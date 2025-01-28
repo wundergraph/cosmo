@@ -1,13 +1,31 @@
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { Label } from '../src/types/index.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { createFederatedGraph, createThenPublishSubgraph, SetupTest } from './test-util.js';
 
 let dbname = '';
 
+vi.mock('../src/core/clickhouse/index.js', () => {
+  const ClickHouseClient = vi.fn();
+  ClickHouseClient.prototype.queryPromise = vi.fn();
+
+  return { ClickHouseClient };
+});
+
 describe('Labels', (ctx) => {
+  let chClient: ClickHouseClient;
+
+  beforeEach(() => {
+    chClient = new ClickHouseClient();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -17,7 +35,7 @@ describe('Labels', (ctx) => {
   });
 
   test('Changing labels of federated should reassign subgraphs', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -27,8 +45,22 @@ describe('Labels', (ctx) => {
 
     const subgraphSchemaSDL = 'type Query { hello: String! }';
 
-    await createThenPublishSubgraph(client, subgraph1Name, 'default', subgraphSchemaSDL, [label1], 'http://localhost:8081');
-    await createThenPublishSubgraph(client, subgraph2Name, 'default', subgraphSchemaSDL, [label2], 'http://localhost:8082');
+    await createThenPublishSubgraph(
+      client,
+      subgraph1Name,
+      'default',
+      subgraphSchemaSDL,
+      [label1],
+      'http://localhost:8081',
+    );
+    await createThenPublishSubgraph(
+      client,
+      subgraph2Name,
+      'default',
+      subgraphSchemaSDL,
+      [label2],
+      'http://localhost:8082',
+    );
 
     const createFedGraphRes = await client.createFederatedGraph({
       name: fedGraphName,
@@ -70,7 +102,7 @@ describe('Labels', (ctx) => {
   });
 
   test('Changing labels of subgraph should affect federated graphs', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const fedGraph1Name = genID('fedGraph1');
     const fedGraph2Name = genID('fedGraph2');
@@ -178,7 +210,7 @@ describe('Labels', (ctx) => {
   });
 
   test('Assign graphs with multiple label matchers correctly', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -250,7 +282,7 @@ describe('Labels', (ctx) => {
   });
 
   test('Graphs with empty label matchers should only compose subgraphs with empty labels', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const fedGraph1Name = genID('fedGraph1');
     const fedGraph2Name = genID('fedGraph2');
@@ -305,7 +337,7 @@ describe('Labels', (ctx) => {
   // Unset the labels of subgraph
   // The graph with empty matchers should have both subgraphs and the other should have none
   test('Should compose correct subgraphs after unsetting subgraph labels', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const fedGraph1Name = genID('fedGraph1');
     const fedGraph2Name = genID('fedGraph2');
@@ -390,7 +422,7 @@ describe('Labels', (ctx) => {
   // Unset the matchers of graph
   // Both graphs should have the subgraph with no labels
   test('Should compose correct subgraphs after unsetting graph label matchers', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const fedGraph1Name = genID('fedGraph1');
     const fedGraph2Name = genID('fedGraph2');
@@ -465,7 +497,7 @@ describe('Labels', (ctx) => {
   // Now set a label again to the subgraph
   // Each graph will have 1 subgraph
   test('Should compose correct subgraph after unsetting and re-adding subgraph labels', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const fedGraph1Name = genID('fedGraph1');
     const fedGraph2Name = genID('fedGraph2');

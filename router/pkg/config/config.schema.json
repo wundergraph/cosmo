@@ -824,7 +824,15 @@
                       "context_field": {
                         "type": "string",
                         "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
-                        "enum": ["operation_service_names", "graphql_error_codes", "graphql_error_service_names", "operation_sha256", "operation_name", "operation_hash", "router_config_version"]
+                        "enum": [
+                          "operation_service_names",
+                          "graphql_error_codes",
+                          "graphql_error_service_names",
+                          "operation_sha256",
+                          "operation_name",
+                          "operation_hash",
+                          "router_config_version"
+                        ]
                       }
                     }
                   }
@@ -851,14 +859,14 @@
                   "default": false,
                   "description": "Enable the collection of metrics for the GraphQL operation router caches. The default value is false."
                 },
-                "engine_stats" : {
+                "engine_stats": {
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
                     "subscriptions": {
-                        "type": "boolean",
-                        "default": false,
-                        "description": "Enabling this will report additional engine metrics for WebSockets and SSE such as connections, subscriptions and triggers. The default value is false"
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enabling this will report additional engine metrics for WebSockets and SSE such as connections, subscriptions and triggers. The default value is false"
                     }
                   }
                 },
@@ -946,7 +954,7 @@
                   "default": false,
                   "description": "Enable the collection of metrics for the GraphQL operation router caches. The default value is false."
                 },
-                "engine_stats" : {
+                "engine_stats": {
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
@@ -1067,10 +1075,36 @@
       "default": "https://cosmo-cp.wundergraph.com",
       "format": "http-url"
     },
+    "playground": {
+      "type": "object",
+      "description": "The configuration for the playground. The playground is a web-based GraphQL IDE that allows you to interact with the GraphQL API.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the GraphQL Playground. The GraphQL Playground is a web-based GraphQL IDE that allows you to interact with the GraphQL API. The default value is true. If the value is false, the GraphQL Playground is disabled.",
+          "default": true
+        },
+        "path": {
+          "type": "string",
+          "format": "x-uri",
+          "default": "/",
+          "description": "The path of the GraphQL Playground. The GraphQL Playground is a web-based GraphQL IDE that allows you to interact with the GraphQL API. The default value is '/'."
+        },
+        "concurrency_limit": {
+          "type": "integer",
+          "description": "The concurrency limit for loading the playground. This shouldn't impact normal usage.",
+          "default": 10,
+          "minimum": 1
+        }
+      }
+    },
     "playground_enabled": {
       "type": "boolean",
       "description": "Enable the GraphQL Playground. The GraphQL Playground is a web-based GraphQL IDE that allows you to interact with the GraphQL API. The default value is true. If the value is false, the GraphQL Playground is disabled.",
-      "default": true
+      "default": true,
+      "deprecated": true,
+      "deprecationMessage": "playground_enabled is deprecated. Please use the playground.enabled configuration instead."
     },
     "introspection_enabled": {
       "type": "boolean",
@@ -1115,6 +1149,14 @@
         "minimum": "5s"
       }
     },
+    "poll_jitter": {
+      "type": "string",
+      "description": "A duration maximum for jitter added to the polling interval. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+      "default": "5s",
+      "duration": {
+        "minimum": "0s"
+      }
+    },
     "health_check_path": {
       "type": "string",
       "default": "/health",
@@ -1143,7 +1185,9 @@
       "type": "string",
       "format": "x-uri",
       "default": "/",
-      "description": "The path of the GraphQL Playground. The GraphQL Playground is a web-based GraphQL IDE that allows you to interact with the GraphQL API. The default value is '/'."
+      "description": "The path of the GraphQL Playground. The GraphQL Playground is a web-based GraphQL IDE that allows you to interact with the GraphQL API. The default value is '/'.",
+      "deprecated": true,
+      "deprecationMessage": "playground_path is deprecated. Please use the playground.path configuration instead."
     },
     "file_upload": {
       "type": "object",
@@ -1299,8 +1343,12 @@
               "type": "array",
               "items": {
                 "oneOf": [
-                  { "$ref": "#/definitions/traffic_shaping_header_rule" },
-                  { "$ref": "#/definitions/set_header_rule" }
+                  {
+                    "$ref": "#/definitions/traffic_shaping_header_rule"
+                  },
+                  {
+                    "$ref": "#/definitions/set_header_rule"
+                  }
                 ]
               }
             },
@@ -1308,8 +1356,12 @@
               "type": "array",
               "items": {
                 "oneOf": [
-                  { "$ref": "#/definitions/traffic_shaping_header_response_rule" },
-                  { "$ref": "#/definitions/set_header_rule" }
+                  {
+                    "$ref": "#/definitions/traffic_shaping_header_response_rule"
+                  },
+                  {
+                    "$ref": "#/definitions/set_header_rule"
+                  }
                 ]
               }
             }
@@ -1325,8 +1377,12 @@
                 "type": "array",
                 "items": {
                   "oneOf": [
-                    { "$ref": "#/definitions/traffic_shaping_header_rule" },
-                    { "$ref": "#/definitions/set_header_rule" }
+                    {
+                      "$ref": "#/definitions/traffic_shaping_header_rule"
+                    },
+                    {
+                      "$ref": "#/definitions/set_header_rule"
+                    }
                   ]
                 }
               },
@@ -1334,8 +1390,12 @@
                 "type": "array",
                 "items": {
                   "oneOf": [
-                    { "$ref": "#/definitions/traffic_shaping_header_response_rule" },
-                    { "$ref": "#/definitions/set_header_rule" }
+                    {
+                      "$ref": "#/definitions/traffic_shaping_header_response_rule"
+                    },
+                    {
+                      "$ref": "#/definitions/set_header_rule"
+                    }
                   ]
                 }
               }
@@ -1504,6 +1564,11 @@
               "type": "integer",
               "description": "The status code to return when the request is rejected. The default value is 200 (OK) as we're returning a well formed GraphQL response.",
               "default": 200
+            },
+            "hide_stats_from_response_extension": {
+              "type": "boolean",
+              "default": false,
+              "description": "Hide the rate limit stats from the response extension. If the value is true, the rate limit stats are not included in the response extension."
             }
           },
           "required": ["rate", "burst", "period"]
@@ -1532,6 +1597,23 @@
         "key_suffix_expression": {
           "type": "string",
           "description": "The expression to define a key suffix for the rate limit, e.g. by using request headers, claims, or a combination of both with a fallback strategy. The expression is specified as a string and needs to evaluate to a string. Please see https://expr-lang.org/ for more information."
+        },
+        "error_extension_code": {
+          "type": "object",
+          "description": "If enabled, a code will be added to the extensions.code field of error objects related to rate limiting. This allows clients to easily identify if an error happened due to rate limiting.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable the error extension code for rate limiting."
+            },
+            "code": {
+              "type": "string",
+              "description": "The error extension code for the rate limit.",
+              "default": "RATE_LIMIT_EXCEEDED"
+            }
+          }
         }
       }
     },
@@ -1708,9 +1790,26 @@
           "default": false
         },
         "source": {
-          "type": "string",
-          "description": "The source of the cache warmup items can be filesystem, cdn (Cosmo), or s3.",
-          "enum": ["filesystem"]
+          "type": "object",
+          "description": "The source of the cache warmup items. Only one can be specified. If empty, the cache warmup source is the Cosmo CDN and it requires a graph to be set.",
+          "additionalProperties": false,
+          "properties": {
+            "filesystem": {
+              "type": "object",
+              "description": "The filesystem source of the cache warmup items.",
+              "additionalProperties": false,
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "description": "The path to the directory containing the cache warmup items.",
+                  "format": "file-path"
+                }
+              }
+            }
+          },
+          "oneOf": [
+            { "required": ["filesystem"] }
+          ]
         },
         "workers": {
           "type": "integer",
@@ -1728,22 +1827,6 @@
           "default": "30s",
           "duration": {
             "minimum": "1s"
-          }
-        },
-        "if": {
-          "properties": {
-            "source": {
-              "const": "filesystem"
-            }
-          }
-        },
-        "then": {
-          "properties": {
-            "path": {
-              "type": "string",
-              "description": "The path to the directory containing the cache warmup items.",
-              "format": "file-path"
-            }
           }
         }
       }

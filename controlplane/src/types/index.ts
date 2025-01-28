@@ -20,7 +20,8 @@ export type FeatureIds =
   | 'ai'
   | 'oidc'
   | 'scim'
-  | 'field-pruning-grace-period';
+  | 'field-pruning-grace-period'
+  | 'cache-warmer';
 
 export type Features = {
   [key in FeatureIds]: Feature;
@@ -442,6 +443,19 @@ export interface ClientDTO {
   lastUpdatedBy: string;
 }
 
+export interface PersistedOperationWithClientDTO {
+  id: string;
+  operationId: string;
+  hash: string;
+  filePath: string;
+  createdAt: string;
+  createdBy?: string;
+  lastUpdatedAt: string;
+  lastUpdatedBy: string;
+  clientName: string;
+  contents: string;
+}
+
 export interface PersistedOperationDTO {
   id: string;
   operationId: string;
@@ -677,4 +691,5 @@ export interface NamespaceDTO {
   organizationId: string;
   enableLinting: boolean;
   enableGraphPruning: boolean;
+  enableCacheWarmer: boolean;
 }

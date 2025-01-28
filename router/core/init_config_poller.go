@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
@@ -139,7 +140,7 @@ func InitializeConfigPoller(r *Router, cdnProviders map[string]config.BaseStorag
 
 	configPoller := configpoller.New(r.graphApiToken,
 		configpoller.WithLogger(r.logger),
-		configpoller.WithPollInterval(r.routerConfigPollerConfig.PollInterval),
+		configpoller.WithPolling(r.routerConfigPollerConfig.PollInterval, r.routerConfigPollerConfig.PollJitter),
 		configpoller.WithClient(*primaryClient),
 		configpoller.WithFallbackClient(fallbackClient),
 	)

@@ -11,26 +11,24 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/internal/expr"
-
-	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/golang-jwt/jwt/v5"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	otelmetric "go.opentelemetry.io/otel/metric"
-
-	"github.com/wundergraph/astjson"
-
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
+	"github.com/wundergraph/astjson"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
+
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/art"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
@@ -569,7 +567,6 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	engineNormalizeSpan.SetAttributes(otel.WgNormalizationCacheHit.Bool(cached))
 
 	requestContext.operation.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
-	requestContext.operation.internalHash = operationKit.parsedOperation.InternalID
 
 	/**
 	* Normalize the variables
@@ -590,7 +587,25 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		return err
 	}
 
+	err = operationKit.RemapVariables()
+	if err != nil {
+		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
+
+		requestContext.operation.normalizationTime = time.Since(startNormalization)
+
+		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
+			httpOperation.traceTimings.EndNormalize()
+		}
+
+		engineNormalizeSpan.End()
+
+		return err
+	}
+
 	requestContext.operation.hash = operationKit.parsedOperation.ID
+	requestContext.operation.internalHash = operationKit.parsedOperation.InternalID
+	requestContext.operation.remapVariables = operationKit.parsedOperation.RemapVariables
+
 	operationHashString := strconv.FormatUint(operationKit.parsedOperation.ID, 10)
 
 	operationHashAttribute := otel.WgOperationHash.String(operationHashString)
@@ -642,7 +657,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 	)
-	validationCached, err := operationKit.Validate(requestContext.operation.executionOptions.SkipLoader)
+	validationCached, err := operationKit.Validate(requestContext.operation.executionOptions.SkipLoader, requestContext.operation.remapVariables)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineValidateSpan, err)
 
@@ -722,7 +737,6 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		httpOperation.requestLogger.Error("failed to plan operation", zap.Error(err))
 		rtrace.AttachErrToSpan(enginePlanSpan, err)
 
-		requestContext.operation.planningTime = time.Since(startPlanning)
 		if !requestContext.operation.traceOptions.ExcludePlannerStats {
 			httpOperation.traceTimings.EndPlanning()
 		}

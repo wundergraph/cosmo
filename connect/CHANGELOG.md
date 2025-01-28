@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.92.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.91.0...@wundergraph/cosmo-connect@0.92.0) (2025-01-24)
+
+### Features
+
+* add compatibility handshake between router and execution config ([#1534](https://github.com/wundergraph/cosmo/issues/1534)) ([4b8d60a](https://github.com/wundergraph/cosmo/commit/4b8d60ac48e1777069d68407ce72ea1d813155ca)) (@Aenimus)
+
+# [0.91.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.90.1...@wundergraph/cosmo-connect@0.91.0) (2025-01-17)
+
+### Features
+
+* cache warmer ([#1501](https://github.com/wundergraph/cosmo/issues/1501)) ([948edd2](https://github.com/wundergraph/cosmo/commit/948edd23e6d0ee968c91edd1a9e9943c3405ac2d)) (@JivusAyrus)
+
 ## [0.90.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.90.0...@wundergraph/cosmo-connect@0.90.1) (2025-01-06)
 
 ### Bug Fixes

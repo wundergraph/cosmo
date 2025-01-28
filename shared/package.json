@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/cosmo-shared",
-  "version": "0.33.2",
+  "version": "0.34.0",
   "description": "Shared code between WunderGraph Cosmo packages",
   "main": "./dist/index.js",
   "type": "module",

@@ -6,8 +6,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/propagation"
 	"net"
 	"net/http"
 	"net/url"
@@ -15,43 +13,42 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
-
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
-
 	"connectrpc.com/connect"
-	"github.com/wundergraph/cosmo/router/pkg/watcher"
-
+	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
 	"github.com/redis/go-redis/v9"
-	"github.com/wundergraph/cosmo/router/internal/docker"
-	"github.com/wundergraph/cosmo/router/internal/graphiql"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/propagation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/atomic"
+	"go.uber.org/zap"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/debug"
+	"github.com/wundergraph/cosmo/router/internal/docker"
+	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"go.opentelemetry.io/otel/attribute"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.uber.org/zap"
+	"github.com/wundergraph/cosmo/router/pkg/watcher"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 )
 
 type IPAnonymizationMethod string
@@ -129,6 +126,7 @@ type (
 	RouterConfigPollerConfig struct {
 		config.ExecutionConfig
 		PollInterval time.Duration
+		PollJitter   time.Duration
 		GraphSignKey string
 	}
 
@@ -175,6 +173,7 @@ type (
 		healthCheckPath                 string
 		readinessCheckPath              string
 		livenessCheckPath               string
+		playgroundConfig                config.PlaygroundConfig
 		cacheControlPolicy              config.CacheControlPolicy
 		routerConfigPollerConfig        *RouterConfigPollerConfig
 		cdnConfig                       config.CDNConfiguration
@@ -207,7 +206,8 @@ type (
 		tlsServerConfig               *tls.Config
 		tlsConfig                     *TlsConfig
 		telemetryAttributes           []config.CustomAttribute
-		tracePropagators              propagation.TextMapPropagator
+		tracePropagators              []propagation.TextMapPropagator
+		compositePropagator           propagation.TextMapPropagator
 		// Poller
 		configPoller                 configpoller.ConfigPoller
 		selfRegister                 selfregister.SelfRegister
@@ -256,8 +256,18 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.graphqlWebURL = r.graphqlPath
 	}
 
-	if r.playgroundPath == "" {
-		r.playgroundPath = "/"
+	// this is set via the deprecated method
+	if !r.playground {
+		r.playgroundConfig.Enabled = r.playground
+		r.logger.Warn("The playground_enabled option is deprecated. Use the playground.enabled option in the config instead.")
+	}
+	if r.playgroundPath != "" && r.playgroundPath != "/" {
+		r.playgroundConfig.Path = r.playgroundPath
+		r.logger.Warn("The playground_path option is deprecated. Use the playground.path option in the config instead.")
+	}
+
+	if r.playgroundConfig.Path == "" {
+		r.playgroundConfig.Path = "/"
 	}
 
 	if r.instanceID == "" {
@@ -433,16 +443,10 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	if r.traceConfig.Enabled {
 		if len(r.traceConfig.Propagators) > 0 {
-			propagators, err := rtrace.NewCompositePropagator(r.traceConfig.Propagators...)
+			propagators, err := rtrace.BuildPropagators(r.traceConfig.Propagators...)
 			if err != nil {
 				r.logger.Error("creating propagators", zap.Error(err))
 				return nil, err
-			}
-
-			// Don't set it globally when we use the router in tests.
-			// In practice, setting it globally only makes sense for module development.
-			if r.traceConfig.TestMemoryExporter == nil {
-				otel.SetTextMapPropagator(propagators)
 			}
 
 			r.tracePropagators = propagators
@@ -593,17 +597,7 @@ func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error 
 	return nil
 }
 
-func (r *Router) listenAndServe(cfg *nodev1.RouterConfig) error {
-	r.logger.Info("Server listening and serving",
-		zap.String("listen_addr", r.listenAddr),
-		zap.Bool("playground", r.playground),
-		zap.Bool("introspection", r.introspection),
-		zap.String("config_version", cfg.GetVersion()),
-	)
-
-	// Mark the server as ready
-	r.httpServer.healthcheck.SetReady(true)
-
+func (r *Router) listenAndServe() error {
 	go func() {
 		// Mark the server as not ready when the server is stopped
 		defer r.httpServer.healthcheck.SetReady(false)
@@ -618,7 +612,6 @@ func (r *Router) listenAndServe(cfg *nodev1.RouterConfig) error {
 }
 
 func (r *Router) initModules(ctx context.Context) error {
-
 	moduleList := make([]ModuleInfo, 0, len(modules)+len(r.customModules))
 
 	for _, module := range modules {
@@ -676,6 +669,13 @@ func (r *Router) initModules(ctx context.Context) error {
 			r.postOriginHandlers = append(r.postOriginHandlers, handler.OnOriginResponse)
 		}
 
+		if handler, ok := moduleInstance.(TracePropagationProvider); ok {
+			modulePropagators := handler.TracePropagators()
+			if len(modulePropagators) > 0 {
+				r.tracePropagators = append(r.tracePropagators, modulePropagators...)
+			}
+		}
+
 		r.modules = append(r.modules, moduleInstance)
 
 		r.logger.Info("Module registered",
@@ -705,13 +705,16 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 	}
 
 	r.httpServer = newServer(&httpServerOptions{
-		addr:            r.listenAddr,
-		logger:          r.logger,
-		tlsConfig:       r.tlsConfig,
-		tlsServerConfig: r.tlsServerConfig,
-		healthcheck:     r.healthcheck,
-		baseURL:         r.baseURL,
-		maxHeaderBytes:  int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
+		addr:               r.listenAddr,
+		logger:             r.logger,
+		tlsConfig:          r.tlsConfig,
+		tlsServerConfig:    r.tlsServerConfig,
+		healthcheck:        r.healthcheck,
+		baseURL:            r.baseURL,
+		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
+		livenessCheckPath:  r.livenessCheckPath,
+		readinessCheckPath: r.readinessCheckPath,
+		healthCheckPath:    r.healthCheckPath,
 	})
 
 	// Start the server with the static config without polling
@@ -853,15 +856,16 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		debug.ReportMemoryUsage(ctx, r.logger)
 	}
 
-	if r.playground {
-		playgroundUrl, err := url.JoinPath(r.baseURL, r.playgroundPath)
+	if r.playgroundConfig.Enabled {
+		playgroundUrl, err := url.JoinPath(r.baseURL, r.playgroundConfig.Path)
 		if err != nil {
 			return fmt.Errorf("failed to join playground url: %w", err)
 		}
 		r.logger.Info("Serving GraphQL playground", zap.String("url", playgroundUrl))
 		r.playgroundHandler = graphiql.NewPlayground(&graphiql.PlaygroundOptions{
-			Html:       graphiql.PlaygroundHTML(),
-			GraphqlURL: r.graphqlWebURL,
+			Html:             graphiql.PlaygroundHTML(),
+			GraphqlURL:       r.graphqlWebURL,
+			ConcurrencyLimit: int64(r.playgroundConfig.ConcurrencyLimit),
 		})
 	}
 
@@ -880,6 +884,16 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	// Modules are only initialized once and not on every config change
 	if err := r.initModules(ctx); err != nil {
 		return fmt.Errorf("failed to init user modules: %w", err)
+	}
+
+	if r.traceConfig.Enabled && len(r.tracePropagators) > 0 {
+		r.compositePropagator = propagation.NewCompositeTextMapPropagator(r.tracePropagators...)
+
+		// Don't set it globally when we use the router in tests.
+		// In practice, setting it globally only makes sense for module development.
+		if r.traceConfig.TestMemoryExporter == nil {
+			otel.SetTextMapPropagator(r.compositePropagator)
+		}
 	}
 
 	return nil
@@ -974,7 +988,6 @@ func (r *Router) buildClients() error {
 			StorageConfig: &provider,
 			Prefix:        r.automaticPersistedQueriesConfig.Storage.ObjectPrefix,
 		})
-
 		if err != nil {
 			return err
 		}
@@ -1042,24 +1055,38 @@ func (r *Router) Start(ctx context.Context) error {
 	}
 
 	r.httpServer = newServer(&httpServerOptions{
-		addr:            r.listenAddr,
-		logger:          r.logger,
-		tlsConfig:       r.tlsConfig,
-		tlsServerConfig: r.tlsServerConfig,
-		healthcheck:     r.healthcheck,
-		baseURL:         r.baseURL,
-		maxHeaderBytes:  int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
+		addr:               r.listenAddr,
+		logger:             r.logger,
+		tlsConfig:          r.tlsConfig,
+		tlsServerConfig:    r.tlsServerConfig,
+		healthcheck:        r.healthcheck,
+		baseURL:            r.baseURL,
+		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
+		livenessCheckPath:  r.livenessCheckPath,
+		readinessCheckPath: r.readinessCheckPath,
+		healthCheckPath:    r.healthCheckPath,
 	})
 
 	// Start the server with the static config without polling
 	if r.staticExecutionConfig != nil {
+		if err := r.listenAndServe(); err != nil {
+			return err
+		}
+
 		if err := r.newServer(ctx, r.staticExecutionConfig); err != nil {
 			return err
 		}
 
-		if err := r.listenAndServe(r.staticExecutionConfig); err != nil {
-			return err
-		}
+		defer func() {
+			r.httpServer.healthcheck.SetReady(true)
+
+			r.logger.Info("Server initialized and ready to serve requests",
+				zap.String("listen_addr", r.listenAddr),
+				zap.Bool("playground", r.playgroundConfig.Enabled),
+				zap.Bool("introspection", r.introspection),
+				zap.String("config_version", r.staticExecutionConfig.Version),
+			)
+		}()
 
 		if r.executionConfig != nil && r.executionConfig.Watch {
 
@@ -1124,11 +1151,16 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to get initial execution config: %w", err)
 	}
 
+	if err := r.listenAndServe(); err != nil {
+		r.logger.Error("Failed to start server with initial config", zap.Error(err))
+		return err
+	}
+
 	if err := r.newServer(ctx, cfg.Config); err != nil {
 		return err
 	}
 
-	if r.playground {
+	if r.playgroundConfig.Enabled {
 		graphqlEndpointURL, err := url.JoinPath(r.baseURL, r.graphqlPath)
 		if err != nil {
 			return fmt.Errorf("failed to join graphql endpoint url: %w", err)
@@ -1160,11 +1192,6 @@ func (r *Router) Start(ctx context.Context) error {
 		)
 	}
 
-	if err := r.listenAndServe(cfg.Config); err != nil {
-		r.logger.Error("Failed to start server with initial config", zap.Error(err))
-		return err
-	}
-
 	r.configPoller.Subscribe(ctx, func(newConfig *nodev1.RouterConfig, oldVersion string) error {
 		if r.shutdown.Load() {
 			r.logger.Warn("Router is in shutdown state. Skipping config update")
@@ -1178,13 +1205,22 @@ func (r *Router) Start(ctx context.Context) error {
 		return nil
 	})
 
+	// Mark the server as ready
+	r.httpServer.healthcheck.SetReady(true)
+
+	r.logger.Info("Server initialized and ready to serve requests",
+		zap.String("listen_addr", r.listenAddr),
+		zap.Bool("playground", r.playgroundConfig.Enabled),
+		zap.Bool("introspection", r.introspection),
+		zap.String("config_version", cfg.Config.GetVersion()),
+	)
+
 	return nil
 }
 
 // Shutdown gracefully shuts down the router. It blocks until the server is shutdown.
 // If the router is already shutdown, the method returns immediately without error.
 func (r *Router) Shutdown(ctx context.Context) (err error) {
-
 	if !r.shutdown.CompareAndSwap(false, true) {
 		return nil
 	}
@@ -1379,6 +1415,13 @@ func WithGraphQLWebURL(p string) Option {
 func WithPlaygroundPath(p string) Option {
 	return func(r *Router) {
 		r.playgroundPath = p
+	}
+}
+
+// WithPlaygroundPath sets the path where the GraphQL Playground is served.
+func WithPlaygroundConfig(c config.PlaygroundConfig) Option {
+	return func(r *Router) {
+		r.playgroundConfig = c
 	}
 }
 
@@ -1873,7 +1916,6 @@ func buildAttributesMap(attributes []config.CustomAttribute) map[string]string {
 
 // buildHeaderAttributesMapper returns a function that maps custom attributes to the request headers.
 func buildHeaderAttributesMapper(attributes []config.CustomAttribute) func(req *http.Request) []attribute.KeyValue {
-
 	if len(attributes) == 0 {
 		return nil
 	}

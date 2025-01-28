@@ -1,6 +1,6 @@
 {
   "name": "controlplane",
-  "version": "0.118.7",
+  "version": "0.121.1",
   "private": true,
   "description": "WunderGraph Cosmo Controlplane",
   "type": "module",
@@ -10,8 +10,7 @@
     "email": "info@wundergraph.com"
   },
   "scripts": {
-    "dev": "tsc-watch --onSuccess \"node dist/index.js\"",
-    "debug": "tsx watch src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "build": "del dist && tsc",
     "seed": "API_KEY=cosmo_669b576aaadc10ee1ae81d9193425705 tsx src/bin/seed.ts",
     "delete-user": "tsx src/bin/delete-user.ts",
@@ -112,7 +111,6 @@
     "msw": "^2.2.11",
     "pino-pretty": "^10.3.1",
     "prettier": "^3.2.4",
-    "tsc-watch": "^6.2.0",
     "tsx": "^4.16.0",
     "typescript": "5.5.2",
     "vitest": "^2.1.8"

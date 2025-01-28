@@ -10,15 +10,15 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+
+	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-
-	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router-tests/testenv"
 )
 
 // Interface guard
@@ -152,8 +152,9 @@ func TestRouterStartLogs(t *testing.T) {
 	t.Parallel()
 
 	testenv.Run(t, &testenv.Config{
-		EnableNats:  true,
-		EnableKafka: true,
+		RouterConfigJSONTemplate: testenv.ConfigWithEdfsJSONTemplate,
+		EnableNats:               true,
+		EnableKafka:              true,
 		LogObservation: testenv.LogObservationConfig{
 			Enabled:  true,
 			LogLevel: zapcore.InfoLevel,
@@ -171,7 +172,7 @@ func TestRouterStartLogs(t *testing.T) {
 		require.Equal(t, playgroundLog.Len(), 1)
 		featureFlagLog := xEnv.Observer().FilterMessage("Feature flags enabled")
 		require.Equal(t, featureFlagLog.Len(), 1)
-		serverListeningLog := xEnv.Observer().FilterMessage("Server listening and serving")
+		serverListeningLog := xEnv.Observer().FilterMessage("Server initialized and ready to serve requests")
 		require.Equal(t, serverListeningLog.Len(), 1)
 	})
 }

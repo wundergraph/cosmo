@@ -41,6 +41,7 @@ import { useRouter } from "next/router";
 import { Fragment, createContext, useContext, useMemo, useState } from "react";
 import { MdOutlineFeaturedPlayList } from "react-icons/md";
 import {
+  PiBracketsCurlyBold,
   PiChat,
   PiCubeFocus,
   PiDevices,
@@ -176,6 +177,12 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         href: basePath + "/discussions",
         matchExact: false,
         icon: <PiChat className="h-4 w-4" />,
+      },
+      {
+        title: "Cache Operations",
+        href: basePath + "/cache-operations",
+        matchExact: false,
+        icon: <PiBracketsCurlyBold className="h-4 w-4" />,
       },
     ];
   }, [organizationSlug, namespace, slug]);

@@ -125,6 +125,7 @@ export function deleteFederatedSubgraph(
             cdnBaseUrl: opts.cdnBaseUrl,
           },
           actorId: authContext.userId,
+          chClient: opts.chClient!,
         });
 
         return { affectedFederatedGraphs, compositionErrors, deploymentErrors, compositionWarnings };

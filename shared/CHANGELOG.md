@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.34.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.33.4...@wundergraph/cosmo-shared@0.34.0) (2025-01-24)
+
+### Features
+
+* add compatibility handshake between router and execution config ([#1534](https://github.com/wundergraph/cosmo/issues/1534)) ([4b8d60a](https://github.com/wundergraph/cosmo/commit/4b8d60ac48e1777069d68407ce72ea1d813155ca)) (@Aenimus)
+
+## [0.33.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.33.3...@wundergraph/cosmo-shared@0.33.4) (2025-01-17)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+## [0.33.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.33.2...@wundergraph/cosmo-shared@0.33.3) (2025-01-08)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
 ## [0.33.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.33.1...@wundergraph/cosmo-shared@0.33.2) (2025-01-06)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared

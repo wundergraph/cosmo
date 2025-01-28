@@ -4,6 +4,46 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.121.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.121.0...controlplane@0.121.1) (2025-01-24)
+
+**Note:** Version bump only for package controlplane
+
+# [0.121.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.120.2...controlplane@0.121.0) (2025-01-23)
+
+### Features
+
+* improve cache warmer ([#1530](https://github.com/wundergraph/cosmo/issues/1530)) ([2e3f0d2](https://github.com/wundergraph/cosmo/commit/2e3f0d2f05f0ecd8c2a39fd1588c5610af22eaed)) (@StarpTech)
+
+## [0.120.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.120.1...controlplane@0.120.2) (2025-01-19)
+
+### Bug Fixes
+
+* **cache operation:** swallow cache errors and other improvements ([#1515](https://github.com/wundergraph/cosmo/issues/1515)) ([d959e2c](https://github.com/wundergraph/cosmo/commit/d959e2c9fb492cc7c73d89f61c31f3bad2ac5706)) (@StarpTech)
+
+## [0.120.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.120.0...controlplane@0.120.1) (2025-01-18)
+
+### Bug Fixes
+
+* **cache warmup:** consider only po of the last 7 days ([#1513](https://github.com/wundergraph/cosmo/issues/1513)) ([1d2f041](https://github.com/wundergraph/cosmo/commit/1d2f0410c240eaeda97b2d7a8afafd4173b672f1)) (@StarpTech)
+
+# [0.120.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.119.1...controlplane@0.120.0) (2025-01-17)
+
+### Features
+
+* cache warmer ([#1501](https://github.com/wundergraph/cosmo/issues/1501)) ([948edd2](https://github.com/wundergraph/cosmo/commit/948edd23e6d0ee968c91edd1a9e9943c3405ac2d)) (@JivusAyrus)
+
+## [0.119.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.119.0...controlplane@0.119.1) (2025-01-08)
+
+### Bug Fixes
+
+* update the timeouts for clickhouse and platform service ([#1500](https://github.com/wundergraph/cosmo/issues/1500)) ([d425aa1](https://github.com/wundergraph/cosmo/commit/d425aa13568ba94f599a6264619502890030ce02)) (@JivusAyrus)
+
+# [0.119.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.118.7...controlplane@0.119.0) (2025-01-08)
+
+### Features
+
+* expose type data and record subgraphs for enums ([#1495](https://github.com/wundergraph/cosmo/issues/1495)) ([9e13f28](https://github.com/wundergraph/cosmo/commit/9e13f28c0a90b0d2f335c9b31f35e728c4a1799c)) (@thisisnithin)
+
 ## [0.118.7](https://github.com/wundergraph/cosmo/compare/controlplane@0.118.6...controlplane@0.118.7) (2025-01-06)
 
 ### Bug Fixes

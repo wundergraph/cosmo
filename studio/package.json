@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "0.96.4",
+  "version": "0.99.1",
   "private": true,
   "license": "Apache-2.0",
   "description": "WunderGraph Cosmo Studio",
@@ -80,6 +80,7 @@
     "dagre": "^0.8.5",
     "date-fns": "^3.6.0",
     "date-fns-tz": "^3.1.3",
+    "debounce": "^2.2.0",
     "framer-motion": "^11.0.3",
     "fuse.js": "^7.0.0",
     "graphql": "^16.9.0",

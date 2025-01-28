@@ -35,6 +35,7 @@ export type EnumDefinitionData = {
   name: string;
   node: MutableEnumNode;
   persistedDirectivesData: PersistedDirectivesData;
+  subgraphNames: Set<string>;
   description?: StringValueNode;
 };
 
@@ -45,6 +46,7 @@ export type EnumValueData = {
   node: MutableEnumValueNode;
   parentTypeName: string;
   persistedDirectivesData: PersistedDirectivesData;
+  subgraphNames: Set<string>;
   description?: StringValueNode;
 };
 

@@ -1,15 +1,33 @@
 import { noBaseDefinitionForExtensionError, noQueryRootTypeError, OBJECT } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel, routerConfigFromJsonString } from '@wundergraph/cosmo-shared';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { BlobNotFoundError } from '../src/core/blobstorage/index.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { unsuccessfulBaseCompositionError } from '../src/core/errors/errors.js';
+import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
 
+vi.mock('../src/core/clickhouse/index.js', () => {
+  const ClickHouseClient = vi.fn();
+  ClickHouseClient.prototype.queryPromise = vi.fn();
+
+  return { ClickHouseClient };
+});
+
 describe('Router Config', (ctx) => {
+  let chClient: ClickHouseClient;
+
+  beforeEach(() => {
+    chClient = new ClickHouseClient();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -19,7 +37,7 @@ describe('Router Config', (ctx) => {
   });
 
   test('Should return routerConfig after federating a valid graph', async (testContext) => {
-    const { client, server, blobStorage, users } = await SetupTest({ dbname });
+    const { client, server, blobStorage, users } = await SetupTest({ dbname, chClient });
 
     const inventorySubgraph = genID('inventory');
     const pandasSubgraph = genID('pandas');
@@ -203,7 +221,7 @@ describe('Router Config', (ctx) => {
   });
 
   test('Should not return routerConfig if an invalid schema version is available', async (testContext) => {
-    const { client, server, users, blobStorage } = await SetupTest({ dbname });
+    const { client, server, users, blobStorage } = await SetupTest({ dbname, chClient });
 
     const pandasSubgraph = genID('pandas');
     const usersSubgraph = genID('users');
@@ -276,8 +294,7 @@ describe('Router Config', (ctx) => {
     });
 
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
-    expect(graph.graph?.compositionErrors)
-      .toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, 'User').toString());
+    expect(graph.graph?.compositionErrors).toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, 'User').toString());
     expect(graph.graph?.isComposable).toBe(false);
 
     const tokenResp = await client.generateRouterToken({

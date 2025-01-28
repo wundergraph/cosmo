@@ -330,6 +330,11 @@ export class RouterConfig extends Message<RouterConfig> {
    */
   featureFlagConfigs?: FeatureFlagRouterExecutionConfigs;
 
+  /**
+   * @generated from field: string compatibility_version = 5;
+   */
+  compatibilityVersion = "";
+
   constructor(data?: PartialMessage<RouterConfig>) {
     super();
     proto3.util.initPartial(data, this);
@@ -342,6 +347,7 @@ export class RouterConfig extends Message<RouterConfig> {
     { no: 2, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "subgraphs", kind: "message", T: Subgraph, repeated: true },
     { no: 4, name: "feature_flag_configs", kind: "message", T: FeatureFlagRouterExecutionConfigs, opt: true },
+    { no: 5, name: "compatibility_version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RouterConfig {
@@ -2269,6 +2275,258 @@ export class SubscriptionFilterCondition extends Message<SubscriptionFilterCondi
 
   static equals(a: SubscriptionFilterCondition | PlainMessage<SubscriptionFilterCondition> | undefined, b: SubscriptionFilterCondition | PlainMessage<SubscriptionFilterCondition> | undefined): boolean {
     return proto3.util.equals(SubscriptionFilterCondition, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.CacheWarmerOperations
+ */
+export class CacheWarmerOperations extends Message<CacheWarmerOperations> {
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.Operation operations = 1;
+   */
+  operations: Operation[] = [];
+
+  constructor(data?: PartialMessage<CacheWarmerOperations>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.CacheWarmerOperations";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "operations", kind: "message", T: Operation, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CacheWarmerOperations {
+    return new CacheWarmerOperations().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CacheWarmerOperations {
+    return new CacheWarmerOperations().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CacheWarmerOperations {
+    return new CacheWarmerOperations().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CacheWarmerOperations | PlainMessage<CacheWarmerOperations> | undefined, b: CacheWarmerOperations | PlainMessage<CacheWarmerOperations> | undefined): boolean {
+    return proto3.util.equals(CacheWarmerOperations, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.Operation
+ */
+export class Operation extends Message<Operation> {
+  /**
+   * @generated from field: wg.cosmo.node.v1.OperationRequest request = 1;
+   */
+  request?: OperationRequest;
+
+  /**
+   * @generated from field: wg.cosmo.node.v1.ClientInfo client = 2;
+   */
+  client?: ClientInfo;
+
+  constructor(data?: PartialMessage<Operation>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.Operation";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "request", kind: "message", T: OperationRequest },
+    { no: 2, name: "client", kind: "message", T: ClientInfo },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Operation {
+    return new Operation().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Operation {
+    return new Operation().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Operation {
+    return new Operation().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Operation | PlainMessage<Operation> | undefined, b: Operation | PlainMessage<Operation> | undefined): boolean {
+    return proto3.util.equals(Operation, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.OperationRequest
+ */
+export class OperationRequest extends Message<OperationRequest> {
+  /**
+   * @generated from field: string operation_name = 1;
+   */
+  operationName = "";
+
+  /**
+   * @generated from field: string query = 2;
+   */
+  query = "";
+
+  /**
+   * @generated from field: wg.cosmo.node.v1.Extension extensions = 3;
+   */
+  extensions?: Extension;
+
+  constructor(data?: PartialMessage<OperationRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.OperationRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "operation_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "query", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "extensions", kind: "message", T: Extension },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OperationRequest {
+    return new OperationRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): OperationRequest {
+    return new OperationRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): OperationRequest {
+    return new OperationRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: OperationRequest | PlainMessage<OperationRequest> | undefined, b: OperationRequest | PlainMessage<OperationRequest> | undefined): boolean {
+    return proto3.util.equals(OperationRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.Extension
+ */
+export class Extension extends Message<Extension> {
+  /**
+   * @generated from field: wg.cosmo.node.v1.PersistedQuery persisted_query = 1;
+   */
+  persistedQuery?: PersistedQuery;
+
+  constructor(data?: PartialMessage<Extension>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.Extension";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "persisted_query", kind: "message", T: PersistedQuery },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Extension {
+    return new Extension().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Extension {
+    return new Extension().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Extension {
+    return new Extension().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Extension | PlainMessage<Extension> | undefined, b: Extension | PlainMessage<Extension> | undefined): boolean {
+    return proto3.util.equals(Extension, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.PersistedQuery
+ */
+export class PersistedQuery extends Message<PersistedQuery> {
+  /**
+   * @generated from field: string sha256_hash = 1;
+   */
+  sha256Hash = "";
+
+  /**
+   * @generated from field: int32 version = 2;
+   */
+  version = 0;
+
+  constructor(data?: PartialMessage<PersistedQuery>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.PersistedQuery";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "sha256_hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "version", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PersistedQuery {
+    return new PersistedQuery().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PersistedQuery {
+    return new PersistedQuery().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PersistedQuery {
+    return new PersistedQuery().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PersistedQuery | PlainMessage<PersistedQuery> | undefined, b: PersistedQuery | PlainMessage<PersistedQuery> | undefined): boolean {
+    return proto3.util.equals(PersistedQuery, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.ClientInfo
+ */
+export class ClientInfo extends Message<ClientInfo> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string version = 2;
+   */
+  version = "";
+
+  constructor(data?: PartialMessage<ClientInfo>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.ClientInfo";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ClientInfo {
+    return new ClientInfo().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ClientInfo {
+    return new ClientInfo().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ClientInfo {
+    return new ClientInfo().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ClientInfo | PlainMessage<ClientInfo> | undefined, b: ClientInfo | PlainMessage<ClientInfo> | undefined): boolean {
+    return proto3.util.equals(ClientInfo, a, b);
   }
 }
 

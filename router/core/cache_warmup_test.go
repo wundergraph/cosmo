@@ -7,32 +7,40 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"go.uber.org/zap"
 )
 
 type CacheWarmupMockSource struct {
-	items []*CacheWarmupItem
+	items []*nodev1.Operation
 	err   error
 }
 
-func (c *CacheWarmupMockSource) LoadItems(ctx context.Context, log *zap.Logger) ([]*CacheWarmupItem, error) {
+func (c *CacheWarmupMockSource) LoadItems(ctx context.Context, log *zap.Logger) ([]*nodev1.Operation, error) {
 	return c.items, c.err
 }
 
 type CacheWarmupMockProcessor struct {
 	err            error
-	processedItems []*CacheWarmupItem
+	processedItems []*nodev1.Operation
 	mux            sync.Mutex
 }
 
-func (c *CacheWarmupMockProcessor) ProcessOperation(ctx context.Context, item *CacheWarmupItem) error {
+func (c *CacheWarmupMockProcessor) ProcessOperation(ctx context.Context, item *nodev1.Operation) (*CacheWarmupOperationPlanResult, error) {
 	if c.err != nil {
-		return c.err
+		return nil, c.err
 	}
 	c.mux.Lock()
 	defer c.mux.Unlock()
 	c.processedItems = append(c.processedItems, item)
-	return nil
+	return &CacheWarmupOperationPlanResult{
+		OperationHash: "",
+		OperationName: "",
+		OperationType: "",
+		ClientName:    item.GetClient().Name,
+		ClientVersion: item.GetClient().Version,
+		PlanningTime:  0,
+	}, nil
 }
 
 type CacheWarmupProcessorError struct{}
@@ -56,19 +64,19 @@ func TestCacheWarmup(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		t.Parallel()
 		source := &CacheWarmupMockSource{
-			items: []*CacheWarmupItem{
+			items: []*nodev1.Operation{
 				{
-					Request: GraphQLRequest{
+					Request: &nodev1.OperationRequest{
 						Query: "query { foo }",
 					},
 				},
 				{
-					Request: GraphQLRequest{
+					Request: &nodev1.OperationRequest{
 						Query: "query { bar }",
 					},
 				},
 				{
-					Request: GraphQLRequest{
+					Request: &nodev1.OperationRequest{
 						Query: "query { baz }",
 					},
 				},
@@ -96,19 +104,19 @@ func TestCacheWarmup(t *testing.T) {
 	t.Run("timeout", func(t *testing.T) {
 		t.Parallel()
 		source := &CacheWarmupMockSource{
-			items: []*CacheWarmupItem{
+			items: []*nodev1.Operation{
 				{
-					Request: GraphQLRequest{
+					Request: &nodev1.OperationRequest{
 						Query: "query { foo }",
 					},
 				},
 				{
-					Request: GraphQLRequest{
+					Request: &nodev1.OperationRequest{
 						Query: "query { bar }",
 					},
 				},
 				{
-					Request: GraphQLRequest{
+					Request: &nodev1.OperationRequest{
 						Query: "query { baz }",
 					},
 				},
@@ -133,19 +141,19 @@ func TestCacheWarmup(t *testing.T) {
 	t.Run("more workers than items", func(t *testing.T) {
 		t.Parallel()
 		source := &CacheWarmupMockSource{
-			items: []*CacheWarmupItem{
+			items: []*nodev1.Operation{
 				{
-					Request: GraphQLRequest{
+					Request: &nodev1.OperationRequest{
 						Query: "query { foo }",
 					},
 				},
 				{
-					Request: GraphQLRequest{
+					Request: &nodev1.OperationRequest{
 						Query: "query { bar }",
 					},
 				},
 				{
-					Request: GraphQLRequest{
+					Request: &nodev1.OperationRequest{
 						Query: "query { baz }",
 					},
 				},
@@ -173,19 +181,19 @@ func TestCacheWarmup(t *testing.T) {
 	t.Run("processor error", func(t *testing.T) {
 		t.Parallel()
 		source := &CacheWarmupMockSource{
-			items: []*CacheWarmupItem{
+			items: []*nodev1.Operation{
 				{
-					Request: GraphQLRequest{
+					Request: &nodev1.OperationRequest{
 						Query: "query { foo }",
 					},
 				},
 				{
-					Request: GraphQLRequest{
+					Request: &nodev1.OperationRequest{
 						Query: "query { bar }",
 					},
 				},
 				{
-					Request: GraphQLRequest{
+					Request: &nodev1.OperationRequest{
 						Query: "query { baz }",
 					},
 				},
@@ -214,11 +222,11 @@ func TestCacheWarmup(t *testing.T) {
 	t.Run("101 items", func(t *testing.T) {
 		t.Parallel()
 		source := &CacheWarmupMockSource{
-			items: make([]*CacheWarmupItem, 101),
+			items: make([]*nodev1.Operation, 101),
 		}
 		for i := range source.items {
-			source.items[i] = &CacheWarmupItem{
-				Request: GraphQLRequest{
+			source.items[i] = &nodev1.Operation{
+				Request: &nodev1.OperationRequest{
 					Query: "query { foo }",
 				},
 			}
@@ -245,19 +253,19 @@ func TestCacheWarmup(t *testing.T) {
 	t.Run("ctx done", func(t *testing.T) {
 		t.Parallel()
 		source := &CacheWarmupMockSource{
-			items: []*CacheWarmupItem{
+			items: []*nodev1.Operation{
 				{
-					Request: GraphQLRequest{
+					Request: &nodev1.OperationRequest{
 						Query: "query { foo }",
 					},
 				},
 				{
-					Request: GraphQLRequest{
+					Request: &nodev1.OperationRequest{
 						Query: "query { bar }",
 					},
 				},
 				{
-					Request: GraphQLRequest{
+					Request: &nodev1.OperationRequest{
 						Query: "query { baz }",
 					},
 				},

@@ -469,6 +469,7 @@ export const namespaces = pgTable(
     }),
     enableLinting: boolean('enable_linting').default(false).notNull(),
     enableGraphPruning: boolean('enable_graph_pruning').default(false).notNull(),
+    enableCacheWarming: boolean('enable_cache_warming').default(false).notNull(),
   },
   (t) => {
     return {
@@ -2016,6 +2017,39 @@ export const playgroundScripts = pgTable(
     return {
       organizationIdIndex: index('ps_organization_id_idx').on(t.organizationId),
       createdByIdIndex: index('ps_created_by_id_idx').on(t.createdById),
+    };
+  },
+);
+
+export const cacheWarmerOperations = pgTable(
+  'cache_warmer_operations', // cwo
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, { onDelete: 'cascade' }),
+    operationContent: text('operation_content'),
+    operationHash: text('operation_hash'),
+    operationPersistedID: text('operation_persisted_id'),
+    operationName: text('operation_name'),
+    clientName: text('client_name'),
+    clientVersion: text('client_version'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    planningTime: real('planning_time'),
+    // is true if the operation is added by the user
+    isManuallyAdded: boolean('is_manually_added').default(false).notNull(),
+    createdById: uuid('created_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (t) => {
+    return {
+      organizationIdIndex: index('cwo_organization_id_idx').on(t.organizationId),
+      federatedGraphId: index('cwo_federated_graph_id_idx').on(t.federatedGraphId),
+      createdByIdIndex: index('cwo_created_by_id_idx').on(t.createdById),
     };
   },
 );

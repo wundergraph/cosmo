@@ -1,0 +1,67 @@
+{
+  "operations": [
+    {
+      "hint": "This is a valid query",
+      "request": {
+        "query": "query { employees { id } }"
+      }
+    },
+    {
+      "hint": "This is a valid query",
+      "request": {
+        "query": "query { employees { id details { forename } } }"
+      }
+    },
+    {
+      "hint": "This is a valid query",
+      "request": {
+        "query": "query { employees { id details { forename surname } } }"
+      }
+    },
+    {
+      "hint": "This is a valid query",
+      "request": {
+        "query": "query { employees { id details { forename surname } isAvailable } }"
+      }
+    },
+    {
+      "hint": "This is a valid feature graph query for myff",
+      "request": {
+        "query": "query { employees { id productCount } }"
+      }
+    },
+    {
+      "hint": "This is a persisted operation query",
+      "request": {
+        "extensions": {
+          "persistedQuery": {
+            "version": 1,
+            "sha256Hash": "1167510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"
+          }
+        }
+      },
+      "client": {
+        "name": "my-client",
+        "version": "missing"
+      }
+    },
+    {
+      "hint": "This is an invalid query with a syntax error and must fail during parsing",
+      "request": {
+        "query": "query { employees { id }"
+      }
+    },
+    {
+      "hint": "This is an invalid query with a non existent field",
+      "request": {
+        "query": "query { employees { id } nonExistentField }"
+      }
+    },
+    {
+      "hint": "This is normalized representation of an employee query",
+      "request": {
+        "query": "query($a: Int!){employee(id: $a){id details {forename surname}}}"
+      }
+    }
+  ]
+}
