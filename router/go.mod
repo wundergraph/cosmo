@@ -8,9 +8,6 @@ require (
 	github.com/buger/jsonparser v1.1.1
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/cloudflare/backoff v0.0.0-20161212185259-647f3cdfc87a
-	// References to main that includes the fix for the race with ristretto.Close()
-	// Link: https://github.com/dgraph-io/ristretto/pull/384
-	github.com/dgraph-io/ristretto v0.1.2-0.20240723054643-f5997484152c
 	github.com/dustin/go-humanize v1.0.1
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-redis/redis_rate/v10 v10.0.1
@@ -30,7 +27,7 @@ require (
 	github.com/redis/go-redis/v9 v9.4.0
 	github.com/sebdah/goldie/v2 v2.5.3
 	github.com/shirou/gopsutil/v3 v3.24.3
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
@@ -65,6 +62,8 @@ require (
 	github.com/MicahParks/keyfunc/v3 v3.3.5
 	github.com/bep/debounce v1.2.1
 	github.com/caarlos0/env/v11 v11.1.0
+	github.com/dgraph-io/ristretto v0.2.0
+	github.com/dgraph-io/ristretto/v2 v2.1.0
 	github.com/expr-lang/expr v1.16.9
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/klauspost/compress v1.17.9
