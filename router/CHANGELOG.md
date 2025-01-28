@@ -4,6 +4,36 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.167.0](https://github.com/wundergraph/cosmo/compare/router@0.166.0...router@0.167.0) (2025-01-27)
+
+### Features
+
+* also add handshake for static execution configs ([#1535](https://github.com/wundergraph/cosmo/issues/1535)) ([f3f8fef](https://github.com/wundergraph/cosmo/commit/f3f8fef1d605fa1f3c6ac0a6bf6e7667ee8ec900)) (@Aenimus)
+* **router:** add interface for trace propagation ([#1526](https://github.com/wundergraph/cosmo/issues/1526)) ([90005c5](https://github.com/wundergraph/cosmo/commit/90005c52e6d38096a9a6a6350c9c8c492eefe5b8)) (@Noroth)
+
+# [0.166.0](https://github.com/wundergraph/cosmo/compare/router@0.165.1...router@0.166.0) (2025-01-24)
+
+### Features
+
+* add compatibility handshake between router and execution config ([#1534](https://github.com/wundergraph/cosmo/issues/1534)) ([4b8d60a](https://github.com/wundergraph/cosmo/commit/4b8d60ac48e1777069d68407ce72ea1d813155ca)) (@Aenimus)
+
+## [0.165.1](https://github.com/wundergraph/cosmo/compare/router@0.165.0...router@0.165.1) (2025-01-23)
+
+### Bug Fixes
+
+* remove semaphore from ResolveGraphQLSubscription ([#1532](https://github.com/wundergraph/cosmo/issues/1532)) ([3b3a870](https://github.com/wundergraph/cosmo/commit/3b3a870ad21029b70b5985194948f5f170c38855)) (@alepane21)
+
+# [0.165.0](https://github.com/wundergraph/cosmo/compare/router@0.164.1...router@0.165.0) (2025-01-23)
+
+### Bug Fixes
+
+* **router:** enable health checks during startup ([#1529](https://github.com/wundergraph/cosmo/issues/1529)) ([d56dfb6](https://github.com/wundergraph/cosmo/commit/d56dfb60ec8d8aaa5918816a07008d2d866d8a74)) (@Noroth)
+
+### Features
+
+* improve cache warmer ([#1530](https://github.com/wundergraph/cosmo/issues/1530)) ([2e3f0d2](https://github.com/wundergraph/cosmo/commit/2e3f0d2f05f0ecd8c2a39fd1588c5610af22eaed)) (@StarpTech)
+* **router:** optimize playground delivery, add concurrency_limit to config ([#1519](https://github.com/wundergraph/cosmo/issues/1519)) ([1d7047b](https://github.com/wundergraph/cosmo/commit/1d7047b7dad07ceda591ae1368d94732c85241c6)) (@df-wg)
+
 ## [0.164.1](https://github.com/wundergraph/cosmo/compare/router@0.164.0...router@0.164.1) (2025-01-20)
 
 ### Bug Fixes

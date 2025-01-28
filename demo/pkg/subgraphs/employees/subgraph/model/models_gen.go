@@ -291,7 +291,7 @@ func (e Department) String() string {
 	return string(e)
 }
 
-func (e *Department) UnmarshalGQL(v interface{}) error {
+func (e *Department) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
@@ -334,7 +334,7 @@ func (e EngineerType) String() string {
 	return string(e)
 }
 
-func (e *EngineerType) UnmarshalGQL(v interface{}) error {
+func (e *EngineerType) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
@@ -375,7 +375,7 @@ func (e Mood) String() string {
 	return string(e)
 }
 
-func (e *Mood) UnmarshalGQL(v interface{}) error {
+func (e *Mood) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
@@ -416,7 +416,7 @@ func (e OperationType) String() string {
 	return string(e)
 }
 
-func (e *OperationType) UnmarshalGQL(v interface{}) error {
+func (e *OperationType) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
