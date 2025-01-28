@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dgraph-io/ristretto/v2"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/dgraph-io/ristretto/v2"
 
 	"connectrpc.com/connect"
 	"github.com/ClickHouse/clickhouse-go/v2"
