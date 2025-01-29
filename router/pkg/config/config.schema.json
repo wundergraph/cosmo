@@ -2182,8 +2182,8 @@
         },
         "max_concurrent_resolvers": {
           "type": "integer",
-          "description": "The maximum number of concurrent resolvers.",
-          "default": 32
+          "description": "The maximum number of concurrent resolvers. The higher the number, the more requests can be processed in parallel but at the cost of more memory usage.",
+          "default": 1024
         },
         "enable_net_poll": {
           "type": "boolean",
