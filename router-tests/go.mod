@@ -26,7 +26,7 @@ require (
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
 	github.com/wundergraph/cosmo/demo v0.0.0-20250119174948-4b991294658e
 	github.com/wundergraph/cosmo/router v0.0.0-20250119174948-4b991294658e
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.145
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.146
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
@@ -60,7 +60,6 @@ require (
 	github.com/cpuguy83/dockercfg v0.3.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/dgraph-io/ristretto v0.2.0 // indirect
 	github.com/dgraph-io/ristretto/v2 v2.1.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/distribution/reference v0.5.0 // indirect
