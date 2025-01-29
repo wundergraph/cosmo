@@ -832,7 +832,7 @@
                       },
                       "expression": {
                         "type": "string",
-                        "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used."
+                        "description": "The templating expression that is evaluated to extract values to log, default value is used if expression evaluates to empty, runtime templating errors are logged and ignored then"
                       },
                       "context_field": {
                         "type": "string",
@@ -2601,7 +2601,7 @@
               },
               "expression": {
                 "type": "string",
-                "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used."
+                "description": "The templating expression that is evaluated to extract values to log, default value is used if expression evaluates to empty, runtime templating errors are logged and ignored then"
               },
               "context_field": {
                 "type": "string",
