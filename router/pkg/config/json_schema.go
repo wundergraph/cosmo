@@ -5,10 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dustin/go-humanize"
-	"github.com/goccy/go-yaml"
-	"github.com/santhosh-tekuri/jsonschema/v6"
-	"golang.org/x/text/message"
 	"io/fs"
 	"log"
 	"net"
@@ -19,6 +15,11 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/dustin/go-humanize"
+	"github.com/goccy/go-yaml"
+	"github.com/santhosh-tekuri/jsonschema/v6"
+	"golang.org/x/text/message"
 )
 
 const (
@@ -332,12 +333,12 @@ func ValidateConfig(yamlData []byte, schema []byte) error {
 	c.RegisterVocabulary(goDurationVocab())
 	c.RegisterVocabulary(humanBytesVocab())
 
-	err = c.AddResource("https://raw.githubusercontent.com/SkArchon/cosmo/milindadias/access-logging/router/pkg/config/config.schema.json", s)
+	err = c.AddResource("https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json", s)
 	if err != nil {
 		return err
 	}
 
-	sch, err := c.Compile("https://raw.githubusercontent.com/SkArchon/cosmo/milindadias/access-logging/router/pkg/config/config.schema.json")
+	sch, err := c.Compile("https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json")
 	if err != nil {
 		return err
 	}
