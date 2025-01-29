@@ -3,7 +3,6 @@ package requestlogger
 import (
 	"crypto/sha256"
 	"fmt"
-	"github.com/expr-lang/expr/vm"
 	"github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
@@ -29,12 +28,6 @@ type (
 	IPAnonymizationConfig struct {
 		Enabled bool
 		Method  IPAnonymizationMethod
-	}
-
-	ExpressionAttribute struct {
-		Key     string
-		Default string
-		Expr    *vm.Program
 	}
 )
 

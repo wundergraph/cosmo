@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
-	exprlocal "github.com/wundergraph/cosmo/router/internal/expr"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"net/http"
 	"net/url"
@@ -811,7 +810,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	var subgraphAccessLogger *requestlogger.SubgraphAccessLogger
 	if s.accessLogsConfig != nil && s.accessLogsConfig.Logger != nil {
-		exprAttributes, err := getAccessLogConfigExpressions(s.accessLogsConfig.Attributes)
+		exprAttributes, err := requestlogger.GetAccessLogConfigExpressions(s.accessLogsConfig.Attributes)
 		if err != nil {
 			return nil, fmt.Errorf("failed building router access log expressions: %w", err)
 		}
@@ -841,7 +840,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		httpRouter.Use(requestLogger)
 
 		if s.accessLogsConfig.SubgraphEnabled {
-			exprAttributes, err := getAccessLogConfigExpressions(s.accessLogsConfig.SubgraphAttributes)
+			exprAttributes, err := requestlogger.GetAccessLogConfigExpressions(s.accessLogsConfig.SubgraphAttributes)
 			if err != nil {
 				return nil, fmt.Errorf("failed building subgraph access log expressions: %w", err)
 			}
@@ -1143,24 +1142,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	s.graphMuxList = append(s.graphMuxList, gm)
 
 	return gm, nil
-}
-
-func getAccessLogConfigExpressions(attributes []config.CustomAttribute) ([]requestlogger.ExpressionAttribute, error) {
-	exprSlice := make([]requestlogger.ExpressionAttribute, 0)
-	for _, sAttribute := range attributes {
-		if expr := sAttribute.ValueFrom.Expression; expr != "" {
-			expression, err := exprlocal.CompileAnyExpression(expr)
-			if err != nil {
-				return nil, fmt.Errorf("failed when compiling log expressions: %w", err)
-			}
-			exprSlice = append(exprSlice, requestlogger.ExpressionAttribute{
-				Key:     sAttribute.Key,
-				Default: sAttribute.Default, // TODO: Do we really need this?
-				Expr:    expression,
-			})
-		}
-	}
-	return exprSlice, nil
 }
 
 func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, routerEngineCfg *RouterEngineConfiguration) error {

@@ -117,6 +117,12 @@ func AccessLogsFieldHandler(
 		}
 	}
 
+	// If the request context was processed as nil for whatever reason
+	// do not proceed to process exprAttributes
+	if reqContext == nil {
+		return resFields
+	}
+
 	for _, exprField := range exprAttributes {
 		result, err := expr.Run(exprField.Expr, reqContext.expressionContext)
 		if err != nil {
