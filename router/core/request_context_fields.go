@@ -117,7 +117,7 @@ func AccessLogsFieldHandler(
 		}
 	}
 
-	// If the request context was processed as nil for whatever reason
+	// If the request context was processed as nil (e.g. :- request was nil above)
 	// do not proceed to process exprAttributes
 	if reqContext == nil {
 		return resFields

@@ -815,6 +815,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			return nil, fmt.Errorf("failed building router access log expressions: %w", err)
 		}
 
+		s.accessLogsConfig.Attributes = requestlogger.CleanupNonExpressions(s.accessLogsConfig.Attributes)
+
 		requestLoggerOpts := []requestlogger.Option{
 			requestlogger.WithDefaultOptions(),
 			requestlogger.WithNoTimeField(),
@@ -844,6 +846,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			if err != nil {
 				return nil, fmt.Errorf("failed building subgraph access log expressions: %w", err)
 			}
+
+			s.accessLogsConfig.SubgraphAttributes = requestlogger.CleanupNonExpressions(s.accessLogsConfig.SubgraphAttributes)
 
 			subgraphAccessLogger = requestlogger.NewSubgraphAccessLogger(
 				s.accessLogsConfig.Logger,

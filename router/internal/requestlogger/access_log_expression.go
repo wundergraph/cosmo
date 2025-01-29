@@ -16,17 +16,30 @@ type ExpressionAttribute struct {
 func GetAccessLogConfigExpressions(attributes []config.CustomAttribute) ([]ExpressionAttribute, error) {
 	exprSlice := make([]ExpressionAttribute, 0)
 	for _, sAttribute := range attributes {
-		if expr := sAttribute.ValueFrom.Expression; expr != "" {
-			expression, err := exprlocal.CompileAnyExpression(expr)
-			if err != nil {
-				return nil, fmt.Errorf("failed when compiling log expressions: %w", err)
-			}
-			exprSlice = append(exprSlice, ExpressionAttribute{
-				Key:     sAttribute.Key,
-				Default: sAttribute.Default,
-				Expr:    expression,
-			})
+		if sAttribute.ValueFrom == nil || sAttribute.ValueFrom.Expression == "" {
+			continue
 		}
+		expression, err := exprlocal.CompileAnyExpression(sAttribute.ValueFrom.Expression)
+		if err != nil {
+			return nil, fmt.Errorf("failed when compiling log expressions: %w", err)
+		}
+		exprSlice = append(exprSlice, ExpressionAttribute{
+			Key:     sAttribute.Key,
+			Default: sAttribute.Default,
+			Expr:    expression,
+		})
 	}
 	return exprSlice, nil
+}
+
+func CleanupNonExpressions(attributes []config.CustomAttribute) []config.CustomAttribute {
+	filtered := make([]config.CustomAttribute, 0, len(attributes))
+
+	for _, elem := range attributes {
+		if elem.ValueFrom == nil || elem.ValueFrom.Expression == "" {
+			filtered = append(filtered, elem)
+		}
+	}
+
+	return filtered
 }

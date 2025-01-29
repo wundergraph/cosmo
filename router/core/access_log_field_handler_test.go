@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-func TestSubgraphAccessLogger(t *testing.T) {
+func TestAccessLogsFieldHandler(t *testing.T) {
 	t.Parallel()
 
 	t.Run("run without any expressions", func(t *testing.T) {
