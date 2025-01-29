@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.168.0](https://github.com/wundergraph/cosmo/compare/router@0.167.0...router@0.168.0) (2025-01-29)
+
+### Features
+
+* add normalizedQuery to query plan and request info to trace ([#1536](https://github.com/wundergraph/cosmo/issues/1536)) ([60e3d0e](https://github.com/wundergraph/cosmo/commit/60e3d0e7d406eea103268306973425a4e4c82222)) (@alepane21)
+
 # [0.167.0](https://github.com/wundergraph/cosmo/compare/router@0.166.0...router@0.167.0) (2025-01-27)
 
 ### Features
