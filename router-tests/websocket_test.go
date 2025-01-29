@@ -519,18 +519,6 @@ func TestWebSockets(t *testing.T) {
 			expectConnectAndReadCurrentTime(t, xEnv)
 		})
 	})
-	t.Run("subscription with multiple reconnects and netPoll disabled", func(t *testing.T) {
-		t.Parallel()
-
-		testenv.Run(t, &testenv.Config{
-			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.EnableNetPoll = false
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			expectConnectAndReadCurrentTime(t, xEnv)
-			expectConnectAndReadCurrentTime(t, xEnv)
-		})
-	})
 	t.Run("subscription with header propagation", func(t *testing.T) {
 		t.Parallel()
 
@@ -1987,6 +1975,21 @@ func TestWebSockets(t *testing.T) {
 
 			require.NoError(t, conn.Close())
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+}
+
+func TestFlakyWebSockets(t *testing.T) {
+	t.Run("subscription with multiple reconnects and netPoll disabled", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.EnableNetPoll = false
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			expectConnectAndReadCurrentTime(t, xEnv)
+			expectConnectAndReadCurrentTime(t, xEnv)
 		})
 	})
 }
