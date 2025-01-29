@@ -717,7 +717,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		}
 	}
 
-	waitErr := e.WaitForServer(ctx, e.RouterURL+"/health/live", 100, 10)
+	waitErr := e.WaitForServer(ctx, e.RouterURL+"/health/ready", 100, 10)
 
 	return e, waitErr
 }
