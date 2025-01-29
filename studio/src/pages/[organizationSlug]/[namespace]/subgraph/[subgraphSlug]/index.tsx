@@ -6,6 +6,7 @@ import {
 import { AddSubgraphUsersContent } from "@/components/subgraphs-table";
 import { Badge } from "@/components/ui/badge";
 import { CLI } from "@/components/ui/cli";
+import { CopyButton } from "@/components/ui/copy-button";
 import {
   Tooltip,
   TooltipContent,
@@ -15,8 +16,8 @@ import { useSubgraph } from "@/hooks/use-subgraph";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
-import { CommandLineIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@connectrpc/connect-query";
+import { CommandLineIcon } from "@heroicons/react/24/outline";
 import {
   getOrganizationMembers,
   getSubgraphMembers,
@@ -100,15 +101,16 @@ const SubgraphOverviewPage = () => {
             <dd className="text-sm">{subgraph.id}</dd>
           </div>
           {subgraph.routingURL && (
-            <div className="flex-start flex min-w-[220px] flex-col gap-2">
+            <div className="flex-start flex min-w-[220px] flex-col gap-px">
               <dt className="text-sm text-muted-foreground">Routing URL</dt>
-              <dd className="text-sm">
+              <dd className="flex items-center text-sm">
                 <Tooltip delayDuration={100}>
                   <TooltipTrigger className="w-full truncate text-start text-sm">
                     {subgraph.routingURL}
                   </TooltipTrigger>
                   <TooltipContent>{subgraph.routingURL}</TooltipContent>
                 </Tooltip>
+                <CopyButton tooltip="Copy URL" value={subgraph.routingURL} />
               </dd>
             </div>
           )}
