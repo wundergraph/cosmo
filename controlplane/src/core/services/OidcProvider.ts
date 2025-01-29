@@ -72,7 +72,7 @@ export default class OidcProvider {
       if (endpoint === 'login.microsoftonline.com') {
         key = 'groups';
       }
-      const claims = `[{ "key": "${key}", "value": "${mapper.ssoGroup}" }]`;
+      const claims = `[{ "key": "${key}", "value": "${mapper.ssoGroup.trim()}" }]`;
       let keycloakGroupName;
 
       switch (mapper.role) {
