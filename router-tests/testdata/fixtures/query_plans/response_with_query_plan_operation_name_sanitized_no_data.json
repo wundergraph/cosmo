@@ -123,7 +123,8 @@
             }
           ]
         }
-      ]
+      ],
+      "normalizedQuery": "query Requires {products {__typename ... on Consultancy {lead {__typename id derivedMood} isLeadAvailable}}}"
     },
     "trace": {
       "version": "1",
@@ -214,6 +215,36 @@
             ]
           }
         ]
+      },
+      "request": {
+        "method": "POST",
+        "url": "/graphql",
+        "headers": {
+          "Accept-Encoding": [
+            "identity"
+          ],
+          "Content-Length": [
+            "294"
+          ],
+          "User-Agent": [
+            "Go-http-client/1.1"
+          ],
+          "X-Wg-Include-Query-Plan": [
+            "true"
+          ],
+          "X-Wg-Skip-Loader": [
+            "true"
+          ],
+          "X-Wg-Trace": [
+            "true",
+            "enable_predictable_debug_timings"
+          ]
+        },
+        "body": {
+          "query": "query Requires {\n\t\t\t\t\t  products {\n\t\t\t\t\t\t__typename\n\t\t\t\t\t\t... on Consultancy {\n\t\t\t\t\t\t  lead {\n\t\t\t\t\t\t\t__typename\n\t\t\t\t\t\t\tid\n\t\t\t\t\t\t\tderivedMood\n\t\t\t\t\t\t  }\n\t\t\t\t\t\t  isLeadAvailable\n\t\t\t\t\t\t}\n\t\t\t\t\t  }\n\t\t\t\t\t}",
+          "operationName": "Requires",
+          "variables": {}
+        }
       }
     }
   }

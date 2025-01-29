@@ -2010,6 +2010,29 @@
             }
           }
         ]
+      },
+      "request": {
+        "method": "POST",
+        "url": "/graphql",
+        "headers": {
+          "Accept-Encoding": [
+            "identity"
+          ],
+          "Content-Length": [
+            "596"
+          ],
+          "User-Agent": [
+            "Go-http-client/1.1"
+          ],
+          "X-Wg-Trace": [
+            "true",
+            "enable_predictable_debug_timings"
+          ]
+        },
+        "body": {
+          "query": "{\n  employees {\n    id\n    details {\n      forename\n      surname\n      hasChildren\n    }\n    role {\n      title\n      departments\n    }\n    hobbies {\n      ... on Exercise {\n        category\n      }\n      ... on Flying {\n        planeModels\n        yearsOfExperience\n      }\n      ... on Gaming {\n        name\n        genres\n        yearsOfExperience\n      }\n      ... on Programming {\n        languages\n      }\n      ... on Travelling {\n        countriesLived {\n\t\t  language\n\t\t}\n      }\n      ... on Other {\n        name\n      }\n    }\n  }\n}",
+          "variables": {}
+        }
       }
     }
   }
