@@ -42,11 +42,6 @@ func NewPlanGenerator(configFilePath string) (*PlanGenerator, error) {
 	return pg, nil
 }
 
-type PlannerInfo struct {
-	planConfiguration *plan.Configuration
-	definition        *ast.Document
-}
-
 func (pg *PlanGenerator) PlanOperation(operationFilePath string) (string, error) {
 	operation, err := pg.parseOperation(operationFilePath)
 	if err != nil {
