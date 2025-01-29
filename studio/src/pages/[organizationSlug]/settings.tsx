@@ -387,7 +387,7 @@ const UpdateIDPMappers = ({
 
   const mutateMappers = () => {
     const groupMappers = mappers.map((m) => {
-      return { role: m.dbRole, ssoGroup: m.ssoGroup };
+      return { role: m.dbRole, ssoGroup: m.ssoGroup.trim() };
     });
 
     groupMappers.push({
@@ -522,7 +522,7 @@ const OpenIDConnectProvider = ({
 
   const onSubmit: SubmitHandler<ConnectOIDCProviderInput> = (data) => {
     const groupMappers = mappers.map((m) => {
-      return { role: m.dbRole, ssoGroup: m.ssoGroup };
+      return { role: m.dbRole, ssoGroup: m.ssoGroup.trim() };
     });
 
     groupMappers.push({
