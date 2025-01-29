@@ -1881,7 +1881,9 @@ func DeflakeWSReadMessage(t testing.TB, conn *websocket.Conn) (messageType int, 
 		messageType, p, err = conn.ReadMessage()
 		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
 			t.Log("connection reset by peer found, retrying...")
-			time.Sleep(time.Duration(i*100) * time.Millisecond)
+			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			require.NoError(t, err)
+			time.Sleep(time.Duration(i*200) * time.Millisecond)
 			continue
 		}
 		break
@@ -1895,7 +1897,9 @@ func DeflakeWSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err e
 		err = conn.ReadJSON(v)
 		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
 			t.Log("connection reset by peer found, retrying...")
-			time.Sleep(time.Duration(i*100) * time.Millisecond)
+			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			require.NoError(t, err)
+			time.Sleep(time.Duration(i*200) * time.Millisecond)
 			continue
 		}
 		break
@@ -1909,7 +1913,9 @@ func DeflakeWSWriteMessage(t testing.TB, conn *websocket.Conn, messageType int, 
 		err = conn.WriteMessage(messageType, data)
 		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
 			t.Log("connection reset by peer found, retrying...")
-			time.Sleep(time.Duration(i*100) * time.Millisecond)
+			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			require.NoError(t, err)
+			time.Sleep(time.Duration(i*200) * time.Millisecond)
 			continue
 		}
 		break
@@ -1923,7 +1929,9 @@ func DeflakeWSWriteJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err 
 		err = conn.WriteJSON(v)
 		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
 			t.Log("connection reset by peer found, retrying...")
-			time.Sleep(time.Duration(i*100) * time.Millisecond)
+			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			require.NoError(t, err)
+			time.Sleep(time.Duration(i*200) * time.Millisecond)
 			continue
 		}
 		break
