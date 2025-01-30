@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap/zaptest/observer"
 	"math"
 	"net/http"
 	"os"
@@ -1872,11 +1871,143 @@ func TestAccessLogs(t *testing.T) {
 		})
 	})
 
-	t.Run("validate expression evaluation", func(t *testing.T) {
+	t.Run("expression field logging", func(t *testing.T) {
 		t.Parallel()
 
-		testenv.Run(t,
-			&testenv.Config{
+		t.Run("validate expression evaluation", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "service_name",
+							ValueFrom: &config.CustomDynamicAttribute{
+								RequestHeader: "service-name",
+							},
+						},
+						{
+							Key: "operation_hash",
+							ValueFrom: &config.CustomDynamicAttribute{
+								ContextField: core.ContextFieldOperationHash,
+							},
+						},
+						{
+							Key: "url_method_expression",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.url.method",
+							},
+						},
+						{
+							Key:     "test_default_value",
+							Default: "value-defined",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.header.Get('some-value-that-does-not-exist')",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query:  `query employees { employees { id } }`,
+						Header: map[string][]string{"service-name": {"service-name"}},
+					})
+					require.JSONEq(t, employeesIDData, res.Body)
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestLogAll := requestLog.All()
+					requestContext := requestLogAll[0].ContextMap()
+
+					expectedValues := map[string]interface{}{
+						"log_type":              "request",
+						"status":                int64(200),
+						"method":                "POST",
+						"path":                  "/graphql",
+						"query":                 "",
+						"ip":                    "[REDACTED]",
+						"service_name":          "service-name",        // From request header
+						"operation_hash":        "1163600561566987607", // From context
+						"url_method_expression": "POST",                // From expression
+						"test_default_value":    "value-defined",       // From expression test default value
+					}
+					additionalExpectedKeys := []string{
+						"user_agent",
+						"latency",
+						"config_version",
+						"request_id",
+						"pid",
+						"hostname",
+					}
+					checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+				},
+			)
+		})
+
+		t.Run("attempt to run with uncompilable expression", func(t *testing.T) {
+			t.Parallel()
+
+			err := testenv.RunWithError(t, &testenv.Config{
+				AccessLogFields: []config.CustomAttribute{
+					{
+						Key: "url_method_expression",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.testing.method",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				assert.Fail(t, "should not be called")
+			})
+
+			require.ErrorContains(t, err, "type expr.Request has no field testing")
+		})
+
+		t.Run("attempt to run with expression that returns a non acceptable result", func(t *testing.T) {
+			t.Parallel()
+
+			err := testenv.RunWithError(t, &testenv.Config{
+				AccessLogFields: []config.CustomAttribute{
+					{
+						Key: "url_method_expression",
+						ValueFrom: &config.CustomDynamicAttribute{
+							// upper is a function in exprlang
+							Expression: "upper",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				assert.Fail(t, "should not be called")
+			})
+
+			require.ErrorContains(t, err, "disallowed type: func(string) string")
+		})
+
+		t.Run("attempt to run with expression that returns nil", func(t *testing.T) {
+			t.Parallel()
+
+			err := testenv.RunWithError(t, &testenv.Config{
+				AccessLogFields: []config.CustomAttribute{
+					{
+						Key: "url_method_expression",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "nil",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				assert.Fail(t, "should not be called")
+			})
+
+			require.ErrorContains(t, err, "disallowed nil")
+		})
+
+		t.Run("validate error expression for logging being processed in the router", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
 				AccessLogFields: []config.CustomAttribute{
 					{
 						Key:     "service_name",
@@ -1886,17 +2017,104 @@ func TestAccessLogs(t *testing.T) {
 						},
 					},
 					{
-						Key:     "operation_hash",
-						Default: "",
+						Key: "error_message",
 						ValueFrom: &config.CustomDynamicAttribute{
-							ContextField: core.ContextFieldOperationHash,
+							ContextField: core.ContextFieldResponseErrorMessage,
 						},
 					},
 					{
-						Key:     "url_method_expression",
+						Key:     "expression_url_method",
 						Default: "",
 						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "request.url.method",
+							Expression: "request.error ?? request.url.method",
+						},
+					},
+					{
+						Key:     "request_error",
+						Default: "",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldRequestError,
+						},
+					},
+				},
+				NoRetryClient: true,
+				RouterOptions: []core.Option{
+					core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+						EnableNetPoll:          true,
+						EnableSingleFlight:     true,
+						MaxConcurrentResolvers: 1,
+					}),
+					core.WithSubgraphRetryOptions(false, 0, 0, 0),
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				}}, func(t *testing.T, xEnv *testenv.Environment) {
+				_, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Header: map[string][]string{
+						"service-name": {"service-name"},
+					},
+					Query: `query employees { employees { id } `, // Missing closing bracket
+				})
+				require.NoError(t, err)
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestContext := requestLog.All()[0].ContextMap()
+
+				expectedValues := map[string]interface{}{
+					"log_type":              "request",
+					"status":                int64(200),
+					"method":                "POST",
+					"path":                  "/graphql",
+					"query":                 "", // http query is empty
+					"ip":                    "[REDACTED]",
+					"user_agent":            "Go-http-client/1.1",
+					"service_name":          "service-name", // From header
+					"error_message":         "unexpected token - got: EOF want one of: [RBRACE IDENT SPREAD]",
+					"expression_url_method": "unexpected token - got: EOF want one of: [RBRACE IDENT SPREAD]",
+					"request_error":         true,
+				}
+				additionalExpectedKeys := []string{
+					"latency",
+					"config_version",
+					"request_id",
+					"pid",
+					"hostname",
+				}
+
+				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+			})
+		})
+
+		t.Run("validate error expression for logging being processed in the subgraph router", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				AccessLogFields: []config.CustomAttribute{
+					{
+						Key: "request_error",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldRequestError,
+						},
+					},
+				},
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "service_name",
+						ValueFrom: &config.CustomDynamicAttribute{
+							RequestHeader: "service-name",
+						},
+					},
+					{
+						Key: "response_header",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ResponseHeader: "response-header-name",
+						},
+					},
+					{
+						Key: "custom_error_message",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.error ?? request.url.method",
 						},
 					},
 				},
@@ -1904,244 +2122,66 @@ func TestAccessLogs(t *testing.T) {
 					Enabled:  true,
 					LogLevel: zapcore.InfoLevel,
 				},
-			},
-			func(t *testing.T, xEnv *testenv.Environment) {
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query:  `query employees { employees { id } }`,
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     "service-name",
+								},
+							},
+						},
+					}),
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Products: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header().Set("Content-Type", "application/json")
+								w.WriteHeader(http.StatusForbidden)
+								_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:  `query employees { employees { id details { forename surname } notes } }`,
 					Header: map[string][]string{"service-name": {"service-name"}},
 				})
-				require.JSONEq(t, employeesIDData, res.Body)
-				logEntries := xEnv.Observer().All()
-				require.Len(t, logEntries, 10)
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
-				require.Equal(t, requestLog.Len(), 1)
-				requestLogAll := requestLog.All()
-				requestContext := requestLogAll[0].ContextMap()
+				productContext := requestLog.All()[1].ContextMap()
 
-				expectedValues := map[string]interface{}{
-					"log_type":              "request",
-					"status":                int64(200),
-					"method":                "POST",
-					"path":                  "/graphql",
-					"query":                 "",
-					"ip":                    "[REDACTED]",
-					"service_name":          "service-name",        // From request header
-					"operation_hash":        "1163600561566987607", // From context
-					"url_method_expression": "POST",                // From expression
-				}
 				additionalExpectedKeys := []string{
 					"user_agent",
+					"trace_id",
+					"hostname",
 					"latency",
 					"config_version",
 					"request_id",
 					"pid",
-					"hostname",
+					"url",
+					"custom_error_message",
 				}
-				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
-			},
-		)
-	})
 
-	t.Run("attempt to run with uncompilable expression", func(t *testing.T) {
-		t.Parallel()
-
-		err := testenv.RunWithError(t, &testenv.Config{
-			AccessLogFields: []config.CustomAttribute{
-				{
-					Key: "url_method_expression",
-					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "request.testing.method",
-					},
-				},
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			assert.Fail(t, "should not be called")
-		})
-
-		require.ErrorContains(t, err, "type expr.Request has no field testing")
-	})
-
-	t.Run("attempt to run with expression that returns a non acceptable result", func(t *testing.T) {
-		t.Parallel()
-
-		err := testenv.RunWithError(t, &testenv.Config{
-			AccessLogFields: []config.CustomAttribute{
-				{
-					Key: "url_method_expression",
-					ValueFrom: &config.CustomDynamicAttribute{
-						// upper is a function
-						Expression: "upper",
-					},
-				},
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			assert.Fail(t, "should not be called")
-		})
-
-		require.ErrorContains(t, err, "disallowed type: func(string) string")
-	})
-
-	t.Run("attempt to run with expression that returns nil", func(t *testing.T) {
-		t.Parallel()
-
-		err := testenv.RunWithError(t, &testenv.Config{
-			AccessLogFields: []config.CustomAttribute{
-				{
-					Key: "url_method_expression",
-					ValueFrom: &config.CustomDynamicAttribute{
-						// upper is a function
-						Expression: "nil",
-					},
-				},
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			assert.Fail(t, "should not be called")
-		})
-
-		require.ErrorContains(t, err, "disallowed nil")
-	})
-
-	t.Run("validate error - router - expressionContext - when error", func(t *testing.T) {
-		t.Parallel()
-
-		testenv.Run(t, &testenv.Config{
-			AccessLogFields: []config.CustomAttribute{
-				{
-					Key:     "service_name",
-					Default: "",
-					ValueFrom: &config.CustomDynamicAttribute{
-						RequestHeader: "service-name",
-					},
-				},
-				{
-					Key: "error_message",
-					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.ContextFieldResponseErrorMessage,
-					},
-				},
-				{
-					Key:     "expression_url_method",
-					Default: "",
-					ValueFrom: &config.CustomDynamicAttribute{
-						Expression: "request.error ?? request.url.method",
-					},
-				},
-				{
-					Key:     "request_error",
-					Default: "",
-					ValueFrom: &config.CustomDynamicAttribute{
-						ContextField: core.ContextFieldRequestError,
-					},
-				},
-			},
-			NoRetryClient: true,
-			RouterOptions: []core.Option{
-				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
-					EnableNetPoll:          true,
-					EnableSingleFlight:     true,
-					MaxConcurrentResolvers: 1,
-				}),
-				core.WithSubgraphRetryOptions(false, 0, 0, 0),
-			},
-			LogObservation: testenv.LogObservationConfig{
-				Enabled:  true,
-				LogLevel: zapcore.InfoLevel,
-			}}, func(t *testing.T, xEnv *testenv.Environment) {
-			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Header: map[string][]string{
-					"service-name": {"service-name"},
-				},
-				Query: `query employees { employees { id } `, // Missing closing bracket
+				productSubgraphVals := map[string]interface{}{
+					"log_type":      "client/subgraph",
+					"subgraph_name": "products",
+					"subgraph_id":   "3",
+					"status":        int64(403),
+					"method":        "POST",
+					"path":          "/graphql",
+					"query":         "", // http query is empty
+					"ip":            "[REDACTED]",
+					"service_name":  "service-name", // From request header
+				}
+				checkValues(t, productContext, productSubgraphVals, additionalExpectedKeys)
 			})
-			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"unexpected token - got: EOF want one of: [RBRACE IDENT SPREAD]","locations":[{"line":0,"column":0}]}]}`, res.Body)
-			logEntries := xEnv.Observer().All()
-			require.Len(t, logEntries, 10)
-			requestLog := xEnv.Observer().FilterMessage("/graphql")
-			require.Equal(t, requestLog.Len(), 1)
-			requestContext := requestLog.All()[0].ContextMap()
-
-			expectedValues := map[string]interface{}{
-				"log_type":              "request",
-				"status":                int64(200),
-				"method":                "POST",
-				"path":                  "/graphql",
-				"query":                 "", // http query is empty
-				"ip":                    "[REDACTED]",
-				"user_agent":            "Go-http-client/1.1",
-				"service_name":          "service-name", // From header
-				"error_message":         "unexpected token - got: EOF want one of: [RBRACE IDENT SPREAD]",
-				"expression_url_method": "unexpected token - got: EOF want one of: [RBRACE IDENT SPREAD]",
-				"request_error":         true,
-			}
-			additionalExpectedKeys := []string{
-				"latency",
-				"config_version",
-				"request_id",
-				"pid",
-				"hostname",
-			}
-
-			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
 		})
+
 	})
 
-	t.Run("validate error - subgraph - expressionContext - when error", func(t *testing.T) {
-		t.Parallel()
-
-		var zCore zapcore.Core
-		zCore, subgraphLogObserver := observer.New(zapcore.InfoLevel)
-		logger := logging.NewZapLoggerWithCore(zCore, true)
-
-		testenv.Run(t, &testenv.Config{
-			RouterOptions: []core.Option{
-				core.WithAccessLogs(&core.AccessLogsConfig{
-					SubgraphEnabled: true,
-					Logger:          logger,
-					SubgraphAttributes: []config.CustomAttribute{
-						{
-							Key:     "operation_hash",
-							Default: "",
-							ValueFrom: &config.CustomDynamicAttribute{
-								ContextField: core.ContextFieldOperationHash,
-							},
-						},
-					},
-				}),
-			},
-			LogObservation: testenv.LogObservationConfig{
-				Enabled:  true,
-				LogLevel: zapcore.InfoLevel,
-			}}, func(t *testing.T, xEnv *testenv.Environment) {
-			_, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Header: map[string][]string{},
-				Query:  `{ employees { id } }`, // Missing closing bracket
-			})
-			require.NoError(t, err)
-
-			requestLog := subgraphLogObserver.FilterMessage("/graphql")
-			require.Equal(t, requestLog.Len(), 2)
-			requestContext := requestLog.All()[0].ContextMap()
-
-			expectedValues := map[string]interface{}{
-				"level":         "info",
-				"msg":           "/graphql",
-				"log_type":      "client/subgraph",
-				"subgraph_name": "employees",
-				"subgraph_id":   "0",
-				"status":        float64(200),
-				"method":        "POST",
-				"path":          "/graphql",
-				"query":         "",
-				"ip":            "[REDACTED]",
-			}
-			additionalExpectedKeys := []string{
-				"time", "hostname", "pid", "latency",
-				"user_agent", "config_version", "request_id", "trace_id", "url",
-			}
-			checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
-		})
-	})
 }
 
 func checkValues(t *testing.T, requestContext map[string]interface{}, expectedValues map[string]interface{}, additionalExpectedKeys []string) {
