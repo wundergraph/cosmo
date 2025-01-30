@@ -22,7 +22,7 @@ func TestNegotiateSubscriptionParams(t *testing.T) {
 				r: &http.Request{
 					URL: &url.URL{RawQuery: "test"},
 					Header: http.Header{
-						"Accept": []string{"test"},
+						"Accept": []string{"test,text/event-stream"},
 					}}},
 			want: SubscriptionParams{
 				UseSse:        false,
@@ -78,7 +78,7 @@ func TestNegotiateSubscriptionParams(t *testing.T) {
 				r: &http.Request{
 					URL: &url.URL{RawQuery: "test"},
 					Header: http.Header{
-						"Accept": []string{"application/json,multipart/mixed"},
+						"Accept": []string{"multipart/mixed,application/json"},
 					}}},
 			want: SubscriptionParams{
 				UseSse:        false,
@@ -87,17 +87,31 @@ func TestNegotiateSubscriptionParams(t *testing.T) {
 			},
 		},
 		{
-			name: "Prefers multipart to SSE",
+			name: "Respect q preference (multipart wins)",
 			args: args{
 				r: &http.Request{
 					URL: &url.URL{RawQuery: "test"},
 					Header: http.Header{
-						"Accept": []string{"text/event-stream;q=0.9,application/json,multipart/mixed;q=1.0"},
+						"Accept": []string{"text/event-stream;q=0.9,application/json;q=0.8,multipart/mixed;q=1.0"},
 					}}},
 			want: SubscriptionParams{
 				UseSse:        false,
 				SubscribeOnce: false,
 				UseMultipart:  true,
+			},
+		},
+		{
+			name: "Respect order (SSE wins)",
+			args: args{
+				r: &http.Request{
+					URL: &url.URL{RawQuery: "test"},
+					Header: http.Header{
+						"Accept": []string{"text/event-stream,application/json,multipart/mixed"},
+					}}},
+			want: SubscriptionParams{
+				UseSse:        true,
+				SubscribeOnce: false,
+				UseMultipart:  false,
 			},
 		},
 	}
