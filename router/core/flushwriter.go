@@ -3,13 +3,12 @@ package core
 import (
 	"bytes"
 	"context"
+	"github.com/wundergraph/astjson"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"io"
 	"mime"
 	"net/http"
 	"strings"
-
-	"github.com/wundergraph/astjson"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 const (
@@ -184,14 +183,26 @@ func setSubscriptionHeaders(wgParams SubscriptionParams, r *http.Request, w http
 
 func NegotiateSubscriptionParams(r *http.Request) SubscriptionParams {
 	q := r.URL.Query()
-	acceptHeader := r.Header.Get("Accept")
-
-	mediaType, _, _ := mime.ParseMediaType(acceptHeader)
-	subscribeOnce := q.Has(WgSubscribeOnceParam)
-	useMultipart := mediaType == multipartMime || strings.HasPrefix(acceptHeader, multipartMime)
+	acceptHeaders := r.Header.Get("Accept")
+	elements := strings.Split(acceptHeaders, ",")
 	// We want to accept both headers in the form (text/event-stream;application/json, which is valid per the RFC,
-	// as well as text/event-stream,application/json which isn't handled by the library)
-	useSse := q.Has(WgSseParam) || mediaType == sseMimeType || strings.HasPrefix(acceptHeader, sseMimeType)
+	// as well as text/event-stream,application/json which isn't handled by the library). Eventually, a solution for
+	// this will be merged in with https://github.com/golang/go/issues/19307, but until then, this is a rough workaround.
+	var (
+		useMultipart = false
+		useSse       = q.Has(WgSseParam)
+	)
+	for _, acceptHeader := range elements {
+		mediaType, _, _ := mime.ParseMediaType(acceptHeader)
+		useMultipart = useMultipart || mediaType == multipartMime
+		useSse = useSse || mediaType == sseMimeType
+	}
+	subscribeOnce := q.Has(WgSubscribeOnceParam)
+
+	if useMultipart && useSse {
+		// If both are set, we default to multipart
+		useSse = false
+	}
 
 	return SubscriptionParams{
 		UseSse:        useSse,
