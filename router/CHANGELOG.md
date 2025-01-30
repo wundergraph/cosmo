@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.168.1](https://github.com/wundergraph/cosmo/compare/router@0.168.0...router@0.168.1) (2025-01-30)
+
+### Bug Fixes
+
+* increase max concurrent resolvers ([#1544](https://github.com/wundergraph/cosmo/issues/1544)) ([00e2ee8](https://github.com/wundergraph/cosmo/commit/00e2ee831173eee25ecc21e4703667b22b779b4e)) (@StarpTech)
+
 # [0.168.0](https://github.com/wundergraph/cosmo/compare/router@0.167.0...router@0.168.0) (2025-01-29)
 
 ### Features
