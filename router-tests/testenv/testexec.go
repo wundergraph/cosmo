@@ -104,7 +104,6 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 	go func() {
 		<-newCtx.Done()
 		_ = cmd.Process.Signal(os.Interrupt)
-		_ = cmd.Process.Kill()
 	}()
 
 	// Create test environment

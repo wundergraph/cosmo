@@ -1172,8 +1172,8 @@ func (e *Environment) Shutdown() {
 	}
 
 	if e.routerCmd != nil {
-		if err := e.routerCmd.Process.Kill(); err != nil {
-			e.t.Logf("could not kill router process: %s", err)
+		if err := e.routerCmd.Process.Signal(os.Interrupt); err != nil {
+			e.t.Logf("could not interrupt router process: %s", err)
 		}
 	}
 }
