@@ -13,11 +13,17 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
 
 const routerDir = "../router"
+
+var (
+	buildOnce sync.Once
+	routerBin string
+)
 
 // RunRouterBinary starts the router binary, sets up the test environment, and runs the provided test function.
 func RunRouterBinary(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
@@ -26,8 +32,8 @@ func RunRouterBinary(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Envir
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	buildRouterBin(t, ctx)
-	env := runRouterBin(t, ctx, cfg, routerDir)
+	routerPath := getRouterBinary(t, ctx)
+	env := runRouterBin(t, ctx, cfg, routerPath)
 	t.Cleanup(env.Shutdown)
 
 	// Execute the test case with the environment
@@ -38,16 +44,33 @@ func RunRouterBinary(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Envir
 func buildRouterBin(t *testing.T, ctx context.Context) {
 	t.Helper()
 
-	cmd := exec.Command("make", "build")
-	cmd.Dir = routerDir
-	runCmdWithLogs(t, ctx, cmd, true)
+	// Ensure we only build once
+	buildOnce.Do(func() {
+		t.Log("Building router binary...")
+
+		cmd := exec.Command("make", "build")
+		cmd.Dir = routerDir
+		runCmdWithLogs(t, ctx, cmd, true) // Run the build command
+
+		// Determine the binary path after successful build
+		binPath := filepath.Join(routerDir, "router") // Adjust if needed for Windows
+		require.FileExists(t, binPath, "Router binary was not found after build")
+
+		routerBin = binPath // Store the path for reuse
+		t.Logf("Router binary built: %s", routerBin)
+	})
+}
+
+// getRouterBinary ensures the router binary is built and returns its path.
+func getRouterBinary(t *testing.T, ctx context.Context) string {
+	buildRouterBin(t, ctx) // Ensure the router is built
+	return routerBin       // Return cached binary path
 }
 
 // runRouterBin starts the router binary and returns an Environment.
-func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, routerDir string) *Environment {
+func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath string) *Environment {
 	t.Helper()
 
-	binaryPath := filepath.Join(routerDir, "router")
 	fullBinPath, err := filepath.Abs(binaryPath)
 	require.NoError(t, err)
 
