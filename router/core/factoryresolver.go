@@ -73,7 +73,6 @@ func NewDefaultFactoryResolver(
 ) *DefaultFactoryResolver {
 
 	defaultHttpClient := &http.Client{
-		Timeout:   transportFactory.DefaultTransportTimeout(),
 		Transport: transportFactory.RoundTripper(enableSingleFlight, baseTransport),
 	}
 	streamingClient := &http.Client{
