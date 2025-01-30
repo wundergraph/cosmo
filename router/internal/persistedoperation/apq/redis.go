@@ -29,9 +29,9 @@ func NewRedisClient(opts *RedisOptions) (KVClient, error) {
 	}
 
 	rdb, err := rd.NewRedisCloser(&rd.RedisCloserOptions{
-		Logger:      opts.Logger,
-		URL:         opts.StorageConfig.URL,
-		ClusterUrls: opts.StorageConfig.ClusterURLs,
+		Logger:         opts.Logger,
+		URLs:           opts.StorageConfig.URLs,
+		ClusterEnabled: opts.StorageConfig.ClusterEnabled,
 	})
 
 	rclient := &redisClient{

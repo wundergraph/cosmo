@@ -17,19 +17,23 @@ type RDCloser interface {
 }
 
 type RedisCloserOptions struct {
-	Logger      *zap.Logger
-	URL         string
-	ClusterUrls []string
-	Password    string
+	Logger         *zap.Logger
+	URLs           []string
+	ClusterEnabled bool
+	Password       string
 }
 
 func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
+	if len(opts.URLs) == 0 {
+		return nil, fmt.Errorf("no redis URLs provided")
+	}
+
 	var rdb RDCloser
 	// If provided, prefer cluster URLs to single URL
-	if len(opts.ClusterUrls) > 0 {
+	if opts.ClusterEnabled {
 		opts.Logger.Info("Detected that redis is running in cluster mode.")
 		strippedUrls := []string{}
-		for _, url := range opts.ClusterUrls {
+		for _, url := range opts.URLs {
 			strippedUrls = append(strippedUrls, strings.ReplaceAll(url, "redis://", ""))
 		}
 		rdb = redis.NewClusterClient(&redis.ClusterOptions{
@@ -37,7 +41,7 @@ func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
 			Password: opts.Password,
 		})
 	} else {
-		options, err := redis.ParseURL(opts.URL)
+		options, err := redis.ParseURL(opts.URLs[0])
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse the redis connection url: %w", err)
 		}

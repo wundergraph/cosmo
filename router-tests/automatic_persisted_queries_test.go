@@ -182,8 +182,8 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 					core.WithStorageProviders(config.StorageProviders{
 						Redis: []config.RedisStorageProvider{
 							{
-								URL: redisUrl,
-								ID:  "redis",
+								URLs: []string{redisUrl},
+								ID:   "redis",
 							},
 						}})},
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
@@ -215,8 +215,8 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 					core.WithStorageProviders(config.StorageProviders{
 						Redis: []config.RedisStorageProvider{
 							{
-								URL: redisUrl,
-								ID:  "redis",
+								URLs: []string{redisUrl},
+								ID:   "redis",
 							},
 						}})},
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
@@ -272,8 +272,8 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 					core.WithStorageProviders(config.StorageProviders{
 						Redis: []config.RedisStorageProvider{
 							{
-								URL: redisUrl,
-								ID:  "redis",
+								URLs: []string{redisUrl},
+								ID:   "redis",
 							},
 						}})},
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
@@ -321,8 +321,8 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 					core.WithStorageProviders(config.StorageProviders{
 						Redis: []config.RedisStorageProvider{
 							{
-								URL: redisUrl,
-								ID:  "redis",
+								URLs: []string{redisUrl},
+								ID:   "redis",
 							},
 						}})},
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
@@ -384,8 +384,9 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 					core.WithStorageProviders(config.StorageProviders{
 						Redis: []config.RedisStorageProvider{
 							{
-								ClusterURLs: clusterUrls,
-								ID:          "redis",
+								ClusterEnabled: true,
+								URLs:           clusterUrls,
+								ID:             "redis",
 							},
 						}})},
 				ApqConfig: config.AutomaticPersistedQueriesConfig{

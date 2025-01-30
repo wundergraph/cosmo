@@ -11,12 +11,21 @@ import (
 func TestRedisCloser(t *testing.T) {
 	t.Parallel()
 
+	t.Run("fails if no urls provided", func(t *testing.T) {
+		_, err := NewRedisCloser(&RedisCloserOptions{
+			Logger: zaptest.NewLogger(t),
+		})
+
+		require.Error(t, err)
+		require.ErrorContains(t, err, "no redis URLs provided")
+	})
+
 	t.Run("Creates default client for normal redis", func(t *testing.T) {
 		mr := miniredis.RunT(t)
 
 		cl, err := NewRedisCloser(&RedisCloserOptions{
 			Logger: zaptest.NewLogger(t),
-			URL:    fmt.Sprintf("redis://%s", mr.Addr()),
+			URLs:   []string{fmt.Sprintf("redis://%s", mr.Addr())},
 		})
 
 		require.NoError(t, err)
@@ -25,10 +34,10 @@ func TestRedisCloser(t *testing.T) {
 		require.False(t, isClusterClient(cl))
 	})
 
-	t.Run("Single cluster client fails", func(t *testing.T) {
+	t.Run("Unresponsive redis fails", func(t *testing.T) {
 		_, err := NewRedisCloser(&RedisCloserOptions{
 			Logger: zaptest.NewLogger(t),
-			URL:    "redis://localhost:7000",
+			URLs:   []string{"redis://localhost:7000"},
 		})
 
 		require.Error(t, err)

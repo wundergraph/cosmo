@@ -842,9 +842,9 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
 		var err error
 		r.redisClient, err = rd.NewRedisCloser(&rd.RedisCloserOptions{
-			URL:         r.Config.rateLimit.Storage.URL,
-			ClusterUrls: r.Config.rateLimit.Storage.ClusterURLs,
-			Logger:      r.logger,
+			URLs:           r.Config.rateLimit.Storage.URLs,
+			ClusterEnabled: r.Config.rateLimit.Storage.ClusterEnabled,
+			Logger:         r.logger,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create redis client: %w", err)

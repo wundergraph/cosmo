@@ -56,24 +56,25 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["url", "id"],
+            "required": ["urls", "id"],
             "additionalProperties": false,
             "properties": {
               "id": {
                 "type": "string",
                 "description": "The ID of the redis provider. The ID is used to identify the storage provider in the configuration."
               },
-              "cluster_urls": {
+              "urls": {
                 "type": "array",
-                "description": "The cluster connection URLs. The values are specified as a string with the format 'host:port' (without scheme://). If present, will use cluster URLs instead of the URL to connect",
+                "description": "The cluster connection URLs. The values are specified as a string with the format 'scheme://host:port'. If cluster enabled, will use these urls for a cluster connection. If cluster is not enabled, we will just select the first URL provided.",
                 "default": [],
                 "items": {
                   "type": "string"
                 }
               },
-              "url": {
-                "type": "string",
-                "description": "The URL of the redis storage. The URL is specified as a string with the format 'scheme://host:port, with auth included if necessary'."
+              "cluster_enabled": {
+                "type": "boolean",
+                "description": "Enable Redis Cluster connection, using the supplied URLs.",
+                "default": false
               }
             }
           }
@@ -1584,16 +1585,16 @@
         "storage": {
           "type": "object",
           "additionalProperties": false,
+          "required": ["urls"],
           "properties": {
-            "url": {
-              "type": "string",
-              "description": "The connection URL. The value is specified as a string with the format 'scheme://host:port'.",
-              "default": "redis://localhost:6379",
-              "format": "url"
+            "cluster_enabled": {
+              "type": "boolean",
+              "description": "Enable Redis Cluster connection, using the supplied URLs.",
+              "default": false
             },
-            "cluster_urls": {
+            "urls": {
               "type": "array",
-              "description": "The cluster connection URLs. The values are specified as a string with the format 'host:port' (without scheme://). If present, will use cluster URLs instead of the URL to connect",
+              "description": "The Redis connection URLs. The values are specified as a string with the format 'scheme://host:port'. If cluster is enabled, will use them to instantiate a cluster connection. f",
               "default": [],
               "items": {
                 "type": "string"
