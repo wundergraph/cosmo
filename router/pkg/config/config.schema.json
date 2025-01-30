@@ -1240,93 +1240,13 @@
         "all": {
           "type": "object",
           "description": "The configuration for all subgraphs. The configuration is used to configure the traffic shaping for all subgraphs.",
-          "additionalProperties": false,
-          "properties": {
-            "request_timeout": {
-              "type": "string",
-              "duration": {
-                "minimum": "1s"
-              },
-              "description": "The request timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-            },
-            "dial_timeout": {
-              "type": "string",
-              "format": "go-duration",
-              "description": "The dial timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-            },
-            "tls_handshake_timeout": {
-              "type": "string",
-              "format": "go-duration",
-              "description": "The TLS handshake timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-            },
-            "response_header_timeout": {
-              "type": "string",
-              "format": "go-duration",
-              "description": "The response header timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-            },
-            "expect_continue_timeout": {
-              "type": "string",
-              "format": "go-duration",
-              "description": "The expect continue timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-            },
-            "keep_alive_idle_timeout": {
-              "type": "string",
-              "format": "go-duration",
-              "description": "The keep alive idle timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-            },
-            "keep_alive_probe_interval": {
-              "type": "string",
-              "duration": {
-                "minimum": "5s"
-              },
-              "description": "The keep alive probe interval. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-            },
-            "retry": {
-              "type": "object",
-              "description": "The retry configuration. The retry configuration is used to configure the retry behavior for the subgraphs requests. See https://cosmo-docs.wundergraph.com/router/traffic-shaping#automatic-retry for more information.",
-              "additionalProperties": false,
-              "properties": {
-                "enabled": {
-                  "type": "boolean"
-                },
-                "algorithm": {
-                  "type": "string",
-                  "description": "The algorithm used to calculate the retry interval. The supported algorithms are 'backoff_jitter'.",
-                  "enum": ["backoff_jitter"]
-                },
-                "max_attempts": {
-                  "type": "integer",
-                  "default": 5,
-                  "minimum": 1,
-                  "description": "The maximum number of attempts. The default value is 5."
-                },
-                "interval": {
-                  "type": "string",
-                  "format": "go-duration",
-                  "default": "3s",
-                  "description": "The time duration between each retry attempt. Increase with every retry. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-                },
-                "max_duration": {
-                  "type": "string",
-                  "format": "go-duration",
-                  "default": "10s",
-                  "description": "The maximum allowable duration between retries (random). The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-                }
-              }
-            }
-          }
+          "$ref": "#/definitions/traffic_shaping_subgraph_request_rule"
         },
         "subgraphs": {
           "type": "object",
           "description": "The configuration to control traffic shaping for specific subgraphs.",
           "additionalProperties": {
-            "request_timeout": {
-              "type": "string",
-              "duration": {
-                "minimum": "1s"
-              },
-              "description": "The request timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-            }
+            "$ref": "#/definitions/traffic_shaping_subgraph_request_rule"
           }
         }
       }
@@ -1834,9 +1754,7 @@
               }
             }
           },
-          "oneOf": [
-            { "required": ["filesystem"] }
-          ]
+          "oneOf": [{ "required": ["filesystem"] }]
         },
         "workers": {
           "type": "integer",
@@ -2441,6 +2359,85 @@
     }
   },
   "definitions": {
+    "traffic_shaping_subgraph_request_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The configuration for all subgraphs. The configuration is used to configure the traffic shaping for all subgraphs.",
+      "properties": {
+        "request_timeout": {
+          "type": "string",
+          "duration": {
+            "minimum": "1s"
+          },
+          "description": "The request timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "dial_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The dial timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "tls_handshake_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The TLS handshake timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "response_header_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The response header timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "expect_continue_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The expect continue timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "keep_alive_idle_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The keep alive idle timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "keep_alive_probe_interval": {
+          "type": "string",
+          "duration": {
+            "minimum": "5s"
+          },
+          "description": "The keep alive probe interval. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "retry": {
+          "type": "object",
+          "description": "The retry configuration. The retry configuration is used to configure the retry behavior for the subgraphs requests. See https://cosmo-docs.wundergraph.com/router/traffic-shaping#automatic-retry for more information.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "algorithm": {
+              "type": "string",
+              "description": "The algorithm used to calculate the retry interval. The supported algorithms are 'backoff_jitter'.",
+              "enum": ["backoff_jitter"]
+            },
+            "max_attempts": {
+              "type": "integer",
+              "default": 5,
+              "minimum": 1,
+              "description": "The maximum number of attempts. The default value is 5."
+            },
+            "interval": {
+              "type": "string",
+              "format": "go-duration",
+              "default": "3s",
+              "description": "The time duration between each retry attempt. Increase with every retry. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            },
+            "max_duration": {
+              "type": "string",
+              "format": "go-duration",
+              "default": "10s",
+              "description": "The maximum allowable duration between retries (random). The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            }
+          }
+        }
+      }
+    },
     "traffic_shaping_header_rule": {
       "type": "object",
       "description": "The configuration for all subgraphs. The configuration is used to configure the traffic shaping for all subgraphs.",
