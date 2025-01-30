@@ -832,7 +832,7 @@
                       },
                       "expression": {
                         "type": "string",
-                        "description": "The templating expression that is evaluated to extract values to log, default value is used if expression evaluates to empty, runtime templating errors are logged and ignored then"
+                        "description": "The expression used to evaluate to extract a value for logging. The expression is specified as a string. Please see https://expr-lang.org/ for more information on constructing expressions."
                       },
                       "context_field": {
                         "type": "string",
@@ -2601,7 +2601,7 @@
               },
               "expression": {
                 "type": "string",
-                "description": "The templating expression that is evaluated to extract values to log, default value is used if expression evaluates to empty, runtime templating errors are logged and ignored then"
+                "description": "The expression used to evaluate to extract a value for logging. The expression is specified as a string. Please see https://expr-lang.org/ for more information on constructing expressions."
               },
               "context_field": {
                 "type": "string",
