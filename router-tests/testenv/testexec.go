@@ -19,15 +19,15 @@ import (
 
 const routerDir = "../router"
 
-// RunBasicRouter starts the router binary, sets up the test environment, and runs the provided test function.
-func RunBasicRouter(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
+// RunRouterBinary starts the router binary, sets up the test environment, and runs the provided test function.
+func RunRouterBinary(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	t.Helper()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	buildRouter(t, ctx)
-	env := RunRouter(t, ctx, cfg, routerDir)
+	buildRouterBin(t, ctx)
+	env := runRouterBin(t, ctx, cfg, routerDir)
 	t.Cleanup(env.Shutdown)
 
 	// Execute the test case with the environment
@@ -35,7 +35,7 @@ func RunBasicRouter(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Enviro
 }
 
 // BuildRouter runs `make build` inside the router directory and fails the test on error.
-func buildRouter(t *testing.T, ctx context.Context) {
+func buildRouterBin(t *testing.T, ctx context.Context) {
 	t.Helper()
 
 	cmd := exec.Command("make", "build")
@@ -43,8 +43,8 @@ func buildRouter(t *testing.T, ctx context.Context) {
 	runCmdWithLogs(t, ctx, cmd, true)
 }
 
-// RunRouter starts the router binary and returns an Environment.
-func RunRouter(t *testing.T, ctx context.Context, cfg *Config, routerDir string) *Environment {
+// runRouterBin starts the router binary and returns an Environment.
+func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, routerDir string) *Environment {
 	t.Helper()
 
 	binaryPath := filepath.Join(routerDir, "router")
@@ -53,9 +53,9 @@ func RunRouter(t *testing.T, ctx context.Context, cfg *Config, routerDir string)
 
 	port := freeport.GetOne(t)
 	listenerAddr := fmt.Sprintf("localhost:%d", port)
-	token, err := GenerateJwtToken()
+	token, err := generateJwtToken()
 	require.NoError(t, err)
-	testCdn := SetupCDNServer(t)
+	testCdn := setupCDNServer(t)
 	vals := ""
 
 	for key, val := range map[string]string{
@@ -96,6 +96,7 @@ func RunRouter(t *testing.T, ctx context.Context, cfg *Config, routerDir string)
 		cancel:        cancel,
 		shutdown:      atomic.NewBool(false),
 		shutdownDelay: 30 * time.Second,
+		routerCmd:     cmd,
 	}
 
 	// Wait for server readiness

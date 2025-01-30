@@ -18,6 +18,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -545,7 +546,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.ModifyRouterConfig(&routerConfig)
 	}
 
-	cdn := SetupCDNServer(t)
+	cdn := setupCDNServer(t)
 
 	if cfg.PrometheusRegistry != nil {
 		cfg.PrometheusPort = ports[0]
@@ -726,7 +727,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	return e, waitErr
 }
 
-func GenerateJwtToken() (string, error) {
+func generateJwtToken() (string, error) {
 	jwtToken := jwt.New(jwt.SigningMethodHS256)
 	jwtToken.Claims = testTokenClaims()
 	return jwtToken.SignedString([]byte("hunter2"))
@@ -756,7 +757,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifyCDNConfig(&cfg.CDN)
 	}
 
-	graphApiToken, err := GenerateJwtToken()
+	graphApiToken, err := generateJwtToken()
 	if err != nil {
 		return nil, err
 	}
@@ -1007,7 +1008,7 @@ func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server
 	return s
 }
 
-func SetupCDNServer(t testing.TB) *httptest.Server {
+func setupCDNServer(t testing.TB) *httptest.Server {
 	_, filePath, _, ok := runtime.Caller(0)
 	require.True(t, ok)
 	baseCdnFile := filepath.Join(path.Dir(filePath), "testdata", "cdn")
@@ -1076,6 +1077,7 @@ type Environment struct {
 	routerConfigVersionMyFF string
 
 	metricReader metric.Reader
+	routerCmd    *exec.Cmd
 }
 
 func GetPubSubNameFn(prefix string) func(name string) string {
@@ -1167,6 +1169,12 @@ func (e *Environment) Shutdown() {
 	// Flush Kafka connection
 	if e.cfg.EnableKafka && e.KafkaClient != nil {
 		e.KafkaClient.Flush(ctx)
+	}
+
+	if e.routerCmd != nil {
+		if err := e.routerCmd.Process.Kill(); err != nil {
+			e.t.Logf("could not kill router process: %s", err)
+		}
 	}
 }
 
