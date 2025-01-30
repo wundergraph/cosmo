@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"github.com/expr-lang/expr"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -124,7 +123,7 @@ func AccessLogsFieldHandler(
 	}
 
 	for _, exprField := range exprAttributes {
-		result, err := expr.Run(exprField.Expr, reqContext.expressionContext)
+		result, err := reqContext.ResolveAnyExpression(exprField.Expr)
 		if err != nil {
 			logger.Error("unable to process expression for access logs", zap.String("fieldKey", exprField.Key), zap.Error(err))
 			continue

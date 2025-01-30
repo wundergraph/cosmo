@@ -16,13 +16,21 @@ type ExpressionAttribute struct {
 func GetAccessLogConfigExpressions(attributes []config.CustomAttribute) ([]ExpressionAttribute, error) {
 	exprSlice := make([]ExpressionAttribute, 0)
 	for _, sAttribute := range attributes {
-		if sAttribute.ValueFrom == nil || sAttribute.ValueFrom.Expression == "" {
+		exprString := sAttribute.ValueFrom.Expression
+		if sAttribute.ValueFrom == nil || exprString == "" {
 			continue
 		}
-		expression, err := exprlocal.CompileAnyExpression(sAttribute.ValueFrom.Expression)
+
+		err := exprlocal.ValidateAnyExpression(exprString)
+		if err != nil {
+			return nil, fmt.Errorf("failed when validating log expressions: %w", err)
+		}
+
+		expression, err := exprlocal.CompileAnyExpression(exprString)
 		if err != nil {
 			return nil, fmt.Errorf("failed when compiling log expressions: %w", err)
 		}
+
 		exprSlice = append(exprSlice, ExpressionAttribute{
 			Key:     sAttribute.Key,
 			Default: sAttribute.Default,

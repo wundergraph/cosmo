@@ -253,6 +253,10 @@ type requestContext struct {
 	expressionContext expr.Context
 }
 
+func (c *requestContext) ResolveAnyExpression(expression *vm.Program) (any, error) {
+	return expr.ResolveAnyExpression(expression, c.expressionContext)
+}
+
 func (c *requestContext) ResolveStringExpression(expression *vm.Program) (string, error) {
 	return expr.ResolveStringExpression(expression, c.expressionContext)
 }
