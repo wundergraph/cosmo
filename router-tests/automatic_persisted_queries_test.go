@@ -8,7 +8,6 @@ import (
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"net/http"
-	"strings"
 	"testing"
 	"time"
 
@@ -368,9 +367,9 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 		t.Run("works with cluster mode", func(t *testing.T) {
 			t.Parallel()
 
-			redisLocalUrl = "localhost:7000,localhost:7001"
+			clusterUrls := []string{"localhost:7000", "localhost:7001"}
 			clusterClient := redis.NewClusterClient(&redis.ClusterOptions{
-				Addrs:    strings.Split(redisLocalUrl, ","),
+				Addrs:    clusterUrls,
 				Password: redisPassword,
 			})
 
@@ -385,8 +384,8 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 					core.WithStorageProviders(config.StorageProviders{
 						Redis: []config.RedisStorageProvider{
 							{
-								URL: redisUrl,
-								ID:  "redis",
+								ClusterURLs: clusterUrls,
+								ID:          "redis",
 							},
 						}})},
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
