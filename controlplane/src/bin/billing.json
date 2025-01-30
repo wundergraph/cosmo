@@ -150,7 +150,7 @@
         { "id": "analytics-retention", "limit": 30 },
         { "id": "tracing-retention", "limit": 30 },
         { "id": "changelog-retention", "limit": 30 },
-        { "id": "breaking-change-retention", "limit": 90 },
+        { "id": "breaking-change-retention", "limit": 30 },
         { "id": "trace-sampling-rate", "limit": 0.1 },
         { "id": "oidc" },
         { "id": "scim", "description": "System for Cross-Domain Identity Management (SCIM)" },
