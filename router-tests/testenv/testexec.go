@@ -87,6 +87,7 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 		"CDN_URL":              testCdn.URL,
 		"METRICS_OTLP_ENABLED": "false",
 		"RETRY_ENABLED":        "false",
+		"SHUTDOWN_DELAY":       "30s",
 		"CDN_CACHE_SIZE":       fmt.Sprintf("%d", 1024*1024),
 	} {
 		vals += fmt.Sprintf("\n%s=%s", key, val)
@@ -103,7 +104,6 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 	go func() {
 		<-newCtx.Done()
 		_ = cmd.Process.Signal(os.Interrupt)
-		time.Sleep(2 * time.Second)
 		_ = cmd.Process.Kill()
 	}()
 
