@@ -90,7 +90,8 @@ func AccessLogsFieldHandler(
 	logger *zap.Logger,
 	attributes []config.CustomAttribute,
 	exprAttributes []requestlogger.ExpressionAttribute,
-	passedErr any,
+	passedErr error,
+	panicErr any,
 	request *http.Request,
 	responseHeader *http.Header,
 ) []zapcore.Field {
@@ -108,7 +109,7 @@ func AccessLogsFieldHandler(
 		} else if field.ValueFrom != nil && field.ValueFrom.RequestHeader != "" && request != nil {
 			resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
 		} else if field.ValueFrom != nil && field.ValueFrom.ContextField != "" {
-			if v := GetLogFieldFromCustomAttribute(field, reqContext, passedErr); v != zap.Skip() {
+			if v := GetLogFieldFromCustomAttribute(field, reqContext, passedErr, panicErr); v != zap.Skip() {
 				resFields = append(resFields, v)
 			}
 		} else if field.Default != "" {
@@ -123,7 +124,11 @@ func AccessLogsFieldHandler(
 	}
 
 	for _, exprField := range exprAttributes {
-		result, err := reqContext.ResolveAnyExpression(exprField.Expr)
+		// TODO: We would ignore any panic recover errors being logged as of now
+		// if we want to do this we either need to type the expr.Error field as any OR
+		// add a separate field for this in the expr context (but I doubt how useful it will
+		// be for a client), just doing `request.error` is easy
+		result, err := reqContext.ResolveAnyExpressionWithErrorOverride(exprField.Expr, passedErr)
 		if err != nil {
 			logger.Error("unable to process expression for access logs", zap.String("fieldKey", exprField.Key), zap.Error(err))
 			continue
@@ -134,8 +139,8 @@ func AccessLogsFieldHandler(
 	return resFields
 }
 
-func GetLogFieldFromCustomAttribute(field config.CustomAttribute, req *requestContext, err any) zap.Field {
-	val := getCustomDynamicAttributeValue(field.ValueFrom, req, err)
+func GetLogFieldFromCustomAttribute(field config.CustomAttribute, req *requestContext, err error, panicErr any) zap.Field {
+	val := getCustomDynamicAttributeValue(field.ValueFrom, req, err, panicErr)
 	switch v := val.(type) {
 	case string:
 		return NewStringLogField(v, field)
@@ -150,7 +155,12 @@ func GetLogFieldFromCustomAttribute(field config.CustomAttribute, req *requestCo
 	return zap.Skip()
 }
 
-func getCustomDynamicAttributeValue(attribute *config.CustomDynamicAttribute, reqContext *requestContext, err any) interface{} {
+func getCustomDynamicAttributeValue(
+	attribute *config.CustomDynamicAttribute,
+	reqContext *requestContext,
+	err error,
+	panicErr any,
+) interface{} {
 	if attribute == nil || attribute.ContextField == "" {
 		return ""
 	}
@@ -167,7 +177,7 @@ func getCustomDynamicAttributeValue(attribute *config.CustomDynamicAttribute, re
 
 	switch attribute.ContextField {
 	case ContextFieldRequestError:
-		return err != nil || reqContext.error != nil
+		return err != nil || panicErr != nil || reqContext.error != nil
 	case ContextFieldOperationName:
 		return reqContext.operation.Name()
 	case ContextFieldOperationType:
@@ -192,6 +202,9 @@ func getCustomDynamicAttributeValue(attribute *config.CustomDynamicAttribute, re
 	case ContextFieldResponseErrorMessage:
 		if err != nil {
 			return fmt.Sprintf("%v", err)
+		}
+		if panicErr != nil {
+			return fmt.Sprintf("%v", panicErr)
 		}
 		if reqContext.error != nil {
 			return reqContext.error.Error()

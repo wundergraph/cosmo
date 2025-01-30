@@ -117,21 +117,11 @@ func trackFinalResponseError(ctx context.Context, err error) {
 		return
 	}
 
-	AssignErrors(requestContext, err)
+	requestContext.error = err
 	requestContext.graphQLErrorServices = getAggregatedSubgraphServiceNames(requestContext.error)
 	requestContext.graphQLErrorCodes = getAggregatedSubgraphErrorCodes(requestContext.error)
 
 	rtrace.AttachErrToSpan(span, err)
-}
-
-// AssignErrors This is a common function for assigning request error to the context
-// by having a common function, any future assigning is likely to use this function
-// thus less likely accidentally avoiding assigning the expr context variable
-func AssignErrors(requestContext *requestContext, err error) {
-	requestContext.error = err
-	if requestContext.error != nil {
-		requestContext.expressionContext.Request.Error = requestContext.error
-	}
 }
 
 func getAggregatedSubgraphErrorCodes(err error) []string {

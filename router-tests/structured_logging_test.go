@@ -1872,8 +1872,6 @@ func TestAccessLogs(t *testing.T) {
 		})
 	})
 
-	//t.Run("validate expressions", func()
-
 	t.Run("validate expression evaluation", func(t *testing.T) {
 		t.Parallel()
 
@@ -2149,7 +2147,6 @@ func TestAccessLogs(t *testing.T) {
 func checkValues(t *testing.T, requestContext map[string]interface{}, expectedValues map[string]interface{}, additionalExpectedKeys []string) {
 	t.Helper()
 
-	// service_name
 	require.Lenf(t, requestContext, len(expectedValues)+len(additionalExpectedKeys), "unexpected number of keys")
 
 	for key, val := range expectedValues {

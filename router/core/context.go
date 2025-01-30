@@ -253,15 +253,40 @@ type requestContext struct {
 	expressionContext expr.Context
 }
 
+func (c *requestContext) setErrorContext() {
+	c.expressionContext.Request.Error = c.error
+}
+
+func (c *requestContext) ResolveAnyExpressionWithErrorOverride(expression *vm.Program, err error) (any, error) {
+	currContextRequest := c.expressionContext.Request
+	if err != nil {
+		// We don't really want to do a deep clone since we only know that error only can get modified
+		copyContext := expr.Context{
+			Request: expr.Request{
+				Auth:   currContextRequest.Auth,
+				URL:    currContextRequest.URL,
+				Header: currContextRequest.Header,
+				Error:  err,
+			},
+		}
+		return expr.ResolveAnyExpression(expression, copyContext)
+	}
+
+	return c.ResolveAnyExpression(expression)
+}
+
 func (c *requestContext) ResolveAnyExpression(expression *vm.Program) (any, error) {
+	c.setErrorContext()
 	return expr.ResolveAnyExpression(expression, c.expressionContext)
 }
 
 func (c *requestContext) ResolveStringExpression(expression *vm.Program) (string, error) {
+	c.setErrorContext()
 	return expr.ResolveStringExpression(expression, c.expressionContext)
 }
 
 func (c *requestContext) ResolveBoolExpression(expression *vm.Program) (bool, error) {
+	c.setErrorContext()
 	return expr.ResolveBoolExpression(expression, c.expressionContext)
 }
 
