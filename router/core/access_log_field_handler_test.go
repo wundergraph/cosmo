@@ -86,7 +86,7 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 				ExternalErrors: nil,
 			},
 		}
-		rcc.error = requestError
+		rcc.SetError(requestError)
 
 		req = req.WithContext(withRequestContext(req.Context(), rcc))
 
