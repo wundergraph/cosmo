@@ -8,7 +8,7 @@ import { LintIssueResult, LintRules, RulesConfig, SchemaLintDTO, SchemaLintIssue
 export default class SchemaLinter {
   linter: Linter;
   constructor() {
-    this.linter = new Linter();
+    this.linter = new Linter({ configType: 'eslintrc' });
   }
 
   getRuleModule = (rule: LintRuleEnum) => {
