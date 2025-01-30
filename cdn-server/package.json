@@ -31,8 +31,8 @@
   },
   "devDependencies": {
     "@types/node": "^20.9.0",
-    "eslint": "^8.53.0",
-    "eslint-config-unjs": "^0.2.1",
+    "eslint": "^9.19.0",
+    "eslint-config-unjs": "^0.4.2",
     "tsx": "^4.16.0",
     "typescript": "5.5.2"
   }
