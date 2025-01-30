@@ -28,6 +28,7 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 			make([]config.CustomAttribute, 0),
 			make([]requestlogger.ExpressionAttribute, 0),
 			nil,
+			nil,
 			req,
 			nil,
 		)
@@ -60,6 +61,7 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 			make([]config.CustomAttribute, 0),
 			exprAttributes,
 			nil,
+			nil,
 			req,
 			nil,
 		)
@@ -84,7 +86,7 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 				ExternalErrors: nil,
 			},
 		}
-		rcc.expressionContext.Request.Error = requestError
+		rcc.error = requestError
 
 		req = req.WithContext(withRequestContext(req.Context(), rcc))
 
@@ -105,13 +107,14 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 			make([]config.CustomAttribute, 0),
 			exprAttributes,
 			nil,
+			nil,
 			req,
 			nil,
 		)
 
 		expressionResponse := response[1]
 		require.Equal(t, expressionResponseKey, expressionResponse.Key)
-		require.Equal(t, requestError, expressionResponse.Interface)
+		require.Equal(t, &ExprWrapError{requestError}, expressionResponse.Interface)
 	})
 
 }
