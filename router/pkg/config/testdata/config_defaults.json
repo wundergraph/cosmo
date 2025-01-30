@@ -180,7 +180,12 @@
   "GraphQLPath": "/graphql",
   "PlaygroundPath": "/",
   "Authentication": {
-    "Providers": null
+    "JWT": {
+      "JWKS": null,
+      "HeaderName": "Authorization",
+      "HeaderValuePrefix": "Bearer",
+      "HeaderSources": null
+    }
   },
   "Authorization": {
     "RequireAuthentication": false,

@@ -398,20 +398,27 @@ type OverridesConfiguration struct {
 	Subgraphs map[string]SubgraphOverridesConfiguration `yaml:"subgraphs"`
 }
 
-type AuthenticationProviderJWKS struct {
-	URL                 string        `yaml:"url"`
-	HeaderNames         []string      `yaml:"header_names"`
-	HeaderValuePrefixes []string      `yaml:"header_value_prefixes"`
-	RefreshInterval     time.Duration `yaml:"refresh_interval" envDefault:"1m"`
+type JWKSConfiguration struct {
+	URL             string        `yaml:"url"`
+	Algorithms      []string      `yaml:"algorithms"`
+	RefreshInterval time.Duration `yaml:"refresh_interval" envDefault:"1m"`
 }
 
-type AuthenticationProvider struct {
-	Name string                      `yaml:"name"`
-	JWKS *AuthenticationProviderJWKS `yaml:"jwks"`
+type HeaderSource struct {
+	Type          string   `yaml:"type"`
+	Name          string   `yaml:"name"`
+	ValuePrefixes []string `yaml:"value_prefixes"`
+}
+
+type JWTAuthenticationConfiguration struct {
+	JWKS              []JWKSConfiguration `yaml:"jwks"`
+	HeaderName        string              `yaml:"header_name" envDefault:"Authorization"`
+	HeaderValuePrefix string              `yaml:"header_value_prefix" envDefault:"Bearer"`
+	HeaderSources     []HeaderSource      `yaml:"header_sources"`
 }
 
 type AuthenticationConfiguration struct {
-	Providers []AuthenticationProvider `yaml:"providers"`
+	JWT JWTAuthenticationConfiguration `yaml:"jwt"`
 }
 
 type AuthorizationConfiguration struct {

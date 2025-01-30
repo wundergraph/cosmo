@@ -13,10 +13,9 @@ const (
 )
 
 type httpHeaderAuthenticator struct {
-	tokenDecoder        TokenDecoder
-	name                string
-	headerNames         []string
-	headerValuePrefixes []string
+	tokenDecoder    TokenDecoder
+	name            string
+	headerSourceMap map[string][]string
 }
 
 func (a *httpHeaderAuthenticator) Name() string {
@@ -27,25 +26,37 @@ func (a *httpHeaderAuthenticator) Authenticate(ctx context.Context, p Provider) 
 	headers := p.AuthenticationHeaders()
 	var errs error
 
-	for _, header := range a.headerNames {
+	for header, prefixes := range a.headerSourceMap {
 		authorization := headers.Get(header)
-		for _, prefix := range a.headerValuePrefixes {
-			if strings.HasPrefix(authorization, prefix) {
-				tokenString := strings.TrimSpace(authorization[len(prefix):])
-				claims, err := a.tokenDecoder.Decode(tokenString)
-				if err != nil {
-					errs = errors.Join(errs, fmt.Errorf("could not validate token: %w", err))
+
+		if len(prefixes) == 0 {
+			prefixes = []string{""}
+		}
+
+		for _, prefix := range prefixes {
+			tokenString := authorization
+			if prefix != "" {
+				if !strings.HasPrefix(authorization, prefix) {
 					continue
 				}
-				// If claims is nil, we should return an empty Claims map to signal that the
-				// authentication was successful, but no claims were found.
-				if claims == nil {
-					claims = make(Claims)
-				}
-				return claims, nil
+
+				tokenString = strings.TrimSpace(authorization[len(prefix):])
 			}
+
+			claims, err := a.tokenDecoder.Decode(tokenString)
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("could not validate token: %w", err))
+				continue
+			}
+			// If claims is nil, we should return an empty Claims map to signal that the
+			// authentication was successful, but no claims were found.
+			if claims == nil {
+				claims = make(Claims)
+			}
+			return claims, nil
 		}
 	}
+
 	return nil, errs
 }
 
@@ -53,14 +64,9 @@ func (a *httpHeaderAuthenticator) Authenticate(ctx context.Context, p Provider) 
 type HttpHeaderAuthenticatorOptions struct {
 	// Name is the authenticator name. It cannot be empty.
 	Name string
-	// URL is the URL of the JWKS endpoint, it is mandatory.
-	URL string
-	// HeaderNames are the header names to use for retrieving the token. It defaults to
-	// Authorization
-	HeaderNames []string
-	// HeaderValuePrefixes are the prefixes to use for retrieving the token. It defaults to
-	// Bearer
-	HeaderValuePrefixes []string
+	// HeaderSourcePrefixes are the headers and their prefixes to use for retrieving the token.
+	// It defaults to Authorization and Bearer
+	HeaderSourcePrefixes map[string][]string
 	// TokenDecoder is the token decoder to use for decoding the token. It cannot be nil.
 	TokenDecoder TokenDecoder
 }
@@ -76,19 +82,15 @@ func NewHttpHeaderAuthenticator(opts HttpHeaderAuthenticatorOptions) (Authentica
 		return nil, fmt.Errorf("token decoder must be provided")
 	}
 
-	headerNames := opts.HeaderNames
-	if len(headerNames) == 0 {
-		headerNames = []string{defaultHeaderName}
-	}
-	headerValuePrefixes := opts.HeaderValuePrefixes
-	if len(headerValuePrefixes) == 0 {
-		headerValuePrefixes = []string{defaultHeaderValuePrefix}
+	if len(opts.HeaderSourcePrefixes) == 0 {
+		opts.HeaderSourcePrefixes = map[string][]string{
+			defaultHeaderName: {defaultHeaderValuePrefix},
+		}
 	}
 
 	return &httpHeaderAuthenticator{
-		tokenDecoder:        opts.TokenDecoder,
-		name:                opts.Name,
-		headerNames:         headerNames,
-		headerValuePrefixes: headerValuePrefixes,
+		tokenDecoder:    opts.TokenDecoder,
+		name:            opts.Name,
+		headerSourceMap: opts.HeaderSourcePrefixes,
 	}, nil
 }
