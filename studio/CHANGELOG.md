@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.99.2](https://github.com/wundergraph/cosmo/compare/studio@0.99.1...studio@0.99.2) (2025-01-29)
+
+### Bug Fixes
+
+* add copy button to subgraph routing url ([#1543](https://github.com/wundergraph/cosmo/issues/1543)) ([d48255d](https://github.com/wundergraph/cosmo/commit/d48255d8edcc4907cc5730636b3cda43dc582db8)) (@thisisnithin)
+* subgraphs search functionality ([#1540](https://github.com/wundergraph/cosmo/issues/1540)) ([3bd7b36](https://github.com/wundergraph/cosmo/commit/3bd7b36fa0a5db912afbe127c2616542fc68399d)) (@JivusAyrus)
+* trim the inputs of group mappers ([#1541](https://github.com/wundergraph/cosmo/issues/1541)) ([18a6025](https://github.com/wundergraph/cosmo/commit/18a6025a1e352ae6adb77ec2d231f209e20c4833)) (@JivusAyrus)
+
+## [0.99.1](https://github.com/wundergraph/cosmo/compare/studio@0.99.0...studio@0.99.1) (2025-01-24)
+
+**Note:** Version bump only for package studio
+
 # [0.99.0](https://github.com/wundergraph/cosmo/compare/studio@0.98.1...studio@0.99.0) (2025-01-23)
 
 ### Features

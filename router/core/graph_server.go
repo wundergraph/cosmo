@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"net/http"
 	"net/url"
@@ -16,7 +17,7 @@ import (
 	"github.com/klauspost/compress/gzip"
 
 	"github.com/cloudflare/backoff"
-	"github.com/dgraph-io/ristretto"
+	"github.com/dgraph-io/ristretto/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
@@ -101,6 +102,16 @@ type (
 
 // newGraphServer creates a new server instance.
 func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterConfig, proxy ProxyFunc) (*graphServer, error) {
+
+	/* Older versions of composition will not populate a compatibility version.
+	 * Currently, all "old" router execution configurations are compatible as there have been no breaking
+	 * changes.
+	 * Upon the first breaking change to the execution config, an unpopulated compatibility version will
+	 * also be unsupported (and the logic for IsRouterCompatibleWithExecutionConfig will need to be updated).
+	 */
+	if !execution_config.IsRouterCompatibleWithExecutionConfig(r.logger, routerConfig.CompatibilityVersion) {
+		return nil, fmt.Errorf(`the compatibility version "%s" is not compatible with this router version`, routerConfig.CompatibilityVersion)
+	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	s := &graphServer{
@@ -770,8 +781,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			otelhttp.WithTracerProvider(s.tracerProvider),
 		}
 
-		if s.tracePropagators != nil {
-			middlewareOptions = append(middlewareOptions, otelhttp.WithPropagators(s.tracePropagators))
+		if s.compositePropagator != nil {
+			middlewareOptions = append(middlewareOptions, otelhttp.WithPropagators(s.compositePropagator))
 		}
 
 		traceHandler := rtrace.NewMiddleware(
@@ -868,7 +879,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				},
 			},
 			TracerProvider:                s.tracerProvider,
-			TracePropagators:              s.tracePropagators,
+			TracePropagators:              s.compositePropagator,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
 		},
