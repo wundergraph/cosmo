@@ -253,11 +253,13 @@ type requestContext struct {
 	expressionContext expr.Context
 }
 
-func (c *requestContext) setErrorContext() {
-	if c.error == nil {
-		return
+func (c *requestContext) SetError(err error) {
+	c.error = err
+	if err != nil {
+		c.expressionContext.Request.Error = &ExprWrapError{err}
+	} else {
+		c.expressionContext.Request.Error = nil
 	}
-	c.expressionContext.Request.Error = &ExprWrapError{c.error}
 }
 
 func (c *requestContext) ResolveAnyExpressionWithErrorOverride(expression *vm.Program, err error) (any, error) {
@@ -279,17 +281,14 @@ func (c *requestContext) ResolveAnyExpressionWithErrorOverride(expression *vm.Pr
 }
 
 func (c *requestContext) ResolveAnyExpression(expression *vm.Program) (any, error) {
-	c.setErrorContext()
 	return expr.ResolveAnyExpression(expression, c.expressionContext)
 }
 
 func (c *requestContext) ResolveStringExpression(expression *vm.Program) (string, error) {
-	c.setErrorContext()
 	return expr.ResolveStringExpression(expression, c.expressionContext)
 }
 
 func (c *requestContext) ResolveBoolExpression(expression *vm.Program) (bool, error) {
-	c.setErrorContext()
 	return expr.ResolveBoolExpression(expression, c.expressionContext)
 }
 
