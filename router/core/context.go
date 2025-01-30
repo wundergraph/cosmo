@@ -254,7 +254,10 @@ type requestContext struct {
 }
 
 func (c *requestContext) setErrorContext() {
-	c.expressionContext.Request.Error = c.error
+	if c.error == nil {
+		return
+	}
+	c.expressionContext.Request.Error = &ExprWrapError{c.error}
 }
 
 func (c *requestContext) ResolveAnyExpressionWithErrorOverride(expression *vm.Program, err error) (any, error) {
@@ -266,7 +269,7 @@ func (c *requestContext) ResolveAnyExpressionWithErrorOverride(expression *vm.Pr
 				Auth:   currContextRequest.Auth,
 				URL:    currContextRequest.URL,
 				Header: currContextRequest.Header,
-				Error:  err,
+				Error:  &ExprWrapError{err},
 			},
 		}
 		return expr.ResolveAnyExpression(expression, copyContext)

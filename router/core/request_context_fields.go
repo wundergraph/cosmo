@@ -38,7 +38,7 @@ func NewExpressionLogField(val any, key string, defaultValue any) zap.Field {
 	// and as the method receivers are all pointers (*reportError)
 	// the Error() function wont get called unless its of type *reportError
 	switch result := val.(type) {
-	case reportError:
+	case ExprWrapError:
 		val = &result
 	}
 

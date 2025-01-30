@@ -316,3 +316,14 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 		writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errInternalServer), requestLogger)
 	}
 }
+
+type ExprWrapError struct {
+	Err error
+}
+
+func (e *ExprWrapError) Error() string {
+	if e.Err == nil {
+		return ""
+	}
+	return e.Err.Error()
+}
