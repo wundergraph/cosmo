@@ -23,8 +23,8 @@
     "wgc": "tsx --env-file .env src/index.ts",
     "test": "pnpm lint && vitest run",
     "coverage": "vitest run --coverage",
-    "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
-    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && prettier --write -c src"
+    "lint": "eslint --cache . && prettier -c src",
+    "lint:fix": "eslint --cache --fix . && prettier --write -c src"
   },
   "keywords": [
     "wundergraph",

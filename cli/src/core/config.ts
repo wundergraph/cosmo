@@ -17,6 +17,7 @@ export const configFile = join(configDir, 'config.yaml');
 const getLoginDetails = (): { accessToken: string; organizationSlug: string } | null => {
   try {
     const data = yaml.load(readFileSync(configFile, 'utf8'));
+    // eslint-disable-next-line unicorn/prefer-structured-clone
     const loginData = JSON.parse(JSON.stringify(data));
     return { accessToken: loginData.accessToken, organizationSlug: loginData.organizationSlug };
   } catch {

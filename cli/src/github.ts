@@ -47,7 +47,7 @@ export const verifyGitHubIntegration = async (client: Client) => {
   let gitInfo: PartialMessage<GitInfo> | undefined;
   const { isPr, commit: commitSha, repository, accountId } = useGitHub();
   if (isPr && commitSha && repository && accountId) {
-    const [ownerSlug, repositorySlug] = repository?.split('/');
+    const [ownerSlug, repositorySlug] = repository.split('/');
     gitInfo = {
       commitSha,
       accountId,

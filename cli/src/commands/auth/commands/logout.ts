@@ -11,7 +11,9 @@ export default (opts: BaseCommandOptions) => {
   logoutCommand.action(() => {
     try {
       rmSync(configDir, { recursive: true });
-    } catch {}
+    } catch {
+      /* empty */
+    }
     console.log(pc.green('Logged out Successfully!'));
   });
 

@@ -1,5 +1,4 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-// eslint-disable-next-line import/named
 import { Ora } from 'ora';
 import Table from 'cli-table3';
 import pc from 'picocolors';
