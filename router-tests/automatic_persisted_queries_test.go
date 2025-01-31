@@ -164,6 +164,7 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 			redisLocalUrl = "localhost:6379"
 			redisUrl      = fmt.Sprintf("redis://%s", redisLocalUrl)
 			redisPassword = "test"
+			client        = redis.NewClient(&redis.Options{Addr: redisLocalUrl, Password: redisPassword})
 		)
 		t.Parallel()
 
@@ -172,7 +173,6 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 
 			key := uuid.New().String()
 			t.Cleanup(func() {
-				client := redis.NewClient(&redis.Options{Addr: redisLocalUrl, Password: redisPassword})
 				del := client.Del(context.Background(), key)
 				require.NoError(t, del.Err())
 			})
@@ -180,10 +180,10 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithStorageProviders(config.StorageProviders{
-						Redis: []config.BaseStorageProvider{
+						Redis: []config.RedisStorageProvider{
 							{
-								URL: redisUrl,
-								ID:  "redis",
+								URLs: []string{redisUrl},
+								ID:   "redis",
 							},
 						}})},
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
@@ -206,7 +206,6 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 
 			key := uuid.New().String()
 			t.Cleanup(func() {
-				client := redis.NewClient(&redis.Options{Addr: redisLocalUrl, Password: redisPassword})
 				del := client.Del(context.Background(), key)
 				require.NoError(t, del.Err())
 			})
@@ -214,10 +213,10 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithStorageProviders(config.StorageProviders{
-						Redis: []config.BaseStorageProvider{
+						Redis: []config.RedisStorageProvider{
 							{
-								URL: redisUrl,
-								ID:  "redis",
+								URLs: []string{redisUrl},
+								ID:   "redis",
 							},
 						}})},
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
@@ -264,7 +263,6 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 
 			key := uuid.New().String()
 			t.Cleanup(func() {
-				client := redis.NewClient(&redis.Options{Addr: redisLocalUrl, Password: redisPassword})
 				del := client.Del(context.Background(), key)
 				require.NoError(t, del.Err())
 			})
@@ -272,10 +270,10 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithStorageProviders(config.StorageProviders{
-						Redis: []config.BaseStorageProvider{
+						Redis: []config.RedisStorageProvider{
 							{
-								URL: redisUrl,
-								ID:  "redis",
+								URLs: []string{redisUrl},
+								ID:   "redis",
 							},
 						}})},
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
@@ -314,7 +312,6 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 
 			key := uuid.New().String()
 			t.Cleanup(func() {
-				client := redis.NewClient(&redis.Options{Addr: redisLocalUrl, Password: redisPassword})
 				del := client.Del(context.Background(), key)
 				require.NoError(t, del.Err())
 			})
@@ -322,10 +319,10 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithStorageProviders(config.StorageProviders{
-						Redis: []config.BaseStorageProvider{
+						Redis: []config.RedisStorageProvider{
 							{
-								URL: redisUrl,
-								ID:  "redis",
+								URLs: []string{redisUrl},
+								ID:   "redis",
 							},
 						}})},
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
@@ -362,6 +359,70 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 				res3 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
 					Header:     header,
+				})
+				require.Equal(t, `{"data":{"__typename":"Query"}}`, res3.Body)
+			})
+		})
+
+		t.Run("works with cluster mode", func(t *testing.T) {
+			t.Parallel()
+
+			clusterUrls := []string{"localhost:7000", "localhost:7001"}
+			clusterClient := redis.NewClusterClient(&redis.ClusterOptions{
+				Addrs:    clusterUrls,
+				Password: redisPassword,
+			})
+
+			key := uuid.New().String()
+			t.Cleanup(func() {
+				del := clusterClient.Del(context.Background(), key)
+				require.NoError(t, del.Err())
+			})
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithStorageProviders(config.StorageProviders{
+						Redis: []config.RedisStorageProvider{
+							{
+								ClusterEnabled: true,
+								URLs:           clusterUrls,
+								ID:             "redis",
+							},
+						}})},
+				ApqConfig: config.AutomaticPersistedQueriesConfig{
+					Enabled: true,
+					Storage: config.AutomaticPersistedQueriesStorageConfig{
+						ProviderID:   "redis",
+						ObjectPrefix: key,
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				header := make(http.Header)
+				header.Add("graphql-client-name", "my-client")
+				res0 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header,
+				})
+				require.Equal(t, `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res0.Body)
+
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:      `{__typename}`,
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header,
+				})
+				require.Equal(t, `{"data":{"__typename":"Query"}}`, res.Body)
+
+				res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header,
+				})
+				require.Equal(t, `{"data":{"__typename":"Query"}}`, res2.Body)
+
+				header2 := make(http.Header)
+				header2.Add("graphql-client-name", "not-my-client")
+				res3 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "ecf4edb46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b38"}}`),
+					Header:     header2,
 				})
 				require.Equal(t, `{"data":{"__typename":"Query"}}`, res3.Body)
 			})
