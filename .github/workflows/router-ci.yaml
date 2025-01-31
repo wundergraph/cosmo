@@ -156,6 +156,16 @@ jobs:
         with:
           cache-dependency-path: |
             router-tests/go.sum
+      - name: Setup Redis Cluster (for Cluster tests)
+        uses: vishnudxb/redis-cluster@1.0.9
+        with:
+          master1-port: 7000
+          master2-port: 7001
+          master3-port: 7002
+          slave1-port: 7003
+          slave2-port: 7004
+          slave3-port: 7005
+          sleep-duration: 5
       - uses: nick-fields/retry@v3
         with:
           timeout_minutes: 30

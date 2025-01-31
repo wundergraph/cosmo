@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.121.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.121.2...controlplane@0.121.3) (2025-01-31)
+
+### Bug Fixes
+
+* change the defaults of breaking-change-retention ([#1551](https://github.com/wundergraph/cosmo/issues/1551)) ([38df3ee](https://github.com/wundergraph/cosmo/commit/38df3ee3bc2370ea4c729978545dcc6d79f5be28)) (@JivusAyrus)
+* reduce the breaking change retention duration ([#1550](https://github.com/wundergraph/cosmo/issues/1550)) ([16ab8c6](https://github.com/wundergraph/cosmo/commit/16ab8c6dc8e2930dfa0f262f42ca960613a456bd)) (@JivusAyrus)
+
 ## [0.121.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.121.1...controlplane@0.121.2) (2025-01-29)
 
 ### Bug Fixes
