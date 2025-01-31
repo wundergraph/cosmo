@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 	"net"
 	"net/http"
 	"net/url"
@@ -16,7 +17,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
-	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -196,7 +196,7 @@ type (
 		fileUploadConfig                *config.FileUpload
 		accessController                *AccessController
 		retryOptions                    retrytransport.RetryOptions
-		redisClient                     *redis.Client
+		redisClient                     rd.RDCloser
 		processStartTime                time.Time
 		developmentMode                 bool
 		healthcheck                     health.Checker
@@ -840,12 +840,16 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
-		options, err := redis.ParseURL(r.Config.rateLimit.Storage.Url)
+		var err error
+		r.redisClient, err = rd.NewRedisCloser(&rd.RedisCloserOptions{
+			URLs:           r.Config.rateLimit.Storage.URLs,
+			ClusterEnabled: r.Config.rateLimit.Storage.ClusterEnabled,
+			Logger:         r.logger,
+		})
 		if err != nil {
-			return fmt.Errorf("failed to parse the redis connection url: %w", err)
+			return fmt.Errorf("failed to create redis client: %w", err)
 		}
 
-		r.redisClient = redis.NewClient(options)
 	}
 
 	if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
@@ -903,7 +907,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 func (r *Router) buildClients() error {
 	s3Providers := map[string]config.S3StorageProvider{}
 	cdnProviders := map[string]config.BaseStorageProvider{}
-	redisProviders := map[string]config.BaseStorageProvider{}
+	redisProviders := map[string]config.RedisStorageProvider{}
 
 	for _, provider := range r.storageProviders.S3 {
 		if _, ok := s3Providers[provider.ID]; ok {
