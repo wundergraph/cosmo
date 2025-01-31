@@ -66,8 +66,7 @@ func NewClient(endpoint string, options *ClientOptions) (routerconfig.Client, er
 	return client, nil
 }
 
-func (c Client) RouterConfig(ctx context.Context, version string, modifiedSince time.Time) (*routerconfig.Response, error) {
-
+func (c Client) getConfigFile(ctx context.Context, version string, modifiedSince time.Time) ([]byte, error) {
 	options := minio.GetObjectOptions{}
 
 	if !modifiedSince.IsZero() {
@@ -89,22 +88,27 @@ func (c Client) RouterConfig(ctx context.Context, version string, modifiedSince 
 	}
 	defer reader.Close()
 
-	body, err := io.ReadAll(reader)
+	return io.ReadAll(reader)
+}
+
+func (c Client) RouterConfig(ctx context.Context, version string, modifiedSince time.Time) (*routerconfig.Response, error) {
+	res := &routerconfig.Response{}
+
+	body, err := c.getConfigFile(ctx, version, modifiedSince)
 	if err != nil {
 		var minioErr minio.ErrorResponse
-		if errors.As(err, &minioErr) && minioErr.StatusCode == http.StatusNotModified {
-			return nil, configpoller.ErrConfigNotModified
+		if errors.As(err, &minioErr) {
+			if minioErr.StatusCode == http.StatusNotModified {
+				return nil, configpoller.ErrConfigNotModified
+			} else if minioErr.Code == "NoSuchKey" {
+				res.Config = routerconfig.GetDefaultConfig()
+				return res, nil
+			}
 		}
+
 		return nil, err
 	}
 
-	routerConfig, err := execution_config.UnmarshalConfig(body)
-	if err != nil {
-		return nil, err
-	}
-
-	result := &routerconfig.Response{}
-	result.Config = routerConfig
-
-	return result, nil
+	res.Config, err = execution_config.UnmarshalConfig(body)
+	return res, err
 }

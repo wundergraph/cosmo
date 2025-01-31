@@ -5,20 +5,9 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"math/rand"
 	"net/http"
 	"testing"
 )
-
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-func randString(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
-}
 
 type testQuery struct {
 	Name      string
@@ -29,7 +18,7 @@ type testQuery struct {
 func (t *testQuery) Data() []byte {
 	name := t.Name
 	if name == "" {
-		name = randString(10)
+		name = testenv.RandString(10)
 	}
 	values := map[string]interface{}{
 		"query":         fmt.Sprintf("query %s %s", name, t.Body),

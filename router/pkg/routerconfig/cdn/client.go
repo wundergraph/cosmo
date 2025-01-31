@@ -30,8 +30,9 @@ const (
 )
 
 var (
-	ErrMissingSignatureHeader = errors.New("signature header not found in CDN response")
-	ErrInvalidSignature       = errors.New("invalid config signature, potential tampering detected")
+	ErrMissingSignatureHeader       = errors.New("signature header not found in CDN response")
+	ErrInvalidSignature             = errors.New("invalid config signature, potential tampering detected")
+	ErrConfigNotFound         error = &routerConfigNotFoundError{}
 )
 
 type Options struct {
@@ -108,8 +109,7 @@ func NewClient(endpoint string, token string, opts *Options) (routerconfig.Clien
 	return c, nil
 }
 
-func (cdn *Client) RouterConfig(ctx context.Context, version string, modifiedSince time.Time) (*routerconfig.Response, error) {
-
+func (cdn *Client) getRouterConfig(ctx context.Context, version string, modifiedSince time.Time) ([]byte, error) {
 	routerConfigPath := fmt.Sprintf("/%s/%s/routerconfigs/latest.json",
 		cdn.organizationID,
 		cdn.federatedGraphID,
@@ -140,9 +140,7 @@ func (cdn *Client) RouterConfig(ctx context.Context, version string, modifiedSin
 
 	if resp.StatusCode != http.StatusOK {
 		if resp.StatusCode == http.StatusNotFound {
-			return nil, &routerConfigNotFoundError{
-				federatedGraphId: cdn.federatedGraphID,
-			}
+			return nil, ErrConfigNotFound
 		}
 		if resp.StatusCode == http.StatusUnauthorized {
 			return nil, errors.New("could not authenticate against CDN")
@@ -177,21 +175,11 @@ func (cdn *Client) RouterConfig(ctx context.Context, version string, modifiedSin
 		return nil, errors.New("empty response body")
 	}
 
-	/*
-	* Serialize the response body to a RouterConfig object
-	 */
-
-	routerConfig, err := execution_config.UnmarshalConfig(body)
-	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal router external router config from CDN: %w", err)
-	}
-
 	/**
 	* If a signature key is set, we need to validate the signature of the received config
 	 */
 
 	if cdn.hash != nil {
-
 		configSignature := resp.Header.Get(sigResponseHeaderName)
 		if configSignature == "" {
 			cdn.logger.Error(
@@ -228,8 +216,27 @@ func (cdn *Client) RouterConfig(ctx context.Context, version string, modifiedSin
 		)
 	}
 
-	res := &routerconfig.Response{}
-	res.Config = routerConfig
+	return body, nil
+}
 
+func (cdn *Client) RouterConfig(ctx context.Context, version string, modifiedSince time.Time) (*routerconfig.Response, error) {
+	res := &routerconfig.Response{}
+
+	body, err := cdn.getRouterConfig(ctx, version, modifiedSince)
+	if err != nil && errors.Is(err, ErrConfigNotFound) {
+		res.Config = routerconfig.GetDefaultConfig()
+		return res, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	/*
+	* Unmarshal the response body to a RouterConfig object
+	 */
+
+	res.Config, err = execution_config.UnmarshalConfig(body)
+	if err != nil {
+		return nil, fmt.Errorf("could not unmarshal router external router config from CDN: %w", err)
+	}
 	return res, nil
 }
