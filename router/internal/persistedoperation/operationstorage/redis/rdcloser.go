@@ -49,7 +49,7 @@ func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
 		rdb = redis.NewClient(options)
 
 		if isClusterClient(rdb) {
-			opts.Logger.Info("Detected that redis is running in cluster mode. You may encounter issues as a result")
+			opts.Logger.Warn("Detected that redis is running in cluster mode. You may encounter issues as a result")
 		}
 	}
 
