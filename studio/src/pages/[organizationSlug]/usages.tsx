@@ -240,7 +240,7 @@ const UsagesPage: NextPageWithLayout = () => {
                   Breaking Changes Retention
                 </dt>
                 <dd className="w-1/3 px-2 text-right text-sm font-medium">
-                  <FeatureLimit id="breaking-change-retention" fallback={90} />{" "}
+                  <FeatureLimit id="breaking-change-retention" fallback={30} />{" "}
                   days
                 </dd>
               </div>
