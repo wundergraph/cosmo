@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/throw-new-error */
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyPluginCallback, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';

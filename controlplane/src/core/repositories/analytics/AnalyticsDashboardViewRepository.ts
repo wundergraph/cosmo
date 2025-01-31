@@ -169,6 +169,7 @@ export class AnalyticsDashboardViewRepository {
     dateRange: DateRange<number>,
     rangeInHours: number,
   ): Promise<PlainMessage<FederatedGraphMetrics>> {
+    // eslint-disable-next-line unicorn/no-single-promise-in-promise-methods
     const [requestRates] = await Promise.all([
       this.getFederatedGraphRates(federatedGraphId, organizationId, dateRange, rangeInHours),
     ]);

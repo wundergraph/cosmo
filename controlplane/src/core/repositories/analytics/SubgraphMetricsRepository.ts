@@ -515,6 +515,7 @@ export class SubgraphMetricsRepository {
   public async getSubgraphErrorsView(props: GetSubgraphMetricsViewProps) {
     const metricsProps = this.getSubgraphMetricsProps(props);
 
+    // eslint-disable-next-line unicorn/no-single-promise-in-promise-methods
     const [errorRate] = await Promise.all([this.getSubgraphErrorRateMetrics(metricsProps)]);
 
     return {

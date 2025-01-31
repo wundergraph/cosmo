@@ -503,6 +503,7 @@ export class MetricsRepository {
   public async getErrorsView(props: GetMetricsViewProps) {
     const metricsProps = this.getMetricsProps(props);
 
+    // eslint-disable-next-line unicorn/no-single-promise-in-promise-methods
     const [errorRate] = await Promise.all([this.getErrorRateMetrics(metricsProps)]);
 
     return {

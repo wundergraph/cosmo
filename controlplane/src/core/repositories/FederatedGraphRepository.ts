@@ -1,4 +1,3 @@
-/* eslint-disable no-labels */
 import { KeyObject, randomUUID } from 'node:crypto';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { FeatureFlagRouterExecutionConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';

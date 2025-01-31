@@ -152,6 +152,7 @@ export class SchemaCheckRepository {
   }) {
     let hasUnsafeClientTraffic = false;
 
+    // eslint-disable-next-line unicorn/prefer-structured-clone
     const result = _.cloneDeep(data.inspectorResultsByChangeId);
 
     const changeActionsByOperationHash: Map<string, typeof data.changes> = new Map();

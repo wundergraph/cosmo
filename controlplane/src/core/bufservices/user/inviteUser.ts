@@ -115,7 +115,7 @@ export function inviteUser(
           });
         } else {
           // the user has already logged in, so we send our custom org invitation email
-          // eslint-disable-next-line no-lonely-if
+
           if (opts.mailerClient) {
             await opts.mailerClient.sendInviteEmail({
               inviteLink: `${process.env.WEB_BASE_URL}/account/invitations`,
