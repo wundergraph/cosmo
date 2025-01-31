@@ -919,6 +919,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
 	if s.Config.cacheWarmup != nil && s.Config.cacheWarmup.Enabled {
+
+		if s.graphApiToken == "" {
+			return nil, fmt.Errorf("graph token is required for cache warmup in order to communicate with the CDN")
+		}
+
 		processor := NewCacheWarmupPlanningProcessor(&CacheWarmupPlanningProcessorOptions{
 			OperationProcessor: operationProcessor,
 			OperationPlanner:   operationPlanner,
