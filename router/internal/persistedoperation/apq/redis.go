@@ -3,8 +3,8 @@ package apq
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/redis/go-redis/v9"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/zap"
 	"time"
@@ -12,14 +12,14 @@ import (
 
 type RedisOptions struct {
 	Logger        *zap.Logger
-	StorageConfig *config.BaseStorageProvider
+	StorageConfig *config.RedisStorageProvider
 	ApqConfig     *config.AutomaticPersistedQueriesConfig
 	Prefix        string
 }
 
 type redisClient struct {
 	logger *zap.Logger
-	client *redis.Client
+	client rd.RDCloser
 	prefix string
 }
 
@@ -28,20 +28,19 @@ func NewRedisClient(opts *RedisOptions) (KVClient, error) {
 		return nil, errors.New("storage config is nil")
 	}
 
-	options, err := redis.ParseURL(opts.StorageConfig.URL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse the redis connection url: %w", err)
-	}
-
-	innerClient := redis.NewClient(options)
+	rdb, err := rd.NewRedisCloser(&rd.RedisCloserOptions{
+		Logger:         opts.Logger,
+		URLs:           opts.StorageConfig.URLs,
+		ClusterEnabled: opts.StorageConfig.ClusterEnabled,
+	})
 
 	rclient := &redisClient{
 		logger: opts.Logger,
-		client: innerClient,
+		client: rdb,
 		prefix: opts.Prefix,
 	}
 
-	return rclient, nil
+	return rclient, err
 }
 
 func (r *redisClient) Get(ctx context.Context, operationHash string) ([]byte, error) {

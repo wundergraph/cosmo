@@ -6,12 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 	"io"
 	"sync"
 
 	"github.com/expr-lang/expr/vm"
 	"github.com/go-redis/redis_rate/v10"
-	"github.com/redis/go-redis/v9"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
@@ -21,7 +21,7 @@ var (
 )
 
 type CosmoRateLimiterOptions struct {
-	RedisClient *redis.Client
+	RedisClient rd.RDCloser
 	Debug       bool
 
 	RejectStatusCode int
@@ -50,7 +50,7 @@ func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, e
 }
 
 type CosmoRateLimiter struct {
-	client  *redis.Client
+	client  rd.RDCloser
 	limiter *redis_rate.Limiter
 	debug   bool
 

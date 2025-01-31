@@ -445,8 +445,9 @@ type RateLimitErrorExtensionCode struct {
 }
 
 type RedisConfiguration struct {
-	Url       string `yaml:"url,omitempty" envDefault:"redis://localhost:6379" env:"RATE_LIMIT_REDIS_URL"`
-	KeyPrefix string `yaml:"key_prefix,omitempty" envDefault:"cosmo_rate_limit" env:"RATE_LIMIT_REDIS_KEY_PREFIX"`
+	URLs           []string `yaml:"urls,omitempty" env:"RATE_LIMIT_REDIS_URLS"`
+	ClusterEnabled bool     `yaml:"cluster_enabled,omitempty" envDefault:"false" env:"RATE_LIMIT_REDIS_CLUSTER_ENABLED"`
+	KeyPrefix      string   `yaml:"key_prefix,omitempty" envDefault:"cosmo_rate_limit" env:"RATE_LIMIT_REDIS_KEY_PREFIX"`
 }
 
 type RateLimitSimpleStrategy struct {
@@ -619,9 +620,9 @@ type SubgraphErrorPropagationConfiguration struct {
 }
 
 type StorageProviders struct {
-	S3    []S3StorageProvider   `yaml:"s3,omitempty"`
-	CDN   []BaseStorageProvider `yaml:"cdn,omitempty"`
-	Redis []BaseStorageProvider `yaml:"redis,omitempty"`
+	S3    []S3StorageProvider    `yaml:"s3,omitempty"`
+	CDN   []BaseStorageProvider  `yaml:"cdn,omitempty"`
+	Redis []RedisStorageProvider `yaml:"redis,omitempty"`
 }
 
 type PersistedOperationsStorageConfig struct {
@@ -650,8 +651,9 @@ type BaseStorageProvider struct {
 }
 
 type RedisStorageProvider struct {
-	ID  string `yaml:"id,omitempty" env:"STORAGE_PROVIDER_REDIS_ID"`
-	URL string `yaml:"url,omitempty" env:"STORAGE_PROVIDER_REDIS_URL"`
+	ID             string   `yaml:"id,omitempty" env:"STORAGE_PROVIDER_REDIS_ID"`
+	URLs           []string `yaml:"urls,omitempty" env:"STORAGE_PROVIDER_REDIS_URLS"`
+	ClusterEnabled bool     `yaml:"cluster_enabled,omitempty" envDefault:"false" env:"STORAGE_PROVIDER_REDIS_CLUSTER_ENABLED"`
 }
 
 type PersistedOperationsCDNProvider struct {
