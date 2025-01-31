@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
-	"time"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 
@@ -41,7 +40,6 @@ type FactoryResolver interface {
 
 type ApiTransportFactory interface {
 	RoundTripper(enableSingleFlight bool, transport http.RoundTripper) http.RoundTripper
-	DefaultTransportTimeout() time.Duration
 	DefaultHTTPProxyURL() *url.URL
 }
 
@@ -73,7 +71,6 @@ func NewDefaultFactoryResolver(
 ) *DefaultFactoryResolver {
 
 	defaultHttpClient := &http.Client{
-		Timeout:   transportFactory.DefaultTransportTimeout(),
 		Transport: transportFactory.RoundTripper(enableSingleFlight, baseTransport),
 	}
 	streamingClient := &http.Client{

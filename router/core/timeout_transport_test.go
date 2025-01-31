@@ -3,13 +3,14 @@ package core
 import (
 	"context"
 	"crypto/tls"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func TestTimeoutTransport(t *testing.T) {

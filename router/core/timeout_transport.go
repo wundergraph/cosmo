@@ -2,8 +2,9 @@ package core
 
 import (
 	"context"
-	"go.uber.org/zap"
 	"net/http"
+
+	"go.uber.org/zap"
 )
 
 type TimeoutTransport struct {
@@ -40,14 +41,24 @@ func (tt *TimeoutTransport) RoundTrip(req *http.Request) (*http.Response, error)
 		return nil, nil
 	}
 	subgraph := rq.ActiveSubgraph(req)
+
 	if subgraph != nil && subgraph.Name != "" && tt.subgraphTrippers[subgraph.Name] != nil {
 		timeout := tt.opts.SubgraphMap[subgraph.Name].RequestTimeout
 		if timeout > 0 {
 			ctx, cancel := context.WithTimeout(req.Context(), timeout)
 			defer cancel()
+
 			return tt.subgraphTrippers[subgraph.Name].RoundTrip(req.WithContext(ctx))
 		}
 		return tt.subgraphTrippers[subgraph.Name].RoundTrip(req)
 	}
+
+	if tt.opts.RequestTimeout > 0 {
+		ctx, cancel := context.WithTimeout(req.Context(), tt.opts.RequestTimeout)
+		defer cancel()
+
+		return tt.defaultTransport.RoundTrip(req.WithContext(ctx))
+	}
+
 	return tt.defaultTransport.RoundTrip(req)
 }

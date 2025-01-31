@@ -3,14 +3,14 @@ package core
 import (
 	"bytes"
 	"fmt"
-	"go.opentelemetry.io/otel/propagation"
 	"io"
 	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
 	"sync"
-	"time"
+
+	"go.opentelemetry.io/otel/propagation"
 
 	otelmetric "go.opentelemetry.io/otel/metric"
 
@@ -18,22 +18,20 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 
-	"github.com/wundergraph/cosmo/router/internal/docker"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/pool"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	otrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-)
 
-var (
-	defaultTimeout = 60 * time.Second
+	"github.com/wundergraph/cosmo/router/internal/docker"
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 )
 
 type TransportPreHandler func(req *http.Request, ctx RequestContext) (*http.Request, *http.Response)
@@ -395,13 +393,6 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport ht
 	tp.logger = t.logger
 
 	return tp
-}
-
-func (t TransportFactory) DefaultTransportTimeout() time.Duration {
-	if t.subgraphTransportOptions != nil {
-		return t.subgraphTransportOptions.RequestTimeout
-	}
-	return defaultTimeout
 }
 
 func (t TransportFactory) DefaultHTTPProxyURL() *url.URL {
