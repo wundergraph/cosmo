@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strconv"
 	"sync"
-	"time"
 
 	"go.opentelemetry.io/otel/propagation"
 
@@ -33,10 +32,6 @@ import (
 
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
-)
-
-var (
-	defaultTimeout = 60 * time.Second
 )
 
 type TransportPreHandler func(req *http.Request, ctx RequestContext) (*http.Request, *http.Response)
