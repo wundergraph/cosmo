@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.170.0](https://github.com/wundergraph/cosmo/compare/router@0.169.0...router@0.170.0) (2025-01-31)
+
+### Bug Fixes
+
+* error when graph token is not set when cache warmup is enabled ([#1554](https://github.com/wundergraph/cosmo/issues/1554)) ([fea311f](https://github.com/wundergraph/cosmo/commit/fea311f392879a2e0abd135dffcd68bffacb0c8c)) (@StarpTech)
+* json schema for traffic shaping subgraphs ([#1552](https://github.com/wundergraph/cosmo/issues/1552)) ([b99e0bc](https://github.com/wundergraph/cosmo/commit/b99e0bca9dc2492f6d40982fefde9b1fce55b842)) (@StarpTech)
+* subgraph timeout can't be bigger than global timeout ([#1548](https://github.com/wundergraph/cosmo/issues/1548)) ([92b69a3](https://github.com/wundergraph/cosmo/commit/92b69a39db17cd5aa6ad69537a8c50e41c9a89ed)) (@devsergiy)
+
+### Features
+
+* **router:** enable using redis clusters for rate limiting and apq ([#1499](https://github.com/wundergraph/cosmo/issues/1499)) ([7c5b3a7](https://github.com/wundergraph/cosmo/commit/7c5b3a772f1f524a1afda14ca2f62cf5a2c5a46a)) (@df-wg)
+
 # [0.169.0](https://github.com/wundergraph/cosmo/compare/router@0.168.1...router@0.169.0) (2025-01-31)
 
 ### Bug Fixes
