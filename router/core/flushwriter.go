@@ -3,12 +3,13 @@ package core
 import (
 	"bytes"
 	"context"
+	"github.com/wundergraph/astjson"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"io"
 	"mime"
 	"net/http"
-
-	"github.com/wundergraph/astjson"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"strconv"
+	"strings"
 )
 
 const (
@@ -183,14 +184,42 @@ func setSubscriptionHeaders(wgParams SubscriptionParams, r *http.Request, w http
 
 func NegotiateSubscriptionParams(r *http.Request) SubscriptionParams {
 	q := r.URL.Query()
-	acceptHeader := r.Header.Get("Accept")
+	acceptHeaders := r.Header.Get("Accept")
+	elements := strings.Split(acceptHeaders, ",")
+	// Per RFC 9110, Accept header can be in the form`text/event-stream,application/json`, with an optional q-value to
+	// specify preference. We want to parse this and find the best option to use, and default to the first option if no
+	// q-value is provided.
+	// Eventually a solution will be in the stdlib: see https://github.com/golang/go/issues/19307, at which point we should
+	// remove this
+	var (
+		useMultipart = false
+		useSse       = q.Has(WgSseParam)
+		bestType     = ""
+		bestQ        = -1.0 // Default to lowest possible q-value
+	)
 
-	mediaType, _, _ := mime.ParseMediaType(acceptHeader)
+	for _, acceptHeader := range elements {
+		mediaType, params, _ := mime.ParseMediaType(acceptHeader)
+		qValue := 1.0                            // Default quality factor
+		if qStr, exists := params["q"]; exists { // If a quality factor exists, parse it and prefer it
+			if parsedQ, err := strconv.ParseFloat(qStr, 64); err == nil {
+				qValue = parsedQ
+			}
+		}
+
+		// Find the media type with the highest q-value. If none is provided, it will default to the first option
+		// in the header, per https://www.rfc-editor.org/rfc/rfc9110.html#name-accept
+		if qValue > bestQ {
+			bestQ = qValue
+			bestType = mediaType
+		}
+	}
 	subscribeOnce := q.Has(WgSubscribeOnceParam)
-	useMultipart := mediaType == multipartMime
+	useSse = useSse || bestType == sseMimeType
+	useMultipart = bestType == multipartMime
 
 	return SubscriptionParams{
-		UseSse:        q.Has(WgSseParam) || mediaType == sseMimeType,
+		UseSse:        useSse,
 		SubscribeOnce: subscribeOnce,
 		UseMultipart:  useMultipart,
 	}
