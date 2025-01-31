@@ -37,7 +37,7 @@ func TestTimeoutTransport(t *testing.T) {
 			transportOpts := &SubgraphTransportOptions{
 				SubgraphMap: map[string]*TransportTimeoutOptions{
 					testSubgraphKey: {
-						RequestTimeout: 10 * time.Millisecond,
+						RequestTimeout: 100 * time.Millisecond,
 					},
 				},
 			}
@@ -63,14 +63,14 @@ func TestTimeoutTransport(t *testing.T) {
 			transportOpts := &SubgraphTransportOptions{
 				SubgraphMap: map[string]*TransportTimeoutOptions{
 					testSubgraphKey: {
-						RequestTimeout: 10 * time.Millisecond,
+						RequestTimeout: 100 * time.Millisecond,
 					},
 				},
 			}
 
 			slowServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				time.Sleep(20 * time.Millisecond) // Slow response
+				time.Sleep(200 * time.Millisecond) // Slow response
 				w.Write([]byte("Hello, world!"))
 			}))
 			defer slowServer.Close()
@@ -102,13 +102,13 @@ func TestTimeoutTransport(t *testing.T) {
 		transportOpts := &SubgraphTransportOptions{
 			SubgraphMap: map[string]*TransportTimeoutOptions{
 				testSubgraphKey: {
-					ResponseHeaderTimeout: 10 * time.Millisecond,
+					ResponseHeaderTimeout: 100 * time.Millisecond,
 				},
 			},
 		}
 
 		headerTimeoutServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			time.Sleep(50 * time.Millisecond) // Delayed header response
+			time.Sleep(500 * time.Millisecond) // Delayed header response
 			w.WriteHeader(http.StatusOK)
 		}))
 		defer headerTimeoutServer.Close()
