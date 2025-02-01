@@ -17,7 +17,14 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type ContextFunc func(logger *zap.Logger, fields []config.CustomAttribute, exprFields []ExpressionAttribute, err error, panic any, r *http.Request, rh *http.Header) []zapcore.Field
+type ContextFunc func(
+	logger *zap.Logger,
+	fields []config.CustomAttribute,
+	exprFields []ExpressionAttribute,
+	err any,
+	r *http.Request,
+	rh *http.Header,
+) []zapcore.Field
 
 // Option provides a functional approach to define
 // configuration for a handler; such as setting the logging
@@ -139,7 +146,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// This is only called on panic so it is safe to call it here again
 			// to gather all the fields that are needed for logging
 			if h.accessLogger.fieldsHandler != nil {
-				fields = append(fields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, nil, err, r, nil)...)
+				fields = append(fields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, err, r, nil)...)
 			}
 
 			if brokenPipe {
@@ -168,7 +175,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.accessLogger.fieldsHandler != nil {
-		resFields = append(resFields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, nil, nil, r, nil)...)
+		resFields = append(resFields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, nil, r, nil)...)
 	}
 
 	h.logger.Info(path, append(fields, resFields...)...)

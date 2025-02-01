@@ -562,7 +562,25 @@
           "description": "The configuration for the router access logs",
           "properties": {
             "fields": {
-              "$ref": "#/definitions/context_fields"
+              "allOf": [
+                {
+                  "$ref": "#/definitions/context_fields"
+                },
+                {
+                  "items": {
+                    "properties": {
+                      "value_from": {
+                        "properties": {
+                          "expression": {
+                            "type": "string",
+                            "description": "The expression used to evaluate to extract a value for logging. The expression is specified as a string. Please see https://expr-lang.org/ for more information on constructing expressions."
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
             }
           }
         },
@@ -829,10 +847,6 @@
                       "request_header": {
                         "type": "string",
                         "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
-                      },
-                      "expression": {
-                        "type": "string",
-                        "description": "The expression used to evaluate to extract a value for logging. The expression is specified as a string. Please see https://expr-lang.org/ for more information on constructing expressions."
                       },
                       "context_field": {
                         "type": "string",
@@ -2598,10 +2612,6 @@
               "response_header": {
                 "type": "string",
                 "description": "The name of the response header from which to extract the value. The value is only extracted for subgraph access logs"
-              },
-              "expression": {
-                "type": "string",
-                "description": "The expression used to evaluate to extract a value for logging. The expression is specified as a string. Please see https://expr-lang.org/ for more information on constructing expressions."
               },
               "context_field": {
                 "type": "string",

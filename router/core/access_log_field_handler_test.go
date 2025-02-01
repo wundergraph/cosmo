@@ -23,11 +23,10 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 		rcc := buildRequestContext(requestContextOptions{r: req})
 		req = req.WithContext(withRequestContext(req.Context(), rcc))
 
-		response := AccessLogsFieldHandler(
+		response := RouterAccessLogsFieldHandler(
 			logger,
 			make([]config.CustomAttribute, 0),
 			make([]requestlogger.ExpressionAttribute, 0),
-			nil,
 			nil,
 			req,
 			nil,
@@ -56,11 +55,10 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 			},
 		}
 
-		response := AccessLogsFieldHandler(
+		response := RouterAccessLogsFieldHandler(
 			logger,
 			make([]config.CustomAttribute, 0),
 			exprAttributes,
-			nil,
 			nil,
 			req,
 			nil,
@@ -102,11 +100,10 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 			},
 		}
 
-		response := AccessLogsFieldHandler(
+		response := RouterAccessLogsFieldHandler(
 			logger,
 			make([]config.CustomAttribute, 0),
 			exprAttributes,
-			nil,
 			nil,
 			req,
 			nil,

@@ -823,7 +823,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			requestlogger.WithFields(baseLogFields...),
 			requestlogger.WithAttributes(s.accessLogsConfig.Attributes),
 			requestlogger.WithExprAttributes(exprAttributes),
-			requestlogger.WithFieldsHandler(AccessLogsFieldHandler),
+			requestlogger.WithFieldsHandler(RouterAccessLogsFieldHandler),
 		}
 
 		var ipAnonConfig *requestlogger.IPAnonymizationConfig
@@ -853,7 +853,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				s.accessLogsConfig.Logger,
 				requestlogger.SubgraphOptions{
 					IPAnonymizationConfig: ipAnonConfig,
-					FieldsHandler:         AccessLogsFieldHandler,
+					FieldsHandler:         SubgraphAccessLogsFieldHandler,
 					Fields:                baseLogFields,
 					Attributes:            s.accessLogsConfig.SubgraphAttributes,
 					ExprAttributes:        exprAttributes,

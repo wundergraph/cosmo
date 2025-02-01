@@ -358,7 +358,7 @@ func (h *HeaderPropagation) applyResponseRuleKeyValue(res *http.Response, propag
 func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.Request, rule *config.RequestHeaderRule) {
 	if rule.Operation == config.HeaderRuleOperationSet {
 		if rule.ValueFrom != nil && rule.ValueFrom.ContextField != "" {
-			val := getCustomDynamicAttributeValue(rule.ValueFrom, getRequestContext(request.Context()), nil, nil)
+			val := getCustomDynamicAttributeValue(rule.ValueFrom, getRequestContext(request.Context()), nil)
 			value := fmt.Sprintf("%v", val)
 			if value != "" {
 				request.Header.Set(rule.Name, value)

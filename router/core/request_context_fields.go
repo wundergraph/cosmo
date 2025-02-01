@@ -86,61 +86,94 @@ func NewDurationLogField(val time.Duration, attribute config.CustomAttribute) za
 	return zap.Skip()
 }
 
-func AccessLogsFieldHandler(
+func RouterAccessLogsFieldHandler(
 	logger *zap.Logger,
 	attributes []config.CustomAttribute,
 	exprAttributes []requestlogger.ExpressionAttribute,
-	passedErr error,
-	panicErr any,
+	passedErr any,
 	request *http.Request,
 	responseHeader *http.Header,
 ) []zapcore.Field {
 	resFields := make([]zapcore.Field, 0, len(attributes))
 
+	reqContext, resFields := processRequestIdField(request, resFields)
+	resFields = processCustomAttributes(attributes, responseHeader, resFields, request, reqContext, passedErr)
+	resFields = processExpressionAttributes(logger, exprAttributes, reqContext, resFields)
+
+	return resFields
+}
+
+func SubgraphAccessLogsFieldHandler(
+	_ *zap.Logger,
+	attributes []config.CustomAttribute,
+	_ []requestlogger.ExpressionAttribute,
+	passedErr any,
+	request *http.Request,
+	responseHeader *http.Header,
+) []zapcore.Field {
+	resFields := make([]zapcore.Field, 0, len(attributes))
+
+	reqContext, resFields := processRequestIdField(request, resFields)
+	resFields = processCustomAttributes(attributes, responseHeader, resFields, request, reqContext, passedErr)
+
+	return resFields
+}
+
+func processRequestIdField(request *http.Request, resFields []zapcore.Field) (*requestContext, []zapcore.Field) {
 	var reqContext *requestContext
-	if request != nil {
-		reqContext = getRequestContext(request.Context())
-		resFields = append(resFields, logging.WithRequestID(middleware.GetReqID(request.Context())))
+	if request == nil {
+		return reqContext, resFields
 	}
 
-	for _, field := range attributes {
-		if field.ValueFrom != nil && field.ValueFrom.ResponseHeader != "" && responseHeader != nil {
-			resFields = append(resFields, NewStringLogField(responseHeader.Get(field.ValueFrom.ResponseHeader), field))
-		} else if field.ValueFrom != nil && field.ValueFrom.RequestHeader != "" && request != nil {
-			resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
-		} else if field.ValueFrom != nil && field.ValueFrom.ContextField != "" {
-			if v := GetLogFieldFromCustomAttribute(field, reqContext, passedErr, panicErr); v != zap.Skip() {
-				resFields = append(resFields, v)
-			}
-		} else if field.Default != "" {
-			resFields = append(resFields, NewStringLogField(field.Default, field))
-		}
-	}
+	reqContext = getRequestContext(request.Context())
+	resFields = append(resFields, logging.WithRequestID(middleware.GetReqID(request.Context())))
+	return reqContext, resFields
+}
 
-	// If the request context was processed as nil (e.g. :- request was nil above)
+func processExpressionAttributes(logger *zap.Logger, exprAttributes []requestlogger.ExpressionAttribute, reqContext *requestContext, resFields []zapcore.Field) []zapcore.Field {
+	// If the request context was processed as nil (e.g. :- request was nil in the caller)
 	// do not proceed to process exprAttributes
 	if reqContext == nil {
 		return resFields
 	}
 
 	for _, exprField := range exprAttributes {
-		// TODO: We would ignore any panic recover errors being logged as of now
-		// if we want to do this we either need to type the expr.Error field as any OR
-		// add a separate field for this in the expr context (but I doubt how useful it will
-		// be for a client), just doing `request.error` is easy
-		result, err := reqContext.ResolveAnyExpressionWithErrorOverride(exprField.Expr, passedErr)
+		result, err := reqContext.ResolveAnyExpressionWithWrappedError(exprField.Expr)
 		if err != nil {
 			logger.Error("unable to process expression for access logs", zap.String("fieldKey", exprField.Key), zap.Error(err))
 			continue
 		}
 		resFields = append(resFields, NewExpressionLogField(result, exprField.Key, exprField.Default))
 	}
-
 	return resFields
 }
 
-func GetLogFieldFromCustomAttribute(field config.CustomAttribute, req *requestContext, err error, panicErr any) zap.Field {
-	val := getCustomDynamicAttributeValue(field.ValueFrom, req, err, panicErr)
+func processCustomAttributes(
+	attributes []config.CustomAttribute,
+	responseHeader *http.Header,
+	resFields []zapcore.Field,
+	request *http.Request,
+	reqContext *requestContext,
+	passedErr any,
+) []zapcore.Field {
+	for _, field := range attributes {
+		if field.ValueFrom != nil && field.ValueFrom.ResponseHeader != "" && responseHeader != nil {
+			resFields = append(resFields, NewStringLogField(responseHeader.Get(field.ValueFrom.ResponseHeader), field))
+		} else if field.ValueFrom != nil && field.ValueFrom.RequestHeader != "" && request != nil {
+			resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
+		} else if field.ValueFrom != nil && field.ValueFrom.ContextField != "" {
+			if v := GetLogFieldFromCustomAttribute(field, reqContext, passedErr); v != zap.Skip() {
+				resFields = append(resFields, v)
+			}
+		} else if field.Default != "" {
+			resFields = append(resFields, NewStringLogField(field.Default, field))
+		}
+	}
+	return resFields
+}
+
+func GetLogFieldFromCustomAttribute(field config.CustomAttribute, req *requestContext, err any) zap.Field {
+	val := getCustomDynamicAttributeValue(field.ValueFrom, req, err)
 	switch v := val.(type) {
 	case string:
 		return NewStringLogField(v, field)
@@ -158,8 +191,7 @@ func GetLogFieldFromCustomAttribute(field config.CustomAttribute, req *requestCo
 func getCustomDynamicAttributeValue(
 	attribute *config.CustomDynamicAttribute,
 	reqContext *requestContext,
-	err error,
-	panicErr any,
+	err any,
 ) interface{} {
 	if attribute == nil || attribute.ContextField == "" {
 		return ""
@@ -177,7 +209,7 @@ func getCustomDynamicAttributeValue(
 
 	switch attribute.ContextField {
 	case ContextFieldRequestError:
-		return err != nil || panicErr != nil || reqContext.error != nil
+		return err != nil || reqContext.error != nil
 	case ContextFieldOperationName:
 		return reqContext.operation.Name()
 	case ContextFieldOperationType:
@@ -202,9 +234,6 @@ func getCustomDynamicAttributeValue(
 	case ContextFieldResponseErrorMessage:
 		if err != nil {
 			return fmt.Sprintf("%v", err)
-		}
-		if panicErr != nil {
-			return fmt.Sprintf("%v", panicErr)
 		}
 		if reqContext.error != nil {
 			return reqContext.error.Error()

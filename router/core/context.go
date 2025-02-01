@@ -255,29 +255,24 @@ type requestContext struct {
 
 func (c *requestContext) SetError(err error) {
 	c.error = err
-	if err != nil {
-		c.expressionContext.Request.Error = &ExprWrapError{err}
-	} else {
-		c.expressionContext.Request.Error = nil
-	}
+	c.expressionContext.Request.Error = err
 }
 
-func (c *requestContext) ResolveAnyExpressionWithErrorOverride(expression *vm.Program, err error) (any, error) {
-	currContextRequest := c.expressionContext.Request
-	if err != nil {
-		// We don't really want to do a deep clone since we only know that error only can get modified
-		copyContext := expr.Context{
+func (c *requestContext) ResolveAnyExpressionWithWrappedError(expression *vm.Program) (any, error) {
+	// If an error exists already, wrap it and resolve the expression with the copied context
+	currExprContext := c.expressionContext.Request
+	if currExprContext.Error != nil {
+		copyExprContext := expr.Context{
 			Request: expr.Request{
-				Auth:   currContextRequest.Auth,
-				URL:    currContextRequest.URL,
-				Header: currContextRequest.Header,
-				Error:  &ExprWrapError{err},
+				Auth:   currExprContext.Auth,
+				URL:    currExprContext.URL,
+				Header: currExprContext.Header,
+				Error:  &ExprWrapError{currExprContext.Error},
 			},
 		}
-		return expr.ResolveAnyExpression(expression, copyContext)
+		return expr.ResolveAnyExpression(expression, copyExprContext)
 	}
-
-	return c.ResolveAnyExpression(expression)
+	return expr.ResolveAnyExpression(expression, c.expressionContext)
 }
 
 func (c *requestContext) ResolveAnyExpression(expression *vm.Program) (any, error) {
