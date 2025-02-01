@@ -774,6 +774,7 @@ func TestAuthorization(t *testing.T) {
 				require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
 				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
 				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
@@ -825,6 +826,7 @@ func TestAuthorization(t *testing.T) {
 				require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
 				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
 				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
@@ -861,6 +863,7 @@ func TestAuthorization(t *testing.T) {
 				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, string(data))
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
 				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
 				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
