@@ -666,6 +666,10 @@
                   "request_header": {
                     "type": "string",
                     "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                  },
+                  "expression": {
+                    "type": "string",
+                    "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
                   }
                 }
               }

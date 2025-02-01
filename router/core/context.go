@@ -153,6 +153,9 @@ type requestTelemetryAttributes struct {
 	// It will also remap the key if configured.
 	mapper *attributeMapper
 
+	// attributeExpressions is a map of expressions that can be used to resolve dynamic attributes
+	attributeExpressions *attributeExpressions
+
 	// metricsEnabled indicates if metrics are enabled. If false, no metrics attributes will be added
 	metricsEnabled bool
 	// traceEnabled indicates if traces are enabled, if false, no trace attributes will be added
@@ -606,14 +609,15 @@ func subgraphResolverFromContext(ctx context.Context) *SubgraphResolver {
 }
 
 type requestContextOptions struct {
-	operationContext    *operationContext
-	requestLogger       *zap.Logger
-	metricSetAttributes map[string]string
-	metricsEnabled      bool
-	traceEnabled        bool
-	mapper              *attributeMapper
-	w                   http.ResponseWriter
-	r                   *http.Request
+	operationContext     *operationContext
+	requestLogger        *zap.Logger
+	metricSetAttributes  map[string]string
+	metricsEnabled       bool
+	traceEnabled         bool
+	mapper               *attributeMapper
+	attributeExpressions *attributeExpressions
+	w                    http.ResponseWriter
+	r                    *http.Request
 }
 
 func buildRequestContext(opts requestContextOptions) *requestContext {
@@ -629,10 +633,11 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 		request:        opts.r,
 		operation:      opts.operationContext,
 		telemetry: &requestTelemetryAttributes{
-			metricSetAttrs: opts.metricSetAttributes,
-			metricsEnabled: opts.metricsEnabled,
-			traceEnabled:   opts.traceEnabled,
-			mapper:         opts.mapper,
+			metricSetAttrs:       opts.metricSetAttributes,
+			metricsEnabled:       opts.metricsEnabled,
+			traceEnabled:         opts.traceEnabled,
+			mapper:               opts.mapper,
+			attributeExpressions: opts.attributeExpressions,
 		},
 		expressionContext: rootCtx,
 		subgraphResolver:  subgraphResolverFromContext(opts.r.Context()),
