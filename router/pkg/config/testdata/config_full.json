@@ -314,7 +314,7 @@
           "ValueFrom": {
             "RequestHeader": "",
             "ContextField": "",
-            "ResponseHeader": "X-Response-Field",
+            "ResponseHeader": "X-Response-Field"
           }
         }
       ]
