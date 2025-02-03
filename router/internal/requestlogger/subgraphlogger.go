@@ -29,7 +29,6 @@ type SubgraphOptions struct {
 	FieldsHandler         ContextFunc
 	Fields                []zapcore.Field
 	Attributes            []config.CustomAttribute
-	ExprAttributes        []ExpressionAttribute
 }
 
 func NewSubgraphAccessLogger(logger *zap.Logger, opts SubgraphOptions) *SubgraphAccessLogger {
@@ -41,7 +40,6 @@ func NewSubgraphAccessLogger(logger *zap.Logger, opts SubgraphOptions) *Subgraph
 			traceID:               true,
 			fieldsHandler:         opts.FieldsHandler,
 			attributes:            opts.Attributes,
-			exprAttributes:        opts.ExprAttributes,
 		},
 	}
 }
