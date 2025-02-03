@@ -5,27 +5,24 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/execution_config"
-	otelmetric "go.opentelemetry.io/otel/metric"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/klauspost/compress/gzhttp"
-	"github.com/klauspost/compress/gzip"
-
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/klauspost/compress/gzhttp"
+	"github.com/klauspost/compress/gzip"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
+	otelmetric "go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/atomic"
@@ -42,6 +39,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
@@ -51,6 +49,7 @@ import (
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 )
 
 const (
@@ -191,7 +190,12 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		)
 	})))
 
+	// Request traffic shaping related middlewares
 	httpRouter.Use(rmiddleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
+	if s.routerTrafficConfig.Compression.Enabled {
+		httpRouter.Use(rmiddleware.HandleCompression(s.logger))
+	}
+
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
 	if s.corsOptions.Enabled {
