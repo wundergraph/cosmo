@@ -21,7 +21,7 @@ func ExtractFederatedGraphTokenClaims(token string) (*FederatedGraphTokenClaims,
 
 	_, _, err := jwtParser.ParseUnverified(token, claims)
 	if err != nil {
-		return nil, fmt.Errorf("invalid token %w", err)
+		return nil, fmt.Errorf("invalid token: %w", err)
 	}
 
 	federatedGraphIDValue := claims[FederatedGraphIDClaim]

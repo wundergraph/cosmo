@@ -44,12 +44,12 @@ func Main() {
 
 	result, err := config.LoadConfig(*configPathFlag, *overrideEnvFlag)
 	if err != nil {
-		log.Fatal("Could not load config", zap.Error(err))
+		log.Fatalf("Could not load config: %s", err)
 	}
 
 	logLevel, err := logging.ZapLogLevelFromString(result.Config.LogLevel)
 	if err != nil {
-		log.Fatal("Could not parse log level", zap.Error(err))
+		log.Fatalf("Could not parse log level: %s", err)
 	}
 
 	logger := logging.New(!result.Config.JSONLog, result.Config.DevelopmentMode, logLevel).

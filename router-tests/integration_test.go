@@ -49,6 +49,17 @@ func TestSimpleQuery(t *testing.T) {
 	})
 }
 
+func TestNoSubgraphConfig(t *testing.T) {
+	t.Parallel()
+
+	testenv.RunRouterBinary(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: `query { hello }`,
+		})
+		require.JSONEq(t, `{"data":{"hello":"Cosmo Router is ready! Follow this guide to deploy your first Supergraph: https://cosmo-docs.wundergraph.com/tutorial/from-zero-to-federation-in-5-steps-using-cosmo"}}`, res.Body)
+	})
+}
+
 func TestContentTypes(t *testing.T) {
 	t.Parallel()
 
