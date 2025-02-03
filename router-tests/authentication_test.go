@@ -2,14 +2,10 @@ package integration
 
 import (
 	"bytes"
-	"context"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"github.com/golang-jwt/jwt/v5"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"io"
 	"net/http"
 	"strings"
@@ -40,7 +36,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("no token", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, _ := configureAuth(t)
+		authenticators, _ := ConfigureAuth(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
@@ -62,7 +58,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("invalid token", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, _ := configureAuth(t)
+		authenticators, _ := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -86,7 +82,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("valid token", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, authServer := configureAuth(t)
+		authenticators, authServer := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -102,7 +98,7 @@ func TestAuthentication(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, employeesExpectedData, string(data))
@@ -112,7 +108,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("scopes required no token", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, _ := configureAuth(t)
+		authenticators, _ := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -130,7 +126,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("scopes required valid token no scopes", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, authServer := configureAuth(t)
+		authenticators, authServer := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -146,7 +142,7 @@ func TestAuthentication(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",0,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",1,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",2,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",3,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",4,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",5,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",6,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",7,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",8,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",9,"startDate"]}],"data":{"employees":[null,null,null,null,null,null,null,null,null,null]},"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":[]}}}`, string(data))
@@ -155,7 +151,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("scopes required valid token AND scopes present", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, authServer := configureAuth(t)
+		authenticators, authServer := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -173,7 +169,7 @@ func TestAuthentication(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
@@ -182,7 +178,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("scopes required valid token AND scopes partially present", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, authServer := configureAuth(t)
+		authenticators, authServer := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -200,7 +196,7 @@ func TestAuthentication(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",0,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",1,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",2,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",3,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",4,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",5,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",6,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",7,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",8,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",9,"startDate"]}],"data":{"employees":[null,null,null,null,null,null,null,null,null,null]},"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":["read:employee"]}}}`, string(data))
@@ -209,7 +205,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("reject unauthorized missing scope", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, authServer := configureAuth(t)
+		authenticators, authServer := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -230,7 +226,7 @@ func TestAuthentication(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			data = bytes.TrimSpace(data)
 			require.NoError(t, err)
@@ -240,7 +236,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("reject unauthorized no scope", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, authServer := configureAuth(t)
+		authenticators, authServer := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -259,7 +255,7 @@ func TestAuthentication(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			data = bytes.TrimSpace(data)
 			require.NoError(t, err)
@@ -269,7 +265,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("reject unauthorized invalid token", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, _ := configureAuth(t)
+		authenticators, _ := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -294,7 +290,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("reject unauthorized no token", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, _ := configureAuth(t)
+		authenticators, _ := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -317,7 +313,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("scopes required valid token OR scopes present", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, authServer := configureAuth(t)
+		authenticators, authServer := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -335,7 +331,7 @@ func TestAuthentication(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
@@ -344,7 +340,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("scopes required valid token AND and OR scopes present", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, authServer := configureAuth(t)
+		authenticators, authServer := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -362,7 +358,7 @@ func TestAuthentication(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
@@ -371,7 +367,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("non-nullable, unauthorized data returns no data even if some is authorized", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, authServer := configureAuth(t)
+		authenticators, authServer := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -391,7 +387,7 @@ func TestAuthentication(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.topSecretFederationFacts.description', Reason: missing required scopes.","path":["topSecretFederationFacts",2,"description"]}],"data":null,"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"EntityFact","fieldName":"description"},"required":[["read:entity","read:scalar"],["read:entity","read:all"]]}],"actualScopes":["read:fact","read:miscellaneous"]}}}`, string(data))
@@ -400,7 +396,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("return unauthenticated error if a field requiring authentication is queried", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, _ := configureAuth(t)
+		authenticators, _ := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -420,7 +416,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("nullable, unauthenticated data returns an error but partial data that does not require authentication is returned", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, _ := configureAuth(t)
+		authenticators, _ := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -440,7 +436,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("nullable, unauthenticated data returns an error but partial data that does not require authentication is returned (reordered fields)", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, _ := configureAuth(t)
+		authenticators, _ := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -460,7 +456,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("data requiring authentication is returned when authenticated", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, authServer := configureAuth(t)
+		authenticators, authServer := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -485,7 +481,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("mutation with valid scopes", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, authServer := configureAuth(t)
+		authenticators, authServer := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -512,7 +508,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("mutation with scope missing for response field", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, authServer := configureAuth(t)
+		authenticators, authServer := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -539,7 +535,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("mutation with scope missing for mutation root field", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, authServer := configureAuth(t)
+		authenticators, authServer := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -566,7 +562,7 @@ func TestAuthentication(t *testing.T) {
 	t.Run("mutation with scope missing for mutation root field (with reject)", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, authServer := configureAuth(t)
+		authenticators, authServer := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -610,7 +606,7 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 
 	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{
-		Name: jwksName,
+		Name: JwksName,
 		HeaderSourcePrefixes: map[string][]string{
 			headerName: {headerValuePrefix},
 		},
@@ -637,7 +633,7 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, employeesExpectedData, string(data))
@@ -663,7 +659,7 @@ func TestAuthorization(t *testing.T) {
 	t.Run("no token", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, _ := configureAuth(t)
+		authenticators, _ := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, true)),
@@ -684,7 +680,7 @@ func TestAuthorization(t *testing.T) {
 	t.Run("invalid token", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, _ := configureAuth(t)
+		authenticators, _ := ConfigureAuth(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, true)),
@@ -708,7 +704,7 @@ func TestAuthorization(t *testing.T) {
 	t.Run("valid token", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, authServer := configureAuth(t)
+		authenticators, authServer := ConfigureAuth(t)
 		token, err := authServer.Token(nil)
 		require.NoError(t, err)
 		testenv.Run(t, &testenv.Config{
@@ -724,154 +720,10 @@ func TestAuthorization(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, employeesExpectedData, string(data))
-		})
-	})
-
-	t.Run("custom metric with expression", func(t *testing.T) {
-		t.Parallel()
-
-		t.Run("existing JWT claim is added", func(t *testing.T) {
-			t.Parallel()
-
-			metricReader := metric.NewManualReader()
-			authenticators, authServer := configureAuth(t)
-			claimKey := "extraclaim"
-			claimVal := "extravalue"
-			testenv.Run(t, &testenv.Config{
-				MetricReader: metricReader,
-				CustomMetricAttributes: []config.CustomAttribute{
-					{
-						Key: claimKey,
-						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "request.auth.claims." + claimKey,
-						},
-					},
-				},
-				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				// Operations with a token should succeed
-				token, err := authServer.Token(map[string]any{
-					"scope":  "read:employee read:private",
-					claimKey: claimVal,
-				})
-				require.NoError(t, err)
-				header := http.Header{
-					"Authorization": []string{"Bearer " + token},
-				}
-				res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
-				require.NoError(t, err)
-				defer res.Body.Close()
-				require.Equal(t, http.StatusOK, res.StatusCode)
-				require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
-				data, err := io.ReadAll(res.Body)
-				require.NoError(t, err)
-				require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
-				rm := metricdata.ResourceMetrics{}
-				err = metricReader.Collect(context.Background(), &rm)
-				require.NoError(t, err)
-				require.Greater(t, len(rm.ScopeMetrics), 0)
-				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
-				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
-				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
-				atts := data2.DataPoints[0].Attributes
-				val, ok := atts.Value(attribute.Key(claimKey))
-				require.True(t, ok)
-				require.Equal(t, claimVal, val.AsString())
-				require.NoError(t, err)
-			})
-		})
-
-		t.Run("not existing JWT claim is not added", func(t *testing.T) {
-			t.Parallel()
-
-			claimKey := "extraclaim"
-
-			metricReader := metric.NewManualReader()
-			authenticators, authServer := configureAuth(t)
-			testenv.Run(t, &testenv.Config{
-				MetricReader: metricReader,
-				CustomMetricAttributes: []config.CustomAttribute{
-					{
-						Key: claimKey,
-						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "request.auth.claims." + claimKey,
-						},
-					},
-				},
-				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				// Operations with a token should succeed
-				token, err := authServer.Token(map[string]any{
-					"scope": "read:employee read:private",
-				})
-				require.NoError(t, err)
-				header := http.Header{
-					"Authorization": []string{"Bearer " + token},
-				}
-				res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
-				require.NoError(t, err)
-				defer res.Body.Close()
-				require.Equal(t, http.StatusOK, res.StatusCode)
-				require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
-				data, err := io.ReadAll(res.Body)
-				require.NoError(t, err)
-				require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
-				rm := metricdata.ResourceMetrics{}
-				err = metricReader.Collect(context.Background(), &rm)
-				require.NoError(t, err)
-				require.Greater(t, len(rm.ScopeMetrics), 0)
-				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
-				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
-				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
-				atts := data2.DataPoints[0].Attributes
-				ok := atts.HasValue(attribute.Key(claimKey))
-				require.False(t, ok)
-			})
-		})
-
-		t.Run("request without JWT don't add the value", func(t *testing.T) {
-			t.Parallel()
-
-			claimKey := "extraclaim"
-
-			metricReader := metric.NewManualReader()
-			testenv.Run(t, &testenv.Config{
-				MetricReader: metricReader,
-				CustomMetricAttributes: []config.CustomAttribute{
-					{
-						Key: claimKey,
-						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "request.auth.claims." + claimKey,
-						},
-					},
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", http.Header{}, strings.NewReader(employeesQuery))
-				require.NoError(t, err)
-				defer res.Body.Close()
-				require.Equal(t, http.StatusOK, res.StatusCode)
-				data, err := io.ReadAll(res.Body)
-				require.NoError(t, err)
-				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, string(data))
-				rm := metricdata.ResourceMetrics{}
-				err = metricReader.Collect(context.Background(), &rm)
-				require.NoError(t, err)
-				require.Greater(t, len(rm.ScopeMetrics), 0)
-				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
-				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
-				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
-				atts := data2.DataPoints[0].Attributes
-				ok := atts.HasValue(attribute.Key(claimKey))
-				require.False(t, ok)
-			})
 		})
 	})
 }
@@ -1007,7 +859,7 @@ func TestAlgorithmMismatch(t *testing.T) {
 		require.NoError(t, err)
 
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name:         jwksName,
+			Name:         JwksName,
 			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -1104,7 +956,7 @@ func TestMultipleKeys(t *testing.T) {
 		require.NoError(t, err)
 		defer res.Body.Close()
 		require.Equal(t, http.StatusOK, res.StatusCode)
-		require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+		require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
 		data, err := io.ReadAll(res.Body)
 		require.NoError(t, err)
 		require.Equal(t, employeesExpectedData, string(data))
@@ -1127,7 +979,7 @@ func TestMultipleKeys(t *testing.T) {
 		require.NoError(t, err)
 
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name:         jwksName,
+			Name:         JwksName,
 			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -1288,7 +1140,7 @@ func TestSupportedAlgorithms(t *testing.T) {
 
 		if expectSuccess {
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
 		} else {
 			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
 		}
@@ -1313,7 +1165,7 @@ func TestSupportedAlgorithms(t *testing.T) {
 		require.NoError(t, err)
 
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name:         jwksName,
+			Name:         JwksName,
 			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -1756,7 +1608,7 @@ func TestAuthenticationOverWebsocket(t *testing.T) {
 
 	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
 	jwksOpts := authentication.HttpHeaderAuthenticatorOptions{
-		Name:         jwksName,
+		Name:         JwksName,
 		TokenDecoder: tokenDecoder,
 	}
 

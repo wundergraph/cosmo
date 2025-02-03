@@ -2,9 +2,11 @@ package telemetry
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"regexp"
 	"runtime"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -8737,6 +8739,151 @@ func TestTelemetry(t *testing.T) {
 				testSpan4 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryRootFieldAliases.Int(0))
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
+			})
+		})
+	})
+
+	t.Run("custom metric with expression", func(t *testing.T) {
+		t.Parallel()
+
+		const employeesQuery = `{"query":"{ employees { id } }"}`
+		const employeesQueryRequiringClaims = `{"query":"{ employees { id startDate } }"}`
+
+		t.Run("existing JWT claim is added", func(t *testing.T) {
+			t.Parallel()
+
+			metricReader := metric.NewManualReader()
+			authenticators, authServer := integration.ConfigureAuth(t)
+			claimKey := "extraclaim"
+			claimVal := "extravalue"
+			testenv.Run(t, &testenv.Config{
+				MetricReader: metricReader,
+				CustomMetricAttributes: []config.CustomAttribute{
+					{
+						Key: claimKey,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.auth.claims." + claimKey,
+						},
+					},
+				},
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, false)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Operations with a token should succeed
+				token, err := authServer.Token(map[string]any{
+					"scope":  "read:employee read:private",
+					claimKey: claimVal,
+				})
+				require.NoError(t, err)
+				header := http.Header{
+					"Authorization": []string{"Bearer " + token},
+				}
+				res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+				require.NoError(t, err)
+				defer res.Body.Close()
+				require.Equal(t, http.StatusOK, res.StatusCode)
+				data, err := io.ReadAll(res.Body)
+				require.NoError(t, err)
+				require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
+				rm := metricdata.ResourceMetrics{}
+				err = metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
+				require.Greater(t, len(rm.ScopeMetrics), 0)
+				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
+				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
+				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+				atts := data2.DataPoints[0].Attributes
+				val, ok := atts.Value(attribute.Key(claimKey))
+				require.True(t, ok)
+				require.Equal(t, claimVal, val.AsString())
+				require.NoError(t, err)
+			})
+		})
+
+		t.Run("not existing JWT claim is not added", func(t *testing.T) {
+			t.Parallel()
+
+			claimKey := "extraclaim"
+
+			metricReader := metric.NewManualReader()
+			authenticators, authServer := integration.ConfigureAuth(t)
+			testenv.Run(t, &testenv.Config{
+				MetricReader: metricReader,
+				CustomMetricAttributes: []config.CustomAttribute{
+					{
+						Key: claimKey,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.auth.claims." + claimKey,
+						},
+					},
+				},
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, false)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Operations with a token should succeed
+				token, err := authServer.Token(map[string]any{
+					"scope": "read:employee read:private",
+				})
+				require.NoError(t, err)
+				header := http.Header{
+					"Authorization": []string{"Bearer " + token},
+				}
+				res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+				require.NoError(t, err)
+				defer res.Body.Close()
+				require.Equal(t, http.StatusOK, res.StatusCode)
+				data, err := io.ReadAll(res.Body)
+				require.NoError(t, err)
+				require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
+				rm := metricdata.ResourceMetrics{}
+				err = metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
+				require.Greater(t, len(rm.ScopeMetrics), 0)
+				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
+				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
+				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+				atts := data2.DataPoints[0].Attributes
+				ok := atts.HasValue(attribute.Key(claimKey))
+				require.False(t, ok)
+			})
+		})
+
+		t.Run("request without JWT don't add the value", func(t *testing.T) {
+			t.Parallel()
+
+			claimKey := "extraclaim"
+
+			metricReader := metric.NewManualReader()
+			testenv.Run(t, &testenv.Config{
+				MetricReader: metricReader,
+				CustomMetricAttributes: []config.CustomAttribute{
+					{
+						Key: claimKey,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.auth.claims." + claimKey,
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", http.Header{}, strings.NewReader(employeesQuery))
+				require.NoError(t, err)
+				defer res.Body.Close()
+				require.Equal(t, http.StatusOK, res.StatusCode)
+				data, err := io.ReadAll(res.Body)
+				require.NoError(t, err)
+				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, string(data))
+				rm := metricdata.ResourceMetrics{}
+				err = metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
+				require.Greater(t, len(rm.ScopeMetrics), 0)
+				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
+				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
+				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+				atts := data2.DataPoints[0].Attributes
+				ok := atts.HasValue(attribute.Key(claimKey))
+				require.False(t, ok)
 			})
 		})
 	})

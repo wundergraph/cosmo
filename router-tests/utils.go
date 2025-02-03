@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	jwksName = "my-jwks-server"
+	JwksName = "my-jwks-server"
 )
 
 // NewContextWithCancel creates a new context with a cancel function that is called when the test is done.
@@ -41,7 +41,7 @@ func RequireSpanWithName(t *testing.T, exporter *tracetest2.InMemoryExporter, na
 	return testSpan
 }
 
-func configureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) {
+func ConfigureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) {
 	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
@@ -53,7 +53,7 @@ func configureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) 
 	})
 
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{
-		Name:         jwksName,
+		Name:         JwksName,
 		TokenDecoder: tokenDecoder,
 	}
 	authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
