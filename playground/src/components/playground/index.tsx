@@ -410,7 +410,8 @@ export const Playground = (input: {
   scripts?: GraphiQLScripts;
   fetch?: typeof fetch;
 }) => {
-  const url = input.routingUrl || import.meta.env.VITE_ROUTING_URL || '{{graphqlURL}}';
+  const url =
+    input.routingUrl || import.meta.env.VITE_ROUTING_URL || new URL('{{graphqlURL}}', window.location.href).toString();
 
   const [isMounted, setIsMounted] = useState(false);
   const [view, setView] = useState<PlaygroundView>('response');
