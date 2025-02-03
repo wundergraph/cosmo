@@ -433,8 +433,6 @@ export const Playground = (input: {
     import.meta.env.VITE_ROUTING_URL ||
     constructGraphQLURL(window.location.href, '{{graphqlURL}}', '{{playgroundPath}}');
 
-  console.log('{{graphqlURL}}', '{{playgroundPath}}');
-
   const [isMounted, setIsMounted] = useState(false);
   const [view, setView] = useState<PlaygroundView>('response');
 
