@@ -616,7 +616,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	enableAttributeMapper := !(s.metricConfig.IsUsingCloudExporter || rmetric.IsDefaultCloudExporterConfigured(s.metricConfig.OpenTelemetry.Exporters))
 
 	// We might want to remap or exclude known attributes based on the configuration for metrics
-	mapper, attExpressions, attErr := initializeAttributes(s.logger, s.metricConfig.Attributes, enableAttributeMapper)
+	mapper := newAttributeMapper(enableAttributeMapper, s.metricConfig.Attributes)
+	attExpressions, attErr := newAttributeExpressions(s.logger, s.metricConfig.Attributes)
 	if attErr != nil {
 		return nil, attErr
 	}
