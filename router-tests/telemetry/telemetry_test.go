@@ -2,6 +2,8 @@ package telemetry
 
 import (
 	"context"
+	"errors"
+	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
 	"regexp"
@@ -8885,6 +8887,28 @@ func TestTelemetry(t *testing.T) {
 				ok := atts.HasValue(attribute.Key(claimKey))
 				require.False(t, ok)
 			})
+		})
+
+		t.Run("invalid expression", func(t *testing.T) {
+			t.Parallel()
+
+			claimKey := "extraclaim"
+			metricReader := metric.NewManualReader()
+			err := testenv.RunWithError(t, &testenv.Config{
+				MetricReader: metricReader,
+				CustomMetricAttributes: []config.CustomAttribute{
+					{
+						Key: claimKey,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "TEST request.auth.claims." + claimKey,
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				assert.FailNow(t, "should not be called")
+			})
+			expectedErr := errors.New("failed to build base mux: custom attribute error, unable to compile 'extraclaim' with expression 'TEST request.auth.claims.extraclaim': line 1, column 5: unexpected token Identifier(\"request\")")
+			assert.ErrorAs(t, err, &expectedErr)
 		})
 	})
 

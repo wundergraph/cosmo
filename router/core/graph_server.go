@@ -618,7 +618,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	// We might want to remap or exclude known attributes based on the configuration for metrics
 	mapper := newAttributeMapper(enableAttributeMapper, s.metricConfig.Attributes)
 	baseMetricAttributes := mapper.mapAttributes(baseOtelAttributes)
-	attributeExpressions := newAttributeExpressions(s.logger, s.metricConfig.Attributes)
+	attExpressions, attErr := newAttributeExpressions(s.logger, s.metricConfig.Attributes)
+	if attErr != nil {
+		return nil, attErr
+	}
 	// Prometheus metricStore rely on OTLP metricStore
 	if metricsEnabled {
 		m, err := rmetric.NewStore(
@@ -688,7 +691,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				metricsEnabled:       metricsEnabled,
 				traceEnabled:         s.traceConfig.Enabled,
 				mapper:               mapper,
-				attributeExpressions: attributeExpressions,
+				attributeExpressions: attExpressions,
 				w:                    w,
 				r:                    r,
 			})

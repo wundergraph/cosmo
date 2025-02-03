@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"github.com/expr-lang/expr/vm"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -16,15 +17,14 @@ type attributeExpressions struct {
 	expressions map[string]*vm.Program
 }
 
-func newAttributeExpressions(logger *zap.Logger, attr []config.CustomAttribute) *attributeExpressions {
+func newAttributeExpressions(logger *zap.Logger, attr []config.CustomAttribute) (*attributeExpressions, error) {
 	attrExprMap := make(map[string]*vm.Program)
 
 	for _, a := range attr {
 		if a.ValueFrom != nil && a.ValueFrom.Expression != "" {
 			prog, err := expr.CompileStringExpression(a.ValueFrom.Expression)
 			if err != nil {
-				logger.Error("failed to compile expression", zap.Error(err))
-				continue
+				return nil, fmt.Errorf("custom attribute error, unable to compile '%s' with expression '%s': %s", a.Key, a.ValueFrom.Expression, err)
 			}
 			attrExprMap[a.Key] = prog
 		}
@@ -33,7 +33,7 @@ func newAttributeExpressions(logger *zap.Logger, attr []config.CustomAttribute) 
 	return &attributeExpressions{
 		logger:      logger,
 		expressions: attrExprMap,
-	}
+	}, nil
 }
 
 func (r *attributeExpressions) expressionsAttributes(reqCtx *requestContext) []attribute.KeyValue {
