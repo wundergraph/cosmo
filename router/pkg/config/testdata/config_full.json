@@ -498,6 +498,9 @@
       "Enabled": false,
       "Condition": ""
     },
+    "Safelist": {
+      "Enabled": true
+    },
     "ComplexityCalculationCache": {
       "Enabled": true,
       "CacheSize": 1024

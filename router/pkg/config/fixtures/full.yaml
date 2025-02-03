@@ -348,6 +348,8 @@ security:
   complexity_calculation_cache:
     enabled: true
     size: 1024
+  safelist:
+    enabled: true
   complexity_limits:
     depth:
         enabled: true

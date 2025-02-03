@@ -425,7 +425,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	}
 
 	// Compute the operation sha256 hash as soon as possible for observability reasons
-	if h.computeOperationSha256 {
+	if h.computeOperationSha256 || h.operationBlocker.SafelistEnabled {
 		if err := operationKit.ComputeOperationSha256(); err != nil {
 			return &httpGraphqlError{
 				message:    fmt.Sprintf("error hashing operation: %s", err),
@@ -434,6 +434,15 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 		requestContext.operation.sha256Hash = operationKit.parsedOperation.Sha256Hash
 		requestContext.telemetry.addCustomMetricStringAttr(ContextFieldOperationSha256, requestContext.operation.sha256Hash)
+		if h.operationBlocker.SafelistEnabled {
+			// Set the request hash to the parsed hash, to see if it matches a safelist entry
+			operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery = &GraphQLRequestExtensionsPersistedQuery{
+				Sha256Hash: operationKit.parsedOperation.Sha256Hash,
+			}
+			// Overwrite the request query, so that we can verify it gets picked up from the persisted operation CDN
+			operationKit.parsedOperation.Request.Query = ""
+			operationKit.parsedOperation.IsPersistedOperation = true
+		}
 	}
 
 	requestContext.operation.extensions = operationKit.parsedOperation.Request.Extensions

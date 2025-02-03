@@ -70,6 +70,22 @@ func TestOverrideURLConfig(t *testing.T) {
 	assert.Equal(t, parsedURL, subgraphs[0].Url)
 }
 
+func TestApqAndSafelistErrors(t *testing.T) {
+	options := []Option{
+		WithAutomatedPersistedQueriesConfig(config.AutomaticPersistedQueriesConfig{
+			Enabled: true,
+		}),
+		WithSecurityConfig(config.SecurityConfiguration{
+			Safelist: config.BlockOperationConfiguration{
+				Enabled: true,
+			},
+		}),
+	}
+	_, err := NewRouter(options...)
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "automatic persisted queries and safelist cannot be enabled at the same time")
+}
+
 func TestOverridesConfig(t *testing.T) {
 	options := []Option{
 		WithOverrides(config.OverridesConfiguration{

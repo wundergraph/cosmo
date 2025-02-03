@@ -257,6 +257,9 @@
       "Enabled": false,
       "Condition": ""
     },
+    "Safelist": {
+      "Enabled": false
+    },
     "ComplexityCalculationCache": null,
     "ComplexityLimits": null,
     "DepthLimit": null

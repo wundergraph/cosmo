@@ -15,11 +15,17 @@ describe('parse operations from different formats', () => {
         const operations = parseOperations(operation);
         expect(operations).toEqual([{ id, contents: operation }]);
     });
+    test('gets same reult as hash', () => {
+        const operation = `query Employees {\n employees {\n id\n }\n}`;
+        const id = crypto.createHash('sha256').update(operation).digest('hex');
+        const operations = parseOperations(operation);
+        expect(operations).toEqual([{ id: "33651da3d80e420709520fb900c7ab8ec4151555da56062feeee428cf7f3a5dd", contents: operation }]);
+    });
     test('parse operations from Apollo', async() => {
         const persistedQueries = await fs.readFile(path.join('test', 'testdata', 'persisted-query-manifest.json'), 'utf8');
         const operations = parseOperations(persistedQueries);
         expect(operations).toEqual([
-            { id: "2d9df67f96ce804da7a9107d33373132a53bf56aec29ef4b4e06569a43a16935", contents: "query Employees {\n employees {\n id\n }\n}" },
+            { id: "33651da3d80e420709520fb900c7ab8ec4151555da56062feeee428cf7f3a5dd", contents: "query Employees {\n employees {\n id\n }\n}" },
         ]);
     });
     test('parse query map', async() => {

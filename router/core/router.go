@@ -513,6 +513,10 @@ func NewRouter(opts ...Option) (*Router, error) {
 		)
 	}
 
+	if r.securityConfiguration.Safelist.Enabled && r.automaticPersistedQueriesConfig.Enabled {
+		return nil, errors.New("automatic persisted queries and safelist cannot be enabled at the same time")
+	}
+
 	if r.securityConfiguration.DepthLimit != nil {
 		r.logger.Warn("The security configuration field 'depth_limit' is deprecated, and will be removed. Use 'security.complexity_limits.depth' instead.")
 
