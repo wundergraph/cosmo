@@ -184,8 +184,7 @@
           "ValueFrom": {
             "RequestHeader": "",
             "ContextField": "operation_name",
-            "ResponseHeader": "",
-            "Expression": ""
+            "ResponseHeader": ""
           }
         }
       ],
@@ -316,7 +315,6 @@
             "RequestHeader": "",
             "ContextField": "",
             "ResponseHeader": "X-Response-Field",
-            "Expression": ""
           }
         }
       ]
