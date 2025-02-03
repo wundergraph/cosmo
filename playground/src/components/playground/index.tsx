@@ -403,6 +403,24 @@ const PlaygroundPortal = () => {
   );
 };
 
+function constructGraphQLURL(location: string, graphqlURL: string, playgroundPath: string): string {
+  const normalizePath = (path: string) => path.replace(/\/+$/, ''); // Remove trailing slashes
+
+  let baseURL = location;
+
+  // Remove playgroundPath from the end of location
+  if (baseURL.endsWith(playgroundPath)) {
+    baseURL = baseURL.slice(0, -playgroundPath.length);
+  } else if (baseURL.endsWith(playgroundPath + '/')) {
+    baseURL = baseURL.slice(0, -playgroundPath.length - 1);
+  }
+
+  baseURL = normalizePath(baseURL);
+  graphqlURL = graphqlURL.startsWith('/') ? graphqlURL : `/${graphqlURL}`;
+
+  return baseURL + graphqlURL;
+}
+
 export const Playground = (input: {
   routingUrl?: string;
   hideLogo?: boolean;
@@ -411,7 +429,11 @@ export const Playground = (input: {
   fetch?: typeof fetch;
 }) => {
   const url =
-    input.routingUrl || import.meta.env.VITE_ROUTING_URL || new URL('{{graphqlURL}}', window.location.href).toString();
+    input.routingUrl ||
+    import.meta.env.VITE_ROUTING_URL ||
+    constructGraphQLURL(window.location.href, '{{graphqlURL}}', '{{playgroundPath}}');
+
+  console.log('{{graphqlURL}}', '{{playgroundPath}}');
 
   const [isMounted, setIsMounted] = useState(false);
   const [view, setView] = useState<PlaygroundView>('response');
