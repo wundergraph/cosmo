@@ -39,7 +39,7 @@ func GetAccessLogConfigExpressions(attributes []config.CustomAttribute) ([]Expre
 	return exprSlice, nil
 }
 
-func CleanupNonExpressions(attributes []config.CustomAttribute) []config.CustomAttribute {
+func CleanupExpressionAttributes(attributes []config.CustomAttribute) []config.CustomAttribute {
 	filtered := make([]config.CustomAttribute, 0, len(attributes))
 
 	for _, elem := range attributes {

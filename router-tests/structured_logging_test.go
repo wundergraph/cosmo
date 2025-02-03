@@ -2114,7 +2114,7 @@ func TestAccessLogs(t *testing.T) {
 					{
 						Key: "custom_error_message",
 						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "request.error ?? request.url.method",
+							Expression: "request.error ?? 'request-data'",
 						},
 					},
 				},
