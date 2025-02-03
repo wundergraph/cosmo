@@ -2085,7 +2085,7 @@ func TestAccessLogs(t *testing.T) {
 			})
 		})
 
-		t.Run("validate error expression for logging being processed in the subgraph router", func(t *testing.T) {
+		t.Run("validate that expressions dont get processed yet in the subgraph logger", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
@@ -2162,7 +2162,6 @@ func TestAccessLogs(t *testing.T) {
 					"request_id",
 					"pid",
 					"url",
-					"custom_error_message",
 				}
 
 				productSubgraphVals := map[string]interface{}{
@@ -2175,6 +2174,7 @@ func TestAccessLogs(t *testing.T) {
 					"query":         "", // http query is empty
 					"ip":            "[REDACTED]",
 					"service_name":  "service-name", // From request header
+					// custom_error_message is removed
 				}
 				checkValues(t, productContext, productSubgraphVals, additionalExpectedKeys)
 			})
