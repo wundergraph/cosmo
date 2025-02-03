@@ -110,6 +110,7 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 		)
 
 		expressionResponse := response[1]
+		require.IsType(t, expressionResponse.Interface, &ExprWrapError{})
 		require.Equal(t, expressionResponseKey, expressionResponse.Key)
 		require.Equal(t, &ExprWrapError{requestError}, expressionResponse.Interface)
 	})
