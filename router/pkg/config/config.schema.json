@@ -2430,6 +2430,21 @@
           },
           "description": "The keep alive probe interval. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         },
+        "max_idle_conns": {
+          "type": "integer",
+          "default": 1024,
+          "description": "MaxIdleConns controls the maximum number of idle (keep-alive) connections across all hosts. Zero means no limit"
+        },
+        "max_conns_per_host": {
+          "type": "integer",
+          "default": 100,
+          "description": "MaxConnsPerHost limits the total number of connections per host, including connections in the dialing, active, and idle states. Zero means no limit."
+        },
+        "max_idle_conns_per_host": {
+          "type": "integer",
+          "default": 20,
+          "description": "MaxIdleConnsPerHost, if non-zero, controls the maximum idle (keep-alive) connections to keep per-host. Zero will default to 2"
+        },
         "retry": {
           "type": "object",
           "description": "The retry configuration. The retry configuration is used to configure the retry behavior for the subgraphs requests. See https://cosmo-docs.wundergraph.com/router/traffic-shaping#automatic-retry for more information.",
