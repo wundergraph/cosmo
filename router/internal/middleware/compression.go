@@ -10,7 +10,7 @@ import (
 func HandleCompression(logger *zap.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Skip compression handling for GET requests or empty bodies
+			// compression handling is only relevant for POST requests with a body
 			if r.Method != http.MethodPost || r.ContentLength == 0 {
 				next.ServeHTTP(w, r)
 				return
