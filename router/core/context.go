@@ -152,7 +152,6 @@ type requestTelemetryAttributes struct {
 	// configured in the custom attributes list. The mapper will potentially filter out attributes or include them.
 	// It will also remap the key if configured.
 	mapper *attributeMapper
-
 	// attributeExpressions is a map of expressions that can be used to resolve dynamic attributes
 	attributeExpressions *attributeExpressions
 
