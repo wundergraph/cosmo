@@ -309,10 +309,10 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 
 				res, err := xEnv.MakeRequest("POST", "/graphql", header, strings.NewReader(builder.String()))
 				require.NoError(t, err)
-				require.Equal(t, http.StatusBadRequest, res.StatusCode)
+				require.Equal(t, http.StatusUnsupportedMediaType, res.StatusCode)
 				b, err := io.ReadAll(res.Body)
 				require.NoError(t, err)
-				require.Contains(t, string(b), "unsupported content encoding")
+				require.Contains(t, string(b), "unsupported media type")
 
 			})
 		})

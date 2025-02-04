@@ -127,7 +127,7 @@ func TestHandleCompression(t *testing.T) {
 		require.Equal(t, http.StatusUnprocessableEntity, recorder.Code)
 	})
 
-	t.Run("Should return status 400 for unsupported content encoding", func(t *testing.T) {
+	t.Run("Should return status 415 for unsupported content encoding", func(t *testing.T) {
 		t.Parallel()
 
 		recorder := httptest.NewRecorder()
@@ -142,8 +142,8 @@ func TestHandleCompression(t *testing.T) {
 
 		HandleCompression(zap.NewNop())(next).ServeHTTP(recorder, req)
 
-		require.Equal(t, http.StatusBadRequest, recorder.Code)
-		require.Equal(t, "unsupported content encoding\n", recorder.Body.String())
+		require.Equal(t, http.StatusUnsupportedMediaType, recorder.Code)
+		require.Equal(t, "unsupported media type\n", recorder.Body.String())
 	})
 
 	t.Run("Should not handle gzip compression when no content encoding is set", func(t *testing.T) {

@@ -23,7 +23,7 @@ func HandleCompression(logger *zap.Logger) func(http.Handler) http.Handler {
 				return
 			}
 
-			switch encodings[0] {
+			switch strings.TrimSpace(encodings[0]) {
 			case "gzip":
 				gzr, err := gzip.NewReader(r.Body)
 				if err != nil {
@@ -42,7 +42,7 @@ func HandleCompression(logger *zap.Logger) func(http.Handler) http.Handler {
 
 			case "":
 			default:
-				http.Error(w, "unsupported content encoding", http.StatusBadRequest)
+				http.Error(w, "unsupported media type", http.StatusUnsupportedMediaType)
 				return
 			}
 
