@@ -173,7 +173,7 @@ jobs:
           # Set a password for each master node
           for port in 7000 7001 7002; do
             redis-cli -h 127.0.0.1 -p $port ACL SETUSER default off  # Disable the default user
-            redis-cli -h 127.0.0.1 -p $port ACL SETUSER cosmo on >test ~* &* +@all
+            redis-cli -h 127.0.0.1 -p $port ACL SETUSER cosmo on >test ~* +@all
             echo "ACL user 'cosmo' created with full access on port $port"
           done
       - name: Running Test with ACL
