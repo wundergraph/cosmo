@@ -36,6 +36,8 @@ func (tt *TimeoutTransport) RoundTrip(req *http.Request) (*http.Response, error)
 		return nil, nil
 	}
 
+	return tt.defaultTransport.RoundTrip(req)
+
 	rq := getRequestContext(req.Context())
 	if rq == nil {
 		return nil, nil

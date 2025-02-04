@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"time"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 
@@ -34,6 +35,7 @@ type Loader struct {
 
 type FactoryResolver interface {
 	ResolveGraphqlFactory() (plan.PlannerFactory[graphql_datasource.Configuration], error)
+	ResolveGraphqlFactoryWithTimeout(time.Duration) (plan.PlannerFactory[graphql_datasource.Configuration], error)
 	ResolveStaticFactory() (plan.PlannerFactory[staticdatasource.Configuration], error)
 	ResolvePubsubFactory() (plan.PlannerFactory[pubsub_datasource.Configuration], error)
 }
@@ -53,6 +55,7 @@ type DefaultFactoryResolver struct {
 
 	engineCtx          context.Context
 	httpClient         *http.Client
+	enableSingleFlight bool
 	streamingClient    *http.Client
 	subscriptionClient graphql_datasource.GraphQLSubscriptionClient
 
@@ -69,7 +72,6 @@ func NewDefaultFactoryResolver(
 	natsPubSubBySourceID map[string]pubsub_datasource.NatsPubSub,
 	kafkaPubSubBySourceID map[string]pubsub_datasource.KafkaPubSub,
 ) *DefaultFactoryResolver {
-
 	defaultHttpClient := &http.Client{
 		Transport: transportFactory.RoundTripper(enableSingleFlight, baseTransport),
 	}
@@ -104,6 +106,7 @@ func NewDefaultFactoryResolver(
 		log:                log,
 		factoryLogger:      factoryLogger,
 		engineCtx:          ctx,
+		enableSingleFlight: enableSingleFlight,
 		httpClient:         defaultHttpClient,
 		streamingClient:    streamingClient,
 		subscriptionClient: subscriptionClient,
@@ -112,6 +115,17 @@ func NewDefaultFactoryResolver(
 
 func (d *DefaultFactoryResolver) ResolveGraphqlFactory() (plan.PlannerFactory[graphql_datasource.Configuration], error) {
 	factory, err := graphql_datasource.NewFactory(d.engineCtx, d.httpClient, d.subscriptionClient)
+	return factory, err
+}
+
+func (d *DefaultFactoryResolver) ResolveGraphqlFactoryWithTimeout(timeout time.Duration) (plan.PlannerFactory[graphql_datasource.Configuration], error) {
+	// make a new http client
+	client := &http.Client{
+		Transport: d.transportFactory.RoundTripper(d.enableSingleFlight, d.baseTransport),
+		Timeout:   timeout,
+	}
+
+	factory, err := graphql_datasource.NewFactory(d.engineCtx, client, d.subscriptionClient)
 	return factory, err
 }
 
@@ -199,10 +213,8 @@ func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, outpu
 	return nil
 }
 
-func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, error) {
-	var (
-		outConfig plan.Configuration
-	)
+func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphTransportOptions *SubgraphTransportOptions, subgraphs []*nodev1.Subgraph, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, error) {
+	var outConfig plan.Configuration
 	// attach field usage information to the plan
 	outConfig.DefaultFlushIntervalMillis = engineConfig.DefaultFlushInterval
 	for _, configuration := range engineConfig.FieldConfigurations {
@@ -328,14 +340,6 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				return nil, fmt.Errorf("error parsing header rules for data source %s: %w", in.Id, err)
 			}
 
-			factory, err := l.resolver.ResolveGraphqlFactory()
-			if err != nil {
-				return nil, err
-			}
-			if factory == nil {
-				continue
-			}
-
 			schemaConfiguration, err := graphql_datasource.NewSchemaConfiguration(
 				graphqlSchema,
 				&graphql_datasource.FederationConfiguration{
@@ -368,7 +372,21 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				return nil, fmt.Errorf("error creating custom configuration for data source %s: %w", in.Id, err)
 			}
 
+			var factory plan.PlannerFactory[graphql_datasource.Configuration]
+
 			dataSourceName := l.subgraphName(subgraphs, in.Id)
+			if dataSourceName != "" && subgraphTransportOptions.SubgraphMap[dataSourceName] != nil {
+				factory, err = l.resolver.ResolveGraphqlFactoryWithTimeout(subgraphTransportOptions.SubgraphMap[dataSourceName].RequestTimeout)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				factory, err = l.resolver.ResolveGraphqlFactory()
+				if err != nil {
+					return nil, err
+				}
+			}
+
 			out, err = plan.NewDataSourceConfigurationWithName[graphql_datasource.Configuration](
 				in.Id,
 				dataSourceName,
