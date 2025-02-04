@@ -49,7 +49,7 @@ func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
 
 				// Strip schema, username, and password
 				addr := secondaryURL.Host
-				if secondaryURL.User != nil && parsedUrl.User != nil && secondaryURL.User.Username() != parsedUrl.User.Username() {
+				if secondaryURL.User != nil && parsedUrl.User != nil && parsedUrl.User.String() != "" && secondaryURL.User.Username() != parsedUrl.User.Username() {
 					opts.Logger.Warn(fmt.Sprintf("Stripping credentials from secondary Redis address: %q", addr))
 				}
 				if secondaryURL.Scheme != parsedUrl.Scheme {
@@ -61,6 +61,7 @@ func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
 			parsedUrl.RawQuery = queryVals.Encode()
 		}
 		clusterOps, err := redis.ParseClusterURL(parsedUrl.String())
+
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse the redis connection url into ops: %w", err)
 		}

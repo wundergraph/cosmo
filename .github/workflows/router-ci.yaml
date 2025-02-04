@@ -179,10 +179,10 @@ jobs:
         run: |
           sudo apt-get install -y redis-tools
           docker ps -a
-          export REDISCLI_AUTH="${{secrets.DOCKER_PASSWORD}}"
-          redis-cli -u redis://cosmo@127.0.0.1:7000 ping
-          redis-cli -u redis://cosmo@127.0.0.1:7001 ping
-          redis-cli -u redis://cosmo@127.0.0.1:7002 ping
+          export REDISCLI_AUTH="cosmo:test"
+          for port in 7000 7001 7002; do
+            redis-cli -h 127.0.0.1 -p $port ping
+          done
       - uses: nick-fields/retry@v3
         with:
           timeout_minutes: 30
