@@ -622,6 +622,14 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return nil, attErr
 	}
 	baseMetricAttributes := mapper.mapAttributes(baseOtelAttributes)
+	var telemetryAttExpressions *attributeExpressions
+	if len(s.telemetryAttributes) > 0 {
+		var telemetryAttErr error
+		telemetryAttExpressions, telemetryAttErr = newAttributeExpressions(s.logger, s.telemetryAttributes)
+		if telemetryAttErr != nil {
+			return nil, telemetryAttErr
+		}
+	}
 
 	// Prometheus metricStore rely on OTLP metricStore
 	if metricsEnabled {
@@ -686,15 +694,16 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
 
 			reqContext := buildRequestContext(requestContextOptions{
-				operationContext:     nil,
-				requestLogger:        requestLogger,
-				metricSetAttributes:  b,
-				metricsEnabled:       metricsEnabled,
-				traceEnabled:         s.traceConfig.Enabled,
-				mapper:               mapper,
-				attributeExpressions: attExpressions,
-				w:                    w,
-				r:                    r,
+				operationContext:              nil,
+				requestLogger:                 requestLogger,
+				metricSetAttributes:           b,
+				metricsEnabled:                metricsEnabled,
+				traceEnabled:                  s.traceConfig.Enabled,
+				mapper:                        mapper,
+				metricAttributeExpressions:    attExpressions,
+				telemetryAttributeExpressions: telemetryAttExpressions,
+				w:                             w,
+				r:                             r,
 			})
 
 			r = r.WithContext(withRequestContext(r.Context(), reqContext))

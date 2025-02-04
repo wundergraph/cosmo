@@ -49,6 +49,10 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 	attrs = append(attrs, semconv.HTTPStatusCode(statusCode))
 	attrs = append(attrs, reqContext.telemetry.metricAttrs...)
 
+	if reqContext.telemetry.attributeExpressions != nil {
+		attrs = append(attrs, reqContext.telemetry.attributeExpressions.expressionsAttributes(reqContext)...)
+	}
+
 	rm := m.routerMetrics.MetricStore()
 
 	latency := time.Since(m.operationStartTime)

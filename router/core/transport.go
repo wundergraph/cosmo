@@ -95,6 +95,9 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 	}
 
 	attributes = append(attributes, reqContext.telemetry.metricAttrs...)
+	if reqContext.telemetry.metricAttributeExpressions != nil {
+		attributes = append(attributes, reqContext.telemetry.metricAttributeExpressions.expressionsAttributes(reqContext)...)
+	}
 	o := otelmetric.WithAttributeSet(attribute.NewSet(attributes...))
 
 	inFlightDone := ct.metricStore.MeasureInFlight(req.Context(), reqContext.telemetry.metricSliceAttrs, o)

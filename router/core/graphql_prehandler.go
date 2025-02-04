@@ -331,9 +331,19 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			requestContext.expressionContext.Request.Auth = expr.LoadAuth(r.Context())
 		}
 
-		requestContext.telemetry.addCommonAttribute(
-			requestContext.telemetry.attributeExpressions.expressionsAttributes(requestContext)...,
-		)
+		if requestContext.telemetry.attributeExpressions != nil {
+			traceMetrics := requestContext.telemetry.attributeExpressions.expressionsAttributes(requestContext)
+			requestContext.telemetry.addCommonAttribute(
+				traceMetrics...,
+			)
+			routerSpan.SetAttributes(traceMetrics...)
+		}
+
+		if requestContext.telemetry.metricAttributeExpressions != nil {
+			requestContext.telemetry.addMetricAttribute(
+				requestContext.telemetry.metricAttributeExpressions.expressionsAttributes(requestContext)...,
+			)
+		}
 
 		err = h.handleOperation(r, variablesParser, &httpOperation{
 			requestContext:   requestContext,
