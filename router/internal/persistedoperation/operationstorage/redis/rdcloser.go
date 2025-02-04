@@ -38,28 +38,7 @@ func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse the redis connection url: %w", err)
 		}
-		if len(opts.URLs) > 1 {
-			queryVals := parsedUrl.Query()
-			for _, rawURL := range opts.URLs[1:] {
-				secondaryURL, parseErr := url.Parse(rawURL)
-				if parseErr != nil {
-					opts.Logger.Warn(fmt.Sprintf("Skipping invalid Redis URL %q: %v", rawURL, parseErr))
-					continue
-				}
-
-				// Strip schema, username, and password
-				addr := secondaryURL.Host
-				if secondaryURL.User != nil && parsedUrl.User != nil && parsedUrl.User.String() != "" && secondaryURL.User.Username() != parsedUrl.User.Username() {
-					opts.Logger.Warn(fmt.Sprintf("Stripping credentials from secondary Redis address: %q", addr))
-				}
-				if secondaryURL.Scheme != parsedUrl.Scheme {
-					opts.Logger.Warn(fmt.Sprintf("Mismatched Redis schemes provided: %q vs %q", secondaryURL.Scheme, parsedUrl.Scheme))
-				}
-
-				queryVals.Add("addr", addr)
-			}
-			parsedUrl.RawQuery = queryVals.Encode()
-		}
+		addClusterUrlsToQuery(opts, parsedUrl)
 		clusterOps, err := redis.ParseClusterURL(parsedUrl.String())
 
 		if err != nil {
@@ -90,6 +69,33 @@ func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
 	}
 
 	return rdb, nil
+}
+
+func addClusterUrlsToQuery(opts *RedisCloserOptions, parsedUrl *url.URL) {
+	if len(opts.URLs) <= 1 {
+		return
+	}
+
+	queryVals := parsedUrl.Query()
+	for _, rawURL := range opts.URLs[1:] {
+		secondaryURL, parseErr := url.Parse(rawURL)
+		if parseErr != nil {
+			opts.Logger.Warn(fmt.Sprintf("Skipping invalid Redis URL %q: %v", rawURL, parseErr))
+			continue
+		}
+
+		// Strip schema, username, and password
+		addr := secondaryURL.Host
+		if secondaryURL.User != nil && parsedUrl.User != nil && parsedUrl.User.String() != "" && secondaryURL.User.Username() != parsedUrl.User.Username() {
+			opts.Logger.Warn(fmt.Sprintf("Stripping credentials from secondary Redis address: %q", addr))
+		}
+		if secondaryURL.Scheme != parsedUrl.Scheme {
+			opts.Logger.Warn(fmt.Sprintf("Mismatched Redis schemes provided: %q vs %q", secondaryURL.Scheme, parsedUrl.Scheme))
+		}
+
+		queryVals.Add("addr", addr)
+	}
+	parsedUrl.RawQuery = queryVals.Encode()
 }
 
 func IsFunctioningClient(rdb RDCloser) bool {
