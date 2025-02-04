@@ -675,7 +675,7 @@ func TestRateLimit(t *testing.T) {
 	})
 	t.Run("Cluster Mode", func(t *testing.T) {
 		var (
-			clusterUrlSlice     = []string{"redis://cosmo:test@127.0.0.1:7000", "redis://cosmo:test@127.0.0.1:7001", "redis://cosmo:test@127.0.0.1:7002"}
+			clusterUrlSlice     = []string{"redis://cosmo:test@localhost:7000", "redis://cosmo:test@localhost:7001", "redis://cosmo:test@localhost:7002"}
 			noSchemeClusterUrls = []string{"localhost:7000", "localhost:7001", "localhost:7002"}
 			user                = "cosmo"
 			password            = "test"
@@ -684,7 +684,7 @@ func TestRateLimit(t *testing.T) {
 		t.Run("cluster url ordering", func(t *testing.T) {
 			t.Run("diff auth in different urls", func(t *testing.T) {
 				t.Parallel()
-				clusterUrlSlice = []string{"redis://cosmo:test@127.0.0.1:7000", "redis://cosmo1:test1@127.0.0.1:7001", "redis://cosmo2:test2@127.0.0.1:7002"}
+				clusterUrlSlice = []string{"redis://cosmo:test@localhost:7000", "redis://cosmo1:test1@localhost:7001", "redis://cosmo2:test2@localhost:7002"}
 
 				key := uuid.New().String()
 				t.Cleanup(func() {
@@ -722,7 +722,7 @@ func TestRateLimit(t *testing.T) {
 
 			t.Run("no auth in first urls", func(t *testing.T) {
 				t.Parallel()
-				clusterUrlSlice = []string{"redis://@127.0.0.1:7000", "rediss://@127.0.0.1:7001", "rediss://cosmo:test@127.0.0.1:7002"}
+				clusterUrlSlice = []string{"redis://localhost:7000", "rediss://localhost:7001", "rediss://cosmo:test@localhost:7002"}
 
 				key := uuid.New().String()
 				t.Cleanup(func() {
