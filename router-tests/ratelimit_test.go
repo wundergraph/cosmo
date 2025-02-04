@@ -675,8 +675,10 @@ func TestRateLimit(t *testing.T) {
 	})
 	t.Run("Cluster Mode", func(t *testing.T) {
 		var (
-			clusterUrlSlice = []string{"localhost:7000", "localhost:7001", "localhost:7002"}
-			password        = "test"
+			clusterUrlSlice     = []string{"redis://cosmo:test@localhost:7000", "redis://cosmo:test@localhost:7001", "redis://cosmo:test@localhost:7002"}
+			noSchemeClusterUrls = []string{"localhost:7000", "localhost:7001", "localhost:7002"}
+			user                = "cosmo"
+			password            = "test"
 		)
 
 		t.Run("enabled - below limit", func(t *testing.T) {
@@ -684,7 +686,7 @@ func TestRateLimit(t *testing.T) {
 
 			key := uuid.New().String()
 			t.Cleanup(func() {
-				client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: clusterUrlSlice, Password: password})
+				client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: noSchemeClusterUrls, Username: user, Password: password})
 				del := client.Del(context.Background(), key)
 				require.NoError(t, del.Err())
 			})
@@ -720,7 +722,7 @@ func TestRateLimit(t *testing.T) {
 
 			key := uuid.New().String()
 			t.Cleanup(func() {
-				client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: clusterUrlSlice, Password: password})
+				client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: noSchemeClusterUrls, Username: user, Password: password})
 				del := client.Del(context.Background(), fmt.Sprintf("%s:localhost", key))
 				require.NoError(t, del.Err())
 			})
@@ -760,7 +762,7 @@ func TestRateLimit(t *testing.T) {
 
 			key := uuid.New().String()
 			t.Cleanup(func() {
-				client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: clusterUrlSlice, Password: password})
+				client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: noSchemeClusterUrls, Username: user, Password: password})
 				del := client.Del(context.Background(), key)
 				require.NoError(t, del.Err())
 			})

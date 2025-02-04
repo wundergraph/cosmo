@@ -6,6 +6,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"io"
+	"net/url"
 	"strings"
 )
 
@@ -32,20 +33,50 @@ func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
 	// If provided, prefer cluster URLs to single URL
 	if opts.ClusterEnabled {
 		opts.Logger.Info("Detected that redis is running in cluster mode.")
-		strippedUrls := []string{}
-		for _, url := range opts.URLs {
-			strippedUrls = append(strippedUrls, strings.ReplaceAll(url, "redis://", ""))
+
+		parsedUrl, err := url.Parse(opts.URLs[0])
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse the redis connection url: %w", err)
 		}
-		rdb = redis.NewClusterClient(&redis.ClusterOptions{
-			Addrs:    strippedUrls,
-			Password: opts.Password,
-		})
+		if len(opts.URLs) > 1 {
+			queryVals := parsedUrl.Query()
+			for _, rawURL := range opts.URLs[1:] {
+				secondaryURL, parseErr := url.Parse(rawURL)
+				if parseErr != nil {
+					opts.Logger.Warn(fmt.Sprintf("Skipping invalid Redis URL %q: %v", rawURL, parseErr))
+					continue
+				}
+
+				// Strip schema, username, and password
+				addr := secondaryURL.Host
+				if secondaryURL.User != nil && parsedUrl.User != nil && secondaryURL.User.Username() != parsedUrl.User.Username() {
+					opts.Logger.Warn(fmt.Sprintf("Stripping credentials from secondary Redis address: %q", addr))
+				}
+				if secondaryURL.Scheme != parsedUrl.Scheme {
+					opts.Logger.Warn(fmt.Sprintf("Mismatched Redis schemes provided: %q vs %q", secondaryURL.Scheme, parsedUrl.Scheme))
+				}
+
+				queryVals.Add("addr", addr)
+			}
+			parsedUrl.RawQuery = queryVals.Encode()
+		}
+		clusterOps, err := redis.ParseClusterURL(parsedUrl.String())
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse the redis connection url into ops: %w", err)
+		}
+		if opts.Password != "" {
+			clusterOps.Password = opts.Password
+		}
+
+		rdb = redis.NewClusterClient(clusterOps)
 	} else {
 		options, err := redis.ParseURL(opts.URLs[0])
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse the redis connection url: %w", err)
 		}
-		options.Password = opts.Password
+		if opts.Password != "" {
+			options.Password = opts.Password
+		}
 		rdb = redis.NewClient(options)
 
 		if isClusterClient(rdb) {
