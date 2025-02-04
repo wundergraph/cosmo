@@ -869,6 +869,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.playgroundHandler = graphiql.NewPlayground(&graphiql.PlaygroundOptions{
 			Html:             graphiql.PlaygroundHTML(),
 			GraphqlURL:       r.graphqlWebURL,
+			PlaygroundPath:   r.playgroundPath,
 			ConcurrencyLimit: int64(r.playgroundConfig.ConcurrencyLimit),
 		})
 	}
