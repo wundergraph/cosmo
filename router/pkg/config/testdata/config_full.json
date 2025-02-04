@@ -250,9 +250,7 @@
     "Router": {
       "MaxRequestBodyBytes": 5000000,
       "MaxHeaderBytes": 4194304,
-      "Decompression": {
-        "Enabled": false
-      }
+      "DecompressionEnabled": false
     },
     "Subgraphs": {
       "products": {

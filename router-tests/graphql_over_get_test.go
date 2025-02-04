@@ -188,10 +188,8 @@ func TestOperationsOverGET(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
-					MaxRequestBodyBytes: 5 << 20, // 5MiB
-					Decompression: config.DecompressionConfiguration{
-						Enabled: true,
-					},
+					MaxRequestBodyBytes:  5 << 20, // 5MiB
+					DecompressionEnabled: true,
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {

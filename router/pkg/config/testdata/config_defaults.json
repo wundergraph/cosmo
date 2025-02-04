@@ -126,9 +126,7 @@
     "Router": {
       "MaxRequestBodyBytes": 5000000,
       "MaxHeaderBytes": 0,
-      "Decompression": {
-        "Enabled": true
-      }
+      "DecompressionEnabled": true
     },
     "Subgraphs": null
   },

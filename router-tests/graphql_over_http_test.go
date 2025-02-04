@@ -245,16 +245,14 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 	t.Run("requests with compression", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("valid request with compression should return 200 OK with valid response", func(t *testing.T) {
+		t.Run("valid request with Content-Encoding header and compressed payload should return 200 OK with valid response", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
-						MaxRequestBodyBytes: 5 << 20, // 5MiB
-						Decompression: config.DecompressionConfiguration{
-							Enabled: true,
-						},
+						MaxRequestBodyBytes:  5 << 20, // 5MiB
+						DecompressionEnabled: true,
 					}),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -284,16 +282,14 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			})
 		})
 
-		t.Run("valid request with deflate compression should not be supported", func(t *testing.T) {
+		t.Run("valid request with deflate Content-Encoding header and compression should not be supported", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
-						MaxRequestBodyBytes: 5 << 20, // 5MiB
-						Decompression: config.DecompressionConfiguration{
-							Enabled: true,
-						},
+						MaxRequestBodyBytes:  5 << 20, // 5MiB
+						DecompressionEnabled: true,
 					}),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -321,16 +317,14 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			})
 		})
 
-		t.Run("request that specifies compression without compression should return status 422", func(t *testing.T) {
+		t.Run("request that specifies Content-Encoding without compressed payload should return status 422", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
-						MaxRequestBodyBytes: 5 << 20, // 5MiB
-						Decompression: config.DecompressionConfiguration{
-							Enabled: true,
-						},
+						MaxRequestBodyBytes:  5 << 20, // 5MiB
+						DecompressionEnabled: true,
 					}),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -358,10 +352,8 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
-						MaxRequestBodyBytes: 5 << 20, // 5MiB
-						Decompression: config.DecompressionConfiguration{
-							Enabled: true,
-						},
+						MaxRequestBodyBytes:  5 << 20, // 5MiB
+						DecompressionEnabled: true,
 					}),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {

@@ -192,7 +192,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 	// Request traffic shaping related middlewares
 	httpRouter.Use(rmiddleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
-	if s.routerTrafficConfig.Decompression.Enabled {
+	if s.routerTrafficConfig.DecompressionEnabled {
 		httpRouter.Use(rmiddleware.HandleCompression(s.logger))
 	}
 

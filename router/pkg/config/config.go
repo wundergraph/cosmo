@@ -160,12 +160,8 @@ type RouterTrafficConfiguration struct {
 	MaxRequestBodyBytes BytesString `yaml:"max_request_body_size" envDefault:"5MB"`
 	// MaxHeaderBytes is the maximum size of the request headers in bytes
 	MaxHeaderBytes BytesString `yaml:"max_header_bytes" envDefault:"0MiB" env:"MAX_HEADER_BYTES"`
-	// Decompression is the configuration for request compression
-	Decompression DecompressionConfiguration `yaml:"decompression"`
-}
-
-type DecompressionConfiguration struct {
-	Enabled bool `yaml:"enabled" envDefault:"true"`
+	// DecompressionEnabled is the configuration for request compression
+	DecompressionEnabled bool `yaml:"decompression_enabled" envDefault:"true"`
 }
 
 type GlobalSubgraphRequestRule struct {
