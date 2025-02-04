@@ -425,7 +425,8 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	}
 
 	// Compute the operation sha256 hash as soon as possible for observability reasons
-	if h.computeOperationSha256 || h.operationBlocker.SafelistEnabled {
+	hasPersistedHash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash != ""
+	if h.computeOperationSha256 || (h.operationBlocker.SafelistEnabled && !hasPersistedHash) {
 		if err := operationKit.ComputeOperationSha256(); err != nil {
 			return &httpGraphqlError{
 				message:    fmt.Sprintf("error hashing operation: %s", err),

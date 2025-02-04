@@ -76,7 +76,7 @@ func TestApqAndSafelistErrors(t *testing.T) {
 			Enabled: true,
 		}),
 		WithSecurityConfig(config.SecurityConfiguration{
-			Safelist: config.BlockOperationConfiguration{
+			Safelist: config.SafelistOperationConfiguration{
 				Enabled: true,
 			},
 		}),
