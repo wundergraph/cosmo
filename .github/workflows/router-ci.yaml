@@ -172,6 +172,8 @@ jobs:
           docker ps -a
           # Set a password for each master node
           redis-cli -h 127.0.0.1 -p 7000 cluster nodes
+          redis-cli -h 127.0.0.1 -p 7000 CONFIG GET requirepass
+          redis-cli -h 127.0.0.1 -p 7000 ACL LIST
           for port in 7000 7001 7002; do
             redis-cli -h 127.0.0.1 -p $port ACL SETUSER cosmo on ">test" "~*" "+@all"
             redis-cli -u "redis://cosmo:test@127.0.0.1:$port" ping
