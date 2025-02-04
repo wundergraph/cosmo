@@ -171,10 +171,12 @@ jobs:
           sudo apt-get install -y redis-tools
           docker ps -a
           # Set a password for each master node
+          redis-cli -h 127.0.0.1 -p 7000 cluster nodes
           for port in 7000 7001 7002; do
             redis-cli -h 127.0.0.1 -p $port ACL SETUSER default off  # Disable the default user
-            redis-cli -h 127.0.0.1 -p $port ACL SETUSER cosmo on >test ~* +@all
+            redis-cli -h 127.0.0.1 -p $port ACL SETUSER cosmo on ">test" "~*" "+@all"
             redis-cli -u "redis://cosmo:test@127.0.0.1:$port" ping
+            redis-cli -h 127.0.0.1 -p $port ACL LIST
             echo "ACL user 'cosmo' created with full access on port $port"
           done
       - uses: nick-fields/retry@v3
