@@ -19,7 +19,7 @@ func HandleCompression(logger *zap.Logger) func(http.Handler) http.Handler {
 
 			encodings := strings.Split(r.Header.Get("Content-Encoding"), ",")
 			if len(encodings) > 1 {
-				http.Error(w, "multiple chained compressions not supported (yet)", http.StatusBadRequest)
+				http.Error(w, "multiple chained compressions not supported yet", http.StatusBadRequest)
 				return
 			}
 
