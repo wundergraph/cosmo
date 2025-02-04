@@ -95,12 +95,13 @@ func TestSingleFileUploadWithCompression(t *testing.T) {
 			operationsPart, err := w.CreateFormField("operations")
 			require.NoError(t, err)
 			_, err = io.Copy(operationsPart, bytes.NewReader(data))
+			require.NoError(t, err)
 
 			// create map part
 			mapPart, err := w.CreateFormField("map")
 			require.NoError(t, err)
 			_, err = io.Copy(mapPart, strings.NewReader(`{ "0": ["variables.file"] }`))
-
+			require.NoError(t, err)
 			require.NoError(t, w.Close())
 
 			var sb strings.Builder
@@ -124,8 +125,6 @@ func TestSingleFileUploadWithCompression(t *testing.T) {
 			buf := new(bytes.Buffer)
 			_, err = buf.ReadFrom(resp.Body)
 			require.NoError(t, err)
-
-			resp.Body = io.NopCloser(bytes.NewReader(buf.Bytes()))
 
 			require.JSONEq(t, `{"data":{"singleUpload": true}}`, buf.String())
 		})
