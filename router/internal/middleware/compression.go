@@ -3,6 +3,7 @@ package middleware
 import (
 	"compress/gzip"
 	"net/http"
+	"strings"
 
 	"go.uber.org/zap"
 )
@@ -16,7 +17,13 @@ func HandleCompression(logger *zap.Logger) func(http.Handler) http.Handler {
 				return
 			}
 
-			switch r.Header.Get("Content-Encoding") {
+			encodings := strings.Split(r.Header.Get("Content-Encoding"), ",")
+			if len(encodings) > 1 {
+				http.Error(w, "multiple chained compressions not supported (yet)", http.StatusBadRequest)
+				return
+			}
+
+			switch encodings[0] {
 			case "gzip":
 				gzr, err := gzip.NewReader(r.Body)
 				if err != nil {

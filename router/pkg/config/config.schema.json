@@ -1244,13 +1244,14 @@
               "default": "0MiB",
               "bytes": {}
             },
-            "compression": {
+            "decompression": {
               "type": "object",
               "additionalProperties": false,
               "properties": {
                 "enabled": {
                   "type": "boolean",
-                  "description": "When enabled, the router will check incoming requests for a 'Content-Encoding' header and decompress the body accordingly. Currently only gzip is supported"
+                  "description": "When enabled, the router will check incoming requests for a 'Content-Encoding' header and decompress the body accordingly. Currently only gzip is supported",
+                  "default": true
                 }
               }
             }

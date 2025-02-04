@@ -189,7 +189,7 @@ func TestOperationsOverGET(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
 					MaxRequestBodyBytes: 5 << 20, // 5MiB
-					Compression: config.CompressionConfiguration{
+					Decompression: config.DecompressionConfiguration{
 						Enabled: true,
 					},
 				}),
