@@ -367,7 +367,7 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 
 		t.Run("works with cluster mode", func(t *testing.T) {
 			t.Parallel()
-			clusterUrls := []string{"redis://cosmo:test@localhost:7000", "redis://cosmo:test@localhost:7001"}
+			clusterUrls := []string{"redis://cosmo:test@127.0.0.1:7000", "redis://cosmo:test@127.0.0.1:7001"}
 			noSchemeClusterUrls := []string{"localhost:7000", "localhost:7001"}
 			clusterClient := redis.NewClusterClient(&redis.ClusterOptions{
 				Addrs:    noSchemeClusterUrls,
