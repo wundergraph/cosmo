@@ -11,7 +11,7 @@ require (
 	github.com/rs/cors v1.11.0
 	github.com/vektah/gqlparser/v2 v2.5.21
 	github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d
-	github.com/wundergraph/cosmo/router v0.0.0-20250119174948-4b991294658e
+	github.com/wundergraph/cosmo/router v0.0.0-20250204092643-f97e30f48a8c
 	github.com/wundergraph/cosmo/router-tests v0.0.0-20241213115435-a249dba8c52a
 	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.145
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
@@ -39,7 +39,7 @@ require (
 	github.com/cloudflare/backoff v0.0.0-20161212185259-647f3cdfc87a // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/dgraph-io/ristretto v0.1.2-0.20240723054643-f5997484152c // indirect
+	github.com/dgraph-io/ristretto/v2 v2.1.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dlclark/regexp2 v1.11.0 // indirect
 	github.com/dop251/goja v0.0.0-20230906160731-9410bcaa81d2 // indirect
