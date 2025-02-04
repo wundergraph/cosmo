@@ -172,16 +172,14 @@ jobs:
           docker ps -a
           # Set a password for each master node
           for port in 7000 7001 7002; do
-            # Authenticate as default user
-            redis-cli -h 127.0.0.1 -p $port -a test ACL SETUSER cosmo on >"${{secrets.DOCKER_PASSWORD}}" ~* +@all
+            redis-cli -h 127.0.0.1 -p $port ACL SETUSER cosmo on >test ~* +@all
             echo "ACL user 'cosmo' created with full access on port $port"
           done
       - name: Running Test with ACL
         run: |
           sudo apt-get install -y redis-tools
           docker ps -a
-          redis-cli -h 127.0.0.1 -p 7000 -a test ping
-          redis-cli -h 127.0.0.1 -p 7000 -u redis://cosmo:"${{secrets.DOCKER_PASSWORD}}"@127.0.0.1:5000 ping
+          redis-cli -u redis://cosmo:"${{secrets.DOCKER_PASSWORD}}"@127.0.0.1:5000 ping
       - uses: nick-fields/retry@v3
         with:
           timeout_minutes: 30
