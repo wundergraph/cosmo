@@ -14,7 +14,7 @@ func TestSafelist(t *testing.T) {
 	t.Run("safelist works with persisted query", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.Safelist = config.BlockOperationConfiguration{
+				securityConfiguration.Safelist = config.SafelistOperationConfiguration{
 					Enabled: true,
 				}
 			},
@@ -34,7 +34,7 @@ func TestSafelist(t *testing.T) {
 	t.Run("safelist rejects persisted query with different spacing", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.Safelist = config.BlockOperationConfiguration{
+				securityConfiguration.Safelist = config.SafelistOperationConfiguration{
 					Enabled: true,
 				}
 			},
@@ -57,7 +57,7 @@ func TestSafelist(t *testing.T) {
 				Enabled: false,
 			},
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.Safelist = config.BlockOperationConfiguration{
+				securityConfiguration.Safelist = config.SafelistOperationConfiguration{
 					Enabled: true,
 				}
 			},
