@@ -51,12 +51,14 @@ func TestSingleFileUploadWithCompression(t *testing.T) {
 				"Content-Encoding": []string{"gzip"},
 			}
 
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query:     "mutation ($file: Upload!){singleUpload(file: $file)}",
 				Variables: []byte(`{"file":null}`),
 				Files:     files,
 				Header:    header,
 			})
+
+			require.NoError(t, err)
 			require.Equal(t, http.StatusUnprocessableEntity, res.Response.StatusCode)
 		})
 	})
