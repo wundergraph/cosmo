@@ -599,7 +599,7 @@ export const LintRules: LintRuleType = {
 export type Severity = 1 | 2;
 export type LintSeverityLevel = 'warn' | 'error';
 export type RuleLevel = Severity | LintSeverityLevel;
-export type RuleLevelAndOptions<Options extends any[] = any[]> = Prepend<Partial<Options>, RuleLevel>;
+export type RuleLevelAndOptions<Options extends any[] = any[]> = [RuleLevel, ...Partial<Options>];
 export type RuleEntry<Options extends any[] = any[]> = RuleLevel | RuleLevelAndOptions<Options>;
 
 export interface RulesConfig {
