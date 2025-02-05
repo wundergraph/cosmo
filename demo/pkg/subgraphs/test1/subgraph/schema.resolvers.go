@@ -75,6 +75,17 @@ func (r *queryResolver) BigResponse(ctx context.Context, artificialDelay int, bi
 
 // LongResponse is the resolver for the longResponse field.
 func (r *queryResolver) LongResponse(ctx context.Context, artificialDelay int, bytes int) (*string, error) {
+	if bytes < 0 {
+		return nil, errors.New("bytes must be positive")
+	}
+
+	// 4 GiB in Bytes
+	maxBytes := 4 * 1024 * 1024 * 1024
+
+	if bytes > maxBytes {
+		return nil, errors.New("bytes must be less than 4 GiB")
+	}
+
 	if artificialDelay > 0 {
 		time.Sleep(time.Duration(artificialDelay) * time.Millisecond)
 	}
@@ -282,5 +293,7 @@ func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 // Subscription returns generated.SubscriptionResolver implementation.
 func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subscriptionResolver{r} }
 
-type queryResolver struct{ *Resolver }
-type subscriptionResolver struct{ *Resolver }
+type (
+	queryResolver        struct{ *Resolver }
+	subscriptionResolver struct{ *Resolver }
+)
