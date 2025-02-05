@@ -155,7 +155,7 @@ fragment EmployeeNameFragment on Employee {
     };
 
 
-    let operationName = randomString(10, 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789')
+    let operationName = randomString(10, 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')
 
     query = query.replace(/\$\$__REPLACE_ME__\$\$/g, operationName);
 

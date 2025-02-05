@@ -2,14 +2,20 @@ package integration
 
 import (
 	"bytes"
+	"compress/gzip"
+	"encoding/json"
+	"io"
+	"mime/multipart"
 	"net/http"
+	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router/core"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 func TestSingleFileUpload(t *testing.T) {
@@ -24,6 +30,108 @@ func TestSingleFileUpload(t *testing.T) {
 		})
 		require.JSONEq(t, `{"data":{"singleUpload": true}}`, res.Body)
 	})
+}
+
+func TestSingleFileUploadWithCompression(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Uploading file without compressed body should return 422", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
+					MaxRequestBodyBytes:  5 << 20,
+					DecompressionEnabled: true,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			fileContent := bytes.Repeat([]byte("a"), 1024)
+			files := [][]byte{fileContent}
+
+			header := http.Header{
+				"Content-Encoding": []string{"gzip"},
+			}
+
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     "mutation ($file: Upload!){singleUpload(file: $file)}",
+				Variables: []byte(`{"file":null}`),
+				Files:     files,
+				Header:    header,
+			})
+
+			require.NoError(t, err)
+			require.Equal(t, http.StatusUnprocessableEntity, res.Response.StatusCode)
+		})
+	})
+
+	t.Run("Uploading file with compressed body should return 200", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
+					MaxRequestBodyBytes:  5 << 20,
+					DecompressionEnabled: true,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			fileContent := bytes.Repeat([]byte("a"), 1024)
+			files := [][]byte{fileContent}
+
+			gqlReq := testenv.GraphQLRequest{
+				Query:     "mutation ($file: Upload!){singleUpload(file: $file)}",
+				Variables: []byte(`{"file":null}`),
+				Files:     files,
+			}
+
+			data, err := json.Marshal(gqlReq)
+			require.NoError(t, err)
+
+			var b bytes.Buffer
+			w := multipart.NewWriter(&b)
+
+			// create file part
+			filePart, err := w.CreateFormFile("variables.file", uuid.NewString())
+			require.NoError(t, err)
+			_, err = io.Copy(filePart, bytes.NewReader(gqlReq.Files[0]))
+			require.NoError(t, err)
+
+			// create operations part
+			operationsPart, err := w.CreateFormField("operations")
+			require.NoError(t, err)
+			_, err = io.Copy(operationsPart, bytes.NewReader(data))
+			require.NoError(t, err)
+
+			// create map part
+			mapPart, err := w.CreateFormField("map")
+			require.NoError(t, err)
+			_, err = io.Copy(mapPart, strings.NewReader(`{ "0": ["variables.file"] }`))
+			require.NoError(t, err)
+			require.NoError(t, w.Close())
+
+			var sb strings.Builder
+			gw := gzip.NewWriter(&sb)
+
+			_, err = gw.Write(b.Bytes())
+			require.NoError(t, err)
+
+			require.NoError(t, gw.Close())
+
+			req, err := http.NewRequestWithContext(xEnv.Context, http.MethodPost, xEnv.GraphQLRequestURL(), strings.NewReader(sb.String()))
+			require.NoError(t, err)
+
+			req.Header.Set("Content-Type", w.FormDataContentType())
+			req.Header.Set("Content-Encoding", "gzip")
+
+			resp, err := xEnv.RouterClient.Do(req)
+			require.NoError(t, err)
+
+			defer resp.Body.Close()
+			buf := new(bytes.Buffer)
+			_, err = buf.ReadFrom(resp.Body)
+			require.NoError(t, err)
+
+			require.JSONEq(t, `{"data":{"singleUpload": true}}`, buf.String())
+		})
+	})
+
 }
 
 func TestSingleFileUpload_InvalidFileFormat(t *testing.T) {
