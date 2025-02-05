@@ -12,7 +12,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-func TestTimeouts(t *testing.T) {
+func TestFlakyTimeouts(t *testing.T) {
 	t.Parallel()
 
 	const queryEmployeeWithHobby = `{
