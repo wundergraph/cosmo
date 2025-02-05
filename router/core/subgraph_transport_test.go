@@ -17,6 +17,37 @@ func TestTimeoutTransport(t *testing.T) {
 
 	testSubgraphKey := "test"
 
+	t.Run("nil request should return nil response", func(t *testing.T) {
+		t.Parallel()
+
+		timeoutTransport := NewSubgraphTransport(
+			&SubgraphTransportOptions{},
+			http.DefaultTransport,
+			zap.NewNop(),
+			http.ProxyFromEnvironment,
+		)
+
+		resp, err := timeoutTransport.RoundTrip(nil)
+		require.Nil(t, resp)
+		require.Nil(t, err)
+	})
+
+	t.Run("nil request context should return nil response", func(t *testing.T) {
+		t.Parallel()
+
+		timeoutTransport := NewSubgraphTransport(
+			&SubgraphTransportOptions{},
+			http.DefaultTransport,
+			zap.NewNop(),
+			http.ProxyFromEnvironment,
+		)
+
+		req := httptest.NewRequest("GET", "http://example.com", nil)
+		resp, err := timeoutTransport.RoundTrip(req)
+		require.Nil(t, resp)
+		require.Nil(t, err)
+	})
+
 	t.Run("ResponseHeaderTimeout exceeded", func(t *testing.T) {
 		t.Parallel()
 
