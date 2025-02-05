@@ -37,7 +37,7 @@ func TestTimeouts(t *testing.T) {
 	// 50000 was sufficiently large in testing to consistently produce an error
 	// but its a race, so it might not always fail
 	const queryLongResponse = `{
-	  longResponse(artificalDelay:0, bytes:50000)
+	  longResponse(artificialDelay:0, bytes:50000)
 	}`
 
 	t.Run("very long response should not fail", func(t *testing.T) {

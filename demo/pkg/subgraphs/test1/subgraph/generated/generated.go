@@ -600,7 +600,7 @@ type ComplexityRoot struct {
 		HeaderValue                 func(childComplexity int, name string) int
 		InitPayloadValue            func(childComplexity int, key string) int
 		InitialPayload              func(childComplexity int) int
-		LongResponse                func(childComplexity int, artificalDelay int, bytes int) int
+		LongResponse                func(childComplexity int, artificialDelay int, bytes int) int
 		RootFieldWithInput          func(childComplexity int, arg model.InputArg) int
 		RootFieldWithListArg        func(childComplexity int, arg []string) int
 		RootFieldWithListOfEnumArg  func(childComplexity int, arg []model.EnumType) int
@@ -905,7 +905,7 @@ type QueryResolver interface {
 	InitialPayload(ctx context.Context) (map[string]any, error)
 	Delay(ctx context.Context, response string, ms int) (string, error)
 	BigResponse(ctx context.Context, artificialDelay int, bigObjects int, nestedObjects int, deeplyNestedObjects int) ([]*model.BigObject, error)
-	LongResponse(ctx context.Context, artificalDelay int, bytes int) (*string, error)
+	LongResponse(ctx context.Context, artificialDelay int, bytes int) (*string, error)
 	BigAbstractResponse(ctx context.Context) (model.BigAbstractResponse, error)
 	RootFieldWithListArg(ctx context.Context, arg []string) ([]string, error)
 	RootFieldWithNestedListArg(ctx context.Context, arg [][]string) ([][]string, error)
@@ -4348,7 +4348,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.LongResponse(childComplexity, args["artificalDelay"].(int), args["bytes"].(int)), true
+		return e.complexity.Query.LongResponse(childComplexity, args["artificialDelay"].(int), args["bytes"].(int)), true
 
 	case "Query.rootFieldWithInput":
 		if e.complexity.Query.RootFieldWithInput == nil {
@@ -6299,7 +6299,7 @@ type Query {
         deeplyNestedObjects: Int! = 100
     ): [BigObject!]!
 
-    longResponse(artificalDelay: Int! = 0, bytes: Int!): String
+    longResponse(artificialDelay: Int! = 0, bytes: Int!): String
 
     bigAbstractResponse: BigAbstractResponse
 
@@ -7555,11 +7555,11 @@ func (ec *executionContext) field_Query_initPayloadValue_argsKey(
 func (ec *executionContext) field_Query_longResponse_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
-	arg0, err := ec.field_Query_longResponse_argsArtificalDelay(ctx, rawArgs)
+	arg0, err := ec.field_Query_longResponse_argsArtificialDelay(ctx, rawArgs)
 	if err != nil {
 		return nil, err
 	}
-	args["artificalDelay"] = arg0
+	args["artificialDelay"] = arg0
 	arg1, err := ec.field_Query_longResponse_argsBytes(ctx, rawArgs)
 	if err != nil {
 		return nil, err
@@ -7567,17 +7567,17 @@ func (ec *executionContext) field_Query_longResponse_args(ctx context.Context, r
 	args["bytes"] = arg1
 	return args, nil
 }
-func (ec *executionContext) field_Query_longResponse_argsArtificalDelay(
+func (ec *executionContext) field_Query_longResponse_argsArtificialDelay(
 	ctx context.Context,
 	rawArgs map[string]any,
 ) (int, error) {
-	if _, ok := rawArgs["artificalDelay"]; !ok {
+	if _, ok := rawArgs["artificialDelay"]; !ok {
 		var zeroVal int
 		return zeroVal, nil
 	}
 
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("artificalDelay"))
-	if tmp, ok := rawArgs["artificalDelay"]; ok {
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("artificialDelay"))
+	if tmp, ok := rawArgs["artificialDelay"]; ok {
 		return ec.unmarshalNInt2int(ctx, tmp)
 	}
 
@@ -29195,7 +29195,7 @@ func (ec *executionContext) _Query_longResponse(ctx context.Context, field graph
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().LongResponse(rctx, fc.Args["artificalDelay"].(int), fc.Args["bytes"].(int))
+		return ec.resolvers.Query().LongResponse(rctx, fc.Args["artificialDelay"].(int), fc.Args["bytes"].(int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)

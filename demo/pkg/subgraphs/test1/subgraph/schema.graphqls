@@ -17,7 +17,7 @@ type Query {
         deeplyNestedObjects: Int! = 100
     ): [BigObject!]!
 
-    longResponse(artificalDelay: Int! = 0, bytes: Int!): String
+    longResponse(artificialDelay: Int! = 0, bytes: Int!): String
 
     bigAbstractResponse: BigAbstractResponse
 

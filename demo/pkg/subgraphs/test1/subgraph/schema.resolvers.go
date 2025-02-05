@@ -74,9 +74,9 @@ func (r *queryResolver) BigResponse(ctx context.Context, artificialDelay int, bi
 }
 
 // LongResponse is the resolver for the longResponse field.
-func (r *queryResolver) LongResponse(ctx context.Context, artificalDelay int, bytes int) (*string, error) {
-	if artificalDelay > 0 {
-		time.Sleep(time.Duration(artificalDelay) * time.Millisecond)
+func (r *queryResolver) LongResponse(ctx context.Context, artificialDelay int, bytes int) (*string, error) {
+	if artificialDelay > 0 {
+		time.Sleep(time.Duration(artificialDelay) * time.Millisecond)
 	}
 
 	b := make([]byte, bytes)
