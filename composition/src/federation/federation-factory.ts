@@ -1,4 +1,12 @@
-import { buildASTSchema, DirectiveDefinitionNode, DocumentNode, GraphQLSchema, Kind, NamedTypeNode } from 'graphql';
+import {
+  buildASTSchema,
+  DirectiveDefinitionNode,
+  DocumentNode,
+  GraphQLSchema,
+  Kind,
+  NamedTypeNode,
+  StringValueNode,
+} from 'graphql';
 import {
   getMutableTypeNode,
   getTypeNodeNamedTypeName,
@@ -13,6 +21,7 @@ import { stringToNamedTypeNode, stringToNameNode } from '../ast/utils';
 import {
   allChildDefinitionsAreInaccessibleError,
   allExternalFieldInstancesError,
+  configureDescriptionPropagationError,
   federationFactoryInitializationFatalError,
   fieldTypeMergeFatalError,
   inaccessibleQueryRootTypeError,
@@ -29,6 +38,7 @@ import {
   invalidInputFieldTypeErrorMessage,
   invalidInterfaceImplementationError,
   invalidReferencesOfInaccessibleTypeError,
+  invalidRepeatedFederatedDirectiveErrorMessage,
   invalidRequiredInputValueError,
   invalidSubscriptionFieldConditionFieldPathErrorMessage,
   invalidSubscriptionFieldConditionFieldPathFieldErrorMessage,
@@ -64,6 +74,7 @@ import {
   FederationFactoryOptions,
   FederationResultContainer,
   FederationResultContainerWithContracts,
+  getDescriptionFromString,
   InterfaceImplementationData,
   InterfaceObjectForInternalGraphOptions,
   newChildTagData,
@@ -170,11 +181,11 @@ import {
   addValidPersistedDirectiveDefinitionNodeByData,
   compareAndValidateInputValueDefaultValues,
   extractPersistedDirectives,
+  generateDeprecatedDirective,
   getClientPersistedDirectiveNodes,
   getClientSchemaFieldNodeByFieldData,
+  getDefinitionDataCoords,
   getNodeForRouterSchemaByData,
-  getNodeWithPersistedDirectivesByFieldData,
-  getNodeWithPersistedDirectivesByInputValueData,
   getSubscriptionFilterValue,
   getValidFieldArgumentNodes,
   isLeafKind,
@@ -565,6 +576,10 @@ export class FederationFactory {
       return;
     }
     existingData.appearances += 1;
+    addMapEntries(
+      incomingData.configureDescriptionDataBySubgraphName,
+      existingData.configureDescriptionDataBySubgraphName,
+    );
     setLongestDescription(existingData, incomingData);
     addIterableValuesToSet(incomingData.subgraphNames, existingData.subgraphNames);
   }
@@ -593,6 +608,10 @@ export class FederationFactory {
       inputValueDataByValueName.set(incomingData.name, incomingData);
       return;
     }
+    addMapEntries(
+      incomingData.configureDescriptionDataBySubgraphName,
+      existingData.configureDescriptionDataBySubgraphName,
+    );
     setLongestDescription(existingData, incomingData);
     addIterableValuesToSet(incomingData.requiredSubgraphNames, existingData.requiredSubgraphNames);
     addIterableValuesToSet(incomingData.subgraphNames, existingData.subgraphNames);
@@ -763,6 +782,7 @@ export class FederationFactory {
     }
     this.recordTagNamesByPath(baseData, fieldPath);
     if (!existingData) {
+      incomingData.description = this.getInitialNodeDescription(incomingData);
       fieldDataByFieldName.set(incomingData.name, incomingData);
       incomingData.node = {
         arguments: [],
@@ -772,6 +792,7 @@ export class FederationFactory {
         type: incomingData.type,
       };
       for (const [argumentName, inputValueData] of incomingData.argumentDataByArgumentName) {
+        inputValueData.description = this.getInitialNodeDescription(inputValueData);
         inputValueData.node = {
           directives: [],
           kind: inputValueData.node.kind,
@@ -863,6 +884,10 @@ export class FederationFactory {
         `${fieldPath}.${argumentName}`,
       );
     }
+    addMapEntries(
+      incomingData.configureDescriptionDataBySubgraphName,
+      existingData.configureDescriptionDataBySubgraphName,
+    );
     setLongestDescription(existingData, incomingData);
     existingData.isInaccessible ||= incomingData.isInaccessible;
     addMapEntries(incomingData.isExternalBySubgraphName, existingData.isExternalBySubgraphName);
@@ -908,6 +933,7 @@ export class FederationFactory {
       incomingData.kind = Kind.INTERFACE_TYPE_DEFINITION;
     }
     if (!existingData) {
+      incomingData.description = this.getInitialNodeDescription(incomingData);
       incomingData.node = {
         kind: incomingData.kind,
         name: stringToNameNode(incomingData.name),
@@ -917,6 +943,7 @@ export class FederationFactory {
         case Kind.ENUM_TYPE_DEFINITION:
           for (const [enumValueName, enumValueData] of incomingData.enumValueDataByValueName) {
             const enumValuePath = `${incomingData.name}.${enumValueName}`;
+            enumValueData.description = this.getInitialNodeDescription(enumValueData);
             enumValueData.node = {
               directives: [],
               kind: enumValueData.node.kind,
@@ -935,6 +962,7 @@ export class FederationFactory {
           return;
         case Kind.INPUT_OBJECT_TYPE_DEFINITION:
           for (const [inputFieldName, inputValueData] of incomingData.inputValueDataByValueName) {
+            inputValueData.description = this.getInitialNodeDescription(inputValueData);
             inputValueData.node = {
               directives: [],
               kind: inputValueData.node.kind,
@@ -963,7 +991,8 @@ export class FederationFactory {
           if (isParentDataRootType(incomingData)) {
             incomingData.extensionType = ExtensionType.NONE;
           }
-          for (const fieldData of incomingData.fieldDataByFieldName.values()) {
+          for (const [fieldName, fieldData] of incomingData.fieldDataByFieldName) {
+            fieldData.description = this.getInitialNodeDescription(fieldData);
             fieldData.node = {
               arguments: [],
               directives: [],
@@ -971,7 +1000,7 @@ export class FederationFactory {
               name: stringToNameNode(fieldData.name),
               type: fieldData.type,
             };
-            const fieldPath = `${fieldData.renamedParentTypeName}.${fieldData.name}`;
+            const fieldPath = `${fieldData.renamedParentTypeName}.${fieldName}`;
             this.handleSubscriptionFilterDirective(fieldData, fieldPath);
             getValueOrDefault(this.pathsByNamedTypeName, fieldData.namedTypeName, () => new Set<string>()).add(
               fieldPath,
@@ -988,6 +1017,7 @@ export class FederationFactory {
               this.inaccessiblePaths.add(fieldPath);
             }
             for (const [argumentName, inputValueData] of fieldData.argumentDataByArgumentName) {
+              inputValueData.description = this.getInitialNodeDescription(inputValueData);
               inputValueData.node = {
                 directives: [],
                 kind: inputValueData.node.kind,
@@ -1039,6 +1069,10 @@ export class FederationFactory {
         return;
       }
     }
+    addMapEntries(
+      incomingData.configureDescriptionDataBySubgraphName,
+      existingData.configureDescriptionDataBySubgraphName,
+    );
     setLongestDescription(existingData, incomingData);
     setParentDataExtensionType(existingData, incomingData);
     switch (existingData.kind) {
@@ -1502,6 +1536,139 @@ export class FederationFactory {
     };
   }
 
+  getValidFlattenedPersistedDirectiveNodeArray(
+    directivesByDirectiveName: Map<string, ConstDirectiveNode[]>,
+    hostPath: string,
+  ): ConstDirectiveNode[] {
+    const persistedDirectiveNodes: ConstDirectiveNode[] = [];
+    for (const [directiveName, directiveNodes] of directivesByDirectiveName) {
+      const persistedDirectiveDefinition = this.persistedDirectiveDefinitionByDirectiveName.get(directiveName);
+      if (!persistedDirectiveDefinition) {
+        continue;
+      }
+      if (directiveNodes.length < 2) {
+        persistedDirectiveNodes.push(...directiveNodes);
+        continue;
+      }
+      if (!persistedDirectiveDefinition.repeatable) {
+        this.errors.push(invalidRepeatedFederatedDirectiveErrorMessage(directiveName, hostPath));
+        continue;
+      }
+      persistedDirectiveNodes.push(...directiveNodes);
+    }
+    return persistedDirectiveNodes;
+  }
+
+  getRouterPersistedDirectiveNodes<T extends NodeData>(nodeData: T): ConstDirectiveNode[] {
+    const persistedDirectiveNodes = [...nodeData.persistedDirectivesData.tags.values()];
+    if (nodeData.persistedDirectivesData.isDeprecated) {
+      persistedDirectiveNodes.push(generateDeprecatedDirective(nodeData.persistedDirectivesData.deprecatedReason));
+    }
+    persistedDirectiveNodes.push(
+      ...this.getValidFlattenedPersistedDirectiveNodeArray(nodeData.persistedDirectivesData.directives, nodeData.name),
+    );
+    return persistedDirectiveNodes;
+  }
+
+  getInitialNodeDescription(data: NodeData): StringValueNode | undefined {
+    if (data.configureDescriptionDataBySubgraphName.size < 1) {
+      return data.description;
+    }
+    // Does not loop because the intention is check whether to propagate the first node data description
+    for (const { propagateToFederatedGraph, description } of data.configureDescriptionDataBySubgraphName.values()) {
+      if (!propagateToFederatedGraph) {
+        return;
+      }
+      return getDescriptionFromString(description) || data.description;
+    }
+  }
+
+  getFederatedGraphNodeDescription(data: NodeData): StringValueNode | undefined {
+    if (data.configureDescriptionDataBySubgraphName.size < 1) {
+      return data.description;
+    }
+    const subgraphNames: Array<string> = [];
+    let descriptionToPropagate = '';
+    for (const [
+      subgraphName,
+      { propagateToFederatedGraph, description },
+    ] of data.configureDescriptionDataBySubgraphName) {
+      if (!propagateToFederatedGraph) {
+        continue;
+      }
+      subgraphNames.push(subgraphName);
+      descriptionToPropagate = description;
+    }
+    if (subgraphNames.length === 1) {
+      return getDescriptionFromString(descriptionToPropagate);
+    }
+    // If no instances define the configureDescription directive, return the longest description
+    if (subgraphNames.length < 1) {
+      return data.description;
+    }
+    this.errors.push(configureDescriptionPropagationError(getDefinitionDataCoords(data, true), subgraphNames));
+  }
+
+  getNodeForRouterSchemaByData<T extends NodeData>(data: T): T['node'] {
+    data.node.name = stringToNameNode(data.name);
+    data.node.description = this.getFederatedGraphNodeDescription(data);
+    data.node.directives = this.getRouterPersistedDirectiveNodes(data);
+    return data.node;
+  }
+
+  getNodeWithPersistedDirectivesByInputValueData(inputValueData: InputValueData): MutableInputValueNode {
+    inputValueData.node.name = stringToNameNode(inputValueData.name);
+    inputValueData.node.type = inputValueData.type;
+    inputValueData.node.description = this.getFederatedGraphNodeDescription(inputValueData);
+    inputValueData.node.directives = this.getRouterPersistedDirectiveNodes(inputValueData);
+    if (inputValueData.includeDefaultValue) {
+      inputValueData.node.defaultValue = inputValueData.defaultValue;
+    }
+    return inputValueData.node;
+  }
+
+  getValidFieldArgumentNodes(fieldData: FieldData): MutableInputValueNode[] {
+    const argumentNodes: MutableInputValueNode[] = [];
+    const argumentNames: string[] = [];
+    const invalidRequiredArguments: InvalidRequiredInputValueData[] = [];
+    const fieldPath = `${fieldData.renamedParentTypeName}.${fieldData.name}`;
+    for (const [argumentName, inputValueData] of fieldData.argumentDataByArgumentName) {
+      if (fieldData.subgraphNames.size === inputValueData.subgraphNames.size) {
+        argumentNames.push(argumentName);
+        argumentNodes.push(this.getNodeWithPersistedDirectivesByInputValueData(inputValueData));
+      } else if (isTypeRequired(inputValueData.type)) {
+        invalidRequiredArguments.push({
+          inputValueName: argumentName,
+          missingSubgraphs: getEntriesNotInHashSet(fieldData.subgraphNames, inputValueData.subgraphNames),
+          requiredSubgraphs: [...inputValueData.requiredSubgraphNames],
+        });
+      }
+    }
+    if (invalidRequiredArguments.length > 0) {
+      this.errors.push(invalidRequiredInputValueError(FIELD, fieldPath, invalidRequiredArguments));
+    } else if (argumentNames.length > 0) {
+      // fieldConfiguration might already exist through subscriptionFilter
+      getValueOrDefault(this.fieldConfigurationByFieldPath, fieldPath, () => ({
+        argumentNames,
+        fieldName: fieldData.name,
+        typeName: fieldData.renamedParentTypeName,
+      })).argumentNames = argumentNames;
+    }
+    return argumentNodes;
+  }
+
+  getNodeWithPersistedDirectivesByFieldData(
+    fieldData: FieldData,
+    argumentNodes: MutableInputValueNode[],
+  ): MutableFieldNode {
+    fieldData.node.arguments = argumentNodes;
+    fieldData.node.name = stringToNameNode(fieldData.name);
+    fieldData.node.type = fieldData.type;
+    fieldData.node.description = this.getFederatedGraphNodeDescription(fieldData);
+    fieldData.node.directives = this.getRouterPersistedDirectiveNodes(fieldData);
+    return fieldData.node;
+  }
+
   pushParentDefinitionDataToDocumentDefinitions(interfaceImplementations: InterfaceImplementationData[]) {
     for (const [parentTypeName, parentDefinitionData] of this.parentDefinitionDataByTypeName) {
       if (parentDefinitionData.extensionType !== ExtensionType.NONE) {
@@ -1552,13 +1719,7 @@ export class FederationFactory {
             }
           }
           parentDefinitionData.node.values = enumValueNodes;
-          this.routerDefinitions.push(
-            getNodeForRouterSchemaByData(
-              parentDefinitionData,
-              this.persistedDirectiveDefinitionByDirectiveName,
-              this.errors,
-            ),
-          );
+          this.routerDefinitions.push(this.getNodeForRouterSchemaByData(parentDefinitionData));
           if (isNodeDataInaccessible(parentDefinitionData)) {
             this.validateReferencesOfInaccessibleType(parentDefinitionData);
             this.internalGraph.setNodeInaccessible(parentDefinitionData.name);
@@ -1586,13 +1747,7 @@ export class FederationFactory {
           const clientInputValueNodes: MutableInputValueNode[] = [];
           for (const [inputValueName, inputValueData] of parentDefinitionData.inputValueDataByValueName) {
             if (parentDefinitionData.subgraphNames.size === inputValueData.subgraphNames.size) {
-              inputValueNodes.push(
-                getNodeWithPersistedDirectivesByInputValueData(
-                  inputValueData,
-                  this.persistedDirectiveDefinitionByDirectiveName,
-                  this.errors,
-                ),
-              );
+              inputValueNodes.push(this.getNodeWithPersistedDirectivesByInputValueData(inputValueData));
               if (isNodeDataInaccessible(inputValueData)) {
                 continue;
               }
@@ -1618,13 +1773,7 @@ export class FederationFactory {
             break;
           }
           parentDefinitionData.node.fields = inputValueNodes;
-          this.routerDefinitions.push(
-            getNodeForRouterSchemaByData(
-              parentDefinitionData,
-              this.persistedDirectiveDefinitionByDirectiveName,
-              this.errors,
-            ),
-          );
+          this.routerDefinitions.push(this.getNodeForRouterSchemaByData(parentDefinitionData));
           if (isNodeDataInaccessible(parentDefinitionData)) {
             this.validateReferencesOfInaccessibleType(parentDefinitionData);
             break;
@@ -1655,23 +1804,11 @@ export class FederationFactory {
           const isObject = parentDefinitionData.kind === Kind.OBJECT_TYPE_DEFINITION;
           for (const [fieldName, fieldData] of parentDefinitionData.fieldDataByFieldName) {
             pushAuthorizationDirectives(fieldData, this.authorizationDataByParentTypeName.get(parentTypeName));
-            const argumentNodes = getValidFieldArgumentNodes(
-              fieldData,
-              this.persistedDirectiveDefinitionByDirectiveName,
-              this.fieldConfigurationByFieldPath,
-              this.errors,
-            );
+            const argumentNodes = this.getValidFieldArgumentNodes(fieldData);
             if (isObject) {
               validateExternalAndShareable(fieldData, invalidFieldNames);
             }
-            fieldNodes.push(
-              getNodeWithPersistedDirectivesByFieldData(
-                fieldData,
-                this.persistedDirectiveDefinitionByDirectiveName,
-                argumentNodes,
-                this.errors,
-              ),
-            );
+            fieldNodes.push(this.getNodeWithPersistedDirectivesByFieldData(fieldData, argumentNodes));
             if (isNodeDataInaccessible(fieldData)) {
               continue;
             }
@@ -1695,13 +1832,7 @@ export class FederationFactory {
             interfaceImplementations.push({ data: parentDefinitionData, clientSchemaFieldNodes });
             break;
           }
-          this.routerDefinitions.push(
-            getNodeForRouterSchemaByData(
-              parentDefinitionData,
-              this.persistedDirectiveDefinitionByDirectiveName,
-              this.errors,
-            ),
-          );
+          this.routerDefinitions.push(this.getNodeForRouterSchemaByData(parentDefinitionData));
           const isQuery = isNodeQuery(parentTypeName);
           if (isNodeDataInaccessible(parentDefinitionData)) {
             if (isQuery) {
@@ -1733,13 +1864,7 @@ export class FederationFactory {
           if (BASE_SCALARS.has(parentTypeName)) {
             break;
           }
-          this.routerDefinitions.push(
-            getNodeForRouterSchemaByData(
-              parentDefinitionData,
-              this.persistedDirectiveDefinitionByDirectiveName,
-              this.errors,
-            ),
-          );
+          this.routerDefinitions.push(this.getNodeForRouterSchemaByData(parentDefinitionData));
           if (isNodeDataInaccessible(parentDefinitionData)) {
             this.validateReferencesOfInaccessibleType(parentDefinitionData);
             this.internalGraph.setNodeInaccessible(parentDefinitionData.name);
@@ -1752,13 +1877,7 @@ export class FederationFactory {
           break;
         case Kind.UNION_TYPE_DEFINITION:
           parentDefinitionData.node.types = mapToArrayOfValues(parentDefinitionData.memberByMemberTypeName);
-          this.routerDefinitions.push(
-            getNodeForRouterSchemaByData(
-              parentDefinitionData,
-              this.persistedDirectiveDefinitionByDirectiveName,
-              this.errors,
-            ),
-          );
+          this.routerDefinitions.push(this.getNodeForRouterSchemaByData(parentDefinitionData));
           if (isNodeDataInaccessible(parentDefinitionData)) {
             this.validateReferencesOfInaccessibleType(parentDefinitionData);
             this.internalGraph.setNodeInaccessible(parentDefinitionData.name);

@@ -14,26 +14,49 @@ import { getOrThrowError, getValueOrDefault, kindToTypeString } from '../utils/u
 import { isKindAbstract, lexicographicallySortDocumentNode, safeParse } from '../ast/utils';
 import {
   ARGUMENT_DEFINITION_UPPER,
+  AUTHENTICATED,
+  COMPOSE_DIRECTIVE,
+  CONFIGURE_CHILD_DESCRIPTIONS,
+  CONFIGURE_DESCRIPTION,
+  DEPRECATED,
+  EDFS_KAFKA_PUBLISH,
+  EDFS_KAFKA_SUBSCRIBE,
+  EDFS_NATS_PUBLISH,
+  EDFS_NATS_REQUEST,
+  EDFS_NATS_SUBSCRIBE,
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
+  EXTENDS,
   EXTERNAL,
   FIELD_DEFINITION_UPPER,
   FIELD_UPPER,
   FIELDS,
   FRAGMENT_DEFINITION_UPPER,
   FRAGMENT_SPREAD_UPPER,
+  INACCESSIBLE,
   INLINE_FRAGMENT_UPPER,
   INPUT_FIELD_DEFINITION_UPPER,
   INPUT_OBJECT_UPPER,
+  INTERFACE_OBJECT,
   INTERFACE_UPPER,
+  KEY,
+  LINK,
   MUTATION_UPPER,
   OBJECT_UPPER,
+  OVERRIDE,
   PERIOD,
+  PROVIDES,
   QUERY,
   QUERY_UPPER,
+  REQUIRES,
+  REQUIRES_SCOPES,
   SCALAR_UPPER,
   SCHEMA_UPPER,
+  SHAREABLE,
+  SPECIFIED_BY,
+  SUBSCRIPTION_FILTER,
   SUBSCRIPTION_UPPER,
+  TAG,
   UNION_UPPER,
   VARIABLE_DEFINITION_UPPER,
 } from '../utils/string-constants';
@@ -74,14 +97,45 @@ import {
   RequiredFieldConfiguration,
 } from '../router-configuration/router-configuration';
 import {
+  ArgumentData,
+  ChildData,
   CompositeOutputData,
+  DirectiveDefinitionData,
   FieldData,
   InputValueData,
+  ParentDefinitionData,
+  SchemaData,
   UnionDefinitionData,
 } from '../schema-building/type-definition-data';
 import { getTypeNodeNamedTypeName } from '../schema-building/ast';
 import { FieldSetDirective, getParentTypeName, newConditionalFieldData } from '../schema-building/utils';
 import { nonExternalConditionalFieldWarning } from '../warnings/warnings';
+import {
+  AUTHENTICATED_DEFINITION_DATA,
+  COMPOSE_DIRECTIVE_DEFINITION_DATA,
+  CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION_DATA,
+  CONFIGURE_DESCRIPTION_DEFINITION_DATA,
+  DEPRECATED_DEFINITION_DATA,
+  EXTENDS_DEFINITION_DATA,
+  EXTERNAL_DEFINITION_DATA,
+  INACCESSIBLE_DEFINITION_DATA,
+  INTERFACE_OBJECT_DEFINITION_DATA,
+  KAFKA_PUBLISH_DEFINITION_DATA,
+  KAFKA_SUBSCRIBE_DEFINITION_DATA,
+  KEY_DEFINITION_DATA,
+  LINK_DEFINITION_DATA,
+  NATS_PUBLISH_DEFINITION_DATA,
+  NATS_REQUEST_DEFINITION_DATA,
+  NATS_SUBSCRIBE_DEFINITION_DATA,
+  OVERRIDE_DEFINITION_DATA,
+  PROVIDES_DEFINITION_DATA,
+  REQUIRES_DEFINITION_DATA,
+  REQUIRES_SCOPES_DEFINITION_DATA,
+  SHAREABLE_DEFINITION_DATA,
+  SPECIFIED_BY_DEFINITION_DATA,
+  SUBSCRIPTION_FILTER_DEFINITION_DATA,
+  TAG_DEFINITION_DATA,
+} from './directive-definition-data';
 
 export type KeyFieldSetData = {
   isUnresolvableByKeyFieldSet: Map<string, boolean>;
@@ -214,12 +268,12 @@ export function areNodeKindAndDirectiveLocationCompatible(
 
 export function getDirectiveDefinitionArgumentSets(
   args: readonly InputValueDefinitionNode[],
-  argumentKindByArgumentName: Map<string, TypeNode>,
+  argumentTypeNodeByArgumentName: Map<string, TypeNode>,
   requiredArguments: Set<string>,
 ) {
   for (const argument of args) {
     const argumentName = argument.name.value;
-    argumentKindByArgumentName.set(argumentName, argument.type);
+    argumentTypeNodeByArgumentName.set(argumentName, argument.type);
     // If the definition defines a default argument, it's not necessary to include it
     if (argument.type.kind === Kind.NON_NULL_TYPE && !argument.defaultValue) {
       requiredArguments.add(argumentName);
@@ -962,3 +1016,48 @@ export function validateArgumentTemplateReferences(
     errorMessages.push(invalidEventSubjectsArgumentErrorMessage(invalidArg));
   }
 }
+
+export function initializeDirectiveDefinitionDatas(): Map<string, DirectiveDefinitionData> {
+  return new Map<string, DirectiveDefinitionData>([
+    [AUTHENTICATED, AUTHENTICATED_DEFINITION_DATA],
+    [COMPOSE_DIRECTIVE, COMPOSE_DIRECTIVE_DEFINITION_DATA],
+    [CONFIGURE_DESCRIPTION, CONFIGURE_DESCRIPTION_DEFINITION_DATA],
+    [CONFIGURE_CHILD_DESCRIPTIONS, CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION_DATA],
+    [DEPRECATED, DEPRECATED_DEFINITION_DATA],
+    [EDFS_KAFKA_PUBLISH, KAFKA_PUBLISH_DEFINITION_DATA],
+    [EDFS_KAFKA_SUBSCRIBE, KAFKA_SUBSCRIBE_DEFINITION_DATA],
+    [EDFS_NATS_PUBLISH, NATS_PUBLISH_DEFINITION_DATA],
+    [EDFS_NATS_PUBLISH, NATS_PUBLISH_DEFINITION_DATA],
+    [EDFS_NATS_REQUEST, NATS_REQUEST_DEFINITION_DATA],
+    [EDFS_NATS_SUBSCRIBE, NATS_SUBSCRIBE_DEFINITION_DATA],
+    [EXTENDS, EXTENDS_DEFINITION_DATA],
+    [EXTERNAL, EXTERNAL_DEFINITION_DATA],
+    [INACCESSIBLE, INACCESSIBLE_DEFINITION_DATA],
+    [INTERFACE_OBJECT, INTERFACE_OBJECT_DEFINITION_DATA],
+    [KEY, KEY_DEFINITION_DATA],
+    [LINK, LINK_DEFINITION_DATA],
+    [OVERRIDE, OVERRIDE_DEFINITION_DATA],
+    [PROVIDES, PROVIDES_DEFINITION_DATA],
+    [REQUIRES, REQUIRES_DEFINITION_DATA],
+    [REQUIRES_SCOPES, REQUIRES_SCOPES_DEFINITION_DATA],
+    [SHAREABLE, SHAREABLE_DEFINITION_DATA],
+    [SPECIFIED_BY, SPECIFIED_BY_DEFINITION_DATA],
+    [SUBSCRIPTION_FILTER, SUBSCRIPTION_FILTER_DEFINITION_DATA],
+    [TAG, TAG_DEFINITION_DATA],
+  ]);
+}
+
+export type ExtractArgumentDataResult = {
+  argumentTypeNodeByArgumentName: Map<string, ArgumentData>;
+  optionalArgumentNames: Set<string>;
+  requiredArgumentNames: Set<string>;
+};
+
+export type ValidateDirectiveParams = {
+  data: ParentDefinitionData | ChildData | SchemaData;
+  definitionData: DirectiveDefinitionData;
+  directiveCoords: string;
+  directiveNode: ConstDirectiveNode;
+  errorMessages: Array<string>;
+  requiredArgumentNames: Array<string>;
+};

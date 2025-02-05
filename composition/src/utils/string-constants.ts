@@ -1,3 +1,4 @@
+export const AS = 'as';
 export const AND_UPPER = 'AND';
 export const ANY_SCALAR = '_Any';
 export const ARGUMENT = 'Argument';
@@ -7,6 +8,8 @@ export const BOOLEAN = 'boolean';
 export const BOOLEAN_SCALAR = 'Boolean';
 export const COMPOSE_DIRECTIVE = 'composeDirective';
 export const CONDITION = 'condition';
+export const CONFIGURE_DESCRIPTION = 'openfed__configureDescription';
+export const CONFIGURE_CHILD_DESCRIPTIONS = 'openfed__configureChildDescriptions';
 export const CONSUMER_NAME = 'consumerName';
 export const DEFAULT = 'default';
 export const DEFAULT_EDFS_PROVIDER_ID = 'default';
@@ -30,19 +33,25 @@ export const ENUM = 'Enum';
 export const ENUM_UPPER = 'ENUM';
 export const ENUM_VALUE = 'Enum Value';
 export const ENUM_VALUE_UPPER = 'ENUM_VALUE';
+export const EXECUTION = 'EXECUTION';
 export const EXTERNAL = 'external';
 export const EXTENDS = 'extends';
 export const EXTENSIONS = 'extensions';
+export const FG_DESCRIPTION_OVERRIDE = 'federatedGraphDescriptionOverride';
 export const FIELD = 'Field';
 export const FIELD_PATH = 'fieldPath';
 export const FIELD_UPPER = 'FIELD';
 export const FIELD_SET_SCALAR = 'openfed__FieldSet';
 export const FIELDS = 'fields';
 export const FIELD_DEFINITION_UPPER = 'FIELD_DEFINITION';
+export const FIRST_ORDINAL = '1st';
 export const FLOAT_SCALAR = 'Float';
+export const FOR = 'for';
 export const FRAGMENT_DEFINITION_UPPER = 'FRAGMENT_DEFINITION';
 export const FRAGMENT_SPREAD_UPPER = 'FRAGMENT_SPREAD';
 export const FROM = 'from';
+export const ID_SCALAR = 'ID';
+export const IMPORT = 'import';
 export const IN_UPPER = 'IN';
 export const INACCESSIBLE = 'inaccessible';
 export const INLINE_FRAGMENT = 'inlineFragment';
@@ -59,12 +68,15 @@ export const INTERFACE_OBJECT = 'interfaceObject';
 export const KEY = 'key';
 export const LEFT_PARENTHESIS = '(';
 export const LINK = 'link';
+export const LINK_IMPORT = 'link__Import';
+export const LINK_PURPOSE = 'link__Purpose';
 export const LIST = 'list';
 export const LITERAL_SPACE = ' ';
 export const LITERAL_NEW_LINE = '\n';
 export const NUMBER = 'number';
 export const MUTATION = 'Mutation';
 export const MUTATION_UPPER = 'MUTATION';
+export const PROPAGATE_TO_FG = 'propagateToFederatedGraph';
 export const PROVIDER_TYPE_KAFKA = 'kafka';
 export const PROVIDER_TYPE_NATS = 'nats';
 export const NOT_APPLICABLE = 'N/A';
@@ -101,6 +113,7 @@ export const SCHEMA = 'schema';
 export const SCHEMA_UPPER = 'SCHEMA';
 export const SCOPES = 'scopes';
 export const SCOPE_SCALAR = 'openfed__Scope';
+export const SECURITY = 'SECURITY';
 export const SELECTION_REPRESENTATION = ' { ... }';
 export const SERVICE_OBJECT = '_Service';
 export const SERVICE_FIELD = '_service';
@@ -129,6 +142,20 @@ export const UNION_UPPER = 'UNION';
 export const URL_LOWER = 'url';
 export const VALUES = 'values';
 export const VARIABLE_DEFINITION_UPPER = 'VARIABLE_DEFINITION';
+
+export const TYPE_SYSTEM_DIRECTIVE_LOCATIONS = new Set<string>([
+  ARGUMENT_DEFINITION_UPPER,
+  ENUM_UPPER,
+  ENUM_VALUE_UPPER,
+  FIELD_DEFINITION_UPPER,
+  INPUT_FIELD_DEFINITION_UPPER,
+  INPUT_OBJECT_UPPER,
+  INTERFACE_UPPER,
+  OBJECT_UPPER,
+  SCALAR_UPPER,
+  SCHEMA_UPPER,
+  UNION_UPPER,
+]);
 
 export const EXECUTABLE_DIRECTIVE_LOCATIONS = new Set<string>([
   FIELD_UPPER,

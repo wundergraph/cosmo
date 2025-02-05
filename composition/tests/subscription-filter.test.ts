@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'vitest';
 import {
+  CONDITION,
   federateSubgraphs,
+  FIRST_ORDINAL,
   inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage,
-  INT_SCALAR,
+  invalidArgumentValueErrorMessageV2,
   invalidDirectiveError,
   invalidInputFieldTypeErrorMessage,
   invalidRepeatedDirectiveErrorMessage,
@@ -16,6 +18,9 @@ import {
   OBJECT,
   parse,
   Subgraph,
+  subgraphValidationError,
+  SUBSCRIPTION,
+  SUBSCRIPTION_FILTER,
   subscriptionFieldConditionEmptyValuesArrayErrorMessage,
   subscriptionFieldConditionInvalidInputFieldErrorMessage,
   subscriptionFieldConditionInvalidValuesArrayErrorMessage,
@@ -29,7 +34,6 @@ import {
   schemaToSortedNormalizedString,
   versionOnePersistedDirectiveDefinitions,
 } from './utils/utils';
-import { CONDITION, FIELD, SUBSCRIPTION } from '../src';
 
 describe('@openfed__subscriptionFilter tests', () => {
   describe('Normalization tests', () => {
@@ -49,7 +53,7 @@ describe('@openfed__subscriptionFilter tests', () => {
           subscription: Subscription
         }
         
-        directive @edfs__kafkaPublish(providerId: String! = "default", topics: [String!]!) on FIELD_DEFINITION
+        directive @edfs__kafkaSubscribe(providerId: String! = "default", topics: [String!]!) on FIELD_DEFINITION
         directive @extends on INTERFACE | OBJECT
         directive @external on FIELD_DEFINITION | OBJECT
         directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
@@ -95,7 +99,7 @@ describe('@openfed__subscriptionFilter tests', () => {
           subscription: Subscription
         }
         
-        directive @edfs__kafkaPublish(providerId: String! = "default", topics: [String!]!) on FIELD_DEFINITION
+        directive @edfs__kafkaSubscribe(providerId: String! = "default", topics: [String!]!) on FIELD_DEFINITION
         directive @extends on INTERFACE | OBJECT
         directive @external on FIELD_DEFINITION | OBJECT
         directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
@@ -135,8 +139,8 @@ describe('@openfed__subscriptionFilter tests', () => {
       const { errors } = normalizeSubgraph(subgraphK.definitions);
       expect(errors).toHaveLength(1);
       expect(errors).toStrictEqual([
-        invalidDirectiveError('openfed__subscriptionFilter', 'Subscription.one', [
-          invalidRepeatedDirectiveErrorMessage('openfed__subscriptionFilter', 'Subscription.one'),
+        invalidDirectiveError('openfed__subscriptionFilter', 'Subscription.one', FIRST_ORDINAL, [
+          invalidRepeatedDirectiveErrorMessage('openfed__subscriptionFilter'),
         ]),
       ]);
     });
@@ -245,8 +249,15 @@ describe('@openfed__subscriptionFilter tests', () => {
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
-        invalidSubscriptionFilterDirectiveError(`Subscription.field`, [
-          subscriptionFilterConditionInvalidInputFieldTypeErrorMessage(CONDITION, OBJECT, INT_SCALAR),
+        subgraphValidationError(subgraphE.name, [
+          invalidDirectiveError(SUBSCRIPTION_FILTER, `Subscription.field`, FIRST_ORDINAL, [
+            invalidArgumentValueErrorMessageV2(
+              '1',
+              SUBSCRIPTION_FILTER,
+              CONDITION,
+              'openfed__SubscriptionFilterCondition!',
+            ),
+          ]),
         ]),
       );
     });

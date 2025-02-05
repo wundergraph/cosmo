@@ -242,106 +242,111 @@ export function invalidFieldShareabilityError(objectData: ObjectDefinitionData, 
   );
 }
 
-export function undefinedDirectiveErrorMessage(directiveName: string, hostPath: string): string {
-  return (
-    `The directive "${directiveName}" is declared on "${hostPath}",` +
-    ` but the directive is not defined in the schema.`
-  );
+export function undefinedDirectiveErrorMessage(directiveName: string): string {
+  return `The directive "@${directiveName}" is not defined in the schema.`;
 }
 
+export function undefinedDirectiveError(directiveName: string, directiveCoords: string): Error {
+  return new Error(
+    `The directive "@${directiveName}" declared on coordinates "${directiveCoords}" is not defined in the schema.`,
+  );
+}
 export function undefinedTypeError(typeName: string): Error {
   return new Error(` The type "${typeName}" was referenced in the schema, but it was never defined.`);
 }
 
-export function invalidRepeatedDirectiveErrorMessage(directiveName: string, hostPath: string): string {
-  return (
-    `The definition for the directive "${directiveName}" does not define it as repeatable, ` +
-    `but the same directive is declared more than once on type "${hostPath}".`
-  );
+export function invalidRepeatedDirectiveErrorMessage(directiveName: string): string {
+  return `The definition for the directive "@${directiveName}" does not define it as repeatable, but it is declared more than once on these coordinates.`;
 }
 
-export function invalidRepeatedFederatedDirectiveErrorMessage(directiveName: string, hostPath: string): Error {
+export function invalidDirectiveError(
+  directiveName: string,
+  directiveCoords: string,
+  ordinal: string,
+  errorMessages: string[],
+): Error {
   return new Error(
-    `The definition for the directive "${directiveName}" does not define it as repeatable,` +
-      ` but the directive has been declared on more than one instance of the type "${hostPath}".`,
-  );
-}
-
-export function invalidDirectiveError(directiveName: string, hostPath: string, errorMessages: string[]): Error {
-  return new Error(
-    `The directive "${directiveName}" declared on "${hostPath}" is invalid for the following reason` +
+    `The ${ordinal} instance of the directive "@${directiveName}" declared on coordinates "${directiveCoords}" is invalid for the following reason` +
       (errorMessages.length > 1 ? 's:\n' : ':\n') +
       errorMessages.join('\n'),
   );
 }
 
-export function invalidDirectiveLocationErrorMessage(hostPath: string, kind: Kind, directiveName: string): string {
-  return (
-    ` "${hostPath}" is type "${kind}", but the directive "${directiveName}" ` +
-    `does not define "${nodeKindToDirectiveLocation(kind)}" as a valid location.`
+export function invalidRepeatedFederatedDirectiveErrorMessage(directiveName: string, directiveCoords: string): Error {
+  return new Error(
+    `The definition for the directive "@${directiveName}" does not define it as repeatable,` +
+      ` but the directive has been declared on more than one instance of the type "${directiveCoords}".`,
   );
 }
 
-export function unexpectedDirectiveArgumentsErrorMessage(directive: ConstDirectiveNode, hostPath: string): string {
+export function invalidDirectiveLocationErrorMessage(directiveName: string, location: string): string {
+  return ` The definition for "@${directiveName}" does not define "${location}" as a valid location.`;
+}
+
+export function unexpectedDirectiveArgumentsErrorMessage(directive: ConstDirectiveNode): string {
   const directiveName = directive.name.value;
   const argumentNumber = directive.arguments?.length || 1; // should never be less than 1
   return (
-    ` The definition for the directive "${directiveName}" does not define any arguments.\n` +
-    ` However, the same directive declared on "${hostPath}" defines ${argumentNumber} argument` +
-    (argumentNumber > 1 ? 's.' : '.')
+    ` The definition for "@${directiveName}" does not define any arguments, but ${argumentNumber} argument` +
+    (argumentNumber > 1 ? 's are' : ' is') +
+    ` defined.`
   );
 }
 
 export function undefinedRequiredArgumentsErrorMessage(
   directiveName: string,
-  hostPath: string,
-  requiredArguments: string[],
-  missingRequiredArguments: string[] = [],
+  requiredArgumentNames: string[],
+  undefinedArgumentNames: string[],
 ): string {
   let message =
-    ` The definition for the directive "${directiveName}" defines the following ` +
-    requiredArguments.length +
+    ` The definition for "@${directiveName}" defines the following ` +
+    requiredArgumentNames.length +
     ` required argument` +
-    (requiredArguments.length > 1 ? 's: ' : ': ') +
+    (requiredArgumentNames.length > 1 ? 's: ' : ': ') +
     `"` +
-    requiredArguments.join('", "') +
+    requiredArgumentNames.join('", "') +
     `"` +
-    `.\n However, the same directive that is declared on "${hostPath}" does not define`;
-  if (missingRequiredArguments.length < 1) {
-    return message + ` any arguments.`;
+    `.\n However,`;
+  if (undefinedArgumentNames.length < 1) {
+    return message + ` no arguments are defined on this instance.`;
   }
   return (
     message +
     ` the following required argument` +
-    (missingRequiredArguments.length > 1 ? `s` : ``) +
-    `: "` +
-    missingRequiredArguments.join(QUOTATION_JOIN) +
+    (undefinedArgumentNames.length > 1 ? `s are` : ` is`) +
+    ` not defined on this instance: "` +
+    undefinedArgumentNames.join(QUOTATION_JOIN) +
     `".`
   );
 }
 
 export function unexpectedDirectiveArgumentErrorMessage(directiveName: string, argumentNames: string[]): string {
   return (
-    ` The definition for the directive "${directiveName}" does not define the following provided argument` +
-    (argumentNames.length > 1 ? 's' : '') +
-    `: "` +
+    ` The definition for "@${directiveName}" does not define the following argument` +
+    (argumentNames.length > 1 ? 's that are' : ' that is') +
+    ` provided: "` +
     argumentNames.join(QUOTATION_JOIN) +
     `".`
   );
 }
 
-export function duplicateDirectiveArgumentDefinitionsErrorMessage(
-  directiveName: string,
-  hostPath: string,
-  argumentNames: string[],
-): string {
+export function duplicateDirectiveArgumentDefinitionsErrorMessage(argumentNames: string[]): string {
   return (
-    ` The directive "${directiveName}" that is declared on "${hostPath}" defines the following argument` +
-    (argumentNames.length > 1 ? 's' : '') +
-    ` more than once: "` +
+    ` The following argument` +
+    (argumentNames.length > 1 ? 's are' : ' is') +
+    ` defined more than once: "` +
     argumentNames.join(QUOTATION_JOIN) +
     `"`
   );
+}
+
+export function invalidArgumentValueErrorMessageV2(
+  value: string,
+  directiveName: string,
+  argumentName: string,
+  expectedTypeString: string,
+): string {
+  return ` The value "${value}" provided to argument "@${directiveName}(${argumentName}: ...)" is not a valid "${expectedTypeString}" type.`;
 }
 
 export function invalidDirectiveArgumentTypeErrorMessage(
@@ -973,13 +978,11 @@ export function undefinedEntityInterfaceImplementationsError(
   return new Error(message);
 }
 
-export function orScopesLimitError(maxOrScopes: number, hostPaths: string[]): Error {
+export function orScopesLimitError(maxOrScopes: number, directiveCoords: string[]): Error {
   return new Error(
     `The maximum number of OR scopes that can be defined by @requiresScopes on a single field is ${maxOrScopes}.` +
-      ` However, the following path` +
-      (hostPaths.length > 1 ? 's attempt' : ' attempts') +
-      ` to define more:\n "` +
-      hostPaths.join(QUOTATION_JOIN) +
+      ` However, the following coordinates attempt to define more:\n "` +
+      directiveCoords.join(QUOTATION_JOIN) +
       `"\nIf you require more, please contact support.`,
   );
 }
@@ -1641,5 +1644,21 @@ export function invalidExternalDirectiveError(fieldCoords: string): Error {
       ` be declared "@external" if it is part of a "@key", "@provides", or "@requires" FieldSet, or the Field is` +
       ` necessary to satisfy an Interface implementation. In the case that none of these conditions is true, the` +
       ` "@external" directive should be removed.`,
+  );
+}
+
+export function configureDescriptionNoDescriptionError(typeString: string, typeName: string): Error {
+  return new Error(
+    `The "@openfed__configureDescription" directive defined on ${typeString} "${typeName}" is invalid` +
+      ` because neither a description nor the "federatedGraphDescriptionOverride" argument is defined.`,
+  );
+}
+
+export function configureDescriptionPropagationError(coords: string, subgraphNames: Array<string>): Error {
+  return new Error(
+    `The coordinates "${coords}" declare "@openfed__configureDescription(propagateToFederatedGraph: true)" in the following subgraphs:\n "` +
+      subgraphNames.join(QUOTATION_JOIN) +
+      '"\n' +
+      `A federated graph only supports a single description; consequently, only one subgraph may define argument "propagateToFederatedGraph" as true (this is the default value).`,
   );
 }

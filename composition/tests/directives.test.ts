@@ -1,4 +1,14 @@
-import { federateSubgraphs, normalizeSubgraphFromString, parse, Subgraph } from '../src';
+import {
+  ENUM,
+  federateSubgraphs,
+  FIRST_ORDINAL,
+  invalidArgumentValueErrorMessageV2,
+  invalidDirectiveError,
+  normalizeSubgraph,
+  normalizeSubgraphFromString,
+  parse,
+  Subgraph,
+} from '../src';
 import { describe, expect, test } from 'vitest';
 import {
   baseDirectiveDefinitions,
@@ -9,8 +19,19 @@ import {
 
 describe('Directive tests', () => {
   describe('Normalization tests', () => {
+    test('that an error is returned if an @inaccessible Enum Value is used as a directive argument', () => {
+      const { errors, warnings } = normalizeSubgraph(na.definitions, na.name);
+      expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
+      expect(errors![0]).toStrictEqual(
+        invalidDirectiveError('a', 'Query.dummy', FIRST_ORDINAL, [
+          invalidArgumentValueErrorMessageV2('B', 'a', 'enum', 'Enum!'),
+        ]),
+      );
+    });
+
     test('that @specifiedBy is supported', () => {
-      const { errors } = normalizeSubgraphFromString(subgraphAString);
+      const { errors } = normalizeSubgraph(subgraphA.definitions, subgraphA.name);
       expect(errors).toBeUndefined();
     });
 
@@ -95,7 +116,7 @@ describe('Directive tests', () => {
     });
   });
 
-  test('that directives', () => {
+  test('that directives compose', () => {
     const { errors, federationResult } = federateSubgraphs([
       { name: 'a', url: '', definitions: parse(`directive @test on OBJECT type Query { dummy: String! }`) },
       { name: 'b', url: '', definitions: parse(`directive @test(a: String!) on OBJECT`) },
@@ -130,18 +151,33 @@ describe('Directive tests', () => {
   });
 });
 
-const subgraphAString = `
-  type Query {
-    json: JSON!
-  }
-  
-  scalar JSON @specifiedBy(url: "https://wundergraph.com")
-`;
+const na: Subgraph = {
+  name: 'na',
+  url: '',
+  definitions: parse(`
+    directive @a(enum: Enum!) on FIELD_DEFINITION
+    
+    type Query {
+      dummy: String! @a(enum: B)
+    }
+    
+    enum Enum {
+      A
+      B @inaccessible
+    }
+  `),
+};
 
 const subgraphA: Subgraph = {
   name: 'subgraph-a',
   url: '',
-  definitions: parse(subgraphAString),
+  definitions: parse(`
+    type Query {
+      json: JSON!
+    }
+    
+    scalar JSON @specifiedBy(url: "https://wundergraph.com")
+  `),
 };
 
 const subgraphB: Subgraph = {

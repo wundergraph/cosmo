@@ -15,6 +15,7 @@ import {
   parse,
   requiresDefinedOnNonEntityFieldWarning,
   Subgraph,
+  FIRST_ORDINAL,
 } from '../src';
 import {
   baseDirectiveDefinitions,
@@ -39,11 +40,11 @@ describe('@external directive tests', () => {
           externalFieldThree: Float
         }
         
-        extend type Object @external {
+        extend type Object {
           """
-            This is the description for Object.externalFieldFour
+            This is the description for Object.nonExternalFieldFour
           """
-          externalFieldFour: String!
+          nonExternalFieldFour: String!
         }
         
         extend type Object {
@@ -57,13 +58,13 @@ describe('@external directive tests', () => {
           baseDirectiveDefinitions +
             `
             type Object {
-              """
-              This is the description for Object.externalFieldFour
-              """
-              externalFieldFour: String! @external
               externalFieldOne(argOne: String!, argTwo: Boolean!): String @external
               externalFieldThree: Float @external
               externalFieldTwo: Int! @external
+              """
+              This is the description for Object.nonExternalFieldFour
+              """
+              nonExternalFieldFour: String!
               nonExternalFieldOne: Boolean!
               nonExternalFieldThree: Boolean
               nonExternalFieldTwo(argOne: Int"""This is a description for Object.nonExternalFieldTwo.argTwo"""argTwo: Boolean!): Float!
@@ -77,11 +78,11 @@ describe('@external directive tests', () => {
 
     test('that @external declared on the object level applies to all its defined fields #1.2', () => {
       const { errors, normalizationResult } = normalizeSubgraphFromString(`
-        extend type Object @external {
+        extend type Object {
           """
-            This is the description for Object.externalFieldFour
+           This is the description for Object.nonExternalFieldFour
           """
-          externalFieldFour: String!
+          nonExternalFieldFour: String!
         }
         
         extend type Object {
@@ -105,13 +106,13 @@ describe('@external directive tests', () => {
           baseDirectiveDefinitions +
             `
             type Object {
-              """
-              This is the description for Object.externalFieldFour
-              """
-              externalFieldFour: String! @external
               externalFieldOne(argOne: String!, argTwo: Boolean!): String @external
               externalFieldThree: Float @external
               externalFieldTwo: Int! @external
+              """
+              This is the description for Object.nonExternalFieldFour
+              """
+              nonExternalFieldFour: String!
               nonExternalFieldOne: Boolean!
               nonExternalFieldThree: Boolean
               nonExternalFieldTwo(argOne: Int"""This is a description for Object.nonExternalFieldTwo.argTwo"""argTwo: Boolean!): Float!
@@ -142,11 +143,12 @@ describe('@external directive tests', () => {
     });
 
     test('that an error is returned if @external is repeated on the same level', () => {
-      const { errors, normalizationResult } = normalizeSubgraph(subgraphG.definitions);
+      const { errors } = normalizeSubgraph(subgraphG.definitions);
+      expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors).toStrictEqual([
-        invalidDirectiveError(EXTERNAL, 'Entity.field', [
-          invalidRepeatedDirectiveErrorMessage(EXTERNAL, 'Entity.field'),
+        invalidDirectiveError(EXTERNAL, 'Entity.field', FIRST_ORDINAL, [
+          invalidRepeatedDirectiveErrorMessage(EXTERNAL),
         ]),
       ]);
     });
