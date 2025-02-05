@@ -271,19 +271,8 @@ func (p *natsPubSub) Shutdown(ctx context.Context) error {
 		p.logger.Error("error draining NATS connection", zap.Error(drainErr))
 	}
 
-	// Wait for all subscriptions to be closed until timeout
-	timeout := time.Second * 5
-	done := make(chan struct{})
-	go func() {
-		p.closeWg.Wait()
-		close(done)
-	}()
-
-	select {
-	case <-done:
-	case <-time.After(timeout):
-		p.logger.Warn("timeout reached before the connection has been drained")
-	}
+	// Wait for all subscriptions to be closed
+	p.closeWg.Wait()
 
 	return err
 }
