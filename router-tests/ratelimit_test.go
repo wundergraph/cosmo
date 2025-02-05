@@ -675,16 +675,112 @@ func TestRateLimit(t *testing.T) {
 	})
 	t.Run("Cluster Mode", func(t *testing.T) {
 		var (
-			clusterUrlSlice = []string{"localhost:7000", "localhost:7001", "localhost:7002"}
-			password        = "test"
+			clusterUrlSlice     = []string{"redis://cosmo:test@localhost:7001", "redis://cosmo:test@localhost:7002", "redis://cosmo:test@localhost:7003"}
+			noSchemeClusterUrls = []string{"localhost:7001", "localhost:7002", "localhost:7003"}
+			user                = "cosmo"
+			password            = "test"
 		)
 
+		t.Run("correctly parses url options and authentication", func(t *testing.T) {
+			t.Parallel()
+
+			tests := []struct {
+				name            string
+				clusterUrlSlice []string
+			}{
+				{
+					name:            "should successfully use auth from first url",
+					clusterUrlSlice: []string{"redis://cosmo:test@localhost:7003", "redis://cosmo1:test1@localhost:7001", "redis://cosmo2:test2@localhost:7002"},
+				},
+				{
+					name:            "should successfully use auth from later url if no auth in first urls",
+					clusterUrlSlice: []string{"redis://localhost:7003", "rediss://localhost:7001", "rediss://cosmo:test@localhost:7002"},
+				},
+				{
+					name:            "should successfully work with two urls",
+					clusterUrlSlice: []string{"redis://cosmo:test@localhost:7002", "rediss://localhost:7001"},
+				},
+			}
+
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					t.Parallel()
+					key := uuid.New().String()
+					t.Cleanup(func() {
+						client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: noSchemeClusterUrls, Username: user, Password: password})
+						del := client.Del(context.Background(), key)
+						require.NoError(t, del.Err())
+					})
+
+					testenv.Run(t, &testenv.Config{
+						RouterOptions: []core.Option{
+							core.WithRateLimitConfig(&config.RateLimitConfiguration{
+								Enabled:  true,
+								Strategy: "simple",
+								SimpleStrategy: config.RateLimitSimpleStrategy{
+									Rate:                    1,
+									Burst:                   1,
+									Period:                  time.Second * 2,
+									RejectExceedingRequests: false,
+								},
+								Storage: config.RedisConfiguration{
+									ClusterEnabled: true,
+									URLs:           tt.clusterUrlSlice,
+									KeyPrefix:      key,
+								},
+								Debug: true,
+							}),
+						},
+					}, func(t *testing.T, xEnv *testenv.Environment) {
+						res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+							Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+							Variables: json.RawMessage(`{"n":1}`),
+						})
+						require.Equal(t, fmt.Sprintf(`{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}},"extensions":{"rateLimit":{"key":"%s","requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, key), res.Body)
+					})
+				})
+			}
+
+			t.Run("should fail with bad auth", func(t *testing.T) {
+				t.Parallel()
+				clusterUrlSlice = []string{"redis://cosmo1:test1@localhost:7001", "redis://cosmo:test@localhost:7003", "redis://cosmo2:test2@localhost:7002"}
+
+				key := uuid.New().String()
+				t.Cleanup(func() {
+					client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: noSchemeClusterUrls, Username: user, Password: password})
+					del := client.Del(context.Background(), key)
+					require.NoError(t, del.Err())
+				})
+				testenv.FailsOnStartup(t, &testenv.Config{
+					RouterOptions: []core.Option{
+						core.WithRateLimitConfig(&config.RateLimitConfiguration{
+							Enabled:  true,
+							Strategy: "simple",
+							SimpleStrategy: config.RateLimitSimpleStrategy{
+								Rate:                    1,
+								Burst:                   1,
+								Period:                  time.Second * 2,
+								RejectExceedingRequests: false,
+							},
+							Storage: config.RedisConfiguration{
+								ClusterEnabled: true,
+								URLs:           clusterUrlSlice,
+								KeyPrefix:      key,
+							},
+							Debug: true,
+						}),
+					},
+				}, func(t *testing.T, err error) {
+					require.Contains(t, err.Error(), "failed to create a functioning redis client")
+				})
+			})
+		})
 		t.Run("enabled - below limit", func(t *testing.T) {
 			t.Parallel()
 
 			key := uuid.New().String()
 			t.Cleanup(func() {
-				client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: clusterUrlSlice, Password: password})
+				client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: noSchemeClusterUrls, Username: user, Password: password})
 				del := client.Del(context.Background(), key)
 				require.NoError(t, del.Err())
 			})
@@ -720,7 +816,7 @@ func TestRateLimit(t *testing.T) {
 
 			key := uuid.New().String()
 			t.Cleanup(func() {
-				client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: clusterUrlSlice, Password: password})
+				client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: noSchemeClusterUrls, Username: user, Password: password})
 				del := client.Del(context.Background(), fmt.Sprintf("%s:localhost", key))
 				require.NoError(t, del.Err())
 			})
@@ -760,7 +856,7 @@ func TestRateLimit(t *testing.T) {
 
 			key := uuid.New().String()
 			t.Cleanup(func() {
-				client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: clusterUrlSlice, Password: password})
+				client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: noSchemeClusterUrls, Username: user, Password: password})
 				del := client.Del(context.Background(), key)
 				require.NoError(t, del.Err())
 			})

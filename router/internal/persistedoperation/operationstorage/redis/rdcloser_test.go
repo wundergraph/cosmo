@@ -30,7 +30,27 @@ func TestRedisCloser(t *testing.T) {
 
 		require.NoError(t, err)
 		require.NotNil(t, cl)
-		require.True(t, IsFunctioningClient(cl))
+		isFunctioning, err := IsFunctioningClient(cl)
+		require.True(t, isFunctioning)
+		require.NoError(t, err)
+		require.False(t, isClusterClient(cl))
+	})
+
+	t.Run("Works with auth", func(t *testing.T) {
+		mr := miniredis.RunT(t)
+		mr.RequireUserAuth("user", "pass")
+
+		authUrl := fmt.Sprintf("redis://user:pass@%s", mr.Addr())
+		cl, err := NewRedisCloser(&RedisCloserOptions{
+			Logger: zaptest.NewLogger(t),
+			URLs:   []string{authUrl},
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, cl)
+		isFunctioning, err := IsFunctioningClient(cl)
+		require.True(t, isFunctioning)
+		require.NoError(t, err)
 		require.False(t, isClusterClient(cl))
 	})
 
