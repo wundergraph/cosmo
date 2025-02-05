@@ -73,6 +73,21 @@ func (r *queryResolver) BigResponse(ctx context.Context, artificialDelay int, bi
 	return big, nil
 }
 
+// LongResponse is the resolver for the longResponse field.
+func (r *queryResolver) LongResponse(ctx context.Context, artificalDelay int, bytes int) (*string, error) {
+	if artificalDelay > 0 {
+		time.Sleep(time.Duration(artificalDelay) * time.Millisecond)
+	}
+
+	b := make([]byte, bytes)
+	for i := 0; i < bytes; i++ {
+		b[i] = 'a'
+	}
+
+	s := string(b)
+	return &s, nil
+}
+
 // BigAbstractResponse is the resolver for the bigAbstractResponse field.
 func (r *queryResolver) BigAbstractResponse(ctx context.Context) (model.BigAbstractResponse, error) {
 	return aBigObject, nil
@@ -127,7 +142,9 @@ func (r *queryResolver) RootFieldWithInput(ctx context.Context, arg model.InputA
 
 // FloatField is the resolver for the floatField field.
 func (r *queryResolver) FloatField(ctx context.Context, arg *float64) (*float64, error) {
-	return arg, nil
+	spomet := 5.0
+
+	return &spomet, nil
 }
 
 // SharedThings is the resolver for the sharedThings field.

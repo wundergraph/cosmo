@@ -600,6 +600,7 @@ type ComplexityRoot struct {
 		HeaderValue                 func(childComplexity int, name string) int
 		InitPayloadValue            func(childComplexity int, key string) int
 		InitialPayload              func(childComplexity int) int
+		LongResponse                func(childComplexity int, artificalDelay int, bytes int) int
 		RootFieldWithInput          func(childComplexity int, arg model.InputArg) int
 		RootFieldWithListArg        func(childComplexity int, arg []string) int
 		RootFieldWithListOfEnumArg  func(childComplexity int, arg []model.EnumType) int
@@ -904,6 +905,7 @@ type QueryResolver interface {
 	InitialPayload(ctx context.Context) (map[string]any, error)
 	Delay(ctx context.Context, response string, ms int) (string, error)
 	BigResponse(ctx context.Context, artificialDelay int, bigObjects int, nestedObjects int, deeplyNestedObjects int) ([]*model.BigObject, error)
+	LongResponse(ctx context.Context, artificalDelay int, bytes int) (*string, error)
 	BigAbstractResponse(ctx context.Context) (model.BigAbstractResponse, error)
 	RootFieldWithListArg(ctx context.Context, arg []string) ([]string, error)
 	RootFieldWithNestedListArg(ctx context.Context, arg [][]string) ([][]string, error)
@@ -4336,6 +4338,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.InitialPayload(childComplexity), true
 
+	case "Query.longResponse":
+		if e.complexity.Query.LongResponse == nil {
+			break
+		}
+
+		args, err := ec.field_Query_longResponse_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.LongResponse(childComplexity, args["artificalDelay"].(int), args["bytes"].(int)), true
+
 	case "Query.rootFieldWithInput":
 		if e.complexity.Query.RootFieldWithInput == nil {
 			break
@@ -6285,6 +6299,8 @@ type Query {
         deeplyNestedObjects: Int! = 100
     ): [BigObject!]!
 
+    longResponse(artificalDelay: Int! = 0, bytes: Int!): String
+
     bigAbstractResponse: BigAbstractResponse
 
     rootFieldWithListArg(arg: [String!]!): [String!]!
@@ -7533,6 +7549,57 @@ func (ec *executionContext) field_Query_initPayloadValue_argsKey(
 	}
 
 	var zeroVal string
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_longResponse_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_longResponse_argsArtificalDelay(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["artificalDelay"] = arg0
+	arg1, err := ec.field_Query_longResponse_argsBytes(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["bytes"] = arg1
+	return args, nil
+}
+func (ec *executionContext) field_Query_longResponse_argsArtificalDelay(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int, error) {
+	if _, ok := rawArgs["artificalDelay"]; !ok {
+		var zeroVal int
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("artificalDelay"))
+	if tmp, ok := rawArgs["artificalDelay"]; ok {
+		return ec.unmarshalNInt2int(ctx, tmp)
+	}
+
+	var zeroVal int
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_longResponse_argsBytes(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int, error) {
+	if _, ok := rawArgs["bytes"]; !ok {
+		var zeroVal int
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("bytes"))
+	if tmp, ok := rawArgs["bytes"]; ok {
+		return ec.unmarshalNInt2int(ctx, tmp)
+	}
+
+	var zeroVal int
 	return zeroVal, nil
 }
 
@@ -29114,6 +29181,58 @@ func (ec *executionContext) fieldContext_Query_bigResponse(ctx context.Context, 
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_longResponse(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_longResponse(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().LongResponse(rctx, fc.Args["artificalDelay"].(int), fc.Args["bytes"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_longResponse(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_longResponse_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_bigAbstractResponse(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_bigAbstractResponse(ctx, field)
 	if err != nil {
@@ -46012,6 +46131,25 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "longResponse":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_longResponse(ctx, field)
 				return res
 			}
 
