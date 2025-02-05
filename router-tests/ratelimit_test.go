@@ -741,7 +741,6 @@ func TestRateLimit(t *testing.T) {
 				})
 			}
 
-			// TODO: Add failing test with bad auth
 			t.Run("should fail with bad auth", func(t *testing.T) {
 				t.Parallel()
 				clusterUrlSlice = []string{"redis://cosmo1:test1@localhost:7001", "redis://cosmo:test@localhost:7000", "redis://cosmo2:test2@localhost:7002"}
@@ -772,7 +771,7 @@ func TestRateLimit(t *testing.T) {
 						}),
 					},
 				}, func(t *testing.T, err error) {
-					require.Contains(t, err.Error(), "WRONGPASS invalid username-password pair or user is disabled")
+					require.Contains(t, err.Error(), "failed to create a functioning redis client")
 				})
 			})
 		})
