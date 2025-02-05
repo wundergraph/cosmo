@@ -153,9 +153,7 @@ func (r *queryResolver) RootFieldWithInput(ctx context.Context, arg model.InputA
 
 // FloatField is the resolver for the floatField field.
 func (r *queryResolver) FloatField(ctx context.Context, arg *float64) (*float64, error) {
-	spomet := 5.0
-
-	return &spomet, nil
+	return arg, nil
 }
 
 // SharedThings is the resolver for the sharedThings field.
