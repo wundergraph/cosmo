@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.171.0](https://github.com/wundergraph/cosmo/compare/router@0.170.1...router@0.171.0) (2025-02-05)
+
+### Bug Fixes
+
+* **router:** enable redis to work with auth ([#1563](https://github.com/wundergraph/cosmo/issues/1563)) ([d9fd035](https://github.com/wundergraph/cosmo/commit/d9fd03544738c0b716364eb3c0b9c9337e50a3fc)) (@df-wg)
+
+### Features
+
+* **router:** support gzip request compression ([#1559](https://github.com/wundergraph/cosmo/issues/1559)) ([5f1d2a7](https://github.com/wundergraph/cosmo/commit/5f1d2a75ea2d99879429456b794dd4e424d70710)) (@Noroth)
+
 ## [0.170.1](https://github.com/wundergraph/cosmo/compare/router@0.170.0...router@0.170.1) (2025-02-03)
 
 ### Bug Fixes
