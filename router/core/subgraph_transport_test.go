@@ -1,7 +1,6 @@
 package core
 
 import (
-	"context"
 	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
@@ -16,85 +15,37 @@ import (
 func TestTimeoutTransport(t *testing.T) {
 	t.Parallel()
 
-	var (
-		testSubgraphKey = "test"
-	)
+	testSubgraphKey := "test"
 
-	t.Run("applies request timeout", func(t *testing.T) {
+	t.Run("nil request should return nil response", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("Fast response within timeout", func(t *testing.T) {
-			t.Parallel()
+		timeoutTransport := NewSubgraphTransport(
+			&SubgraphTransportOptions{},
+			http.DefaultTransport,
+			zap.NewNop(),
+			http.ProxyFromEnvironment,
+		)
 
-			fastServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusOK)
-			}))
-			defer fastServer.Close()
+		resp, err := timeoutTransport.RoundTrip(nil)
+		require.Nil(t, resp)
+		require.Nil(t, err)
+	})
 
-			rqCtx := &requestContext{
-				subgraphResolver: NewSubgraphResolver([]Subgraph{{Name: testSubgraphKey, UrlString: fastServer.URL}}),
-			}
+	t.Run("nil request context should return nil response", func(t *testing.T) {
+		t.Parallel()
 
-			transportOpts := &SubgraphTransportOptions{
-				SubgraphMap: map[string]*TransportTimeoutOptions{
-					testSubgraphKey: {
-						RequestTimeout: 100 * time.Millisecond,
-					},
-				},
-			}
+		timeoutTransport := NewSubgraphTransport(
+			&SubgraphTransportOptions{},
+			http.DefaultTransport,
+			zap.NewNop(),
+			http.ProxyFromEnvironment,
+		)
 
-			req := httptest.NewRequest("GET", fastServer.URL, nil)
-			req = req.WithContext(withRequestContext(req.Context(), rqCtx))
-
-			timeoutTransport := NewTimeoutTransport(
-				transportOpts,
-				http.DefaultTransport,
-				zap.NewNop(),
-				http.ProxyFromEnvironment,
-			)
-			resp, err := timeoutTransport.RoundTrip(req)
-			require.Nil(t, err)
-			require.NotNil(t, resp)
-			require.Equal(t, http.StatusOK, resp.StatusCode)
-		})
-
-		t.Run("Slow response exceeding timeout", func(t *testing.T) {
-			t.Parallel()
-
-			transportOpts := &SubgraphTransportOptions{
-				SubgraphMap: map[string]*TransportTimeoutOptions{
-					testSubgraphKey: {
-						RequestTimeout: 100 * time.Millisecond,
-					},
-				},
-			}
-
-			slowServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusOK)
-				time.Sleep(200 * time.Millisecond) // Slow response
-				w.Write([]byte("Hello, world!"))
-			}))
-			defer slowServer.Close()
-
-			rqCtx := &requestContext{
-				subgraphResolver: NewSubgraphResolver([]Subgraph{{Name: testSubgraphKey, UrlString: slowServer.URL}}),
-			}
-
-			req := httptest.NewRequest("GET", slowServer.URL, nil)
-			req = req.WithContext(withRequestContext(req.Context(), rqCtx))
-
-			timeoutTransport := NewTimeoutTransport(
-				transportOpts,
-				http.DefaultTransport,
-				zap.NewNop(),
-				http.ProxyFromEnvironment,
-			)
-
-			resp, err := timeoutTransport.RoundTrip(req)
-			require.NotNil(t, err)
-			require.ErrorIs(t, err, context.DeadlineExceeded)
-			require.Nil(t, resp) // No response due to timeout
-		})
+		req := httptest.NewRequest("GET", "http://example.com", nil)
+		resp, err := timeoutTransport.RoundTrip(req)
+		require.Nil(t, resp)
+		require.Nil(t, err)
 	})
 
 	t.Run("ResponseHeaderTimeout exceeded", func(t *testing.T) {
@@ -121,7 +72,7 @@ func TestTimeoutTransport(t *testing.T) {
 		req := httptest.NewRequest("GET", headerTimeoutServer.URL, nil)
 		req = req.WithContext(withRequestContext(req.Context(), rqCtx))
 
-		timeoutTransport := NewTimeoutTransport(
+		timeoutTransport := NewSubgraphTransport(
 			transportOpts,
 			http.DefaultTransport,
 			zap.NewNop(),
@@ -159,7 +110,7 @@ func TestTimeoutTransport(t *testing.T) {
 		req := httptest.NewRequest("GET", tlsServer.URL, nil)
 		req = req.WithContext(withRequestContext(req.Context(), rqCtx))
 
-		timeoutTransport := NewTimeoutTransport(
+		timeoutTransport := NewSubgraphTransport(
 			transportOpts,
 			http.DefaultTransport,
 			zap.NewNop(),
@@ -192,7 +143,7 @@ func TestTimeoutTransport(t *testing.T) {
 		req := httptest.NewRequest("GET", unreachableServerURL, nil)
 		req = req.WithContext(withRequestContext(req.Context(), rqCtx))
 
-		timeoutTransport := NewTimeoutTransport(
+		timeoutTransport := NewSubgraphTransport(
 			transportOpts,
 			http.DefaultTransport,
 			zap.NewNop(),

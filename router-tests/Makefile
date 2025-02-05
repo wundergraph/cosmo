@@ -23,7 +23,7 @@ clean-testcache:
 	go clean -testcache
 
 update-test-config:
-	./update-config.sh
+	./update-config-no-edg.sh
 
 .PHONY: test test-no-race lint test-stability clean-testcache update-test-config test-fresh
 
