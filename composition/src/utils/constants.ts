@@ -265,7 +265,11 @@ export const EDFS_NATS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @edfs__natsSubscribe(subjects: [String!]!, providerId: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration) on FIELD_DEFINITION
+/* directive @edfs__natsSubscribe(
+ *   subjects: [String!]!, providerId: String! = "default",
+ *   streamConfiguration: edfs__NatsStreamConfiguration
+ * ) on FIELD_DEFINITION
+ */
 export const EDFS_NATS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
@@ -829,10 +833,10 @@ export const EDFS_NATS_STREAM_CONFIGURATION_DEFINITION: MutableInputObjectNode =
 };
 
 /*
- * directive @openfed__configureDescription {
+ * directive @openfed__configureDescription(
  *   propagate: Boolean! = true
  *   descriptionOverride: String
- * } on ARGUMENT_DEFINITION | FIELD_DEFINITION | INPUT_OBJECT | INPUT_FIELD_DEFINITION | ENUM | ENUM_VALUE |
+ * ) on ARGUMENT_DEFINITION | FIELD_DEFINITION | INPUT_OBJECT | INPUT_FIELD_DEFINITION | ENUM | ENUM_VALUE |
  * INTERFACE | OBJECT | SCALAR | SCHEMA | UNION
  * */
 export const CONFIGURE_DESCRIPTION_DEFINITION: MutableDirectiveDefinitionNode = {
@@ -876,9 +880,9 @@ export const CONFIGURE_DESCRIPTION_DEFINITION: MutableDirectiveDefinitionNode = 
 };
 
 /*
- * directive @openfed__configureChildDescriptions {
+ * directive @openfed__configureChildDescriptions(
  *   propagate: Boolean! = true
- * } on ENUM | INPUT_OBJECT | INTERFACE | OBJECT
+ * ) on ENUM | INPUT_OBJECT | INTERFACE | OBJECT
  */
 export const CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION: MutableDirectiveDefinitionNode = {
   arguments: [
