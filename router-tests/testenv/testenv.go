@@ -106,7 +106,7 @@ func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	}
 }
 
-// Run runs the test and fails the test if an error occurs
+// FailsOnStartup runs the test and ensures that the router fails during bootstrapping
 func FailsOnStartup(t *testing.T, cfg *Config, f func(t *testing.T, err error)) {
 	t.Helper()
 	env, err := createTestEnv(t, cfg)

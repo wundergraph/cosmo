@@ -675,8 +675,8 @@ func TestRateLimit(t *testing.T) {
 	})
 	t.Run("Cluster Mode", func(t *testing.T) {
 		var (
-			clusterUrlSlice     = []string{"redis://cosmo:test@localhost:7000", "redis://cosmo:test@localhost:7001", "redis://cosmo:test@localhost:7002"}
-			noSchemeClusterUrls = []string{"localhost:7000", "localhost:7001", "localhost:7002"}
+			clusterUrlSlice     = []string{"redis://cosmo:test@localhost:7001", "redis://cosmo:test@localhost:7002", "redis://cosmo:test@localhost:7003"}
+			noSchemeClusterUrls = []string{"localhost:7001", "localhost:7002", "localhost:7003"}
 			user                = "cosmo"
 			password            = "test"
 		)
@@ -690,15 +690,15 @@ func TestRateLimit(t *testing.T) {
 			}{
 				{
 					name:            "should successfully use auth from first url",
-					clusterUrlSlice: []string{"redis://cosmo:test@localhost:7000", "redis://cosmo1:test1@localhost:7001", "redis://cosmo2:test2@localhost:7002"},
+					clusterUrlSlice: []string{"redis://cosmo:test@localhost:7003", "redis://cosmo1:test1@localhost:7001", "redis://cosmo2:test2@localhost:7002"},
 				},
 				{
 					name:            "should successfully use auth from later url if no auth in first urls",
-					clusterUrlSlice: []string{"redis://localhost:7000", "rediss://localhost:7001", "rediss://cosmo:test@localhost:7002"},
+					clusterUrlSlice: []string{"redis://localhost:7003", "rediss://localhost:7001", "rediss://cosmo:test@localhost:7002"},
 				},
 				{
 					name:            "should successfully work with two urls",
-					clusterUrlSlice: []string{"redis://cosmo:test@localhost:7000", "rediss://localhost:7001"},
+					clusterUrlSlice: []string{"redis://cosmo:test@localhost:7002", "rediss://localhost:7001"},
 				},
 			}
 
@@ -743,7 +743,7 @@ func TestRateLimit(t *testing.T) {
 
 			t.Run("should fail with bad auth", func(t *testing.T) {
 				t.Parallel()
-				clusterUrlSlice = []string{"redis://cosmo1:test1@localhost:7001", "redis://cosmo:test@localhost:7000", "redis://cosmo2:test2@localhost:7002"}
+				clusterUrlSlice = []string{"redis://cosmo1:test1@localhost:7001", "redis://cosmo:test@localhost:7003", "redis://cosmo2:test2@localhost:7002"}
 
 				key := uuid.New().String()
 				t.Cleanup(func() {
