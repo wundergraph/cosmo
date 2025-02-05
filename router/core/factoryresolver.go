@@ -34,8 +34,7 @@ type Loader struct {
 }
 
 type FactoryResolver interface {
-	ResolveGraphqlFactory() (plan.PlannerFactory[graphql_datasource.Configuration], error)
-	ResolveGraphqlFactoryWithTimeout(time.Duration) (plan.PlannerFactory[graphql_datasource.Configuration], error)
+	ResolveGraphqlFactoryWithTimeout(timeout time.Duration) (plan.PlannerFactory[graphql_datasource.Configuration], error)
 	ResolveStaticFactory() (plan.PlannerFactory[staticdatasource.Configuration], error)
 	ResolvePubsubFactory() (plan.PlannerFactory[pubsub_datasource.Configuration], error)
 }
@@ -107,15 +106,9 @@ func NewDefaultFactoryResolver(
 		factoryLogger:      factoryLogger,
 		engineCtx:          ctx,
 		enableSingleFlight: enableSingleFlight,
-		httpClient:         defaultHttpClient,
 		streamingClient:    streamingClient,
 		subscriptionClient: subscriptionClient,
 	}
-}
-
-func (d *DefaultFactoryResolver) ResolveGraphqlFactory() (plan.PlannerFactory[graphql_datasource.Configuration], error) {
-	factory, err := graphql_datasource.NewFactory(d.engineCtx, d.httpClient, d.subscriptionClient)
-	return factory, err
 }
 
 func (d *DefaultFactoryResolver) ResolveGraphqlFactoryWithTimeout(timeout time.Duration) (plan.PlannerFactory[graphql_datasource.Configuration], error) {
@@ -213,7 +206,7 @@ func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, outpu
 	return nil
 }
 
-func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphTransportOptions *SubgraphTransportOptions, subgraphs []*nodev1.Subgraph, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, error) {
+func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, transportOptions *SubgraphTransportOptions, subgraphs []*nodev1.Subgraph, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, error) {
 	var outConfig plan.Configuration
 	// attach field usage information to the plan
 	outConfig.DefaultFlushIntervalMillis = engineConfig.DefaultFlushInterval
@@ -372,19 +365,21 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphTranspor
 				return nil, fmt.Errorf("error creating custom configuration for data source %s: %w", in.Id, err)
 			}
 
-			var factory plan.PlannerFactory[graphql_datasource.Configuration]
-
 			dataSourceName := l.subgraphName(subgraphs, in.Id)
-			if dataSourceName != "" && subgraphTransportOptions.SubgraphMap[dataSourceName] != nil {
-				factory, err = l.resolver.ResolveGraphqlFactoryWithTimeout(subgraphTransportOptions.SubgraphMap[dataSourceName].RequestTimeout)
-				if err != nil {
-					return nil, err
-				}
+
+			var timeout time.Duration
+			if dataSourceName != "" && transportOptions.SubgraphMap[dataSourceName] != nil {
+				timeout = transportOptions.SubgraphMap[dataSourceName].RequestTimeout
 			} else {
-				factory, err = l.resolver.ResolveGraphqlFactory()
-				if err != nil {
-					return nil, err
-				}
+				timeout = transportOptions.RequestTimeout
+			}
+
+			factory, err := l.resolver.ResolveGraphqlFactoryWithTimeout(timeout)
+			if err != nil {
+				return nil, err
+			}
+			if factory == nil {
+				continue
 			}
 
 			out, err = plan.NewDataSourceConfigurationWithName[graphql_datasource.Configuration](
