@@ -2,13 +2,15 @@ package integration
 
 import (
 	"bytes"
-
+	"compress/gzip"
+	"compress/zlib"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -237,6 +239,148 @@ func TestGraphQLOverHTTPCompatibility(t *testing.T) {
 			res, err := xEnv.MakeRequest("POST", "/graphql", header, bytes.NewReader(body))
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, res.StatusCode)
+		})
+	})
+
+	t.Run("requests with compression", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("valid request with Content-Encoding header and compressed payload should return 200 OK with valid response", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
+						MaxRequestBodyBytes:  5 << 20, // 5MiB
+						DecompressionEnabled: true,
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				header := http.Header{
+					"Content-Type":     []string{"application/json"},
+					"Accept":           []string{"application/json"},
+					"Content-Encoding": []string{"gzip"},
+				}
+
+				body := []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{"criteria":{"nationality":"GERMAN"}},"operationName":"Find"}`)
+
+				var builder strings.Builder
+				gzBody := gzip.NewWriter(&builder)
+				defer func() {}()
+
+				_, err := gzBody.Write(body)
+				require.NoError(t, err)
+				require.NoError(t, gzBody.Close())
+
+				res, err := xEnv.MakeRequest("POST", "/graphql", header, strings.NewReader(builder.String()))
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, res.StatusCode)
+				b, err := io.ReadAll(res.Body)
+				require.NoError(t, err)
+
+				require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, string(b))
+			})
+		})
+
+		t.Run("valid request with deflate Content-Encoding header and compression should not be supported", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
+						MaxRequestBodyBytes:  5 << 20, // 5MiB
+						DecompressionEnabled: true,
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				header := http.Header{
+					"Content-Type":     []string{"application/json"},
+					"Accept":           []string{"application/json"},
+					"Content-Encoding": []string{"deflate"},
+				}
+
+				body := []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{"criteria":{"nationality":"GERMAN"}},"operationName":"Find"}`)
+
+				var builder strings.Builder
+				w := zlib.NewWriter(&builder)
+				_, err := w.Write(body)
+				require.NoError(t, err)
+				require.NoError(t, w.Close())
+
+				res, err := xEnv.MakeRequest("POST", "/graphql", header, strings.NewReader(builder.String()))
+				require.NoError(t, err)
+				require.Equal(t, http.StatusUnsupportedMediaType, res.StatusCode)
+				b, err := io.ReadAll(res.Body)
+				require.NoError(t, err)
+				require.Contains(t, string(b), "unsupported media type")
+
+			})
+		})
+
+		t.Run("request that specifies Content-Encoding without compressed payload should return status 422", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
+						MaxRequestBodyBytes:  5 << 20, // 5MiB
+						DecompressionEnabled: true,
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				header := http.Header{
+					"Content-Type":     []string{"application/json"},
+					"Accept":           []string{"application/json"},
+					"Content-Encoding": []string{"gzip"},
+				}
+
+				body := []byte(`{"query":"query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}","variables":{"criteria":{"nationality":"GERMAN"}},"operationName":"Find"}`)
+
+				res, err := xEnv.MakeRequest("POST", "/graphql", header, bytes.NewReader(body))
+				require.NoError(t, err)
+				require.Equal(t, http.StatusUnprocessableEntity, res.StatusCode)
+				b, err := io.ReadAll(res.Body)
+				require.NoError(t, err)
+
+				require.Contains(t, string(b), "invalid gzip payload")
+			})
+		})
+
+		t.Run("valid mutation request with compression should return 200 OK with valid response", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
+						MaxRequestBodyBytes:  5 << 20, // 5MiB
+						DecompressionEnabled: true,
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				header := http.Header{
+					"Content-Type":     []string{"application/json"},
+					"Accept":           []string{"application/json"},
+					"Content-Encoding": []string{"gzip"},
+				}
+
+				body := []byte(`{"query": "mutation { updateEmployeeTag(id: 1, tag: \"test\") { id tag } }"}`)
+
+				var builder strings.Builder
+				gzBody := gzip.NewWriter(&builder)
+				defer func() {}()
+
+				_, err := gzBody.Write(body)
+				require.NoError(t, err)
+				require.NoError(t, gzBody.Close())
+
+				res, err := xEnv.MakeRequest("POST", "/graphql", header, strings.NewReader(builder.String()))
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, res.StatusCode)
+				b, err := io.ReadAll(res.Body)
+				require.NoError(t, err)
+
+				require.Equal(t, `{"data":{"updateEmployeeTag":{"id":1,"tag":"test"}}}`, string(b))
+			})
 		})
 	})
 

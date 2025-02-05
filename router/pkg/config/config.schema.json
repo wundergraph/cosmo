@@ -1243,6 +1243,11 @@
               "description": "The maximum size of the request headers. Setting this to 0 uses the default value from the http standard lib, which is 1MiB.",
               "default": "0MiB",
               "bytes": {}
+            },
+            "decompression_enabled": {
+              "type": "boolean",
+              "description": "When enabled, the router will check incoming requests for a 'Content-Encoding' header and decompress the body accordingly. Currently only gzip is supported",
+              "default": true
             }
           }
         },

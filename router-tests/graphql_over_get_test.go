@@ -9,9 +9,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/net/html"
+
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
-	"golang.org/x/net/html"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 func TestOperationsOverGET(t *testing.T) {
@@ -178,6 +180,35 @@ func TestOperationsOverGET(t *testing.T) {
 			_, err = html.Parse(httpRes.Body)
 			require.NoError(t, err)
 		})
+	})
+
+	t.Run("Should ignore compression when using GET", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
+					MaxRequestBodyBytes:  5 << 20, // 5MiB
+					DecompressionEnabled: true,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := http.Header{
+				"Content-Type":     []string{"application/json"},
+				"Accept":           []string{"application/json"},
+				"Content-Encoding": []string{"gzip"},
+			}
+
+			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+				OperationName: []byte(`Employees`),
+				Query:         `query Employees { employees { id } }`,
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+		})
+
 	})
 }
 

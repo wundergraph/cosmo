@@ -291,6 +291,8 @@ services:
       - redis-cluster-node-2
     volumes:
       - ./docker/redis/:/usr/local/etc/redis/
+    profiles:
+      - dev
 
   kafka:
     image: bitnami/kafka:3.7.0
