@@ -263,9 +263,6 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			if err != nil {
 				return nil, err
 			}
-			if factory == nil {
-				continue
-			}
 
 			out, err = plan.NewDataSourceConfiguration[staticdatasource.Configuration](
 				in.Id,
@@ -384,9 +381,6 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			if err != nil {
 				return nil, err
 			}
-			if factory == nil {
-				continue
-			}
 
 			out, err = plan.NewDataSourceConfigurationWithName[graphql_datasource.Configuration](
 				in.Id,
@@ -453,9 +447,6 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			factory, err := l.resolver.ResolvePubsubFactory()
 			if err != nil {
 				return nil, err
-			}
-			if factory == nil {
-				continue
 			}
 
 			out, err = plan.NewDataSourceConfiguration[pubsub_datasource.Configuration](
