@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
-	"time"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 
@@ -34,7 +33,7 @@ type Loader struct {
 }
 
 type FactoryResolver interface {
-	ResolveGraphqlFactoryWithTimeout(timeout time.Duration) (plan.PlannerFactory[graphql_datasource.Configuration], error)
+	ResolveGraphqlFactory(subgraphName string) (plan.PlannerFactory[graphql_datasource.Configuration], error)
 	ResolveStaticFactory() (plan.PlannerFactory[staticdatasource.Configuration], error)
 	ResolvePubsubFactory() (plan.PlannerFactory[pubsub_datasource.Configuration], error)
 }
@@ -47,6 +46,7 @@ type ApiTransportFactory interface {
 type DefaultFactoryResolver struct {
 	baseTransport    http.RoundTripper
 	transportFactory ApiTransportFactory
+	transportOptions *TransportOptions
 
 	static *staticdatasource.Factory[staticdatasource.Configuration]
 	pubsub *pubsub_datasource.Factory[pubsub_datasource.Configuration]
@@ -63,7 +63,7 @@ type DefaultFactoryResolver struct {
 
 func NewDefaultFactoryResolver(
 	ctx context.Context,
-	transportFactory ApiTransportFactory,
+	transportOptions *TransportOptions,
 	baseTransport http.RoundTripper,
 	log *zap.Logger,
 	enableSingleFlight bool,
@@ -71,10 +71,14 @@ func NewDefaultFactoryResolver(
 	natsPubSubBySourceID map[string]pubsub_datasource.NatsPubSub,
 	kafkaPubSubBySourceID map[string]pubsub_datasource.KafkaPubSub,
 ) *DefaultFactoryResolver {
+	transportFactory := NewTransport(transportOptions)
+
 	defaultHttpClient := &http.Client{
+		Timeout:   transportOptions.SubgraphTransportOptions.RequestTimeout,
 		Transport: transportFactory.RoundTripper(enableSingleFlight, baseTransport),
 	}
 	streamingClient := &http.Client{
+		Timeout:   transportOptions.SubgraphTransportOptions.RequestTimeout,
 		Transport: transportFactory.RoundTripper(enableSingleFlight, baseTransport),
 	}
 
@@ -100,25 +104,35 @@ func NewDefaultFactoryResolver(
 	return &DefaultFactoryResolver{
 		baseTransport:      baseTransport,
 		transportFactory:   transportFactory,
+		transportOptions:   transportOptions,
 		static:             &staticdatasource.Factory[staticdatasource.Configuration]{},
 		pubsub:             pubsub_datasource.NewFactory(ctx, natsPubSubBySourceID, kafkaPubSubBySourceID),
 		log:                log,
 		factoryLogger:      factoryLogger,
 		engineCtx:          ctx,
+		httpClient:         defaultHttpClient,
 		enableSingleFlight: enableSingleFlight,
 		streamingClient:    streamingClient,
 		subscriptionClient: subscriptionClient,
 	}
 }
 
-func (d *DefaultFactoryResolver) ResolveGraphqlFactoryWithTimeout(timeout time.Duration) (plan.PlannerFactory[graphql_datasource.Configuration], error) {
-	// make a new http client
-	client := &http.Client{
-		Transport: d.transportFactory.RoundTripper(d.enableSingleFlight, d.baseTransport),
-		Timeout:   timeout,
+func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (plan.PlannerFactory[graphql_datasource.Configuration], error) {
+	if subgraphName != "" && d.transportOptions.SubgraphTransportOptions.SubgraphMap[subgraphName] != nil {
+		timeout := d.transportOptions.SubgraphTransportOptions.SubgraphMap[subgraphName].RequestTimeout
+
+		// make a new http client
+		subgraphClient := &http.Client{
+			Transport: d.transportFactory.RoundTripper(d.enableSingleFlight, d.baseTransport),
+			Timeout:   timeout,
+		}
+
+		factory, err := graphql_datasource.NewFactory(d.engineCtx, subgraphClient, d.subscriptionClient)
+		return factory, err
 	}
 
-	factory, err := graphql_datasource.NewFactory(d.engineCtx, client, d.subscriptionClient)
+	factory, err := graphql_datasource.NewFactory(d.engineCtx, d.httpClient, d.subscriptionClient)
+
 	return factory, err
 }
 
@@ -206,7 +220,7 @@ func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, outpu
 	return nil
 }
 
-func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, transportOptions *SubgraphTransportOptions, subgraphs []*nodev1.Subgraph, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, error) {
+func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineConfig *RouterEngineConfiguration) (*plan.Configuration, error) {
 	var outConfig plan.Configuration
 	// attach field usage information to the plan
 	outConfig.DefaultFlushIntervalMillis = engineConfig.DefaultFlushInterval
@@ -367,14 +381,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, transportOptions
 
 			dataSourceName := l.subgraphName(subgraphs, in.Id)
 
-			var timeout time.Duration
-			if dataSourceName != "" && transportOptions.SubgraphMap[dataSourceName] != nil {
-				timeout = transportOptions.SubgraphMap[dataSourceName].RequestTimeout
-			} else {
-				timeout = transportOptions.RequestTimeout
-			}
-
-			factory, err := l.resolver.ResolveGraphqlFactoryWithTimeout(timeout)
+			factory, err := l.resolver.ResolveGraphqlFactory(dataSourceName)
 			if err != nil {
 				return nil, err
 			}

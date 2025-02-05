@@ -269,7 +269,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 
 	loader := NewLoader(b.trackUsageInfo, NewDefaultFactoryResolver(
 		ctx,
-		NewTransport(b.transportOptions),
+		b.transportOptions,
 		b.transport,
 		b.logger,
 		routerEngineCfg.Execution.EnableSingleFlight,
@@ -279,7 +279,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	))
 
 	// this generates the plan config using the data source factories from the config package
-	planConfig, err := loader.Load(engineConfig, b.transportOptions.SubgraphTransportOptions, subgraphs, routerEngineCfg)
+	planConfig, err := loader.Load(engineConfig, subgraphs, routerEngineCfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
