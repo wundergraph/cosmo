@@ -697,7 +697,7 @@ func TestRateLimit(t *testing.T) {
 					clusterUrlSlice: []string{"redis://localhost:7000", "rediss://localhost:7001", "rediss://cosmo:test@localhost:7002"},
 				},
 				{
-					name:            "should successfully work with single url",
+					name:            "should successfully work with two urls",
 					clusterUrlSlice: []string{"redis://cosmo:test@localhost:7000", "rediss://localhost:7001"},
 				},
 			}
