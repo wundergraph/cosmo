@@ -97,4 +97,68 @@ describe('BreakingChanges', () => {
       expect(schemaChanges.breakingChanges[0].changeType).toBe(SchemaChangeType.ENUM_VALUE_REMOVED);
     }
   });
+
+  test('Should cause non breaking changes on adding directives to fields', async () => {
+    const schemaA = 'type Query { hello: String! @shareable } type User { name: String! }';
+    const schemaB = 'type Query { hello: String! @shareable } type User { name: String! @shareable }';
+
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB);
+
+    expect(schemaChanges.kind).toBe('success');
+
+    if (schemaChanges.kind === 'success') {
+      expect(schemaChanges.nonBreakingChanges.length).toBe(1);
+      expect(schemaChanges.nonBreakingChanges[0].message).toBe("Directive 'shareable' was added to field 'User.name'");
+      expect(schemaChanges.nonBreakingChanges[0].path).toBe('User.name.shareable');
+      expect(schemaChanges.nonBreakingChanges[0].changeType).toBe(SchemaChangeType.DIRECTIVE_USAGE_FIELD_DEFINITION_ADDED);
+    }
+  });
+
+  test('Should cause non breaking changes on removing directives from fields', async () => {
+    const schemaA = 'type Query { hello: String! @shareable } type User { name: String! @shareable }';
+    const schemaB = 'type Query { hello: String! @shareable } type User { name: String! }';
+
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB);
+
+    expect(schemaChanges.kind).toBe('success');
+
+    if (schemaChanges.kind === 'success') {
+      expect(schemaChanges.nonBreakingChanges.length).toBe(1);
+      expect(schemaChanges.nonBreakingChanges[0].message).toBe("Directive 'shareable' was removed from field 'User.name'");
+      expect(schemaChanges.nonBreakingChanges[0].path).toBe('User.name.shareable');
+      expect(schemaChanges.nonBreakingChanges[0].changeType).toBe(SchemaChangeType.DIRECTIVE_USAGE_FIELD_DEFINITION_REMOVED);
+    }
+  });
+
+  test('Should cause non breaking changes on adding directives to objects', async () => {
+    const schemaA = 'type Query { hello: String! } type User { name: String! }';
+    const schemaB = 'type Query { hello: String! } type User @key(fields: "name") { name: String! }';
+
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB);
+
+    expect(schemaChanges.kind).toBe('success');
+
+    if (schemaChanges.kind === 'success') {
+      expect(schemaChanges.nonBreakingChanges.length).toBe(1);
+      expect(schemaChanges.nonBreakingChanges[0].message).toBe("Directive 'key' was added to object 'User'");
+      expect(schemaChanges.nonBreakingChanges[0].path).toBe('User.key');
+      expect(schemaChanges.nonBreakingChanges[0].changeType).toBe(SchemaChangeType.DIRECTIVE_USAGE_OBJECT_ADDED);
+    }
+  });
+
+  test('Should cause non breaking changes on removing directives from objects', async () => {
+    const schemaA = 'type Query { hello: String! } type User @key(fields: "name") { name: String! }';
+    const schemaB = 'type Query { hello: String! } type User { name: String! }';
+
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB);
+
+    expect(schemaChanges.kind).toBe('success');
+
+    if (schemaChanges.kind === 'success') {
+      expect(schemaChanges.nonBreakingChanges.length).toBe(1);
+      expect(schemaChanges.nonBreakingChanges[0].message).toBe("Directive 'key' was removed from object 'User'");
+      expect(schemaChanges.nonBreakingChanges[0].path).toBe('User.key');
+      expect(schemaChanges.nonBreakingChanges[0].changeType).toBe(SchemaChangeType.DIRECTIVE_USAGE_OBJECT_REMOVED);
+    }
+  });
 });

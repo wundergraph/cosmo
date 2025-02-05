@@ -3,7 +3,7 @@ package metric
 import (
 	"context"
 	"errors"
-	"github.com/dgraph-io/ristretto"
+	"github.com/dgraph-io/ristretto/v2"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"

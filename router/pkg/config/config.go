@@ -322,7 +322,7 @@ type EngineExecutionConfiguration struct {
 	EnableSingleFlight                     bool                     `envDefault:"true" env:"ENGINE_ENABLE_SINGLE_FLIGHT" yaml:"enable_single_flight"`
 	EnableRequestTracing                   bool                     `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
 	EnableExecutionPlanCacheResponseHeader bool                     `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
-	MaxConcurrentResolvers                 int                      `envDefault:"32" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
+	MaxConcurrentResolvers                 int                      `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
 	EnableNetPoll                          bool                     `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
 	WebSocketClientPollTimeout             time.Duration            `envDefault:"1s" env:"ENGINE_WEBSOCKET_CLIENT_POLL_TIMEOUT" yaml:"websocket_client_poll_timeout,omitempty"`
 	WebSocketClientConnBufferSize          int                      `envDefault:"128" env:"ENGINE_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE" yaml:"websocket_client_conn_buffer_size,omitempty"`
@@ -398,20 +398,27 @@ type OverridesConfiguration struct {
 	Subgraphs map[string]SubgraphOverridesConfiguration `yaml:"subgraphs"`
 }
 
-type AuthenticationProviderJWKS struct {
-	URL                 string        `yaml:"url"`
-	HeaderNames         []string      `yaml:"header_names"`
-	HeaderValuePrefixes []string      `yaml:"header_value_prefixes"`
-	RefreshInterval     time.Duration `yaml:"refresh_interval" envDefault:"1m"`
+type JWKSConfiguration struct {
+	URL             string        `yaml:"url"`
+	Algorithms      []string      `yaml:"algorithms"`
+	RefreshInterval time.Duration `yaml:"refresh_interval" envDefault:"1m"`
 }
 
-type AuthenticationProvider struct {
-	Name string                      `yaml:"name"`
-	JWKS *AuthenticationProviderJWKS `yaml:"jwks"`
+type HeaderSource struct {
+	Type          string   `yaml:"type"`
+	Name          string   `yaml:"name"`
+	ValuePrefixes []string `yaml:"value_prefixes"`
+}
+
+type JWTAuthenticationConfiguration struct {
+	JWKS              []JWKSConfiguration `yaml:"jwks"`
+	HeaderName        string              `yaml:"header_name" envDefault:"Authorization"`
+	HeaderValuePrefix string              `yaml:"header_value_prefix" envDefault:"Bearer"`
+	HeaderSources     []HeaderSource      `yaml:"header_sources"`
 }
 
 type AuthenticationConfiguration struct {
-	Providers []AuthenticationProvider `yaml:"providers"`
+	JWT JWTAuthenticationConfiguration `yaml:"jwt"`
 }
 
 type AuthorizationConfiguration struct {
@@ -438,8 +445,9 @@ type RateLimitErrorExtensionCode struct {
 }
 
 type RedisConfiguration struct {
-	Url       string `yaml:"url,omitempty" envDefault:"redis://localhost:6379" env:"RATE_LIMIT_REDIS_URL"`
-	KeyPrefix string `yaml:"key_prefix,omitempty" envDefault:"cosmo_rate_limit" env:"RATE_LIMIT_REDIS_KEY_PREFIX"`
+	URLs           []string `yaml:"urls,omitempty" env:"RATE_LIMIT_REDIS_URLS"`
+	ClusterEnabled bool     `yaml:"cluster_enabled,omitempty" envDefault:"false" env:"RATE_LIMIT_REDIS_CLUSTER_ENABLED"`
+	KeyPrefix      string   `yaml:"key_prefix,omitempty" envDefault:"cosmo_rate_limit" env:"RATE_LIMIT_REDIS_KEY_PREFIX"`
 }
 
 type RateLimitSimpleStrategy struct {
@@ -612,9 +620,9 @@ type SubgraphErrorPropagationConfiguration struct {
 }
 
 type StorageProviders struct {
-	S3    []S3StorageProvider   `yaml:"s3,omitempty"`
-	CDN   []BaseStorageProvider `yaml:"cdn,omitempty"`
-	Redis []BaseStorageProvider `yaml:"redis,omitempty"`
+	S3    []S3StorageProvider    `yaml:"s3,omitempty"`
+	CDN   []BaseStorageProvider  `yaml:"cdn,omitempty"`
+	Redis []RedisStorageProvider `yaml:"redis,omitempty"`
 }
 
 type PersistedOperationsStorageConfig struct {
@@ -643,8 +651,9 @@ type BaseStorageProvider struct {
 }
 
 type RedisStorageProvider struct {
-	ID  string `yaml:"id,omitempty" env:"STORAGE_PROVIDER_REDIS_ID"`
-	URL string `yaml:"url,omitempty" env:"STORAGE_PROVIDER_REDIS_URL"`
+	ID             string   `yaml:"id,omitempty" env:"STORAGE_PROVIDER_REDIS_ID"`
+	URLs           []string `yaml:"urls,omitempty" env:"STORAGE_PROVIDER_REDIS_URLS"`
+	ClusterEnabled bool     `yaml:"cluster_enabled,omitempty" envDefault:"false" env:"STORAGE_PROVIDER_REDIS_CLUSTER_ENABLED"`
 }
 
 type PersistedOperationsCDNProvider struct {

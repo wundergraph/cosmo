@@ -18,6 +18,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -83,6 +84,10 @@ var (
 	demoKafkaProviders             = []string{myKafkaProviderID}
 )
 
+func init() {
+	freeport.SetLogLevel(freeport.ERROR)
+}
+
 // Run runs the test and fails the test if an error occurs
 func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	t.Helper()
@@ -136,6 +141,16 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 		}
 	}
 
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+func RandString(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
 }
 
 func assertCacheMetrics(t testing.TB, env *Environment, expected CacheMetricsAssertion, featureFlag string) {
@@ -716,6 +731,12 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	return e, waitErr
 }
 
+func generateJwtToken() (string, error) {
+	jwtToken := jwt.New(jwt.SigningMethodHS256)
+	jwtToken.Claims = testTokenClaims()
+	return jwtToken.SignedString([]byte("hunter2"))
+}
+
 func configureRouter(listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsData *NatsData) (*core.Router, error) {
 	cfg := config.Config{
 		Graph: config.Graph{},
@@ -740,9 +761,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifyCDNConfig(&cfg.CDN)
 	}
 
-	jwtToken := jwt.New(jwt.SigningMethodHS256)
-	jwtToken.Claims = testTokenClaims()
-	graphApiToken, err := jwtToken.SignedString([]byte("hunter2"))
+	graphApiToken, err := generateJwtToken()
 	if err != nil {
 		return nil, err
 	}
@@ -1062,6 +1081,7 @@ type Environment struct {
 	routerConfigVersionMyFF string
 
 	metricReader metric.Reader
+	routerCmd    *exec.Cmd
 }
 
 func GetPubSubNameFn(prefix string) func(name string) string {
@@ -1109,9 +1129,11 @@ func (e *Environment) Shutdown() {
 	defer cancel()
 
 	// Gracefully shutdown router
-	err := e.Router.Shutdown(ctx)
-	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
-		e.t.Errorf("could not shutdown router: %s", err)
+	if e.Router != nil {
+		err := e.Router.Shutdown(ctx)
+		if err != nil && !errors.Is(err, context.DeadlineExceeded) {
+			e.t.Errorf("could not shutdown router: %s", err)
+		}
 	}
 
 	// Close all test servers
@@ -1151,6 +1173,12 @@ func (e *Environment) Shutdown() {
 	// Flush Kafka connection
 	if e.cfg.EnableKafka && e.KafkaClient != nil {
 		e.KafkaClient.Flush(ctx)
+	}
+
+	if e.routerCmd != nil {
+		if err := e.routerCmd.Process.Signal(os.Interrupt); err != nil {
+			e.t.Logf("could not interrupt router process: %s", err)
+		}
 	}
 }
 

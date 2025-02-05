@@ -52,7 +52,7 @@ func TestRateLimit(t *testing.T) {
 				core.WithRateLimitConfig(&config.RateLimitConfiguration{
 					Enabled: false,
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:1",
+						URLs:      []string{"redis://localhost:1"},
 						KeyPrefix: "non",
 					},
 				}),
@@ -86,7 +86,7 @@ func TestRateLimit(t *testing.T) {
 						RejectExceedingRequests: false,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URLs:      []string{"redis://localhost:6379"},
 						KeyPrefix: key,
 					},
 					Debug: true,
@@ -121,7 +121,7 @@ func TestRateLimit(t *testing.T) {
 						RejectExceedingRequests: false,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URLs:      []string{"redis://localhost:6379"},
 						KeyPrefix: key,
 					},
 					Debug:               true,
@@ -162,7 +162,7 @@ func TestRateLimit(t *testing.T) {
 						RejectExceedingRequests: false,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URLs:      []string{"redis://localhost:6379"},
 						KeyPrefix: key,
 					},
 					Debug:               true,
@@ -225,7 +225,7 @@ func TestRateLimit(t *testing.T) {
 						RejectExceedingRequests: false,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URLs:      []string{"redis://localhost:6379"},
 						KeyPrefix: key,
 					},
 					KeySuffixExpression: "request.header.Get('X-Forwarded-For')",
@@ -255,10 +255,14 @@ func TestRateLimit(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
+			{
+				URL:             authServer.JWKSURL(),
+				RefreshInterval: time.Second * 5,
+			},
+		})
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
 			Name:         "my-jwks-server",
-			URL:          authServer.JWKSURL(),
 			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -278,7 +282,7 @@ func TestRateLimit(t *testing.T) {
 						RejectExceedingRequests: false,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URLs:      []string{"redis://localhost:6379"},
 						KeyPrefix: key,
 					},
 					Debug:               true,
@@ -321,7 +325,7 @@ func TestRateLimit(t *testing.T) {
 						RejectExceedingRequests: false,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URLs:      []string{"redis://localhost:6379"},
 						KeyPrefix: key,
 					},
 					Debug: true,
@@ -376,7 +380,7 @@ func TestRateLimit(t *testing.T) {
 						RejectExceedingRequests: false,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URLs:      []string{"redis://localhost:6379"},
 						KeyPrefix: key,
 					},
 					Debug: true,
@@ -410,7 +414,7 @@ func TestRateLimit(t *testing.T) {
 						RejectExceedingRequests: false,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URLs:      []string{"redis://localhost:6379"},
 						KeyPrefix: key,
 					},
 					Debug: true,
@@ -445,7 +449,7 @@ func TestRateLimit(t *testing.T) {
 						RejectStatusCode:        http.StatusOK,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URLs:      []string{"redis://localhost:6379"},
 						KeyPrefix: key,
 					},
 					Debug: true,
@@ -483,7 +487,7 @@ func TestRateLimit(t *testing.T) {
 						RejectStatusCode:        http.StatusTooManyRequests,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URLs:      []string{"redis://localhost:6379"},
 						KeyPrefix: key,
 					},
 					Debug: true,
@@ -520,7 +524,7 @@ func TestRateLimit(t *testing.T) {
 						HideStatsFromResponseExtension: true,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URLs:      []string{"redis://localhost:6379"},
 						KeyPrefix: key,
 					},
 					Debug: true,
@@ -556,7 +560,7 @@ func TestRateLimit(t *testing.T) {
 						HideStatsFromResponseExtension: true,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URLs:      []string{"redis://localhost:6379"},
 						KeyPrefix: key,
 					},
 					Debug: true,
@@ -602,7 +606,7 @@ func TestRateLimit(t *testing.T) {
 						HideStatsFromResponseExtension: true,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URLs:      []string{"redis://localhost:6379"},
 						KeyPrefix: key,
 					},
 					Debug: true,
@@ -649,7 +653,7 @@ func TestRateLimit(t *testing.T) {
 						HideStatsFromResponseExtension: true,
 					},
 					Storage: config.RedisConfiguration{
-						Url:       "redis://localhost:6379",
+						URLs:      []string{"redis://localhost:6379"},
 						KeyPrefix: key,
 					},
 					Debug: true,
@@ -667,6 +671,145 @@ func TestRateLimit(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, `{"errors":[{"message":"Rate limit exceeded"}],"data":null}`, res.Body)
+		})
+	})
+	t.Run("Cluster Mode", func(t *testing.T) {
+		var (
+			clusterUrlSlice = []string{"localhost:7000", "localhost:7001", "localhost:7002"}
+			password        = "test"
+		)
+
+		t.Run("enabled - below limit", func(t *testing.T) {
+			t.Parallel()
+
+			key := uuid.New().String()
+			t.Cleanup(func() {
+				client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: clusterUrlSlice, Password: password})
+				del := client.Del(context.Background(), key)
+				require.NoError(t, del.Err())
+			})
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithRateLimitConfig(&config.RateLimitConfiguration{
+						Enabled:  true,
+						Strategy: "simple",
+						SimpleStrategy: config.RateLimitSimpleStrategy{
+							Rate:                    1,
+							Burst:                   1,
+							Period:                  time.Second * 2,
+							RejectExceedingRequests: false,
+						},
+						Storage: config.RedisConfiguration{
+							ClusterEnabled: true,
+							URLs:           clusterUrlSlice,
+							KeyPrefix:      key,
+						},
+						Debug: true,
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+					Variables: json.RawMessage(`{"n":1}`),
+				})
+				require.Equal(t, fmt.Sprintf(`{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}},"extensions":{"rateLimit":{"key":"%s","requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, key), res.Body)
+			})
+		})
+		t.Run("enabled - header key", func(t *testing.T) {
+			t.Parallel()
+
+			key := uuid.New().String()
+			t.Cleanup(func() {
+				client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: clusterUrlSlice, Password: password})
+				del := client.Del(context.Background(), fmt.Sprintf("%s:localhost", key))
+				require.NoError(t, del.Err())
+			})
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithRateLimitConfig(&config.RateLimitConfiguration{
+						Enabled:  true,
+						Strategy: "simple",
+						SimpleStrategy: config.RateLimitSimpleStrategy{
+							Rate:                    1,
+							Burst:                   1,
+							Period:                  time.Second * 2,
+							RejectExceedingRequests: false,
+						},
+						Storage: config.RedisConfiguration{
+							ClusterEnabled: true,
+							URLs:           clusterUrlSlice,
+							KeyPrefix:      key,
+						},
+						Debug:               true,
+						KeySuffixExpression: "request.header.Get('X-Forwarded-For')",
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
+					Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+					Variables: json.RawMessage(`{"n":1}`),
+				}, map[string]string{
+					"X-Forwarded-For": "localhost",
+				})
+				require.NoError(t, err)
+				require.Equal(t, fmt.Sprintf(`{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}},"extensions":{"rateLimit":{"key":"%s:localhost","requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, key), res.Body)
+			})
+		})
+		t.Run("enabled - above limit", func(t *testing.T) {
+			t.Parallel()
+
+			key := uuid.New().String()
+			t.Cleanup(func() {
+				client := redis.NewClusterClient(&redis.ClusterOptions{Addrs: clusterUrlSlice, Password: password})
+				del := client.Del(context.Background(), key)
+				require.NoError(t, del.Err())
+			})
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithRateLimitConfig(&config.RateLimitConfiguration{
+						Enabled:  true,
+						Strategy: "simple",
+						SimpleStrategy: config.RateLimitSimpleStrategy{
+							Rate:                    2,
+							Burst:                   2,
+							Period:                  time.Second * 2,
+							RejectExceedingRequests: false,
+						},
+						Storage: config.RedisConfiguration{
+							ClusterEnabled: true,
+							URLs:           clusterUrlSlice,
+							KeyPrefix:      key,
+						},
+						Debug: true,
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+					Variables: json.RawMessage(`{"n":1}`),
+				})
+				require.Equal(t, fmt.Sprintf(`{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}},"extensions":{"rateLimit":{"key":"%s","requestRate":1,"remaining":1,"retryAfterMs":1234,"resetAfterMs":1234}}}`, key), res.Body)
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+					Variables: json.RawMessage(`{"n":1}`),
+				})
+				require.Equal(t, fmt.Sprintf(`{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}},"extensions":{"rateLimit":{"key":"%s","requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, key), res.Body)
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+					Variables: json.RawMessage(`{"n":1}`),
+				})
+				require.Equal(t, fmt.Sprintf(`{"errors":[{"message":"Rate limit exceeded for Subgraph 'employees'."}],"data":{"employee":null},"extensions":{"rateLimit":{"key":"%s","requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, key), res.Body)
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+					Variables: json.RawMessage(`{"n":1}`),
+				})
+				require.Equal(t, fmt.Sprintf(`{"errors":[{"message":"Rate limit exceeded for Subgraph 'employees'."}],"data":{"employee":null},"extensions":{"rateLimit":{"key":"%s","requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, key), res.Body)
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
+					Variables: json.RawMessage(`{"n":1}`),
+				})
+				require.Equal(t, fmt.Sprintf(`{"errors":[{"message":"Rate limit exceeded for Subgraph 'employees'."}],"data":{"employee":null},"extensions":{"rateLimit":{"key":"%s","requestRate":1,"remaining":0,"retryAfterMs":1234,"resetAfterMs":1234}}}`, key), res.Body)
+			})
 		})
 	})
 }

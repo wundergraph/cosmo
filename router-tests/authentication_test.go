@@ -2,19 +2,24 @@ package integration
 
 import (
 	"bytes"
-	"go.uber.org/zap"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
+	"github.com/golang-jwt/jwt/v5"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/MicahParks/jwkset"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"go.uber.org/zap"
 )
 
 const (
@@ -599,13 +604,13 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
 
-	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{
-		Name:                jwksName,
-		URL:                 authServer.JWKSURL(),
-		HeaderNames:         []string{headerName},
-		HeaderValuePrefixes: []string{headerValuePrefix},
-		TokenDecoder:        tokenDecoder,
+		Name: jwksName,
+		HeaderSourcePrefixes: map[string][]string{
+			headerName: {headerValuePrefix},
+		},
+		TokenDecoder: tokenDecoder,
 	}
 	authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 	require.NoError(t, err)
@@ -734,23 +739,25 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(authServer2.Close)
 
-	tokenDecoder1, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer1.JWKSURL(), time.Second*5)
+	tokenDecoder1, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer1.JWKSURL(), time.Second*5)})
 	authenticator1HeaderValuePrefixes := []string{"Provider1"}
 	authenticator1, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
-		Name:                "1",
-		HeaderValuePrefixes: authenticator1HeaderValuePrefixes,
-		URL:                 authServer1.JWKSURL(),
-		TokenDecoder:        tokenDecoder1,
+		Name: "1",
+		HeaderSourcePrefixes: map[string][]string{
+			"Authorization": authenticator1HeaderValuePrefixes,
+		},
+		TokenDecoder: tokenDecoder1,
 	})
 	require.NoError(t, err)
 
-	tokenDecoder2, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer2.JWKSURL(), time.Second*5)
+	tokenDecoder2, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer2.JWKSURL(), time.Second*5)})
 	authenticator2HeaderValuePrefixes := []string{"", "Provider2"}
 	authenticator2, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
-		Name:                "2",
-		HeaderValuePrefixes: authenticator2HeaderValuePrefixes,
-		URL:                 authServer2.JWKSURL(),
-		TokenDecoder:        tokenDecoder2,
+		Name: "2",
+		HeaderSourcePrefixes: map[string][]string{
+			"Authorization": authenticator2HeaderValuePrefixes,
+		},
+		TokenDecoder: tokenDecoder2,
 	})
 	require.NoError(t, err)
 	authenticators := []authentication.Authenticator{authenticator1, authenticator2}
@@ -835,6 +842,761 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 			require.JSONEq(t, unauthorizedExpectedData, string(data))
 		})
 	})
+
+}
+
+func TestAlgorithmMismatch(t *testing.T) {
+	t.Parallel()
+
+	testSetup := func(t *testing.T, crypto jwks.Crypto) (string, []authentication.Authenticator) {
+		t.Helper()
+
+		authServer, err := jwks.NewServerWithCrypto(t, crypto)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+		require.NoError(t, err)
+
+		authOptions := authentication.HttpHeaderAuthenticatorOptions{
+			Name:         jwksName,
+			TokenDecoder: tokenDecoder,
+		}
+		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
+		require.NoError(t, err)
+
+		authenticators := []authentication.Authenticator{authenticator}
+
+		token, err := authServer.TokenForKID(crypto.KID(), nil)
+		require.NoError(t, err)
+
+		return token, authenticators
+	}
+
+	t.Run("should prevent access with invalid algorithm", func(t *testing.T) {
+		// create a crypto for RSA
+		rsaCrypto, err := jwks.NewRSACrypto("", jwkset.AlgRS256, 2048)
+		require.NoError(t, err)
+
+		// We are not using the provided token here as we want to test the algorithm mismatch
+		_, authenticators := testSetup(t, rsaCrypto)
+
+		// sign a token with an HMAC algorithm using the RSA key in PEM format
+		// Unlike RSA, HMAC is a symmetric algorithm and the key is the same for signing and verifying
+		// Therefore we can try to use the public key as the HMAC key to sign a token.
+		signer := jwt.New(jwt.SigningMethodHS256)
+
+		signer.Header[jwkset.HeaderKID] = rsaCrypto.KID()
+
+		publicKey := rsaCrypto.PrivateKey().(*rsa.PrivateKey).PublicKey
+		publicKeyPEM := &pem.Block{
+			Type:  "RSA PUBLIC KEY",
+			Bytes: x509.MarshalPKCS1PublicKey(&publicKey),
+		}
+
+		token, err := signer.SignedString(pem.EncodeToMemory(publicKeyPEM))
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operation with forged token should fail
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+		})
+	})
+
+	t.Run("Should not allow none algorithm", func(t *testing.T) {
+		t.Parallel()
+
+		rsaCrypto, err := jwks.NewRSACrypto("", jwkset.AlgRS256, 2048)
+		require.NoError(t, err)
+
+		// We will create a token with none algorithm
+		_, authenticators := testSetup(t, rsaCrypto)
+
+		token, err := jwt.New(jwt.SigningMethodNone).SignedString(jwt.UnsafeAllowNoneSignatureType)
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+		})
+	})
+}
+
+func TestMultipleKeys(t *testing.T) {
+	t.Parallel()
+
+	testAuthentication := func(t *testing.T, xEnv *testenv.Environment, token string) {
+		t.Helper()
+
+		// Operations with a token should succeed
+		header := http.Header{
+			"Authorization": []string{"Bearer " + token},
+		}
+		res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+		require.NoError(t, err)
+		defer res.Body.Close()
+		require.Equal(t, http.StatusOK, res.StatusCode)
+		require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+		data, err := io.ReadAll(res.Body)
+		require.NoError(t, err)
+		require.Equal(t, employeesExpectedData, string(data))
+
+		// Operation without a token should fail
+		res, err = xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(employeesQuery))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+	}
+
+	testSetup := func(t *testing.T, crypto ...jwks.Crypto) (map[string]string, []authentication.Authenticator) {
+		t.Helper()
+
+		authServer, err := jwks.NewServerWithCrypto(t, crypto...)
+		require.NoError(t, err)
+
+		t.Cleanup(authServer.Close)
+
+		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+		require.NoError(t, err)
+
+		authOptions := authentication.HttpHeaderAuthenticatorOptions{
+			Name:         jwksName,
+			TokenDecoder: tokenDecoder,
+		}
+		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
+		require.NoError(t, err)
+
+		authenticators := []authentication.Authenticator{authenticator}
+
+		tokens := make(map[string]string)
+
+		for _, c := range crypto {
+			token, err := authServer.TokenForKID(c.KID(), nil)
+			require.NoError(t, err)
+
+			tokens[c.KID()] = token
+		}
+
+		return tokens, authenticators
+	}
+
+	t.Run("Test with multiple asymmetric keys", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("Should succeed with multiple RSA keys", func(t *testing.T) {
+			t.Parallel()
+
+			rsa1, err := jwks.NewRSACrypto("", jwkset.AlgRS256, 2048)
+			require.NoError(t, err)
+
+			rsa2, err := jwks.NewRSACrypto("", jwkset.AlgRS512, 2048)
+			require.NoError(t, err)
+
+			tokens, authenticators := testSetup(t, rsa1, rsa2)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, true)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				for _, token := range tokens {
+					testAuthentication(t, xEnv, token)
+				}
+			})
+		})
+
+		t.Run("Should succeed with multiple ECDSA keys", func(t *testing.T) {
+			t.Parallel()
+
+			ec1, err := jwks.NewES256Crypto("")
+			require.NoError(t, err)
+
+			ec2, err := jwks.NewES384Crypto("")
+			require.NoError(t, err)
+
+			tokens, authenticators := testSetup(t, ec1, ec2)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, true)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				for _, token := range tokens {
+					testAuthentication(t, xEnv, token)
+				}
+			})
+		})
+
+		t.Run("Should succeed with RSA and ECDSA keys", func(t *testing.T) {
+			t.Parallel()
+
+			rsa, err := jwks.NewRSACrypto("", jwkset.AlgRS256, 2048)
+			require.NoError(t, err)
+
+			ec, err := jwks.NewES256Crypto("")
+			require.NoError(t, err)
+
+			tokens, authenticators := testSetup(t, rsa, ec)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, true)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				for _, token := range tokens {
+					testAuthentication(t, xEnv, token)
+				}
+			})
+		})
+	})
+
+	t.Run("Test with multiple symmetric keys", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("Should succeed with multiple HS256 keys", func(t *testing.T) {
+			t.Parallel()
+
+			hs1, err := jwks.NewHMACCrypto("", jwkset.AlgHS256)
+			require.NoError(t, err)
+
+			hs2, err := jwks.NewHMACCrypto("", jwkset.AlgHS256)
+			require.NoError(t, err)
+
+			tokens, authenticators := testSetup(t, hs1, hs2)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, true)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				for _, token := range tokens {
+					testAuthentication(t, xEnv, token)
+				}
+			})
+		})
+	})
+
+	t.Run("Test with symmetric and asymmetric keys", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("Should succeed with RSA and HS256 keys", func(t *testing.T) {
+			t.Parallel()
+
+			rsa, err := jwks.NewRSACrypto("", jwkset.AlgRS256, 2048)
+			require.NoError(t, err)
+
+			hs, err := jwks.NewHMACCrypto("", jwkset.AlgHS256)
+			require.NoError(t, err)
+
+			tokens, authenticators := testSetup(t, rsa, hs)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, true)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				for _, token := range tokens {
+					testAuthentication(t, xEnv, token)
+				}
+			})
+		})
+	})
+}
+
+func TestSupportedAlgorithms(t *testing.T) {
+	t.Parallel()
+
+	authHeader := func(token string) http.Header {
+		return http.Header{
+			"Authorization": []string{"Bearer " + token},
+		}
+	}
+
+	testRequest := func(t *testing.T, xEnv *testenv.Environment, header http.Header, expectSuccess bool) string {
+		t.Helper()
+
+		res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		if expectSuccess {
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
+		} else {
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+		}
+
+		data, err := io.ReadAll(res.Body)
+		require.NoError(t, err)
+		return string(data)
+	}
+
+	testSetup := func(t *testing.T, crypto jwks.Crypto, allowedAlgorithms ...string) (string, []authentication.Authenticator) {
+		t.Helper()
+
+		authServer, err := jwks.NewServerWithCrypto(t, crypto)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		tokenDecoder, err := authentication.NewJwksTokenDecoder(
+			NewContextWithCancel(t),
+			zap.NewNop(),
+			[]authentication.JWKSConfig{
+				toJWKSConfig(authServer.JWKSURL(), time.Second*5, allowedAlgorithms...)})
+		require.NoError(t, err)
+
+		authOptions := authentication.HttpHeaderAuthenticatorOptions{
+			Name:         jwksName,
+			TokenDecoder: tokenDecoder,
+		}
+		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
+		require.NoError(t, err)
+
+		authenticators := []authentication.Authenticator{authenticator}
+
+		token, err := authServer.TokenForKID(crypto.KID(), nil)
+		require.NoError(t, err)
+
+		return token, authenticators
+	}
+
+	t.Run("RSA Tests", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("Test authentication with RSA 256", func(t *testing.T) {
+			t.Parallel()
+
+			rsaCrypto, err := jwks.NewRSACrypto("", jwkset.AlgRS256, 2048)
+			require.NoError(t, err)
+
+			token, authenticators := testSetup(t, rsaCrypto)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, true)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
+			})
+		})
+
+		t.Run("Test authentication with RSA 384", func(t *testing.T) {
+			t.Parallel()
+
+			rsaCrypto, err := jwks.NewRSACrypto("", jwkset.AlgRS384, 2048)
+			require.NoError(t, err)
+
+			token, authenticators := testSetup(t, rsaCrypto)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, true)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
+			})
+		})
+
+		t.Run("Test authentication with RSA 512", func(t *testing.T) {
+			t.Parallel()
+
+			rsaCrypto, err := jwks.NewRSACrypto("", jwkset.AlgRS512, 2048)
+			require.NoError(t, err)
+
+			token, authenticators := testSetup(t, rsaCrypto)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, true)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
+			})
+		})
+
+		t.Run("Test authentication with RSA 256 PSS", func(t *testing.T) {
+			t.Parallel()
+
+			rsaCrypto, err := jwks.NewRSACrypto("", jwkset.AlgPS256, 2048)
+			require.NoError(t, err)
+
+			token, authenticators := testSetup(t, rsaCrypto)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, true)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
+			})
+		})
+
+		t.Run("Test authentication with RSA 384 PSS", func(t *testing.T) {
+			t.Parallel()
+
+			rsaCrypto, err := jwks.NewRSACrypto("", jwkset.AlgPS384, 2048)
+			require.NoError(t, err)
+
+			token, authenticators := testSetup(t, rsaCrypto)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, true)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
+			})
+		})
+
+		t.Run("Test authentication with RSA 512 PSS", func(t *testing.T) {
+			t.Parallel()
+
+			rsaCrypto, err := jwks.NewRSACrypto("", jwkset.AlgPS512, 2048)
+			require.NoError(t, err)
+
+			token, authenticators := testSetup(t, rsaCrypto)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, true)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
+			})
+		})
+	})
+
+	t.Run("HMAC Tests", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("Test authentication with HMAC 256", func(t *testing.T) {
+			t.Parallel()
+
+			hmac, err := jwks.NewHMACCrypto("", jwkset.AlgHS256)
+			require.NoError(t, err)
+
+			token, authenticators := testSetup(t, hmac)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, true)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
+			})
+		})
+
+		t.Run("Test authentication with HMAC 384", func(t *testing.T) {
+			t.Parallel()
+
+			hmac, err := jwks.NewHMACCrypto("", jwkset.AlgHS384)
+			require.NoError(t, err)
+
+			token, authenticators := testSetup(t, hmac)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, true)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
+			})
+		})
+
+		t.Run("Test authentication with HMAC 512", func(t *testing.T) {
+			t.Parallel()
+
+			hmac, err := jwks.NewHMACCrypto("", jwkset.AlgHS512)
+			require.NoError(t, err)
+
+			token, authenticators := testSetup(t, hmac)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, true)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
+			})
+		})
+	})
+
+	t.Run("ED25519 Tests", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("Test authentication with ED25519", func(t *testing.T) {
+			t.Parallel()
+
+			ed25519Crypto, err := jwks.NewED25519Crypto("")
+			require.NoError(t, err)
+
+			token, authenticators := testSetup(t, ed25519Crypto)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, true)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
+			})
+		})
+	})
+
+	t.Run("ECDSA Tests", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("Test authentication with ES256", func(t *testing.T) {
+			t.Parallel()
+
+			es256Crypto, err := jwks.NewES256Crypto("")
+			require.NoError(t, err)
+
+			token, authenticators := testSetup(t, es256Crypto)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, true)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
+			})
+		})
+
+		t.Run("Test authentication with ES384", func(t *testing.T) {
+			t.Parallel()
+
+			es384Crypto, err := jwks.NewES384Crypto("")
+			require.NoError(t, err)
+
+			token, authenticators := testSetup(t, es384Crypto)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, true)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
+			})
+		})
+
+		t.Run("Test authentication with ES512", func(t *testing.T) {
+			t.Parallel()
+
+			es512Crypto, err := jwks.NewES512Crypto("")
+			require.NoError(t, err)
+
+			token, authenticators := testSetup(t, es512Crypto)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, true)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				t.Run("Should succeed when providing token", func(t *testing.T) {
+					t.Parallel()
+					body := testRequest(t, xEnv, authHeader(token), true)
+					require.Equal(t, employeesExpectedData, string(body))
+
+				})
+
+				t.Run("Should fail when providing no Token", func(t *testing.T) {
+					t.Parallel()
+
+					body := testRequest(t, xEnv, nil, false)
+					require.JSONEq(t, unauthorizedExpectedData, body)
+				})
+			})
+		})
+	})
+
+	t.Run("Should not be able to add JWKS with an algorithm that was not allowed", func(t *testing.T) {
+		t.Parallel()
+
+		rsaCrypto, err := jwks.NewRSACrypto("", jwkset.AlgRS256, 2048)
+		require.NoError(t, err)
+
+		// We are adding an RSA key but only allow HMAC
+		token, authenticators := testSetup(t, rsaCrypto, jwkset.AlgHS256.String())
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should fail
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer func() { _ = res.Body.Close() }()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+		})
+	})
 }
 
 func TestAuthenticationOverWebsocket(t *testing.T) {
@@ -844,10 +1606,9 @@ func TestAuthenticationOverWebsocket(t *testing.T) {
 	require.NoError(t, err)
 	defer authServer.Close()
 
-	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
 	jwksOpts := authentication.HttpHeaderAuthenticatorOptions{
 		Name:         jwksName,
-		URL:          authServer.JWKSURL(),
 		TokenDecoder: tokenDecoder,
 	}
 
@@ -880,4 +1641,12 @@ func TestAuthenticationOverWebsocket(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, http.StatusSwitchingProtocols, res.StatusCode)
 	})
+}
+
+func toJWKSConfig(url string, refresh time.Duration, allowedAlgorithms ...string) authentication.JWKSConfig {
+	return authentication.JWKSConfig{
+		URL:               url,
+		RefreshInterval:   refresh,
+		AllowedAlgorithms: allowedAlgorithms,
+	}
 }

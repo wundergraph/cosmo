@@ -4,6 +4,54 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.170.1](https://github.com/wundergraph/cosmo/compare/router@0.170.0...router@0.170.1) (2025-02-03)
+
+### Bug Fixes
+
+* incorrect graphql endpoint in playground ([#1562](https://github.com/wundergraph/cosmo/issues/1562)) ([2e680ce](https://github.com/wundergraph/cosmo/commit/2e680ce7e6e0a584b13d3ee3aa314ab6e9a051c2)) (@thisisnithin)
+
+# [0.170.0](https://github.com/wundergraph/cosmo/compare/router@0.169.0...router@0.170.0) (2025-01-31)
+
+### Bug Fixes
+
+* error when graph token is not set when cache warmup is enabled ([#1554](https://github.com/wundergraph/cosmo/issues/1554)) ([fea311f](https://github.com/wundergraph/cosmo/commit/fea311f392879a2e0abd135dffcd68bffacb0c8c)) (@StarpTech)
+* json schema for traffic shaping subgraphs ([#1552](https://github.com/wundergraph/cosmo/issues/1552)) ([b99e0bc](https://github.com/wundergraph/cosmo/commit/b99e0bca9dc2492f6d40982fefde9b1fce55b842)) (@StarpTech)
+* subgraph timeout can't be bigger than global timeout ([#1548](https://github.com/wundergraph/cosmo/issues/1548)) ([92b69a3](https://github.com/wundergraph/cosmo/commit/92b69a39db17cd5aa6ad69537a8c50e41c9a89ed)) (@devsergiy)
+
+### Features
+
+* **router:** enable using redis clusters for rate limiting and apq ([#1499](https://github.com/wundergraph/cosmo/issues/1499)) ([7c5b3a7](https://github.com/wundergraph/cosmo/commit/7c5b3a772f1f524a1afda14ca2f62cf5a2c5a46a)) (@df-wg)
+
+# [0.169.0](https://github.com/wundergraph/cosmo/compare/router@0.168.1...router@0.169.0) (2025-01-31)
+
+### Bug Fixes
+
+* increase the test timeout value to prevent failures on slower machines ([#1547](https://github.com/wundergraph/cosmo/issues/1547)) ([b850fd7](https://github.com/wundergraph/cosmo/commit/b850fd71d1f8e8c7a2c4b5f6006ea66794901562)) (@alepane21)
+* **router:** parse accept header per rfc 9110 ([#1549](https://github.com/wundergraph/cosmo/issues/1549)) ([cbd8edc](https://github.com/wundergraph/cosmo/commit/cbd8edc74817a242381b74aad7eeb1ed9a4c29ea)) (@df-wg)
+
+### Features
+
+* **router:** enable starting the router without subgraphs ([#1533](https://github.com/wundergraph/cosmo/issues/1533)) ([806d3b4](https://github.com/wundergraph/cosmo/commit/806d3b43bba3f3b4be6bdd0a99293062c571ef52)) (@df-wg)
+
+## [0.168.1](https://github.com/wundergraph/cosmo/compare/router@0.168.0...router@0.168.1) (2025-01-30)
+
+### Bug Fixes
+
+* increase max concurrent resolvers ([#1544](https://github.com/wundergraph/cosmo/issues/1544)) ([00e2ee8](https://github.com/wundergraph/cosmo/commit/00e2ee831173eee25ecc21e4703667b22b779b4e)) (@StarpTech)
+
+# [0.168.0](https://github.com/wundergraph/cosmo/compare/router@0.167.0...router@0.168.0) (2025-01-29)
+
+### Features
+
+* add normalizedQuery to query plan and request info to trace ([#1536](https://github.com/wundergraph/cosmo/issues/1536)) ([60e3d0e](https://github.com/wundergraph/cosmo/commit/60e3d0e7d406eea103268306973425a4e4c82222)) (@alepane21)
+
+# [0.167.0](https://github.com/wundergraph/cosmo/compare/router@0.166.0...router@0.167.0) (2025-01-27)
+
+### Features
+
+* also add handshake for static execution configs ([#1535](https://github.com/wundergraph/cosmo/issues/1535)) ([f3f8fef](https://github.com/wundergraph/cosmo/commit/f3f8fef1d605fa1f3c6ac0a6bf6e7667ee8ec900)) (@Aenimus)
+* **router:** add interface for trace propagation ([#1526](https://github.com/wundergraph/cosmo/issues/1526)) ([90005c5](https://github.com/wundergraph/cosmo/commit/90005c52e6d38096a9a6a6350c9c8c492eefe5b8)) (@Noroth)
+
 # [0.166.0](https://github.com/wundergraph/cosmo/compare/router@0.165.1...router@0.166.0) (2025-01-24)
 
 ### Features

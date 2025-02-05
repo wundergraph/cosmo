@@ -17,7 +17,7 @@ import (
 	"github.com/klauspost/compress/gzip"
 
 	"github.com/cloudflare/backoff"
-	"github.com/dgraph-io/ristretto"
+	"github.com/dgraph-io/ristretto/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
@@ -781,8 +781,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			otelhttp.WithTracerProvider(s.tracerProvider),
 		}
 
-		if s.tracePropagators != nil {
-			middlewareOptions = append(middlewareOptions, otelhttp.WithPropagators(s.tracePropagators))
+		if s.compositePropagator != nil {
+			middlewareOptions = append(middlewareOptions, otelhttp.WithPropagators(s.compositePropagator))
 		}
 
 		traceHandler := rtrace.NewMiddleware(
@@ -879,7 +879,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				},
 			},
 			TracerProvider:                s.tracerProvider,
-			TracePropagators:              s.tracePropagators,
+			TracePropagators:              s.compositePropagator,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
 		},
@@ -919,6 +919,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
 	if s.Config.cacheWarmup != nil && s.Config.cacheWarmup.Enabled {
+
+		if s.graphApiToken == "" {
+			return nil, fmt.Errorf("graph token is required for cache warmup in order to communicate with the CDN")
+		}
+
 		processor := NewCacheWarmupPlanningProcessor(&CacheWarmupPlanningProcessorOptions{
 			OperationProcessor: operationProcessor,
 			OperationPlanner:   operationPlanner,

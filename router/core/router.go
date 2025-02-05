@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 	"net"
 	"net/http"
 	"net/url"
@@ -16,7 +17,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
-	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -196,7 +196,7 @@ type (
 		fileUploadConfig                *config.FileUpload
 		accessController                *AccessController
 		retryOptions                    retrytransport.RetryOptions
-		redisClient                     *redis.Client
+		redisClient                     rd.RDCloser
 		processStartTime                time.Time
 		developmentMode                 bool
 		healthcheck                     health.Checker
@@ -206,7 +206,8 @@ type (
 		tlsServerConfig               *tls.Config
 		tlsConfig                     *TlsConfig
 		telemetryAttributes           []config.CustomAttribute
-		tracePropagators              propagation.TextMapPropagator
+		tracePropagators              []propagation.TextMapPropagator
+		compositePropagator           propagation.TextMapPropagator
 		// Poller
 		configPoller                 configpoller.ConfigPoller
 		selfRegister                 selfregister.SelfRegister
@@ -442,16 +443,10 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	if r.traceConfig.Enabled {
 		if len(r.traceConfig.Propagators) > 0 {
-			propagators, err := rtrace.NewCompositePropagator(r.traceConfig.Propagators...)
+			propagators, err := rtrace.BuildPropagators(r.traceConfig.Propagators...)
 			if err != nil {
 				r.logger.Error("creating propagators", zap.Error(err))
 				return nil, err
-			}
-
-			// Don't set it globally when we use the router in tests.
-			// In practice, setting it globally only makes sense for module development.
-			if r.traceConfig.TestMemoryExporter == nil {
-				otel.SetTextMapPropagator(propagators)
 			}
 
 			r.tracePropagators = propagators
@@ -674,6 +669,13 @@ func (r *Router) initModules(ctx context.Context) error {
 			r.postOriginHandlers = append(r.postOriginHandlers, handler.OnOriginResponse)
 		}
 
+		if handler, ok := moduleInstance.(TracePropagationProvider); ok {
+			modulePropagators := handler.TracePropagators()
+			if len(modulePropagators) > 0 {
+				r.tracePropagators = append(r.tracePropagators, modulePropagators...)
+			}
+		}
+
 		r.modules = append(r.modules, moduleInstance)
 
 		r.logger.Info("Module registered",
@@ -838,12 +840,16 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
-		options, err := redis.ParseURL(r.Config.rateLimit.Storage.Url)
+		var err error
+		r.redisClient, err = rd.NewRedisCloser(&rd.RedisCloserOptions{
+			URLs:           r.Config.rateLimit.Storage.URLs,
+			ClusterEnabled: r.Config.rateLimit.Storage.ClusterEnabled,
+			Logger:         r.logger,
+		})
 		if err != nil {
-			return fmt.Errorf("failed to parse the redis connection url: %w", err)
+			return fmt.Errorf("failed to create redis client: %w", err)
 		}
 
-		r.redisClient = redis.NewClient(options)
 	}
 
 	if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
@@ -863,6 +869,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.playgroundHandler = graphiql.NewPlayground(&graphiql.PlaygroundOptions{
 			Html:             graphiql.PlaygroundHTML(),
 			GraphqlURL:       r.graphqlWebURL,
+			PlaygroundPath:   r.playgroundPath,
 			ConcurrencyLimit: int64(r.playgroundConfig.ConcurrencyLimit),
 		})
 	}
@@ -884,6 +891,16 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		return fmt.Errorf("failed to init user modules: %w", err)
 	}
 
+	if r.traceConfig.Enabled && len(r.tracePropagators) > 0 {
+		r.compositePropagator = propagation.NewCompositeTextMapPropagator(r.tracePropagators...)
+
+		// Don't set it globally when we use the router in tests.
+		// In practice, setting it globally only makes sense for module development.
+		if r.traceConfig.TestMemoryExporter == nil {
+			otel.SetTextMapPropagator(r.compositePropagator)
+		}
+	}
+
 	return nil
 }
 
@@ -891,7 +908,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 func (r *Router) buildClients() error {
 	s3Providers := map[string]config.S3StorageProvider{}
 	cdnProviders := map[string]config.BaseStorageProvider{}
-	redisProviders := map[string]config.BaseStorageProvider{}
+	redisProviders := map[string]config.RedisStorageProvider{}
 
 	for _, provider := range r.storageProviders.S3 {
 		if _, ok := s3Providers[provider.ID]; ok {

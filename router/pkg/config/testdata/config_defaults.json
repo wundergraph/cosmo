@@ -180,7 +180,12 @@
   "GraphQLPath": "/graphql",
   "PlaygroundPath": "/",
   "Authentication": {
-    "Providers": null
+    "JWT": {
+      "JWKS": null,
+      "HeaderName": "Authorization",
+      "HeaderValuePrefix": "Bearer",
+      "HeaderSources": null
+    }
   },
   "Authorization": {
     "RequireAuthentication": false,
@@ -198,7 +203,8 @@
       "HideStatsFromResponseExtension": false
     },
     "Storage": {
-      "Url": "redis://localhost:6379",
+      "URLs": null,
+      "ClusterEnabled": false,
       "KeyPrefix": "cosmo_rate_limit"
     },
     "Debug": false,
@@ -276,7 +282,7 @@
     "EnableSingleFlight": true,
     "EnableRequestTracing": true,
     "EnableExecutionPlanCacheResponseHeader": false,
-    "MaxConcurrentResolvers": 32,
+    "MaxConcurrentResolvers": 1024,
     "EnableNetPoll": true,
     "WebSocketClientPollTimeout": 1000000000,
     "WebSocketClientConnBufferSize": 128,
