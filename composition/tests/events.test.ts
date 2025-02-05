@@ -2,8 +2,14 @@ import { describe, expect, test } from 'vitest';
 import {
   allExternalFieldInstancesError,
   ConfigurationData,
+  DEFAULT_EDFS_PROVIDER_ID,
   duplicateDirectiveArgumentDefinitionsErrorMessage,
+  EDFS_NATS_PUBLISH,
+  EDFS_NATS_REQUEST,
+  EDFS_NATS_SUBSCRIBE,
   federateSubgraphs,
+  FIRST_ORDINAL,
+  invalidArgumentValueErrorMessage,
   invalidDirectiveError,
   invalidEventDirectiveError,
   invalidEventDrivenGraphError,
@@ -23,22 +29,16 @@ import {
   normalizeSubgraphFromString,
   OBJECT,
   parse,
+  PROVIDER_ID,
+  PROVIDER_TYPE_KAFKA,
+  PROVIDER_TYPE_NATS,
   Subgraph,
   subgraphValidationError,
+  SUBJECTS,
   undefinedEventSubjectsArgumentErrorMessage,
   undefinedRequiredArgumentsErrorMessage,
   unexpectedDirectiveArgumentErrorMessage,
 } from '../src';
-import {
-  DEFAULT_EDFS_PROVIDER_ID,
-  EDFS_NATS_PUBLISH,
-  EDFS_NATS_REQUEST,
-  EDFS_NATS_SUBSCRIBE,
-  PROVIDER_ID,
-  PROVIDER_TYPE_KAFKA,
-  PROVIDER_TYPE_NATS,
-  SUBJECTS,
-} from '../src/utils/string-constants';
 import {
   normalizeString,
   schemaToSortedNormalizedString,
@@ -50,7 +50,7 @@ import {
 describe('events Configuration tests', () => {
   describe('Normalization tests', () => {
     test('that events configuration is correctly generated', () => {
-      const { errors, normalizationResult } = normalizeSubgraphFromString(subgraphStringA);
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphA.definitions, subgraphA.name);
       expect(errors).toBeUndefined();
       expect(normalizationResult).toBeDefined();
       expect(normalizationResult!.configurationDataByTypeName).toStrictEqual(
@@ -294,28 +294,20 @@ describe('events Configuration tests', () => {
     test('that errors are returned if an event directive is invalid #1', () => {
       const { errors } = normalizeSubgraph(subgraphN.definitions, subgraphN.name);
       expect(errors).toBeDefined();
-      expect(errors).toHaveLength(3);
-      const directiveName = 'edfs__natsSubscribe';
+      expect(errors).toHaveLength(2);
       const rootFieldPath = 'Subscription.entitySubscription';
       expect(errors![0]).toStrictEqual(
-        invalidDirectiveError(directiveName, rootFieldPath, [
-          duplicateDirectiveArgumentDefinitionsErrorMessage(directiveName, rootFieldPath, [SUBJECTS, PROVIDER_ID]),
-          unexpectedDirectiveArgumentErrorMessage(directiveName, ['unknownArgument']),
-        ]),
-      );
-      expect(errors![1]).toStrictEqual(
-        invalidEventDirectiveError(directiveName, rootFieldPath, [
+        invalidEventDirectiveError(EDFS_NATS_SUBSCRIBE, rootFieldPath, [
           invalidEventSubjectsItemErrorMessage(SUBJECTS),
           invalidEventProviderIdErrorMessage,
         ]),
       );
-      expect(errors![2]).toStrictEqual(
-        invalidEventDrivenGraphError([
-          invalidRootTypeFieldEventsDirectivesErrorMessage(
-            new Map<string, InvalidRootTypeFieldEventsDirectiveData>([
-              [rootFieldPath, { definesDirectives: false, invalidDirectiveNames: [] }],
-            ]),
-          ),
+      expect(errors![1]).toStrictEqual(
+        invalidDirectiveError(EDFS_NATS_SUBSCRIBE, rootFieldPath, FIRST_ORDINAL, [
+          invalidArgumentValueErrorMessage('[1]', `@${EDFS_NATS_SUBSCRIBE}`, SUBJECTS, '[String!]!'),
+          invalidArgumentValueErrorMessage('false', `@${EDFS_NATS_SUBSCRIBE}`, PROVIDER_ID, 'String!'),
+          duplicateDirectiveArgumentDefinitionsErrorMessage([SUBJECTS, PROVIDER_ID]),
+          unexpectedDirectiveArgumentErrorMessage(EDFS_NATS_SUBSCRIBE, ['unknownArgument']),
         ]),
       );
     });
@@ -323,21 +315,12 @@ describe('events Configuration tests', () => {
     test('that errors are returned if an event directive is invalid #2', () => {
       const { errors } = normalizeSubgraph(subgraphR.definitions, subgraphR.name);
       expect(errors).toBeDefined();
-      expect(errors).toHaveLength(2);
+      expect(errors).toHaveLength(1);
       const directiveName = 'edfs__natsSubscribe';
       const rootFieldPath = 'Subscription.entitySubscription';
       expect(errors![0]).toStrictEqual(
-        invalidDirectiveError(directiveName, rootFieldPath, [
-          undefinedRequiredArgumentsErrorMessage(directiveName, rootFieldPath, ['subjects'], []),
-        ]),
-      );
-      expect(errors![1]).toStrictEqual(
-        invalidEventDrivenGraphError([
-          invalidRootTypeFieldEventsDirectivesErrorMessage(
-            new Map<string, InvalidRootTypeFieldEventsDirectiveData>([
-              [rootFieldPath, { definesDirectives: false, invalidDirectiveNames: [] }],
-            ]),
-          ),
+        invalidDirectiveError(directiveName, rootFieldPath, FIRST_ORDINAL, [
+          undefinedRequiredArgumentsErrorMessage(directiveName, ['subjects'], []),
         ]),
       );
     });
@@ -954,34 +937,38 @@ describe('events Configuration tests', () => {
   });
 });
 
-const subgraphStringA = `
-  type Query {
-    findEntity(id: ID!): Entity! @edfs__natsRequest(subject: "findEntity.{{ args.id }}")
-  }
-
-  type edfs__PublishResult {
-   success: Boolean!
-  }
+const subgraphA: Subgraph = {
+  name: 'subgraph-a',
+  url: '',
+  definitions: parse(`
+    type Query {
+      findEntity(id: ID!): Entity! @edfs__natsRequest(subject: "findEntity.{{ args.id }}")
+    }
   
-  type Mutation {
-    updateEntity(id: ID!, name: String!): edfs__PublishResult! @edfs__natsPublish(subject: "updateEntity.{{ args.id }}")
-  }
-
-  type Subscription {
-    entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"], providerId: "my-provider")
-    entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__natsSubscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], providerId: "double", streamConfiguration: {consumerName: "consumer", streamName: "streamName", consumerInactiveThreshold: 300})
-  }
+    type edfs__PublishResult {
+     success: Boolean!
+    }
+    
+    type Mutation {
+      updateEntity(id: ID!, name: String!): edfs__PublishResult! @edfs__natsPublish(subject: "updateEntity.{{ args.id }}")
+    }
   
-  type Entity @key(fields: "id", resolvable: false) {
-    id: ID! @external
-  }
-  
-  input edfs__NatsStreamConfiguration {
-    consumerInactiveThreshold: Int! = 30
-    consumerName: String!
-    streamName: String!
-  }
-`;
+    type Subscription {
+      entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"], providerId: "my-provider")
+      entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__natsSubscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], providerId: "double", streamConfiguration: {consumerName: "consumer", streamName: "streamName", consumerInactiveThreshold: 300})
+    }
+    
+    type Entity @key(fields: "id", resolvable: false) {
+      id: ID! @external
+    }
+    
+    input edfs__NatsStreamConfiguration {
+      consumerInactiveThreshold: Int! = 30
+      consumerName: String!
+      streamName: String!
+    }
+  `),
+};
 
 const subgraphStringB = `
   schema {
