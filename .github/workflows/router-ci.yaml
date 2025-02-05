@@ -159,13 +159,23 @@ jobs:
       - name: Setup Redis Cluster (for Cluster tests)
         uses: vishnudxb/redis-cluster@1.0.9
         with:
-          master1-port: 7000
-          master2-port: 7001
-          master3-port: 7002
-          slave1-port: 7003
-          slave2-port: 7004
-          slave3-port: 7005
+          master1-port: 7001
+          master2-port: 7002
+          master3-port: 7003
+          slave1-port: 7004
+          slave2-port: 7005
+          slave3-port: 7006
           sleep-duration: 5
+      - name: Configure Redis Authentication & ACL
+        run: |
+          sudo apt-get install -y redis-tools
+          docker ps -a
+          # Set a password for each master node
+          for port in 7001 7002 7003; do
+            redis-cli -h 127.0.0.1 -p $port ACL SETUSER cosmo on ">test" "~*" "+@all"
+            redis-cli -u "redis://cosmo:test@127.0.0.1:$port" ping
+            echo "ACL user 'cosmo' created with full access on port $port"
+          done
       - name: Run Integration tests
         working-directory: ./router-tests
         run: make test test_params="-run '^Test[^(Flaky)]' --timeout=5m --parallel 10"

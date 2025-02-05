@@ -108,6 +108,15 @@ func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	}
 }
 
+// FailsOnStartup runs the test and ensures that the router fails during bootstrapping
+func FailsOnStartup(t *testing.T, cfg *Config, f func(t *testing.T, err error)) {
+	t.Helper()
+	env, err := createTestEnv(t, cfg)
+	require.Error(t, err)
+	require.Nil(t, env)
+	f(t, err)
+}
+
 // RunWithError runs the test but returns an error instead of failing the test
 // Useful when you want to assert errors during router bootstrapping
 func RunWithError(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) error {
