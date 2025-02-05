@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -31,6 +32,126 @@ func TestTimeouts(t *testing.T) {
 		id
 	  }
 	}`
+
+	// Make sure `bytes` in the test is equal to this
+	// 50000 was sufficiently large in testing to consistently produce an error
+	// but its a race, so it might not always fail
+	const queryLongResponse = `{
+	  longResponse(artificialDelay:0, bytes:50000)
+	}`
+
+	t.Run("very long response should not fail", func(t *testing.T) {
+		t.Parallel()
+
+		trafficConfig := config.TrafficShapingRules{
+			All: config.GlobalSubgraphRequestRule{
+				RequestTimeout: 500 * time.Millisecond,
+			},
+			Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
+				"test1": {
+					ResponseHeaderTimeout: 100 * time.Millisecond,
+				},
+			},
+		}
+
+		bytes := 50000
+
+		b := make([]byte, bytes)
+		for i := 0; i < bytes; i++ {
+			b[i] = 'a'
+		}
+
+		expectedResponse := string(b)
+
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				Test1: testenv.SubgraphConfig{},
+			},
+			RouterOptions: []core.Option{
+				core.WithSubgraphTransportOptions(
+					core.NewSubgraphTransportOptions(trafficConfig)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: queryLongResponse,
+			})
+			require.Equal(t, fmt.Sprintf(`{"data":{"longResponse":"%s"}}`, expectedResponse), res.Body)
+		})
+	})
+
+	t.Run("Global timeouts", func(t *testing.T) {
+		t.Parallel()
+
+		subgraphSleep := func(hobbies, employees time.Duration) testenv.SubgraphsConfig {
+			return testenv.SubgraphsConfig{
+				Hobbies: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							time.Sleep(hobbies)
+							handler.ServeHTTP(w, r)
+						})
+					},
+				},
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							time.Sleep(employees) // Slow response
+							handler.ServeHTTP(w, r)
+						})
+					},
+				},
+			}
+		}
+
+		trafficConfig := config.TrafficShapingRules{
+			All: config.GlobalSubgraphRequestRule{
+				RequestTimeout: 200 * time.Millisecond,
+			},
+		}
+		t.Run("no timeout below global timeout value", func(t *testing.T) {
+			t.Parallel()
+
+			delay := 100 * time.Millisecond // 100ms is lower than the global 200ms timeout
+
+			testenv.Run(t, &testenv.Config{
+				Subgraphs: subgraphSleep(delay, 0),
+				RouterOptions: []core.Option{
+					core.WithSubgraphTransportOptions(
+						core.NewSubgraphTransportOptions(trafficConfig)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+
+				// It can also result in invalid JSON, but we don't care about that here
+				require.NotContains(t, res.Body, "Failed to fetch from Subgraph 'hobbies'")
+
+				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+			})
+		})
+
+		t.Run("timeout above global timeout value", func(t *testing.T) {
+			t.Parallel()
+
+			delay := 500 * time.Millisecond // 500ms is bigger than the global 200ms timeout
+
+			testenv.Run(t, &testenv.Config{
+				Subgraphs: subgraphSleep(delay, 0),
+				RouterOptions: []core.Option{
+					core.WithSubgraphTransportOptions(
+						core.NewSubgraphTransportOptions(trafficConfig)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+
+				// It can also result in invalid JSON, but we don't care about that here
+				require.Contains(t, res.Body, "Failed to fetch from Subgraph 'hobbies'")
+			})
+		})
+	})
 
 	t.Run("Per subgraph timeouts", func(t *testing.T) {
 		t.Parallel()
@@ -64,9 +185,11 @@ func TestTimeouts(t *testing.T) {
 				"hobbies": {
 					RequestTimeout: 300 * time.Millisecond,
 				},
+				"test1": {
+					RequestTimeout: 500 * time.Millisecond,
+				},
 			},
 		}
-
 		t.Run("no timeout on hobbies subgraph", func(t *testing.T) {
 			t.Parallel()
 
