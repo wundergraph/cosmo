@@ -32,7 +32,7 @@ import {
   EXECUTION,
   EXTENDS,
   EXTERNAL,
-  FG_DESCRIPTION_OVERRIDE,
+  DESCRIPTION_OVERRIDE,
   FIELD_DEFINITION_UPPER,
   FIELD_PATH,
   FIELD_SET_SCALAR,
@@ -56,7 +56,7 @@ import {
   OBJECT_UPPER,
   OR_UPPER,
   OVERRIDE,
-  PROPAGATE_TO_FG,
+  PROPAGATE,
   PROVIDER_ID,
   PROVIDES,
   REASON,
@@ -830,8 +830,8 @@ export const EDFS_NATS_STREAM_CONFIGURATION_DEFINITION: MutableInputObjectNode =
 
 /*
  * directive @openfed__configureDescription {
- *   propagateToFederatedGraph: Boolean! = true
- *   federatedGraphDescriptionOverride: String
+ *   propagate: Boolean! = true
+ *   descriptionOverride: String
  * } on ARGUMENT_DEFINITION | FIELD_DEFINITION | INPUT_OBJECT | INPUT_FIELD_DEFINITION | ENUM | ENUM_VALUE |
  * INTERFACE | OBJECT | SCALAR | SCHEMA | UNION
  * */
@@ -840,7 +840,7 @@ export const CONFIGURE_DESCRIPTION_DEFINITION: MutableDirectiveDefinitionNode = 
     {
       directives: [],
       kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode(PROPAGATE_TO_FG),
+      name: stringToNameNode(PROPAGATE),
       type: {
         kind: Kind.NON_NULL_TYPE,
         type: stringToNamedTypeNode(BOOLEAN_SCALAR),
@@ -853,7 +853,7 @@ export const CONFIGURE_DESCRIPTION_DEFINITION: MutableDirectiveDefinitionNode = 
     {
       directives: [],
       kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode(FG_DESCRIPTION_OVERRIDE),
+      name: stringToNameNode(DESCRIPTION_OVERRIDE),
       type: stringToNamedTypeNode(STRING_SCALAR),
     },
   ],
@@ -877,7 +877,7 @@ export const CONFIGURE_DESCRIPTION_DEFINITION: MutableDirectiveDefinitionNode = 
 
 /*
  * directive @openfed__configureChildDescriptions {
- *   propagateToFederatedGraph: Boolean! = true
+ *   propagate: Boolean! = true
  * } on ENUM | INPUT_OBJECT | INTERFACE | OBJECT
  */
 export const CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION: MutableDirectiveDefinitionNode = {
@@ -885,7 +885,7 @@ export const CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION: MutableDirectiveDefinition
     {
       directives: [],
       kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode(PROPAGATE_TO_FG),
+      name: stringToNameNode(PROPAGATE),
       type: {
         kind: Kind.NON_NULL_TYPE,
         type: stringToNamedTypeNode(BOOLEAN_SCALAR),

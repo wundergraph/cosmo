@@ -285,8 +285,8 @@ export function setLongestDescription(existingData: DefinitionData, incomingData
   }
   if ('configureDescriptionDataBySubgraphName' in incomingData) {
     // There should be only be an incoming value for a single subgraph
-    for (const { propagateToFederatedGraph } of incomingData.configureDescriptionDataBySubgraphName.values()) {
-      if (!propagateToFederatedGraph) {
+    for (const { propagate } of incomingData.configureDescriptionDataBySubgraphName.values()) {
+      if (!propagate) {
         return;
       }
     }

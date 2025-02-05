@@ -29,7 +29,7 @@ export type ArgumentData = {
 };
 
 export type ConfigureDescriptionData = {
-  propagateToFederatedGraph: boolean;
+  propagate: boolean;
   description: string;
 };
 

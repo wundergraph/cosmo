@@ -1590,16 +1590,16 @@ export function invalidExternalDirectiveError(fieldCoords: string): Error {
 export function configureDescriptionNoDescriptionError(typeString: string, typeName: string): Error {
   return new Error(
     `The "@openfed__configureDescription" directive defined on ${typeString} "${typeName}" is invalid` +
-      ` because neither a description nor the "federatedGraphDescriptionOverride" argument is defined.`,
+      ` because neither a description nor the "descriptionOverride" argument is defined.`,
   );
 }
 
 export function configureDescriptionPropagationError(coords: string, subgraphNames: Array<string>): Error {
   return new Error(
-    `The coordinates "${coords}" declare "@openfed__configureDescription(propagateToFederatedGraph: true)" in the following subgraphs:\n "` +
+    `The coordinates "${coords}" declare "@openfed__configureDescription(propagate: true)" in the following subgraphs:\n "` +
       subgraphNames.join(QUOTATION_JOIN) +
       '"\n' +
-      `A federated graph only supports a single description; consequently, only one subgraph may define argument "propagateToFederatedGraph" as true (this is the default value).`,
+      `A federated graph only supports a single description; consequently, only one subgraph may define argument "propagate" as true (this is the default value).`,
   );
 }
 

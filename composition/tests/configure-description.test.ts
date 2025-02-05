@@ -7,14 +7,14 @@ import {
   duplicateDirectiveArgumentDefinitionsErrorMessage,
   ENUM,
   federateSubgraphs,
-  FG_DESCRIPTION_OVERRIDE,
+  DESCRIPTION_OVERRIDE,
   FIRST_ORDINAL,
   INTERFACE,
   invalidArgumentValueErrorMessage,
   invalidDirectiveError,
   invalidRepeatedDirectiveErrorMessage,
   normalizeSubgraph,
-  PROPAGATE_TO_FG,
+  PROPAGATE,
   QUERY,
   SCALAR,
   STRING_SCALAR,
@@ -49,7 +49,7 @@ describe('@openfed__configureDescription tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidDirectiveError(CONFIGURE_DESCRIPTION, 'Query', FIRST_ORDINAL, [
-          duplicateDirectiveArgumentDefinitionsErrorMessage([PROPAGATE_TO_FG]),
+          duplicateDirectiveArgumentDefinitionsErrorMessage([PROPAGATE]),
         ]),
       );
     });
@@ -61,24 +61,24 @@ describe('@openfed__configureDescription tests', () => {
       expect(errors![0]).toStrictEqual(configureDescriptionNoDescriptionError('Object', 'Query'));
     });
 
-    test('that an error is returned if propagateToFederatedGraph receives a non-boolean value', () => {
+    test('that an error is returned if propagate receives a non-boolean value', () => {
       const { errors } = normalizeSubgraph(nd.definitions, nd.name);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidDirectiveError(CONFIGURE_DESCRIPTION, 'Query', FIRST_ORDINAL, [
-          invalidArgumentValueErrorMessage('1', `@${CONFIGURE_DESCRIPTION}`, PROPAGATE_TO_FG, 'Boolean!'),
+          invalidArgumentValueErrorMessage('1', `@${CONFIGURE_DESCRIPTION}`, PROPAGATE, 'Boolean!'),
         ]),
       );
     });
 
-    test('that an error is returned if federatedGraphDescriptionOverride receives a non-string value', () => {
+    test('that an error is returned if descriptionOverride receives a non-string value', () => {
       const { errors } = normalizeSubgraph(ne.definitions, ne.name);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidDirectiveError(CONFIGURE_DESCRIPTION, 'Query', FIRST_ORDINAL, [
-          invalidArgumentValueErrorMessage('1', `@${CONFIGURE_DESCRIPTION}`, FG_DESCRIPTION_OVERRIDE, STRING_SCALAR),
+          invalidArgumentValueErrorMessage('1', `@${CONFIGURE_DESCRIPTION}`, DESCRIPTION_OVERRIDE, STRING_SCALAR),
         ]),
       );
     });
@@ -94,7 +94,7 @@ describe('@openfed__configureDescription tests', () => {
           """
           nf.Query
           """
-          type Query @openfed__configureDescription(federatedGraphDescriptionOverride: "nf.Query override") {
+          type Query @openfed__configureDescription(descriptionOverride: "nf.Query override") {
             dummy: String!
           }
 
@@ -104,14 +104,14 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that an error is returned if propagateToFederatedGraph is true and no description nor override value is defined #1', () => {
+    test('that an error is returned if propagate is true and no description nor override value is defined #1', () => {
       const { errors } = normalizeSubgraph(ng.definitions, ng.name);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(configureDescriptionNoDescriptionError('Object', 'Query'));
     });
 
-    test('that an error is returned if propagateToFederatedGraph is false and no description nor override value is defined #1', () => {
+    test('that an error is returned if propagate is false and no description nor override value is defined #1', () => {
       const { errors } = normalizeSubgraph(nh.definitions, nh.name);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(1);
@@ -201,7 +201,7 @@ describe('@openfed__configureDescription tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    test('that an Object description with propagateToFederatedGraph: false is not propagated', () => {
+    test('that an Object description with propagate: false is not propagated', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([faa, faf]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -225,7 +225,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that an Object instance with no description and another with propagateToFederatedGraph: false results in no description', () => {
+    test('that an Object instance with no description and another with propagate: false results in no description', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([faf, fag]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -246,7 +246,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that all Object instances with no description or propagateToFederatedGraph: false results in no description', () => {
+    test('that all Object instances with no description or propagate: false results in no description', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([faf, fah]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -359,7 +359,7 @@ describe('@openfed__configureDescription tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    test('that an Interface description with propagateToFederatedGraph: false is not propagated', () => {
+    test('that an Interface description with propagate: false is not propagated', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fba, fbf]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -387,7 +387,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that an Interface instance with no description and another with propagateToFederatedGraph: false results in no description', () => {
+    test('that an Interface instance with no description and another with propagate: false results in no description', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fbf, fbg]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -410,7 +410,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that all Interface instances with no description or propagateToFederatedGraph: false results in no description', () => {
+    test('that all Interface instances with no description or propagate: false results in no description', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fbf, fbh]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -525,7 +525,7 @@ describe('@openfed__configureDescription tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    test('that an Enum description with propagateToFederatedGraph: false is not propagated', () => {
+    test('that an Enum description with propagate: false is not propagated', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fca, fcf]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -553,7 +553,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that an Enum instance with no description and another with propagateToFederatedGraph: false results in no description', () => {
+    test('that an Enum instance with no description and another with propagate: false results in no description', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fcf, fcg]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -576,7 +576,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that all Enum instances with no description or propagateToFederatedGraph: false results in no description', () => {
+    test('that all Enum instances with no description or propagate: false results in no description', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fcf, fch]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -691,7 +691,7 @@ describe('@openfed__configureDescription tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    test('that an Input Object description with propagateToFederatedGraph: false is not propagated', () => {
+    test('that an Input Object description with propagate: false is not propagated', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fda, fdf]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -719,7 +719,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that an Input Object instance with no description and another with propagateToFederatedGraph: false results in no description', () => {
+    test('that an Input Object instance with no description and another with propagate: false results in no description', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fdf, fdg]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -742,7 +742,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that all Input Object instances with no description or propagateToFederatedGraph: false results in no description', () => {
+    test('that all Input Object instances with no description or propagate: false results in no description', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fdf, fdh]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -842,7 +842,7 @@ describe('@openfed__configureDescription tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    test('that a Scalar description with propagateToFederatedGraph: false is not propagated', () => {
+    test('that a Scalar description with propagate: false is not propagated', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fea, fef]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -865,7 +865,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that a Scalar instance with no description and another with propagateToFederatedGraph: false results in no description', () => {
+    test('that a Scalar instance with no description and another with propagate: false results in no description', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fef, feg]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -883,7 +883,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that all Scalar instances with no description or propagateToFederatedGraph: false results in no description', () => {
+    test('that all Scalar instances with no description or propagate: false results in no description', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fef, feh]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -992,7 +992,7 @@ describe('@openfed__configureDescription tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    test('that a Union description with propagateToFederatedGraph: false is not propagated', () => {
+    test('that a Union description with propagate: false is not propagated', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([ffa, fff]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -1019,7 +1019,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that a Union instance with no description and another with propagateToFederatedGraph: false results in no description', () => {
+    test('that a Union instance with no description and another with propagate: false results in no description', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fff, ffg]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -1043,7 +1043,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that all Union instances with no description or propagateToFederatedGraph: false results in no description', () => {
+    test('that all Union instances with no description or propagate: false results in no description', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fff, ffh]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -1148,7 +1148,7 @@ describe('@openfed__configureDescription tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    test('that a renamed root type Object description with propagateToFederatedGraph: false is not propagated', () => {
+    test('that a renamed root type Object description with propagate: false is not propagated', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fga, fgf]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -1172,7 +1172,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that a renamed root type Object instance with no description and another with propagateToFederatedGraph: false results in no description', () => {
+    test('that a renamed root type Object instance with no description and another with propagate: false results in no description', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fgf, fgg]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -1193,7 +1193,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that all renamed root type Object instances with no description or propagateToFederatedGraph: false results in no description', () => {
+    test('that all renamed root type Object instances with no description or propagate: false results in no description', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fgf, fgh]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -1286,7 +1286,7 @@ describe('@openfed__configureDescription tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    test('that a field description with propagateToFederatedGraph: false is not propagated', () => {
+    test('that a field description with propagate: false is not propagated', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fha, fhf]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -1307,7 +1307,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that a field instance with no description and another with propagateToFederatedGraph: false results in no description', () => {
+    test('that a field instance with no description and another with propagate: false results in no description', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fhf, fhg]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -1325,7 +1325,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that all field instances with no description or propagateToFederatedGraph: false results in no description', () => {
+    test('that all field instances with no description or propagate: false results in no description', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fhf, fhh]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -1417,7 +1417,7 @@ describe('@openfed__configureDescription tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    test('that a field argument description with propagateToFederatedGraph: false is not propagated', () => {
+    test('that a field argument description with propagate: false is not propagated', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fia, fif]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -1440,7 +1440,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that a field argument instance with no description and another with propagateToFederatedGraph: false results in no description', () => {
+    test('that a field argument instance with no description and another with propagate: false results in no description', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fif, fig]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -1458,7 +1458,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that all field argument instances with propagateToFederatedGraph: false results in no description', () => {
+    test('that all field argument instances with propagate: false results in no description', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fif, fih]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -1559,7 +1559,7 @@ describe('@openfed__configureDescription tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    test('that an Input Value description with propagateToFederatedGraph: false is not propagated', () => {
+    test('that an Input Value description with propagate: false is not propagated', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fja, fjf]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -1584,7 +1584,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that an Input Value instance with no description and another with propagateToFederatedGraph: false results in no description', () => {
+    test('that an Input Value instance with no description and another with propagate: false results in no description', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fjf, fjg]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -1604,7 +1604,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that all Input Object instances with no description or propagateToFederatedGraph: false results in no description', () => {
+    test('that all Input Object instances with no description or propagate: false results in no description', () => {
       const { errors, federationResult, warnings } = federateSubgraphs([fjf, fjh]);
       expect(errors).toBeUndefined();
       expect(warnings).toHaveLength(0);
@@ -1650,7 +1650,7 @@ const nb: Subgraph = {
     """
     nb.Query
     """
-    type Query @openfed__configureDescription(propagateToFederatedGraph: true, propagateToFederatedGraph: true) {
+    type Query @openfed__configureDescription(propagate: true, propagate: true) {
       dummy: String!
     }
   `),
@@ -1670,7 +1670,7 @@ const nd: Subgraph = {
   name: 'nd',
   url: '',
   definitions: parse(`
-    type Query @openfed__configureDescription(propagateToFederatedGraph: 1) {
+    type Query @openfed__configureDescription(propagate: 1) {
       dummy: String!
     }
   `),
@@ -1680,7 +1680,7 @@ const ne: Subgraph = {
   name: 'ne',
   url: '',
   definitions: parse(`
-    type Query @openfed__configureDescription(federatedGraphDescriptionOverride: 1) {
+    type Query @openfed__configureDescription(descriptionOverride: 1) {
       dummy: String!
     }
   `),
@@ -1690,7 +1690,7 @@ const nf: Subgraph = {
   name: 'nf',
   url: '',
   definitions: parse(`
-    extend type Query @openfed__configureDescription(federatedGraphDescriptionOverride: "nf.Query override") {
+    extend type Query @openfed__configureDescription(descriptionOverride: "nf.Query override") {
       dummy: String!
     }
     
@@ -1705,7 +1705,7 @@ const ng: Subgraph = {
   name: 'ng',
   url: '',
   definitions: parse(`
-    type Query @openfed__configureDescription(propagateToFederatedGraph: true) {
+    type Query @openfed__configureDescription(propagate: true) {
       dummy: String!
     }
   `),
@@ -1715,7 +1715,7 @@ const nh: Subgraph = {
   name: 'nh',
   url: '',
   definitions: parse(`
-    type Query @openfed__configureDescription(propagateToFederatedGraph: false) {
+    type Query @openfed__configureDescription(propagate: false) {
       dummy: String!
     }
   `),
@@ -1757,7 +1757,7 @@ const fac: Subgraph = {
   name: 'fac',
   url: '',
   definitions: parse(`
-    extend type Query @shareable @openfed__configureDescription(federatedGraphDescriptionOverride: "fac.Query extension") {
+    extend type Query @shareable @openfed__configureDescription(descriptionOverride: "fac.Query extension") {
       """
       fac.Query.dummy
       """
@@ -1775,7 +1775,7 @@ const fad: Subgraph = {
     """
     type Query
     
-    extend type Query @shareable @openfed__configureDescription(federatedGraphDescriptionOverride: "fad.Query extension") {
+    extend type Query @shareable @openfed__configureDescription(descriptionOverride: "fad.Query extension") {
       """
       fad.Query.dummy
       """
@@ -1807,7 +1807,7 @@ const faf: Subgraph = {
     """
     faf.Query description
     """
-    type Query @shareable @openfed__configureDescription(propagateToFederatedGraph: false) {
+    type Query @shareable @openfed__configureDescription(propagate: false) {
       """
       faf.Query.dummy description
       """
@@ -1836,7 +1836,7 @@ const fah: Subgraph = {
     """
     fah.Query description
     """
-    type Query @shareable @openfed__configureDescription(propagateToFederatedGraph: false) {
+    type Query @shareable @openfed__configureDescription(propagate: false) {
       """
       fah.Query.dummy description
       """
@@ -1885,7 +1885,7 @@ const fbc: Subgraph = {
   name: 'fbc',
   url: '',
   definitions: parse(`
-    extend interface Interface @openfed__configureDescription(federatedGraphDescriptionOverride: "fbc.Interface extension") {
+    extend interface Interface @openfed__configureDescription(descriptionOverride: "fbc.Interface extension") {
       """
       fbc.Interface.name description
       """
@@ -1903,7 +1903,7 @@ const fbd: Subgraph = {
     """
     interface Interface
     
-    extend interface Interface @openfed__configureDescription(federatedGraphDescriptionOverride: "fbd.Interface extension") {
+    extend interface Interface @openfed__configureDescription(descriptionOverride: "fbd.Interface extension") {
       """
       fbd.Interface.name
       """
@@ -1939,7 +1939,7 @@ const fbf: Subgraph = {
     """
     fbf.Interface description dolorem ipsum quia dolor sit amet
     """
-    interface Interface @openfed__configureDescription(propagateToFederatedGraph: false) {
+    interface Interface @openfed__configureDescription(propagate: false) {
       """
       fbf.Interface.name description
       """
@@ -1972,7 +1972,7 @@ const fbh: Subgraph = {
     """
     fbh.Interface description dolorem ipsum quia dolor sit amet
     """
-    interface Interface @openfed__configureDescription(propagateToFederatedGraph: false) {
+    interface Interface @openfed__configureDescription(propagate: false) {
       """
       fbh.Interface.name description
       """
@@ -2025,7 +2025,7 @@ const fcc: Subgraph = {
   name: 'fcc',
   url: '',
   definitions: parse(`
-    extend enum Enum @openfed__configureDescription(federatedGraphDescriptionOverride: "fcc.Enum extension") {
+    extend enum Enum @openfed__configureDescription(descriptionOverride: "fcc.Enum extension") {
       """
       fcc.Enum.A description
       """
@@ -2043,7 +2043,7 @@ const fcd: Subgraph = {
     """
     enum Enum
     
-    extend enum Enum @openfed__configureDescription(federatedGraphDescriptionOverride: "fcd.Enum extension") {
+    extend enum Enum @openfed__configureDescription(descriptionOverride: "fcd.Enum extension") {
       """
       fcd.Enum.A description
       """
@@ -2079,7 +2079,7 @@ const fcf: Subgraph = {
     """
     fcf.Enum description dolorem ipsum quia dolor sit amet
     """
-    enum Enum @openfed__configureDescription(propagateToFederatedGraph: false) {
+    enum Enum @openfed__configureDescription(propagate: false) {
       """
       fcf.Enum.A description
       """
@@ -2112,7 +2112,7 @@ const fch: Subgraph = {
     """
     fch.Enum description dolorem ipsum quia dolor sit amet
     """
-    enum Enum @openfed__configureDescription(propagateToFederatedGraph: false) {
+    enum Enum @openfed__configureDescription(propagate: false) {
       """
       fch.Enum.A description
       """
@@ -2165,7 +2165,7 @@ const fdc: Subgraph = {
   name: 'fdc',
   url: '',
   definitions: parse(`
-    extend input Input @openfed__configureDescription(federatedGraphDescriptionOverride: "fdc.Input extension") {
+    extend input Input @openfed__configureDescription(descriptionOverride: "fdc.Input extension") {
       """
       fdc.Input.name description
       """
@@ -2183,7 +2183,7 @@ const fdd: Subgraph = {
     """
     input Input
     
-    extend input Input @openfed__configureDescription(federatedGraphDescriptionOverride: "fdd.Input extension") {
+    extend input Input @openfed__configureDescription(descriptionOverride: "fdd.Input extension") {
       """
       fdd.Input.name
       """
@@ -2219,7 +2219,7 @@ const fdf: Subgraph = {
     """
     fdf.Input description dolorem ipsum quia dolor sit amet
     """
-    input Input @openfed__configureDescription(propagateToFederatedGraph: false) {
+    input Input @openfed__configureDescription(propagate: false) {
       """
       fdf.Input.name description
       """
@@ -2252,7 +2252,7 @@ const fdh: Subgraph = {
     """
     fdh.Input description dolorem ipsum quia dolor sit amet
     """
-    input Input @openfed__configureDescription(propagateToFederatedGraph: false) {
+    input Input @openfed__configureDescription(propagate: false) {
       """
       fdh.Input.name description
       """
@@ -2295,7 +2295,7 @@ const fec: Subgraph = {
   name: 'fec',
   url: '',
   definitions: parse(`
-    extend scalar Scalar @openfed__configureDescription(federatedGraphDescriptionOverride: "fec.Scalar extension")
+    extend scalar Scalar @openfed__configureDescription(descriptionOverride: "fec.Scalar extension")
     
     scalar Scalar
   `),
@@ -2310,7 +2310,7 @@ const fed: Subgraph = {
     """
     scalar Scalar
     
-    extend scalar Scalar @openfed__configureDescription(federatedGraphDescriptionOverride: "fed.Scalar extension")
+    extend scalar Scalar @openfed__configureDescription(descriptionOverride: "fed.Scalar extension")
   `),
 };
 
@@ -2336,7 +2336,7 @@ const fef: Subgraph = {
     """
     fef.Scalar description dolorem ipsum quia dolor sit amet
     """
-    scalar Scalar @openfed__configureDescription(propagateToFederatedGraph: false)
+    scalar Scalar @openfed__configureDescription(propagate: false)
   `),
 };
 
@@ -2359,7 +2359,7 @@ const feh: Subgraph = {
     """
     feh.Scalar description dolorem ipsum quia dolor sit amet
     """
-    scalar Scalar @openfed__configureDescription(propagateToFederatedGraph: false)
+    scalar Scalar @openfed__configureDescription(propagate: false)
     
     type Query {
       dummy: String!
@@ -2405,7 +2405,7 @@ const ffc: Subgraph = {
   name: 'ffc',
   url: '',
   definitions: parse(`
-    extend union Union @openfed__configureDescription(federatedGraphDescriptionOverride: "ffc.Union extension") = Object
+    extend union Union @openfed__configureDescription(descriptionOverride: "ffc.Union extension") = Object
   
     type Object @shareable {
       name: String!
@@ -2426,7 +2426,7 @@ const ffd: Subgraph = {
     """
     union Union
     
-    extend union Union @openfed__configureDescription(federatedGraphDescriptionOverride: "ffd.Union extension") = Object
+    extend union Union @openfed__configureDescription(descriptionOverride: "ffd.Union extension") = Object
   `),
 };
 
@@ -2456,7 +2456,7 @@ const fff: Subgraph = {
     """
     fff.Interface description dolorem ipsum quia dolor sit amet
     """
-    union Union @openfed__configureDescription(propagateToFederatedGraph: false) = Object
+    union Union @openfed__configureDescription(propagate: false) = Object
     
     type Object @shareable {
       name: String!
@@ -2487,7 +2487,7 @@ const ffh: Subgraph = {
     """
     ffh.Union description dolorem ipsum quia dolor sit amet
     """
-    union Union @openfed__configureDescription(propagateToFederatedGraph: false) = Object
+    union Union @openfed__configureDescription(propagate: false) = Object
     
     type Object @shareable {
       name: String!
@@ -2547,7 +2547,7 @@ const fgc: Subgraph = {
       query: MyQuery
     }
     
-    extend type MyQuery @shareable @openfed__configureDescription(federatedGraphDescriptionOverride: "fgc.MyQuery extension") {
+    extend type MyQuery @shareable @openfed__configureDescription(descriptionOverride: "fgc.MyQuery extension") {
       """
       fgc.Query.dummy
       """
@@ -2569,7 +2569,7 @@ const fgd: Subgraph = {
     """
     type MyQuery
     
-    extend type MyQuery @shareable @openfed__configureDescription(federatedGraphDescriptionOverride: "fgd.MyQuery extension") {
+    extend type MyQuery @shareable @openfed__configureDescription(descriptionOverride: "fgd.MyQuery extension") {
       """
       fgd.MyQuery.dummy
       """
@@ -2609,7 +2609,7 @@ const fgf: Subgraph = {
     """
     fgf.MyQuery description dolorem ipsum quia dolor sit amet
     """
-    type MyQuery @shareable @openfed__configureDescription(propagateToFederatedGraph: false) {
+    type MyQuery @shareable @openfed__configureDescription(propagate: false) {
       """
       fgf.MyQuery.dummy description
       """
@@ -2646,7 +2646,7 @@ const fgh: Subgraph = {
     """
     fgh.Queries description
     """
-    type Queries @shareable @openfed__configureDescription(propagateToFederatedGraph: false) {
+    type Queries @shareable @openfed__configureDescription(propagate: false) {
       """
       fgh.Queries.dummy description
       """
@@ -2686,7 +2686,7 @@ const fhc: Subgraph = {
   url: '',
   definitions: parse(`
     extend type Query @shareable {
-      dummy: String! @openfed__configureDescription(federatedGraphDescriptionOverride: "fhc.Query.dummy")
+      dummy: String! @openfed__configureDescription(descriptionOverride: "fhc.Query.dummy")
     }
   `),
 };
@@ -2701,7 +2701,7 @@ const fhd: Subgraph = {
       """
       fhd.Query.dummy
       """
-      dummy: String! @openfed__configureDescription(federatedGraphDescriptionOverride: "fhd.Query.dummy override")
+      dummy: String! @openfed__configureDescription(descriptionOverride: "fhd.Query.dummy override")
     }
   `),
 };
@@ -2727,7 +2727,7 @@ const fhf: Subgraph = {
       """
       fhf.Query.dummy description delorem ipsum quia dolor sit amet
       """
-      dummy: String! @openfed__configureDescription(propagateToFederatedGraph: false)
+      dummy: String! @openfed__configureDescription(propagate: false)
     }
   `),
 };
@@ -2750,7 +2750,7 @@ const fhh: Subgraph = {
       """
       fhh.Query.dummy description
       """
-      dummy: String! @openfed__configureDescription(propagateToFederatedGraph: false)
+      dummy: String! @openfed__configureDescription(propagate: false)
     }
   `),
 };
@@ -2794,7 +2794,7 @@ const fic: Subgraph = {
         """
         fic.Query.dummy(arg)
         """
-        arg: Int! @openfed__configureDescription(federatedGraphDescriptionOverride: "fic.Query.dummy(arg) override")
+        arg: Int! @openfed__configureDescription(descriptionOverride: "fic.Query.dummy(arg) override")
       ): String!
     }
   `),
@@ -2811,7 +2811,7 @@ const fid: Subgraph = {
         """
         fid.Query.dummy(arg)
         """
-        arg: Int! @openfed__configureDescription(federatedGraphDescriptionOverride: "fid.Query.dummy(arg) override")
+        arg: Int! @openfed__configureDescription(descriptionOverride: "fid.Query.dummy(arg) override")
       ): String!
     }
   `),
@@ -2841,7 +2841,7 @@ const fif: Subgraph = {
         """
         fif.Query.dummy(arg) description dolorem ipsum quia dolor sit amet
         """
-        arg: Int! @openfed__configureDescription(propagateToFederatedGraph: false)
+        arg: Int! @openfed__configureDescription(propagate: false)
       ): String!
     }
   `),
@@ -2866,7 +2866,7 @@ const fih: Subgraph = {
         """
         fih.Query.dummy(arg) description
         """
-        arg: Int! @openfed__configureDescription(propagateToFederatedGraph: false)
+        arg: Int! @openfed__configureDescription(propagate: false)
       ): String!
     }
   `),
@@ -2907,7 +2907,7 @@ const fjc: Subgraph = {
   url: '',
   definitions: parse(`
     extend input Input {
-      name: String! @openfed__configureDescription(federatedGraphDescriptionOverride: "fjc.Input.name override")
+      name: String! @openfed__configureDescription(descriptionOverride: "fjc.Input.name override")
     }
   `),
 };
@@ -2922,7 +2922,7 @@ const fjd: Subgraph = {
       """
       fjd.Input.name description
       """
-      name: String! @openfed__configureDescription(federatedGraphDescriptionOverride: "fjd.Input.name override")
+      name: String! @openfed__configureDescription(descriptionOverride: "fjd.Input.name override")
     }
   `),
 };
@@ -2952,7 +2952,7 @@ const fjf: Subgraph = {
       """
       fjf.Input.name description
       """
-      name: String! @openfed__configureDescription(propagateToFederatedGraph: false)
+      name: String! @openfed__configureDescription(propagate: false)
     }
   `),
 };
@@ -2979,7 +2979,7 @@ const fjh: Subgraph = {
       """
       fjh.Input.name description
       """
-      name: String! @openfed__configureDescription(propagateToFederatedGraph: false)
+      name: String! @openfed__configureDescription(propagate: false)
     }
 
     type Query {

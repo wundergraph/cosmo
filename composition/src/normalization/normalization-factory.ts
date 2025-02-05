@@ -202,7 +202,7 @@ import {
   EXECUTION,
   EXTENDS,
   EXTERNAL,
-  FG_DESCRIPTION_OVERRIDE,
+  DESCRIPTION_OVERRIDE,
   FIELD_SET_SCALAR,
   FIELDS,
   FLOAT_SCALAR,
@@ -222,7 +222,7 @@ import {
   NOT_APPLICABLE,
   OPERATION_TO_DEFAULT,
   OVERRIDE,
-  PROPAGATE_TO_FG,
+  PROPAGATE,
   PROVIDER_ID,
   PROVIDER_TYPE_KAFKA,
   PROVIDER_TYPE_NATS,
@@ -913,25 +913,25 @@ export class NormalizationFactory {
         this.invalidConfigureDescriptionNodeDatas.push(data);
       }
       data.configureDescriptionDataBySubgraphName.set(this.subgraphName, {
-        propagateToFederatedGraph: true,
+        propagate: true,
         description: data.description?.value || '',
       });
       return;
     }
     const configureDescriptionData: ConfigureDescriptionData = {
-      propagateToFederatedGraph: true,
+      propagate: true,
       description: data.description?.value || '',
     };
     for (const argument of directiveNode.arguments) {
       switch (argument.name.value) {
-        case PROPAGATE_TO_FG: {
+        case PROPAGATE: {
           if (argument.value.kind != Kind.BOOLEAN) {
             return;
           }
-          configureDescriptionData.propagateToFederatedGraph = argument.value.value;
+          configureDescriptionData.propagate = argument.value.value;
           break;
         }
-        case FG_DESCRIPTION_OVERRIDE: {
+        case DESCRIPTION_OVERRIDE: {
           if (argument.value.kind != Kind.STRING) {
             return;
           }

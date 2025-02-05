@@ -20,7 +20,7 @@ import {
   ENUM_VALUE_UPPER,
   EXTENDS,
   EXTERNAL,
-  FG_DESCRIPTION_OVERRIDE,
+  DESCRIPTION_OVERRIDE,
   FIELD_DEFINITION_UPPER,
   FIELDS,
   FOR,
@@ -38,7 +38,7 @@ import {
   NAME,
   OBJECT_UPPER,
   OVERRIDE,
-  PROPAGATE_TO_FG,
+  PROPAGATE,
   PROVIDER_ID,
   PROVIDES,
   REASON,
@@ -125,9 +125,9 @@ export const COMPOSE_DIRECTIVE_DEFINITION_DATA: DirectiveDefinitionData = {
 export const CONFIGURE_DESCRIPTION_DEFINITION_DATA: DirectiveDefinitionData = {
   argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
     [
-      PROPAGATE_TO_FG,
+      PROPAGATE,
       {
-        name: PROPAGATE_TO_FG,
+        name: PROPAGATE,
         typeNode: {
           kind: Kind.NON_NULL_TYPE,
           type: stringToNamedTypeNode(BOOLEAN_SCALAR),
@@ -139,9 +139,9 @@ export const CONFIGURE_DESCRIPTION_DEFINITION_DATA: DirectiveDefinitionData = {
       },
     ],
     [
-      FG_DESCRIPTION_OVERRIDE,
+      DESCRIPTION_OVERRIDE,
       {
-        name: FG_DESCRIPTION_OVERRIDE,
+        name: DESCRIPTION_OVERRIDE,
         typeNode: stringToNamedTypeNode(STRING_SCALAR),
       },
     ],
@@ -162,16 +162,16 @@ export const CONFIGURE_DESCRIPTION_DEFINITION_DATA: DirectiveDefinitionData = {
   ]),
   name: CONFIGURE_DESCRIPTION,
   node: CONFIGURE_DESCRIPTION_DEFINITION,
-  optionalArgumentNames: new Set<string>([PROPAGATE_TO_FG, FG_DESCRIPTION_OVERRIDE]),
+  optionalArgumentNames: new Set<string>([PROPAGATE, DESCRIPTION_OVERRIDE]),
   requiredArgumentNames: new Set<string>(),
 };
 
 export const CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION_DATA: DirectiveDefinitionData = {
   argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
     [
-      PROPAGATE_TO_FG,
+      PROPAGATE,
       {
-        name: PROPAGATE_TO_FG,
+        name: PROPAGATE,
         typeNode: {
           kind: Kind.NON_NULL_TYPE,
           type: stringToNamedTypeNode(BOOLEAN_SCALAR),
@@ -187,7 +187,7 @@ export const CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION_DATA: DirectiveDefinitionDa
   locations: new Set<string>([ENUM_UPPER, INPUT_OBJECT_UPPER, INTERFACE_UPPER, OBJECT_UPPER]),
   name: CONFIGURE_CHILD_DESCRIPTIONS,
   node: CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION,
-  optionalArgumentNames: new Set<string>([PROPAGATE_TO_FG]),
+  optionalArgumentNames: new Set<string>([PROPAGATE]),
   requiredArgumentNames: new Set<string>(),
 };
 

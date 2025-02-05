@@ -1574,8 +1574,8 @@ export class FederationFactory {
       return data.description;
     }
     // Does not loop because the intention is check whether to propagate the first node data description
-    for (const { propagateToFederatedGraph, description } of data.configureDescriptionDataBySubgraphName.values()) {
-      if (!propagateToFederatedGraph) {
+    for (const { propagate, description } of data.configureDescriptionDataBySubgraphName.values()) {
+      if (!propagate) {
         return;
       }
       return getDescriptionFromString(description) || data.description;
@@ -1588,11 +1588,8 @@ export class FederationFactory {
     }
     const subgraphNames: Array<string> = [];
     let descriptionToPropagate = '';
-    for (const [
-      subgraphName,
-      { propagateToFederatedGraph, description },
-    ] of data.configureDescriptionDataBySubgraphName) {
-      if (!propagateToFederatedGraph) {
+    for (const [subgraphName, { propagate, description }] of data.configureDescriptionDataBySubgraphName) {
+      if (!propagate) {
         continue;
       }
       subgraphNames.push(subgraphName);
