@@ -4,7 +4,6 @@ import {
   EnumTypeDefinitionNode,
   EnumTypeExtensionNode,
   FieldNode,
-  InlineFragmentNode,
   InputObjectTypeDefinitionNode,
   InputObjectTypeExtensionNode,
   InterfaceTypeDefinitionNode,
@@ -23,8 +22,6 @@ import {
   SelectionNode,
   SelectionSetNode,
   StringValueNode,
-  TypeDefinitionNode,
-  TypeExtensionNode,
   UnionTypeDefinitionNode,
   UnionTypeExtensionNode,
 } from 'graphql';
@@ -52,7 +49,6 @@ import {
   SUBSCRIPTION,
   UNION_UPPER,
 } from '../utils/string-constants';
-import { duplicateImplementedInterfaceError } from '../errors/errors';
 import { CompositeOutputNode } from '../schema-building/ast';
 
 export function isObjectLikeNodeEntity(node: CompositeOutputNode): boolean {

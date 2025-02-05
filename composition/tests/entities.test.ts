@@ -4,6 +4,7 @@ import {
   federateSubgraphs,
   FieldData,
   FIELDS,
+  FIRST_ORDINAL,
   invalidDirectiveError,
   invalidFieldShareabilityError,
   KEY,
@@ -27,19 +28,20 @@ import {
 describe('Entity tests', () => {
   describe('Entity normalization tests', () => {
     test('that an error is returned if the @key directive is defined with invalid arguments', () => {
-      const hostPath = 'Entity';
+      const directiveCoords = 'Entity';
       const { errors } = normalizeSubgraph(subgraphT.definitions, subgraphT.name);
       expect(errors).toBeDefined();
       expect(errors).toHaveLength(2);
       expect(errors![0]).toStrictEqual(
-        invalidDirectiveError(KEY, hostPath, [
+        invalidDirectiveError(KEY, directiveCoords, FIRST_ORDINAL, [
+          duplicateDirectiveArgumentDefinitionsErrorMessage(['duplicateUnknownArgument']),
           unexpectedDirectiveArgumentErrorMessage(KEY, ['unknownArgument', 'duplicateUnknownArgument']),
-          undefinedRequiredArgumentsErrorMessage(KEY, hostPath, [FIELDS], [FIELDS]),
+          undefinedRequiredArgumentsErrorMessage(KEY, [FIELDS], [FIELDS]),
         ]),
       );
       expect(errors![1]).toStrictEqual(
-        invalidDirectiveError(KEY, hostPath, [
-          duplicateDirectiveArgumentDefinitionsErrorMessage(KEY, hostPath, [FIELDS]),
+        invalidDirectiveError(KEY, directiveCoords, '2nd', [
+          duplicateDirectiveArgumentDefinitionsErrorMessage([FIELDS]),
         ]),
       );
     });

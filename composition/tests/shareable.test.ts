@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
   federateSubgraphs,
+  FIRST_ORDINAL,
   invalidDirectiveError,
   invalidRepeatedDirectiveErrorMessage,
   normalizeSubgraph,
@@ -136,14 +137,25 @@ describe('@shareable directive tests', () => {
       );
     });
 
-    test('that an error is returned if @shareable is repeated on the same level', () => {
+    test('that @shareable can be repeated', () => {
       const { errors, normalizationResult } = normalizeSubgraph(subgraphE.definitions);
-      expect(errors).toHaveLength(1);
-      expect(errors).toStrictEqual([
-        invalidDirectiveError(SHAREABLE, 'Entity.field', [
-          invalidRepeatedDirectiveErrorMessage(SHAREABLE, 'Entity.field'),
-        ]),
-      ]);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toStrictEqual(
+        normalizeString(
+          versionTwoDirectiveDefinitions +
+            `
+          type Entity @key(fields: "id") {
+            field: String! @shareable
+            id: ID!
+            name: String! @shareable
+          }
+          
+          scalar openfed__FieldSet
+          
+          scalar openfed__Scope
+        `,
+        ),
+      );
     });
   });
 
@@ -363,6 +375,10 @@ const subgraphE: Subgraph = {
     type Entity @key(fields: "id") {
       id: ID!
       field: String! @shareable @shareable
+    }
+    
+    extend type Entity @shareable {
+      name: String!
     }
   `),
 };

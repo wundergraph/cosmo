@@ -5,6 +5,7 @@ export * from './errors/utils';
 export * from './federation/federation-factory';
 export * from './federation/utils';
 export * from './federation/walkers';
+export * from './normalization/directive-definition-data';
 export * from './normalization/normalization-factory';
 export * from './normalization/utils';
 export * from './normalization/walkers';

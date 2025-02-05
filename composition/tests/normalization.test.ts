@@ -3,15 +3,32 @@ import {
   duplicateEnumValueDefinitionError,
   duplicateTypeDefinitionError,
   ENUM,
+  ENUM_UPPER,
+  EXTERNAL,
+  FIELDS,
+  FIRST_ORDINAL,
+  INACCESSIBLE,
+  INPUT_OBJECT_UPPER,
+  INTERFACE_UPPER,
   invalidDirectiveError,
+  invalidDirectiveLocationErrorMessage,
   invalidKeyDirectivesError,
   invalidProvidesOrRequiresDirectivesError,
   invalidSelectionSetErrorMessage,
+  KEY,
+  NAME,
   normalizeSubgraphFromString,
   OBJECT,
-  undefinedDirectiveErrorMessage,
+  OBJECT_UPPER,
+  PROVIDES,
+  REQUIRES,
+  SHAREABLE,
+  TAG,
+  undefinedDirectiveError,
   undefinedFieldInFieldSetErrorMessage,
+  undefinedRequiredArgumentsErrorMessage,
   undefinedTypeError,
+  unexpectedDirectiveArgumentErrorMessage,
   unparsableFieldSetErrorMessage,
 } from '../src';
 import { readFileSync } from 'fs';
@@ -82,11 +99,7 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('UnknownDirective', 'Example.string', [
-        undefinedDirectiveErrorMessage('UnknownDirective', 'Example.string'),
-      ]),
-    );
+    expect(errors![0]).toStrictEqual(undefinedDirectiveError('UnknownDirective', 'Example.string'));
   });
 
   test('that duplicate directive definitions return an error', () => {
@@ -801,13 +814,11 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('key', 'User', [
-        ` "User" is type "EnumTypeDefinition", but the directive "key" does not define "ENUM" as a valid location.`,
-      ]),
+      invalidDirectiveError(KEY, 'User', FIRST_ORDINAL, [invalidDirectiveLocationErrorMessage(KEY, ENUM_UPPER)]),
     );
   });
 
-  test('Should give errors when key directive is applied to a input', () => {
+  test('Should give errors when key directive is applied to an Input', () => {
     const { errors } = normalizeSubgraphFromString(`
       input User @key(fields: "name") {
         name: String!
@@ -816,8 +827,8 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('key', 'User', [
-        ` "User" is type "InputObjectTypeDefinition", but the directive "key" does not define "INPUT_OBJECT" as a valid location.`,
+      invalidDirectiveError('key', 'User', FIRST_ORDINAL, [
+        invalidDirectiveLocationErrorMessage(KEY, INPUT_OBJECT_UPPER),
       ]),
     );
   });
@@ -842,10 +853,7 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('tag', 'User', [
-        ` The definition for the directive "tag" defines the following 1 required argument: "name".\n` +
-          ` However, the same directive that is declared on "User" does not define any arguments.`,
-      ]),
+      invalidDirectiveError(TAG, 'User', FIRST_ORDINAL, [undefinedRequiredArgumentsErrorMessage(TAG, [NAME], [])]),
     );
   });
 
@@ -858,9 +866,8 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('tag', 'User.name', [
-        ` The definition for the directive "tag" defines the following 1 required argument: "name".\n` +
-          ` However, the same directive that is declared on "User.name" does not define any arguments.`,
+      invalidDirectiveError('tag', 'User.name', FIRST_ORDINAL, [
+        undefinedRequiredArgumentsErrorMessage(TAG, [NAME], []),
       ]),
     );
   });
@@ -884,9 +891,10 @@ describe('Normalization tests', () => {
       }
     `);
     expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('external', 'User', [
-        ` "User" is type "InterfaceTypeDefinition", but the directive "external" does not define "INTERFACE" as a valid location.`,
+      invalidDirectiveError(EXTERNAL, 'User', FIRST_ORDINAL, [
+        invalidDirectiveLocationErrorMessage(EXTERNAL, INTERFACE_UPPER),
       ]),
     );
   });
@@ -900,8 +908,8 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('external', 'User', [
-        ` "User" is type "EnumTypeDefinition", but the directive "external" does not define "ENUM" as a valid location.`,
+      invalidDirectiveError(EXTERNAL, 'User', FIRST_ORDINAL, [
+        invalidDirectiveLocationErrorMessage(EXTERNAL, ENUM_UPPER),
       ]),
     );
   });
@@ -915,8 +923,8 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('external', 'User', [
-        ` "User" is type "InputObjectTypeDefinition", but the directive "external" does not define "INPUT_OBJECT" as a valid location.`,
+      invalidDirectiveError(EXTERNAL, 'User', FIRST_ORDINAL, [
+        invalidDirectiveLocationErrorMessage(EXTERNAL, INPUT_OBJECT_UPPER),
       ]),
     );
   });
@@ -950,6 +958,7 @@ describe('Normalization tests', () => {
     }
     `);
     expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
     expect(errors![0].message).toStrictEqual(
       `The following "provides" directive is invalid:\n On "Review.user" —` +
         undefinedFieldInFieldSetErrorMessage('age', 'User', 'age'),
@@ -969,10 +978,10 @@ describe('Normalization tests', () => {
     }
     `);
     expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('provides', 'Review.user', [
-        ` The definition for the directive "provides" defines the following 1 required argument: "fields".\n` +
-          ` However, the same directive that is declared on "Review.user" does not define any arguments.`,
+      invalidDirectiveError(PROVIDES, 'Review.user', FIRST_ORDINAL, [
+        undefinedRequiredArgumentsErrorMessage(PROVIDES, [FIELDS], []),
       ]),
     );
   });
@@ -986,8 +995,8 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('provides', 'User', [
-        ` "User" is type "ObjectTypeDefinition", but the directive "provides" does not define "OBJECT" as a valid location.`,
+      invalidDirectiveError(PROVIDES, 'User', FIRST_ORDINAL, [
+        invalidDirectiveLocationErrorMessage(PROVIDES, OBJECT_UPPER),
       ]),
     );
   });
@@ -1001,8 +1010,8 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('provides', 'User', [
-        ` "User" is type "InterfaceTypeDefinition", but the directive "provides" does not define "INTERFACE" as a valid location.`,
+      invalidDirectiveError(PROVIDES, 'User', FIRST_ORDINAL, [
+        invalidDirectiveLocationErrorMessage(PROVIDES, INTERFACE_UPPER),
       ]),
     );
   });
@@ -1016,8 +1025,8 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('provides', 'User', [
-        ` "User" is type "EnumTypeDefinition", but the directive "provides" does not define "ENUM" as a valid location.`,
+      invalidDirectiveError(PROVIDES, 'User', FIRST_ORDINAL, [
+        invalidDirectiveLocationErrorMessage(PROVIDES, ENUM_UPPER),
       ]),
     );
   });
@@ -1030,9 +1039,10 @@ describe('Normalization tests', () => {
       }
     `);
     expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('provides', 'User', [
-        ` "User" is type "InputObjectTypeDefinition", but the directive "provides" does not define "INPUT_OBJECT" as a valid location.`,
+      invalidDirectiveError(PROVIDES, 'User', FIRST_ORDINAL, [
+        invalidDirectiveLocationErrorMessage(PROVIDES, INPUT_OBJECT_UPPER),
       ]),
     );
   });
@@ -1059,7 +1069,7 @@ describe('Normalization tests', () => {
     expect(errors).toBeDefined();
     expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
-      invalidProvidesOrRequiresDirectivesError('requires', [
+      invalidProvidesOrRequiresDirectivesError(REQUIRES, [
         ` On "Product.shippingCost" —` + undefinedFieldInFieldSetErrorMessage('age', 'Product', 'age'),
       ]),
     );
@@ -1085,8 +1095,8 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('requires', 'User', [
-        ` "User" is type "ObjectTypeDefinition", but the directive "requires" does not define "OBJECT" as a valid location.`,
+      invalidDirectiveError(REQUIRES, 'User', FIRST_ORDINAL, [
+        invalidDirectiveLocationErrorMessage(REQUIRES, OBJECT_UPPER),
       ]),
     );
   });
@@ -1100,8 +1110,8 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('requires', 'User', [
-        ` "User" is type "InterfaceTypeDefinition", but the directive "requires" does not define "INTERFACE" as a valid location.`,
+      invalidDirectiveError(REQUIRES, 'User', FIRST_ORDINAL, [
+        invalidDirectiveLocationErrorMessage(REQUIRES, INTERFACE_UPPER),
       ]),
     );
   });
@@ -1115,8 +1125,8 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('requires', 'User', [
-        ` "User" is type "EnumTypeDefinition", but the directive "requires" does not define "ENUM" as a valid location.`,
+      invalidDirectiveError(REQUIRES, 'User', FIRST_ORDINAL, [
+        invalidDirectiveLocationErrorMessage(REQUIRES, ENUM_UPPER),
       ]),
     );
   });
@@ -1130,8 +1140,8 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('requires', 'User', [
-        ` "User" is type "InputObjectTypeDefinition", but the directive "requires" does not define "INPUT_OBJECT" as a valid location.`,
+      invalidDirectiveError(REQUIRES, 'User', FIRST_ORDINAL, [
+        invalidDirectiveLocationErrorMessage(REQUIRES, INPUT_OBJECT_UPPER),
       ]),
     );
   });
@@ -1166,10 +1176,10 @@ describe('Normalization tests', () => {
       }
     `);
     expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('shareable', 'User', [
-        ` The definition for the directive "shareable" does not define any arguments.\n` +
-          ` However, the same directive declared on "User" defines 1 argument.`,
+      invalidDirectiveError(SHAREABLE, 'User', FIRST_ORDINAL, [
+        unexpectedDirectiveArgumentErrorMessage(SHAREABLE, [FIELDS]),
       ]),
     );
   });
@@ -1183,8 +1193,8 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('shareable', 'User', [
-        ` "User" is type "InterfaceTypeDefinition", but the directive "shareable" does not define "INTERFACE" as a valid location.`,
+      invalidDirectiveError(SHAREABLE, 'User', FIRST_ORDINAL, [
+        invalidDirectiveLocationErrorMessage(SHAREABLE, INTERFACE_UPPER),
       ]),
     );
   });
@@ -1198,8 +1208,8 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('shareable', 'User', [
-        ` "User" is type "EnumTypeDefinition", but the directive "shareable" does not define "ENUM" as a valid location.`,
+      invalidDirectiveError(SHAREABLE, 'User', FIRST_ORDINAL, [
+        invalidDirectiveLocationErrorMessage(SHAREABLE, ENUM_UPPER),
       ]),
     );
   });
@@ -1213,9 +1223,8 @@ describe('Normalization tests', () => {
     `);
     expect(errors).toBeDefined();
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('shareable', 'User', [
-        ` "User" is type "InputObjectTypeDefinition", but the directive "shareable"` +
-          ` does not define "INPUT_OBJECT" as a valid location.`,
+      invalidDirectiveError(SHAREABLE, 'User', FIRST_ORDINAL, [
+        invalidDirectiveLocationErrorMessage(SHAREABLE, INPUT_OBJECT_UPPER),
       ]),
     );
   });
@@ -1269,10 +1278,10 @@ describe('Normalization tests', () => {
        }
     `);
     expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
-      invalidDirectiveError('inaccessible', 'User', [
-        ` The definition for the directive "inaccessible" does not define any arguments.\n` +
-          ` However, the same directive declared on "User" defines 1 argument.`,
+      invalidDirectiveError(INACCESSIBLE, 'User', FIRST_ORDINAL, [
+        unexpectedDirectiveArgumentErrorMessage(INACCESSIBLE, [FIELDS]),
       ]),
     );
   });
@@ -1338,6 +1347,7 @@ describe('Normalization tests', () => {
         }
     `);
     expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
       invalidKeyDirectivesError('Entity', [
         undefinedFieldInFieldSetErrorMessage('id organization { id details { id age } }', 'Details', 'age'),
@@ -1364,6 +1374,7 @@ describe('Normalization tests', () => {
         }
     `);
     expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
       invalidKeyDirectivesError('Entity', [
         unparsableFieldSetErrorMessage(
@@ -1393,6 +1404,7 @@ describe('Normalization tests', () => {
         }
     `);
     expect(errors).toBeDefined();
+    expect(errors).toHaveLength(1);
     expect(errors![0]).toStrictEqual(
       invalidKeyDirectivesError('Entity', [
         invalidSelectionSetErrorMessage('id organization { id details }', ['Organization.details'], 'Details', OBJECT),
@@ -1496,16 +1508,16 @@ describe('Normalization tests', () => {
       normalizeString(`
       directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
       directive @composeDirective(name: String!) repeatable on SCHEMA
-      directive @extends on INTERFACE | OBJECTdirective @external on FIELD_DEFINITION | OBJECT
+      directive @extends on INTERFACE | OBJECT
+      directive @external on FIELD_DEFINITION | OBJECT
       directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
       directive @interfaceObject on OBJECT
       directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
-      directive @link(as: String, for: String, import: [String], url: String!) repeatable on SCHEMA
       directive @override(from: String!) on FIELD_DEFINITION
       directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
       directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
       directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-      directive @shareable on FIELD_DEFINITION | OBJECT
+      directive @shareable repeatable on FIELD_DEFINITION | OBJECT
       directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
       
       enum Enum {

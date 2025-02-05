@@ -1,6 +1,5 @@
 import {
   federateSubgraphs,
-  incompatibleObjectExtensionOrphanBaseTypeError,
   incompatibleParentKindMergeError,
   INPUT_OBJECT,
   invalidSubgraphNamesError,
@@ -283,7 +282,7 @@ describe('FederationFactory tests', () => {
       }
 
       type MiscellaneousFact implements TopSecretFact {
-        description: FactContent! @authenticated @requiresScopes(scopes: [["read:miscellaneous", "read:scalar"], ["read:miscellaneous", "read:all"]])
+        description: FactContent! @requiresScopes(scopes: [["read:miscellaneous", "read:scalar"], ["read:miscellaneous", "read:all"]]) @authenticated
         factType: TopSecretFactType @authenticated
         title: String!
       }

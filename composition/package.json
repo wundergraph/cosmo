@@ -17,6 +17,7 @@
     "build": "del dist && tsc",
     "test:watch": "vitest test",
     "test": "vitest run",
+    "test:core": "vitest run --exclude ./tests/unstaged-tests",
     "lint": "prettier --check src tests",
     "lint:fix": "prettier --write src tests",
     "postversion": "node ./scripts/get-composition-version.mjs"

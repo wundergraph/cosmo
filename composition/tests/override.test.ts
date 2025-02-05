@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
+  ARGUMENT_DEFINITION_UPPER,
   batchNormalize,
   ConfigurationData,
   duplicateOverriddenFieldErrorMessage,
@@ -7,6 +8,7 @@ import {
   equivalentSourceAndTargetOverrideErrorMessage,
   federateSubgraphs,
   FieldData,
+  FIRST_ORDINAL,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
   invalidFieldShareabilityError,
@@ -26,8 +28,9 @@ describe('@override directive tests', () => {
     test('that an error is returned if the source and target subgraph name for @override are equivalent', () => {
       const { errors } = normalizeSubgraph(subgraphQ.definitions, 'subgraph-q');
       expect(errors).toBeDefined();
+      expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
-        invalidDirectiveError(OVERRIDE, 'Entity.name', [
+        invalidDirectiveError(OVERRIDE, 'Entity.name', FIRST_ORDINAL, [
           equivalentSourceAndTargetOverrideErrorMessage('subgraph-q', 'Entity.name'),
         ]),
       );
@@ -550,11 +553,12 @@ describe('@override directive tests', () => {
     test('that if @override is declared at an invalid location, an error is returned', () => {
       const { errors } = federateSubgraphs([subgraphG, subgraphH]);
       expect(errors).toBeDefined();
-      const hostPath = 'Entity.name(argOne: ...)';
+      expect(errors).toHaveLength(1);
+      const directiveCoords = 'Entity.name(argOne: ...)';
       expect(errors![0]).toStrictEqual(
         subgraphValidationError('subgraph-g', [
-          invalidDirectiveError(OVERRIDE, hostPath, [
-            invalidDirectiveLocationErrorMessage(hostPath, Kind.ARGUMENT, OVERRIDE),
+          invalidDirectiveError(OVERRIDE, directiveCoords, FIRST_ORDINAL, [
+            invalidDirectiveLocationErrorMessage(OVERRIDE, ARGUMENT_DEFINITION_UPPER),
           ]),
         ]),
       );

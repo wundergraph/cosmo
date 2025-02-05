@@ -4,15 +4,19 @@ import {
   InputObjectTypeDefinitionNode,
   Kind,
   ScalarTypeDefinitionNode,
+  TypeNode,
 } from 'graphql';
 import { stringArrayToNameNodeArray, stringToNamedTypeNode, stringToNameNode } from '../ast/utils';
 import {
   AND_UPPER,
   ARGUMENT_DEFINITION_UPPER,
+  AS,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
   COMPOSE_DIRECTIVE,
   CONDITION,
+  CONFIGURE_CHILD_DESCRIPTIONS,
+  CONFIGURE_DESCRIPTION,
   CONSUMER_INACTIVE_THRESHOLD,
   CONSUMER_NAME,
   DEFAULT_EDFS_PROVIDER_ID,
@@ -25,13 +29,17 @@ import {
   EDFS_NATS_SUBSCRIBE,
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
+  EXECUTION,
   EXTENDS,
   EXTERNAL,
+  DESCRIPTION_OVERRIDE,
   FIELD_DEFINITION_UPPER,
   FIELD_PATH,
   FIELD_SET_SCALAR,
   FIELDS,
+  FOR,
   FROM,
+  IMPORT,
   IN_UPPER,
   INACCESSIBLE,
   INPUT_FIELD_DEFINITION_UPPER,
@@ -41,11 +49,14 @@ import {
   INTERFACE_UPPER,
   KEY,
   LINK,
+  LINK_IMPORT,
+  LINK_PURPOSE,
   NAME,
   NOT_UPPER,
   OBJECT_UPPER,
   OR_UPPER,
   OVERRIDE,
+  PROPAGATE,
   PROVIDER_ID,
   PROVIDES,
   REASON,
@@ -56,8 +67,10 @@ import {
   SCHEMA_UPPER,
   SCOPE_SCALAR,
   SCOPES,
+  SECURITY,
   SHAREABLE,
   SPECIFIED_BY,
+  STREAM_CONFIGURATION,
   STREAM_NAME,
   STRING_SCALAR,
   SUBJECT,
@@ -73,8 +86,18 @@ import {
   URL_LOWER,
   VALUES,
 } from './string-constants';
-import { MutableDirectiveDefinitionNode, MutableInputObjectNode, MutableScalarNode } from '../schema-building/ast';
+import {
+  MutableDirectiveDefinitionNode,
+  MutableEnumNode,
+  MutableInputObjectNode,
+  MutableScalarNode,
+} from '../schema-building/ast';
 import { DEFAULT_CONSUMER_INACTIVE_THRESHOLD } from './integer-constants';
+
+export const REQUIRED_STRING_TYPE_NODE: TypeNode = {
+  kind: Kind.NON_NULL_TYPE,
+  type: stringToNamedTypeNode(STRING_SCALAR),
+};
 
 export const BASE_SCALARS = new Set<string>([
   '_Any',
@@ -116,7 +139,7 @@ export const DEPRECATED_DEFINITION: MutableDirectiveDefinitionNode = {
 };
 
 // directive @extends on INTERFACE | OBJECT
-const EXTENDS_DEFINITION: DirectiveDefinitionNode = {
+export const EXTENDS_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([INTERFACE_UPPER, OBJECT_UPPER]),
   name: stringToNameNode(EXTENDS),
@@ -124,31 +147,25 @@ const EXTENDS_DEFINITION: DirectiveDefinitionNode = {
 };
 
 // directive @external on FIELD_DEFINITION | OBJECT
-const EXTERNAL_DEFINITION: DirectiveDefinitionNode = {
+export const EXTERNAL_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
   name: stringToNameNode(EXTERNAL),
   repeatable: false,
 };
 
-// directive @edfs__kafkaPublish(topic: String!, providerId: String! = "kafka") on FIELD_DEFINITION
-const EDFS_KAFKA_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
+// directive @edfs__kafkaPublish(topic: String!, providerId: String! = "default") on FIELD_DEFINITION
+export const EDFS_KAFKA_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(TOPIC),
-      type: {
-        kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(STRING_SCALAR),
-      },
+      type: REQUIRED_STRING_TYPE_NODE,
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(PROVIDER_ID),
-      type: {
-        kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(STRING_SCALAR),
-      },
+      type: REQUIRED_STRING_TYPE_NODE,
       defaultValue: {
         kind: Kind.STRING,
         value: DEFAULT_EDFS_PROVIDER_ID,
@@ -161,8 +178,8 @@ const EDFS_KAFKA_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @edfs__kafkaSubscribe(topics: [String!]!, providerId: String! = "kafka") on FIELD_DEFINITION
-const EDFS_KAFKA_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
+// directive @edfs__kafkaSubscribe(topics: [String!]!, providerId: String! = "default") on FIELD_DEFINITION
+export const EDFS_KAFKA_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -171,20 +188,14 @@ const EDFS_KAFKA_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
         kind: Kind.NON_NULL_TYPE,
         type: {
           kind: Kind.LIST_TYPE,
-          type: {
-            kind: Kind.NON_NULL_TYPE,
-            type: stringToNamedTypeNode(STRING_SCALAR),
-          },
+          type: REQUIRED_STRING_TYPE_NODE,
         },
       },
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(PROVIDER_ID),
-      type: {
-        kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(STRING_SCALAR),
-      },
+      type: REQUIRED_STRING_TYPE_NODE,
       defaultValue: {
         kind: Kind.STRING,
         value: DEFAULT_EDFS_PROVIDER_ID,
@@ -193,20 +204,17 @@ const EDFS_KAFKA_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
-  name: stringToNameNode(EDFS_KAFKA_PUBLISH),
+  name: stringToNameNode(EDFS_KAFKA_SUBSCRIBE),
   repeatable: false,
 };
 
 // directive @edfs__natsPublish(subject: String!, providerId: String! = "default") on FIELD_DEFINITION
-const EDFS_NATS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
+export const EDFS_NATS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(SUBJECT),
-      type: {
-        kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(STRING_SCALAR),
-      },
+      type: REQUIRED_STRING_TYPE_NODE,
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -228,7 +236,7 @@ const EDFS_NATS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
 };
 
 // directive @edfs__natsRequest(subject: String!, providerId String! = "default") on FIELD_DEFINITION
-const EDFS_NATS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
+export const EDFS_NATS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -257,8 +265,12 @@ const EDFS_NATS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @edfs__natsSubscribe(subjects: [String!]!, providerId: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration) on FIELD_DEFINITION
-const EDFS_NATS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
+/* directive @edfs__natsSubscribe(
+ *   subjects: [String!]!, providerId: String! = "default",
+ *   streamConfiguration: edfs__NatsStreamConfiguration
+ * ) on FIELD_DEFINITION
+ */
+export const EDFS_NATS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -267,20 +279,14 @@ const EDFS_NATS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
         kind: Kind.NON_NULL_TYPE,
         type: {
           kind: Kind.LIST_TYPE,
-          type: {
-            kind: Kind.NON_NULL_TYPE,
-            type: stringToNamedTypeNode(STRING_SCALAR),
-          },
+          type: REQUIRED_STRING_TYPE_NODE,
         },
       },
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(PROVIDER_ID),
-      type: {
-        kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(STRING_SCALAR),
-      },
+      type: REQUIRED_STRING_TYPE_NODE,
       defaultValue: {
         kind: Kind.STRING,
         value: DEFAULT_EDFS_PROVIDER_ID,
@@ -288,7 +294,7 @@ const EDFS_NATS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode('streamConfiguration'),
+      name: stringToNameNode(STREAM_CONFIGURATION),
       type: stringToNamedTypeNode(EDFS_NATS_STREAM_CONFIGURATION),
     },
   ],
@@ -298,16 +304,18 @@ const EDFS_NATS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
+export const REQUIRED_FIELDSET_TYPE_NODE: TypeNode = {
+  kind: Kind.NON_NULL_TYPE,
+  type: stringToNamedTypeNode(FIELD_SET_SCALAR),
+};
+
 // directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
-const KEY_DEFINITION: DirectiveDefinitionNode = {
+export const KEY_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(FIELDS),
-      type: {
-        kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(FIELD_SET_SCALAR),
-      },
+      type: REQUIRED_FIELDSET_TYPE_NODE,
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -326,15 +334,12 @@ const KEY_DEFINITION: DirectiveDefinitionNode = {
 };
 
 // directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
-const PROVIDES_DEFINITION: DirectiveDefinitionNode = {
+export const PROVIDES_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(FIELDS),
-      type: {
-        kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(FIELD_SET_SCALAR),
-      },
+      type: REQUIRED_FIELDSET_TYPE_NODE,
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
@@ -344,7 +349,7 @@ const PROVIDES_DEFINITION: DirectiveDefinitionNode = {
 };
 
 // directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
-const REQUIRES_DEFINITION: DirectiveDefinitionNode = {
+export const REQUIRES_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -362,15 +367,12 @@ const REQUIRES_DEFINITION: DirectiveDefinitionNode = {
 };
 
 // directive @specifiedBy(url: String!) on SCALAR
-const SPECIFIED_BY_DEFINITION: DirectiveDefinitionNode = {
+export const SPECIFIED_BY_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(URL_LOWER),
-      type: {
-        kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(STRING_SCALAR),
-      },
+      type: REQUIRED_STRING_TYPE_NODE,
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
@@ -427,6 +429,33 @@ export const BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<string, Direc
   [TAG, TAG_DEFINITION],
 ]);
 
+export const ALL_IN_BUILT_DIRECTIVE_NAMES = new Set<string>([
+  AUTHENTICATED,
+  COMPOSE_DIRECTIVE,
+  CONFIGURE_DESCRIPTION,
+  CONFIGURE_CHILD_DESCRIPTIONS,
+  DEPRECATED,
+  EDFS_NATS_PUBLISH,
+  EDFS_NATS_REQUEST,
+  EDFS_NATS_SUBSCRIBE,
+  EDFS_KAFKA_PUBLISH,
+  EDFS_KAFKA_SUBSCRIBE,
+  EXTENDS,
+  EXTERNAL,
+  INACCESSIBLE,
+  INTERFACE_OBJECT,
+  KEY,
+  LINK,
+  OVERRIDE,
+  PROVIDES,
+  REQUIRES,
+  REQUIRES_SCOPES,
+  SHAREABLE,
+  SPECIFIED_BY,
+  SUBSCRIPTION_FILTER,
+  TAG,
+]);
+
 // @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
 export const AUTHENTICATED_DEFINITION: MutableDirectiveDefinitionNode = {
   arguments: [],
@@ -444,15 +473,12 @@ export const AUTHENTICATED_DEFINITION: MutableDirectiveDefinitionNode = {
 
 // @composeDirective is currently unimplemented
 /* directive @composeDirective(name: String!) repeatable on SCHEMA */
-const COMPOSE_DIRECTIVE_DEFINITION: DirectiveDefinitionNode = {
+export const COMPOSE_DIRECTIVE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(NAME),
-      type: {
-        kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(STRING_SCALAR),
-      },
+      type: REQUIRED_STRING_TYPE_NODE,
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
@@ -484,15 +510,37 @@ export const INACCESSIBLE_DEFINITION: MutableDirectiveDefinitionNode = {
 };
 
 // directive @interfaceObject on OBJECT
-const INTERFACE_OBJECT_DEFINITION: DirectiveDefinitionNode = {
+export const INTERFACE_OBJECT_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([OBJECT_UPPER]),
   name: stringToNameNode(INTERFACE_OBJECT),
   repeatable: false,
 };
 
+export const LINK_IMPORT_DEFINITION: MutableScalarNode = {
+  kind: Kind.SCALAR_TYPE_DEFINITION,
+  name: stringToNameNode(LINK_IMPORT),
+};
+
+export const LINK_PURPOSE_DEFINITION: MutableEnumNode = {
+  kind: Kind.ENUM_TYPE_DEFINITION,
+  name: stringToNameNode(LINK_PURPOSE),
+  values: [
+    {
+      directives: [],
+      kind: Kind.ENUM_VALUE_DEFINITION,
+      name: stringToNameNode(EXECUTION),
+    },
+    {
+      directives: [],
+      kind: Kind.ENUM_VALUE_DEFINITION,
+      name: stringToNameNode(SECURITY),
+    },
+  ],
+};
+
 // directive @link(url: String!, as: String!, for: String, import: [String]) repeatable on SCHEMA
-const LINK_DEFINITION: DirectiveDefinitionNode = {
+export const LINK_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -504,20 +552,20 @@ const LINK_DEFINITION: DirectiveDefinitionNode = {
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode('as'),
+      name: stringToNameNode(AS),
       type: stringToNamedTypeNode(STRING_SCALAR),
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode('for'),
-      type: stringToNamedTypeNode(STRING_SCALAR),
+      name: stringToNameNode(FOR),
+      type: stringToNamedTypeNode(LINK_PURPOSE),
     },
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode('import'),
+      name: stringToNameNode(IMPORT),
       type: {
         kind: Kind.LIST_TYPE,
-        type: stringToNamedTypeNode(STRING_SCALAR),
+        type: stringToNamedTypeNode(LINK_IMPORT),
       },
     },
   ],
@@ -528,7 +576,7 @@ const LINK_DEFINITION: DirectiveDefinitionNode = {
 };
 
 // directive @override(from: String!) on FIELD_DEFINITION
-const OVERRIDE_DEFINITION: DirectiveDefinitionNode = {
+export const OVERRIDE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -583,11 +631,11 @@ export const REQUIRES_SCOPES_DEFINITION: MutableDirectiveDefinitionNode = {
 };
 
 // directive @shareable on FIELD_DEFINITION | OBJECT
-const SHAREABLE_DEFINITION: DirectiveDefinitionNode = {
+export const SHAREABLE_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
   name: stringToNameNode(SHAREABLE),
-  repeatable: false,
+  repeatable: true,
 };
 
 // directive @openfed__subscriptionFilter(condition: openfed__SubscriptionFilterCondition!) on FIELD_DEFINITION
@@ -726,7 +774,6 @@ export const VERSION_TWO_DIRECTIVE_DEFINITIONS: DirectiveDefinitionNode[] = [
   COMPOSE_DIRECTIVE_DEFINITION,
   INACCESSIBLE_DEFINITION,
   INTERFACE_OBJECT_DEFINITION,
-  LINK_DEFINITION,
   OVERRIDE_DEFINITION,
   REQUIRES_SCOPES_DEFINITION,
   SHAREABLE_DEFINITION,
@@ -785,37 +832,80 @@ export const EDFS_NATS_STREAM_CONFIGURATION_DEFINITION: MutableInputObjectNode =
   ],
 };
 
-export const INHERITABLE_DIRECTIVE_NAMES = [EXTERNAL, SHAREABLE];
+/*
+ * directive @openfed__configureDescription(
+ *   propagate: Boolean! = true
+ *   descriptionOverride: String
+ * ) on ARGUMENT_DEFINITION | FIELD_DEFINITION | INPUT_OBJECT | INPUT_FIELD_DEFINITION | ENUM | ENUM_VALUE |
+ * INTERFACE | OBJECT | SCALAR | SCHEMA | UNION
+ * */
+export const CONFIGURE_DESCRIPTION_DEFINITION: MutableDirectiveDefinitionNode = {
+  arguments: [
+    {
+      directives: [],
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(PROPAGATE),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      },
+      defaultValue: {
+        kind: Kind.BOOLEAN,
+        value: true,
+      },
+    },
+    {
+      directives: [],
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(DESCRIPTION_OVERRIDE),
+      type: stringToNamedTypeNode(STRING_SCALAR),
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([
+    ARGUMENT_DEFINITION_UPPER,
+    ENUM_UPPER,
+    ENUM_VALUE_UPPER,
+    FIELD_DEFINITION_UPPER,
+    INTERFACE_UPPER,
+    INPUT_OBJECT_UPPER,
+    INPUT_FIELD_DEFINITION_UPPER,
+    OBJECT_UPPER,
+    SCALAR_UPPER,
+    SCHEMA_UPPER,
+    UNION_UPPER,
+  ]),
+  name: stringToNameNode(CONFIGURE_DESCRIPTION),
+  repeatable: false,
+};
 
-export const baseDirectives = `
-  directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION
-  directive @extends on INTERFACE | OBJECT
-  directive @external on FIELD_DEFINITION | OBJECT
-  directive @edfs__kafkaPublish(topic: String!, providerId: String! = "default") on FIELD_DEFINITION
-  directive @edfs__kafkaSubscribe(topic: String!, providerId: String! = "default") on FIELD_DEFINITION
-  directive @edfs__natsPublish(subject: String!, providerId: String! = "default") on FIELD_DEFINITION
-  directive @edfs__natsRequest(subject: String!, providerId: String! = "default") on FIELD_DEFINITION
-  directive @edfs__natsSubscribe(subjects: [String!]!, id: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration) on FIELD_DEFINITION
-  directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
-  directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
-  directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
-  directive @specifiedBy(url: String!) on SCALAR
-  directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-  directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-  directive @composeDirective(name: String!) repeatable on SCHEMA
-  directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-  directive @interfaceObject on OBJECT
-  directive @link(url: String!, as: String, for: String, import: [String]) repeatable on SCHEMA
-  directive @override(from: String!) on FIELD_DEFINITION
-  directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-  directive @shareable on FIELD_DEFINITION | OBJECT
-  scalar openfed__FieldSet
-  scalar openfed__Scope
-  input edfs__NatsStreamConfiguration {
-    consumerInactiveThreshold: Int! = ${DEFAULT_CONSUMER_INACTIVE_THRESHOLD}
-    consumerName: String!
-    streamName: String!
-  }
-`;
+/*
+ * directive @openfed__configureChildDescriptions(
+ *   propagate: Boolean! = true
+ * ) on ENUM | INPUT_OBJECT | INTERFACE | OBJECT
+ */
+export const CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION: MutableDirectiveDefinitionNode = {
+  arguments: [
+    {
+      directives: [],
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(PROPAGATE),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      },
+      defaultValue: {
+        kind: Kind.BOOLEAN,
+        value: true,
+      },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([ENUM_UPPER, INPUT_OBJECT_UPPER, INTERFACE_UPPER, OBJECT_UPPER]),
+  name: stringToNameNode(CONFIGURE_CHILD_DESCRIPTIONS),
+  repeatable: false,
+};
+
+export const INHERITABLE_DIRECTIVE_NAMES = [EXTERNAL, SHAREABLE];
 
 export const EDFS_ARGS_REGEXP = /{{\s*args\.([a-zA-Z0-9_]+)\s*}}/g;
