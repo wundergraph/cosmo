@@ -78,7 +78,6 @@ func NewDefaultFactoryResolver(
 		Transport: transportFactory.RoundTripper(enableSingleFlight, baseTransport),
 	}
 	streamingClient := &http.Client{
-		Timeout:   transportOptions.SubgraphTransportOptions.RequestTimeout,
 		Transport: transportFactory.RoundTripper(enableSingleFlight, baseTransport),
 	}
 
