@@ -187,7 +187,6 @@ import {
   getDefinitionDataCoords,
   getNodeForRouterSchemaByData,
   getSubscriptionFilterValue,
-  getValidFieldArgumentNodes,
   isLeafKind,
   isNodeDataInaccessible,
   isParentDataRootType,
@@ -1537,10 +1536,10 @@ export class FederationFactory {
   }
 
   getValidFlattenedPersistedDirectiveNodeArray(
-    directivesByDirectiveName: Map<string, ConstDirectiveNode[]>,
+    directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>,
     hostPath: string,
-  ): ConstDirectiveNode[] {
-    const persistedDirectiveNodes: ConstDirectiveNode[] = [];
+  ): Array<ConstDirectiveNode> {
+    const persistedDirectiveNodes: Array<ConstDirectiveNode> = [];
     for (const [directiveName, directiveNodes] of directivesByDirectiveName) {
       const persistedDirectiveDefinition = this.persistedDirectiveDefinitionByDirectiveName.get(directiveName);
       if (!persistedDirectiveDefinition) {
@@ -1628,8 +1627,8 @@ export class FederationFactory {
   }
 
   getValidFieldArgumentNodes(fieldData: FieldData): MutableInputValueNode[] {
-    const argumentNodes: MutableInputValueNode[] = [];
-    const argumentNames: string[] = [];
+    const argumentNodes: Array<MutableInputValueNode> = [];
+    const argumentNames: Array<string> = [];
     const invalidRequiredArguments: InvalidRequiredInputValueData[] = [];
     const fieldPath = `${fieldData.renamedParentTypeName}.${fieldData.name}`;
     for (const [argumentName, inputValueData] of fieldData.argumentDataByArgumentName) {
@@ -1659,7 +1658,7 @@ export class FederationFactory {
 
   getNodeWithPersistedDirectivesByFieldData(
     fieldData: FieldData,
-    argumentNodes: MutableInputValueNode[],
+    argumentNodes: Array<MutableInputValueNode>,
   ): MutableFieldNode {
     fieldData.node.arguments = argumentNodes;
     fieldData.node.name = stringToNameNode(fieldData.name);
@@ -1678,8 +1677,8 @@ export class FederationFactory {
       }
       switch (parentDefinitionData.kind) {
         case Kind.ENUM_TYPE_DEFINITION:
-          const enumValueNodes: MutableEnumValueNode[] = [];
-          const clientEnumValueNodes: MutableEnumValueNode[] = [];
+          const enumValueNodes: Array<MutableEnumValueNode> = [];
+          const clientEnumValueNodes: Array<MutableEnumValueNode> = [];
           const mergeMethod = this.getEnumValueMergeMethod(parentTypeName);
           for (const enumValueData of parentDefinitionData.enumValueDataByValueName.values()) {
             const enumValueNode = getNodeForRouterSchemaByData(
@@ -1742,9 +1741,9 @@ export class FederationFactory {
           });
           break;
         case Kind.INPUT_OBJECT_TYPE_DEFINITION:
-          const invalidRequiredInputs: InvalidRequiredInputValueData[] = [];
-          const inputValueNodes: MutableInputValueNode[] = [];
-          const clientInputValueNodes: MutableInputValueNode[] = [];
+          const invalidRequiredInputs: Array<InvalidRequiredInputValueData> = [];
+          const inputValueNodes: Array<MutableInputValueNode> = [];
+          const clientInputValueNodes: Array<MutableInputValueNode> = [];
           for (const [inputValueName, inputValueData] of parentDefinitionData.inputValueDataByValueName) {
             if (parentDefinitionData.subgraphNames.size === inputValueData.subgraphNames.size) {
               inputValueNodes.push(this.getNodeWithPersistedDirectivesByInputValueData(inputValueData));
@@ -1797,8 +1796,8 @@ export class FederationFactory {
         case Kind.INTERFACE_TYPE_DEFINITION:
         // intentional fallthrough
         case Kind.OBJECT_TYPE_DEFINITION:
-          const fieldNodes: MutableFieldNode[] = [];
-          const clientSchemaFieldNodes: MutableFieldNode[] = [];
+          const fieldNodes: Array<MutableFieldNode> = [];
+          const clientSchemaFieldNodes: Array<MutableFieldNode> = [];
           const graphFieldDataByFieldName = new Map<string, GraphFieldData>();
           const invalidFieldNames = newInvalidFieldNames();
           const isObject = parentDefinitionData.kind === Kind.OBJECT_TYPE_DEFINITION;
@@ -2012,7 +2011,7 @@ export class FederationFactory {
     objectData: ObjectDefinitionData,
     inputFieldPath: string,
     directiveSubgraphName: string,
-    fieldErrorMessages: string[],
+    fieldErrorMessages: Array<string>,
   ): string[] {
     const paths = conditionFieldPath.split(PERIOD);
     if (paths.length < 1) {

@@ -1,18 +1,21 @@
 import {
   ConstDirectiveNode,
+  ConstValueNode,
   DefinitionNode,
   DirectiveDefinitionNode,
-  DirectiveNode,
   DocumentNode,
   EnumTypeDefinitionNode,
   EnumTypeExtensionNode,
+  EnumValueDefinitionNode,
   FieldDefinitionNode,
   GraphQLSchema,
   InputObjectTypeExtensionNode,
+  InputValueDefinitionNode,
   InterfaceTypeDefinitionNode,
   InterfaceTypeExtensionNode,
   Kind,
   ListValueNode,
+  NamedTypeNode,
   ObjectTypeDefinitionNode,
   ObjectTypeExtensionNode,
   OperationTypeDefinitionNode,
@@ -20,10 +23,13 @@ import {
   print,
   ScalarTypeDefinitionNode,
   ScalarTypeExtensionNode,
+  SchemaDefinitionNode,
   StringValueNode,
   TypeDefinitionNode,
   TypeExtensionNode,
   TypeNode,
+  UnionTypeDefinitionNode,
+  UnionTypeExtensionNode,
 } from 'graphql';
 import {
   extractExecutableDirectiveLocations,
@@ -41,6 +47,8 @@ import {
   addFieldNamesToConfigurationData,
   ExtractArgumentDataResult,
   FieldSetData,
+  HandleOverrideDirectiveParams,
+  HandleRequiresScopesDirectiveParams,
   initializeDirectiveDefinitionDatas,
   InputValidationContainer,
   isNodeQuery,
@@ -106,7 +114,9 @@ import {
   configureDescriptionNoDescriptionError,
   duplicateArgumentsError,
   duplicateDirectiveArgumentDefinitionsErrorMessage,
+  duplicateDirectiveDefinitionArgumentErrorMessage,
   duplicateDirectiveDefinitionError,
+  duplicateDirectiveDefinitionLocationErrorMessage,
   duplicateImplementedInterfaceError,
   duplicateOverriddenFieldErrorMessage,
   duplicateOverriddenFieldsError,
@@ -118,8 +128,8 @@ import {
   incompatibleInputValueDefaultValueTypeError,
   invalidArgumentsError,
   invalidArgumentValueErrorMessage,
-  invalidArgumentValueErrorMessageV2,
-  invalidDirectiveArgumentTypeErrorMessage,
+  invalidDirectiveDefinitionError,
+  invalidDirectiveDefinitionLocationErrorMessage,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
   invalidEdfsDirectiveName,
@@ -196,7 +206,6 @@ import {
   FIELD_SET_SCALAR,
   FIELDS,
   FLOAT_SCALAR,
-  FROM,
   ID_SCALAR,
   INACCESSIBLE,
   INPUT_FIELD,
@@ -264,7 +273,6 @@ import {
 } from './walkers';
 import {
   ArgumentData,
-  ChildData,
   CompositeOutputData,
   ConfigureDescriptionData,
   EnumDefinitionData,
@@ -305,20 +313,11 @@ import {
   getMutableScalarNode,
   getMutableTypeNode,
   getMutableUnionNode,
+  getNamedTypeNode,
   getTypeNodeNamedTypeName,
 } from '../schema-building/ast';
 import { InvalidRootTypeFieldEventsDirectiveData } from '../errors/utils';
 import { Graph } from '../resolvability-graph/graph';
-import {
-  ConstValueNode,
-  EnumValueDefinitionNode,
-  InputValueDefinitionNode,
-  NamedTypeNode,
-  NameNode,
-  SchemaDefinitionNode,
-  UnionTypeDefinitionNode,
-  UnionTypeExtensionNode,
-} from 'graphql/index';
 import { DEFAULT_CONSUMER_INACTIVE_THRESHOLD, MAX_INT32 } from '../utils/integer-constants';
 
 export type NormalizationResult = {
@@ -568,7 +567,8 @@ export class NormalizationFactory {
     switch (typeNode.kind) {
       case Kind.LIST_TYPE: {
         if (argumentValue.kind !== Kind.LIST) {
-          return false;
+          // This handles List coercion
+          return this.isArgumentValueValid(getNamedTypeNode(typeNode.type), argumentValue);
         }
         for (const value of argumentValue.values) {
           if (!this.isArgumentValueValid(typeNode.type, value)) {
@@ -633,7 +633,7 @@ export class NormalizationFactory {
             if (parentData.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION) {
               return false;
             }
-            // TODO
+            // TODO deep comparison
             return argumentValue.kind === Kind.OBJECT;
           }
         }
@@ -702,21 +702,8 @@ export class NormalizationFactory {
       if (definitionData.requiredArgumentNames.size > 0) {
         errorMessages.push(undefinedRequiredArgumentsErrorMessage(directiveName, requiredArgumentNames, []));
       }
-      // todo
-      if (
-        isAuthenticated &&
-        (data.kind === Kind.ENUM_TYPE_DEFINITION ||
-          data.kind === Kind.FIELD_DEFINITION ||
-          data.kind === Kind.SCALAR_TYPE_DEFINITION)
-      ) {
-        if (data.kind !== Kind.FIELD_DEFINITION) {
-          this.leafTypeNamesWithAuthorizationDirectives.add(parentTypeName);
-        }
-        const parentAuthorizationData = getValueOrDefault(this.authorizationDataByParentTypeName, parentTypeName, () =>
-          newAuthorizationData(parentTypeName),
-        );
-        const authorizationData = getAuthorizationDataToUpdate(parentAuthorizationData, data.node);
-        authorizationData.requiresAuthentication ||= isAuthenticated;
+      if (isAuthenticated) {
+        this.handleAuthenticatedDirective(data, parentTypeName);
       }
       return errorMessages;
     }
@@ -738,52 +725,34 @@ export class NormalizationFactory {
       }
       if (!this.isArgumentValueValid(argumentData.typeNode, argumentNode.value)) {
         errorMessages.push(
-          invalidArgumentValueErrorMessageV2(
+          invalidArgumentValueErrorMessage(
             print(argumentNode.value),
-            directiveName,
+            `@${directiveName}`,
             argumentName,
             printTypeNode(argumentData.typeNode),
           ),
         );
         continue;
       }
-      if (isOverride) {
-        const targetSubgraphName = (argumentNode.value as StringValueNode).value;
-        if (targetSubgraphName === this.subgraphName) {
-          errorMessages.push(equivalentSourceAndTargetOverrideErrorMessage(targetSubgraphName, directiveCoords));
-          continue;
-        }
-        const overrideDataForSubgraph = getValueOrDefault(
-          this.overridesByTargetSubgraphName,
-          targetSubgraphName,
-          () => new Map<string, Set<string>>(),
-        );
-        const overriddenFieldNamesForParent = getValueOrDefault(
-          overrideDataForSubgraph,
-          parentTypeName,
-          () => new Set<string>(),
-        );
-        overriddenFieldNamesForParent.add(data.name);
+      // The directive location validation means the kind check should be unnecessary
+      if (isOverride && data.kind === Kind.FIELD_DEFINITION) {
+        this.handleOverrideDirective({
+          data,
+          directiveCoords,
+          errorMessages,
+          targetSubgraphName: (argumentNode.value as StringValueNode).value,
+        });
         continue;
       }
       if (!isRequiresScopes || argumentName !== SCOPES) {
         continue;
       }
-      // Casts are safe because invalid arguments short circuit
-      const orScopes = (argumentNode.value as ListValueNode).values;
-      if (orScopes.length > maxOrScopes) {
-        this.invalidOrScopesHostPaths.add(directiveCoords);
-        continue;
-      }
-      for (const scopes of orScopes) {
-        const andScopes = new Set<string>();
-        for (const scope of (scopes as ListValueNode).values) {
-          andScopes.add((scope as StringValueNode).value);
-        }
-        if (andScopes.size > 0) {
-          requiredScopes.push(andScopes);
-        }
-      }
+      this.handleRequiresScopesDirective({
+        directiveCoords,
+        // Casts are safe because invalid arguments would short circuit
+        orScopes: (argumentNode.value as ListValueNode).values,
+        requiredScopes,
+      });
     }
     if (duplicateArgumentNames.size > 0) {
       errorMessages.push(duplicateDirectiveArgumentDefinitionsErrorMessage([...duplicateArgumentNames]));
@@ -818,7 +787,7 @@ export class NormalizationFactory {
     return errorMessages;
   }
 
-  validateDirectives(data: ParentDefinitionData | ChildData | SchemaData, directiveCoords: string) {
+  validateDirectives(data: NodeData | SchemaData, directiveCoords: string) {
     const undefinedDirectiveNames = new Set<string>();
     for (const [directiveName, directiveNodes] of data.directivesByDirectiveName) {
       const definitionData = this.directiveDefinitionDataByDirectiveName.get(directiveName);
@@ -985,10 +954,10 @@ export class NormalizationFactory {
     if (configureDescriptionNodes && configureDescriptionNodes.length == 1) {
       this.extractConfigureDescriptionData(data, configureDescriptionNodes[0]);
     }
-    //TODO
-    const configureChildDescriptionsNodes = data.directivesByDirectiveName.get(CONFIGURE_CHILD_DESCRIPTIONS);
-    if (configureChildDescriptionsNodes && configureChildDescriptionsNodes.length == 1) {
-    }
+    // TODO configureChildDescriptions will be added in another PR
+    // const configureChildDescriptionsNodes = data.directivesByDirectiveName.get(CONFIGURE_CHILD_DESCRIPTIONS);
+    // if (configureChildDescriptionsNodes && configureChildDescriptionsNodes.length == 1) {
+    // }
   }
 
   extractImplementedInterfaceTypeNames(
@@ -1088,25 +1057,32 @@ export class NormalizationFactory {
     });
   }
 
-  extractDirectiveLocations(locationNodes: readonly NameNode[] | NameNode[]): Set<string> {
+  extractDirectiveLocations(node: DirectiveDefinitionNode, errorMessages: Array<string>): Set<string> {
     const locations = new Set<string>();
-    for (const node of locationNodes) {
-      const locationName = node.value;
-      if (locations.has(locationName)) {
-        // TODO error
+    const handledLocations = new Set<string>();
+    for (const locationNode of node.locations) {
+      const locationName = locationNode.value;
+      if (handledLocations.has(locationName)) {
         continue;
       }
       if (!EXECUTABLE_DIRECTIVE_LOCATIONS.has(locationName) && !TYPE_SYSTEM_DIRECTIVE_LOCATIONS.has(locationName)) {
-        // TODO error
+        errorMessages.push(invalidDirectiveDefinitionLocationErrorMessage(locationName));
+        handledLocations.add(locationName);
         continue;
       }
-      locations.add(node.value);
+      if (locations.has(locationName)) {
+        errorMessages.push(duplicateDirectiveDefinitionLocationErrorMessage(locationName));
+        handledLocations.add(locationName);
+        continue;
+      }
+      locations.add(locationName);
     }
     return locations;
   }
 
   extractArgumentData(
-    argumentNodes: readonly InputValueDefinitionNode[] | Array<InputValueDefinitionNode> | undefined,
+    argumentNodes: ReadonlyArray<InputValueDefinitionNode> | Array<InputValueDefinitionNode> | undefined,
+    errorMessages: Array<string>,
   ): ExtractArgumentDataResult {
     const argumentTypeNodeByArgumentName = new Map<string, ArgumentData>();
     const optionalArgumentNames = new Set<string>();
@@ -1119,10 +1095,11 @@ export class NormalizationFactory {
     if (!argumentNodes) {
       return output;
     }
+    const duplicateArgumentNames = new Set<string>();
     for (const argumentNode of argumentNodes) {
       const name = argumentNode.name.value;
       if (argumentTypeNodeByArgumentName.has(name)) {
-        // TODO error
+        duplicateArgumentNames.add(name);
         continue;
       }
       if (argumentNode.defaultValue) {
@@ -1136,6 +1113,9 @@ export class NormalizationFactory {
         typeNode: argumentNode.type,
         defaultValue: argumentNode.defaultValue,
       });
+    }
+    if (duplicateArgumentNames.size > 0) {
+      errorMessages.push(duplicateDirectiveDefinitionArgumentErrorMessage([...duplicateArgumentNames]));
     }
     return output;
   }
@@ -1157,18 +1137,23 @@ export class NormalizationFactory {
     if (ALL_IN_BUILT_DIRECTIVE_NAMES.has(name)) {
       return false;
     }
+    const errorMessages: Array<string> = [];
     const { argumentTypeNodeByArgumentName, optionalArgumentNames, requiredArgumentNames } = this.extractArgumentData(
       node.arguments,
+      errorMessages,
     );
     this.directiveDefinitionDataByDirectiveName.set(name, {
       argumentTypeNodeByArgumentName,
       isRepeatable: node.repeatable,
-      locations: this.extractDirectiveLocations(node.locations),
+      locations: this.extractDirectiveLocations(node, errorMessages),
       name,
       node,
       optionalArgumentNames,
       requiredArgumentNames,
     });
+    if (errorMessages.length > 0) {
+      this.errors.push(invalidDirectiveDefinitionError(name, errorMessages));
+    }
     return true;
   }
 
@@ -1728,16 +1713,26 @@ export class NormalizationFactory {
     }
   }
 
-  // TODO
-  handleOverrideDeclaration(node: DirectiveNode, hostPath: string, errorMessages: string[]) {
-    const argumentNode = node.arguments![0];
-    if (argumentNode.value.kind !== Kind.STRING) {
-      errorMessages.push(invalidDirectiveArgumentTypeErrorMessage(true, FROM, Kind.STRING, argumentNode.value.kind));
+  handleAuthenticatedDirective(data: NodeData | SchemaData, parentTypeName: string) {
+    if (
+      data.kind !== Kind.ENUM_TYPE_DEFINITION &&
+      data.kind !== Kind.FIELD_DEFINITION &&
+      data.kind !== Kind.SCALAR_TYPE_DEFINITION
+    ) {
       return;
     }
-    const targetSubgraphName = argumentNode.value.value;
+    if (data.kind !== Kind.FIELD_DEFINITION) {
+      this.leafTypeNamesWithAuthorizationDirectives.add(parentTypeName);
+    }
+    const parentAuthorizationData = getValueOrDefault(this.authorizationDataByParentTypeName, parentTypeName, () =>
+      newAuthorizationData(parentTypeName),
+    );
+    getAuthorizationDataToUpdate(parentAuthorizationData, data.node).requiresAuthentication = true;
+  }
+
+  handleOverrideDirective({ data, directiveCoords, errorMessages, targetSubgraphName }: HandleOverrideDirectiveParams) {
     if (targetSubgraphName === this.subgraphName) {
-      errorMessages.push(equivalentSourceAndTargetOverrideErrorMessage(targetSubgraphName, hostPath));
+      errorMessages.push(equivalentSourceAndTargetOverrideErrorMessage(targetSubgraphName, directiveCoords));
       return;
     }
     const overrideDataForSubgraph = getValueOrDefault(
@@ -1745,12 +1740,27 @@ export class NormalizationFactory {
       targetSubgraphName,
       () => new Map<string, Set<string>>(),
     );
-    const overriddenFieldNamesForParent = getValueOrDefault(
+    getValueOrDefault(
       overrideDataForSubgraph,
-      this.renamedParentTypeName || this.originalParentTypeName,
+      data.renamedParentTypeName || data.originalParentTypeName,
       () => new Set<string>(),
-    );
-    overriddenFieldNamesForParent.add(this.childName);
+    ).add(data.name);
+  }
+
+  handleRequiresScopesDirective({ directiveCoords, orScopes, requiredScopes }: HandleRequiresScopesDirectiveParams) {
+    if (orScopes.length > maxOrScopes) {
+      this.invalidOrScopesHostPaths.add(directiveCoords);
+      return;
+    }
+    for (const scopes of orScopes) {
+      const andScopes = new Set<string>();
+      for (const scope of (scopes as ListValueNode).values) {
+        andScopes.add((scope as StringValueNode).value);
+      }
+      if (andScopes.size > 0) {
+        requiredScopes.push(andScopes);
+      }
+    }
   }
 
   getKafkaPublishConfiguration(
@@ -1951,12 +1961,14 @@ export class NormalizationFactory {
                 break;
               case CONSUMER_INACTIVE_THRESHOLD:
                 if (field.value.kind != Kind.INT) {
-                  // errorMessages.push(
-                  //   invalidArgumentValueErrorMessage(
-                  //     'edfs__NatsStreamConfiguration(consumerInactiveThreshold: ...)',
-                  //     Kind.INT,
-                  //   ),
-                  // );
+                  errorMessages.push(
+                    invalidArgumentValueErrorMessage(
+                      print(field.value),
+                      'edfs__NatsStreamConfiguration',
+                      `consumerInactiveThreshold`,
+                      INT_SCALAR,
+                    ),
+                  );
                   isValid = false;
                   continue;
                 }
@@ -1967,9 +1979,10 @@ export class NormalizationFactory {
                 } catch (e) {
                   errorMessages.push(
                     invalidArgumentValueErrorMessage(
-                      'edfs__NatsStreamConfiguration(consumerInactiveThreshold: ...)',
-                      Kind.INT,
-                      field.value.value,
+                      print(field.value),
+                      'edfs__NatsStreamConfiguration',
+                      `consumerInactiveThreshold`,
+                      INT_SCALAR,
                     ),
                   );
                   isValid = false;

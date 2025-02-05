@@ -10,7 +10,7 @@ import {
   FG_DESCRIPTION_OVERRIDE,
   FIRST_ORDINAL,
   INTERFACE,
-  invalidArgumentValueErrorMessageV2,
+  invalidArgumentValueErrorMessage,
   invalidDirectiveError,
   invalidRepeatedDirectiveErrorMessage,
   normalizeSubgraph,
@@ -67,7 +67,7 @@ describe('@openfed__configureDescription tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidDirectiveError(CONFIGURE_DESCRIPTION, 'Query', FIRST_ORDINAL, [
-          invalidArgumentValueErrorMessageV2('1', CONFIGURE_DESCRIPTION, PROPAGATE_TO_FG, 'Boolean!'),
+          invalidArgumentValueErrorMessage('1', `@${CONFIGURE_DESCRIPTION}`, PROPAGATE_TO_FG, 'Boolean!'),
         ]),
       );
     });
@@ -78,7 +78,7 @@ describe('@openfed__configureDescription tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors![0]).toStrictEqual(
         invalidDirectiveError(CONFIGURE_DESCRIPTION, 'Query', FIRST_ORDINAL, [
-          invalidArgumentValueErrorMessageV2('1', CONFIGURE_DESCRIPTION, FG_DESCRIPTION_OVERRIDE, STRING_SCALAR),
+          invalidArgumentValueErrorMessage('1', `@${CONFIGURE_DESCRIPTION}`, FG_DESCRIPTION_OVERRIDE, STRING_SCALAR),
         ]),
       );
     });

@@ -1,19 +1,7 @@
-import {
-  BREAK,
-  ConstDirectiveNode,
-  DirectiveDefinitionNode,
-  DocumentNode,
-  InputValueDefinitionNode,
-  Kind,
-  OperationTypeNode,
-  print,
-  TypeNode,
-  visit,
-} from 'graphql';
+import { BREAK, ConstDirectiveNode, DocumentNode, Kind, OperationTypeNode, print, ValueNode, visit } from 'graphql';
 import { getOrThrowError, getValueOrDefault, kindToTypeString } from '../utils/utils';
 import { isKindAbstract, lexicographicallySortDocumentNode, safeParse } from '../ast/utils';
 import {
-  ARGUMENT_DEFINITION_UPPER,
   AUTHENTICATED,
   COMPOSE_DIRECTIVE,
   CONFIGURE_CHILD_DESCRIPTIONS,
@@ -24,41 +12,23 @@ import {
   EDFS_NATS_PUBLISH,
   EDFS_NATS_REQUEST,
   EDFS_NATS_SUBSCRIBE,
-  ENUM_UPPER,
-  ENUM_VALUE_UPPER,
   EXTENDS,
   EXTERNAL,
-  FIELD_DEFINITION_UPPER,
-  FIELD_UPPER,
   FIELDS,
-  FRAGMENT_DEFINITION_UPPER,
-  FRAGMENT_SPREAD_UPPER,
   INACCESSIBLE,
-  INLINE_FRAGMENT_UPPER,
-  INPUT_FIELD_DEFINITION_UPPER,
-  INPUT_OBJECT_UPPER,
   INTERFACE_OBJECT,
-  INTERFACE_UPPER,
   KEY,
   LINK,
-  MUTATION_UPPER,
-  OBJECT_UPPER,
   OVERRIDE,
   PERIOD,
   PROVIDES,
   QUERY,
-  QUERY_UPPER,
   REQUIRES,
   REQUIRES_SCOPES,
-  SCALAR_UPPER,
-  SCHEMA_UPPER,
   SHAREABLE,
   SPECIFIED_BY,
   SUBSCRIPTION_FILTER,
-  SUBSCRIPTION_UPPER,
   TAG,
-  UNION_UPPER,
-  VARIABLE_DEFINITION_UPPER,
 } from '../utils/string-constants';
 import { NormalizationFactory } from './normalization-factory';
 import {
@@ -83,7 +53,6 @@ import {
   undefinedEventSubjectsArgumentErrorMessage,
   undefinedFieldInFieldSetErrorMessage,
   unexpectedArgumentErrorMessage,
-  unexpectedDirectiveLocationError,
   unknownInlineFragmentTypeConditionErrorMessage,
   unknownNamedTypeErrorMessage,
   unknownTypeInFieldSetErrorMessage,
@@ -98,12 +67,11 @@ import {
 } from '../router-configuration/router-configuration';
 import {
   ArgumentData,
-  ChildData,
   CompositeOutputData,
   DirectiveDefinitionData,
   FieldData,
   InputValueData,
-  ParentDefinitionData,
+  NodeData,
   SchemaData,
   UnionDefinitionData,
 } from '../schema-building/type-definition-data';
@@ -157,128 +125,6 @@ export function newFieldSetData(): FieldSetData {
     provides: new Map<string, string>(),
     requires: new Map<string, string>(),
   };
-}
-
-export function areNodeKindAndDirectiveLocationCompatible(
-  kind: Kind,
-  directiveDefinitionNode: DirectiveDefinitionNode,
-  isArgument = false,
-): boolean {
-  for (const location of directiveDefinitionNode.locations) {
-    const locationName = location.value.toUpperCase();
-    switch (locationName) {
-      case ARGUMENT_DEFINITION_UPPER:
-        if (!isArgument) {
-          break;
-        }
-        if (kind === Kind.INPUT_VALUE_DEFINITION) {
-          return true;
-        }
-        break;
-      case ENUM_UPPER:
-        if (kind === Kind.ENUM_TYPE_DEFINITION || kind === Kind.ENUM_TYPE_EXTENSION) {
-          return true;
-        }
-        break;
-      case ENUM_VALUE_UPPER:
-        if (kind === Kind.ENUM_VALUE_DEFINITION) {
-          return true;
-        }
-        break;
-      case FIELD_UPPER:
-        if (kind === Kind.FIELD) {
-          return true;
-        }
-        break;
-      case FIELD_DEFINITION_UPPER:
-        if (kind === Kind.FIELD_DEFINITION) {
-          return true;
-        }
-        break;
-      case INLINE_FRAGMENT_UPPER:
-        if (kind === Kind.INLINE_FRAGMENT) {
-          return true;
-        }
-        break;
-      case INPUT_FIELD_DEFINITION_UPPER:
-        if (kind === Kind.INPUT_VALUE_DEFINITION) {
-          return true;
-        }
-        break;
-      case INPUT_OBJECT_UPPER:
-        if (kind === Kind.INPUT_OBJECT_TYPE_DEFINITION || kind === Kind.INPUT_OBJECT_TYPE_EXTENSION) {
-          return true;
-        }
-        break;
-      case INTERFACE_UPPER:
-        if (kind === Kind.INTERFACE_TYPE_DEFINITION || kind === Kind.INTERFACE_TYPE_EXTENSION) {
-          return true;
-        }
-        break;
-      case OBJECT_UPPER:
-        if (kind === Kind.OBJECT_TYPE_DEFINITION || kind === Kind.OBJECT_TYPE_EXTENSION) {
-          return true;
-        }
-        break;
-      case FRAGMENT_DEFINITION_UPPER:
-        if (kind === Kind.FRAGMENT_DEFINITION) {
-          return true;
-        }
-        break;
-      case FRAGMENT_SPREAD_UPPER:
-        if (kind === Kind.FRAGMENT_SPREAD) {
-          return true;
-        }
-        break;
-      case SCALAR_UPPER:
-        if (kind === Kind.SCALAR_TYPE_DEFINITION || kind === Kind.SCALAR_TYPE_EXTENSION) {
-          return true;
-        }
-        break;
-      case SCHEMA_UPPER:
-        if (kind === Kind.SCHEMA_DEFINITION || kind === Kind.SCHEMA_EXTENSION) {
-          return true;
-        }
-        break;
-      case UNION_UPPER:
-        if (kind === Kind.UNION_TYPE_DEFINITION || kind === Kind.UNION_TYPE_EXTENSION) {
-          return true;
-        }
-        break;
-      case VARIABLE_DEFINITION_UPPER:
-        if (kind === Kind.VARIABLE_DEFINITION) {
-          return true;
-        }
-        break;
-      case QUERY_UPPER:
-      // intentional fallthrough
-      case MUTATION_UPPER:
-      // intentional fallthrough
-      case SUBSCRIPTION_UPPER:
-        if (kind === Kind.OPERATION_DEFINITION) {
-          return true;
-        }
-        break;
-      default:
-        throw unexpectedDirectiveLocationError(locationName);
-    }
-  }
-  return false;
-}
-
-export function getDirectiveDefinitionArgumentSets(
-  args: readonly InputValueDefinitionNode[],
-  argumentTypeNodeByArgumentName: Map<string, TypeNode>,
-  requiredArguments: Set<string>,
-) {
-  for (const argument of args) {
-    const argumentName = argument.name.value;
-    argumentTypeNodeByArgumentName.set(argumentName, argument.type);
-    // If the definition defines a default argument, it's not necessary to include it
-    if (argument.type.kind === Kind.NON_NULL_TYPE && !argument.defaultValue) {
-      requiredArguments.add(argumentName);
-    }
-  }
 }
 
 export type InputValidationContainer = {
@@ -1054,10 +900,23 @@ export type ExtractArgumentDataResult = {
 };
 
 export type ValidateDirectiveParams = {
-  data: ParentDefinitionData | ChildData | SchemaData;
+  data: NodeData | SchemaData;
   definitionData: DirectiveDefinitionData;
   directiveCoords: string;
   directiveNode: ConstDirectiveNode;
   errorMessages: Array<string>;
   requiredArgumentNames: Array<string>;
+};
+
+export type HandleOverrideDirectiveParams = {
+  data: FieldData;
+  directiveCoords: string;
+  errorMessages: Array<string>;
+  targetSubgraphName: string;
+};
+
+export type HandleRequiresScopesDirectiveParams = {
+  directiveCoords: string;
+  orScopes: ReadonlyArray<ValueNode>;
+  requiredScopes: Array<Set<string>>;
 };

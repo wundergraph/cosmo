@@ -4,7 +4,7 @@ import {
   federateSubgraphs,
   FIRST_ORDINAL,
   inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage,
-  invalidArgumentValueErrorMessageV2,
+  invalidArgumentValueErrorMessage,
   invalidDirectiveError,
   invalidInputFieldTypeErrorMessage,
   invalidRepeatedDirectiveErrorMessage,
@@ -251,9 +251,9 @@ describe('@openfed__subscriptionFilter tests', () => {
       expect(errors![0]).toStrictEqual(
         subgraphValidationError(subgraphE.name, [
           invalidDirectiveError(SUBSCRIPTION_FILTER, `Subscription.field`, FIRST_ORDINAL, [
-            invalidArgumentValueErrorMessageV2(
+            invalidArgumentValueErrorMessage(
               '1',
-              SUBSCRIPTION_FILTER,
+              `@${SUBSCRIPTION_FILTER}`,
               CONDITION,
               'openfed__SubscriptionFilterCondition!',
             ),

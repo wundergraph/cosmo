@@ -9,7 +9,7 @@ import {
   EDFS_NATS_SUBSCRIBE,
   federateSubgraphs,
   FIRST_ORDINAL,
-  invalidArgumentValueErrorMessageV2,
+  invalidArgumentValueErrorMessage,
   invalidDirectiveError,
   invalidEventDirectiveError,
   invalidEventDrivenGraphError,
@@ -304,8 +304,8 @@ describe('events Configuration tests', () => {
       );
       expect(errors![1]).toStrictEqual(
         invalidDirectiveError(EDFS_NATS_SUBSCRIBE, rootFieldPath, FIRST_ORDINAL, [
-          invalidArgumentValueErrorMessageV2('[1]', EDFS_NATS_SUBSCRIBE, SUBJECTS, '[String!]!'),
-          invalidArgumentValueErrorMessageV2('false', EDFS_NATS_SUBSCRIBE, PROVIDER_ID, 'String!'),
+          invalidArgumentValueErrorMessage('[1]', `@${EDFS_NATS_SUBSCRIBE}`, SUBJECTS, '[String!]!'),
+          invalidArgumentValueErrorMessage('false', `@${EDFS_NATS_SUBSCRIBE}`, PROVIDER_ID, 'String!'),
           duplicateDirectiveArgumentDefinitionsErrorMessage([SUBJECTS, PROVIDER_ID]),
           unexpectedDirectiveArgumentErrorMessage(EDFS_NATS_SUBSCRIBE, ['unknownArgument']),
         ]),
