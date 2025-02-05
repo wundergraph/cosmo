@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.171.1](https://github.com/wundergraph/cosmo/compare/router@0.171.0...router@0.171.1) (2025-02-05)
+
+### Bug Fixes
+
+* inject a per-subgraph http.Client to fix timeout race issue ([#1567](https://github.com/wundergraph/cosmo/issues/1567)) ([6501202](https://github.com/wundergraph/cosmo/commit/6501202688c8dca2519adf1a75ac12efedd162cb)) (@endigma)
+
 # [0.171.0](https://github.com/wundergraph/cosmo/compare/router@0.170.1...router@0.171.0) (2025-02-05)
 
 ### Bug Fixes
