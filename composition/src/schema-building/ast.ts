@@ -292,3 +292,12 @@ export function getTypeNodeNamedTypeName(typeNode: TypeNode): string {
       return getTypeNodeNamedTypeName(typeNode.type);
   }
 }
+
+export function getNamedTypeNode(typeNode: TypeNode): TypeNode {
+  switch (typeNode.kind) {
+    case Kind.NAMED_TYPE:
+      return typeNode;
+    default:
+      return getNamedTypeNode(typeNode.type);
+  }
+}
