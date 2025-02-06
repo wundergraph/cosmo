@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.36.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.36.0...@wundergraph/composition@0.36.1) (2025-02-06)
+
+### Bug Fixes
+
+* allow integer to Float input coercion ([#1572](https://github.com/wundergraph/cosmo/issues/1572)) ([51c3d8e](https://github.com/wundergraph/cosmo/commit/51c3d8e11b6360f583f1809e2360c652a91659c6)) (@Aenimus)
+
 # [0.36.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.35.0...@wundergraph/composition@0.36.0) (2025-02-05)
 
 ### Features
