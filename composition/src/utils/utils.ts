@@ -518,11 +518,11 @@ export function resetAuthorizationData(authorizationData?: AuthorizationData) {
 export function getAuthorizationDataToUpdate(
   authorizationContainer: AuthorizationData,
   node: EnumTypeNode | FieldDefinitionNode | InterfaceTypeNode | ObjectTypeNode | ScalarTypeNode,
-  fieldName: string,
 ): AuthorizationData | FieldAuthorizationData {
   if (node.kind === Kind.FIELD_DEFINITION) {
-    return getValueOrDefault(authorizationContainer.fieldAuthorizationDataByFieldName, fieldName, () =>
-      newFieldAuthorizationData(fieldName),
+    const name = node.name.value;
+    return getValueOrDefault(authorizationContainer.fieldAuthorizationDataByFieldName, name, () =>
+      newFieldAuthorizationData(name),
     );
   }
   authorizationContainer.hasParentLevelAuthorization = true;
@@ -683,6 +683,10 @@ export function generateRequiresScopesDirective(orScopes: Set<string>[]): ConstD
 
 export function isNodeKindInterface(kind: Kind) {
   return kind === Kind.INTERFACE_TYPE_DEFINITION || kind === Kind.INTERFACE_TYPE_EXTENSION;
+}
+
+export function isNodeKindObject(kind: Kind) {
+  return kind === Kind.OBJECT_TYPE_DEFINITION || kind === Kind.OBJECT_TYPE_EXTENSION;
 }
 
 export function addMapEntries<K, V>(source: Map<K, V>, target: Map<K, V>) {

@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.36.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.35.0...@wundergraph/composition@0.36.0) (2025-02-05)
+
+### Features
+
+* implement [@openfed](https://github.com/openfed)__configureDescription ([#1568](https://github.com/wundergraph/cosmo/issues/1568)) ([28398c1](https://github.com/wundergraph/cosmo/commit/28398c19afb33dfad816c3779024d6edb5047c84)) (@Aenimus)
+
 # [0.35.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.34.0...@wundergraph/composition@0.35.0) (2025-01-24)
 
 ### Features
