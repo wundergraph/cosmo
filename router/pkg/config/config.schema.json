@@ -2228,6 +2228,11 @@
           "type": "boolean",
           "default": false,
           "description": "Enable appending the operation name to subgraph fetches. This will ensure that the operation name will be included in the corresponding subgraph requests using the following format: $operationName__$subgraphName__$sequenceID."
+        },
+        "disable_variables_remapping": {
+          "type": "boolean",
+          "default": false,
+          "description": "Disables variables renaming during normalization. This option could have a negative impact on planner cache hits."
         }
       }
     },

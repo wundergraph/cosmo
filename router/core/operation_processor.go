@@ -811,20 +811,19 @@ func (o *OperationKit) NormalizeVariables() error {
 	return nil
 }
 
-func (o *OperationKit) RemapVariables() error {
+func (o *OperationKit) RemapVariables(disabled bool) error {
 	report := &operationreport.Report{}
-	variablesMap := o.kit.variablesRemapper.NormalizeOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
-	if report.HasErrors() {
-		return &reportError{
-			report: report,
-		}
-	}
-	o.parsedOperation.RemapVariables = variablesMap
 
-	// Hash the normalized operation with the static operation name to avoid different IDs for the same operation
-	err := o.kit.printer.Print(o.kit.doc, o.kit.keyGen)
-	if err != nil {
-		return errors.WithStack(fmt.Errorf("RemapVariables failed generating operation hash: %w", err))
+	// even if the variables are disabled, we still need to execute rest of the method,
+	// as it generates InternalID for the operation, which is used as planner cache key
+	if !disabled {
+		variablesMap := o.kit.variablesRemapper.NormalizeOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
+		if report.HasErrors() {
+			return &reportError{
+				report: report,
+			}
+		}
+		o.parsedOperation.RemapVariables = variablesMap
 	}
 
 	// Print the operation without the operation name to get the pure normalized form
@@ -837,9 +836,9 @@ func (o *OperationKit) RemapVariables() error {
 	staticNameRef := o.kit.doc.Input.AppendInputBytes([]byte(""))
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = staticNameRef
 
-	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
+	err := o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
-		return err
+		return errors.WithStack(fmt.Errorf("RemapVariables failed generating operation hash: %w", err))
 	}
 	// Reset the doc with the original name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = nameRef
