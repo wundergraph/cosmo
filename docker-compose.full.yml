@@ -62,6 +62,21 @@ services:
     networks:
       - primary
 
+  test1:
+    container_name: test1
+    environment:
+      OTEL_AUTH_TOKEN: ${OTEL_AUTH_TOKEN}
+      OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
+    build:
+      context: ./demo
+      dockerfile: Dockerfile.test1
+    profiles:
+      - subgraphs
+    ports:
+      - '4006:4006'
+    networks:
+      - primary
+
   availability:
     container_name: availability
     environment:

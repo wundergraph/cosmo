@@ -122,7 +122,7 @@ dc-federation-demo:
 
 DC_FLAGS=
 dc-subgraphs-demo:
-	OTEL_AUTH_TOKEN=$(OTEL_AUTH_TOKEN) docker compose -f docker-compose.full.yml --profile subgraphs up --remove-orphans --detach $(DC_FLAGS)
+	OTEL_AUTH_TOKEN=$(OTEL_AUTH_TOKEN) docker compose -f docker-compose.full.yml --profile subgraphs up --remove-orphans --detach $(DC_FLAGS) && pushd router && make compose-demo-config && popd
 
 dc-subgraphs-demo-down:
 	docker compose -f docker-compose.full.yml --profile subgraphs down --remove-orphans
