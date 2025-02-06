@@ -30,7 +30,7 @@ func TestSafelist(t *testing.T) {
 		})
 	})
 
-	t.Run("safelist works with persisted query", func(t *testing.T) {
+	t.Run("safelist should allow a persisted query to run", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 				securityConfiguration.Safelist = config.EnableOperationConfiguration{
@@ -50,7 +50,7 @@ func TestSafelist(t *testing.T) {
 		})
 	})
 
-	t.Run("safelist rejects persisted query with different spacing", func(t *testing.T) {
+	t.Run("safelist should reject a query with different spacing from the persisted operation", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 				securityConfiguration.Safelist = config.EnableOperationConfiguration{
@@ -70,7 +70,7 @@ func TestSafelist(t *testing.T) {
 		})
 	})
 
-	t.Run("safelist blocks non persisted query", func(t *testing.T) {
+	t.Run("safelist should block a non persisted query", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ApqConfig: config.AutomaticPersistedQueriesConfig{
 				Enabled: false,
@@ -94,7 +94,7 @@ func TestSafelist(t *testing.T) {
 	})
 
 	t.Run("log unknown operations", func(t *testing.T) {
-		t.Run("logs non persisted query but doesn't block", func(t *testing.T) {
+		t.Run("logs non persisted query but allows them to continue", func(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
 					Enabled: false,
@@ -130,7 +130,7 @@ func TestSafelist(t *testing.T) {
 			})
 		})
 
-		t.Run("doesn't log persisted queries", func(t *testing.T) {
+		t.Run("doesn't log persisted queries and allows them to continue", func(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
 					Enabled: false,
