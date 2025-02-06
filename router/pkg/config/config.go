@@ -174,6 +174,11 @@ type GlobalSubgraphRequestRule struct {
 	TLSHandshakeTimeout    time.Duration `yaml:"tls_handshake_timeout,omitempty" envDefault:"10s"`
 	KeepAliveIdleTimeout   time.Duration `yaml:"keep_alive_idle_timeout,omitempty" envDefault:"0s"`
 	KeepAliveProbeInterval time.Duration `yaml:"keep_alive_probe_interval,omitempty" envDefault:"30s"`
+
+	// Connection configuration
+	MaxConnsPerHost     int `yaml:"max_conns_per_host,omitempty" envDefault:"100"`
+	MaxIdleConns        int `yaml:"max_idle_conns,omitempty" envDefault:"1024"`
+	MaxIdleConnsPerHost int `yaml:"max_idle_conns_per_host,omitempty" envDefault:"20"`
 }
 
 type SubgraphTrafficRequestRule struct {
