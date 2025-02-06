@@ -411,6 +411,126 @@ func TestVariables(t *testing.T) {
 	})
 }
 
+func TestVariablesRemapping(t *testing.T) {
+	t.Parallel()
+
+	t.Run("enabled", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							body, _ := io.ReadAll(r.Body)
+							var req core.GraphQLRequest
+							require.NoError(t, json.Unmarshal(body, &req))
+
+							require.Equal(t, `query($a: Int!){employee(id: $a){id}}`, req.Query)
+							require.Equal(t, json.RawMessage(`{"a":1}`), req.Variables)
+
+							w.WriteHeader(http.StatusOK)
+							_, _ = w.Write([]byte(`{"data":{"employee":{"id":1}}}`))
+						})
+					},
+				},
+				Test1: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							body, _ := io.ReadAll(r.Body)
+							var req core.GraphQLRequest
+							require.NoError(t, json.Unmarshal(body, &req))
+
+							require.Equal(t, `query($a: InputArg!){rootFieldWithInput(arg: $a)}`, req.Query)
+							require.Equal(t, json.RawMessage(`{"a":{"string":"foo"}}`), req.Variables)
+
+							w.WriteHeader(http.StatusOK)
+							_, _ = w.Write([]byte(`{"data":{"rootFieldWithInput":"bar"}}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Run("scalar argument type", func(t *testing.T) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query ($count:Int!) { employee(id:$count) { id } }`,
+					Variables: json.RawMessage(`{"count":1}`),
+				})
+				require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+			})
+
+			t.Run("input object argument type - variable argument", func(t *testing.T) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query ($arg:InputArg!) { rootFieldWithInput(arg: $arg) }`,
+					Variables: json.RawMessage(`{"arg":{"string": "foo"}}`),
+				})
+				require.JSONEq(t, `{"data":{"rootFieldWithInput":"bar"}}`, res.Body)
+			})
+
+			t.Run("input object argument type - inline value", func(t *testing.T) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { rootFieldWithInput(arg: {string: "foo"}) }`,
+				})
+				require.JSONEq(t, `{"data":{"rootFieldWithInput":"bar"}}`, res.Body)
+			})
+		})
+	})
+
+	t.Run("disabled", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.DisableVariablesRemapping = true
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							body, _ := io.ReadAll(r.Body)
+							var req core.GraphQLRequest
+							require.NoError(t, json.Unmarshal(body, &req))
+
+							require.Equal(t, `query($count: Int!){employee(id: $count){id}}`, req.Query)
+							require.Equal(t, json.RawMessage(`{"count":1}`), req.Variables)
+
+							w.WriteHeader(http.StatusOK)
+							_, _ = w.Write([]byte(`{"data":{"employee":{"id":1}}}`))
+						})
+					},
+				},
+				Test1: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							body, _ := io.ReadAll(r.Body)
+							var req core.GraphQLRequest
+							require.NoError(t, json.Unmarshal(body, &req))
+
+							require.Equal(t, `query($arg: InputArg!){rootFieldWithInput(arg: $arg)}`, req.Query)
+							require.Equal(t, json.RawMessage(`{"arg":{"string":"foo"}}`), req.Variables)
+
+							w.WriteHeader(http.StatusOK)
+							_, _ = w.Write([]byte(`{"data":{"rootFieldWithInput":"bar"}}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Run("scalar argument type", func(t *testing.T) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query ($count:Int!) { employee(id:$count) { id } }`,
+					Variables: json.RawMessage(`{"count":1}`),
+				})
+				require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+			})
+
+			t.Run("input object argument type", func(t *testing.T) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query ($arg:InputArg!) { rootFieldWithInput(arg: $arg) }`,
+					Variables: json.RawMessage(`{"arg":{"string": "foo"}}`),
+				})
+				require.JSONEq(t, `{"data":{"rootFieldWithInput":"bar"}}`, res.Body)
+			})
+		})
+	})
+}
+
 func TestAnonymousQuery(t *testing.T) {
 	t.Parallel()
 
