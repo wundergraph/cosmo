@@ -52,7 +52,7 @@ func TestTimeoutTransport(t *testing.T) {
 		t.Parallel()
 
 		transportOpts := &SubgraphTransportOptions{
-			SubgraphMap: map[string]*TransportTimeoutOptions{
+			SubgraphMap: map[string]*TransportRequestOptions{
 				testSubgraphKey: {
 					ResponseHeaderTimeout: 100 * time.Millisecond,
 				},
@@ -89,7 +89,7 @@ func TestTimeoutTransport(t *testing.T) {
 		t.Parallel()
 
 		transportOpts := &SubgraphTransportOptions{
-			SubgraphMap: map[string]*TransportTimeoutOptions{
+			SubgraphMap: map[string]*TransportRequestOptions{
 				testSubgraphKey: {
 					TLSHandshakeTimeout: 2 * time.Millisecond,
 				},
@@ -127,7 +127,7 @@ func TestTimeoutTransport(t *testing.T) {
 		t.Parallel()
 
 		transportOpts := &SubgraphTransportOptions{
-			SubgraphMap: map[string]*TransportTimeoutOptions{
+			SubgraphMap: map[string]*TransportRequestOptions{
 				testSubgraphKey: {
 					DialTimeout: 1 * time.Millisecond,
 				},
