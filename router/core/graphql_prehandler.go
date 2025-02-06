@@ -24,15 +24,16 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/astjson"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
+
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/art"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 )
 
 type PreHandlerOptions struct {
@@ -62,6 +63,7 @@ type PreHandlerOptions struct {
 	ClientHeader                config.ClientHeader
 	ComputeOperationSha256      bool
 	ApolloCompatibilityFlags    *config.ApolloCompatibilityFlags
+	DisableVariablesRemapping   bool
 }
 
 type PreHandler struct {
@@ -92,6 +94,7 @@ type PreHandler struct {
 	computeOperationSha256      bool
 	apolloCompatibilityFlags    *config.ApolloCompatibilityFlags
 	variableParsePool           astjson.ParserPool
+	disableVariablesRemapping   bool
 }
 
 type httpOperation struct {
@@ -123,18 +126,19 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
-		fileUploadEnabled:        opts.FileUploadEnabled,
-		maxUploadFiles:           opts.MaxUploadFiles,
-		maxUploadFileSize:        opts.MaxUploadFileSize,
-		complexityLimits:         opts.ComplexityLimits,
-		alwaysIncludeQueryPlan:   opts.AlwaysIncludeQueryPlan,
-		alwaysSkipLoader:         opts.AlwaysSkipLoader,
-		queryPlansEnabled:        opts.QueryPlansEnabled,
-		queryPlansLoggingEnabled: opts.QueryPlansLoggingEnabled,
-		trackSchemaUsageInfo:     opts.TrackSchemaUsageInfo,
-		clientHeader:             opts.ClientHeader,
-		computeOperationSha256:   opts.ComputeOperationSha256,
-		apolloCompatibilityFlags: opts.ApolloCompatibilityFlags,
+		fileUploadEnabled:         opts.FileUploadEnabled,
+		maxUploadFiles:            opts.MaxUploadFiles,
+		maxUploadFileSize:         opts.MaxUploadFileSize,
+		complexityLimits:          opts.ComplexityLimits,
+		alwaysIncludeQueryPlan:    opts.AlwaysIncludeQueryPlan,
+		alwaysSkipLoader:          opts.AlwaysSkipLoader,
+		queryPlansEnabled:         opts.QueryPlansEnabled,
+		queryPlansLoggingEnabled:  opts.QueryPlansLoggingEnabled,
+		trackSchemaUsageInfo:      opts.TrackSchemaUsageInfo,
+		clientHeader:              opts.ClientHeader,
+		computeOperationSha256:    opts.ComputeOperationSha256,
+		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
+		disableVariablesRemapping: opts.DisableVariablesRemapping,
 	}
 }
 
@@ -615,7 +619,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		return err
 	}
 
-	err = operationKit.RemapVariables()
+	err = operationKit.RemapVariables(h.disableVariablesRemapping)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 
