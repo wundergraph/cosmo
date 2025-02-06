@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.172.0](https://github.com/wundergraph/cosmo/compare/router@0.171.1...router@0.172.0) (2025-02-06)
+
+### Features
+
+* add a flag to disable variables remapping ([#1570](https://github.com/wundergraph/cosmo/issues/1570)) ([9cf3374](https://github.com/wundergraph/cosmo/commit/9cf337429682522d490a99ed63b9036bec169b5e)) (@devsergiy)
+
 ## [0.171.1](https://github.com/wundergraph/cosmo/compare/router@0.171.0...router@0.171.1) (2025-02-05)
 
 ### Bug Fixes
