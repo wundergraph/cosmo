@@ -443,11 +443,6 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 			operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery = &GraphQLRequestExtensionsPersistedQuery{
 				Sha256Hash: operationKit.parsedOperation.Sha256Hash,
 			}
-
-			if h.operationBlocker.SafelistEnabled {
-				// Overwrite the request query, so that we can verify it gets picked up from the persisted operation CDN
-				operationKit.parsedOperation.Request.Query = ""
-			}
 		}
 	}
 

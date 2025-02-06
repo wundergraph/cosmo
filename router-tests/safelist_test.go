@@ -19,6 +19,17 @@ func TestSafelist(t *testing.T) {
 		persistedNotFoundResp = `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`
 	)
 
+	t.Run("router fails if APQ and Safelist are both enabled", func(t *testing.T) {
+		testenv.FailsOnStartup(t, &testenv.Config{
+			ApqConfig: config.AutomaticPersistedQueriesConfig{Enabled: true},
+			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+				securityConfiguration.Safelist = config.EnableOperationConfiguration{Enabled: true}
+			},
+		}, func(t *testing.T, err error) {
+			require.Contains(t, err.Error(), "automatic persisted queries and safelist cannot be enabled at the same time")
+		})
+	})
+
 	t.Run("safelist works with persisted query", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
