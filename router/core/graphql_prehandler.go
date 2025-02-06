@@ -438,8 +438,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		requestContext.operation.sha256Hash = operationKit.parsedOperation.Sha256Hash
 		requestContext.telemetry.addCustomMetricStringAttr(ContextFieldOperationSha256, requestContext.operation.sha256Hash)
 		if h.operationBlocker.SafelistEnabled || h.operationBlocker.LogUnknownOperationsEnabled {
-			// Set the request hash to the parsed hash, to see if it matches a safelist entry
-			operationKit.parsedOperation.IsPersistedOperation = true
+			// Set the request hash to the parsed hash, to see if it matches a persisted operation
 			operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery = &GraphQLRequestExtensionsPersistedQuery{
 				Sha256Hash: operationKit.parsedOperation.Sha256Hash,
 			}
@@ -460,7 +459,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		isApq     bool
 	)
 
-	if operationKit.parsedOperation.IsPersistedOperation {
+	if operationKit.parsedOperation.IsPersistedOperation || h.operationBlocker.SafelistEnabled || h.operationBlocker.LogUnknownOperationsEnabled {
 		ctx, span := h.tracer.Start(req.Context(), "Load Persisted Operation",
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(requestContext.telemetry.traceAttrs...),
