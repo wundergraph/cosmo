@@ -15,9 +15,8 @@ describe('parse operations from different formats', () => {
         const operations = parseOperations(operation);
         expect(operations).toEqual([{ id, contents: operation }]);
     });
-    test('gets same reult as hash', () => {
+    test('returns consistent hash', () => {
         const operation = `query Employees {\n employees {\n id\n }\n}`;
-        const id = crypto.createHash('sha256').update(operation).digest('hex');
         const operations = parseOperations(operation);
         expect(operations).toEqual([{ id: "33651da3d80e420709520fb900c7ab8ec4151555da56062feeee428cf7f3a5dd", contents: operation }]);
     });
