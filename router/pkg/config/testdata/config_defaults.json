@@ -260,6 +260,9 @@
     "Safelist": {
       "Enabled": false
     },
+    "LogUnknownOperations": {
+      "Enabled": false
+    },
     "ComplexityCalculationCache": null,
     "ComplexityLimits": null,
     "DepthLimit": null

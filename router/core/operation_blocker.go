@@ -15,7 +15,9 @@ var (
 )
 
 type OperationBlocker struct {
-	SafelistEnabled    bool
+	SafelistEnabled             bool
+	LogUnknownOperationsEnabled bool
+
 	blockMutations     BlockMutationOptions
 	blockSubscriptions BlockSubscriptionOptions
 	blockNonPersisted  BlockNonPersistedOptions
@@ -44,18 +46,20 @@ type SafelistPersistedOptions struct {
 }
 
 type OperationBlockerOptions struct {
-	BlockMutations     BlockMutationOptions
-	BlockSubscriptions BlockSubscriptionOptions
-	BlockNonPersisted  BlockNonPersistedOptions
-	SafelistEnabled    bool
+	BlockMutations              BlockMutationOptions
+	BlockSubscriptions          BlockSubscriptionOptions
+	BlockNonPersisted           BlockNonPersistedOptions
+	SafelistEnabled             bool
+	LogUnknownOperationsEnabled bool
 }
 
 func NewOperationBlocker(opts *OperationBlockerOptions) (*OperationBlocker, error) {
 	ob := &OperationBlocker{
-		blockMutations:     opts.BlockMutations,
-		blockSubscriptions: opts.BlockSubscriptions,
-		blockNonPersisted:  opts.BlockNonPersisted,
-		SafelistEnabled:    opts.SafelistEnabled,
+		blockMutations:              opts.BlockMutations,
+		blockSubscriptions:          opts.BlockSubscriptions,
+		blockNonPersisted:           opts.BlockNonPersisted,
+		SafelistEnabled:             opts.SafelistEnabled,
+		LogUnknownOperationsEnabled: opts.LogUnknownOperationsEnabled,
 	}
 
 	if err := ob.compileExpressions(); err != nil {

@@ -501,6 +501,9 @@
     "Safelist": {
       "Enabled": true
     },
+    "LogUnknownOperations": {
+      "Enabled": true
+    },
     "ComplexityCalculationCache": {
       "Enabled": true,
       "CacheSize": 1024

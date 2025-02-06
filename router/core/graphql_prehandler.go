@@ -5,7 +5,9 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"net/http"
 	"strconv"
 	"strings"
@@ -426,7 +428,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 	// Compute the operation sha256 hash as soon as possible for observability reasons
 	hasPersistedHash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash != ""
-	if h.computeOperationSha256 || (h.operationBlocker.SafelistEnabled && !hasPersistedHash) {
+	if h.computeOperationSha256 || !hasPersistedHash && (h.operationBlocker.SafelistEnabled || h.operationBlocker.LogUnknownOperationsEnabled) {
 		if err := operationKit.ComputeOperationSha256(); err != nil {
 			return &httpGraphqlError{
 				message:    fmt.Sprintf("error hashing operation: %s", err),
@@ -435,14 +437,17 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 		requestContext.operation.sha256Hash = operationKit.parsedOperation.Sha256Hash
 		requestContext.telemetry.addCustomMetricStringAttr(ContextFieldOperationSha256, requestContext.operation.sha256Hash)
-		if h.operationBlocker.SafelistEnabled {
+		if h.operationBlocker.SafelistEnabled || h.operationBlocker.LogUnknownOperationsEnabled {
 			// Set the request hash to the parsed hash, to see if it matches a safelist entry
+			operationKit.parsedOperation.IsPersistedOperation = true
 			operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery = &GraphQLRequestExtensionsPersistedQuery{
 				Sha256Hash: operationKit.parsedOperation.Sha256Hash,
 			}
-			// Overwrite the request query, so that we can verify it gets picked up from the persisted operation CDN
-			operationKit.parsedOperation.Request.Query = ""
-			operationKit.parsedOperation.IsPersistedOperation = true
+
+			if h.operationBlocker.SafelistEnabled {
+				// Overwrite the request query, so that we can verify it gets picked up from the persisted operation CDN
+				operationKit.parsedOperation.Request.Query = ""
+			}
 		}
 	}
 
@@ -468,13 +473,18 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 		skipParse, isApq, err = operationKit.FetchPersistedOperation(ctx, requestContext.operation.clientInfo)
 		if err != nil {
-			span.RecordError(err)
-			span.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
-			span.SetStatus(codes.Error, err.Error())
+			var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
+			if h.operationBlocker.LogUnknownOperationsEnabled && errors.As(err, &poNotFoundErr) {
+				h.log.Warn("Unknown persisted operation found", zap.String("query", operationKit.parsedOperation.Request.Query), zap.String("sha256Hash", poNotFoundErr.Sha256Hash))
+			} else {
+				span.RecordError(err)
+				span.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
+				span.SetStatus(codes.Error, err.Error())
 
-			span.End()
+				span.End()
 
-			return err
+				return err
+			}
 		}
 
 		span.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))

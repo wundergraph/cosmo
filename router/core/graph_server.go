@@ -458,7 +458,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 				break
 			}
 		}
-	} else if srv.securityConfiguration.Safelist.Enabled {
+	} else if srv.securityConfiguration.Safelist.Enabled || srv.securityConfiguration.LogUnknownOperations.Enabled {
 		// In this case, we'll want to compute the sha256 for every operation
 		computeSha256 = true
 	}
@@ -1036,7 +1036,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			Enabled:   s.securityConfiguration.BlockNonPersistedOperations.Enabled,
 			Condition: s.securityConfiguration.BlockNonPersistedOperations.Condition,
 		},
-		SafelistEnabled: s.securityConfiguration.Safelist.Enabled,
+		SafelistEnabled:             s.securityConfiguration.Safelist.Enabled,
+		LogUnknownOperationsEnabled: s.securityConfiguration.LogUnknownOperations.Enabled,
 	})
 
 	if err != nil {

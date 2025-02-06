@@ -350,6 +350,8 @@ security:
     size: 1024
   safelist:
     enabled: true
+  log_unknown_operations:
+    enabled: true
   complexity_limits:
     depth:
         enabled: true

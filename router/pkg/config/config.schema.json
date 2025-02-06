@@ -1923,6 +1923,17 @@
             }
           }
         },
+        "log_unknown_operations": {
+          "type": "object",
+          "description": "The configuration for logging operations which haven't yet been persisted. It can be enabled prior to enabling safelisting to help identify operations that should be safelisted.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Log operations (sent with the operation body) which haven't yet been persisted. If the value is true, all operations not yet persisted are logged to the router logs."
+            }
+          }
+        },
         "complexity_calculation_cache": {
           "type": "object",
           "description": "The configuration for the complexity calculation cache. The complexity calculation cache is used to cache the complexity calculation for the queries.",
