@@ -1143,10 +1143,13 @@ func (e *Environment) Shutdown() {
 	ctx, cancel := context.WithTimeout(e.Context, e.shutdownDelay)
 	defer cancel()
 
+	// Terminate test server resources
+	e.cancel(ErrEnvironmentClosed)
+
 	// Gracefully shutdown router
 	if e.Router != nil {
 		err := e.Router.Shutdown(ctx)
-		if err != nil && !errors.Is(err, context.DeadlineExceeded) {
+		if err != nil && !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, context.Canceled) {
 			e.t.Errorf("could not shutdown router: %s", err)
 		}
 	}
@@ -1155,9 +1158,6 @@ func (e *Environment) Shutdown() {
 	for _, s := range e.Servers {
 		s.CloseClientConnections()
 	}
-
-	// Terminate test server resources
-	e.cancel(ErrEnvironmentClosed)
 
 	for _, s := range e.Servers {
 		// Do not call s.Close() here, as it will get stuck on connections left open!

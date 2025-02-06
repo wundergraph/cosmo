@@ -1619,4 +1619,66 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForConnectionCount(0, NatsWaitTimeout)
 		})
 	})
+
+	t.Run("shutdown doesn't wait indefinitely", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Delay: time.Minute,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var subscription struct {
+				employeeUpdated struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+						Surname  string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdated(employeeID: 3)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+			t.Cleanup(func() {
+				_ = client.Close()
+			})
+
+			var consumed atomic.Uint32
+
+			subscriptionID, err := client.Subscribe(&subscription, nil, func(dataValue []byte, errValue error) error {
+				defer consumed.Add(1)
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEqual(t, "", subscriptionID)
+
+			go func() {
+				clientErr := client.Run()
+				require.NoError(t, clientErr)
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
+			require.NoError(t, err)
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+
+			assert.NoError(t, client.Close())
+
+			var completed atomic.Bool
+			go func() {
+				defer completed.Store(true)
+				xEnv.Shutdown()
+				assert.NoError(t, err)
+			}()
+
+			assert.Eventually(t, completed.Load, NatsWaitTimeout, time.Millisecond*100)
+		})
+	})
 }
