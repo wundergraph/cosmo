@@ -583,7 +583,7 @@ export class NormalizationFactory {
             return argumentValue.kind === Kind.BOOLEAN;
           }
           case FLOAT_SCALAR: {
-            return argumentValue.kind === Kind.FLOAT;
+            return argumentValue.kind === Kind.FLOAT || argumentValue.kind === Kind.INT;
           }
           case ID_SCALAR: {
             return argumentValue.kind === Kind.STRING || argumentValue.kind === Kind.INT;

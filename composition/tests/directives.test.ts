@@ -217,6 +217,28 @@ describe('Directive tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
+    test('that a integer can be coerced into a Float', () => {
+      const { errors, normalizationResult, warnings } = normalizeSubgraph(nk.definitions, nk.name);
+      expect(errors).toBeUndefined();
+      expect(schemaToSortedNormalizedString(normalizationResult!.schema)).toBe(
+        normalizeString(
+          schemaQueryDefinition +
+            baseDirectiveDefinitions +
+            `
+            directive @z(float: Float!) on FIELD_DEFINITION
+            
+            
+            type Query {
+              dummy: String! @z(float: 1)
+            }
+            
+            scalar openfed__FieldSet
+        `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
+    });
+
     test('that @specifiedBy is supported', () => {
       const { errors } = normalizeSubgraph(subgraphA.definitions, subgraphA.name);
       expect(errors).toBeUndefined();
@@ -476,6 +498,18 @@ const nj: Subgraph = {
     }
     
     scalar Scalar
+  `),
+};
+
+const nk: Subgraph = {
+  name: 'nk',
+  url: '',
+  definitions: parse(`
+    directive @z(float: Float!) on FIELD_DEFINITION
+
+    type Query {
+      dummy: String! @z(float: 1)
+    }
   `),
 };
 
