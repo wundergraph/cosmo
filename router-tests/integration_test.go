@@ -111,45 +111,154 @@ func TestPlayground(t *testing.T) {
 func TestExecutionPlanCache(t *testing.T) {
 	t.Parallel()
 
-	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+	t.Run("enabled variables remapping", func(t *testing.T) {
+		t.Parallel()
 
-		// MISS - First query
-		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-			Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
-			Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
-		})
-		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, res.Response.StatusCode)
-		require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
-		require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			// MISS - First query
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteria: SearchInput) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
 
-		// HIT - Same query as above with different variables
-		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-			Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
-			Variables: json.RawMessage(`{"criteria":{"nationality":"AMERICAN"}}`),
-		})
-		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, res.Response.StatusCode)
-		require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
-		require.Equal(t, `{"data":{"findEmployees":[{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}]}}`, res.Body)
+			// MISS - Same query as above with different variables nullability
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
 
-		// HIT - Same query as above with inline variables
-		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-			Query: `query Find($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
-		})
-		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, res.Response.StatusCode)
-		require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
-		require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+			// HIT - Same query as above with different variables values
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteria: SearchInput) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables: json.RawMessage(`{"criteria":{"nationality":"AMERICAN"}}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}]}}`, res.Body)
 
-		// HIT - Same query as above but with different whitespace and operation name
-		res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-			Query: `query Foo      ($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+			// HIT - Same query as above with different variable name
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteriaDifferent: SearchInput) {findEmployees(criteria: $criteriaDifferent){id details {forename surname}}}`,
+				Variables: json.RawMessage(`{"criteriaDifferent":{"nationality":"AMERICAN"}}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}]}}`, res.Body)
+
+			// HIT - Same query as above with variables default value
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query Find($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+
+			// HIT - Same query as above with inline value
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query Find {findEmployees(criteria: { nationality: ENGLISH }){id details {forename surname}}}`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+
+			// HIT - Same query as above but with different whitespace and operation name
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query Foo      ($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
 		})
-		require.NoError(t, err)
-		require.Equal(t, http.StatusOK, res.Response.StatusCode)
-		require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
-		require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+	})
+
+	t.Run("disabled variables remapping", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.DisableVariablesRemapping = true
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// MISS - First query
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteria: SearchInput) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
+
+			// MISS - Same query as above with different variables nullability
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
+
+			// HIT - Same query as above with different variables values
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteria: SearchInput) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+				Variables: json.RawMessage(`{"criteria":{"nationality":"AMERICAN"}}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}]}}`, res.Body)
+
+			// MISS - Same query as above with different variable name
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query Find($criteriaDifferent: SearchInput) {findEmployees(criteria: $criteriaDifferent){id details {forename surname}}}`,
+				Variables: json.RawMessage(`{"criteriaDifferent":{"nationality":"AMERICAN"}}`),
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}]}}`, res.Body)
+
+			// HIT - Same query as above with variables default value
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query Find($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+
+			// MISS - Same query as above with inline value
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query Find {findEmployees(criteria: { nationality: ENGLISH }){id details {forename surname}}}`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+
+			// HIT - Same query as above but with different whitespace and operation name
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query Foo      ($criteria: SearchInput! = { nationality: ENGLISH }) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "HIT", res.Response.Header.Get("X-WG-Execution-Plan-Cache"))
+			require.Equal(t, `{"data":{"findEmployees":[{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+		})
 	})
 }
 
