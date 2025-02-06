@@ -30,6 +30,8 @@ import (
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/exp/maps"
 
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
+
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
@@ -49,7 +51,6 @@ import (
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 )
 
 const (
@@ -929,11 +930,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 
 		processor := NewCacheWarmupPlanningProcessor(&CacheWarmupPlanningProcessorOptions{
-			OperationProcessor: operationProcessor,
-			OperationPlanner:   operationPlanner,
-			ComplexityLimits:   s.securityConfiguration.ComplexityLimits,
-			RouterSchema:       executor.RouterSchema,
-			TrackSchemaUsage:   s.graphqlMetricsConfig.Enabled,
+			OperationProcessor:        operationProcessor,
+			OperationPlanner:          operationPlanner,
+			ComplexityLimits:          s.securityConfiguration.ComplexityLimits,
+			RouterSchema:              executor.RouterSchema,
+			TrackSchemaUsage:          s.graphqlMetricsConfig.Enabled,
+			DisableVariablesRemapping: s.engineExecutionConfiguration.DisableVariablesRemapping,
 		})
 
 		warmupConfig := &CacheWarmupConfig{
@@ -1065,26 +1067,28 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		ClientHeader:                s.clientHeader,
 		ComputeOperationSha256:      computeSha256,
 		ApolloCompatibilityFlags:    &s.apolloCompatibilityFlags,
+		DisableVariablesRemapping:   s.engineExecutionConfiguration.DisableVariablesRemapping,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
 		wsMiddleware := NewWebsocketMiddleware(ctx, WebsocketMiddlewareOptions{
-			OperationProcessor:     operationProcessor,
-			OperationBlocker:       operationBlocker,
-			Planner:                operationPlanner,
-			GraphQLHandler:         graphqlHandler,
-			PreHandler:             graphqlPreHandler,
-			Metrics:                metrics,
-			AccessController:       s.accessController,
-			Logger:                 s.logger,
-			Stats:                  s.engineStats,
-			ReadTimeout:            s.engineExecutionConfiguration.WebSocketClientReadTimeout,
-			EnableNetPoll:          s.engineExecutionConfiguration.EnableNetPoll,
-			NetPollTimeout:         s.engineExecutionConfiguration.WebSocketClientPollTimeout,
-			NetPollConnBufferSize:  s.engineExecutionConfiguration.WebSocketClientConnBufferSize,
-			WebSocketConfiguration: s.webSocketConfiguration,
-			ClientHeader:           s.clientHeader,
-			Attributes:             baseOtelAttributes,
+			OperationProcessor:        operationProcessor,
+			OperationBlocker:          operationBlocker,
+			Planner:                   operationPlanner,
+			GraphQLHandler:            graphqlHandler,
+			PreHandler:                graphqlPreHandler,
+			Metrics:                   metrics,
+			AccessController:          s.accessController,
+			Logger:                    s.logger,
+			Stats:                     s.engineStats,
+			ReadTimeout:               s.engineExecutionConfiguration.WebSocketClientReadTimeout,
+			EnableNetPoll:             s.engineExecutionConfiguration.EnableNetPoll,
+			NetPollTimeout:            s.engineExecutionConfiguration.WebSocketClientPollTimeout,
+			NetPollConnBufferSize:     s.engineExecutionConfiguration.WebSocketClientConnBufferSize,
+			WebSocketConfiguration:    s.webSocketConfiguration,
+			ClientHeader:              s.clientHeader,
+			Attributes:                baseOtelAttributes,
+			DisableVariablesRemapping: s.engineExecutionConfiguration.DisableVariablesRemapping,
 		})
 
 		// When the playground path is equal to the graphql path, we need to handle
