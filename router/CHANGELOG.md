@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.173.0](https://github.com/wundergraph/cosmo/compare/router@0.172.0...router@0.173.0) (2025-02-06)
+
+### Features
+
+* **router:** add configurable connection limits for each subgraph ([#1558](https://github.com/wundergraph/cosmo/issues/1558)) ([e9a8a3b](https://github.com/wundergraph/cosmo/commit/e9a8a3b874395c59585b784dd74067669ef46278)) (@endigma)
+
 # [0.172.0](https://github.com/wundergraph/cosmo/compare/router@0.171.1...router@0.172.0) (2025-02-06)
 
 ### Features
