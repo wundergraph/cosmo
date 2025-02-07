@@ -6,13 +6,14 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"sync"
 	"time"
+
+	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 
 	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
@@ -85,7 +86,7 @@ type (
 		proxy             ProxyFunc
 	}
 
-	TransportTimeoutOptions struct {
+	TransportRequestOptions struct {
 		RequestTimeout         time.Duration
 		ResponseHeaderTimeout  time.Duration
 		ExpectContinueTimeout  time.Duration
@@ -93,11 +94,15 @@ type (
 		DialTimeout            time.Duration
 		TLSHandshakeTimeout    time.Duration
 		KeepAliveProbeInterval time.Duration
+
+		MaxConnsPerHost     int
+		MaxIdleConns        int
+		MaxIdleConnsPerHost int
 	}
 
 	SubgraphTransportOptions struct {
-		TransportTimeoutOptions
-		SubgraphMap map[string]*TransportTimeoutOptions
+		TransportRequestOptions
+		SubgraphMap map[string]*TransportRequestOptions
 	}
 
 	GraphQLMetricsConfig struct {
@@ -1663,8 +1668,8 @@ func DefaultFileUploadConfig() *config.FileUpload {
 	}
 }
 
-func NewTransportTimeoutOptions(cfg config.GlobalSubgraphRequestRule) TransportTimeoutOptions {
-	return TransportTimeoutOptions{
+func NewTransportRequestOptions(cfg config.GlobalSubgraphRequestRule) TransportRequestOptions {
+	return TransportRequestOptions{
 		RequestTimeout:         cfg.RequestTimeout,
 		ResponseHeaderTimeout:  cfg.ResponseHeaderTimeout,
 		ExpectContinueTimeout:  cfg.ExpectContinueTimeout,
@@ -1672,17 +1677,21 @@ func NewTransportTimeoutOptions(cfg config.GlobalSubgraphRequestRule) TransportT
 		DialTimeout:            cfg.DialTimeout,
 		TLSHandshakeTimeout:    cfg.TLSHandshakeTimeout,
 		KeepAliveProbeInterval: cfg.KeepAliveProbeInterval,
+
+		MaxConnsPerHost:     cfg.MaxConnsPerHost,
+		MaxIdleConns:        cfg.MaxIdleConns,
+		MaxIdleConnsPerHost: cfg.MaxIdleConnsPerHost,
 	}
 }
 
 func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransportOptions {
 	base := &SubgraphTransportOptions{
-		TransportTimeoutOptions: NewTransportTimeoutOptions(cfg.All),
-		SubgraphMap:             map[string]*TransportTimeoutOptions{},
+		TransportRequestOptions: NewTransportRequestOptions(cfg.All),
+		SubgraphMap:             map[string]*TransportRequestOptions{},
 	}
 
 	for k, v := range cfg.Subgraphs {
-		opts := NewTransportTimeoutOptions(*v)
+		opts := NewTransportRequestOptions(*v)
 		base.SubgraphMap[k] = &opts
 	}
 
@@ -1691,7 +1700,7 @@ func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransp
 
 func DefaultSubgraphTransportOptions() *SubgraphTransportOptions {
 	return &SubgraphTransportOptions{
-		TransportTimeoutOptions: TransportTimeoutOptions{
+		TransportRequestOptions: TransportRequestOptions{
 			RequestTimeout:         60 * time.Second,
 			TLSHandshakeTimeout:    10 * time.Second,
 			ResponseHeaderTimeout:  0 * time.Second,
@@ -1699,8 +1708,12 @@ func DefaultSubgraphTransportOptions() *SubgraphTransportOptions {
 			KeepAliveProbeInterval: 30 * time.Second,
 			KeepAliveIdleTimeout:   0 * time.Second,
 			DialTimeout:            30 * time.Second,
+
+			MaxConnsPerHost:     100,
+			MaxIdleConns:        1024,
+			MaxIdleConnsPerHost: 20,
 		},
-		SubgraphMap: map[string]*TransportTimeoutOptions{},
+		SubgraphMap: map[string]*TransportRequestOptions{},
 	}
 }
 
@@ -1830,7 +1843,7 @@ func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 
 type ProxyFunc func(req *http.Request) (*url.URL, error)
 
-func newHTTPTransport(opts TransportTimeoutOptions, proxy ProxyFunc) *http.Transport {
+func newHTTPTransport(opts TransportRequestOptions, proxy ProxyFunc) *http.Transport {
 	dialer := &net.Dialer{
 		Timeout:   opts.DialTimeout,
 		KeepAlive: opts.KeepAliveProbeInterval,
@@ -1843,13 +1856,13 @@ func newHTTPTransport(opts TransportTimeoutOptions, proxy ProxyFunc) *http.Trans
 		},
 		// The defaults value 0 = unbounded.
 		// We set to some value to prevent resource exhaustion e.g max requests and ports.
-		MaxConnsPerHost: 100,
+		MaxConnsPerHost: opts.MaxConnsPerHost,
 		// The defaults value 0 = unbounded. 100 is used by the default go transport.
 		// This value should be significant higher than MaxIdleConnsPerHost.
-		MaxIdleConns: 1024,
+		MaxIdleConns: opts.MaxIdleConns,
 		// The default value is 2. Such a low limit will open and close connections too often.
 		// Details: https://gitlab.com/gitlab-org/gitlab-pages/-/merge_requests/274
-		MaxIdleConnsPerHost: 20,
+		MaxIdleConnsPerHost: opts.MaxIdleConnsPerHost,
 		ForceAttemptHTTP2:   true,
 		IdleConnTimeout:     opts.KeepAliveIdleTimeout,
 		// Set more timeouts https://gitlab.com/gitlab-org/gitlab-pages/-/issues/495
