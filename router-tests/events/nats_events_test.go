@@ -888,73 +888,6 @@ func TestNatsEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribe to multiple subjects", func(t *testing.T) {
-		t.Parallel()
-
-		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
-			EnableNats:               true,
-			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Second
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			type subscriptionPayload struct {
-				Data struct {
-					EmployeeUpdatedMyNats struct {
-						ID float64 `graphql:"id"`
-					} `graphql:"employeeUpdatedMyNats(id: 12)"`
-				} `json:"data"`
-			}
-
-			// conn.Close() is called in  a cleanup defined in the function
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err := conn.WriteJSON(&testenv.WebSocketMessage{
-				ID:      "1",
-				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { employeeUpdatedMyNats(id: 12) { id }}"}`),
-			})
-			require.NoError(t, err)
-			var msg testenv.WebSocketMessage
-			var payload subscriptionPayload
-
-			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
-
-			// Trigger the first subscription via NATS
-			err = xEnv.NatsConnectionMyNats.Publish(xEnv.GetPubSubName("employeeUpdatedMyNats.12"), []byte(`{"id":13,"__typename":"Employee"}`))
-			require.NoError(t, err)
-
-			err = xEnv.NatsConnectionMyNats.Flush()
-			require.NoError(t, err)
-
-			xEnv.WaitForMessagesSent(1, NatsWaitTimeout)
-
-			err = conn.ReadJSON(&msg)
-			require.NoError(t, err)
-			require.Equal(t, "1", msg.ID)
-			require.Equal(t, "next", msg.Type)
-			err = json.Unmarshal(msg.Payload, &payload)
-			require.NoError(t, err)
-			require.Equal(t, float64(13), payload.Data.EmployeeUpdatedMyNats.ID)
-
-			// Trigger the first subscription via NATS
-			err = xEnv.NatsConnectionMyNats.Publish(xEnv.GetPubSubName("employeeUpdatedMyNatsTwo.12"), []byte(`{"id":99,"__typename":"Employee"}`))
-			require.NoError(t, err)
-
-			err = xEnv.NatsConnectionMyNats.Flush()
-			require.NoError(t, err)
-
-			xEnv.WaitForMessagesSent(2, NatsWaitTimeout)
-
-			err = conn.ReadJSON(&msg)
-			require.NoError(t, err)
-			require.Equal(t, "1", msg.ID)
-			require.Equal(t, "next", msg.Type)
-			err = json.Unmarshal(msg.Payload, &payload)
-			require.NoError(t, err)
-			require.Equal(t, float64(99), payload.Data.EmployeeUpdatedMyNats.ID)
-		})
-	})
-
 	t.Run("subscribe with stream and consumer", func(t *testing.T) {
 		t.Parallel()
 
@@ -1679,6 +1612,75 @@ func TestNatsEvents(t *testing.T) {
 			}()
 
 			assert.Eventually(t, completed.Load, NatsWaitTimeout, time.Millisecond*100)
+		})
+	})
+}
+
+func TestFlakyNatsEvents(t *testing.T) {
+	t.Run("subscribe to multiple subjects", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Second
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			type subscriptionPayload struct {
+				Data struct {
+					EmployeeUpdatedMyNats struct {
+						ID float64 `graphql:"id"`
+					} `graphql:"employeeUpdatedMyNats(id: 12)"`
+				} `json:"data"`
+			}
+
+			// conn.Close() is called in  a cleanup defined in the function
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { employeeUpdatedMyNats(id: 12) { id }}"}`),
+			})
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+			var payload subscriptionPayload
+
+			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+
+			// Trigger the first subscription via NATS
+			err = xEnv.NatsConnectionMyNats.Publish(xEnv.GetPubSubName("employeeUpdatedMyNats.12"), []byte(`{"id":13,"__typename":"Employee"}`))
+			require.NoError(t, err)
+
+			err = xEnv.NatsConnectionMyNats.Flush()
+			require.NoError(t, err)
+
+			xEnv.WaitForMessagesSent(1, NatsWaitTimeout)
+
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+			require.Equal(t, float64(13), payload.Data.EmployeeUpdatedMyNats.ID)
+
+			// Trigger the first subscription via NATS
+			err = xEnv.NatsConnectionMyNats.Publish(xEnv.GetPubSubName("employeeUpdatedMyNatsTwo.12"), []byte(`{"id":99,"__typename":"Employee"}`))
+			require.NoError(t, err)
+
+			err = xEnv.NatsConnectionMyNats.Flush()
+			require.NoError(t, err)
+
+			xEnv.WaitForMessagesSent(2, NatsWaitTimeout)
+
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			err = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, err)
+			require.Equal(t, float64(99), payload.Data.EmployeeUpdatedMyNats.ID)
 		})
 	})
 }

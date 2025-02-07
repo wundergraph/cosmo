@@ -6,11 +6,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/core"
 	"net/http"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/core"
 
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/require"
@@ -666,137 +667,6 @@ func TestKafkaEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribe async with filter", func(t *testing.T) {
-		t.Parallel()
-
-		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
-
-		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
-			EnableKafka:              true,
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-
-			ensureTopicExists(t, xEnv, topics...)
-
-			type subscriptionPayload struct {
-				Data struct {
-					FilteredEmployeeUpdatedMyKafka struct {
-						ID      float64 `graphql:"id"`
-						Details struct {
-							Forename string `graphql:"forename"`
-							Surname  string `graphql:"surname"`
-						} `graphql:"details"`
-					} `graphql:"filteredEmployeeUpdatedMyKafka(employeeID: 1)"`
-				} `json:"data"`
-			}
-
-			// conn.Close() is called in a cleanup defined in the function
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err := conn.WriteJSON(&testenv.WebSocketMessage{
-				ID:      "1",
-				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { filteredEmployeeUpdatedMyKafka(employeeID: 1) { id details { forename, surname } } }"}`),
-			})
-
-			require.NoError(t, err)
-			var msg testenv.WebSocketMessage
-			var payload subscriptionPayload
-
-			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
-
-			var produced atomic.Uint32
-			var consumed atomic.Uint32
-			const MsgCount = uint32(12)
-
-			go func() {
-				consumed.Add(1) // the first message is ignored
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == MsgCount-11
-				}, KafkaWaitTimeout, time.Millisecond*100)
-				gErr := conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(11), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
-				require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
-				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
-				consumed.Add(4) // should arrive to 5th message, with id 7
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == MsgCount-7
-				}, KafkaWaitTimeout, time.Millisecond*100)
-				gErr = conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(7), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
-				require.Equal(t, "Suvij", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
-				require.Equal(t, "Surya", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
-				consumed.Add(3) // should arrive to 8th message, with id 4
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == MsgCount-4
-				}, KafkaWaitTimeout, time.Millisecond*100)
-				gErr = conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(4), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
-				require.Equal(t, "Björn", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
-				require.Equal(t, "Schwenzer", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
-				consumed.Add(1)
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == MsgCount-3
-				}, KafkaWaitTimeout, time.Millisecond*100)
-				gErr = conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(3), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
-				require.Equal(t, "Stefan", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
-				require.Equal(t, "Avram", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
-				consumed.Add(2) // should arrive to 10th message, with id 2
-
-				require.Eventually(t, func() bool {
-					return produced.Load() == MsgCount-1
-				}, KafkaWaitTimeout, time.Millisecond*100)
-				gErr = conn.ReadJSON(&msg)
-				require.NoError(t, gErr)
-				require.Equal(t, "1", msg.ID)
-				require.Equal(t, "next", msg.Type)
-				gErr = json.Unmarshal(msg.Payload, &payload)
-				require.NoError(t, gErr)
-				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
-				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
-				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
-				consumed.Add(1)
-			}()
-
-			// Events 1, 3, 4, 7, and 11 should be included
-			for i := MsgCount; i > 0; i-- {
-				require.Eventually(t, func() bool {
-					return consumed.Load() >= MsgCount-i
-				}, KafkaWaitTimeout, time.Millisecond*100)
-				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
-				produced.Add(1)
-			}
-
-			require.Eventually(t, func() bool {
-				return consumed.Load() == MsgCount && produced.Load() == MsgCount
-			}, KafkaWaitTimeout, time.Millisecond*100)
-		})
-	})
-
 	t.Run("subscribe async with filter and multiple list field arguments", func(t *testing.T) {
 		t.Parallel()
 
@@ -1173,6 +1043,139 @@ func TestKafkaEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
 			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
+		})
+	})
+}
+
+func TestFlakyKafkaEvents(t *testing.T) {
+	t.Run("subscribe async with filter", func(t *testing.T) {
+		t.Parallel()
+
+		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			ensureTopicExists(t, xEnv, topics...)
+
+			type subscriptionPayload struct {
+				Data struct {
+					FilteredEmployeeUpdatedMyKafka struct {
+						ID      float64 `graphql:"id"`
+						Details struct {
+							Forename string `graphql:"forename"`
+							Surname  string `graphql:"surname"`
+						} `graphql:"details"`
+					} `graphql:"filteredEmployeeUpdatedMyKafka(employeeID: 1)"`
+				} `json:"data"`
+			}
+
+			// conn.Close() is called in a cleanup defined in the function
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { filteredEmployeeUpdatedMyKafka(employeeID: 1) { id details { forename, surname } } }"}`),
+			})
+
+			require.NoError(t, err)
+			var msg testenv.WebSocketMessage
+			var payload subscriptionPayload
+
+			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+
+			var produced atomic.Uint32
+			var consumed atomic.Uint32
+			const MsgCount = uint32(12)
+
+			go func() {
+				consumed.Add(1) // the first message is ignored
+
+				require.Eventually(t, func() bool {
+					return produced.Load() == MsgCount-11
+				}, KafkaWaitTimeout, time.Millisecond*100)
+				gErr := conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(11), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
+				require.Equal(t, "Alexandra", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
+				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
+				consumed.Add(4) // should arrive to 5th message, with id 7
+
+				require.Eventually(t, func() bool {
+					return produced.Load() == MsgCount-7
+				}, KafkaWaitTimeout, time.Millisecond*100)
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(7), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
+				require.Equal(t, "Suvij", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
+				require.Equal(t, "Surya", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
+				consumed.Add(3) // should arrive to 8th message, with id 4
+
+				require.Eventually(t, func() bool {
+					return produced.Load() == MsgCount-4
+				}, KafkaWaitTimeout, time.Millisecond*100)
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(4), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
+				require.Equal(t, "Björn", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
+				require.Equal(t, "Schwenzer", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
+				consumed.Add(1)
+
+				require.Eventually(t, func() bool {
+					return produced.Load() == MsgCount-3
+				}, KafkaWaitTimeout, time.Millisecond*100)
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(3), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
+				require.Equal(t, "Stefan", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
+				require.Equal(t, "Avram", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
+				consumed.Add(2) // should arrive to 10th message, with id 2
+
+				require.Eventually(t, func() bool {
+					return produced.Load() == MsgCount-1
+				}, KafkaWaitTimeout, time.Millisecond*100)
+				gErr = conn.ReadJSON(&msg)
+				require.NoError(t, gErr)
+				require.Equal(t, "1", msg.ID)
+				require.Equal(t, "next", msg.Type)
+				gErr = json.Unmarshal(msg.Payload, &payload)
+				require.NoError(t, gErr)
+				require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdatedMyKafka.ID)
+				require.Equal(t, "Jens", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Forename)
+				require.Equal(t, "Neuse", payload.Data.FilteredEmployeeUpdatedMyKafka.Details.Surname)
+				consumed.Add(1)
+			}()
+
+			// Events 1, 3, 4, 7, and 11 should be included
+			for i := MsgCount; i > 0; i-- {
+				require.Eventually(t, func() bool {
+					return consumed.Load() >= MsgCount-i
+				}, KafkaWaitTimeout, time.Millisecond*100)
+				produceKafkaMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
+				produced.Add(1)
+			}
+
+			require.Eventually(t, func() bool {
+				return consumed.Load() == MsgCount && produced.Load() == MsgCount
+			}, KafkaWaitTimeout, time.Millisecond*100)
 		})
 	})
 }

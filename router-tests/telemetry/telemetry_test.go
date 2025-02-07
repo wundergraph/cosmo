@@ -2,7 +2,6 @@ package telemetry
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"regexp"
 	"runtime"
@@ -10,6 +9,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -31,7 +32,7 @@ import (
 	integration "github.com/wundergraph/cosmo/router-tests"
 )
 
-func TestEngineStatisticsTelemetry(t *testing.T) {
+func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Should provide correct metrics for one subscription over SSE", func(t *testing.T) {
