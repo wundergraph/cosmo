@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.174.0](https://github.com/wundergraph/cosmo/compare/router@0.173.0...router@0.174.0) (2025-02-07)
+
+### Bug Fixes
+
+* querying fields under external path used in a composite key with nested fields ([#1573](https://github.com/wundergraph/cosmo/issues/1573)) ([e053fad](https://github.com/wundergraph/cosmo/commit/e053fad861f639caf5eaff94cd52c0338c50d1cc)) (@devsergiy)
+
+### Features
+
+* add plan cmd and plan generator ([#1539](https://github.com/wundergraph/cosmo/issues/1539)) ([586ca21](https://github.com/wundergraph/cosmo/commit/586ca21a0da1eb7f3e889281cf4bc4ea0c15a2b6)) (@devsergiy)
+
 # [0.173.0](https://github.com/wundergraph/cosmo/compare/router@0.172.0...router@0.173.0) (2025-02-06)
 
 ### Features
