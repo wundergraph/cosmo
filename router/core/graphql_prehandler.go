@@ -389,6 +389,23 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 	})
 }
 
+func (h *PreHandler) shouldComputeHash(operationKit *OperationKit) bool {
+	if h.computeOperationSha256 {
+		return true
+	}
+	hasPersistedHash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash != ""
+	// If it already has a persisted hash attached to the request, then there is no need for us to compute it anew
+	// Otherwise, we only want to compute the hash (an expensive operation) if we're safelisting or logging unknown persisted operations
+	return !hasPersistedHash && (h.operationBlocker.SafelistEnabled || h.operationBlocker.LogUnknownOperationsEnabled)
+}
+
+// shouldFetchPersistedOperation determines if we should fetch a persisted operation. The most intuitive case is if the
+// operation is a persisted operation. However, we also want to fetch persisted operations if we're enabling safelisting
+// and if we're logging unknown operations. This is because we want to check if the operation is already persisted in the cache
+func (h *PreHandler) shouldFetchPersistedOperation(operationKit *OperationKit) bool {
+	return operationKit.parsedOperation.IsPersistedOperation || h.operationBlocker.SafelistEnabled || h.operationBlocker.LogUnknownOperationsEnabled
+}
+
 func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson.Parser, httpOperation *httpOperation) error {
 	operationKit, err := h.operationProcessor.NewKit()
 	if err != nil {
@@ -431,8 +448,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	}
 
 	// Compute the operation sha256 hash as soon as possible for observability reasons
-	hasPersistedHash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash != ""
-	if h.computeOperationSha256 || !hasPersistedHash && (h.operationBlocker.SafelistEnabled || h.operationBlocker.LogUnknownOperationsEnabled) {
+	if h.shouldComputeHash(operationKit) {
 		if err := operationKit.ComputeOperationSha256(); err != nil {
 			return &httpGraphqlError{
 				message:    fmt.Sprintf("error hashing operation: %s", err),
@@ -463,7 +479,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		isApq     bool
 	)
 
-	if operationKit.parsedOperation.IsPersistedOperation || h.operationBlocker.SafelistEnabled || h.operationBlocker.LogUnknownOperationsEnabled {
+	if h.shouldFetchPersistedOperation(operationKit) {
 		ctx, span := h.tracer.Start(req.Context(), "Load Persisted Operation",
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(requestContext.telemetry.traceAttrs...),

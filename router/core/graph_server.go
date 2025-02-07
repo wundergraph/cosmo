@@ -454,7 +454,8 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			}
 		}
 	} else if srv.securityConfiguration.Safelist.Enabled || srv.securityConfiguration.LogUnknownOperations.Enabled {
-		// In this case, we'll want to compute the sha256 for every operation
+		// In these case, we'll want to compute the sha256 for every operation, in order to check that the operation
+		// is present in the Persisted Operation cache
 		computeSha256 = true
 	}
 
