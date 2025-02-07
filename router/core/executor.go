@@ -238,7 +238,6 @@ func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([
 // Only general options like TLS, SASL, etc. are configured here. Specific options like topics, etc. are
 // configured in the KafkaPubSub implementation.
 func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
-
 	opts := []kgo.Opt{
 		kgo.SeedBrokers(eventSource.Brokers...),
 		// Ensure proper timeouts are set
@@ -270,7 +269,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 
 	loader := NewLoader(b.trackUsageInfo, NewDefaultFactoryResolver(
 		ctx,
-		NewTransport(b.transportOptions),
+		b.transportOptions,
 		b.transport,
 		b.logger,
 		routerEngineCfg.Execution.EnableSingleFlight,

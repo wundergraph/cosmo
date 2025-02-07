@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "0.99.2",
+  "version": "0.99.5",
   "private": true,
   "license": "Apache-2.0",
   "description": "WunderGraph Cosmo Studio",
@@ -19,7 +19,7 @@
     "lint:fix": "next lint --fix",
     "preinstall": "npx only-allow pnpm",
     "postinstall": "pnpm run copy-monaco",
-    "postversion": "name=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.name);process.exit(0)\")\"; version=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.version);process.exit(0)\")\"; gh workflow run image-release.yml -F name=$name -F workingDirectory=studio -F tag=$version -F dockerContext=."
+    "postversion": "name=$(jq -r .name package.json); version=$(jq -r .version package.json); gh workflow run image-release.yml -F name=$name -F workingDirectory=studio -F tag=$version -F dockerContext=."
   },
   "author": {
     "name": "WunderGraph Maintainers",
@@ -131,7 +131,7 @@
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "10.4.14",
     "cross-env": "^7.0.3",
-    "eslint": "8.43.0",
+    "eslint": "^8.57.1",
     "eslint-config-next": "13.4.7",
     "jsdom": "^23.2.0",
     "postcss": "8.4.38",

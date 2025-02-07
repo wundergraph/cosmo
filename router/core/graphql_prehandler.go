@@ -61,6 +61,7 @@ type PreHandlerOptions struct {
 	ClientHeader                config.ClientHeader
 	ComputeOperationSha256      bool
 	ApolloCompatibilityFlags    *config.ApolloCompatibilityFlags
+	DisableVariablesRemapping   bool
 }
 
 type PreHandler struct {
@@ -91,6 +92,7 @@ type PreHandler struct {
 	computeOperationSha256      bool
 	apolloCompatibilityFlags    *config.ApolloCompatibilityFlags
 	variableParsePool           astjson.ParserPool
+	disableVariablesRemapping   bool
 }
 
 type httpOperation struct {
@@ -122,18 +124,19 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
-		fileUploadEnabled:        opts.FileUploadEnabled,
-		maxUploadFiles:           opts.MaxUploadFiles,
-		maxUploadFileSize:        opts.MaxUploadFileSize,
-		complexityLimits:         opts.ComplexityLimits,
-		alwaysIncludeQueryPlan:   opts.AlwaysIncludeQueryPlan,
-		alwaysSkipLoader:         opts.AlwaysSkipLoader,
-		queryPlansEnabled:        opts.QueryPlansEnabled,
-		queryPlansLoggingEnabled: opts.QueryPlansLoggingEnabled,
-		trackSchemaUsageInfo:     opts.TrackSchemaUsageInfo,
-		clientHeader:             opts.ClientHeader,
-		computeOperationSha256:   opts.ComputeOperationSha256,
-		apolloCompatibilityFlags: opts.ApolloCompatibilityFlags,
+		fileUploadEnabled:         opts.FileUploadEnabled,
+		maxUploadFiles:            opts.MaxUploadFiles,
+		maxUploadFileSize:         opts.MaxUploadFileSize,
+		complexityLimits:          opts.ComplexityLimits,
+		alwaysIncludeQueryPlan:    opts.AlwaysIncludeQueryPlan,
+		alwaysSkipLoader:          opts.AlwaysSkipLoader,
+		queryPlansEnabled:         opts.QueryPlansEnabled,
+		queryPlansLoggingEnabled:  opts.QueryPlansLoggingEnabled,
+		trackSchemaUsageInfo:      opts.TrackSchemaUsageInfo,
+		clientHeader:              opts.ClientHeader,
+		computeOperationSha256:    opts.ComputeOperationSha256,
+		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
+		disableVariablesRemapping: opts.DisableVariablesRemapping,
 	}
 }
 
@@ -602,7 +605,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		return err
 	}
 
-	err = operationKit.RemapVariables()
+	err = operationKit.RemapVariables(h.disableVariablesRemapping)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 

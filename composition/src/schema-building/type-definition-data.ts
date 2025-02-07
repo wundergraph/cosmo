@@ -1,11 +1,13 @@
 import {
   ConstDirectiveNode,
   ConstValueNode,
+  DirectiveDefinitionNode,
   Kind,
   NamedTypeNode,
   OperationTypeDefinitionNode,
   OperationTypeNode,
   StringValueNode,
+  TypeNode,
 } from 'graphql';
 import {
   MutableEnumNode,
@@ -20,6 +22,28 @@ import {
   MutableUnionNode,
 } from './ast';
 
+export type ArgumentData = {
+  name: string;
+  typeNode: TypeNode;
+  defaultValue?: ConstValueNode;
+};
+
+export type ConfigureDescriptionData = {
+  propagate: boolean;
+  description: string;
+};
+
+export type DirectiveDefinitionData = {
+  argumentTypeNodeByArgumentName: Map<string, ArgumentData>;
+  isRepeatable: boolean;
+  locations: Set<string>;
+  name: string;
+  node: DirectiveDefinitionNode;
+  // required arguments with a default value are considered optional
+  optionalArgumentNames: Set<string>;
+  requiredArgumentNames: Set<string>;
+};
+
 export enum ExtensionType {
   EXTENDS,
   NONE,
@@ -28,6 +52,7 @@ export enum ExtensionType {
 
 export type EnumDefinitionData = {
   appearances: number;
+  configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
   enumValueDataByValueName: Map<string, EnumValueData>;
   extensionType: ExtensionType;
@@ -41,7 +66,9 @@ export type EnumDefinitionData = {
 
 export type EnumValueData = {
   appearances: number;
+  configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
+  kind: Kind.ENUM_VALUE_DEFINITION;
   name: string;
   node: MutableEnumValueNode;
   parentTypeName: string;
@@ -52,10 +79,12 @@ export type EnumValueData = {
 
 export type FieldData = {
   argumentDataByArgumentName: Map<string, InputValueData>;
+  configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
   isExternalBySubgraphName: Map<string, boolean>;
   isInaccessible: boolean;
   isShareableBySubgraphName: Map<string, boolean>;
+  kind: Kind.FIELD_DEFINITION;
   name: string;
   namedTypeName: string;
   node: MutableFieldNode;
@@ -68,6 +97,7 @@ export type FieldData = {
 };
 
 export type InputObjectDefinitionData = {
+  configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
   extensionType: ExtensionType;
   inputValueDataByValueName: Map<string, InputValueData>;
@@ -81,9 +111,11 @@ export type InputObjectDefinitionData = {
 };
 
 export type InputValueData = {
+  configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
   includeDefaultValue: boolean;
   isArgument: boolean;
+  kind: Kind.ARGUMENT | Kind.INPUT_VALUE_DEFINITION;
   name: string;
   node: MutableInputValueNode;
   originalPath: string;
@@ -97,6 +129,7 @@ export type InputValueData = {
 };
 
 export type InterfaceDefinitionData = {
+  configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
   extensionType: ExtensionType;
   fieldDataByFieldName: Map<string, FieldData>;
@@ -112,6 +145,7 @@ export type InterfaceDefinitionData = {
 };
 
 export type ObjectDefinitionData = {
+  configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
   extensionType: ExtensionType;
   fieldDataByFieldName: Map<string, FieldData>;
@@ -145,6 +179,7 @@ export type PersistedDirectivesData = {
 };
 
 export type ScalarDefinitionData = {
+  configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
   extensionType: ExtensionType;
   kind: Kind.SCALAR_TYPE_DEFINITION;
@@ -157,12 +192,13 @@ export type ScalarDefinitionData = {
 export type SchemaData = {
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
   kind: Kind.SCHEMA_DEFINITION;
-  typeName: string;
+  name: string;
   operationTypes: Map<OperationTypeNode, OperationTypeDefinitionNode>;
   description?: StringValueNode;
 };
 
 export type UnionDefinitionData = {
+  configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
   extensionType: ExtensionType;
   kind: Kind.UNION_TYPE_DEFINITION;
@@ -198,3 +234,8 @@ export type DefinitionData =
   | UnionDefinitionData;
 
 export type NodeData = ParentDefinitionData | ChildData;
+
+export interface X {
+  directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
+  name: string;
+}

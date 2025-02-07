@@ -5,33 +5,32 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/execution_config"
-	otelmetric "go.opentelemetry.io/otel/metric"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/klauspost/compress/gzhttp"
-	"github.com/klauspost/compress/gzip"
-
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/klauspost/compress/gzhttp"
+	"github.com/klauspost/compress/gzip"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
+	otelmetric "go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/exp/maps"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -42,6 +41,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
@@ -102,7 +102,6 @@ type (
 
 // newGraphServer creates a new server instance.
 func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterConfig, proxy ProxyFunc) (*graphServer, error) {
-
 	/* Older versions of composition will not populate a compatibility version.
 	 * Currently, all "old" router execution configurations are compatible as there have been no breaking
 	 * changes.
@@ -119,7 +118,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		cancelFunc:              cancel,
 		Config:                  &r.Config,
 		engineStats:             r.EngineStats,
-		executionTransport:      newHTTPTransport(r.subgraphTransportOptions.TransportTimeoutOptions, proxy),
+		executionTransport:      newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy),
 		executionTransportProxy: proxy,
 		playgroundHandler:       r.playgroundHandler,
 		baseRouterConfigVersion: routerConfig.GetVersion(),
@@ -191,7 +190,12 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		)
 	})))
 
+	// Request traffic shaping related middlewares
 	httpRouter.Use(rmiddleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
+	if s.routerTrafficConfig.DecompressionEnabled {
+		httpRouter.Use(rmiddleware.HandleCompression(s.logger))
+	}
+
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
 	if s.corsOptions.Enabled {
@@ -226,7 +230,6 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	* A group where we can selectively apply middlewares to the graphql endpoint
 	 */
 	httpRouter.Group(func(cr chi.Router) {
-
 		// We are applying it conditionally because compressing 3MB playground is still slow even with stdlib gzip
 		cr.Use(func(h http.Handler) http.Handler {
 			return wrapper(h)
@@ -261,7 +264,6 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 }
 
 func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig) (http.HandlerFunc, error) {
-
 	if len(featureFlagConfigs) == 0 {
 		return baseMux.ServeHTTP, nil
 	}
@@ -283,7 +285,6 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		// Extract the feature flag and run the corresponding mux
 		// 1. From the request header
 		// 2. From the cookie
@@ -313,7 +314,8 @@ func (s *graphServer) setupEngineStatistics() (err error) {
 	// We only include the base router config version in the attributes for the engine statistics.
 	// Same approach is used for the runtime metrics.
 	baseAttributes := append([]attribute.KeyValue{
-		otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion)}, s.baseOtelAttributes...)
+		otel.WgRouterConfigVersion.String(s.baseRouterConfigVersion),
+	}, s.baseOtelAttributes...)
 
 	s.otlpEngineMetrics, err = rmetric.NewEngineMetrics(
 		s.logger,
@@ -322,7 +324,6 @@ func (s *graphServer) setupEngineStatistics() (err error) {
 		s.engineStats,
 		&s.metricConfig.OpenTelemetry.EngineStats,
 	)
-
 	if err != nil {
 		return err
 	}
@@ -334,7 +335,6 @@ func (s *graphServer) setupEngineStatistics() (err error) {
 		s.engineStats,
 		&s.metricConfig.Prometheus.EngineStats,
 	)
-
 	if err != nil {
 		return err
 	}
@@ -359,7 +359,6 @@ type graphMux struct {
 // buildOperationCaches creates the caches for the graph mux.
 // The caches are created based on the engine configuration.
 func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, err error) {
-
 	// We create a new execution plan cache for each operation planner which is coupled to
 	// the specific engine configuration. This is necessary because otherwise we would return invalid plans.
 	//
@@ -480,7 +479,6 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 			srv.logger,
 			baseOtelAttributes,
 			srv.otlpMeterProvider)
-
 		if err != nil {
 			return fmt.Errorf("failed to create cache metrics for OTLP: %w", err)
 		}
@@ -493,7 +491,6 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 			srv.logger,
 			baseOtelAttributes,
 			srv.promMeterProvider)
-
 		if err != nil {
 			return fmt.Errorf("failed to create cache metrics for Prometheus: %w", err)
 		}
@@ -539,7 +536,6 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 }
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
-
 	var err error
 
 	if s.planCache != nil {
@@ -596,8 +592,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	featureFlagName string,
 	routerConfigVersion string,
 	engineConfig *nodev1.EngineConfiguration,
-	configSubgraphs []*nodev1.Subgraph) (*graphMux, error) {
-
+	configSubgraphs []*nodev1.Subgraph,
+) (*graphMux, error) {
 	gm := &graphMux{
 		metricStore: rmetric.NewNoopMetrics(),
 	}
@@ -740,7 +736,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 			reqContext := getRequestContext(r.Context())
 
 			reqContext.telemetry.addCommonTraceAttribute(baseOtelAttributes...)
@@ -919,12 +914,18 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
 	if s.Config.cacheWarmup != nil && s.Config.cacheWarmup.Enabled {
+
+		if s.graphApiToken == "" {
+			return nil, fmt.Errorf("graph token is required for cache warmup in order to communicate with the CDN")
+		}
+
 		processor := NewCacheWarmupPlanningProcessor(&CacheWarmupPlanningProcessorOptions{
-			OperationProcessor: operationProcessor,
-			OperationPlanner:   operationPlanner,
-			ComplexityLimits:   s.securityConfiguration.ComplexityLimits,
-			RouterSchema:       executor.RouterSchema,
-			TrackSchemaUsage:   s.graphqlMetricsConfig.Enabled,
+			OperationProcessor:        operationProcessor,
+			OperationPlanner:          operationPlanner,
+			ComplexityLimits:          s.securityConfiguration.ComplexityLimits,
+			RouterSchema:              executor.RouterSchema,
+			TrackSchemaUsage:          s.graphqlMetricsConfig.Enabled,
+			DisableVariablesRemapping: s.engineExecutionConfiguration.DisableVariablesRemapping,
 		})
 
 		warmupConfig := &CacheWarmupConfig{
@@ -1025,7 +1026,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			Condition: s.securityConfiguration.BlockNonPersistedOperations.Condition,
 		},
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to create operation blocker: %w", err)
 	}
@@ -1056,26 +1056,28 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		ClientHeader:                s.clientHeader,
 		ComputeOperationSha256:      computeSha256,
 		ApolloCompatibilityFlags:    &s.apolloCompatibilityFlags,
+		DisableVariablesRemapping:   s.engineExecutionConfiguration.DisableVariablesRemapping,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
 		wsMiddleware := NewWebsocketMiddleware(ctx, WebsocketMiddlewareOptions{
-			OperationProcessor:     operationProcessor,
-			OperationBlocker:       operationBlocker,
-			Planner:                operationPlanner,
-			GraphQLHandler:         graphqlHandler,
-			PreHandler:             graphqlPreHandler,
-			Metrics:                metrics,
-			AccessController:       s.accessController,
-			Logger:                 s.logger,
-			Stats:                  s.engineStats,
-			ReadTimeout:            s.engineExecutionConfiguration.WebSocketClientReadTimeout,
-			EnableNetPoll:          s.engineExecutionConfiguration.EnableNetPoll,
-			NetPollTimeout:         s.engineExecutionConfiguration.WebSocketClientPollTimeout,
-			NetPollConnBufferSize:  s.engineExecutionConfiguration.WebSocketClientConnBufferSize,
-			WebSocketConfiguration: s.webSocketConfiguration,
-			ClientHeader:           s.clientHeader,
-			Attributes:             baseOtelAttributes,
+			OperationProcessor:        operationProcessor,
+			OperationBlocker:          operationBlocker,
+			Planner:                   operationPlanner,
+			GraphQLHandler:            graphqlHandler,
+			PreHandler:                graphqlPreHandler,
+			Metrics:                   metrics,
+			AccessController:          s.accessController,
+			Logger:                    s.logger,
+			Stats:                     s.engineStats,
+			ReadTimeout:               s.engineExecutionConfiguration.WebSocketClientReadTimeout,
+			EnableNetPoll:             s.engineExecutionConfiguration.EnableNetPoll,
+			NetPollTimeout:            s.engineExecutionConfiguration.WebSocketClientPollTimeout,
+			NetPollConnBufferSize:     s.engineExecutionConfiguration.WebSocketClientConnBufferSize,
+			WebSocketConfiguration:    s.webSocketConfiguration,
+			ClientHeader:              s.clientHeader,
+			Attributes:                baseOtelAttributes,
+			DisableVariablesRemapping: s.engineExecutionConfiguration.DisableVariablesRemapping,
 		})
 
 		// When the playground path is equal to the graphql path, we need to handle
@@ -1093,7 +1095,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		// Must be mounted after the websocket middleware to ensure that we only count non-hijacked requests like WebSockets
 		func(handler http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 				requestContext := getRequestContext(r.Context())
 
 				// We don't want to count any type of subscriptions e.g. SSE as in-flight requests because they are long-lived
@@ -1128,7 +1129,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 }
 
 func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, routerEngineCfg *RouterEngineConfiguration) error {
-
 	datasourceConfigurations := engineConfig.GetDatasourceConfigurations()
 	for _, datasourceConfiguration := range datasourceConfigurations {
 		if datasourceConfiguration.CustomEvents == nil {
@@ -1181,7 +1181,6 @@ func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig
 			}
 
 			for _, eventSource := range routerEngineCfg.Events.Providers.Kafka {
-
 				if eventSource.ID == providerID {
 					options, err := buildKafkaOptions(eventSource)
 					if err != nil {
@@ -1235,7 +1234,6 @@ func (s *graphServer) wait(ctx context.Context) error {
 // After all requests are done, it will shut down the metric store and runtime metrics.
 // Shutdown does cancel the context after all non-hijacked requests such as WebSockets has been handled.
 func (s *graphServer) Shutdown(ctx context.Context) error {
-
 	// Cancel the context after the graceful shutdown is done
 	// to clean up resources like websocket connections, pools, etc.
 	defer s.cancelFunc()
@@ -1329,9 +1327,7 @@ func configureSubgraphOverwrites(
 	overrideRoutingURLConfig config.OverrideRoutingURLConfiguration,
 	overrides config.OverridesConfiguration,
 ) ([]Subgraph, error) {
-	var (
-		err error
-	)
+	var err error
 	subgraphs := make([]Subgraph, 0, len(configSubgraphs))
 	for _, sg := range configSubgraphs {
 

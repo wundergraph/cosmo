@@ -1,6 +1,6 @@
 {
   "name": "controlplane",
-  "version": "0.121.2",
+  "version": "0.121.7",
   "private": true,
   "description": "WunderGraph Cosmo Controlplane",
   "type": "module",
@@ -31,7 +31,7 @@
     "db:migrate": "tsx src/bin/db-migrate.ts",
     "ch:migrate": "tsx src/bin/ch-migrate.ts",
     "ch:new-migration": "dbmate -d \"./clickhouse/migrations\" new",
-    "postversion": "name=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.name);process.exit(0)\")\"; version=\"$(node -p \"var a = require('./package.json');process.stdout.write(a.version);process.exit(0)\")\"; gh workflow run image-release.yml -F name=$name -F workingDirectory=controlplane -F tag=$version -F dockerContext=."
+    "postversion": "name=$(jq -r .name package.json); version=$(jq -r .version package.json); gh workflow run image-release.yml -F name=$name -F workingDirectory=controlplane -F tag=$version -F dockerContext=."
   },
   "keywords": [
     "controlplane",
@@ -63,8 +63,8 @@
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.35.3",
     "ejs": "^3.1.10",
-    "eslint": "^8.57.0",
-    "execa": "^9.3.0",
+    "eslint": "^8.57.1",
+    "execa": "^9.5.2",
     "fastify": "^4.28.1",
     "fastify-graceful-shutdown": "^4.0.1",
     "fastify-plugin": "^4.5.1",
@@ -97,7 +97,7 @@
     "@connectrpc/protoc-gen-connect-es": "^1.4.0",
     "@types/cookie": "^0.6.0",
     "@types/ejs": "^3.1.5",
-    "@types/eslint": "^8.56.2",
+    "@types/eslint": "^9.6.1",
     "@types/lodash": "^4.14.202",
     "@types/node": "^18.19.21",
     "@types/nodemailer": "^6.4.14",

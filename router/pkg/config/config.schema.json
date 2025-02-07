@@ -56,16 +56,25 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["url", "id"],
+            "required": ["urls", "id"],
             "additionalProperties": false,
             "properties": {
               "id": {
                 "type": "string",
                 "description": "The ID of the redis provider. The ID is used to identify the storage provider in the configuration."
               },
-              "url": {
-                "type": "string",
-                "description": "The URL of the redis storage. The URL is specified as a string with the format 'scheme://host:port, with auth included if necessary'."
+              "urls": {
+                "type": "array",
+                "description": "The cluster connection URLs. The values are specified as a string with the format 'scheme://host:port'. If cluster enabled, will use these urls for a cluster connection. If cluster is not enabled, we will just select the first URL provided.",
+                "default": [],
+                "items": {
+                  "type": "string"
+                }
+              },
+              "cluster_enabled": {
+                "type": "boolean",
+                "description": "Enable Redis Cluster connection, using the supplied URLs.",
+                "default": false
               }
             }
           }
@@ -553,7 +562,7 @@
           "description": "The configuration for the router access logs",
           "properties": {
             "fields": {
-              "$ref": "#/definitions/context_fields"
+              "$ref": "#/$defs/context_fields"
             }
           }
         },
@@ -570,7 +579,7 @@
             "fields": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/context_fields"
+                  "$ref": "#/$defs/context_fields"
                 },
                 {
                   "items": {
@@ -1234,99 +1243,24 @@
               "description": "The maximum size of the request headers. Setting this to 0 uses the default value from the http standard lib, which is 1MiB.",
               "default": "0MiB",
               "bytes": {}
+            },
+            "decompression_enabled": {
+              "type": "boolean",
+              "description": "When enabled, the router will check incoming requests for a 'Content-Encoding' header and decompress the body accordingly. Currently only gzip is supported",
+              "default": true
             }
           }
         },
         "all": {
           "type": "object",
           "description": "The configuration for all subgraphs. The configuration is used to configure the traffic shaping for all subgraphs.",
-          "additionalProperties": false,
-          "properties": {
-            "request_timeout": {
-              "type": "string",
-              "duration": {
-                "minimum": "1s"
-              },
-              "description": "The request timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-            },
-            "dial_timeout": {
-              "type": "string",
-              "format": "go-duration",
-              "description": "The dial timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-            },
-            "tls_handshake_timeout": {
-              "type": "string",
-              "format": "go-duration",
-              "description": "The TLS handshake timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-            },
-            "response_header_timeout": {
-              "type": "string",
-              "format": "go-duration",
-              "description": "The response header timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-            },
-            "expect_continue_timeout": {
-              "type": "string",
-              "format": "go-duration",
-              "description": "The expect continue timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-            },
-            "keep_alive_idle_timeout": {
-              "type": "string",
-              "format": "go-duration",
-              "description": "The keep alive idle timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-            },
-            "keep_alive_probe_interval": {
-              "type": "string",
-              "duration": {
-                "minimum": "5s"
-              },
-              "description": "The keep alive probe interval. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-            },
-            "retry": {
-              "type": "object",
-              "description": "The retry configuration. The retry configuration is used to configure the retry behavior for the subgraphs requests. See https://cosmo-docs.wundergraph.com/router/traffic-shaping#automatic-retry for more information.",
-              "additionalProperties": false,
-              "properties": {
-                "enabled": {
-                  "type": "boolean"
-                },
-                "algorithm": {
-                  "type": "string",
-                  "description": "The algorithm used to calculate the retry interval. The supported algorithms are 'backoff_jitter'.",
-                  "enum": ["backoff_jitter"]
-                },
-                "max_attempts": {
-                  "type": "integer",
-                  "default": 5,
-                  "minimum": 1,
-                  "description": "The maximum number of attempts. The default value is 5."
-                },
-                "interval": {
-                  "type": "string",
-                  "format": "go-duration",
-                  "default": "3s",
-                  "description": "The time duration between each retry attempt. Increase with every retry. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-                },
-                "max_duration": {
-                  "type": "string",
-                  "format": "go-duration",
-                  "default": "10s",
-                  "description": "The maximum allowable duration between retries (random). The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-                }
-              }
-            }
-          }
+          "$ref": "#/$defs/traffic_shaping_subgraph_request_rule"
         },
         "subgraphs": {
           "type": "object",
           "description": "The configuration to control traffic shaping for specific subgraphs.",
           "additionalProperties": {
-            "request_timeout": {
-              "type": "string",
-              "duration": {
-                "minimum": "1s"
-              },
-              "description": "The request timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-            }
+            "$ref": "#/$defs/traffic_shaping_subgraph_request_rule"
           }
         }
       }
@@ -1344,10 +1278,10 @@
               "items": {
                 "oneOf": [
                   {
-                    "$ref": "#/definitions/traffic_shaping_header_rule"
+                    "$ref": "#/$defs/traffic_shaping_header_rule"
                   },
                   {
-                    "$ref": "#/definitions/set_header_rule"
+                    "$ref": "#/$defs/set_header_rule"
                   }
                 ]
               }
@@ -1357,10 +1291,10 @@
               "items": {
                 "oneOf": [
                   {
-                    "$ref": "#/definitions/traffic_shaping_header_response_rule"
+                    "$ref": "#/$defs/traffic_shaping_header_response_rule"
                   },
                   {
-                    "$ref": "#/definitions/set_header_rule"
+                    "$ref": "#/$defs/set_header_rule"
                   }
                 ]
               }
@@ -1378,10 +1312,10 @@
                 "items": {
                   "oneOf": [
                     {
-                      "$ref": "#/definitions/traffic_shaping_header_rule"
+                      "$ref": "#/$defs/traffic_shaping_header_rule"
                     },
                     {
-                      "$ref": "#/definitions/set_header_rule"
+                      "$ref": "#/$defs/set_header_rule"
                     }
                   ]
                 }
@@ -1391,10 +1325,10 @@
                 "items": {
                   "oneOf": [
                     {
-                      "$ref": "#/definitions/traffic_shaping_header_response_rule"
+                      "$ref": "#/$defs/traffic_shaping_header_response_rule"
                     },
                     {
-                      "$ref": "#/definitions/set_header_rule"
+                      "$ref": "#/$defs/set_header_rule"
                     }
                   ]
                 }
@@ -1456,17 +1390,14 @@
       "description": "The configuration for the authentication. The authentication is used to authenticate the incoming requests. We currently support JWK (JSON Web Key) authentication.",
       "additionalProperties": false,
       "properties": {
-        "providers": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "name": {
-                "type": "string",
-                "description": "The name of the authentication provider. The name is used to identify the provider in the configuration."
-              },
-              "jwks": {
+        "jwt": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "jwks": {
+              "type": "array",
+              "additionalProperties": false,
+              "items": {
                 "type": "object",
                 "additionalProperties": false,
                 "properties": {
@@ -1475,20 +1406,12 @@
                     "description": "The URL of the JWKs. The JWKs are used to verify the JWT (JSON Web Token). The URL is specified as a string with the format 'scheme://host:port'.",
                     "format": "http-url"
                   },
-                  "header_names": {
+                  "algorithms": {
                     "type": "array",
-                    "description": "The names of the headers. The headers are used to extract the token from the request. The default value is 'Authorization'",
-                    "default": ["Authorization"],
+                    "description": "The allowed algorithms for the keys that are retrieved from the JWKs. An empty list means that all algorithms are allowed.",
                     "items": {
-                      "type": "string"
-                    }
-                  },
-                  "header_value_prefixes": {
-                    "type": "array",
-                    "description": "The prefixes of the header values. The prefixes are used to extract the token from the header value. The default value is 'Bearer'",
-                    "default": ["Bearer"],
-                    "items": {
-                      "type": "string"
+                      "type": "string",
+                      "enum": ["HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA"]
                     }
                   },
                   "refresh_interval": {
@@ -1503,7 +1426,45 @@
                 "required": ["url"]
               }
             },
-            "required": ["name"]
+            "header_name": {
+              "type": "string",
+              "description": "The name of the header. The header is used to extract the token from the request. The default value is 'Authorization'.",
+              "default": "Authorization"
+            },
+            "header_value_prefix": {
+              "type": "string",
+              "description": "The prefix of the header value. The prefix is used to extract the token from the header value. The default value is 'Bearer'.",
+              "default": "Bearer"
+            },
+            "header_sources": {
+              "type": "array",
+              "description": "Additional sources for the token. The sources are used to extract the token from the request.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "description": "The type of the source. The only currently supported type is 'header'.",
+                    "enum": ["header"]
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "The name of the header. The header is used to extract the token from the request.",
+                    "format": "http-header",
+                    "examples": ["X-Authorization"]
+                  },
+                  "value_prefixes": {
+                    "type": "array",
+                    "description": "The prefixes of the header value. The prefixes are used to extract the token from the header value.",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": ["type", "name"]
+              }
+            }
           }
         }
       }
@@ -1576,12 +1537,20 @@
         "storage": {
           "type": "object",
           "additionalProperties": false,
+          "required": ["urls"],
           "properties": {
-            "url": {
-              "type": "string",
-              "description": "The connection URL. The value is specified as a string with the format 'scheme://host:port'.",
-              "default": "redis://localhost:6379",
-              "format": "url"
+            "cluster_enabled": {
+              "type": "boolean",
+              "description": "Enable Redis Cluster connection, using the supplied URLs.",
+              "default": false
+            },
+            "urls": {
+              "type": "array",
+              "description": "The Redis connection URLs. The values are specified as a string with the format 'scheme://host:port', with optional auth and options added in to the URL. If cluster is enabled, will use them to instantiate a cluster connection.",
+              "default": [],
+              "items": {
+                "type": "string"
+              }
             },
             "key_prefix": {
               "type": "string",
@@ -1807,9 +1776,7 @@
               }
             }
           },
-          "oneOf": [
-            { "required": ["filesystem"] }
-          ]
+          "oneOf": [{ "required": ["filesystem"] }]
         },
         "workers": {
           "type": "integer",
@@ -2182,8 +2149,8 @@
         },
         "max_concurrent_resolvers": {
           "type": "integer",
-          "description": "The maximum number of concurrent resolvers.",
-          "default": 32
+          "description": "The maximum number of concurrent resolvers. The higher the number, the more requests can be processed in parallel but at the cost of more memory usage.",
+          "default": 1024
         },
         "enable_net_poll": {
           "type": "boolean",
@@ -2261,6 +2228,11 @@
           "type": "boolean",
           "default": false,
           "description": "Enable appending the operation name to subgraph fetches. This will ensure that the operation name will be included in the corresponding subgraph requests using the following format: $operationName__$subgraphName__$sequenceID."
+        },
+        "disable_variables_remapping": {
+          "type": "boolean",
+          "default": false,
+          "description": "Disables variables renaming during normalization. This option could have a negative impact on planner cache hits."
         }
       }
     },
@@ -2413,7 +2385,101 @@
       }
     }
   },
-  "definitions": {
+  "$defs": {
+    "traffic_shaping_subgraph_request_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The configuration for all subgraphs. The configuration is used to configure the traffic shaping for all subgraphs.",
+      "properties": {
+        "request_timeout": {
+          "type": "string",
+          "duration": {
+            "minimum": "1s"
+          },
+          "description": "The request timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "dial_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The dial timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "tls_handshake_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The TLS handshake timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "response_header_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The response header timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "expect_continue_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The expect continue timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "keep_alive_idle_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The keep alive idle timeout. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "keep_alive_probe_interval": {
+          "type": "string",
+          "duration": {
+            "minimum": "5s"
+          },
+          "description": "The keep alive probe interval. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "max_idle_conns": {
+          "type": "integer",
+          "default": 1024,
+          "description": "MaxIdleConns controls the maximum number of idle (keep-alive) connections across all hosts. Zero means no limit"
+        },
+        "max_conns_per_host": {
+          "type": "integer",
+          "default": 100,
+          "description": "MaxConnsPerHost limits the total number of connections per host, including connections in the dialing, active, and idle states. Zero means no limit."
+        },
+        "max_idle_conns_per_host": {
+          "type": "integer",
+          "default": 20,
+          "description": "MaxIdleConnsPerHost, if non-zero, controls the maximum idle (keep-alive) connections to keep per-host. Zero will default to 2"
+        },
+        "retry": {
+          "type": "object",
+          "description": "The retry configuration. The retry configuration is used to configure the retry behavior for the subgraphs requests. See https://cosmo-docs.wundergraph.com/router/traffic-shaping#automatic-retry for more information.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "algorithm": {
+              "type": "string",
+              "description": "The algorithm used to calculate the retry interval. The supported algorithms are 'backoff_jitter'.",
+              "enum": ["backoff_jitter"]
+            },
+            "max_attempts": {
+              "type": "integer",
+              "default": 5,
+              "minimum": 1,
+              "description": "The maximum number of attempts. The default value is 5."
+            },
+            "interval": {
+              "type": "string",
+              "format": "go-duration",
+              "default": "3s",
+              "description": "The time duration between each retry attempt. Increase with every retry. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            },
+            "max_duration": {
+              "type": "string",
+              "format": "go-duration",
+              "default": "10s",
+              "description": "The maximum allowable duration between retries (random). The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            }
+          }
+        }
+      }
+    },
     "traffic_shaping_header_rule": {
       "type": "object",
       "description": "The configuration for all subgraphs. The configuration is used to configure the traffic shaping for all subgraphs.",
