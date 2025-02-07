@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.174.1](https://github.com/wundergraph/cosmo/compare/router@0.174.0...router@0.174.1) (2025-02-07)
+
+### Bug Fixes
+
+* extracting arguments input objects with optional variables ([#1574](https://github.com/wundergraph/cosmo/issues/1574)) ([f63ac1a](https://github.com/wundergraph/cosmo/commit/f63ac1a09e748ccf6996ea7abd948e0ba5a3b941)) (@devsergiy)
+
 # [0.174.0](https://github.com/wundergraph/cosmo/compare/router@0.173.0...router@0.174.0) (2025-02-07)
 
 ### Bug Fixes
