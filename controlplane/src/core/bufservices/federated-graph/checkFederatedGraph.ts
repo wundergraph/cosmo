@@ -110,7 +110,7 @@ export function checkFederatedGraph(
       });
     }
 
-    if (result.errors) {
+    if (!result.success) {
       const compositionErrors: PlainMessage<CompositionError>[] = [];
       for (const error of result.errors) {
         compositionErrors.push({
