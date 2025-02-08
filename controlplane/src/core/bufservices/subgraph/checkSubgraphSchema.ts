@@ -162,12 +162,12 @@ export function checkSubgraphSchema(
     if (newSchemaSDL) {
       try {
         // Here we check if the schema is valid as a subgraph SDL
-        const { errors } = buildSchema(newSchemaSDL);
-        if (errors && errors.length > 0) {
+        const result = buildSchema(newSchemaSDL);
+        if (!result.success) {
           return {
             response: {
               code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA,
-              details: errors.map((e) => e.toString()).join('\n'),
+              details: result.errors.map((e) => e.toString()).join('\n'),
             },
             breakingChanges: [],
             nonBreakingChanges: [],
@@ -311,10 +311,10 @@ export function checkSubgraphSchema(
         });
       }
 
-      /* 
-          We don't collect operation usage when 
+      /*
+          We don't collect operation usage when
           1. we have composition errors
-          2. when we don't have any inspectable changes. 
+          2. when we don't have any inspectable changes.
           3. When user wants to skip the traffic check altogether
           That means any breaking change is really breaking
           */

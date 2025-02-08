@@ -250,12 +250,12 @@ export default class SchemaGraphPruner {
     let oldGraphQLSchema: GraphQLSchema | undefined;
 
     try {
-      const { errors, normalizationResult } = buildSchema(oldSchema, false);
-      if (errors && errors.length > 0) {
+      const result = buildSchema(oldSchema, false);
+      if (!result.success) {
         oldGraphQLSchema = undefined;
       }
-      if (normalizationResult?.schema) {
-        oldGraphQLSchema = normalizationResult.schema;
+      if (result.success) {
+        oldGraphQLSchema = result.schema;
       }
     } catch {
       oldGraphQLSchema = undefined;

@@ -113,12 +113,12 @@ export function fixSubgraphSchema(
 
     try {
       // Here we check if the schema is valid as a subgraph
-      const { errors } = buildSchema(newSchemaSDL);
-      if (errors && errors.length > 0) {
+      const result = buildSchema(newSchemaSDL);
+      if (!result.success) {
         return {
           response: {
             code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA,
-            details: errors.map((e) => e.toString()).join('\n'),
+            details: result.errors.map((e) => e.toString()).join('\n'),
           },
           modified: false,
           schema: '',

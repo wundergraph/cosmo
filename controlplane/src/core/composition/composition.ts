@@ -5,7 +5,7 @@ import {
   federateSubgraphsWithContracts,
   FederationResult,
   NormalizationResult,
-  normalizeSubgraphFromString,
+  normalizeSubgraphFromString, ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
 } from '@wundergraph/composition';
 
@@ -16,26 +16,30 @@ export function composeSubgraphsWithContracts(
   subgraphs: Subgraph[],
   tagOptionsByContractName: Map<string, ContractTagOptions>,
 ) {
-  return federateSubgraphsWithContracts(subgraphs, tagOptionsByContractName, 1);
+  // @TODO get router compatibility version programmatically
+  return federateSubgraphsWithContracts(subgraphs, tagOptionsByContractName, ROUTER_COMPATIBILITY_VERSION_ONE);
 }
 
 /**
  * Composes a list of subgraphs for a contract using a set of exclusion tags
  */
 export function composeSubgraphsForContract(subgraphs: Subgraph[], contractTagOptions: ContractTagOptions) {
-  return federateSubgraphsContract(subgraphs, contractTagOptions, 1);
+  // @TODO get router compatibility version programmatically
+  return federateSubgraphsContract(subgraphs, contractTagOptions, ROUTER_COMPATIBILITY_VERSION_ONE);
 }
 
 /**
  * Composes a list of subgraphs into a single schema.
  */
 export function composeSubgraphs(subgraphs: Subgraph[]): FederationResult {
-  return federateSubgraphs(subgraphs, 1);
+  // @TODO get router compatibility version programmatically
+  return federateSubgraphs(subgraphs, ROUTER_COMPATIBILITY_VERSION_ONE);
 }
 
 /**
  * Normalizes and builds a GraphQLSchema from a string. It is not the same as buildSchema from graphql-js.
  */
 export function buildSchema(schema: string, noLocation = true): NormalizationResult {
-  return normalizeSubgraphFromString(schema, noLocation);
+  // @TODO get router compatibility version programmatically
+  return normalizeSubgraphFromString(schema, noLocation, ROUTER_COMPATIBILITY_VERSION_ONE);
 }
