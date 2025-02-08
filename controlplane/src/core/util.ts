@@ -12,10 +12,18 @@ import { formatISO, subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
 import { parse, visit } from 'graphql';
 import { uid } from 'uid/secure';
+import {
+  ContractTagOptions,
+  FederationResult,
+  FederationResultWithContracts,
+  newContractTagOptionsFromArrays,
+} from '@wundergraph/composition';
 import { MemberRole, WebsocketSubprotocol } from '../db/models.js';
-import { AuthContext, DateRange, Label, ResponseMessage, S3StorageOptions } from '../types/index.js';
+import { AuthContext, DateRange, FederatedGraphDTO, Label, ResponseMessage, S3StorageOptions } from '../types/index.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
+import { composeSubgraphsForContract, composeSubgraphsWithContracts } from './composition/composition.js';
+import { SubgraphsToCompose } from './repositories/FeatureFlagRepository.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
 const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
@@ -444,4 +452,19 @@ export function createBatches<T>(array: T[], batchSize: number): T[][] {
   }
 
   return batches;
+}
+
+export function composeSubgraphs(
+  federatedGraph: FederatedGraphDTO,
+  subgraphsToCompose: SubgraphsToCompose,
+  tagOptionsByContractName: Map<string, ContractTagOptions>,
+): FederationResult | FederationResultWithContracts {
+  // This condition is only true when entering the method to specifically create/update a contract
+  if (federatedGraph.contract) {
+    return composeSubgraphsForContract(
+      subgraphsToCompose.compositionSubgraphs,
+      newContractTagOptionsFromArrays(federatedGraph.contract.excludeTags, federatedGraph.contract.includeTags),
+    );
+  }
+  return composeSubgraphsWithContracts(subgraphsToCompose.compositionSubgraphs, tagOptionsByContractName);
 }

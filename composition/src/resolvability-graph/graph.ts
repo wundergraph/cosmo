@@ -8,7 +8,8 @@ import {
   NodeResolutionData,
   RootFieldData,
 } from './utils';
-import { NOT_APPLICABLE, ROOT_TYPE_NAMES, RootTypeName } from '../utils/string-constants';
+import { NOT_APPLICABLE, ROOT_TYPE_NAMES } from '../utils/string-constants';
+import { RootTypeName } from '../utils/types';
 
 export class Graph {
   edgeId = -1;

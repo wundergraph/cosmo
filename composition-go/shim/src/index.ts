@@ -40,8 +40,8 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederatedGraph {
     throw new Error(`could not federate schema: ${result.errors.map((e: Error) => e.message).join(', ')}`);
   }
   return {
-    fieldConfigurations: result!.fieldConfigurations,
-    sdl: print(result!.federatedGraphAST),
+    fieldConfigurations: result.fieldConfigurations,
+    sdl: print(result.federatedGraphAST),
   };
 }
 

@@ -32,8 +32,8 @@ import { generateKeyPair, importPKCS8, SignJWT } from 'jose';
 import { uid } from 'uid/secure';
 import {
   ContractTagOptions,
-  FederationResultDeprecated,
-  FederationResultContainerDeprecated,
+  FederationResult,
+  FederationResultWithContracts,
   newContractTagOptionsFromArrays,
   Warning,
 } from '@wundergraph/composition';
@@ -70,10 +70,9 @@ import {
   routerConfigToFeatureFlagExecutionConfig,
   RouterConfigUploadError,
 } from '../composition/composer.js';
-import { composeSubgraphsForContract, composeSubgraphsWithContracts } from '../composition/composition.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { AdmissionError } from '../services/AdmissionWebhookController.js';
-import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
+import { composeSubgraphs, normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { unsuccessfulBaseCompositionError } from '../errors/errors.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { ContractRepository } from './ContractRepository.js';
@@ -1525,46 +1524,27 @@ export class FederatedGraphRepository {
         const contractBaseCompositionDataByContractId = new Map<string, ContractBaseCompositionData>();
 
         for (const subgraphsToCompose of allSubgraphsToCompose) {
-          let compositionErrors: Error[] | undefined;
-          let compositionWarnings: Warning[] | undefined;
-          let result: FederationResultDeprecated | undefined;
-          let federationResultContainerByContractName: Map<string, FederationResultContainerDeprecated> | undefined;
-
-          // This condition is only true when entering the method to specifically create/update a contract
-          if (federatedGraph.contract) {
-            const { errors, federationResult, warnings } = composeSubgraphsForContract(
-              subgraphsToCompose.compositionSubgraphs,
-              newContractTagOptionsFromArrays(federatedGraph.contract.excludeTags, federatedGraph.contract.includeTags),
-            );
-            compositionErrors = errors;
-            compositionWarnings = warnings;
-            result = federationResult;
-          } else {
-            const {
-              errors,
-              federationResult,
-              federationResultContainerByContractName: contractFederationResult,
-              warnings,
-            } = composeSubgraphsWithContracts(subgraphsToCompose.compositionSubgraphs, tagOptionsByContractName);
-            compositionErrors = errors;
-            compositionWarnings = warnings;
-            result = federationResult;
-            federationResultContainerByContractName = contractFederationResult;
-          }
-
-          // Collect all composition errors
-          allCompositionErrors.push(
-            ...(compositionErrors || []).map((e) => ({
-              federatedGraphName: federatedGraph.name,
-              namespace: federatedGraph.namespace,
-              message: e.message,
-              featureFlag: subgraphsToCompose.featureFlagName || '',
-            })),
+          const result: FederationResult | FederationResultWithContracts = composeSubgraphs(
+            federatedGraph,
+            subgraphsToCompose,
+            tagOptionsByContractName,
           );
+
+          if (!result.success) {
+            // Collect all composition errors
+            allCompositionErrors.push(
+              ...result.errors.map((e) => ({
+                federatedGraphName: federatedGraph.name,
+                namespace: federatedGraph.namespace,
+                message: e.message,
+                featureFlag: subgraphsToCompose.featureFlagName || '',
+              })),
+            );
+          }
 
           // Collect all composition warnings
           allCompositionWarnings.push(
-            ...(compositionWarnings || []).map((w) => ({
+            ...result.warnings.map((w) => ({
               federatedGraphName: federatedGraph.name,
               namespace: federatedGraph.namespace,
               message: w.message,
@@ -1572,17 +1552,11 @@ export class FederatedGraphRepository {
             })),
           );
 
-          if (!subgraphsToCompose.isFeatureFlagComposition && compositionErrors && !federatedGraph.contract) {
+          if (!subgraphsToCompose.isFeatureFlagComposition && !result.success && !federatedGraph.contract) {
             allCompositionErrors.push(unsuccessfulBaseCompositionError(federatedGraph.name, federatedGraph.namespace));
           }
 
-          const composedGraph = mapResultToComposedGraph(
-            federatedGraph,
-            subgraphsToCompose.subgraphs,
-            compositionErrors,
-            result,
-            compositionWarnings,
-          );
+          const composedGraph = mapResultToComposedGraph(federatedGraph, subgraphsToCompose.subgraphs, result);
 
           const federatedSchemaVersionId = randomUUID();
 
@@ -1598,7 +1572,7 @@ export class FederatedGraphRepository {
             featureFlagId: subgraphsToCompose.featureFlagId,
           });
 
-          if (compositionErrors || !baseComposition.schemaVersionId || !routerExecutionConfig) {
+          if (!result.success || !baseComposition.schemaVersionId || !routerExecutionConfig) {
             /* If the base composition failed to compose or deploy, return to the parent loop, because
              * contracts are not composed if the base composition fails.
              */
@@ -1618,30 +1592,28 @@ export class FederatedGraphRepository {
           }
 
           // If there are no contracts, there is nothing further to do
-          if (!federationResultContainerByContractName) {
+          if (!('federationResultByContractName' in result)) {
             continue;
           }
 
-          for (const [
-            contractName,
-            { errors, federationResult, warnings },
-          ] of federationResultContainerByContractName) {
+          for (const [contractName, contractResult] of result.federationResultByContractName) {
             const contractGraph = await fedGraphRepo.byName(contractName, federatedGraph.namespace);
             if (!contractGraph) {
               throw new Error(`The contract graph "${contractName}" was not found.`);
             }
-
-            allCompositionErrors.push(
-              ...(errors || []).map((e) => ({
-                federatedGraphName: contractGraph.name,
-                namespace: contractGraph.namespace,
-                message: e.message,
-                featureFlag: subgraphsToCompose.featureFlagName,
-              })),
-            );
+            if (!contractResult.success) {
+              allCompositionErrors.push(
+                ...(contractResult.errors || []).map((e) => ({
+                  federatedGraphName: contractGraph.name,
+                  namespace: contractGraph.namespace,
+                  message: e.message,
+                  featureFlag: subgraphsToCompose.featureFlagName,
+                })),
+              );
+            }
 
             allCompositionWarnings.push(
-              ...(warnings || []).map((w) => ({
+              ...(contractResult.warnings || []).map((w) => ({
                 federatedGraphName: contractGraph.name,
                 namespace: contractGraph.namespace,
                 message: w.message,
@@ -1652,9 +1624,7 @@ export class FederatedGraphRepository {
             const composedContract = mapResultToComposedGraph(
               contractGraph,
               subgraphsToCompose.subgraphs,
-              errors,
-              federationResult,
-              warnings,
+              contractResult,
             );
 
             const contractSchemaVersionId = randomUUID();
@@ -1671,11 +1641,7 @@ export class FederatedGraphRepository {
               featureFlagId: subgraphsToCompose.featureFlagId,
             });
 
-            if (
-              (errors && errors.length > 0) ||
-              !contractComposition.schemaVersionId ||
-              !contractRouterExecutionConfig
-            ) {
+            if (!contractResult.success || !contractComposition.schemaVersionId || !contractRouterExecutionConfig) {
               continue;
             }
 

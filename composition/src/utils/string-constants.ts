@@ -143,6 +143,14 @@ export const URL_LOWER = 'url';
 export const VALUES = 'values';
 export const VARIABLE_DEFINITION_UPPER = 'VARIABLE_DEFINITION';
 
-export const ROOT_TYPE_NAMES = new Set<string>([MUTATION, QUERY, SUBSCRIPTION]);
+export const EXECUTABLE_DIRECTIVE_LOCATIONS = new Set<string>([
+  FIELD_UPPER,
+  FRAGMENT_DEFINITION_UPPER,
+  FRAGMENT_SPREAD_UPPER,
+  INLINE_FRAGMENT_UPPER,
+  MUTATION_UPPER,
+  QUERY_UPPER,
+  SUBSCRIPTION_UPPER,
+]);
 
-export type RootTypeName = 'Mutation' | 'Query' | 'Subscription';
+export const ROOT_TYPE_NAMES = new Set<string>([MUTATION, QUERY, SUBSCRIPTION]);

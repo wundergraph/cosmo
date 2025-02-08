@@ -1,4 +1,4 @@
-export const ROUTER_COMPATIBILITY_VERSION_ONE = 1;
+export const ROUTER_COMPATIBILITY_VERSION_ONE: SupportedRouterCompatibilityVersion = 1;
 
 export type SupportedRouterCompatibilityVersion = 1;
 

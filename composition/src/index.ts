@@ -17,6 +17,7 @@ export * from './schema-building/utils';
 export * from './subgraph/types';
 export * from './utils/composition-version';
 export * from './utils/string-constants';
+export * from './utils/types';
 export * from './warnings/warnings';
 
 // v1

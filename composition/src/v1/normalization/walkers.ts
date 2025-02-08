@@ -54,12 +54,12 @@ import {
   PARENT_DEFINITION_DATA,
   PROVIDES,
   REQUIRES,
-  RootTypeName,
   SCHEMA,
   SERVICE_FIELD,
   SERVICE_OBJECT,
   SUBSCRIPTION_FILTER,
 } from '../../utils/string-constants';
+import { RootTypeName } from '../../utils/types';
 
 /* Walker to collect schema definition, directive definitions, and entities.
  * Directives are not validated upon immediate extract because all types must be recorded first.
