@@ -5,7 +5,8 @@ import {
   federateSubgraphsWithContracts,
   FederationResult,
   NormalizationResult,
-  normalizeSubgraphFromString, ROUTER_COMPATIBILITY_VERSION_ONE,
+  normalizeSubgraphFromString,
+  ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
 } from '@wundergraph/composition';
 
