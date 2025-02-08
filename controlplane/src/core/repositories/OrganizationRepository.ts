@@ -1227,7 +1227,7 @@ export class OrganizationRepository {
       'analytics-retention': 30,
       'tracing-retention': 30,
       'changelog-retention': 30,
-      'breaking-change-retention': 90,
+      'breaking-change-retention': 30,
       'trace-sampling-rate': 1,
       'federated-graphs': 30,
       'feature-flags': 0,

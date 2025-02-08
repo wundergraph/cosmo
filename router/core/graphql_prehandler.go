@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -60,6 +61,7 @@ type PreHandlerOptions struct {
 	ClientHeader                config.ClientHeader
 	ComputeOperationSha256      bool
 	ApolloCompatibilityFlags    *config.ApolloCompatibilityFlags
+	DisableVariablesRemapping   bool
 }
 
 type PreHandler struct {
@@ -90,6 +92,7 @@ type PreHandler struct {
 	computeOperationSha256      bool
 	apolloCompatibilityFlags    *config.ApolloCompatibilityFlags
 	variableParsePool           astjson.ParserPool
+	disableVariablesRemapping   bool
 }
 
 type httpOperation struct {
@@ -121,18 +124,19 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
-		fileUploadEnabled:        opts.FileUploadEnabled,
-		maxUploadFiles:           opts.MaxUploadFiles,
-		maxUploadFileSize:        opts.MaxUploadFileSize,
-		complexityLimits:         opts.ComplexityLimits,
-		alwaysIncludeQueryPlan:   opts.AlwaysIncludeQueryPlan,
-		alwaysSkipLoader:         opts.AlwaysSkipLoader,
-		queryPlansEnabled:        opts.QueryPlansEnabled,
-		queryPlansLoggingEnabled: opts.QueryPlansLoggingEnabled,
-		trackSchemaUsageInfo:     opts.TrackSchemaUsageInfo,
-		clientHeader:             opts.ClientHeader,
-		computeOperationSha256:   opts.ComputeOperationSha256,
-		apolloCompatibilityFlags: opts.ApolloCompatibilityFlags,
+		fileUploadEnabled:         opts.FileUploadEnabled,
+		maxUploadFiles:            opts.MaxUploadFiles,
+		maxUploadFileSize:         opts.MaxUploadFileSize,
+		complexityLimits:          opts.ComplexityLimits,
+		alwaysIncludeQueryPlan:    opts.AlwaysIncludeQueryPlan,
+		alwaysSkipLoader:          opts.AlwaysSkipLoader,
+		queryPlansEnabled:         opts.QueryPlansEnabled,
+		queryPlansLoggingEnabled:  opts.QueryPlansLoggingEnabled,
+		trackSchemaUsageInfo:      opts.TrackSchemaUsageInfo,
+		clientHeader:              opts.ClientHeader,
+		computeOperationSha256:    opts.ComputeOperationSha256,
+		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
+		disableVariablesRemapping: opts.DisableVariablesRemapping,
 	}
 }
 
@@ -349,6 +353,20 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		art.SetRequestTracingStats(r.Context(), traceOptions, traceTimings)
+
+		if traceOptions.Enable {
+			reqData := &resolve.RequestData{
+				Method:  r.Method,
+				URL:     r.URL.String(),
+				Headers: r.Header,
+				Body: resolve.BodyData{
+					Query:         requestContext.operation.rawContent,
+					OperationName: requestContext.operation.name,
+					Variables:     json.RawMessage(requestContext.operation.variables.String()),
+				},
+			}
+			r = r.WithContext(resolve.SetRequest(r.Context(), reqData))
+		}
 
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
@@ -591,7 +609,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		return err
 	}
 
-	err = operationKit.RemapVariables()
+	err = operationKit.RemapVariables(h.disableVariablesRemapping)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 
@@ -616,6 +634,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	requestContext.telemetry.addCommonAttribute(operationHashAttribute)
 	httpOperation.routerSpan.SetAttributes(operationHashAttribute)
 
+	requestContext.operation.rawContent = operationKit.parsedOperation.Request.Query
 	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
 	requestContext.operation.variables, err = variablesParser.ParseBytes(operationKit.parsedOperation.Request.Variables)
 	if err != nil {
@@ -773,6 +792,11 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	// we could log the query plan only if query plans are calculated
 	if (h.queryPlansEnabled && requestContext.operation.executionOptions.IncludeQueryPlanInResponse) ||
 		h.alwaysIncludeQueryPlan {
+
+		switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
+		case *plan.SynchronousResponsePlan:
+			p.Response.Fetches.NormalizedQuery = operationKit.parsedOperation.NormalizedRepresentation
+		}
 
 		if h.queryPlansLoggingEnabled {
 			switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {

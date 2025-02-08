@@ -4,6 +4,43 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.121.7](https://github.com/wundergraph/cosmo/compare/controlplane@0.121.6...controlplane@0.121.7) (2025-02-06)
+
+**Note:** Version bump only for package controlplane
+
+## [0.121.6](https://github.com/wundergraph/cosmo/compare/controlplane@0.121.5...controlplane@0.121.6) (2025-02-05)
+
+**Note:** Version bump only for package controlplane
+
+## [0.121.5](https://github.com/wundergraph/cosmo/compare/controlplane@0.121.4...controlplane@0.121.5) (2025-02-05)
+
+**Note:** Version bump only for package controlplane
+
+## [0.121.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.121.3...controlplane@0.121.4) (2025-02-05)
+
+### Bug Fixes
+
+* update vulnerable packages ([#1560](https://github.com/wundergraph/cosmo/issues/1560)) ([f97e30f](https://github.com/wundergraph/cosmo/commit/f97e30f48a8cdab7b26d6cede9235e61fd1dec23)) (@JivusAyrus)
+
+## [0.121.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.121.2...controlplane@0.121.3) (2025-01-31)
+
+### Bug Fixes
+
+* change the defaults of breaking-change-retention ([#1551](https://github.com/wundergraph/cosmo/issues/1551)) ([38df3ee](https://github.com/wundergraph/cosmo/commit/38df3ee3bc2370ea4c729978545dcc6d79f5be28)) (@JivusAyrus)
+* reduce the breaking change retention duration ([#1550](https://github.com/wundergraph/cosmo/issues/1550)) ([16ab8c6](https://github.com/wundergraph/cosmo/commit/16ab8c6dc8e2930dfa0f262f42ca960613a456bd)) (@JivusAyrus)
+
+## [0.121.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.121.1...controlplane@0.121.2) (2025-01-29)
+
+### Bug Fixes
+
+* adding/removing directive is not picked up by wgc subgraph check ([#1494](https://github.com/wundergraph/cosmo/issues/1494)) ([3cfa2d5](https://github.com/wundergraph/cosmo/commit/3cfa2d5ceba9d1b5beb613c255566324bec85c3d)) (@JivusAyrus)
+* trim the inputs of group mappers ([#1541](https://github.com/wundergraph/cosmo/issues/1541)) ([18a6025](https://github.com/wundergraph/cosmo/commit/18a6025a1e352ae6adb77ec2d231f209e20c4833)) (@JivusAyrus)
+* webhooks shot when schema is unchanged ([#1542](https://github.com/wundergraph/cosmo/issues/1542)) ([3024dcf](https://github.com/wundergraph/cosmo/commit/3024dcfe9f6a7df3e7d3707fca671615ac26f304)) (@thisisnithin)
+
+## [0.121.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.121.0...controlplane@0.121.1) (2025-01-24)
+
+**Note:** Version bump only for package controlplane
+
 # [0.121.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.120.2...controlplane@0.121.0) (2025-01-23)
 
 ### Features

@@ -255,11 +255,15 @@
       "ExpectContinueTimeout": 0,
       "TLSHandshakeTimeout": 0,
       "KeepAliveIdleTimeout": 0,
-      "KeepAliveProbeInterval": 30000000000
+      "KeepAliveProbeInterval": 30000000000,
+      "MaxConnsPerHost": 100,
+      "MaxIdleConns": 1024,
+      "MaxIdleConnsPerHost": 20
     },
     "Router": {
       "MaxRequestBodyBytes": 5000000,
-      "MaxHeaderBytes": 4194304
+      "MaxHeaderBytes": 4194304,
+      "DecompressionEnabled": false
     },
     "Subgraphs": {
       "products": {
@@ -276,7 +280,10 @@
         "ExpectContinueTimeout": 0,
         "TLSHandshakeTimeout": 0,
         "KeepAliveIdleTimeout": 0,
-        "KeepAliveProbeInterval": 0
+        "KeepAliveProbeInterval": 0,
+        "MaxConnsPerHost": 0,
+        "MaxIdleConns": 0,
+        "MaxIdleConnsPerHost": 0
       }
     }
   },
@@ -351,21 +358,47 @@
   "GraphQLPath": "/graphql",
   "PlaygroundPath": "/",
   "Authentication": {
-    "Providers": [
-      {
-        "Name": "My Auth Provider",
-        "JWKS": {
+    "JWT": {
+      "JWKS": [
+        {
           "URL": "https://example.com/.well-known/jwks.json",
-          "HeaderNames": [
-            "Authorization"
-          ],
-          "HeaderValuePrefixes": [
-            "Bearer"
+          "Algorithms": [
+            "RS256"
           ],
           "RefreshInterval": 60000000000
+        },
+        {
+          "URL": "https://example.com/.well-known/jwks2.json",
+          "Algorithms": [
+            "RS256",
+            "HS256"
+          ],
+          "RefreshInterval": 120000000000
+        },
+        {
+          "URL": "https://example.com/.well-known/jwks3.json",
+          "Algorithms": null,
+          "RefreshInterval": 0
         }
-      }
-    ]
+      ],
+      "HeaderName": "Authorization",
+      "HeaderValuePrefix": "Bearer",
+      "HeaderSources": [
+        {
+          "Type": "header",
+          "Name": "X-Authorization",
+          "ValuePrefixes": [
+            "Bearer",
+            "Token"
+          ]
+        },
+        {
+          "Type": "header",
+          "Name": "authz",
+          "ValuePrefixes": null
+        }
+      ]
+    }
   },
   "Authorization": {
     "RequireAuthentication": false,
@@ -383,7 +416,11 @@
       "HideStatsFromResponseExtension": false
     },
     "Storage": {
-      "Url": "redis://:test@localhost:6379",
+      "URLs": [
+        "test@localhost:8000",
+        "test2@localhost:8001"
+      ],
+      "ClusterEnabled": true,
       "KeyPrefix": "cosmo_rate_limit"
     },
     "Debug": false,
@@ -542,7 +579,8 @@
     "EnableValidationCache": true,
     "ValidationCacheSize": 1024,
     "ResolverMaxRecyclableParserSize": 4096,
-    "EnableSubgraphFetchOperationName": true
+    "EnableSubgraphFetchOperationName": true,
+    "DisableVariablesRemapping": false
   },
   "WebSocket": {
     "Enabled": true,
@@ -604,7 +642,11 @@
     "Redis": [
       {
         "ID": "my_redis",
-        "URL": "redis://:test@localhost:6379"
+        "URLs": [
+          "test@localhost:8000",
+          "test2@localhost:8001"
+        ],
+        "ClusterEnabled": false
       }
     ]
   },

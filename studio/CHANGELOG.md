@@ -4,6 +4,34 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.99.5](https://github.com/wundergraph/cosmo/compare/studio@0.99.4...studio@0.99.5) (2025-02-05)
+
+**Note:** Version bump only for package studio
+
+## [0.99.4](https://github.com/wundergraph/cosmo/compare/studio@0.99.3...studio@0.99.4) (2025-02-05)
+
+### Bug Fixes
+
+* update vulnerable packages ([#1560](https://github.com/wundergraph/cosmo/issues/1560)) ([f97e30f](https://github.com/wundergraph/cosmo/commit/f97e30f48a8cdab7b26d6cede9235e61fd1dec23)) (@JivusAyrus)
+
+## [0.99.3](https://github.com/wundergraph/cosmo/compare/studio@0.99.2...studio@0.99.3) (2025-01-31)
+
+### Bug Fixes
+
+* change the defaults of breaking-change-retention ([#1551](https://github.com/wundergraph/cosmo/issues/1551)) ([38df3ee](https://github.com/wundergraph/cosmo/commit/38df3ee3bc2370ea4c729978545dcc6d79f5be28)) (@JivusAyrus)
+
+## [0.99.2](https://github.com/wundergraph/cosmo/compare/studio@0.99.1...studio@0.99.2) (2025-01-29)
+
+### Bug Fixes
+
+* add copy button to subgraph routing url ([#1543](https://github.com/wundergraph/cosmo/issues/1543)) ([d48255d](https://github.com/wundergraph/cosmo/commit/d48255d8edcc4907cc5730636b3cda43dc582db8)) (@thisisnithin)
+* subgraphs search functionality ([#1540](https://github.com/wundergraph/cosmo/issues/1540)) ([3bd7b36](https://github.com/wundergraph/cosmo/commit/3bd7b36fa0a5db912afbe127c2616542fc68399d)) (@JivusAyrus)
+* trim the inputs of group mappers ([#1541](https://github.com/wundergraph/cosmo/issues/1541)) ([18a6025](https://github.com/wundergraph/cosmo/commit/18a6025a1e352ae6adb77ec2d231f209e20c4833)) (@JivusAyrus)
+
+## [0.99.1](https://github.com/wundergraph/cosmo/compare/studio@0.99.0...studio@0.99.1) (2025-01-24)
+
+**Note:** Version bump only for package studio
+
 # [0.99.0](https://github.com/wundergraph/cosmo/compare/studio@0.98.1...studio@0.99.0) (2025-01-23)
 
 ### Features

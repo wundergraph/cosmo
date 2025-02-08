@@ -476,7 +476,9 @@ type operationContext struct {
 	internalHash uint64
 	// remapVariables is a map of variables that have been remapped to the new names
 	remapVariables map[string]string
-	// Content is the content of the operation
+	// RawContent is the raw content of the operation
+	rawContent string
+	// Content is the normalized content of the operation
 	content    string
 	variables  *astjson.Value
 	files      []httpclient.File

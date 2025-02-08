@@ -131,11 +131,15 @@
       "ExpectContinueTimeout": 0,
       "TLSHandshakeTimeout": 10000000000,
       "KeepAliveIdleTimeout": 0,
-      "KeepAliveProbeInterval": 30000000000
+      "KeepAliveProbeInterval": 30000000000,
+      "MaxConnsPerHost": 100,
+      "MaxIdleConns": 1024,
+      "MaxIdleConnsPerHost": 20
     },
     "Router": {
       "MaxRequestBodyBytes": 5000000,
-      "MaxHeaderBytes": 0
+      "MaxHeaderBytes": 0,
+      "DecompressionEnabled": true
     },
     "Subgraphs": null
   },
@@ -190,7 +194,12 @@
   "GraphQLPath": "/graphql",
   "PlaygroundPath": "/",
   "Authentication": {
-    "Providers": null
+    "JWT": {
+      "JWKS": null,
+      "HeaderName": "Authorization",
+      "HeaderValuePrefix": "Bearer",
+      "HeaderSources": null
+    }
   },
   "Authorization": {
     "RequireAuthentication": false,
@@ -208,7 +217,8 @@
       "HideStatsFromResponseExtension": false
     },
     "Storage": {
-      "Url": "redis://localhost:6379",
+      "URLs": null,
+      "ClusterEnabled": false,
       "KeyPrefix": "cosmo_rate_limit"
     },
     "Debug": false,
@@ -286,7 +296,7 @@
     "EnableSingleFlight": true,
     "EnableRequestTracing": true,
     "EnableExecutionPlanCacheResponseHeader": false,
-    "MaxConcurrentResolvers": 32,
+    "MaxConcurrentResolvers": 1024,
     "EnableNetPoll": true,
     "WebSocketClientPollTimeout": 1000000000,
     "WebSocketClientConnBufferSize": 128,
@@ -301,7 +311,8 @@
     "EnableValidationCache": true,
     "ValidationCacheSize": 1024,
     "ResolverMaxRecyclableParserSize": 32768,
-    "EnableSubgraphFetchOperationName": false
+    "EnableSubgraphFetchOperationName": false,
+    "DisableVariablesRemapping": false
   },
   "WebSocket": {
     "Enabled": true,

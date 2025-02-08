@@ -6,7 +6,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +18,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -36,7 +36,6 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/nats-io/nats.go"
-
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
@@ -60,6 +59,8 @@ import (
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
+
+	_ "embed"
 )
 
 var ErrEnvironmentClosed = errors.New("test environment closed")
@@ -83,6 +84,10 @@ var (
 	demoKafkaProviders             = []string{myKafkaProviderID}
 )
 
+func init() {
+	freeport.SetLogLevel(freeport.ERROR)
+}
+
 // Run runs the test and fails the test if an error occurs
 func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	t.Helper()
@@ -104,6 +109,15 @@ func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 			assertCacheMetrics(t, env, v, ff, "after")
 		}
 	}
+}
+
+// FailsOnStartup runs the test and ensures that the router fails during bootstrapping
+func FailsOnStartup(t *testing.T, cfg *Config, f func(t *testing.T, err error)) {
+	t.Helper()
+	env, err := createTestEnv(t, cfg)
+	require.Error(t, err)
+	require.Nil(t, env)
+	f(t, err)
 }
 
 // RunWithError runs the test but returns an error instead of failing the test
@@ -155,6 +169,16 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 		}
 	}
 
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+func RandString(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
 }
 
 func assertCacheMetrics(t testing.TB, env *Environment, expected CacheMetricsAssertion, featureFlag, hint string) {
@@ -740,6 +764,12 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	return e, waitErr
 }
 
+func generateJwtToken() (string, error) {
+	jwtToken := jwt.New(jwt.SigningMethodHS256)
+	jwtToken.Claims = testTokenClaims()
+	return jwtToken.SignedString([]byte("hunter2"))
+}
+
 func configureRouter(listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsData *NatsData) (*core.Router, error) {
 	cfg := config.Config{
 		Graph: config.Graph{},
@@ -764,9 +794,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifyCDNConfig(&cfg.CDN)
 	}
 
-	jwtToken := jwt.New(jwt.SigningMethodHS256)
-	jwtToken.Claims = testTokenClaims()
-	graphApiToken, err := jwtToken.SignedString([]byte("hunter2"))
+	graphApiToken, err := generateJwtToken()
 	if err != nil {
 		return nil, err
 	}
@@ -1050,11 +1078,11 @@ func setupCDNServer(t testing.TB) *httptest.Server {
 }
 
 func gqlURL(srv *httptest.Server) string {
-	path, err := url.JoinPath(srv.URL, "/graphql")
+	p, err := url.JoinPath(srv.URL, "/graphql")
 	if err != nil {
 		panic(err)
 	}
-	return path
+	return p
 }
 
 type Environment struct {
@@ -1086,6 +1114,7 @@ type Environment struct {
 	routerConfigVersionMyFF string
 
 	metricReader metric.Reader
+	routerCmd    *exec.Cmd
 }
 
 func GetPubSubNameFn(prefix string) func(name string) string {
@@ -1133,9 +1162,11 @@ func (e *Environment) Shutdown() {
 	defer cancel()
 
 	// Gracefully shutdown router
-	err := e.Router.Shutdown(ctx)
-	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
-		e.t.Errorf("could not shutdown router: %s", err)
+	if e.Router != nil {
+		err := e.Router.Shutdown(ctx)
+		if err != nil && !errors.Is(err, context.DeadlineExceeded) {
+			e.t.Errorf("could not shutdown router: %s", err)
+		}
 	}
 
 	// Close all test servers
@@ -1175,6 +1206,12 @@ func (e *Environment) Shutdown() {
 	// Flush Kafka connection
 	if e.cfg.EnableKafka && e.KafkaClient != nil {
 		e.KafkaClient.Flush(ctx)
+	}
+
+	if e.routerCmd != nil {
+		if err := e.routerCmd.Process.Signal(os.Interrupt); err != nil {
+			e.t.Logf("could not interrupt router process: %s", err)
+		}
 	}
 }
 

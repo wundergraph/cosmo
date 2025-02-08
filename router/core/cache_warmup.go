@@ -208,20 +208,22 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 }
 
 type CacheWarmupPlanningProcessorOptions struct {
-	OperationProcessor *OperationProcessor
-	OperationPlanner   *OperationPlanner
-	ComplexityLimits   *config.ComplexityLimits
-	RouterSchema       *ast.Document
-	TrackSchemaUsage   bool
+	OperationProcessor        *OperationProcessor
+	OperationPlanner          *OperationPlanner
+	ComplexityLimits          *config.ComplexityLimits
+	RouterSchema              *ast.Document
+	TrackSchemaUsage          bool
+	DisableVariablesRemapping bool
 }
 
 func NewCacheWarmupPlanningProcessor(options *CacheWarmupPlanningProcessorOptions) *CacheWarmupPlanningProcessor {
 	return &CacheWarmupPlanningProcessor{
-		operationProcessor: options.OperationProcessor,
-		operationPlanner:   options.OperationPlanner,
-		complexityLimits:   options.ComplexityLimits,
-		routerSchema:       options.RouterSchema,
-		trackSchemaUsage:   options.TrackSchemaUsage,
+		operationProcessor:        options.OperationProcessor,
+		operationPlanner:          options.OperationPlanner,
+		complexityLimits:          options.ComplexityLimits,
+		routerSchema:              options.RouterSchema,
+		trackSchemaUsage:          options.TrackSchemaUsage,
+		disableVariablesRemapping: options.DisableVariablesRemapping,
 	}
 }
 
@@ -235,11 +237,12 @@ type CacheWarmupOperationPlanResult struct {
 }
 
 type CacheWarmupPlanningProcessor struct {
-	operationProcessor *OperationProcessor
-	operationPlanner   *OperationPlanner
-	complexityLimits   *config.ComplexityLimits
-	routerSchema       *ast.Document
-	trackSchemaUsage   bool
+	operationProcessor        *OperationProcessor
+	operationPlanner          *OperationPlanner
+	complexityLimits          *config.ComplexityLimits
+	routerSchema              *ast.Document
+	trackSchemaUsage          bool
+	disableVariablesRemapping bool
 }
 
 func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, operation *nodev1.Operation) (*CacheWarmupOperationPlanResult, error) {
@@ -340,7 +343,7 @@ func (c *CacheWarmupPlanningProcessor) processOperation(ctx context.Context, req
 		return err
 	}
 
-	err = k.RemapVariables()
+	err = k.RemapVariables(c.disableVariablesRemapping)
 	if err != nil {
 		return err
 	}

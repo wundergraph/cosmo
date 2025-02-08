@@ -13,21 +13,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/internal/exporter"
-	"github.com/wundergraph/cosmo/router/internal/normalizationcachewarmupexporter"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/propagation"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
-
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
+	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 
 	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
-	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -90,7 +81,7 @@ type (
 		proxy             ProxyFunc
 	}
 
-	TransportTimeoutOptions struct {
+	TransportRequestOptions struct {
 		RequestTimeout         time.Duration
 		ResponseHeaderTimeout  time.Duration
 		ExpectContinueTimeout  time.Duration
@@ -98,11 +89,15 @@ type (
 		DialTimeout            time.Duration
 		TLSHandshakeTimeout    time.Duration
 		KeepAliveProbeInterval time.Duration
+
+		MaxConnsPerHost     int
+		MaxIdleConns        int
+		MaxIdleConnsPerHost int
 	}
 
 	SubgraphTransportOptions struct {
-		TransportTimeoutOptions
-		SubgraphMap map[string]*TransportTimeoutOptions
+		TransportRequestOptions
+		SubgraphMap map[string]*TransportRequestOptions
 	}
 
 	GraphQLMetricsConfig struct {
@@ -212,7 +207,7 @@ type (
 		fileUploadConfig                 *config.FileUpload
 		accessController                 *AccessController
 		retryOptions                     retrytransport.RetryOptions
-		redisClient                      *redis.Client
+		redisClient                      rd.RDCloser
 		processStartTime                 time.Time
 		developmentMode                  bool
 		healthcheck                      health.Checker
@@ -222,7 +217,8 @@ type (
 		tlsServerConfig               *tls.Config
 		tlsConfig                     *TlsConfig
 		telemetryAttributes           []config.CustomAttribute
-		tracePropagators              propagation.TextMapPropagator
+		tracePropagators              []propagation.TextMapPropagator
+		compositePropagator           propagation.TextMapPropagator
 		// Poller
 		configPoller                 configpoller.ConfigPoller
 		selfRegister                 selfregister.SelfRegister
@@ -458,16 +454,10 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	if r.traceConfig.Enabled {
 		if len(r.traceConfig.Propagators) > 0 {
-			propagators, err := rtrace.NewCompositePropagator(r.traceConfig.Propagators...)
+			propagators, err := rtrace.BuildPropagators(r.traceConfig.Propagators...)
 			if err != nil {
 				r.logger.Error("creating propagators", zap.Error(err))
 				return nil, err
-			}
-
-			// Don't set it globally when we use the router in tests.
-			// In practice, setting it globally only makes sense for module development.
-			if r.traceConfig.TestMemoryExporter == nil {
-				otel.SetTextMapPropagator(propagators)
 			}
 
 			r.tracePropagators = propagators
@@ -690,6 +680,13 @@ func (r *Router) initModules(ctx context.Context) error {
 			r.postOriginHandlers = append(r.postOriginHandlers, handler.OnOriginResponse)
 		}
 
+		if handler, ok := moduleInstance.(TracePropagationProvider); ok {
+			modulePropagators := handler.TracePropagators()
+			if len(modulePropagators) > 0 {
+				r.tracePropagators = append(r.tracePropagators, modulePropagators...)
+			}
+		}
+
 		r.modules = append(r.modules, moduleInstance)
 
 		r.logger.Info("Module registered",
@@ -878,12 +875,16 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
-		options, err := redis.ParseURL(r.Config.rateLimit.Storage.Url)
+		var err error
+		r.redisClient, err = rd.NewRedisCloser(&rd.RedisCloserOptions{
+			URLs:           r.Config.rateLimit.Storage.URLs,
+			ClusterEnabled: r.Config.rateLimit.Storage.ClusterEnabled,
+			Logger:         r.logger,
+		})
 		if err != nil {
-			return fmt.Errorf("failed to parse the redis connection url: %w", err)
+			return fmt.Errorf("failed to create redis client: %w", err)
 		}
 
-		r.redisClient = redis.NewClient(options)
 	}
 
 	if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
@@ -903,6 +904,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.playgroundHandler = graphiql.NewPlayground(&graphiql.PlaygroundOptions{
 			Html:             graphiql.PlaygroundHTML(),
 			GraphqlURL:       r.graphqlWebURL,
+			PlaygroundPath:   r.playgroundPath,
 			ConcurrencyLimit: int64(r.playgroundConfig.ConcurrencyLimit),
 		})
 	}
@@ -924,6 +926,16 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		return fmt.Errorf("failed to init user modules: %w", err)
 	}
 
+	if r.traceConfig.Enabled && len(r.tracePropagators) > 0 {
+		r.compositePropagator = propagation.NewCompositeTextMapPropagator(r.tracePropagators...)
+
+		// Don't set it globally when we use the router in tests.
+		// In practice, setting it globally only makes sense for module development.
+		if r.traceConfig.TestMemoryExporter == nil {
+			otel.SetTextMapPropagator(r.compositePropagator)
+		}
+	}
+
 	return nil
 }
 
@@ -931,7 +943,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 func (r *Router) buildClients() error {
 	s3Providers := map[string]config.S3StorageProvider{}
 	cdnProviders := map[string]config.BaseStorageProvider{}
-	redisProviders := map[string]config.BaseStorageProvider{}
+	redisProviders := map[string]config.RedisStorageProvider{}
 
 	for _, provider := range r.storageProviders.S3 {
 		if _, ok := s3Providers[provider.ID]; ok {
@@ -1682,8 +1694,8 @@ func DefaultFileUploadConfig() *config.FileUpload {
 	}
 }
 
-func NewTransportTimeoutOptions(cfg config.GlobalSubgraphRequestRule) TransportTimeoutOptions {
-	return TransportTimeoutOptions{
+func NewTransportRequestOptions(cfg config.GlobalSubgraphRequestRule) TransportRequestOptions {
+	return TransportRequestOptions{
 		RequestTimeout:         cfg.RequestTimeout,
 		ResponseHeaderTimeout:  cfg.ResponseHeaderTimeout,
 		ExpectContinueTimeout:  cfg.ExpectContinueTimeout,
@@ -1691,17 +1703,21 @@ func NewTransportTimeoutOptions(cfg config.GlobalSubgraphRequestRule) TransportT
 		DialTimeout:            cfg.DialTimeout,
 		TLSHandshakeTimeout:    cfg.TLSHandshakeTimeout,
 		KeepAliveProbeInterval: cfg.KeepAliveProbeInterval,
+
+		MaxConnsPerHost:     cfg.MaxConnsPerHost,
+		MaxIdleConns:        cfg.MaxIdleConns,
+		MaxIdleConnsPerHost: cfg.MaxIdleConnsPerHost,
 	}
 }
 
 func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransportOptions {
 	base := &SubgraphTransportOptions{
-		TransportTimeoutOptions: NewTransportTimeoutOptions(cfg.All),
-		SubgraphMap:             map[string]*TransportTimeoutOptions{},
+		TransportRequestOptions: NewTransportRequestOptions(cfg.All),
+		SubgraphMap:             map[string]*TransportRequestOptions{},
 	}
 
 	for k, v := range cfg.Subgraphs {
-		opts := NewTransportTimeoutOptions(*v)
+		opts := NewTransportRequestOptions(*v)
 		base.SubgraphMap[k] = &opts
 	}
 
@@ -1710,7 +1726,7 @@ func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransp
 
 func DefaultSubgraphTransportOptions() *SubgraphTransportOptions {
 	return &SubgraphTransportOptions{
-		TransportTimeoutOptions: TransportTimeoutOptions{
+		TransportRequestOptions: TransportRequestOptions{
 			RequestTimeout:         60 * time.Second,
 			TLSHandshakeTimeout:    10 * time.Second,
 			ResponseHeaderTimeout:  0 * time.Second,
@@ -1718,8 +1734,12 @@ func DefaultSubgraphTransportOptions() *SubgraphTransportOptions {
 			KeepAliveProbeInterval: 30 * time.Second,
 			KeepAliveIdleTimeout:   0 * time.Second,
 			DialTimeout:            30 * time.Second,
+
+			MaxConnsPerHost:     100,
+			MaxIdleConns:        1024,
+			MaxIdleConnsPerHost: 20,
 		},
-		SubgraphMap: map[string]*TransportTimeoutOptions{},
+		SubgraphMap: map[string]*TransportRequestOptions{},
 	}
 }
 
@@ -1864,7 +1884,7 @@ func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 
 type ProxyFunc func(req *http.Request) (*url.URL, error)
 
-func newHTTPTransport(opts TransportTimeoutOptions, proxy ProxyFunc) *http.Transport {
+func newHTTPTransport(opts TransportRequestOptions, proxy ProxyFunc) *http.Transport {
 	dialer := &net.Dialer{
 		Timeout:   opts.DialTimeout,
 		KeepAlive: opts.KeepAliveProbeInterval,
@@ -1877,13 +1897,13 @@ func newHTTPTransport(opts TransportTimeoutOptions, proxy ProxyFunc) *http.Trans
 		},
 		// The defaults value 0 = unbounded.
 		// We set to some value to prevent resource exhaustion e.g max requests and ports.
-		MaxConnsPerHost: 100,
+		MaxConnsPerHost: opts.MaxConnsPerHost,
 		// The defaults value 0 = unbounded. 100 is used by the default go transport.
 		// This value should be significant higher than MaxIdleConnsPerHost.
-		MaxIdleConns: 1024,
+		MaxIdleConns: opts.MaxIdleConns,
 		// The default value is 2. Such a low limit will open and close connections too often.
 		// Details: https://gitlab.com/gitlab-org/gitlab-pages/-/merge_requests/274
-		MaxIdleConnsPerHost: 20,
+		MaxIdleConnsPerHost: opts.MaxIdleConnsPerHost,
 		ForceAttemptHTTP2:   true,
 		IdleConnTimeout:     opts.KeepAliveIdleTimeout,
 		// Set more timeouts https://gitlab.com/gitlab-org/gitlab-pages/-/issues/495
