@@ -9,10 +9,6 @@ import (
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"net/http"
-	"testing"
-	"time"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -136,14 +132,16 @@ func TestCacheWarmup(t *testing.T) {
 						},
 					}),
 				},
-				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
-					BaseGraphAssertions: testenv.CacheMetricsAssertion{
-						QueryNormalizationMisses: 3 + employeeWarmedQueryCount + employeeQueryCount,
-						QueryNormalizationHits:   4,
-						ValidationMisses:         5 + employeeWarmedQueryCount,
-						ValidationHits:           2 + employeeQueryCount,
-						PlanMisses:               5 + employeeWarmedQueryCount,
-						PlanHits:                 2 + employeeQueryCount,
+				AssertCacheMetrics: &testenv.AssertCacheMetrics{
+					After: &testenv.CacheMetricsAssertions{
+						BaseGraphAssertions: testenv.CacheMetricsAssertion{
+							QueryNormalizationMisses: 3 + employeeWarmedQueryCount + employeeQueryCount,
+							QueryNormalizationHits:   4,
+							ValidationMisses:         5 + employeeWarmedQueryCount,
+							ValidationHits:           2 + employeeQueryCount,
+							PlanMisses:               5 + employeeWarmedQueryCount,
+							PlanHits:                 2 + employeeQueryCount,
+						},
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {

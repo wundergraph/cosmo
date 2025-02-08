@@ -963,8 +963,10 @@ type NormalizationCacheWarmupDataQuery struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// Query is the original query sent by the client
 	Query string `protobuf:"bytes,1,opt,name=Query,proto3" json:"Query,omitempty"`
-	Hash  uint64 `protobuf:"varint,2,opt,name=Hash,proto3" json:"Hash,omitempty"`
+	// Hash is the hash of the fully normalized query
+	Hash uint64 `protobuf:"varint,2,opt,name=Hash,proto3" json:"Hash,omitempty"`
 }
 
 func (x *NormalizationCacheWarmupDataQuery) Reset() {

@@ -723,7 +723,7 @@ func TestRateLimit(t *testing.T) {
 									Period:                  time.Second * 2,
 									RejectExceedingRequests: false,
 								},
-								Storage: config.RedisConfiguration{
+								Storage: config.RateLimitRedisConfiguration{
 									ClusterEnabled: true,
 									URLs:           tt.clusterUrlSlice,
 									KeyPrefix:      key,
@@ -762,7 +762,7 @@ func TestRateLimit(t *testing.T) {
 								Period:                  time.Second * 2,
 								RejectExceedingRequests: false,
 							},
-							Storage: config.RedisConfiguration{
+							Storage: config.RateLimitRedisConfiguration{
 								ClusterEnabled: true,
 								URLs:           clusterUrlSlice,
 								KeyPrefix:      key,
@@ -795,7 +795,7 @@ func TestRateLimit(t *testing.T) {
 							Period:                  time.Second * 2,
 							RejectExceedingRequests: false,
 						},
-						Storage: config.RedisConfiguration{
+						Storage: config.RateLimitRedisConfiguration{
 							ClusterEnabled: true,
 							URLs:           clusterUrlSlice,
 							KeyPrefix:      key,
@@ -831,7 +831,7 @@ func TestRateLimit(t *testing.T) {
 							Period:                  time.Second * 2,
 							RejectExceedingRequests: false,
 						},
-						Storage: config.RedisConfiguration{
+						Storage: config.RateLimitRedisConfiguration{
 							ClusterEnabled: true,
 							URLs:           clusterUrlSlice,
 							KeyPrefix:      key,
@@ -871,7 +871,7 @@ func TestRateLimit(t *testing.T) {
 							Period:                  time.Second * 2,
 							RejectExceedingRequests: false,
 						},
-						Storage: config.RedisConfiguration{
+						Storage: config.RateLimitRedisConfiguration{
 							ClusterEnabled: true,
 							URLs:           clusterUrlSlice,
 							KeyPrefix:      key,
