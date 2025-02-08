@@ -21,7 +21,7 @@ import {
 } from 'graphql';
 import { formatDescription, stringToNameNode } from '../ast/utils';
 import { maximumTypeNestingExceededError, unexpectedTypeNodeKindFatalError } from '../errors/errors';
-import { MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
+import { MAXIMUM_TYPE_NESTING } from '../v1/utils/integer-constants';
 
 export type MutableDirectiveDefinitionNode = {
   arguments: MutableInputValueNode[];

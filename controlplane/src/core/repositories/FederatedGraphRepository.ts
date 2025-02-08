@@ -32,8 +32,8 @@ import { generateKeyPair, importPKCS8, SignJWT } from 'jose';
 import { uid } from 'uid/secure';
 import {
   ContractTagOptions,
-  FederationResult,
-  FederationResultContainer,
+  FederationResultDeprecated,
+  FederationResultContainerDeprecated,
   newContractTagOptionsFromArrays,
   Warning,
 } from '@wundergraph/composition';
@@ -1527,8 +1527,8 @@ export class FederatedGraphRepository {
         for (const subgraphsToCompose of allSubgraphsToCompose) {
           let compositionErrors: Error[] | undefined;
           let compositionWarnings: Warning[] | undefined;
-          let result: FederationResult | undefined;
-          let federationResultContainerByContractName: Map<string, FederationResultContainer> | undefined;
+          let result: FederationResultDeprecated | undefined;
+          let federationResultContainerByContractName: Map<string, FederationResultContainerDeprecated> | undefined;
 
           // This condition is only true when entering the method to specifically create/update a contract
           if (federatedGraph.contract) {

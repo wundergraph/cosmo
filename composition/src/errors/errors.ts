@@ -9,7 +9,7 @@ import {
   InvalidRequiredInputValueData,
   kindToTypeString,
   numberToOrdinal,
-} from '../utils/utils';
+} from '../v1/utils/utils';
 import {
   AND_UPPER,
   ARGUMENT,
@@ -27,10 +27,10 @@ import {
   SUBSCRIPTION_FILTER_VALUE,
   UNION,
   VALUES,
-} from '../utils/string-constants';
-import { ObjectDefinitionData } from '../schema-building/type-definition-data';
+} from '../v1/utils/string-constants';
+import { ObjectDefinitionData } from '../schema-building/types';
 import { InvalidRootTypeFieldEventsDirectiveData } from './utils';
-import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
+import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../v1/utils/integer-constants';
 import { UnresolvableFieldData } from '../resolvability-graph/utils';
 import { FieldSetDirective } from '../schema-building/utils';
 
@@ -586,13 +586,16 @@ export function invalidArgumentsError(fieldPath: string, invalidArguments: Inval
   return new Error(message);
 }
 
-export const noQueryRootTypeError = new Error(
-  `A valid federated graph must have at least one accessible query root type field.\n` +
-    ` For example:\n` +
-    `  type Query {\n` +
-    `    dummy: String\n` +
-    `  }`,
-);
+export function noQueryRootTypeError(isRouterSchema = true): Error {
+  return new Error(
+    `The ${isRouterSchema ? 'router' : 'client'} schema does not define at least one accessible query root` +
+      `type field after federation was completed, which is necessary for a federated graph to be valid.\n` +
+      ` For example:\n` +
+      `  type Query {\n` +
+      `    dummy: String\n` +
+      `  }`,
+  );
+}
 
 export const inaccessibleQueryRootTypeError = new Error(
   `The root query type "Query" must be present in the client schema;` +

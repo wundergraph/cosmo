@@ -3,7 +3,6 @@ import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
   ContractTagOptions,
   FederationResult,
-  FederationResultContainerWithContracts,
   FieldConfiguration,
   newContractTagOptionsFromArrays,
   Subgraph,
@@ -81,6 +80,7 @@ export function buildRouterExecutionConfig(
     federatedClientSDL,
     federatedSDL: composedGraph.composedSchema,
     fieldConfigurations: composedGraph.fieldConfigurations,
+    routerCompatibilityVersion: 1,
     subgraphs: composedGraph.subgraphs,
     schemaVersionId: federatedSchemaVersionId,
   });
@@ -93,7 +93,7 @@ export type ComposedSubgraph = IComposedSubgraph & {
 
 export function subgraphDTOsToComposedSubgraphs(
   subgraphs: SubgraphDTO[],
-  result?: FederationResult,
+  result: FederationResult,
 ): ComposedSubgraph[] {
   return subgraphs.map((subgraph) => {
     /* batchNormalize returns an intermediate representation of the engine configuration
@@ -104,7 +104,7 @@ export function subgraphDTOsToComposedSubgraphs(
      *  This is passed to the FederationFactory and is returned by federateSubgraphs if federation is successful.
      *  The normalized schema and engine configuration is used by buildRouterConfig.
      * */
-    const subgraphConfig = result?.subgraphConfigBySubgraphName.get(subgraph.name);
+    const subgraphConfig = result.success ? result.subgraphConfigBySubgraphName.get(subgraph.name) : undefined;
     const schema = subgraphConfig?.schema;
     const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
     return {
@@ -128,9 +128,7 @@ export function subgraphDTOsToComposedSubgraphs(
 export function mapResultToComposedGraph(
   federatedGraph: FederatedGraphDTO,
   subgraphs: SubgraphDTO[],
-  errors?: Error[],
-  result?: FederationResult,
-  warnings?: Warning[],
+  result: FederationResult,
 ): ComposedFederatedGraph {
   return {
     id: federatedGraph.id,
@@ -138,15 +136,13 @@ export function mapResultToComposedGraph(
     name: federatedGraph.name,
     namespace: federatedGraph.namespace,
     namespaceId: federatedGraph.namespaceId,
-    composedSchema: result?.federatedGraphSchema ? printSchemaWithDirectives(result.federatedGraphSchema) : undefined,
-    federatedClientSchema: result?.federatedGraphClientSchema
-      ? printSchema(result.federatedGraphClientSchema)
-      : undefined,
-    shouldIncludeClientSchema: result?.shouldIncludeClientSchema || false,
-    errors: errors || [],
+    composedSchema: result.success ? printSchemaWithDirectives(result.federatedGraphSchema) : undefined,
+    federatedClientSchema: result.success ? printSchema(result.federatedGraphClientSchema) : undefined,
+    shouldIncludeClientSchema: result.success ? result.shouldIncludeClientSchema : false,
+    errors: result.success ? [] : result.errors,
     subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
-    fieldConfigurations: result?.fieldConfigurations || [],
-    warnings: warnings || [],
+    fieldConfigurations: result.success ? result.fieldConfigurations : [],
+    warnings: result.warnings,
   };
 }
 
@@ -514,7 +510,6 @@ export class Composer {
     ) => [SubgraphDTO[], { name: string; url: string; definitions: DocumentNode }[]],
   ): Promise<CompositionResult> {
     const composedGraphs: ComposedFederatedGraph[] = [];
-    let federationResultContainer: FederationResultContainerWithContracts;
 
     const graphs = await this.federatedGraphRepo.bySubgraphLabels({
       labels: subgraphLabels,
@@ -530,51 +525,34 @@ export class Composer {
 
         const contracts = await this.contractRepo.bySourceFederatedGraphId(graph.id);
 
-        if (contracts.length > 0) {
-          const tagOptionsByContractName = new Map<string, ContractTagOptions>();
-
-          for (const contract of contracts) {
-            tagOptionsByContractName.set(
-              contract.downstreamFederatedGraph.target.name,
-              newContractTagOptionsFromArrays(contract.excludeTags, contract.includeTags),
-            );
-          }
-
-          federationResultContainer = composeSubgraphsWithContracts(subgraphsToBeComposed, tagOptionsByContractName);
-        } else {
-          federationResultContainer = composeSubgraphs(subgraphsToBeComposed);
+        if (contracts.length === 0) {
+          const federationResult = composeSubgraphs(subgraphsToBeComposed);
+          composedGraphs.push(mapResultToComposedGraph(graph, subgraphs, federationResult));
+          continue;
         }
 
-        if (!federationResultContainer) {
-          throw new Error('Could not federate subgraphs');
+        const tagOptionsByContractName = new Map<string, ContractTagOptions>();
+
+        for (const contract of contracts) {
+          tagOptionsByContractName.set(
+            contract.downstreamFederatedGraph.target.name,
+            newContractTagOptionsFromArrays(contract.excludeTags, contract.includeTags),
+          );
         }
 
-        const {
-          federationResult: result,
-          errors,
-          federationResultContainerByContractName,
-          warnings,
-        } = federationResultContainer;
+        const federationResult = composeSubgraphsWithContracts(subgraphsToBeComposed, tagOptionsByContractName);
+        composedGraphs.push(mapResultToComposedGraph(graph, subgraphs, federationResult));
 
-        composedGraphs.push(mapResultToComposedGraph(graph, subgraphs, errors, result, warnings));
+        if (!federationResult.success) {
+          continue;
+        }
 
-        if (federationResultContainerByContractName) {
-          for (const [contractName, contractResultContainer] of federationResultContainerByContractName.entries()) {
-            const {
-              errors: contractErrors,
-              federationResult: contractResult,
-              warnings: contractWarnings,
-            } = contractResultContainer;
-
-            const contractGraph = await this.federatedGraphRepo.byName(contractName, graph.namespace);
-            if (!contractGraph) {
-              throw new Error(`Contract graph ${contractName} not found`);
-            }
-
-            composedGraphs.push(
-              mapResultToComposedGraph(contractGraph, subgraphs, contractErrors, contractResult, contractWarnings),
-            );
+        for (const [contractName, contractResult] of federationResult.federationResultByContractName) {
+          const contractGraph = await this.federatedGraphRepo.byName(contractName, graph.namespace);
+          if (!contractGraph) {
+            throw new Error(`Contract graph ${contractName} not found`);
           }
+          composedGraphs.push(mapResultToComposedGraph(contractGraph, subgraphs, contractResult));
         }
       } catch (e: any) {
         composedGraphs.push({

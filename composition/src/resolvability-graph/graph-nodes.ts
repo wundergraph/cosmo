@@ -1,4 +1,4 @@
-import { getEntriesNotInHashSet, getValueOrDefault, add, GraphFieldData } from '../utils/utils';
+import { getEntriesNotInHashSet, getValueOrDefault, add, GraphFieldData } from '../v1/utils/utils';
 
 export class Edge {
   edgeName: string;

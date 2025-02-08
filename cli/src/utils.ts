@@ -1,6 +1,6 @@
 /* eslint-disable import/named */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { FederationResultContainer, Subgraph, federateSubgraphs } from '@wundergraph/composition';
+import { FederationResultContainerDeprecated, Subgraph, federateSubgraphs } from '@wundergraph/composition';
 import boxen from 'boxen';
 import { buildClientSchema, printSchema } from 'graphql';
 import yaml from 'js-yaml';
@@ -174,7 +174,7 @@ export const introspectSubgraph = async ({
 /**
  * Composes a list of subgraphs into a single schema.
  */
-export function composeSubgraphs(subgraphs: Subgraph[]): FederationResultContainer {
+export function composeSubgraphs(subgraphs: Subgraph[]): FederationResultContainerDeprecated {
   return federateSubgraphs(subgraphs);
 }
 

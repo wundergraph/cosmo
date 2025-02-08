@@ -53,25 +53,23 @@ export async function getDiffBetweenGraphs(
     let oldSchema: GraphQLSchema = new GraphQLSchema({});
     let newSchema: GraphQLSchema = new GraphQLSchema({});
     if (oldSchemaSDL) {
-      const { normalizationResult } = buildSchema(oldSchemaSDL);
-      if (normalizationResult?.schema) {
-        oldSchema = normalizationResult.schema;
+      const result = buildSchema(oldSchemaSDL);
+      if (result.success) {
+        oldSchema = result.schema;
       }
     }
 
     if (newSchemaSDL?.length) {
-      const { errors, normalizationResult } = buildSchema(newSchemaSDL);
-      if (errors && errors.length > 0) {
+      const result = buildSchema(newSchemaSDL);
+      if (!result.success) {
         return {
           kind: 'failure',
-          error: new Error(errors.map((e) => e.toString()).join('\n')),
+          error: new Error(result.errors.map((e) => e.toString()).join('\n')),
           errorCode: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA,
-          errorMessage: errors.map((e) => e.toString()).join('\n'),
+          errorMessage: result.errors.map((e) => e.toString()).join('\n'),
         };
       }
-      if (normalizationResult?.schema) {
-        newSchema = normalizationResult.schema;
-      }
+      newSchema = result.schema;
     }
 
     const schemaChanges = await getSchemaDiff(oldSchema, newSchema);

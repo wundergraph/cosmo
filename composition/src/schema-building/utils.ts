@@ -17,8 +17,10 @@ import {
   TypeNode,
 } from 'graphql';
 import {
+  AuthorizationData,
   ChildData,
   CompositeOutputData,
+  ConditionalFieldData,
   DefinitionData,
   EnumDefinitionData,
   EnumValueData,
@@ -30,7 +32,7 @@ import {
   PersistedDirectiveDefinitionData,
   PersistedDirectivesData,
   ScalarDefinitionData,
-} from './type-definition-data';
+} from './types';
 import { MutableFieldNode, MutableInputValueNode, MutableTypeDefinitionNode } from './ast';
 import { ObjectTypeNode, setToNameNodeArray, stringToNameNode } from '../ast/utils';
 import {
@@ -62,21 +64,16 @@ import {
   STRING_SCALAR,
   SUBSCRIPTION,
   TAG,
-} from '../utils/string-constants';
+} from '../v1/utils/string-constants';
 import {
-  AuthorizationData,
   generateRequiresScopesDirective,
   generateSimpleDirective,
   getEntriesNotInHashSet,
   getValueOrDefault,
   InvalidRequiredInputValueData,
-} from '../utils/utils';
-import { INHERITABLE_DIRECTIVE_NAMES } from '../utils/constants';
-import {
-  FieldConfiguration,
-  FieldSetCondition,
-  SubscriptionFilterValue,
-} from '../router-configuration/router-configuration';
+} from '../v1/utils/utils';
+import { INHERITABLE_DIRECTIVE_NAMES } from '../v1/utils/constants';
+import { FieldConfiguration, SubscriptionFilterValue } from '../router-configuration/router-configuration';
 
 export function newPersistedDirectivesData(): PersistedDirectivesData {
   return {
@@ -770,11 +767,6 @@ export enum FieldSetDirective {
   REQUIRES = 'requires',
 }
 
-export type ConditionalFieldData = {
-  providedBy: Array<FieldSetCondition>;
-  requiredBy: Array<FieldSetCondition>;
-};
-
 export function newConditionalFieldData(): ConditionalFieldData {
   return {
     providedBy: [],
@@ -801,4 +793,13 @@ export function getDefinitionDataCoords(data: NodeData, useRenamedPath: boolean)
     default:
       return data.name;
   }
+}
+
+export function doSetsIntersect<T>(set: Set<T>, other: Set<T>): boolean {
+  for (const entry of set) {
+    if (other.has(entry)) {
+      return true;
+    }
+  }
+  return false;
 }

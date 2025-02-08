@@ -148,6 +148,7 @@ export default (opts: BaseCommandOptions) => {
       federatedClientSDL,
       federatedSDL: printSchemaWithDirectives(result.federationResult.federatedGraphSchema),
       fieldConfigurations: result.federationResult.fieldConfigurations,
+      routerCompatibilityVersion: 1,
       schemaVersionId: 'static',
       subgraphs: config.subgraphs.map((s, index) => {
         const subgraphConfig = result.federationResult!.subgraphConfigBySubgraphName.get(s.name);
@@ -287,6 +288,7 @@ export default (opts: BaseCommandOptions) => {
           federatedClientSDL,
           federatedSDL: printSchemaWithDirectives(result.federationResult.federatedGraphSchema),
           fieldConfigurations: result.federationResult.fieldConfigurations,
+          routerCompatibilityVersion: 1,
           schemaVersionId: `static`,
           subgraphs: subgraphs.map((s, index) => {
             const subgraphConfig = result.federationResult!.subgraphConfigBySubgraphName.get(s.name);

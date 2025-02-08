@@ -1,5 +1,5 @@
-import { getEntriesNotInHashSet, getOrThrowError, GraphFieldData } from '../utils/utils';
-import { LITERAL_SPACE, QUOTATION_JOIN } from '../utils/string-constants';
+import { getEntriesNotInHashSet, getOrThrowError, GraphFieldData } from '../v1/utils/utils';
+import { LITERAL_SPACE, QUOTATION_JOIN } from '../v1/utils/string-constants';
 import { unexpectedEdgeFatalError, unresolvablePathError } from '../errors/errors';
 
 export class NodeResolutionData {

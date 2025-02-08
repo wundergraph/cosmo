@@ -30,7 +30,6 @@ import {
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
   EXECUTABLE_DIRECTIVE_LOCATIONS,
-  EXTENDS,
   FIELD_DEFINITION_UPPER,
   FRAGMENT_DEFINITION_UPPER,
   FRAGMENT_SPREAD_UPPER,
@@ -48,7 +47,7 @@ import {
   SCHEMA_UPPER,
   SUBSCRIPTION,
   UNION_UPPER,
-} from '../utils/string-constants';
+} from '../v1/utils/string-constants';
 import { CompositeOutputNode } from '../schema-building/ast';
 
 export function isObjectLikeNodeEntity(node: CompositeOutputNode): boolean {
@@ -73,37 +72,6 @@ export function isNodeInterfaceObject(node: ObjectTypeDefinitionNode): boolean {
     }
   }
   return false;
-}
-
-export function isNodeExtension(node: ObjectTypeDefinitionNode | InterfaceTypeDefinitionNode): boolean {
-  if (!node.directives?.length) {
-    return false;
-  }
-  for (const directive of node.directives) {
-    if (directive.name.value === EXTENDS) {
-      return true;
-    }
-  }
-  return false;
-}
-
-export function areBaseAndExtensionKindsCompatible(baseKind: Kind, extensionKind: Kind, typeName: string): boolean {
-  switch (baseKind) {
-    case Kind.ENUM_TYPE_DEFINITION:
-      return extensionKind === Kind.ENUM_TYPE_EXTENSION;
-    case Kind.INPUT_OBJECT_TYPE_DEFINITION:
-      return extensionKind === Kind.INPUT_OBJECT_TYPE_EXTENSION;
-    case Kind.INTERFACE_TYPE_DEFINITION:
-      return extensionKind === Kind.INTERFACE_TYPE_EXTENSION;
-    case Kind.OBJECT_TYPE_DEFINITION:
-      return extensionKind === Kind.OBJECT_TYPE_EXTENSION;
-    case Kind.SCALAR_TYPE_DEFINITION:
-      return extensionKind === Kind.SCALAR_TYPE_EXTENSION;
-    case Kind.UNION_TYPE_DEFINITION:
-      return extensionKind === Kind.UNION_TYPE_EXTENSION;
-    default:
-      return false;
-  }
 }
 
 export function stringToNameNode(value: string): NameNode {
