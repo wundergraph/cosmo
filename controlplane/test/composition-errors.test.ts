@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi 
 import { parse } from 'graphql';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import {
+  FederationResultFailure,
   ImplementationErrors,
   incompatibleArgumentTypesError,
   incompatibleParentKindMergeError,
@@ -134,9 +135,10 @@ describe('Composition error tests', (ctx) => {
       `),
     };
 
-    const result = composeSubgraphs([subgraph1, subgraph2]);
-    expect(result.errors).toBeDefined();
-    expect(result.errors?.[0].message).toBe(
+    const result = composeSubgraphs([subgraph1, subgraph2]) as FederationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0].message).toBe(
       'Incompatible types when merging two instances of "A.a":\n Expected type "NamedType" but received "ListType"',
     );
   });
@@ -166,9 +168,10 @@ describe('Composition error tests', (ctx) => {
       `),
     };
 
-    const result = composeSubgraphs([subgraph1, subgraph2]);
-    expect(result.errors).toBeDefined();
-    expect(result.errors?.[0].message).toBe(
+    const result = composeSubgraphs([subgraph1, subgraph2]) as FederationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0].message).toBe(
       'Incompatible types when merging two instances of "A.a":\n Expected type "String" but received "Int"',
     );
   });
@@ -200,9 +203,10 @@ describe('Composition error tests', (ctx) => {
       `),
     };
 
-    const { errors } = composeSubgraphs([subgraph1, subgraph2]);
-    expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(incompatibleArgumentTypesError('n', 'Function.g(n: ...)', 'Int', 'String'));
+    const result = composeSubgraphs([subgraph1, subgraph2]) as FederationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toStrictEqual(incompatibleArgumentTypesError('n', 'Function.g(n: ...)', 'Int', 'String'));
   });
 
   test.skip('Should cause composition errors when the @tag definition is invalid', () => {
@@ -228,10 +232,11 @@ describe('Composition error tests', (ctx) => {
       name: 'subgraph2',
     };
 
-    const result = composeSubgraphs([subgraph1, subgraph2]);
+    const result = composeSubgraphs([subgraph1, subgraph2]) as FederationResultFailure;
 
-    expect(result.errors).toBeDefined();
-    expect(result.errors?.[0].message).toBe(
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0].message).toBe(
       '[subgraph1] Invalid definition for directive "@tag": missing required argument "name"',
     );
   });
@@ -257,10 +262,11 @@ describe('Composition error tests', (ctx) => {
       name: 'subgraph2',
     };
 
-    const result = composeSubgraphs([subgraph1, subgraph2]);
+    const result = composeSubgraphs([subgraph1, subgraph2]) as FederationResultFailure;
 
-    expect(result.errors).toBeDefined();
-    expect(result.errors?.[0].message).toBe(
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0].message).toBe(
       '[subgraph1] Name "__something" must not begin with "__", which is reserved by GraphQL introspection.',
     );
   });
@@ -286,11 +292,10 @@ describe('Composition error tests', (ctx) => {
       name: 'subgraph2',
     };
 
-    const { errors } = composeSubgraphs([subgraph1, subgraph2]);
-
-    expect(errors).toBeDefined();
-    expect(errors).toHaveLength(1);
-    expect(errors?.[0]).toStrictEqual(noQueryRootTypeError);
+    const result = composeSubgraphs([subgraph1, subgraph2]) as FederationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors?.[0]).toStrictEqual(noQueryRootTypeError);
   });
 
   test('Should cause an composition error when a type and a interface are defined with the same name in different subgraphs', () => {
@@ -318,10 +323,10 @@ describe('Composition error tests', (ctx) => {
       name: 'subgraph2',
     };
 
-    const { errors } = composeSubgraphs([subgraph1, subgraph2]);
-    expect(errors).toBeDefined();
-    expect(errors).toHaveLength(1);
-    expect(errors![0]).toStrictEqual(incompatibleParentKindMergeError('SameName', OBJECT, INTERFACE));
+    const result = composeSubgraphs([subgraph1, subgraph2]) as FederationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toStrictEqual(incompatibleParentKindMergeError('SameName', OBJECT, INTERFACE));
   });
 
   test('that composition errors are returned if a type does not satisfy its implemented Interfaces after federation', () => {
@@ -358,10 +363,11 @@ describe('Composition error tests', (ctx) => {
       name: 'subgraph2',
     };
 
-    const { errors } = composeSubgraphs([subgraph1, subgraph2]);
+    const result = composeSubgraphs([subgraph1, subgraph2]) as FederationResultFailure;
 
-    expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toStrictEqual(
       invalidInterfaceImplementationError(
         'TypeB',
         OBJECT,
@@ -403,8 +409,9 @@ describe('Composition error tests', (ctx) => {
       url: '',
     };
 
-    const result = composeSubgraphs([subgraph1, subgraph2]);
-    expect(result.errors).toBeDefined();
+    const result = composeSubgraphs([subgraph1, subgraph2]) as FederationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
     expect(result.errors?.[0].message).toBe(
       'None of the fields of input object type "InputA" are consistently defined in all the subgraphs defining that type. As only fields common to all subgraphs are merged, this would result in an empty type.',
     );
@@ -440,9 +447,9 @@ describe('Composition error tests', (ctx) => {
       name: 'subgraph2',
     };
 
-    const { errors } = composeSubgraphs([subgraph1, subgraph2]);
-    expect(errors).toBeDefined();
-    expect(errors![0]).toStrictEqual(
+    const result = composeSubgraphs([subgraph1, subgraph2]) as FederationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors[0]).toStrictEqual(
       invalidRequiredInputValueError(
         INPUT_OBJECT,
         'InputA',

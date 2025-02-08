@@ -1,18 +1,5 @@
-import { DocumentNode, GraphQLSchema, lexicographicSortSchema, parse, print } from 'graphql';
+import { parse } from 'graphql';
 import { Subgraph } from '../../../src';
-import { printSchemaWithDirectives } from '@graphql-tools/utils';
-
-export function normalizeString(input: string): string {
-  return input.replaceAll(/\n| {2,}/g, '');
-}
-
-export function documentNodeToNormalizedString(document: DocumentNode): string {
-  return normalizeString(print(document));
-}
-
-export function schemaToSortedNormalizedString(schema: GraphQLSchema): string {
-  return normalizeString(printSchemaWithDirectives(lexicographicSortSchema(schema)));
-}
 
 // The V1 definitions that are required during normalization
 export const versionOneBaseSchema = `

@@ -9,12 +9,8 @@ import {
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
 } from '../../src';
-import {
-  normalizeString,
-  schemaToSortedNormalizedString,
-  versionTwoDirectiveDefinitions,
-  versionTwoRouterDefinitions,
-} from './utils/utils';
+import { versionTwoDirectiveDefinitions, versionTwoRouterDefinitions } from './utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('@shareable directive tests', () => {
   describe('Normalization tests', () => {

@@ -19,14 +19,8 @@ import {
   unexpectedDirectiveArgumentErrorMessage,
 } from '../../src';
 import { describe, expect, test } from 'vitest';
-import {
-  documentNodeToNormalizedString,
-  normalizeString,
-  schemaToSortedNormalizedString,
-  versionOnePersistedBaseSchema,
-  versionOneRouterDefinitions,
-  versionTwoRouterDefinitions,
-} from './utils/utils';
+import { versionOnePersistedBaseSchema, versionOneRouterDefinitions, versionTwoRouterDefinitions } from './utils/utils';
+import { documentNodeToNormalizedString, normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('Entity tests', () => {
   describe('Entity normalization tests', () => {

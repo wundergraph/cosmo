@@ -10,13 +10,8 @@ import {
   Subgraph,
 } from '../../src';
 import { describe, expect, test } from 'vitest';
-import {
-  normalizeString,
-  schemaQueryDefinition,
-  schemaToSortedNormalizedString,
-  versionOneRouterContractDefinitions,
-  versionOneRouterDefinitions,
-} from './utils/utils';
+import { schemaQueryDefinition, versionOneRouterContractDefinitions, versionOneRouterDefinitions } from './utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('Contract tests', () => {
   describe('Exclude tags', () => {

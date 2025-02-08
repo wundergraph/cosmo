@@ -11,12 +11,8 @@ import {
   Subgraph,
 } from '../../src';
 import { parse } from 'graphql';
-import {
-  baseDirectiveDefinitions,
-  normalizeString,
-  schemaToSortedNormalizedString,
-  versionOneRouterDefinitions,
-} from './utils/utils';
+import { baseDirectiveDefinitions, versionOneRouterDefinitions } from './utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('Scalar tests', () => {
   describe('Normalization tests', () => {

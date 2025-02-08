@@ -22,13 +22,8 @@ import {
   NormalizationResultFailure,
   FederationResultFailure,
 } from '../../src';
-import {
-  baseDirectiveDefinitions,
-  normalizeString,
-  schemaToSortedNormalizedString,
-  versionOneRouterDefinitions,
-  versionTwoRouterDefinitions,
-} from './utils/utils';
+import { baseDirectiveDefinitions, versionOneRouterDefinitions, versionTwoRouterDefinitions } from './utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('@external directive tests', () => {
   describe('Normalization tests', () => {

@@ -11,9 +11,10 @@ import {
   undefinedEntityInterfaceImplementationsError,
 } from '../../src';
 import { describe, expect, test } from 'vitest';
-import { normalizeString, schemaToSortedNormalizedString, versionTwoRouterDefinitions } from './utils/utils';
+import { versionTwoRouterDefinitions } from './utils/utils';
 
 import { parse } from 'graphql';
+import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('Entity Interface Tests', () => {
   test('that an @interfaceObject does not need to contribute new fields', () => {

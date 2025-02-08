@@ -21,12 +21,8 @@ import {
   Subgraph,
   UNION,
 } from '../../src';
-import {
-  normalizeString,
-  schemaToSortedNormalizedString,
-  versionTwoClientDefinitions,
-  versionTwoRouterDefinitions,
-} from './utils/utils';
+import { versionTwoClientDefinitions, versionTwoRouterDefinitions } from './utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('@inaccessible tests', () => {
   test('that inaccessible fields are included in client schema but not the router schema', () => {

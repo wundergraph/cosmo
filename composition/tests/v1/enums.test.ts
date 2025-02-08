@@ -18,12 +18,11 @@ import {
 import { describe, expect, test } from 'vitest';
 import {
   baseDirectiveDefinitions,
-  normalizeString,
-  schemaToSortedNormalizedString,
   versionOneRouterDefinitions,
   versionTwoClientDefinitions,
   versionTwoRouterDefinitions,
 } from './utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('Enum tests', () => {
   describe('Normalization tests', () => {

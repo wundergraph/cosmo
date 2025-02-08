@@ -39,12 +39,11 @@ import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import {
   baseDirectiveDefinitions,
-  normalizeString,
   schemaQueryDefinition,
-  schemaToSortedNormalizedString,
   versionOneBaseSchema,
   versionTwoBaseSchema,
 } from './utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('Normalization tests', () => {
   test('that an unparsable graph returns an error', () => {

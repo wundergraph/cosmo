@@ -20,12 +20,8 @@ import {
   subgraphValidationError,
 } from '../../src';
 import { describe, expect, test } from 'vitest';
-import {
-  normalizeString,
-  schemaToSortedNormalizedString,
-  versionOneRouterDefinitions,
-  versionTwoRouterDefinitions,
-} from './utils/utils';
+import { versionOneRouterDefinitions, versionTwoRouterDefinitions } from './utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('Argument federation tests', () => {
   const argumentName = 'input';

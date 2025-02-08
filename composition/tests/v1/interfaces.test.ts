@@ -26,12 +26,11 @@ import {
 import { describe, expect, test } from 'vitest';
 import {
   baseDirectiveDefinitions,
-  normalizeString,
   schemaQueryDefinition,
-  schemaToSortedNormalizedString,
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
 } from './utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('Interface tests', () => {
   describe('Normalization tests', () => {

@@ -16,14 +16,12 @@ import {
 } from '../../src';
 import { describe, expect, test } from 'vitest';
 import {
-  documentNodeToNormalizedString,
-  normalizeString,
-  schemaToSortedNormalizedString,
   versionOnePersistedBaseSchema,
   versionOnePersistedDirectiveDefinitions,
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
 } from './utils/utils';
+import { documentNodeToNormalizedString, normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('Field resolvability tests', () => {
   test('that shared queries that return a nested type that is only resolvable over multiple subgraphs are valid', () => {

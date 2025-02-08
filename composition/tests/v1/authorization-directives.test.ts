@@ -13,13 +13,9 @@ import {
   parse,
   Subgraph,
 } from '../../src';
-import {
-  normalizeString,
-  schemaToSortedNormalizedString,
-  versionTwoRouterDefinitions,
-  versionTwoRouterDirectiveDefinitions,
-} from './utils/utils';
+import { versionTwoRouterDefinitions, versionTwoRouterDirectiveDefinitions } from './utils/utils';
 import { NormalizationResultFailure, ROUTER_COMPATIBILITY_VERSION_ONE } from '../../src';
+import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('Authorization directives tests', () => {
   describe('Normalization Tests', () => {

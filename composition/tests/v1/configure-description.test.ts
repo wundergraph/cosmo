@@ -28,12 +28,11 @@ import {
 } from '../../src';
 import {
   baseDirectiveDefinitionWithConfigureDescription,
-  normalizeString,
   schemaQueryDefinition,
-  schemaToSortedNormalizedString,
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
 } from './utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('@openfed__configureDescription tests', () => {
   describe('Normalization tests', () => {

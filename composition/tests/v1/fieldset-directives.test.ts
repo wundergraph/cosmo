@@ -36,12 +36,8 @@ import {
   UNION,
   unparsableFieldSetErrorMessage,
 } from '../../src';
-import {
-  normalizeString,
-  schemaQueryDefinition,
-  schemaToSortedNormalizedString,
-  versionTwoDirectiveDefinitions,
-} from './utils/utils';
+import { schemaQueryDefinition, versionTwoDirectiveDefinitions } from './utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('openfed_FieldSet tests', () => {
   describe('@key FieldSets', () => {

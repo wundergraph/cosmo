@@ -259,7 +259,7 @@ describe('Router Config', (ctx) => {
 
     expect(publishPandaResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
     expect(publishPandaResp.compositionErrors).toHaveLength(2);
-    expect(publishPandaResp.compositionErrors[0].message).toStrictEqual(noQueryRootTypeError.message);
+    expect(publishPandaResp.compositionErrors[0].message).toStrictEqual(noQueryRootTypeError().message);
     expect(publishPandaResp.compositionErrors[1]).toStrictEqual(
       unsuccessfulBaseCompositionError(fedGraphName, 'default'),
     );

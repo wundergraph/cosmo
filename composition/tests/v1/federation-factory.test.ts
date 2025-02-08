@@ -15,10 +15,7 @@ import {
 } from '../../src';
 import { describe, expect, test } from 'vitest';
 import {
-  documentNodeToNormalizedString,
-  normalizeString,
   schemaQueryDefinition,
-  schemaToSortedNormalizedString,
   versionOnePersistedBaseSchema,
   versionOneRouterDefinitions,
   versionTwoClientDefinitions,
@@ -28,6 +25,7 @@ import {
 import fs from 'node:fs';
 import path, { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { documentNodeToNormalizedString, normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 // @ts-ignore
 const __filename = fileURLToPath(import.meta.url);

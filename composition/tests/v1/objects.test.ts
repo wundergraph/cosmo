@@ -18,12 +18,11 @@ import {
 } from '../../src';
 import {
   baseDirectiveDefinitions,
-  normalizeString,
-  schemaToSortedNormalizedString,
   versionOneBaseSchema,
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
 } from './utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('Object tests', () => {
   describe('Normalization tests', () => {

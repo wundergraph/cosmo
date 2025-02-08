@@ -16,12 +16,8 @@ import {
   subgraphValidationError,
 } from '../../src';
 import { describe, expect, test } from 'vitest';
-import {
-  baseDirectiveDefinitions,
-  normalizeString,
-  schemaToSortedNormalizedString,
-  versionOneRouterDefinitions,
-} from './utils/utils';
+import { baseDirectiveDefinitions, versionOneRouterDefinitions } from './utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('Input tests', () => {
   describe('Normalization tests', () => {

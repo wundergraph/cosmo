@@ -45,12 +45,11 @@ import {
   unexpectedDirectiveArgumentErrorMessage,
 } from '../../src';
 import {
-  normalizeString,
-  schemaToSortedNormalizedString,
   versionOneFullEventDefinitions,
   versionOnePersistedDirectiveDefinitions,
   versionOneSubscriptionEventDefinitions,
 } from './utils/utils';
+import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('events Configuration tests', () => {
   describe('Normalization tests', () => {
