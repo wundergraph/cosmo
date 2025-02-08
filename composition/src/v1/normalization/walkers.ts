@@ -28,23 +28,7 @@ import {
 } from '../utils/utils';
 import { formatDescription, isNodeInterfaceObject, isObjectLikeNodeEntity, SchemaNode } from '../../ast/utils';
 import { extractFieldSetValue, newFieldSetData, newKeyFieldSetData } from './utils';
-import {
-  ANY_SCALAR,
-  CONFIGURE_CHILD_DESCRIPTIONS,
-  CONFIGURE_DESCRIPTION,
-  ENTITIES_FIELD,
-  ENTITY_UNION,
-  EVENT_DIRECTIVE_NAMES,
-  EXTERNAL,
-  PARENT_DEFINITION_DATA,
-  PROVIDES,
-  REQUIRES,
-  RootTypeName,
-  SCHEMA,
-  SERVICE_FIELD,
-  SERVICE_OBJECT,
-  SUBSCRIPTION_FILTER,
-} from '../utils/string-constants';
+import { EVENT_DIRECTIVE_NAMES } from '../utils/string-constants';
 import {
   getRenamedRootTypeName,
   isParentDataInterfaceType,
@@ -60,6 +44,22 @@ import {
 import { getMutableEnumValueNode, getTypeNodeNamedTypeName } from '../../schema-building/ast';
 import { GraphNode, RootNode } from '../../resolvability-graph/graph-nodes';
 import { requiresDefinedOnNonEntityFieldWarning } from '../warnings/warnings';
+import {
+  ANY_SCALAR,
+  CONFIGURE_CHILD_DESCRIPTIONS,
+  CONFIGURE_DESCRIPTION,
+  ENTITIES_FIELD,
+  ENTITY_UNION,
+  EXTERNAL,
+  PARENT_DEFINITION_DATA,
+  PROVIDES,
+  REQUIRES,
+  RootTypeName,
+  SCHEMA,
+  SERVICE_FIELD,
+  SERVICE_OBJECT,
+  SUBSCRIPTION_FILTER,
+} from '../../utils/string-constants';
 
 /* Walker to collect schema definition, directive definitions, and entities.
  * Directives are not validated upon immediate extract because all types must be recorded first.

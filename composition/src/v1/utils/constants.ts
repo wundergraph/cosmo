@@ -8,6 +8,13 @@ import {
 } from 'graphql';
 import { stringArrayToNameNodeArray, stringToNamedTypeNode, stringToNameNode } from '../../ast/utils';
 import {
+  MutableDirectiveDefinitionNode,
+  MutableEnumNode,
+  MutableInputObjectNode,
+  MutableScalarNode,
+} from '../../schema-building/ast';
+import { DEFAULT_CONSUMER_INACTIVE_THRESHOLD } from './integer-constants';
+import {
   AND_UPPER,
   ARGUMENT_DEFINITION_UPPER,
   AS,
@@ -21,6 +28,7 @@ import {
   CONSUMER_NAME,
   DEFAULT_EDFS_PROVIDER_ID,
   DEPRECATED,
+  DESCRIPTION_OVERRIDE,
   EDFS_KAFKA_PUBLISH,
   EDFS_KAFKA_SUBSCRIBE,
   EDFS_NATS_PUBLISH,
@@ -32,13 +40,14 @@ import {
   EXECUTION,
   EXTENDS,
   EXTERNAL,
-  DESCRIPTION_OVERRIDE,
   FIELD_DEFINITION_UPPER,
   FIELD_PATH,
   FIELD_SET_SCALAR,
   FIELDS,
+  FLOAT_SCALAR,
   FOR,
   FROM,
+  ID_SCALAR,
   IMPORT,
   IN_UPPER,
   INACCESSIBLE,
@@ -85,16 +94,7 @@ import {
   UNION_UPPER,
   URL_LOWER,
   VALUES,
-  ID_SCALAR,
-  FLOAT_SCALAR,
-} from './string-constants';
-import {
-  MutableDirectiveDefinitionNode,
-  MutableEnumNode,
-  MutableInputObjectNode,
-  MutableScalarNode,
-} from '../../schema-building/ast';
-import { DEFAULT_CONSUMER_INACTIVE_THRESHOLD } from './integer-constants';
+} from '../../utils/string-constants';
 
 export const REQUIRED_STRING_TYPE_NODE: TypeNode = {
   kind: Kind.NON_NULL_TYPE,

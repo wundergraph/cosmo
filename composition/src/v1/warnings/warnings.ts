@@ -1,6 +1,6 @@
-import { QUOTATION_JOIN } from '../utils/string-constants';
 import { FieldSetDirective } from '../../schema-building/utils';
 import { Warning } from '../../warnings/warnings';
+import { QUOTATION_JOIN } from '../../utils/string-constants';
 
 export function invalidOverrideTargetSubgraphNameWarning(
   targetSubgraphName: string,

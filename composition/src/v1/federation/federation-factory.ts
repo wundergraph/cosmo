@@ -79,34 +79,7 @@ import {
   SubscriptionFilterData,
   validateImplicitFieldSets,
 } from './utils';
-import {
-  AND_UPPER,
-  AUTHENTICATED,
-  CONDITION,
-  DEPRECATED,
-  ENUM_VALUE,
-  FIELD,
-  FIELD_PATH,
-  IN_UPPER,
-  INACCESSIBLE,
-  INPUT_OBJECT,
-  LEFT_PARENTHESIS,
-  LIST,
-  NOT_UPPER,
-  OBJECT,
-  OR_UPPER,
-  PARENT_DEFINITION_DATA,
-  PERIOD,
-  QUERY,
-  REQUIRES_SCOPES,
-  STRING,
-  SUBSCRIPTION_FILTER,
-  SUBSCRIPTION_FILTER_INPUT_NAMES,
-  SUBSCRIPTION_FILTER_LIST_INPUT_NAMES,
-  TAG,
-  UNION,
-  VALUES,
-} from '../utils/string-constants';
+import { SUBSCRIPTION_FILTER_INPUT_NAMES, SUBSCRIPTION_FILTER_LIST_INPUT_NAMES } from '../utils/string-constants';
 import {
   addIterableValuesToSet,
   addMapEntries,
@@ -211,6 +184,32 @@ import { GraphNode } from '../../resolvability-graph/graph-nodes';
 import { InternalSubgraph, Subgraph, SubgraphConfig } from '../../subgraph/types';
 import { Warning } from '../../warnings/warnings';
 import { ContractTagOptions, FederationResult, FederationResultWithContracts } from '../../federation/types';
+import {
+  AND_UPPER,
+  AUTHENTICATED,
+  CONDITION,
+  DEPRECATED,
+  ENUM_VALUE,
+  FIELD,
+  FIELD_PATH,
+  IN_UPPER,
+  INACCESSIBLE,
+  INPUT_OBJECT,
+  LEFT_PARENTHESIS,
+  LIST,
+  NOT_UPPER,
+  OBJECT,
+  OR_UPPER,
+  PARENT_DEFINITION_DATA,
+  PERIOD,
+  QUERY,
+  REQUIRES_SCOPES,
+  STRING,
+  SUBSCRIPTION_FILTER,
+  TAG,
+  UNION,
+  VALUES,
+} from '../../utils/string-constants';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;

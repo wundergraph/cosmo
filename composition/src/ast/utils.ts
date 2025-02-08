@@ -25,11 +25,12 @@ import {
   UnionTypeDefinitionNode,
   UnionTypeExtensionNode,
 } from 'graphql';
+import { EXECUTABLE_DIRECTIVE_LOCATIONS } from '../v1/utils/string-constants';
+import { CompositeOutputNode } from '../schema-building/ast';
 import {
   ARGUMENT_DEFINITION_UPPER,
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
-  EXECUTABLE_DIRECTIVE_LOCATIONS,
   FIELD_DEFINITION_UPPER,
   FRAGMENT_DEFINITION_UPPER,
   FRAGMENT_SPREAD_UPPER,
@@ -47,8 +48,7 @@ import {
   SCHEMA_UPPER,
   SUBSCRIPTION,
   UNION_UPPER,
-} from '../v1/utils/string-constants';
-import { CompositeOutputNode } from '../schema-building/ast';
+} from '../utils/string-constants';
 
 export function isObjectLikeNodeEntity(node: CompositeOutputNode): boolean {
   if (!node.directives?.length) {

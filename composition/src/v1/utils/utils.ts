@@ -9,6 +9,17 @@ import {
   ScalarTypeDefinitionNode,
   StringValueNode,
 } from 'graphql';
+import { invalidKeyFatalError } from '../../errors/errors';
+import { stringToNameNode } from '../../ast/utils';
+import { FieldConfiguration } from '../../router-configuration/router-configuration';
+import {
+  AuthorizationData,
+  EntityData,
+  EntityInterfaceSubgraphData,
+  FieldAuthorizationData,
+  FieldData,
+  SimpleFieldData,
+} from '../../schema-building/types';
 import {
   BOOLEAN_SCALAR,
   ENUM,
@@ -26,18 +37,7 @@ import {
   SCOPES,
   STRING_SCALAR,
   UNION,
-} from './string-constants';
-import { invalidKeyFatalError } from '../../errors/errors';
-import { stringToNameNode } from '../../ast/utils';
-import { FieldConfiguration } from '../../router-configuration/router-configuration';
-import {
-  AuthorizationData,
-  EntityData,
-  EntityInterfaceSubgraphData,
-  FieldAuthorizationData,
-  FieldData,
-  SimpleFieldData,
-} from '../../schema-building/types';
+} from '../../utils/string-constants';
 
 export function areSetsEqual<T>(set: Set<T>, other: Set<T>): boolean {
   if (set.size !== other.size) {

@@ -1,35 +1,6 @@
 import { BREAK, ConstDirectiveNode, DocumentNode, Kind, OperationTypeNode, print, ValueNode, visit } from 'graphql';
 import { getOrThrowError, getValueOrDefault, kindToTypeString } from '../utils/utils';
 import { isKindAbstract, lexicographicallySortDocumentNode, safeParse } from '../../ast/utils';
-import {
-  AUTHENTICATED,
-  COMPOSE_DIRECTIVE,
-  CONFIGURE_CHILD_DESCRIPTIONS,
-  CONFIGURE_DESCRIPTION,
-  DEPRECATED,
-  EDFS_KAFKA_PUBLISH,
-  EDFS_KAFKA_SUBSCRIBE,
-  EDFS_NATS_PUBLISH,
-  EDFS_NATS_REQUEST,
-  EDFS_NATS_SUBSCRIBE,
-  EXTENDS,
-  EXTERNAL,
-  FIELDS,
-  INACCESSIBLE,
-  INTERFACE_OBJECT,
-  KEY,
-  LINK,
-  OVERRIDE,
-  PERIOD,
-  PROVIDES,
-  QUERY,
-  REQUIRES,
-  REQUIRES_SCOPES,
-  SHAREABLE,
-  SPECIFIED_BY,
-  SUBSCRIPTION_FILTER,
-  TAG,
-} from '../utils/string-constants';
 import { NormalizationFactory } from './normalization-factory';
 import {
   abstractTypeInKeyFieldSetErrorMessage,
@@ -104,6 +75,35 @@ import {
   SUBSCRIPTION_FILTER_DEFINITION_DATA,
   TAG_DEFINITION_DATA,
 } from './directive-definition-data';
+import {
+  AUTHENTICATED,
+  COMPOSE_DIRECTIVE,
+  CONFIGURE_CHILD_DESCRIPTIONS,
+  CONFIGURE_DESCRIPTION,
+  DEPRECATED,
+  EDFS_KAFKA_PUBLISH,
+  EDFS_KAFKA_SUBSCRIBE,
+  EDFS_NATS_PUBLISH,
+  EDFS_NATS_REQUEST,
+  EDFS_NATS_SUBSCRIBE,
+  EXTENDS,
+  EXTERNAL,
+  FIELDS,
+  INACCESSIBLE,
+  INTERFACE_OBJECT,
+  KEY,
+  LINK,
+  OVERRIDE,
+  PERIOD,
+  PROVIDES,
+  QUERY,
+  REQUIRES,
+  REQUIRES_SCOPES,
+  SHAREABLE,
+  SPECIFIED_BY,
+  SUBSCRIPTION_FILTER,
+  TAG,
+} from '../../utils/string-constants';
 
 export type KeyFieldSetData = {
   isUnresolvableByKeyFieldSet: Map<string, boolean>;
