@@ -1,4 +1,4 @@
-import { DocumentNode, GraphQLSchema, lexicographicSortSchema, print } from 'graphql/index';
+import { DocumentNode, GraphQLSchema, lexicographicSortSchema, print } from 'graphql';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 
 export function normalizeString(input: string): string {

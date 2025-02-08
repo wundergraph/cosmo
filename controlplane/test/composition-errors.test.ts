@@ -295,7 +295,7 @@ describe('Composition error tests', (ctx) => {
     const result = composeSubgraphs([subgraph1, subgraph2]) as FederationResultFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
-    expect(result.errors?.[0]).toStrictEqual(noQueryRootTypeError);
+    expect(result.errors?.[0]).toStrictEqual(noQueryRootTypeError());
   });
 
   test('Should cause an composition error when a type and a interface are defined with the same name in different subgraphs', () => {
