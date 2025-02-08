@@ -2,6 +2,7 @@ import {
   BOOLEAN_SCALAR,
   duplicateArgumentsError,
   federateSubgraphs,
+  FIELD,
   incompatibleArgumentTypesError,
   incompatibleInputValueDefaultValuesError,
   incompatibleInputValueDefaultValueTypeError,
@@ -9,7 +10,6 @@ import {
   InvalidRequiredInputValueData,
   invalidRequiredInputValueError,
   normalizeSubgraphFromString,
-  NULL,
   OBJECT,
   parse,
   Subgraph,
@@ -22,7 +22,6 @@ import {
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
 } from './utils/utils';
-import { FIELD } from '../src';
 
 describe('Argument federation tests', () => {
   const argumentName = 'input';

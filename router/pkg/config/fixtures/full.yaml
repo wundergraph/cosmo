@@ -11,6 +11,10 @@ listen_addr: "localhost:3002"
 controlplane_url: "https://cosmo-cp.wundergraph.com"
 playground_enabled: true
 playground_path: "/"
+playground:
+  enabled: false
+  path: "/my-playground"
+  concurrency_limit: 1500
 introspection_enabled: true
 json_log: true
 shutdown_delay: 15s
@@ -151,6 +155,7 @@ traffic_shaping:
     # Is the maximum size of the request body in MB, mib
     max_request_body_size: 5MB
     max_header_bytes: 4MiB
+    decompression_enabled: false
   all: # Rules are applied to all subgraph requests.
     # Subgraphs transport options
     request_timeout: 60s
@@ -210,15 +215,23 @@ headers:
 # Authentication and Authorization
 # See https://cosmo-docs.wundergraph.com/router/authentication-and-authorization for more information
 authentication:
-  providers:
-    - name: My Auth Provider # Optional, used for error messages and diagnostics
-      jwks: # JWKS provider configuration
-        url: https://example.com/.well-known/jwks.json # URL to load the JWKS from
+  jwt:
+    jwks:
+      - url: "https://example.com/.well-known/jwks.json"
         refresh_interval: 1m
-        header_names:
-          - Authorization # Optional
-        header_value_prefixes:
-          - Bearer # Optional
+        algorithms: ["RS256"]
+      - url: "https://example.com/.well-known/jwks2.json"
+        refresh_interval: 2m
+        algorithms: ["RS256", "HS256"]
+      - url: "https://example.com/.well-known/jwks3.json"
+    header_name: Authorization
+    header_value_prefix: Bearer
+    header_sources:
+      - type: header
+        name: X-Authorization
+        value_prefixes: [Bearer, Token]
+      - type: header
+        name: authz
 
 authorization:
   require_authentication: false # Set to true to disable requests without authentication
@@ -270,7 +283,10 @@ rate_limit:
   enabled: true
   strategy: "simple"
   storage:
-    url: "redis://:test@localhost:6379"
+    cluster_enabled: true
+    urls:
+      - "test@localhost:8000"
+      - "test2@localhost:8001"
     key_prefix: "cosmo_rate_limit"
   simple_strategy:
     rate: 60
@@ -323,7 +339,10 @@ storage_providers:
       secure: false
   redis:
     - id: "my_redis"
-      url: "redis://:test@localhost:6379"
+      cluster_enabled: false
+      urls:
+        - "test@localhost:8000"
+        - "test2@localhost:8001"
 
 security:
   complexity_calculation_cache:

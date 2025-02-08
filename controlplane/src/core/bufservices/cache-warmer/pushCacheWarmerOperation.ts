@@ -166,15 +166,15 @@ export function pushCacheWarmerOperation(
     }
 
     await cacheWarmerRepo.addCacheWarmerOperations({
-      federatedGraphId: federatedGraph.id,
-      organizationId: authContext.organizationId,
-      createdById: authContext.userId,
-      isManuallyAdded: true,
       operations: [
         {
-          name: req.operationName,
-          persistedId: req.operationPersistedId,
-          content: req.operationContent,
+          operationName: req.operationName,
+          operationPersistedID: req.operationPersistedId,
+          operationContent: req.operationContent,
+          federatedGraphId: federatedGraph.id,
+          organizationId: authContext.organizationId,
+          createdById: authContext.userId,
+          isManuallyAdded: true,
           clientName,
         },
       ],

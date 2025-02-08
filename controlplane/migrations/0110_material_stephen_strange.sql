@@ -1,0 +1,24 @@
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_UNION_MEMBER_ADDED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_UNION_MEMBER_REMOVED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_ENUM_ADDED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_ENUM_REMOVED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_ENUM_VALUE_ADDED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_ENUM_VALUE_REMOVED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_INPUT_OBJECT_ADDED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_INPUT_OBJECT_REMOVED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_FIELD_ADDED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_FIELD_REMOVED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_SCALAR_ADDED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_SCALAR_REMOVED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_OBJECT_ADDED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_OBJECT_REMOVED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_INTERFACE_ADDED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_INTERFACE_REMOVED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_ARGUMENT_DEFINITION_ADDED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_ARGUMENT_DEFINITION_REMOVED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_SCHEMA_ADDED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_SCHEMA_REMOVED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_FIELD_DEFINITION_ADDED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_FIELD_DEFINITION_REMOVED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_INPUT_FIELD_DEFINITION_ADDED';--> statement-breakpoint
+ALTER TYPE "public"."schema_change_type" ADD VALUE 'DIRECTIVE_USAGE_INPUT_FIELD_DEFINITION_REMOVED';

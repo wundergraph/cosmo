@@ -3,7 +3,8 @@
   "compilerOptions": {
     "declaration": true,
     "outDir": "./dist",
-    "module": "commonjs",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]

@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 
 	"go.uber.org/ratelimit"
@@ -27,7 +28,7 @@ type CacheWarmupSource interface {
 }
 
 type CacheWarmupProcessor interface {
-	ProcessOperation(ctx context.Context, item *nodev1.Operation) error
+	ProcessOperation(ctx context.Context, item *nodev1.Operation) (*CacheWarmupOperationPlanResult, error)
 }
 
 type CacheWarmupConfig struct {
@@ -37,6 +38,7 @@ type CacheWarmupConfig struct {
 	ItemsPerSecond int
 	Timeout        time.Duration
 	Processor      CacheWarmupProcessor
+	AfterOperation func(item *CacheWarmupOperationPlanResult)
 }
 
 func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
@@ -47,6 +49,7 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 		itemsPerSecond: cfg.ItemsPerSecond,
 		timeout:        cfg.Timeout,
 		processor:      cfg.Processor,
+		afterOperation: cfg.AfterOperation,
 	}
 	if cfg.Workers < 1 {
 		w.workers = 4
@@ -93,6 +96,7 @@ type cacheWarmup struct {
 	itemsPerSecond int
 	timeout        time.Duration
 	processor      CacheWarmupProcessor
+	afterOperation func(item *CacheWarmupOperationPlanResult)
 }
 
 func (w *cacheWarmup) run(ctx context.Context) (int, error) {
@@ -150,9 +154,10 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 					}
 					rl.Take()
 					item := items[idx]
-					err := w.processor.ProcessOperation(ctx, item)
+
+					res, err := w.processor.ProcessOperation(ctx, item)
 					if err != nil {
-						w.log.Error("Failed to process operation, skipping",
+						w.log.Warn("Failed to process operation, skipping",
 							zap.Error(err),
 							zap.String("client_name", item.Client.Name),
 							zap.String("client_version", item.Client.Version),
@@ -160,6 +165,11 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 							zap.String("operation_name", item.Request.OperationName),
 						)
 					}
+
+					if err == nil && w.afterOperation != nil {
+						w.afterOperation(res)
+					}
+
 					select {
 					case <-done:
 						return
@@ -188,32 +198,44 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 }
 
 type CacheWarmupPlanningProcessorOptions struct {
-	OperationProcessor *OperationProcessor
-	OperationPlanner   *OperationPlanner
-	ComplexityLimits   *config.ComplexityLimits
-	RouterSchema       *ast.Document
-	TrackSchemaUsage   bool
+	OperationProcessor        *OperationProcessor
+	OperationPlanner          *OperationPlanner
+	ComplexityLimits          *config.ComplexityLimits
+	RouterSchema              *ast.Document
+	TrackSchemaUsage          bool
+	DisableVariablesRemapping bool
 }
 
 func NewCacheWarmupPlanningProcessor(options *CacheWarmupPlanningProcessorOptions) *CacheWarmupPlanningProcessor {
 	return &CacheWarmupPlanningProcessor{
-		operationProcessor: options.OperationProcessor,
-		operationPlanner:   options.OperationPlanner,
-		complexityLimits:   options.ComplexityLimits,
-		routerSchema:       options.RouterSchema,
-		trackSchemaUsage:   options.TrackSchemaUsage,
+		operationProcessor:        options.OperationProcessor,
+		operationPlanner:          options.OperationPlanner,
+		complexityLimits:          options.ComplexityLimits,
+		routerSchema:              options.RouterSchema,
+		trackSchemaUsage:          options.TrackSchemaUsage,
+		disableVariablesRemapping: options.DisableVariablesRemapping,
 	}
 }
 
-type CacheWarmupPlanningProcessor struct {
-	operationProcessor *OperationProcessor
-	operationPlanner   *OperationPlanner
-	complexityLimits   *config.ComplexityLimits
-	routerSchema       *ast.Document
-	trackSchemaUsage   bool
+type CacheWarmupOperationPlanResult struct {
+	OperationHash string
+	OperationName string
+	OperationType string
+	ClientName    string
+	ClientVersion string
+	PlanningTime  time.Duration
 }
 
-func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, operation *nodev1.Operation) error {
+type CacheWarmupPlanningProcessor struct {
+	operationProcessor        *OperationProcessor
+	operationPlanner          *OperationPlanner
+	complexityLimits          *config.ComplexityLimits
+	routerSchema              *ast.Document
+	trackSchemaUsage          bool
+	disableVariablesRemapping bool
+}
+
+func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, operation *nodev1.Operation) (*CacheWarmupOperationPlanResult, error) {
 
 	var (
 		isAPQ bool
@@ -221,14 +243,14 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 
 	k, err := c.operationProcessor.NewIndependentKit()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var s []byte
 	if operation.Request.GetExtensions() != nil {
 		s, err = protojson.Marshal(operation.Request.GetExtensions())
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -248,44 +270,44 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 
 	err = k.unmarshalOperation()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = k.ComputeOperationSha256()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if k.parsedOperation.IsPersistedOperation {
 		_, isAPQ, err = k.FetchPersistedOperation(ctx, item.Client)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	err = k.Parse()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	_, err = k.NormalizeOperation(item.Client.Name, isAPQ)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = k.NormalizeVariables()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = k.RemapVariables()
+	err = k.RemapVariables(c.disableVariablesRemapping)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	_, err = k.Validate(true, k.parsedOperation.RemapVariables)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if c.complexityLimits != nil {
@@ -316,13 +338,22 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 
 	opContext.variables, err = astjson.ParseBytes(k.parsedOperation.Request.Variables)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	planningStart := time.Now()
 
 	err = c.operationPlanner.plan(opContext, planOptions)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &CacheWarmupOperationPlanResult{
+		OperationHash: strconv.FormatUint(k.parsedOperation.ID, 10),
+		OperationName: k.parsedOperation.Request.OperationName,
+		OperationType: k.parsedOperation.Type,
+		ClientName:    item.Client.Name,
+		ClientVersion: item.Client.Version,
+		PlanningTime:  time.Since(planningStart),
+	}, nil
 }

@@ -41,11 +41,11 @@ const SubGraphsPage: NextPageWithLayout = () => {
     if (tab === "featureSubgraphs") {
       const fuse = new Fuse(graphData.featureSubgraphs, {
         keys: ["name"],
-        minMatchCharLength: 1,
+        useExtendedSearch: true,
       });
 
       const searchedFetaureSubgraphs = search
-        ? fuse.search(search).map(({ item }) => item)
+        ? fuse.search(`'${search}`).map(({ item }) => item)
         : graphData.featureSubgraphs;
 
       setTotalCount(searchedFetaureSubgraphs.length);
@@ -55,11 +55,12 @@ const SubGraphsPage: NextPageWithLayout = () => {
     } else {
       const fuse = new Fuse(graphData.subgraphs, {
         keys: ["name", "id"],
-        minMatchCharLength: 1,
+        useExtendedSearch: true,
       });
 
+      // https://www.fusejs.io/examples.html#default-weight:~:text=%23-,Extended%20Search,-This%20form%20of
       const searchedSubgraphs = search
-        ? fuse.search(search).map(({ item }) => item)
+        ? fuse.search(`'${search}`).map(({ item }) => item)
         : graphData.subgraphs;
 
       setTotalCount(searchedSubgraphs.length);

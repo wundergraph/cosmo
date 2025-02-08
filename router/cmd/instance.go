@@ -55,47 +55,9 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 	cfg := params.Config
 	logger := params.Logger
 
-	var authenticators []authentication.Authenticator
-	for i, auth := range cfg.Authentication.Providers {
-		if auth.JWKS != nil {
-			name := auth.Name
-			if name == "" {
-				name = fmt.Sprintf("jwks-#%d", i)
-			}
-			providerLogger := logger.With(zap.String("provider_name", name))
-			tokenDecoder, err := authentication.NewJwksTokenDecoder(ctx, providerLogger, auth.JWKS.URL, auth.JWKS.RefreshInterval)
-			if err != nil {
-				providerLogger.Error("Could not create JWKS token decoder", zap.Error(err))
-				return nil, err
-			}
-			opts := authentication.HttpHeaderAuthenticatorOptions{
-				Name:                name,
-				URL:                 auth.JWKS.URL,
-				HeaderNames:         auth.JWKS.HeaderNames,
-				HeaderValuePrefixes: auth.JWKS.HeaderValuePrefixes,
-				TokenDecoder:        tokenDecoder,
-			}
-			authenticator, err := authentication.NewHttpHeaderAuthenticator(opts)
-			if err != nil {
-				providerLogger.Error("Could not create HttpHeader authenticator", zap.Error(err))
-				return nil, err
-			}
-			authenticators = append(authenticators, authenticator)
-
-			if cfg.WebSocket.Authentication.FromInitialPayload.Enabled {
-				opts := authentication.WebsocketInitialPayloadAuthenticatorOptions{
-					TokenDecoder:        tokenDecoder,
-					Key:                 cfg.WebSocket.Authentication.FromInitialPayload.Key,
-					HeaderValuePrefixes: auth.JWKS.HeaderValuePrefixes,
-				}
-				authenticator, err = authentication.NewWebsocketInitialPayloadAuthenticator(opts)
-				if err != nil {
-					providerLogger.Error("Could not create WebsocketInitialPayload authenticator", zap.Error(err))
-					return nil, err
-				}
-				authenticators = append(authenticators, authenticator)
-			}
-		}
+	authenticators, err := setupAuthenticators(ctx, logger, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("could not setup authenticators: %w", err)
 	}
 
 	options := []core.Option{
@@ -114,6 +76,7 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 		core.WithGraphQLPath(cfg.GraphQLPath),
 		core.WithModulesConfig(cfg.Modules),
 		core.WithGracePeriod(cfg.GracePeriod),
+		core.WithPlaygroundConfig(cfg.PlaygroundConfig),
 		core.WithPlaygroundPath(cfg.PlaygroundPath),
 		core.WithHealthCheckPath(cfg.HealthCheckPath),
 		core.WithLivenessCheckPath(cfg.LivenessCheckPath),
@@ -264,6 +227,85 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 	}
 
 	return core.NewRouter(options...)
+}
+
+func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Config) ([]authentication.Authenticator, error) {
+	jwtConf := cfg.Authentication.JWT
+	if len(jwtConf.JWKS) == 0 {
+		// No JWT authenticators configured
+		return nil, nil
+	}
+
+	var authenticators []authentication.Authenticator
+	configs := make([]authentication.JWKSConfig, 0, len(jwtConf.JWKS))
+
+	for _, jwks := range cfg.Authentication.JWT.JWKS {
+		configs = append(configs, authentication.JWKSConfig{
+			URL:               jwks.URL,
+			RefreshInterval:   jwks.RefreshInterval,
+			AllowedAlgorithms: jwks.Algorithms,
+		})
+	}
+
+	tokenDecoder, err := authentication.NewJwksTokenDecoder(ctx, logger, configs)
+	if err != nil {
+		return nil, err
+	}
+
+	// create a map for the `httpHeaderAuthenticator`
+	headerSourceMap := map[string][]string{
+		jwtConf.HeaderName: {jwtConf.HeaderValuePrefix},
+	}
+
+	// The `websocketInitialPayloadAuthenticator` has one key and uses a flat list of prefixes
+	prefixSet := make(map[string]struct{})
+
+	for _, s := range jwtConf.HeaderSources {
+		if s.Type != "header" {
+			continue
+		}
+
+		for _, prefix := range s.ValuePrefixes {
+			headerSourceMap[s.Name] = append(headerSourceMap[s.Name], prefix)
+			prefixSet[prefix] = struct{}{}
+		}
+
+	}
+
+	opts := authentication.HttpHeaderAuthenticatorOptions{
+		Name:                 "jwks",
+		HeaderSourcePrefixes: headerSourceMap,
+		TokenDecoder:         tokenDecoder,
+	}
+
+	authenticator, err := authentication.NewHttpHeaderAuthenticator(opts)
+	if err != nil {
+		logger.Error("Could not create HttpHeader authenticator", zap.Error(err))
+		return nil, err
+	}
+
+	authenticators = append(authenticators, authenticator)
+
+	if cfg.WebSocket.Authentication.FromInitialPayload.Enabled {
+		headerPrefixes := make([]string, 0, len(prefixSet))
+		for prefix := range prefixSet {
+			headerPrefixes = append(headerPrefixes, prefix)
+		}
+
+		opts := authentication.WebsocketInitialPayloadAuthenticatorOptions{
+			TokenDecoder:        tokenDecoder,
+			Key:                 cfg.WebSocket.Authentication.FromInitialPayload.Key,
+			HeaderValuePrefixes: headerPrefixes,
+		}
+		authenticator, err = authentication.NewWebsocketInitialPayloadAuthenticator(opts)
+		if err != nil {
+			logger.Error("Could not create WebsocketInitialPayload authenticator", zap.Error(err))
+			return nil, err
+		}
+		authenticators = append(authenticators, authenticator)
+	}
+
+	return authenticators, nil
 }
 
 func hasProxyConfigured() bool {

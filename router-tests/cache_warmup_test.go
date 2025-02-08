@@ -1,9 +1,18 @@
 package integration
 
 import (
+	"context"
 	"net/http"
 	"testing"
 	"time"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -33,7 +42,7 @@ func TestCacheWarmup(t *testing.T) {
 		t.Run("cache warmup enabled", func(t *testing.T) {
 			t.Parallel()
 
-			const employeeQueryCount = 2
+			const employeeQueryCount = 3
 
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
@@ -74,6 +83,9 @@ func TestCacheWarmup(t *testing.T) {
 				})
 				require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
 
+				// employee operation is warmed up from the query with the inline value 2 for the id
+
+				// variable called id
 				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query:     `query m($id: Int!){ employee(id: $id) { id details { forename surname } } }`,
 					Variables: []byte(`{"id": 1}`),
@@ -81,6 +93,15 @@ func TestCacheWarmup(t *testing.T) {
 				require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
 				require.Equal(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
 
+				// variable called jensID
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query m($jensID: Int!){ employee(id: $jensID) { id details { forename surname } } }`,
+					Variables: []byte(`{"jensID": 1}`),
+				})
+				require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
+				require.Equal(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+
+				// inline value 2 - match with warmed up operation
 				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employee(id: 2) { id details { forename surname } } }`,
 				})
@@ -88,6 +109,81 @@ func TestCacheWarmup(t *testing.T) {
 				require.Equal(t, `{"data":{"employee":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}}`, res.Body)
 			})
 		})
+
+		t.Run("cache warmup enabled - variables remapping disabled", func(t *testing.T) {
+			t.Parallel()
+
+			const employeeQueryCount = 3
+
+			testenv.Run(t, &testenv.Config{
+				ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+					cfg.DisableVariablesRemapping = true
+				},
+				RouterOptions: []core.Option{
+					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+						Enabled: true,
+						Source: config.CacheWarmupSource{
+							Filesystem: &config.CacheWarmupFileSystemSource{
+								Path: "testenv/testdata/cache_warmup/simple",
+							},
+						},
+					}),
+				},
+				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
+					BaseGraphAssertions: testenv.CacheMetricsAssertion{
+						QueryNormalizationMisses: 3 + employeeWarmedQueryCount + employeeQueryCount,
+						QueryNormalizationHits:   4,
+						ValidationMisses:         5 + employeeWarmedQueryCount,
+						ValidationHits:           2 + employeeQueryCount,
+						PlanMisses:               5 + employeeWarmedQueryCount,
+						PlanHits:                 2 + employeeQueryCount,
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id } }`,
+				})
+				require.Equal(t, employeesIDData, res.Body)
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id } }`,
+				})
+				require.Equal(t, employeesIDData, res.Body)
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id details { forename } } }`,
+				})
+				require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens"}},{"id":2,"details":{"forename":"Dustin"}},{"id":3,"details":{"forename":"Stefan"}},{"id":4,"details":{"forename":"Björn"}},{"id":5,"details":{"forename":"Sergiy"}},{"id":7,"details":{"forename":"Suvij"}},{"id":8,"details":{"forename":"Nithin"}},{"id":10,"details":{"forename":"Eelco"}},{"id":11,"details":{"forename":"Alexandra"}},{"id":12,"details":{"forename":"David"}}]}}`, res.Body)
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id details { forename surname } } }`,
+				})
+				require.Equal(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, res.Body)
+
+				// employee operation is warmed up from the query with the inline value 2 for the id
+
+				// variable called id
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query m($id: Int!){ employee(id: $id) { id details { forename surname } } }`,
+					Variables: []byte(`{"id": 1}`),
+				})
+				require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
+				require.Equal(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+
+				// variable called jensID
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query m($jensID: Int!){ employee(id: $jensID) { id details { forename surname } } }`,
+					Variables: []byte(`{"jensID": 1}`),
+				})
+				require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
+				require.Equal(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+
+				// inline value 2 - match with warmed up operation
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employee(id: 2) { id details { forename surname } } }`,
+				})
+				require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
+				require.Equal(t, `{"data":{"employee":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}}`, res.Body)
+			})
+		})
+
 		t.Run("cache warmup invalid files", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
@@ -559,6 +655,124 @@ func TestCacheWarmup(t *testing.T) {
 				require.Equal(t, res.Response.Header.Get("X-Feature-Flag"), "myff")
 				require.JSONEq(t, `{"data":{"employees":[{"id":1,"productCount":5},{"id":2,"productCount":2},{"id":3,"productCount":2},{"id":4,"productCount":3},{"id":5,"productCount":2},{"id":7,"productCount":0},{"id":8,"productCount":2},{"id":10,"productCount":3},{"id":11,"productCount":1},{"id":12,"productCount":4}]}}`, res.Body)
 			})
+		})
+	})
+}
+
+func TestCacheWarmupMetrics(t *testing.T) {
+	t.Run("should emit planning times metrics during warmup", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
+			RouterOptions: []core.Option{
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled: true,
+					Source: config.CacheWarmupSource{
+						Filesystem: &config.CacheWarmupFileSystemSource{
+							Path: "testenv/testdata/cache_warmup/single",
+						},
+					},
+				}),
+			},
+			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+				routerConfig.FeatureFlagConfigs = nil
+			},
+			AssertCacheMetrics: &testenv.CacheMetricsAssertions{
+				BaseGraphAssertions: testenv.CacheMetricsAssertion{
+					QueryNormalizationMisses: 1,
+					QueryNormalizationHits:   2,
+					ValidationMisses:         1,
+					ValidationHits:           2,
+					PlanMisses:               1,
+					PlanHits:                 2,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
+			require.Equal(t, employeesIDData, res.Body)
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
+
+			rm := metricdata.ResourceMetrics{}
+			err := metricReader.Collect(context.Background(), &rm)
+
+			require.NoError(t, err)
+			require.Len(t, rm.ScopeMetrics, 2)
+
+			metricScope := GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			require.NotNil(t, metricScope)
+
+			require.Len(t, metricScope.Metrics, 6)
+
+			operationPlanningTimeMetric := metricdata.Metrics{
+				Name:        "router.graphql.operation.planning_time",
+				Description: "Operation planning time in milliseconds",
+				Unit:        "ms",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(
+								otel.WgClientName.String(""),
+								otel.WgClientVersion.String(""),
+								// This is a miss, because we just planned it
+								otel.WgEnginePlanCacheHit.Bool(false),
+								otel.WgFeatureFlag.String(""),
+								otel.WgOperationHash.String("1163600561566987607"),
+								otel.WgOperationName.String(""),
+								otel.WgOperationType.String("query"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Count: 1,
+						},
+						{
+							Attributes: attribute.NewSet(
+								otel.WgClientName.String("unknown"),
+								otel.WgClientVersion.String("missing"),
+								// This is a hit, because we planned it for the base graph
+								otel.WgEnginePlanCacheHit.Bool(true),
+								otel.WgOperationHash.String("1163600561566987607"),
+								otel.WgOperationName.String(""),
+								otel.WgOperationProtocol.String("http"),
+								otel.WgOperationType.String("query"),
+								otel.WgRouterClusterName.String(""),
+								otel.WgFederatedGraphID.String("graph"),
+								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
+								otel.WgRouterVersion.String("dev"),
+							),
+							Count: 2,
+						},
+					},
+				},
+			}
+
+			m := *GetMetricByName(metricScope, "router.graphql.operation.planning_time")
+
+			// One when warming up the operation and one when executing the operation
+			require.Len(t, m.Data.(metricdata.Histogram[float64]).DataPoints, 2)
+
+			// Warming up the operation
+			require.Equal(t, m.Data.(metricdata.Histogram[float64]).DataPoints[0].Count, uint64(1))
+
+			// Executing the operation. Is exported as an aggregated value
+			require.Equal(t, m.Data.(metricdata.Histogram[float64]).DataPoints[1].Count, uint64(2))
+
+			// Ensure we collected non-zero planning times
+			require.Greater(t, m.Data.(metricdata.Histogram[float64]).DataPoints[0].Sum, float64(0))
+			require.Greater(t, m.Data.(metricdata.Histogram[float64]).DataPoints[1].Sum, float64(0))
+
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, m, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
 }

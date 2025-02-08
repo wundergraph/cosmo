@@ -1,4 +1,4 @@
-import { ConstDirectiveNode, DocumentNode, GraphQLSchema } from 'graphql';
+import { ConstDirectiveNode, DocumentNode, GraphQLSchema, StringValueNode } from 'graphql';
 import {
   ConfigurationData,
   FieldConfiguration,
@@ -264,5 +264,16 @@ export function newContractTagOptionsFromArrays(
   return {
     tagNamesToExclude: new Set<string>(tagNamesToExclude),
     tagNamesToInclude: new Set<string>(tagNamesToInclude),
+  };
+}
+
+export function getDescriptionFromString(description: string): StringValueNode | undefined {
+  if (!description) {
+    return;
+  }
+  return {
+    block: true,
+    kind: Kind.STRING,
+    value: description,
   };
 }
