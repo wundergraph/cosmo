@@ -22,21 +22,10 @@ import (
 	"github.com/klauspost/compress/gzip"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/wundergraph/cosmo/router/internal/expr"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel/attribute"
-	otelmetric "go.opentelemetry.io/otel/metric"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	oteltrace "go.opentelemetry.io/otel/trace"
-	"go.uber.org/atomic"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"golang.org/x/exp/maps"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
-
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/batch"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 	rmiddleware "github.com/wundergraph/cosmo/router/internal/middleware"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
@@ -53,6 +42,16 @@ import (
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
+	otelmetric "go.opentelemetry.io/otel/metric"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	oteltrace "go.opentelemetry.io/otel/trace"
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"golang.org/x/exp/maps"
 )
 
 const (
@@ -242,7 +241,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		}
 
 		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
-		cr.Handle(r.graphqlPath, multiGraphHandler)
+		cr.Handle(r.graphqlPath, batch.Batch()(multiGraphHandler))
 
 		if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled && r.webSocketConfiguration.AbsintheProtocol.Enabled {
 			// Mount the Absinthe protocol handler for WebSockets
@@ -276,7 +275,7 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 
 	featureFlagToMux := make(map[string]*chi.Mux, len(featureFlagConfigs))
 
-	// Build all the muxes for the feature flags in serial to avoid any race conditions
+	// Build all the muxes for the feature flags in serial to avoid any race conditions.
 	for featureFlagName, executionConfig := range featureFlagConfigs {
 		gm, err := s.buildGraphMux(ctx,
 			featureFlagName,
@@ -297,20 +296,20 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 
 		ff := strings.TrimSpace(r.Header.Get(featureFlagHeader))
 		if ff == "" {
-			cookie, err := r.Cookie(featureFlagCookie)
-			if err == nil && cookie != nil {
+			if cookie, err := r.Cookie(featureFlagCookie); err == nil && cookie != nil {
 				ff = strings.TrimSpace(cookie.Value)
 			}
 		}
 
+		var muxHandler http.HandlerFunc
 		if mux, ok := featureFlagToMux[ff]; ok {
 			w.Header().Set(featureFlagHeader, ff)
-			mux.ServeHTTP(w, r)
-			return
+			muxHandler = mux.ServeHTTP
+		} else {
+			muxHandler = baseMux.ServeHTTP
 		}
 
-		// Fall back to the base composition
-		baseMux.ServeHTTP(w, r)
+		muxHandler(w, r)
 	}, nil
 }
 
