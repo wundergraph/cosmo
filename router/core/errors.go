@@ -242,7 +242,7 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 // writeMultipartError writes the error response in a multipart format with proper boundaries and headers.
 func writeMultipartError(w http.ResponseWriter, requestErrors graphqlerrors.RequestErrors, requestLogger *zap.Logger) error {
 	// Start with the multipart boundary
-	prefix := GetWriterPrefix(false, true)
+	prefix := GetWriterPrefix(false, true, true)
 	if _, err := w.Write([]byte(prefix)); err != nil {
 		return err
 	}

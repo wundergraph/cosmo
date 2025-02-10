@@ -22,6 +22,7 @@ const (
 	sseMimeType          = "text/event-stream"
 	heartbeat            = "{}"
 	multipartContent     = multipartMime + "; boundary=" + multipartBoundary
+	multipartStart       = "\r\n--" + multipartBoundary
 )
 
 type HttpFlushWriter struct {
@@ -33,6 +34,7 @@ type HttpFlushWriter struct {
 	sse           bool
 	multipart     bool
 	buf           *bytes.Buffer
+	firstMessage  bool
 }
 
 func (f *HttpFlushWriter) Complete() {
@@ -43,7 +45,7 @@ func (f *HttpFlushWriter) Complete() {
 		_, _ = f.writer.Write([]byte("event: complete"))
 	} else if f.multipart {
 		// Write the final boundary in the multipart response
-		_, _ = f.writer.Write([]byte("--" + multipartBoundary + "--\n"))
+		_, _ = f.writer.Write([]byte("--\n"))
 	}
 	f.Close()
 }
@@ -72,7 +74,10 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	resp := f.buf.Bytes()
 	f.buf.Reset()
 
-	flushBreak := GetWriterPrefix(f.sse, f.multipart)
+	flushBreak := GetWriterPrefix(f.sse, f.multipart, f.firstMessage)
+	if f.firstMessage {
+		f.firstMessage = false
+	}
 	if f.multipart && len(resp) > 0 {
 		var err error
 		resp, err = wrapMultipartMessage(resp)
@@ -83,7 +88,7 @@ func (f *HttpFlushWriter) Flush() (err error) {
 
 	separation := "\n\n"
 	if f.multipart {
-		separation = "\n"
+		separation = "\n" + multipartStart
 	} else if f.subscribeOnce {
 		separation = ""
 	}
@@ -125,6 +130,7 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 		multipart:     wgParams.UseMultipart,
 		subscribeOnce: wgParams.SubscribeOnce,
 		buf:           &bytes.Buffer{},
+		firstMessage:  true,
 	}
 
 	flushWriter.ctx, flushWriter.cancel = context.WithCancel(ctx.Context())
@@ -231,12 +237,16 @@ type SubscriptionParams struct {
 	UseMultipart  bool
 }
 
-func GetWriterPrefix(sse bool, multipart bool) string {
+func GetWriterPrefix(sse bool, multipart bool, firstMessage bool) string {
 	flushBreak := ""
 	if sse {
 		flushBreak = "event: next\ndata: "
 	} else if multipart {
-		flushBreak = "\r\n--" + multipartBoundary + "\nContent-Type: " + jsonContent + "\r\n\r\n"
+		messageStart := ""
+		if firstMessage {
+			messageStart = multipartStart
+		}
+		flushBreak = messageStart + "\nContent-Type: " + jsonContent + "\r\n\r\n"
 	}
 
 	return flushBreak
