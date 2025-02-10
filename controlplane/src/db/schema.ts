@@ -732,7 +732,6 @@ export const schemaChecks = pgTable(
     hasGraphPruningErrors: boolean('has_graph_pruning_errors').default(false),
     hasClientTraffic: boolean('has_client_traffic').default(false),
     clientTrafficCheckSkipped: boolean('client_traffic_check_skipped').default(false),
-    changeDetectionSkipped: boolean('change_detection_skipped').default(false),
     lintSkipped: boolean('lint_skipped'),
     graphPruningSkipped: boolean('graph_pruning_skipped'),
     proposedSubgraphSchemaSDL: text('proposed_subgraph_schema_sdl'),
@@ -814,6 +813,7 @@ export const schemaCheckFederatedGraphs = pgTable(
     hasBreakingChanges: boolean('has_breaking_changes').default(false),
     hasGraphPruningErrors: boolean('has_graph_pruning_errors').default(false),
     hasClientTraffic: boolean('has_client_traffic').default(false),
+    changeDetectionSkipped: boolean('change_detection_skipped').default(false),
   },
   (t) => {
     return {

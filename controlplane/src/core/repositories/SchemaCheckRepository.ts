@@ -73,6 +73,7 @@ export class SchemaCheckRepository {
     hasClientTraffic?: boolean;
     hasBreakingChanges?: boolean;
     hasGraphPruningErrors?: boolean;
+    changeDetectionSkipped?: boolean;
   }) {
     return this.db
       .update(schemaCheckFederatedGraphs)
@@ -81,6 +82,7 @@ export class SchemaCheckRepository {
         hasBreakingChanges: data.hasBreakingChanges,
         hasClientTraffic: data.hasClientTraffic,
         hasGraphPruningErrors: data.hasGraphPruningErrors,
+        changeDetectionSkipped: data.changeDetectionSkipped,
       })
       .where(
         and(

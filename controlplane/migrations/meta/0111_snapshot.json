@@ -1,5 +1,5 @@
 {
-  "id": "c08cf55d-e6f4-45b6-8a24-72cb594368df",
+  "id": "3bedb05d-2f34-478e-bdd7-2073cb2762f2",
   "prevId": "3df57b8c-c6a3-4c65-bcaa-b34fd22ac23c",
   "version": "7",
   "dialect": "postgresql",
@@ -4865,13 +4865,6 @@
           "notNull": false,
           "default": false
         },
-        "has_lint_errors": {
-          "name": "has_lint_errors",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
         "has_graph_pruning_errors": {
           "name": "has_graph_pruning_errors",
           "type": "boolean",
@@ -4881,6 +4874,13 @@
         },
         "has_client_traffic": {
           "name": "has_client_traffic",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "change_detection_skipped": {
+          "name": "change_detection_skipped",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,

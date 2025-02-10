@@ -32,6 +32,7 @@ import {
   collectOperationUsageStats,
 } from '../../services/SchemaUsageTrafficInspector.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { directiveChangeTypes } from '../../../core/constants.js';
 
 export function checkSubgraphSchema(
   opts: RouterOptions,
@@ -253,6 +254,33 @@ export function checkSubgraphSchema(
     };
     const inspectedOperations: InspectorOperationResult[] = [];
 
+    const subgraphSchemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL);
+    if (subgraphSchemaChanges.kind === 'failure') {
+      logger.warn(`Error finding diff between graphs: ${subgraphSchemaChanges.error}`);
+      return {
+        response: {
+          code: subgraphSchemaChanges.errorCode,
+          details: subgraphSchemaChanges.errorMessage,
+        },
+        breakingChanges: [],
+        nonBreakingChanges: [],
+        compositionErrors: [],
+        checkId: schemaCheckID,
+        checkedFederatedGraphs: [],
+        lintWarnings: [],
+        lintErrors: [],
+        graphPruneWarnings: [],
+        graphPruneErrors: [],
+        compositionWarnings: [],
+      };
+    }
+
+    const directiveBasedSubgraphSchemaChanges = subgraphSchemaChanges.changes.filter((change) =>
+      directiveChangeTypes.has(change.changeType),
+    );
+    const breakingDirectiveChanges = directiveBasedSubgraphSchemaChanges.filter((change) => change.isBreaking);
+    const nonBreakingDirectiveChanges = directiveBasedSubgraphSchemaChanges.filter((change) => !change.isBreaking);
+
     for (const composition of compositionResult.compositions) {
       await schemaCheckRepo.createCheckedFederatedGraph(schemaCheckID, composition.id, limit);
 
@@ -275,7 +303,12 @@ export function checkSubgraphSchema(
       }
 
       if (composition.errors.length > 0 || !composition.composedSchema) {
-        // update schema check to show that diff is not performed.
+        // update schema check to show that diff is not performed for this federated graph.
+        await schemaCheckRepo.updateCheckFederatedGraphs({
+          schemaCheckID,
+          federatedGraphId: composition.id,
+          changeDetectionSkipped: true,
+        });
         continue;
       }
 
@@ -308,7 +341,7 @@ export function checkSubgraphSchema(
       }
 
       schemaChanges.breakingChanges.push(
-        ...schemaChangesByFedGraph.breakingChanges.map((change) => {
+        ...[...schemaChangesByFedGraph.breakingChanges, ...breakingDirectiveChanges].map((change) => {
           return new SchemaChange({
             ...change,
             federatedGraphId: composition.id,
@@ -318,7 +351,7 @@ export function checkSubgraphSchema(
       );
 
       schemaChanges.nonBreakingChanges.push(
-        ...schemaChangesByFedGraph.breakingChanges.map((change) => {
+        ...[...schemaChangesByFedGraph.nonBreakingChanges, ...nonBreakingDirectiveChanges].map((change) => {
           return new SchemaChange({
             ...change,
             federatedGraphId: composition.id,
@@ -421,8 +454,6 @@ export function checkSubgraphSchema(
       rangeInDays: limit,
     });
 
-    // Update the overall schema check with the results
-
     if (req.gitInfo && opts.githubApp) {
       try {
         const githubRepo = new GitHubRepository(opts.db, opts.githubApp);
@@ -447,8 +478,26 @@ export function checkSubgraphSchema(
       response: {
         code: EnumStatusCode.OK,
       },
-      breakingChanges: schemaChanges.breakingChanges,
-      nonBreakingChanges: schemaChanges.nonBreakingChanges,
+      breakingChanges: [
+        ...schemaChanges.breakingChanges,
+        ...breakingDirectiveChanges.map((change) => {
+          return new SchemaChange({
+            ...change,
+            federatedGraphId: '',
+            federatedGraphName: '',
+          });
+        }),
+      ],
+      nonBreakingChanges: [
+        ...schemaChanges.nonBreakingChanges,
+        ...nonBreakingDirectiveChanges.map((change) => {
+          return new SchemaChange({
+            ...change,
+            federatedGraphId: '',
+            federatedGraphName: '',
+          });
+        }),
+      ],
       operationUsageStats: collectOperationUsageStats(inspectedOperations),
       compositionErrors,
       checkId: schemaCheckID,
