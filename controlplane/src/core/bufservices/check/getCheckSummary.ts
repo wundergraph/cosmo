@@ -72,7 +72,11 @@ export function getCheckSummary(
     }
 
     const check = await subgraphRepo.checkById({ id: req.checkId, federatedGraphTargetId: graph.targetId });
-    const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
+    const checkDetails = await subgraphRepo.checkDetails({
+      id: req.checkId,
+      federatedTargetID: graph.targetId,
+      federatedGraphID: graph.id,
+    });
 
     if (!check || !checkDetails) {
       return {
@@ -107,7 +111,11 @@ export function getCheckSummary(
       check,
       affectedGraphs: check.affectedGraphs,
       proposedSubgraphSchemaSDL: check.proposedSubgraphSchemaSDL,
-      changes: checkDetails.changes,
+      changes: checkDetails.changes.map((change) => ({
+        ...change,
+        federatedGraphId: graph.id,
+        federatedGraphName: graph.name,
+      })),
       compositionErrors: checkDetails.compositionErrors,
       trafficCheckDays,
       lintIssues,

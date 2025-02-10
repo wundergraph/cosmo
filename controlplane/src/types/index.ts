@@ -190,7 +190,7 @@ export interface SchemaCheckDetailsDTO {
     id: string;
     changeType: string;
     message: string;
-    path?: string;
+    path: string;
     isBreaking: boolean;
   }[];
   compositionErrors: string[];

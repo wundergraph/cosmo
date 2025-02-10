@@ -56,7 +56,11 @@ export function toggleChangeOverridesForAllOperations(
       const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId({
         checkId: req.checkId,
       });
-      const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
+      const checkDetails = await subgraphRepo.checkDetails({
+        id: req.checkId,
+        federatedTargetID: graph.targetId,
+        federatedGraphID: graph.id,
+      });
 
       if (!checkDetails) {
         throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Could not find details of requested check`);

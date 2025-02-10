@@ -985,7 +985,15 @@ export class SubgraphRepository {
     };
   }
 
-  public async checkDetails(id: string, federatedTargetID: string): Promise<SchemaCheckDetailsDTO | undefined> {
+  public async checkDetails({
+    id,
+    federatedGraphID,
+    federatedTargetID,
+  }: {
+    id: string;
+    federatedGraphID: string;
+    federatedTargetID: string;
+  }): Promise<SchemaCheckDetailsDTO | undefined> {
     const changes = await this.db.query.schemaCheckChangeAction.findMany({
       columns: {
         id: true,
@@ -994,7 +1002,10 @@ export class SubgraphRepository {
         path: true,
         isBreaking: true,
       },
-      where: eq(schema.schemaCheckChangeAction.schemaCheckId, id),
+      where: and(
+        eq(schema.schemaCheckChangeAction.schemaCheckId, id),
+        eq(schema.schemaCheckChangeAction.federatedGraphId, federatedGraphID),
+      ),
     });
 
     const errorList = await this.db.query.schemaCheckComposition.findMany({
@@ -1027,7 +1038,7 @@ export class SubgraphRepository {
         id: c.id,
         changeType: c.changeType ?? '',
         message: c.changeMessage ?? '',
-        path: c.path ?? undefined,
+        path: c.path ?? '',
         isBreaking: c.isBreaking ?? false,
       })),
       compositionErrors,

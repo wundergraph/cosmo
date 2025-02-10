@@ -44,7 +44,11 @@ export function getCheckOperations(
     }
 
     const check = await subgraphRepo.checkById({ id: req.checkId, federatedGraphTargetId: graph.targetId });
-    const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
+    const checkDetails = await subgraphRepo.checkDetails({
+      id: req.checkId,
+      federatedTargetID: graph.targetId,
+      federatedGraphID: graph.id,
+    });
 
     if (!check || !checkDetails) {
       return {
@@ -110,6 +114,8 @@ export function getCheckOperations(
             hasOverride: overrides.some(
               (o) => o.hash === operation.hash && o.changeType === c.changeType && o.path === c.path,
             ),
+            federatedGraphId: graph.id,
+            federatedGraphName: graph.name,
           })),
         hasIgnoreAllOverride: ignoreAllOverrides.some((io) => io.hash === operation.hash),
       })),
