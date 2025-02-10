@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/redis/go-redis/v9"
 	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
@@ -14,23 +15,23 @@ import (
 
 var (
 	_ pubsub_datasource.RedisConnector = (*connector)(nil)
-	_ pubsub_datasource.Redis          = (*redisPubSub)(nil)
+	_ pubsub_datasource.RedisPubSub    = (*redisPubSub)(nil)
 	_ pubsub.Lifecycle                 = (*redisPubSub)(nil)
 )
 
 type connector struct {
-	conn   rd.RDCloser
+	conn   redis.UniversalClient
 	logger *zap.Logger
 }
 
-func New(logger *zap.Logger, conn rd.RDCloser) pubsub_datasource.RedisConnector {
+func NewConnector(logger *zap.Logger, conn redis.UniversalClient) pubsub_datasource.RedisConnector {
 	return &connector{
 		conn:   conn,
 		logger: logger,
 	}
 }
 
-func (c *connector) New(ctx context.Context) pubsub_datasource.Redis {
+func (c *connector) New(ctx context.Context) pubsub_datasource.RedisPubSub {
 	return &redisPubSub{
 		ctx:     ctx,
 		conn:    c.conn,
@@ -101,7 +102,7 @@ func (p *redisPubSub) Publish(ctx context.Context, event pubsub_datasource.Redis
 	intCmd := p.conn.Publish(ctx, event.Channel, data)
 	if intCmd.Err() != nil {
 		log.Error("publish error", zap.Error(intCmd.Err()))
-		return pubsub.NewError(fmt.Sprintf("error publishing to Redis PubSub channel %s", event.Channel), intCmd.Err())
+		return pubsub.NewError(fmt.Sprintf("error publishing to RedisPubSub PubSub channel %s", event.Channel), intCmd.Err())
 	}
 
 	return nil

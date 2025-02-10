@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -59,16 +60,15 @@ import (
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
-
-	_ "embed"
 )
 
 var ErrEnvironmentClosed = errors.New("test environment closed")
 
 const (
-	natsDefaultSourceName = "default"
-	myNatsProviderID      = "my-nats"
-	myKafkaProviderID     = "my-kafka"
+	natsDefaultSourceName  = "default"
+	myNatsProviderID       = "my-nats"
+	myKafkaProviderID      = "my-kafka"
+	redisDefaultSourceName = "default"
 )
 
 var (
@@ -80,8 +80,11 @@ var (
 	ConfigWithEdfsKafkaJSONTemplate string
 	//go:embed testdata/configWithEdfsNats.json
 	ConfigWithEdfsNatsJSONTemplate string
-	demoNatsProviders              = []string{natsDefaultSourceName, myNatsProviderID}
-	demoKafkaProviders             = []string{myKafkaProviderID}
+	//go:embed testdata/configWithEdfsRedis.json
+	ConfigWithEdfsRedisJSONTemplate string
+	demoNatsProviders               = []string{natsDefaultSourceName, myNatsProviderID}
+	demoKafkaProviders              = []string{myKafkaProviderID}
+	demoRedisProviders              = []string{redisDefaultSourceName}
 )
 
 func init() {
@@ -813,6 +816,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 	natsEventSources := make([]config.NatsEventSource, len(demoNatsProviders))
 	kafkaEventSources := make([]config.KafkaEventSource, len(demoKafkaProviders))
+	redisEventSources := make([]config.RedisEventSource, len(demoRedisProviders))
 
 	if natsData != nil {
 		for _, sourceName := range demoNatsProviders {
@@ -828,11 +832,18 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			Brokers: testConfig.KafkaSeeds,
 		})
 	}
+	for _, sourceName := range demoRedisProviders {
+		redisEventSources = append(redisEventSources, config.RedisEventSource{
+			ID:   sourceName,
+			URLs: []string{"redis://localhost:6379"},
+		})
+	}
 
 	eventsConfiguration := config.EventsConfiguration{
 		Providers: config.EventProviders{
 			Nats:  natsEventSources,
 			Kafka: kafkaEventSources,
+			Redis: redisEventSources,
 		},
 	}
 	if testConfig.ModifyEventsConfiguration != nil {

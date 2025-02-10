@@ -20,6 +20,8 @@ import (
 	"github.com/klauspost/compress/gzip"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
+	redisClient "github.com/redis/go-redis/v9"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/redis"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -68,6 +70,7 @@ type (
 	EnginePubSubProviders struct {
 		nats  map[string]pubsub_datasource.NatsPubSub
 		kafka map[string]pubsub_datasource.KafkaPubSub
+		redis map[string]pubsub_datasource.RedisPubSub
 	}
 
 	// graphServer is the swappable implementation of a Graph instance which is an HTTP mux with middlewares.
@@ -129,6 +132,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		pubSubProviders: &EnginePubSubProviders{
 			nats:  map[string]pubsub_datasource.NatsPubSub{},
 			kafka: map[string]pubsub_datasource.KafkaPubSub{},
+			redis: map[string]pubsub_datasource.RedisPubSub{},
 		},
 	}
 
@@ -1200,6 +1204,40 @@ func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig
 			_, ok = s.pubSubProviders.kafka[providerID]
 			if !ok {
 				return fmt.Errorf("failed to find Kafka provider with ID \"%s\". Ensure the provider definition is part of the config", providerID)
+			}
+		}
+
+		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetRedis() {
+
+			providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
+			// if this source name's provider has already been initiated, do not try to initiate again
+			_, ok := s.pubSubProviders.redis[providerID]
+			if ok {
+				continue
+			}
+
+			for _, eventSource := range routerEngineCfg.Events.Providers.Redis {
+				if eventSource.ID == providerID {
+					if len(eventSource.URLs) == 0 {
+						return fmt.Errorf("no URLs provided for Redis provider with ID \"%s\"", providerID)
+					}
+					// TODO: fix URL parsing for cluster
+					urlEncodedOpts, err := redisClient.ParseURL(eventSource.URLs[0])
+					if err != nil {
+						return fmt.Errorf("failed to parse the redis connection url: %w", err)
+					}
+					client := redisClient.NewClient(urlEncodedOpts)
+					ps := redis.NewConnector(s.logger, client)
+
+					s.pubSubProviders.redis[providerID] = ps.New(ctx)
+
+					break
+				}
+			}
+
+			_, ok = s.pubSubProviders.redis[providerID]
+			if !ok {
+				return fmt.Errorf("failed to find Redis provider with ID \"%s\". Ensure the provider definition is part of the config", providerID)
 			}
 		}
 

@@ -3,6 +3,12 @@ package testenv
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/hashicorp/consul/sdk/freeport"
 	natsserver "github.com/nats-io/nats-server/v2/server"
@@ -13,11 +19,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/kafka"
 	"github.com/testcontainers/testcontainers-go/wait"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"os"
-	"path/filepath"
-	"sync"
-	"testing"
-	"time"
 )
 
 var (
@@ -177,6 +178,13 @@ func addPubSubPrefixToEngineConfiguration(engineConfig *nodev1.EngineConfigurati
 					prefixedTopics = append(prefixedTopics, getPubSubName(subject))
 				}
 				customEvents.Kafka[kafkaConfig].Topics = prefixedTopics
+			}
+			for redisConfig := range customEvents.Redis {
+				var prefixedChannels []string
+				for _, channel := range customEvents.Redis[redisConfig].Channels {
+					prefixedChannels = append(prefixedChannels, getPubSubName(channel))
+				}
+				customEvents.Redis[redisConfig].Channels = prefixedChannels
 			}
 		}
 	}
