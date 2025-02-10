@@ -504,12 +504,6 @@
       "Enabled": false,
       "Condition": ""
     },
-    "Safelist": {
-      "Enabled": true
-    },
-    "LogUnknownOperations": {
-      "Enabled": true
-    },
     "ComplexityCalculationCache": {
       "Enabled": true,
       "CacheSize": 1024
@@ -662,6 +656,10 @@
     }
   },
   "PersistedOperationsConfig": {
+    "LogUnknownOperations": true,
+    "Safelist": {
+      "Enabled": true
+    },
     "Cache": {
       "Size": 100000000
     },

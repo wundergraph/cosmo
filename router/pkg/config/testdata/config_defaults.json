@@ -260,12 +260,6 @@
       "Enabled": false,
       "Condition": ""
     },
-    "Safelist": {
-      "Enabled": false
-    },
-    "LogUnknownOperations": {
-      "Enabled": false
-    },
     "ComplexityCalculationCache": null,
     "ComplexityLimits": null,
     "DepthLimit": null
@@ -375,6 +369,10 @@
     }
   },
   "PersistedOperationsConfig": {
+    "LogUnknownOperations": false,
+    "Safelist": {
+      "Enabled": false
+    },
     "Cache": {
       "Size": 100000000
     },

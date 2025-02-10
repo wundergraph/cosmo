@@ -75,8 +75,8 @@ func TestApqAndSafelistErrors(t *testing.T) {
 		WithAutomatedPersistedQueriesConfig(config.AutomaticPersistedQueriesConfig{
 			Enabled: true,
 		}),
-		WithSecurityConfig(config.SecurityConfiguration{
-			Safelist: config.EnableOperationConfiguration{
+		WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+			Safelist: config.SafelistConfiguration{
 				Enabled: true,
 			},
 		}),

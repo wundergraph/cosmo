@@ -3,6 +3,7 @@ package integration
 import (
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/zap/zapcore"
 	"net/http"
@@ -22,8 +23,10 @@ func TestSafelist(t *testing.T) {
 	t.Run("router fails if APQ and Safelist are both enabled", func(t *testing.T) {
 		testenv.FailsOnStartup(t, &testenv.Config{
 			ApqConfig: config.AutomaticPersistedQueriesConfig{Enabled: true},
-			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.Safelist = config.EnableOperationConfiguration{Enabled: true}
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Safelist: config.SafelistConfiguration{Enabled: true},
+				}),
 			},
 		}, func(t *testing.T, err error) {
 			require.Contains(t, err.Error(), "automatic persisted queries and safelist cannot be enabled at the same time")
@@ -32,10 +35,10 @@ func TestSafelist(t *testing.T) {
 
 	t.Run("safelist should allow a persisted query to run", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
-			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.Safelist = config.EnableOperationConfiguration{
-					Enabled: true,
-				}
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Safelist: config.SafelistConfiguration{Enabled: true},
+				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
@@ -52,10 +55,10 @@ func TestSafelist(t *testing.T) {
 
 	t.Run("safelist should reject a query with different spacing from the persisted operation", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
-			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.Safelist = config.EnableOperationConfiguration{
-					Enabled: true,
-				}
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Safelist: config.SafelistConfiguration{Enabled: true},
+				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
@@ -75,10 +78,10 @@ func TestSafelist(t *testing.T) {
 			ApqConfig: config.AutomaticPersistedQueriesConfig{
 				Enabled: false,
 			},
-			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.Safelist = config.EnableOperationConfiguration{
-					Enabled: true,
-				}
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Safelist: config.SafelistConfiguration{Enabled: true},
+				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := make(http.Header)
@@ -99,13 +102,11 @@ func TestSafelist(t *testing.T) {
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
 					Enabled: false,
 				},
-				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.Safelist = config.EnableOperationConfiguration{
-						Enabled: false,
-					}
-					securityConfiguration.LogUnknownOperations = config.EnableOperationConfiguration{
-						Enabled: true,
-					}
+				RouterOptions: []core.Option{
+					core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+						Safelist:             config.SafelistConfiguration{Enabled: true},
+						LogUnknownOperations: true,
+					}),
 				},
 				LogObservation: testenv.LogObservationConfig{
 					Enabled:  true,
@@ -135,13 +136,11 @@ func TestSafelist(t *testing.T) {
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
 					Enabled: false,
 				},
-				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.Safelist = config.EnableOperationConfiguration{
-						Enabled: false,
-					}
-					securityConfiguration.LogUnknownOperations = config.EnableOperationConfiguration{
-						Enabled: true,
-					}
+				RouterOptions: []core.Option{
+					core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+						Safelist:             config.SafelistConfiguration{Enabled: true},
+						LogUnknownOperations: true,
+					}),
 				},
 				LogObservation: testenv.LogObservationConfig{
 					Enabled:  true,

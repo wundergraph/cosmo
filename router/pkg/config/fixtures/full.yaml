@@ -348,10 +348,6 @@ security:
   complexity_calculation_cache:
     enabled: true
     size: 1024
-  safelist:
-    enabled: true
-  log_unknown_operations:
-    enabled: true
   complexity_limits:
     depth:
         enabled: true
@@ -370,6 +366,9 @@ security:
       limit: 4
       ignore_persisted_operations: true
 persisted_operations:
+  safelist:
+    enabled: true
+  log_unknown_operations: true
   cache:
     size: 100MB
   storage:

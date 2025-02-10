@@ -518,7 +518,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 		)
 	}
 
-	if r.securityConfiguration.Safelist.Enabled && r.automaticPersistedQueriesConfig.Enabled {
+	if r.persistedOperationsConfig.Safelist.Enabled && r.automaticPersistedQueriesConfig.Enabled {
 		return nil, errors.New("automatic persisted queries and safelist cannot be enabled at the same time")
 	}
 

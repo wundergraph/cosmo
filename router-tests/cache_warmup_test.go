@@ -404,9 +404,9 @@ func TestCacheWarmup(t *testing.T) {
 							},
 						},
 					}),
-				},
-				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.Safelist = config.EnableOperationConfiguration{Enabled: true}
+					core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+						Safelist: config.SafelistConfiguration{Enabled: true},
+					}),
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
 					BaseGraphAssertions: testenv.CacheMetricsAssertion{

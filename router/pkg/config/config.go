@@ -353,19 +353,13 @@ type BlockOperationConfiguration struct {
 	Condition string `yaml:"condition" env:"CONDITION"`
 }
 
-type EnableOperationConfiguration struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-}
-
 type SecurityConfiguration struct {
-	BlockMutations              BlockOperationConfiguration  `yaml:"block_mutations" envPrefix:"SECURITY_BLOCK_MUTATIONS_"`
-	BlockSubscriptions          BlockOperationConfiguration  `yaml:"block_subscriptions" envPrefix:"SECURITY_BLOCK_SUBSCRIPTIONS_"`
-	BlockNonPersistedOperations BlockOperationConfiguration  `yaml:"block_non_persisted_operations" envPrefix:"SECURITY_BLOCK_NON_PERSISTED_OPERATIONS_"`
-	Safelist                    EnableOperationConfiguration `yaml:"safelist" envPrefix:"SECURITY_BLOCK_SUBSCRIPTIONS_"`
-	LogUnknownOperations        EnableOperationConfiguration `yaml:"log_unknown_operations" envPrefix:"SECURITY_LOG_UNKNOWN_OPERATION_"`
-	ComplexityCalculationCache  *ComplexityCalculationCache  `yaml:"complexity_calculation_cache"`
-	ComplexityLimits            *ComplexityLimits            `yaml:"complexity_limits"`
-	DepthLimit                  *QueryDepthConfiguration     `yaml:"depth_limit"`
+	BlockMutations              BlockOperationConfiguration `yaml:"block_mutations" envPrefix:"SECURITY_BLOCK_MUTATIONS_"`
+	BlockSubscriptions          BlockOperationConfiguration `yaml:"block_subscriptions" envPrefix:"SECURITY_BLOCK_SUBSCRIPTIONS_"`
+	BlockNonPersistedOperations BlockOperationConfiguration `yaml:"block_non_persisted_operations" envPrefix:"SECURITY_BLOCK_NON_PERSISTED_OPERATIONS_"`
+	ComplexityCalculationCache  *ComplexityCalculationCache `yaml:"complexity_calculation_cache"`
+	ComplexityLimits            *ComplexityLimits           `yaml:"complexity_limits"`
+	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
 }
 
 type QueryDepthConfiguration struct {
@@ -706,8 +700,14 @@ type AutomaticPersistedQueriesCacheConfig struct {
 }
 
 type PersistedOperationsConfig struct {
-	Cache   PersistedOperationsCacheConfig   `yaml:"cache"`
-	Storage PersistedOperationsStorageConfig `yaml:"storage"`
+	LogUnknownOperations bool                             `yaml:"log_unknown_operations" env:"PERSISTED_OPERATIONS_LOG_UNKNOWN_OPERATIONS" envDefault:"false"`
+	Safelist             SafelistConfiguration            `yaml:"safelist" envPrefix:"PERSISTED_OPERATIONS_SAFELIST_"`
+	Cache                PersistedOperationsCacheConfig   `yaml:"cache"`
+	Storage              PersistedOperationsStorageConfig `yaml:"storage"`
+}
+
+type SafelistConfiguration struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 }
 
 type AutomaticPersistedQueriesConfig struct {
