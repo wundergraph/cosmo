@@ -39,6 +39,10 @@ export const federatedGraphs = pgTable(
     admissionWebhookURL: text('admission_webhook_url'),
     admissionWebhookSecret: text('admission_webhook_secret'),
     supportsFederation: boolean('supports_federation').default(true).notNull(),
+    /* The version that composition returns to determine whether the router execution configuration is compatible
+     * with a specific router version.
+     */
+    routerCompatibilityVersion: integer('router_compatibility_version').notNull().default(1),
   },
   (t) => ({
     targetIdIndex: index('fgs_target_id_idx').on(t.targetId),

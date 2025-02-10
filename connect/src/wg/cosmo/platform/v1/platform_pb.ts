@@ -2512,6 +2512,11 @@ export class FederatedGraph extends Message<FederatedGraph> {
    */
   admissionWebhookUrl?: string;
 
+  /**
+   * @generated from field: int32 router_compatibility_version = 17;
+   */
+  routerCompatibilityVersion = 0;
+
   constructor(data?: PartialMessage<FederatedGraph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2536,6 +2541,7 @@ export class FederatedGraph extends Message<FederatedGraph> {
     { no: 14, name: "supports_federation", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 15, name: "contract", kind: "message", T: Contract, opt: true },
     { no: 16, name: "admission_webhook_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 17, name: "router_compatibility_version", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FederatedGraph {
@@ -3006,7 +3012,7 @@ export class GetFederatedGraphByNameResponse extends Message<GetFederatedGraphBy
   featureFlagsInLatestValidComposition: FeatureFlag[] = [];
 
   /**
-   * includes all the feature subgraphs that are part of the federated graph, 
+   * includes all the feature subgraphs that are part of the federated graph,
    * even the ones that are not part of the latest composition
    *
    * @generated from field: repeated wg.cosmo.platform.v1.Subgraph featureSubgraphs = 6;
@@ -18885,7 +18891,7 @@ export class GetFederatedGraphByIdResponse extends Message<GetFederatedGraphById
   featureFlagsInLatestValidComposition: FeatureFlag[] = [];
 
   /**
-   * includes all the feature subgraphs that are part of the federated graph, 
+   * includes all the feature subgraphs that are part of the federated graph,
    * even the ones that are not part of the latest composition
    *
    * @generated from field: repeated wg.cosmo.platform.v1.Subgraph featureSubgraphs = 6;
@@ -19639,6 +19645,178 @@ export class GetCacheWarmerConfigResponse extends Message<GetCacheWarmerConfigRe
 
   static equals(a: GetCacheWarmerConfigResponse | PlainMessage<GetCacheWarmerConfigResponse> | undefined, b: GetCacheWarmerConfigResponse | PlainMessage<GetCacheWarmerConfigResponse> | undefined): boolean {
     return proto3.util.equals(GetCacheWarmerConfigResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.ListRouterCompatibilityVersionsRequest
+ */
+export class ListRouterCompatibilityVersionsRequest extends Message<ListRouterCompatibilityVersionsRequest> {
+  constructor(data?: PartialMessage<ListRouterCompatibilityVersionsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.ListRouterCompatibilityVersionsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListRouterCompatibilityVersionsRequest {
+    return new ListRouterCompatibilityVersionsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListRouterCompatibilityVersionsRequest {
+    return new ListRouterCompatibilityVersionsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListRouterCompatibilityVersionsRequest {
+    return new ListRouterCompatibilityVersionsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListRouterCompatibilityVersionsRequest | PlainMessage<ListRouterCompatibilityVersionsRequest> | undefined, b: ListRouterCompatibilityVersionsRequest | PlainMessage<ListRouterCompatibilityVersionsRequest> | undefined): boolean {
+    return proto3.util.equals(ListRouterCompatibilityVersionsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.ListRouterCompatibilityVersionsResponse
+ */
+export class ListRouterCompatibilityVersionsResponse extends Message<ListRouterCompatibilityVersionsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated int32 versions = 2;
+   */
+  versions: number[] = [];
+
+  constructor(data?: PartialMessage<ListRouterCompatibilityVersionsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.ListRouterCompatibilityVersionsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "versions", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListRouterCompatibilityVersionsResponse {
+    return new ListRouterCompatibilityVersionsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListRouterCompatibilityVersionsResponse {
+    return new ListRouterCompatibilityVersionsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListRouterCompatibilityVersionsResponse {
+    return new ListRouterCompatibilityVersionsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListRouterCompatibilityVersionsResponse | PlainMessage<ListRouterCompatibilityVersionsResponse> | undefined, b: ListRouterCompatibilityVersionsResponse | PlainMessage<ListRouterCompatibilityVersionsResponse> | undefined): boolean {
+    return proto3.util.equals(ListRouterCompatibilityVersionsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionRequest
+ */
+export class SetGraphRouterCompatibilityVersionRequest extends Message<SetGraphRouterCompatibilityVersionRequest> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: int32 version = 3;
+   */
+  version = 0;
+
+  constructor(data?: PartialMessage<SetGraphRouterCompatibilityVersionRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "version", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetGraphRouterCompatibilityVersionRequest {
+    return new SetGraphRouterCompatibilityVersionRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SetGraphRouterCompatibilityVersionRequest {
+    return new SetGraphRouterCompatibilityVersionRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SetGraphRouterCompatibilityVersionRequest {
+    return new SetGraphRouterCompatibilityVersionRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SetGraphRouterCompatibilityVersionRequest | PlainMessage<SetGraphRouterCompatibilityVersionRequest> | undefined, b: SetGraphRouterCompatibilityVersionRequest | PlainMessage<SetGraphRouterCompatibilityVersionRequest> | undefined): boolean {
+    return proto3.util.equals(SetGraphRouterCompatibilityVersionRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionResponse
+ */
+export class SetGraphRouterCompatibilityVersionResponse extends Message<SetGraphRouterCompatibilityVersionResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: int32 previous_version = 2;
+   */
+  previousVersion = 0;
+
+  /**
+   * @generated from field: int32 new_version = 3;
+   */
+  newVersion = 0;
+
+  constructor(data?: PartialMessage<SetGraphRouterCompatibilityVersionResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "previous_version", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "new_version", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetGraphRouterCompatibilityVersionResponse {
+    return new SetGraphRouterCompatibilityVersionResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SetGraphRouterCompatibilityVersionResponse {
+    return new SetGraphRouterCompatibilityVersionResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SetGraphRouterCompatibilityVersionResponse {
+    return new SetGraphRouterCompatibilityVersionResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SetGraphRouterCompatibilityVersionResponse | PlainMessage<SetGraphRouterCompatibilityVersionResponse> | undefined, b: SetGraphRouterCompatibilityVersionResponse | PlainMessage<SetGraphRouterCompatibilityVersionResponse> | undefined): boolean {
+    return proto3.util.equals(SetGraphRouterCompatibilityVersionResponse, a, b);
   }
 }
 

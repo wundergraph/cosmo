@@ -18,12 +18,14 @@ import {
   enrichLogger,
   formatSubscriptionProtocol,
   formatWebsocketSubprotocol,
+  getFederatedGraphRouterCompatibilityVersion,
   getLogger,
   handleError,
   isValidGraphName,
   isValidLabels,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 
 export function publishFederatedSubgraph(
   opts: RouterOptions,
@@ -43,6 +45,7 @@ export function publishFederatedSubgraph(
       opts.billingDefaultPlanId,
     );
     const auditLogRepo = new AuditLogRepository(opts.db);
+    const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const schemaGraphPruningRepo = new SchemaGraphPruningRepository(opts.db);
@@ -62,12 +65,34 @@ export function publishFederatedSubgraph(
     }
 
     const subgraphSchemaSDL = req.schema;
+    const namespace = await namespaceRepo.byName(req.namespace);
+    if (!namespace) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Could not find namespace ${req.namespace}`,
+        },
+        compositionErrors: [],
+        deploymentErrors: [],
+        compositionWarnings: [],
+      };
+    }
+    let subgraph = await subgraphRepo.byName(req.name, req.namespace);
     let isEventDrivenGraph = false;
     let isV2Graph: boolean | undefined;
 
     try {
+      const federatedGraphs = subgraph
+        ? await fedGraphRepo.bySubgraphLabels({ labels: subgraph.labels, namespaceId: namespace.id })
+        : [];
+      /*
+       * If there are any federated graphs for which the subgraph is a constituent, the subgraph will be validated
+       * against the first router compatibility version encountered.
+       * If no federated graphs have yet been created, the subgraph will be validated against the latest router
+       * compatibility version.
+       */
       // Here we check if the schema is valid as a subgraph SDL
-      const result = buildSchema(subgraphSchemaSDL);
+      const result = buildSchema(subgraphSchemaSDL, true, getFederatedGraphRouterCompatibilityVersion(federatedGraphs));
       if (!result.success) {
         return {
           response: {
@@ -93,21 +118,7 @@ export function publishFederatedSubgraph(
       };
     }
 
-    const namespace = await namespaceRepo.byName(req.namespace);
-    if (!namespace) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `Could not find namespace ${req.namespace}`,
-        },
-        compositionErrors: [],
-        deploymentErrors: [],
-        compositionWarnings: [],
-      };
-    }
-
     const routingUrl = req.routingUrl || '';
-    let subgraph = await subgraphRepo.byName(req.name, req.namespace);
     let baseSubgraphID = '';
 
     /* If the subgraph exists, validate that no parameters were included.

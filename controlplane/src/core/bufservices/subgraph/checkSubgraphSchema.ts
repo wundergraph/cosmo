@@ -1,6 +1,10 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
-import { buildASTSchema } from '@wundergraph/composition';
+import {
+  buildASTSchema,
+  LATEST_ROUTER_COMPATIBILITY_VERSION,
+  SupportedRouterCompatibilityVersion,
+} from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   CheckSubgraphSchemaRequest,
@@ -30,7 +34,7 @@ import {
   SchemaUsageTrafficInspector,
   collectOperationUsageStats,
 } from '../../services/SchemaUsageTrafficInspector.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError } from '../../util.js';
 
 export function checkSubgraphSchema(
   opts: RouterOptions,
@@ -156,13 +160,20 @@ export function checkSubgraphSchema(
       };
     }
 
+    const federatedGraphs = await fedGraphRepo.bySubgraphLabels({ labels: subgraph.labels, namespaceId: namespace.id });
+    /*
+     * If there are any federated graphs for which the subgraph is a constituent, the subgraph will be validated
+     * against the first router compatibility version encountered.
+     * If no federated graphs have yet been created, the subgraph will be validated against the latest router
+     * compatibility version.
+     */
+    const routerCompatibilityVersion: number = getFederatedGraphRouterCompatibilityVersion(federatedGraphs);
     const newSchemaSDL = req.delete ? '' : new TextDecoder().decode(req.schema);
     let newGraphQLSchema: GraphQLSchema | undefined;
-
     if (newSchemaSDL) {
       try {
         // Here we check if the schema is valid as a subgraph SDL
-        const result = buildSchema(newSchemaSDL);
+        const result = buildSchema(newSchemaSDL, true, routerCompatibilityVersion);
         if (!result.success) {
           return {
             response: {
@@ -216,7 +227,7 @@ export function checkSubgraphSchema(
       vcsContext: req.vcsContext,
     });
 
-    const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL);
+    const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL, routerCompatibilityVersion);
     if (schemaChanges.kind === 'failure') {
       logger.warn(`Error finding diff between graphs: ${schemaChanges.error}`);
       return {

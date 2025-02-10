@@ -16,13 +16,14 @@ import {
   ContractTagOptions,
   FederationResult,
   FederationResultWithContracts,
+  LATEST_ROUTER_COMPATIBILITY_VERSION,
   newContractTagOptionsFromArrays,
 } from '@wundergraph/composition';
 import { MemberRole, WebsocketSubprotocol } from '../db/models.js';
 import { AuthContext, DateRange, FederatedGraphDTO, Label, ResponseMessage, S3StorageOptions } from '../types/index.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
-import { composeSubgraphsForContract, composeSubgraphsWithContracts } from './composition/composition.js';
+import { composeFederatedContract, composeFederatedGraphWithPotentialContracts } from './composition/composition.js';
 import { SubgraphsToCompose } from './repositories/FeatureFlagRepository.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
@@ -454,17 +455,29 @@ export function createBatches<T>(array: T[], batchSize: number): T[][] {
   return batches;
 }
 
-export function composeSubgraphs(
+export function getFederationResultWithPotentialContracts(
   federatedGraph: FederatedGraphDTO,
   subgraphsToCompose: SubgraphsToCompose,
   tagOptionsByContractName: Map<string, ContractTagOptions>,
 ): FederationResult | FederationResultWithContracts {
   // This condition is only true when entering the method to specifically create/update a contract
   if (federatedGraph.contract) {
-    return composeSubgraphsForContract(
+    return composeFederatedContract(
       subgraphsToCompose.compositionSubgraphs,
       newContractTagOptionsFromArrays(federatedGraph.contract.excludeTags, federatedGraph.contract.includeTags),
+      federatedGraph.routerCompatibilityVersion,
     );
   }
-  return composeSubgraphsWithContracts(subgraphsToCompose.compositionSubgraphs, tagOptionsByContractName);
+  return composeFederatedGraphWithPotentialContracts(
+    subgraphsToCompose.compositionSubgraphs,
+    tagOptionsByContractName,
+    federatedGraph.routerCompatibilityVersion,
+  );
+}
+
+export function getFederatedGraphRouterCompatibilityVersion(federatedGraphDTOs: Array<FederatedGraphDTO>): number {
+  if (federatedGraphDTOs.length === 0) {
+    return LATEST_ROUTER_COMPATIBILITY_VERSION;
+  }
+  return federatedGraphDTOs[0].routerCompatibilityVersion;
 }

@@ -73,7 +73,7 @@ export function publishMonograph(
 
     try {
       // Here we check if the schema is valid as a subgraph SDL
-      const result = buildSchema(subgraphSchemaSDL);
+      const result = buildSchema(subgraphSchemaSDL, true, graph.routerCompatibilityVersion);
       if (!result.success) {
         return {
           response: {

@@ -484,6 +484,12 @@ const (
 	// PlatformServiceUpgradePlanProcedure is the fully-qualified name of the PlatformService's
 	// UpgradePlan RPC.
 	PlatformServiceUpgradePlanProcedure = "/wg.cosmo.platform.v1.PlatformService/UpgradePlan"
+	// PlatformServiceListRouterCompatibilityVersionsProcedure is the fully-qualified name of the
+	// PlatformService's ListRouterCompatibilityVersions RPC.
+	PlatformServiceListRouterCompatibilityVersionsProcedure = "/wg.cosmo.platform.v1.PlatformService/ListRouterCompatibilityVersions"
+	// PlatformServiceSetGraphRouterCompatibilityVersionProcedure is the fully-qualified name of the
+	// PlatformService's SetGraphRouterCompatibilityVersion RPC.
+	PlatformServiceSetGraphRouterCompatibilityVersionProcedure = "/wg.cosmo.platform.v1.PlatformService/SetGraphRouterCompatibilityVersion"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -639,6 +645,8 @@ var (
 	platformServiceCreateCheckoutSessionMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("CreateCheckoutSession")
 	platformServiceCreateBillingPortalSessionMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("CreateBillingPortalSession")
 	platformServiceUpgradePlanMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("UpgradePlan")
+	platformServiceListRouterCompatibilityVersionsMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("ListRouterCompatibilityVersions")
+	platformServiceSetGraphRouterCompatibilityVersionMethodDescriptor    = platformServiceServiceDescriptor.Methods().ByName("SetGraphRouterCompatibilityVersion")
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -924,6 +932,10 @@ type PlatformServiceClient interface {
 	CreateBillingPortalSession(context.Context, *connect.Request[v1.CreateBillingPortalSessionRequest]) (*connect.Response[v1.CreateBillingPortalSessionResponse], error)
 	// Upgrade the current plan
 	UpgradePlan(context.Context, *connect.Request[v1.UpgradePlanRequest]) (*connect.Response[v1.UpgradePlanResponse], error)
+	// Router Compatibility Versions
+	ListRouterCompatibilityVersions(context.Context, *connect.Request[v1.ListRouterCompatibilityVersionsRequest]) (*connect.Response[v1.ListRouterCompatibilityVersionsResponse], error)
+	// Graph
+	SetGraphRouterCompatibilityVersion(context.Context, *connect.Request[v1.SetGraphRouterCompatibilityVersionRequest]) (*connect.Response[v1.SetGraphRouterCompatibilityVersionResponse], error)
 }
 
 // NewPlatformServiceClient constructs a client for the wg.cosmo.platform.v1.PlatformService
@@ -1843,6 +1855,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceUpgradePlanMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		listRouterCompatibilityVersions: connect.NewClient[v1.ListRouterCompatibilityVersionsRequest, v1.ListRouterCompatibilityVersionsResponse](
+			httpClient,
+			baseURL+PlatformServiceListRouterCompatibilityVersionsProcedure,
+			connect.WithSchema(platformServiceListRouterCompatibilityVersionsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		setGraphRouterCompatibilityVersion: connect.NewClient[v1.SetGraphRouterCompatibilityVersionRequest, v1.SetGraphRouterCompatibilityVersionResponse](
+			httpClient,
+			baseURL+PlatformServiceSetGraphRouterCompatibilityVersionProcedure,
+			connect.WithSchema(platformServiceSetGraphRouterCompatibilityVersionMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -1998,6 +2022,8 @@ type platformServiceClient struct {
 	createCheckoutSession                 *connect.Client[v1.CreateCheckoutSessionRequest, v1.CreateCheckoutSessionResponse]
 	createBillingPortalSession            *connect.Client[v1.CreateBillingPortalSessionRequest, v1.CreateBillingPortalSessionResponse]
 	upgradePlan                           *connect.Client[v1.UpgradePlanRequest, v1.UpgradePlanResponse]
+	listRouterCompatibilityVersions       *connect.Client[v1.ListRouterCompatibilityVersionsRequest, v1.ListRouterCompatibilityVersionsResponse]
+	setGraphRouterCompatibilityVersion    *connect.Client[v1.SetGraphRouterCompatibilityVersionRequest, v1.SetGraphRouterCompatibilityVersionResponse]
 }
 
 // CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
@@ -2775,6 +2801,18 @@ func (c *platformServiceClient) UpgradePlan(ctx context.Context, req *connect.Re
 	return c.upgradePlan.CallUnary(ctx, req)
 }
 
+// ListRouterCompatibilityVersions calls
+// wg.cosmo.platform.v1.PlatformService.ListRouterCompatibilityVersions.
+func (c *platformServiceClient) ListRouterCompatibilityVersions(ctx context.Context, req *connect.Request[v1.ListRouterCompatibilityVersionsRequest]) (*connect.Response[v1.ListRouterCompatibilityVersionsResponse], error) {
+	return c.listRouterCompatibilityVersions.CallUnary(ctx, req)
+}
+
+// SetGraphRouterCompatibilityVersion calls
+// wg.cosmo.platform.v1.PlatformService.SetGraphRouterCompatibilityVersion.
+func (c *platformServiceClient) SetGraphRouterCompatibilityVersion(ctx context.Context, req *connect.Request[v1.SetGraphRouterCompatibilityVersionRequest]) (*connect.Response[v1.SetGraphRouterCompatibilityVersionResponse], error) {
+	return c.setGraphRouterCompatibilityVersion.CallUnary(ctx, req)
+}
+
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
 type PlatformServiceHandler interface {
 	// PlaygroundScripts
@@ -3058,6 +3096,10 @@ type PlatformServiceHandler interface {
 	CreateBillingPortalSession(context.Context, *connect.Request[v1.CreateBillingPortalSessionRequest]) (*connect.Response[v1.CreateBillingPortalSessionResponse], error)
 	// Upgrade the current plan
 	UpgradePlan(context.Context, *connect.Request[v1.UpgradePlanRequest]) (*connect.Response[v1.UpgradePlanResponse], error)
+	// Router Compatibility Versions
+	ListRouterCompatibilityVersions(context.Context, *connect.Request[v1.ListRouterCompatibilityVersionsRequest]) (*connect.Response[v1.ListRouterCompatibilityVersionsResponse], error)
+	// Graph
+	SetGraphRouterCompatibilityVersion(context.Context, *connect.Request[v1.SetGraphRouterCompatibilityVersionRequest]) (*connect.Response[v1.SetGraphRouterCompatibilityVersionResponse], error)
 }
 
 // NewPlatformServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -3973,6 +4015,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceUpgradePlanMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceListRouterCompatibilityVersionsHandler := connect.NewUnaryHandler(
+		PlatformServiceListRouterCompatibilityVersionsProcedure,
+		svc.ListRouterCompatibilityVersions,
+		connect.WithSchema(platformServiceListRouterCompatibilityVersionsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceSetGraphRouterCompatibilityVersionHandler := connect.NewUnaryHandler(
+		PlatformServiceSetGraphRouterCompatibilityVersionProcedure,
+		svc.SetGraphRouterCompatibilityVersion,
+		connect.WithSchema(platformServiceSetGraphRouterCompatibilityVersionMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlatformServiceCreatePlaygroundScriptProcedure:
@@ -4275,6 +4329,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceCreateBillingPortalSessionHandler.ServeHTTP(w, r)
 		case PlatformServiceUpgradePlanProcedure:
 			platformServiceUpgradePlanHandler.ServeHTTP(w, r)
+		case PlatformServiceListRouterCompatibilityVersionsProcedure:
+			platformServiceListRouterCompatibilityVersionsHandler.ServeHTTP(w, r)
+		case PlatformServiceSetGraphRouterCompatibilityVersionProcedure:
+			platformServiceSetGraphRouterCompatibilityVersionHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -4882,4 +4940,12 @@ func (UnimplementedPlatformServiceHandler) CreateBillingPortalSession(context.Co
 
 func (UnimplementedPlatformServiceHandler) UpgradePlan(context.Context, *connect.Request[v1.UpgradePlanRequest]) (*connect.Response[v1.UpgradePlanResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpgradePlan is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) ListRouterCompatibilityVersions(context.Context, *connect.Request[v1.ListRouterCompatibilityVersionsRequest]) (*connect.Response[v1.ListRouterCompatibilityVersionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ListRouterCompatibilityVersions is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) SetGraphRouterCompatibilityVersion(context.Context, *connect.Request[v1.SetGraphRouterCompatibilityVersionRequest]) (*connect.Response[v1.SetGraphRouterCompatibilityVersionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.SetGraphRouterCompatibilityVersion is not implemented"))
 }

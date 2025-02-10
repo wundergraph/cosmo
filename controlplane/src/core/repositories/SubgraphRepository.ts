@@ -37,7 +37,7 @@ import {
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
-import { hasLabelsChanged, normalizeLabels } from '../util.js';
+import { getFederatedGraphRouterCompatibilityVersion, hasLabelsChanged, normalizeLabels } from '../util.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
@@ -1367,7 +1367,17 @@ export class SubgraphRepository {
     namespaceId: string;
     graphPruningConfigs: SchemaGraphPruningDTO[];
   }) {
-    const schemaChanges = await getDiffBetweenGraphs(schemaSDL, newSchemaSDL);
+    const subgraph = await this.byId(subgraphId);
+    if (!subgraph) {
+      throw new Error(`Subgraph not found.`);
+    }
+    const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
+    const federatedGraphs = await fedGraphRepo.bySubgraphLabels({ labels: subgraph.labels, namespaceId });
+    const schemaChanges = await getDiffBetweenGraphs(
+      schemaSDL,
+      newSchemaSDL,
+      getFederatedGraphRouterCompatibilityVersion(federatedGraphs),
+    );
     if (schemaChanges.kind === 'failure') {
       this.logger.error(`Failed to get diff between schemas for subgraph ${subgraphId} while handling grace periods`);
     } else {

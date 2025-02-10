@@ -33,7 +33,7 @@ import * as schema from '../../db/schema.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { CacheWarmerRepository } from '../repositories/CacheWarmerRepository.js';
 import { NamespaceRepository } from '../repositories/NamespaceRepository.js';
-import { composeSubgraphs, composeSubgraphsWithContracts } from './composition.js';
+import { composeSubgraphs, composeFederatedGraphWithPotentialContracts } from './composition.js';
 import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult } from './schemaCheck.js';
 
 export type CompositionResult = {
@@ -484,10 +484,15 @@ export class Composer {
       schemaChanges = await getDiffBetweenGraphs(
         prevValidFederatedSDL?.clientSchema || '',
         composedGraph.federatedClientSchema,
+        updatedFederatedGraph.routerCompatibilityVersion,
       );
     } else {
       // Fallback to full schema for backwards compatibility
-      schemaChanges = await getDiffBetweenGraphs(prevValidFederatedSDL?.schema || '', composedGraph.composedSchema);
+      schemaChanges = await getDiffBetweenGraphs(
+        prevValidFederatedSDL?.schema || '',
+        composedGraph.composedSchema || '',
+        updatedFederatedGraph.routerCompatibilityVersion,
+      );
     }
 
     if (schemaChanges.kind !== 'failure' && schemaChanges.changes.length > 0) {
@@ -526,7 +531,7 @@ export class Composer {
         const contracts = await this.contractRepo.bySourceFederatedGraphId(graph.id);
 
         if (contracts.length === 0) {
-          const federationResult = composeSubgraphs(subgraphsToBeComposed);
+          const federationResult = composeSubgraphs(subgraphsToBeComposed, graph.routerCompatibilityVersion);
           composedGraphs.push(mapResultToComposedGraph(graph, subgraphs, federationResult));
           continue;
         }
@@ -540,7 +545,11 @@ export class Composer {
           );
         }
 
-        const federationResult = composeSubgraphsWithContracts(subgraphsToBeComposed, tagOptionsByContractName);
+        const federationResult = composeFederatedGraphWithPotentialContracts(
+          subgraphsToBeComposed,
+          tagOptionsByContractName,
+          graph.routerCompatibilityVersion,
+        );
         composedGraphs.push(mapResultToComposedGraph(graph, subgraphs, federationResult));
 
         if (!federationResult.success) {

@@ -98,6 +98,7 @@ export function checkFederatedGraph(
         url: s.routingUrl,
         definitions: parse(s.schemaSDL),
       })),
+      federatedGraph.routerCompatibilityVersion,
     );
 
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];

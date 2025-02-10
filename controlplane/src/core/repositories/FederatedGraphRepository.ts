@@ -72,7 +72,7 @@ import {
 } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { AdmissionError } from '../services/AdmissionWebhookController.js';
-import { composeSubgraphs, normalizeLabelMatchers, normalizeLabels } from '../util.js';
+import { getFederationResultWithPotentialContracts, normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { unsuccessfulBaseCompositionError } from '../errors/errors.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { ContractRepository } from './ContractRepository.js';
@@ -180,6 +180,7 @@ export class FederatedGraphRepository {
         namespace: data.namespace,
         namespaceId: data.namespaceId,
         supportsFederation: insertedGraph[0].supportsFederation,
+        routerCompatibilityVersion: insertedGraph[0].routerCompatibilityVersion,
       };
     });
   }
@@ -519,6 +520,7 @@ export class FederatedGraphRepository {
         admissionWebhookURL: schema.federatedGraphs.admissionWebhookURL,
         admissionWebhookSecret: schema.federatedGraphs.admissionWebhookSecret,
         supportsFederation: schema.federatedGraphs.supportsFederation,
+        routerCompatibilityVersion: schema.federatedGraphs.routerCompatibilityVersion,
       })
       .from(targets)
       .where(and(...conditions))
@@ -578,6 +580,7 @@ export class FederatedGraphRepository {
       admissionWebhookSecret: resp[0].admissionWebhookSecret ?? undefined,
       supportsFederation: resp[0].supportsFederation,
       contract,
+      routerCompatibilityVersion: resp[0].routerCompatibilityVersion,
     };
   }
 
@@ -816,6 +819,7 @@ export class FederatedGraphRepository {
         composedSchemaVersionId: insertedVersion[0].insertedId,
         namespace: fedGraph.namespace,
         namespaceId: fedGraph.namespaceId,
+        routerCompatibilityVersion: fedGraph.routerCompatibilityVersion,
       };
     });
   }
@@ -1524,7 +1528,7 @@ export class FederatedGraphRepository {
         const contractBaseCompositionDataByContractId = new Map<string, ContractBaseCompositionData>();
 
         for (const subgraphsToCompose of allSubgraphsToCompose) {
-          const result: FederationResult | FederationResultWithContracts = composeSubgraphs(
+          const result: FederationResult | FederationResultWithContracts = getFederationResultWithPotentialContracts(
             federatedGraph,
             subgraphsToCompose,
             tagOptionsByContractName,
@@ -1603,7 +1607,7 @@ export class FederatedGraphRepository {
             }
             if (!contractResult.success) {
               allCompositionErrors.push(
-                ...(contractResult.errors || []).map((e) => ({
+                ...contractResult.errors.map((e) => ({
                   federatedGraphName: contractGraph.name,
                   namespace: contractGraph.namespace,
                   message: e.message,
@@ -1613,7 +1617,7 @@ export class FederatedGraphRepository {
             }
 
             allCompositionWarnings.push(
-              ...(contractResult.warnings || []).map((w) => ({
+              ...contractResult.warnings.map((w) => ({
                 federatedGraphName: contractGraph.name,
                 namespace: contractGraph.namespace,
                 message: w.message,
@@ -1762,4 +1766,12 @@ export class FederatedGraphRepository {
       };
     });
   };
+
+  public updateRouterCompatibilityVersion(id: string, version: number) {
+    return this.db
+      .update(federatedGraphs)
+      .set({ routerCompatibilityVersion: version })
+      .where(eq(federatedGraphs.id, id))
+      .execute();
+  }
 }

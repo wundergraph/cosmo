@@ -1,6 +1,7 @@
 import { ChangeType, CriticalityLevel, diff, TypeOfChangeType } from '@graphql-inspector/core';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GraphQLSchema } from 'graphql';
+import { SupportedRouterCompatibilityVersion } from '@wundergraph/composition';
 import { buildSchema } from './composition.js';
 
 export interface SchemaDiff {
@@ -47,20 +48,21 @@ export async function getSchemaDiff(oldSchemaSDL: GraphQLSchema, newSchemaSDL: G
 
 export async function getDiffBetweenGraphs(
   oldSchemaSDL: string,
-  newSchemaSDL?: string,
+  newSchemaSDL: string,
+  routerCompatibilityVersion: number,
 ): Promise<GetDiffBetweenGraphsResult> {
   try {
     let oldSchema: GraphQLSchema = new GraphQLSchema({});
     let newSchema: GraphQLSchema = new GraphQLSchema({});
     if (oldSchemaSDL) {
-      const result = buildSchema(oldSchemaSDL);
+      const result = buildSchema(oldSchemaSDL, true, routerCompatibilityVersion);
       if (result.success) {
         oldSchema = result.schema;
       }
     }
 
-    if (newSchemaSDL?.length) {
-      const result = buildSchema(newSchemaSDL);
+    if (newSchemaSDL.length > 0) {
+      const result = buildSchema(newSchemaSDL, true, routerCompatibilityVersion);
       if (!result.success) {
         return {
           kind: 'failure',
