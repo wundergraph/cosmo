@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/caarlos0/env/v11"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/sebdah/goldie/v2"
 	"github.com/stretchr/testify/require"
@@ -90,6 +91,57 @@ poll_interval: 11s
 	require.Equal(t, cfg.Config.PollInterval, time.Second*11)
 }
 
+// Confirms https://github.com/caarlos0/env/issues/354 is fixed
+func TestConfigSlicesHaveDefaults(t *testing.T) {
+	type TestMetricsOTLPExporter struct {
+		Value       string
+		Exporter    string `envDefault:"http"`
+		Temporality string `envDefault:"cumulative"`
+	}
+
+	type TestMetricsOTLP struct {
+		RouterRuntime bool `envDefault:"true" env:"METRICS_OTLP_ROUTER_RUNTIME"`
+		Exporters     []TestMetricsOTLPExporter
+	}
+
+	config := TestMetricsOTLP{
+		Exporters: []TestMetricsOTLPExporter{
+			{Value: "A"},
+		},
+	}
+
+	require.NoError(t, env.Parse(&config))
+
+	require.Equal(t, "A", config.Exporters[0].Value)
+	require.Equal(t, "http", config.Exporters[0].Exporter)
+	require.Equal(t, "cumulative", config.Exporters[0].Temporality)
+}
+
+// Confirms that defaults and fallthrough works properly
+func TestConfigMapsHaveDefaults(t *testing.T) {
+	f := createTempFileFromFixture(t, `
+# yaml-language-server: $schema=../config.schema.json
+
+version: "1"
+
+graph:
+  token: "token"
+
+traffic_shaping:
+  subgraphs:
+    foo:
+      request_timeout: 10s
+      dial_timeout: 0s
+`)
+	cfg, err := LoadConfig(f, "")
+
+	require.NoError(t, err)
+
+	require.Equal(t, 1024, cfg.Config.TrafficShaping.Subgraphs["foo"].MaxIdleConns, 1024)
+	require.Equal(t, time.Duration(0), cfg.Config.TrafficShaping.Subgraphs["foo"].DialTimeout)
+	require.Equal(t, time.Minute, cfg.Config.TrafficShaping.All.RequestTimeout)
+}
+
 func TestErrorWhenConfigNotExists(t *testing.T) {
 	_, err := LoadConfig("./fixtures/not_exists.yaml", "")
 
@@ -155,7 +207,6 @@ func TestErrorWhenEnvVariableConfigNotExists(t *testing.T) {
 }
 
 func TestConfigIsOptional(t *testing.T) {
-
 	require.NoError(t, os.Setenv("GRAPH_API_TOKEN", "XXX"))
 
 	t.Cleanup(func() {
@@ -498,5 +549,4 @@ version: "1"
 
 	require.True(t, c.Config.Telemetry.Metrics.Prometheus.EngineStats.Subscriptions)
 	require.True(t, c.Config.Telemetry.Metrics.OTLP.EngineStats.Subscriptions)
-
 }
