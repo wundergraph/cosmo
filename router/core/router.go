@@ -6,6 +6,13 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/exporter"
+	"github.com/wundergraph/cosmo/router/internal/normalizationcachewarmupexporter"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
+	"go.opentelemetry.io/otel/propagation"
 	"net"
 	"net/http"
 	"net/url"
@@ -20,7 +27,6 @@ import (
 	"github.com/nats-io/nuid"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/atomic"
@@ -33,9 +39,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -49,7 +52,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 )
 
 type IPAnonymizationMethod string
@@ -108,6 +110,16 @@ type (
 	GraphQLMetricsConfig struct {
 		Enabled           bool
 		CollectorEndpoint string
+		BatchSize         int
+		BatchInterval     time.Duration
+		QueueSize         int
+		ExportTimeout     time.Duration
+		RetryOptions      struct {
+			Enabled     bool
+			MaxDuration time.Duration
+			Interval    time.Duration
+			MaxAttempts int
+		}
 	}
 
 	IPAnonymizationConfig struct {
@@ -149,63 +161,64 @@ type (
 
 	// Config defines the configuration options for the Router.
 	Config struct {
-		clusterName                     string
-		instanceID                      string
-		logger                          *zap.Logger
-		traceConfig                     *rtrace.Config
-		metricConfig                    *rmetric.Config
-		tracerProvider                  *sdktrace.TracerProvider
-		otlpMeterProvider               *sdkmetric.MeterProvider
-		promMeterProvider               *sdkmetric.MeterProvider
-		gqlMetricsExporter              *graphqlmetrics.Exporter
-		corsOptions                     *cors.Config
-		setConfigVersionHeader          bool
-		routerGracePeriod               time.Duration
-		staticExecutionConfig           *nodev1.RouterConfig
-		awsLambda                       bool
-		shutdown                        atomic.Bool
-		bootstrapped                    atomic.Bool
-		ipAnonymization                 *IPAnonymizationConfig
-		listenAddr                      string
-		baseURL                         string
-		graphqlWebURL                   string
-		playgroundPath                  string
-		graphqlPath                     string
-		playground                      bool
-		introspection                   bool
-		queryPlansEnabled               bool
-		graphApiToken                   string
-		healthCheckPath                 string
-		readinessCheckPath              string
-		livenessCheckPath               string
-		playgroundConfig                config.PlaygroundConfig
-		cacheControlPolicy              config.CacheControlPolicy
-		routerConfigPollerConfig        *RouterConfigPollerConfig
-		cdnConfig                       config.CDNConfiguration
-		persistedOperationClient        persistedoperation.SaveClient
-		persistedOperationsConfig       config.PersistedOperationsConfig
-		automaticPersistedQueriesConfig config.AutomaticPersistedQueriesConfig
-		apolloCompatibilityFlags        config.ApolloCompatibilityFlags
-		storageProviders                config.StorageProviders
-		eventsConfig                    config.EventsConfiguration
-		prometheusServer                *http.Server
-		modulesConfig                   map[string]interface{}
-		executionConfig                 *ExecutionConfig
-		routerMiddlewares               []func(http.Handler) http.Handler
-		preOriginHandlers               []TransportPreHandler
-		postOriginHandlers              []TransportPostHandler
-		headerRules                     *config.HeaderRules
-		subgraphTransportOptions        *SubgraphTransportOptions
-		graphqlMetricsConfig            *GraphQLMetricsConfig
-		routerTrafficConfig             *config.RouterTrafficConfiguration
-		fileUploadConfig                *config.FileUpload
-		accessController                *AccessController
-		retryOptions                    retrytransport.RetryOptions
-		redisClient                     rd.RDCloser
-		processStartTime                time.Time
-		developmentMode                 bool
-		healthcheck                     health.Checker
-		accessLogsConfig                *AccessLogsConfig
+		clusterName                      string
+		instanceID                       string
+		logger                           *zap.Logger
+		traceConfig                      *rtrace.Config
+		metricConfig                     *rmetric.Config
+		tracerProvider                   *sdktrace.TracerProvider
+		otlpMeterProvider                *sdkmetric.MeterProvider
+		promMeterProvider                *sdkmetric.MeterProvider
+		gqlMetricsExporter               *graphqlmetrics.Exporter
+		normalizationCacheWarmupExporter *normalizationcachewarmupexporter.Exporter
+		corsOptions                      *cors.Config
+		setConfigVersionHeader           bool
+		routerGracePeriod                time.Duration
+		staticExecutionConfig            *nodev1.RouterConfig
+		awsLambda                        bool
+		shutdown                         atomic.Bool
+		bootstrapped                     atomic.Bool
+		ipAnonymization                  *IPAnonymizationConfig
+		listenAddr                       string
+		baseURL                          string
+		graphqlWebURL                    string
+		playgroundPath                   string
+		graphqlPath                      string
+		playground                       bool
+		introspection                    bool
+		queryPlansEnabled                bool
+		graphApiToken                    string
+		healthCheckPath                  string
+		readinessCheckPath               string
+		livenessCheckPath                string
+		playgroundConfig                 config.PlaygroundConfig
+		cacheControlPolicy               config.CacheControlPolicy
+		routerConfigPollerConfig         *RouterConfigPollerConfig
+		cdnConfig                        config.CDNConfiguration
+		persistedOperationClient         persistedoperation.SaveClient
+		persistedOperationsConfig        config.PersistedOperationsConfig
+		automaticPersistedQueriesConfig  config.AutomaticPersistedQueriesConfig
+		apolloCompatibilityFlags         config.ApolloCompatibilityFlags
+		storageProviders                 config.StorageProviders
+		eventsConfig                     config.EventsConfiguration
+		prometheusServer                 *http.Server
+		modulesConfig                    map[string]interface{}
+		executionConfig                  *ExecutionConfig
+		routerMiddlewares                []func(http.Handler) http.Handler
+		preOriginHandlers                []TransportPreHandler
+		postOriginHandlers               []TransportPostHandler
+		headerRules                      *config.HeaderRules
+		subgraphTransportOptions         *SubgraphTransportOptions
+		graphqlMetricsConfig             *GraphQLMetricsConfig
+		routerTrafficConfig              *config.RouterTrafficConfiguration
+		fileUploadConfig                 *config.FileUpload
+		accessController                 *AccessController
+		retryOptions                     retrytransport.RetryOptions
+		redisClient                      rd.RDCloser
+		processStartTime                 time.Time
+		developmentMode                  bool
+		healthcheck                      health.Checker
+		accessLogsConfig                 *AccessLogsConfig
 		// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
 		localhostFallbackInsideDocker bool
 		tlsServerConfig               *tls.Config
@@ -825,21 +838,45 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if r.graphqlMetricsConfig.Enabled {
+
+		settings := exporter.NewSettings(
+			r.graphqlMetricsConfig.BatchSize,
+			r.graphqlMetricsConfig.QueueSize,
+			r.graphqlMetricsConfig.BatchInterval,
+			r.graphqlMetricsConfig.ExportTimeout,
+			r.graphqlMetricsConfig.RetryOptions.Enabled,
+			r.graphqlMetricsConfig.RetryOptions.MaxAttempts,
+			r.graphqlMetricsConfig.RetryOptions.MaxDuration,
+			r.graphqlMetricsConfig.RetryOptions.Interval,
+		)
+
 		client := graphqlmetricsv1connect.NewGraphQLMetricsServiceClient(
 			http.DefaultClient,
 			r.graphqlMetricsConfig.CollectorEndpoint,
 			connect.WithSendGzip(),
 		)
+
 		ge, err := graphqlmetrics.NewExporter(
 			r.logger,
 			client,
 			r.graphApiToken,
-			graphqlmetrics.NewDefaultExporterSettings(),
+			settings,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to validate graphql metrics exporter: %w", err)
 		}
 		r.gqlMetricsExporter = ge
+
+		ne, err := normalizationcachewarmupexporter.NewExporter(
+			r.logger,
+			client,
+			r.graphApiToken,
+			settings,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to validate normalization cache warmup exporter: %w", err)
+		}
+		r.normalizationCacheWarmupExporter = ne
 
 		r.logger.Info("GraphQL schema coverage metrics enabled")
 	}
@@ -1717,6 +1754,21 @@ func DefaultGraphQLMetricsConfig() *GraphQLMetricsConfig {
 	return &GraphQLMetricsConfig{
 		Enabled:           false,
 		CollectorEndpoint: "",
+		BatchSize:         1024,
+		BatchInterval:     10 * time.Second,
+		QueueSize:         1024,
+		ExportTimeout:     time.Second * 10,
+		RetryOptions: struct {
+			Enabled     bool
+			MaxDuration time.Duration
+			Interval    time.Duration
+			MaxAttempts int
+		}{
+			Enabled:     true,
+			MaxDuration: time.Second * 5,
+			Interval:    time.Second * 5,
+			MaxAttempts: 5,
+		},
 	}
 }
 

@@ -1,4 +1,4 @@
-package graphqlmetrics
+package normalizationcachewarmupexporter
 
 import (
 	"context"
@@ -24,7 +24,7 @@ type Exporter struct {
 	shutdownSignal    chan struct{}
 	acceptTrafficSema chan struct{}
 
-	queue           chan *graphqlmetrics.SchemaUsageInfo
+	queue           chan *graphqlmetrics.NormalizationCacheWarmupData
 	inflightBatches *atomic.Int64
 
 	// exportRequestContext is used to cancel all requests that started before the shutdown
@@ -44,7 +44,7 @@ func NewExporter(logger *zap.Logger, client graphqlmetricsv1connect.GraphQLMetri
 		settings:                settings,
 		client:                  client,
 		apiToken:                apiToken,
-		queue:                   make(chan *graphqlmetrics.SchemaUsageInfo, settings.QueueSize),
+		queue:                   make(chan *graphqlmetrics.NormalizationCacheWarmupData, settings.QueueSize),
 		shutdownSignal:          make(chan struct{}),
 		acceptTrafficSema:       make(chan struct{}),
 		inflightBatches:         atomic.NewInt64(0),
@@ -101,16 +101,20 @@ func (e *Exporter) acceptTraffic() bool {
 	}
 }
 
-func (e *Exporter) RecordUsage(usageInfo *graphqlmetrics.SchemaUsageInfo, synchronous bool) (ok bool) {
+func (e *Exporter) RecordUsage(data *graphqlmetrics.NormalizationCacheWarmupData, synchronous bool) (ok bool) {
 	if synchronous {
-		_ = e.sendItems([]*graphqlmetrics.SchemaUsageInfo{usageInfo})
+		_ = e.send(&graphqlmetrics.NormalizationCacheWarmupDataAggregation{
+			Operations: map[uint64]*graphqlmetrics.NormalizationCacheWarmupData{
+				data.Query.Hash: data,
+			},
+		})
 		return true
 	}
 	if !e.acceptTraffic() {
 		return false
 	}
 	select {
-	case e.queue <- usageInfo:
+	case e.queue <- data:
 		return true
 	default:
 		e.logger.Warn("RecordAsync: Queue is full, dropping item")
@@ -118,8 +122,8 @@ func (e *Exporter) RecordUsage(usageInfo *graphqlmetrics.SchemaUsageInfo, synchr
 	}
 }
 
-func (e *Exporter) sendItems(items []*graphqlmetrics.SchemaUsageInfo) error {
-	e.logger.Debug("sending batch", zap.Int("size", len(items)))
+func (e *Exporter) send(aggregation *graphqlmetrics.NormalizationCacheWarmupDataAggregation) error {
+	e.logger.Debug("sending item")
 	ctx := e.exportRequestContext
 	if e.settings.ExportTimeout > 0 {
 		var cancel context.CancelFunc
@@ -127,47 +131,24 @@ func (e *Exporter) sendItems(items []*graphqlmetrics.SchemaUsageInfo) error {
 		defer cancel()
 	}
 
-	req := connect.NewRequest(&graphqlmetrics.PublishGraphQLRequestMetricsRequest{
-		SchemaUsage: items,
+	req := connect.NewRequest(&graphqlmetrics.PublishNormalizationCacheWarmupDataRequest{
+		Aggregation: aggregation,
 	})
 
 	req.Header().Set("Authorization", fmt.Sprintf("Bearer %s", e.apiToken))
 
-	_, err := e.client.PublishGraphQLMetrics(ctx, req)
+	_, err := e.client.PublishNormalizationCacheWarmupData(ctx, req)
 	if err != nil {
-		e.logger.Debug("Failed to export batch", zap.Error(err), zap.Int("batch_size", len(items)))
+		e.logger.Debug("Failed to export batch", zap.Error(err))
 		return err
 	}
 
-	e.logger.Debug("Successfully exported batch", zap.Int("batch_size", len(items)))
+	e.logger.Debug("Successfully exported batch")
 
 	return nil
 }
 
-func (e *Exporter) sendAggregation(ctx context.Context, request *graphqlmetrics.PublishAggregatedGraphQLRequestMetricsRequest) error {
-	e.logger.Debug("sendAggregation", zap.Int("size", len(request.Aggregation)))
-	if e.settings.ExportTimeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, e.settings.ExportTimeout)
-		defer cancel()
-	}
-
-	req := connect.NewRequest(request)
-
-	req.Header().Set("Authorization", fmt.Sprintf("Bearer %s", e.apiToken))
-
-	_, err := e.client.PublishAggregatedGraphQLMetrics(ctx, req)
-	if err != nil {
-		e.logger.Debug("sendAggregation failed", zap.Error(err), zap.Int("batch_size", len(request.Aggregation)))
-		return err
-	}
-
-	e.logger.Debug("sendAggregation success", zap.Int("batch_size", len(request.Aggregation)))
-
-	return nil
-}
-
-func (e *Exporter) prepareAndSendBatch(batch []*graphqlmetrics.SchemaUsageInfo) {
+func (e *Exporter) prepareAndSendBatch(batch []*graphqlmetrics.NormalizationCacheWarmupData) {
 	e.logger.Debug("Exporter.prepareAndSendBatch", zap.Int("batch_size", len(batch)))
 	e.inflightBatches.Inc()
 	go func() {
@@ -177,13 +158,13 @@ func (e *Exporter) prepareAndSendBatch(batch []*graphqlmetrics.SchemaUsageInfo) 
 }
 
 // export sends the batch to the configured endpoint.
-func (e *Exporter) aggregateAndSendBatch(batch []*graphqlmetrics.SchemaUsageInfo) {
+func (e *Exporter) aggregateAndSendBatch(batch []*graphqlmetrics.NormalizationCacheWarmupData) {
 	b := backoff.New(e.settings.RetryOptions.MaxDuration, e.settings.RetryOptions.Interval)
 	defer b.Reset()
 
-	request := AggregateSchemaUsageInfoBatch(batch)
+	request := e.aggregate(batch)
 
-	err := e.sendAggregation(e.exportRequestContext, request)
+	err := e.send(request)
 	if err == nil {
 		return
 	}
@@ -192,7 +173,7 @@ func (e *Exporter) aggregateAndSendBatch(batch []*graphqlmetrics.SchemaUsageInfo
 	if errors.As(err, &connectErr) && connectErr.Code() == connect.CodeUnauthenticated {
 		e.logger.Error("Failed to export batch due to unauthenticated error, not retrying",
 			zap.Error(err),
-			zap.Int("batch_size", len(request.Aggregation)),
+			zap.Int("batch_size", len(request.Operations)),
 		)
 		return
 	}
@@ -200,7 +181,7 @@ func (e *Exporter) aggregateAndSendBatch(batch []*graphqlmetrics.SchemaUsageInfo
 	if !e.settings.RetryOptions.Enabled {
 		e.logger.Error("Failed to export batch",
 			zap.Error(err),
-			zap.Int("batch_size", len(request.Aggregation)),
+			zap.Int("batch_size", len(request.Operations)),
 		)
 		return
 	}
@@ -216,7 +197,7 @@ func (e *Exporter) aggregateAndSendBatch(batch []*graphqlmetrics.SchemaUsageInfo
 		sleepDuration := b.Duration()
 
 		e.logger.Debug(fmt.Sprintf("Retrying export in %s ...", sleepDuration.String()),
-			zap.Int("batch_size", len(request.Aggregation)),
+			zap.Int("batch_size", len(request.Operations)),
 			zap.Int("retry", retry),
 			zap.Duration("sleep", sleepDuration),
 		)
@@ -224,14 +205,14 @@ func (e *Exporter) aggregateAndSendBatch(batch []*graphqlmetrics.SchemaUsageInfo
 		// Wait for the specified backoff period
 		time.Sleep(sleepDuration)
 
-		err = e.sendAggregation(e.exportRequestContext, request)
+		err = e.send(request)
 		if err == nil {
 			return
 		}
 		if errors.As(err, &connectErr) && connectErr.Code() == connect.CodeUnauthenticated {
 			e.logger.Error("Failed to export batch due to unauthenticated error, not retrying",
 				zap.Error(err),
-				zap.Int("batch_size", len(request.Aggregation)),
+				zap.Int("batch_size", len(request.Operations)),
 			)
 			return
 		}
@@ -240,9 +221,27 @@ func (e *Exporter) aggregateAndSendBatch(batch []*graphqlmetrics.SchemaUsageInfo
 
 	e.logger.Error("Failed to export batch after retries",
 		zap.Error(lastErr),
-		zap.Int("batch_size", len(request.Aggregation)),
+		zap.Int("batch_size", len(request.Operations)),
 		zap.Int("retries", retry),
 	)
+}
+
+func (e *Exporter) aggregate(batch []*graphqlmetrics.NormalizationCacheWarmupData) *graphqlmetrics.NormalizationCacheWarmupDataAggregation {
+	aggregation := &graphqlmetrics.NormalizationCacheWarmupDataAggregation{
+		Operations: make(map[uint64]*graphqlmetrics.NormalizationCacheWarmupData),
+	}
+
+	for _, item := range batch {
+		if existing, ok := aggregation.Operations[item.Query.Hash]; ok {
+			for k, v := range item.VariableVariations {
+				existing.VariableVariations[k] = v
+			}
+		} else {
+			aggregation.Operations[item.Query.Hash] = item
+		}
+	}
+
+	return aggregation
 }
 
 // start starts the exporter and blocks until the exporter is shutdown.
@@ -254,11 +253,11 @@ func (e *Exporter) start() {
 		e.logger.Debug("Exporter stopped")
 	}()
 
-	var buffer []*graphqlmetrics.SchemaUsageInfo
+	var buffer []*graphqlmetrics.NormalizationCacheWarmupData
 
 	for {
 		if buffer == nil {
-			buffer = make([]*graphqlmetrics.SchemaUsageInfo, 0, e.settings.BatchSize)
+			buffer = make([]*graphqlmetrics.NormalizationCacheWarmupData, 0, e.settings.BatchSize)
 		}
 		select {
 		case <-ticker.C:
@@ -282,7 +281,7 @@ func (e *Exporter) start() {
 	}
 }
 
-func (e *Exporter) drainQueue(buffer []*graphqlmetrics.SchemaUsageInfo) {
+func (e *Exporter) drainQueue(buffer []*graphqlmetrics.NormalizationCacheWarmupData) {
 	e.logger.Debug("Exporter.closeAndDrainQueue")
 	drainedItems := 0
 	for {
@@ -292,7 +291,7 @@ func (e *Exporter) drainQueue(buffer []*graphqlmetrics.SchemaUsageInfo) {
 			buffer = append(buffer, item)
 			if len(buffer) == e.settings.BatchSize {
 				e.prepareAndSendBatch(buffer)
-				buffer = make([]*graphqlmetrics.SchemaUsageInfo, 0, e.settings.BatchSize)
+				buffer = make([]*graphqlmetrics.NormalizationCacheWarmupData, 0, e.settings.BatchSize)
 			}
 		default:
 			if len(buffer) > 0 {

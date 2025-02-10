@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strconv"
 	"time"
@@ -157,13 +158,22 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 
 					res, err := w.processor.ProcessOperation(ctx, item)
 					if err != nil {
-						w.log.Warn("Failed to process operation, skipping",
+						fields := []zap.Field{
 							zap.Error(err),
-							zap.String("client_name", item.Client.Name),
-							zap.String("client_version", item.Client.Version),
-							zap.String("query", item.Request.Query),
-							zap.String("operation_name", item.Request.OperationName),
-						)
+						}
+						if item.Client != nil {
+							fields = append(fields,
+								zap.String("client_name", item.Client.Name),
+								zap.String("client_version", item.Client.Version),
+							)
+						}
+						if item.Request != nil {
+							fields = append(fields,
+								zap.String("query", item.Request.Query),
+								zap.String("operation_name", item.Request.OperationName),
+							)
+						}
+						w.log.Warn("Failed to process operation, skipping", fields...)
 					}
 
 					if err == nil && w.afterOperation != nil {
@@ -236,6 +246,32 @@ type CacheWarmupPlanningProcessor struct {
 }
 
 func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, operation *nodev1.Operation) (*CacheWarmupOperationPlanResult, error) {
+	request := operation.GetRequest()
+	client := operation.GetClient()
+	variations := request.GetVariableVariations()
+	result := &CacheWarmupOperationPlanResult{
+		ClientName:    client.Name,
+		ClientVersion: client.Version,
+	}
+	if len(variations) == 0 {
+		err := c.processOperation(ctx, request, result, client)
+		if err != nil {
+			return nil, err
+		}
+		return result, nil
+	}
+	for _, variation := range variations {
+		variables := variation.GetVariables()
+		request.Variables = variables
+		err := c.processOperation(ctx, request, result, client)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
+}
+
+func (c *CacheWarmupPlanningProcessor) processOperation(ctx context.Context, request *nodev1.OperationRequest, result *CacheWarmupOperationPlanResult, client *nodev1.ClientInfo) error {
 
 	var (
 		isAPQ bool
@@ -243,71 +279,78 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 
 	k, err := c.operationProcessor.NewIndependentKit()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	var s []byte
-	if operation.Request.GetExtensions() != nil {
-		s, err = protojson.Marshal(operation.Request.GetExtensions())
+	if request.GetExtensions() != nil {
+		s, err = protojson.Marshal(request.GetExtensions())
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	item := &CacheWarmupItem{
 		Request: GraphQLRequest{
-			Query:         operation.Request.GetQuery(),
-			OperationName: operation.Request.GetOperationName(),
+			Query:         request.GetQuery(),
+			OperationName: request.GetOperationName(),
 			Extensions:    s,
 		},
 		Client: &ClientInfo{
-			Name:    operation.GetClient().GetName(),
-			Version: operation.GetClient().GetVersion(),
+			Name:    client.GetName(),
+			Version: client.GetVersion(),
 		},
+	}
+
+	if request.Variables != nil {
+		item.Request.Variables, err = json.Marshal(request.Variables)
+		if err != nil {
+			return err
+		}
 	}
 
 	k.parsedOperation.Request = item.Request
 
 	err = k.unmarshalOperation()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = k.ComputeOperationSha256()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if k.parsedOperation.IsPersistedOperation {
 		_, isAPQ, err = k.FetchPersistedOperation(ctx, item.Client)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	err = k.Parse()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	_, err = k.NormalizeOperation(item.Client.Name, isAPQ)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = k.NormalizeVariables()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = k.RemapVariables(c.disableVariablesRemapping)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	_, err = k.Validate(true, k.parsedOperation.RemapVariables)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if c.complexityLimits != nil {
@@ -338,22 +381,31 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 
 	opContext.variables, err = astjson.ParseBytes(k.parsedOperation.Request.Variables)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	planningStart := time.Now()
+	start := time.Now()
 
 	err = c.operationPlanner.plan(opContext, planOptions)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &CacheWarmupOperationPlanResult{
-		OperationHash: strconv.FormatUint(k.parsedOperation.ID, 10),
-		OperationName: k.parsedOperation.Request.OperationName,
-		OperationType: k.parsedOperation.Type,
-		ClientName:    item.Client.Name,
-		ClientVersion: item.Client.Version,
-		PlanningTime:  time.Since(planningStart),
-	}, nil
+	if result.PlanningTime == 0 {
+		result.PlanningTime = time.Since(start)
+	}
+
+	if result.OperationHash == "" {
+		result.OperationHash = strconv.FormatUint(k.parsedOperation.ID, 10)
+	}
+
+	if result.OperationName == "" {
+		result.OperationName = k.parsedOperation.Request.OperationName
+	}
+
+	if result.OperationType == "" {
+		result.OperationType = k.parsedOperation.Type
+	}
+
+	return nil
 }

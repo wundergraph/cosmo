@@ -2377,6 +2377,20 @@ export class OperationRequest extends Message<OperationRequest> {
    */
   extensions?: Extension;
 
+  /**
+   * we're only interested in variables that are relevant for normalization
+   * as such, we only need booleans that are used for skip/include
+   * consequently, variables is a map of key->bool
+   *
+   * @generated from field: map<string, bool> variables = 4;
+   */
+  variables: { [key: string]: boolean } = {};
+
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.VariableVariation variable_variations = 5;
+   */
+  variableVariations: VariableVariation[] = [];
+
   constructor(data?: PartialMessage<OperationRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2388,6 +2402,8 @@ export class OperationRequest extends Message<OperationRequest> {
     { no: 1, name: "operation_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "query", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "extensions", kind: "message", T: Extension },
+    { no: 4, name: "variables", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 8 /* ScalarType.BOOL */} },
+    { no: 5, name: "variable_variations", kind: "message", T: VariableVariation, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OperationRequest {
@@ -2404,6 +2420,43 @@ export class OperationRequest extends Message<OperationRequest> {
 
   static equals(a: OperationRequest | PlainMessage<OperationRequest> | undefined, b: OperationRequest | PlainMessage<OperationRequest> | undefined): boolean {
     return proto3.util.equals(OperationRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.VariableVariation
+ */
+export class VariableVariation extends Message<VariableVariation> {
+  /**
+   * @generated from field: map<string, bool> variables = 1;
+   */
+  variables: { [key: string]: boolean } = {};
+
+  constructor(data?: PartialMessage<VariableVariation>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.VariableVariation";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "variables", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 8 /* ScalarType.BOOL */} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VariableVariation {
+    return new VariableVariation().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): VariableVariation {
+    return new VariableVariation().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): VariableVariation {
+    return new VariableVariation().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: VariableVariation | PlainMessage<VariableVariation> | undefined, b: VariableVariation | PlainMessage<VariableVariation> | undefined): boolean {
+    return proto3.util.equals(VariableVariation, a, b);
   }
 }
 

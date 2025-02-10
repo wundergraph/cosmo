@@ -56,7 +56,17 @@
   },
   "GraphqlMetrics": {
     "Enabled": true,
-    "CollectorEndpoint": "https://cosmo-metrics.wundergraph.com"
+    "CollectorEndpoint": "https://cosmo-metrics.wundergraph.com",
+    "BatchInterval": 10000000000,
+    "BatchSize": 1024,
+    "QueueSize": 1024,
+    "ExportTimeout": 10000000000,
+    "RetryOptions": {
+      "Enabled": true,
+      "MaxDuration": 10000000000,
+      "Interval": 5000000000,
+      "MaxAttempts": 5
+    }
   },
   "CORS": {
     "Enabled": true,

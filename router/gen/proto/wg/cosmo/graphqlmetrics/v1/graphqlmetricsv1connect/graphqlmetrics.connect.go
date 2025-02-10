@@ -41,13 +41,17 @@ const (
 	// GraphQLMetricsServicePublishAggregatedGraphQLMetricsProcedure is the fully-qualified name of the
 	// GraphQLMetricsService's PublishAggregatedGraphQLMetrics RPC.
 	GraphQLMetricsServicePublishAggregatedGraphQLMetricsProcedure = "/wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService/PublishAggregatedGraphQLMetrics"
+	// GraphQLMetricsServicePublishNormalizationCacheWarmupDataProcedure is the fully-qualified name of
+	// the GraphQLMetricsService's PublishNormalizationCacheWarmupData RPC.
+	GraphQLMetricsServicePublishNormalizationCacheWarmupDataProcedure = "/wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService/PublishNormalizationCacheWarmupData"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
-	graphQLMetricsServiceServiceDescriptor                               = v1.File_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto.Services().ByName("GraphQLMetricsService")
-	graphQLMetricsServicePublishGraphQLMetricsMethodDescriptor           = graphQLMetricsServiceServiceDescriptor.Methods().ByName("PublishGraphQLMetrics")
-	graphQLMetricsServicePublishAggregatedGraphQLMetricsMethodDescriptor = graphQLMetricsServiceServiceDescriptor.Methods().ByName("PublishAggregatedGraphQLMetrics")
+	graphQLMetricsServiceServiceDescriptor                                   = v1.File_wg_cosmo_graphqlmetrics_v1_graphqlmetrics_proto.Services().ByName("GraphQLMetricsService")
+	graphQLMetricsServicePublishGraphQLMetricsMethodDescriptor               = graphQLMetricsServiceServiceDescriptor.Methods().ByName("PublishGraphQLMetrics")
+	graphQLMetricsServicePublishAggregatedGraphQLMetricsMethodDescriptor     = graphQLMetricsServiceServiceDescriptor.Methods().ByName("PublishAggregatedGraphQLMetrics")
+	graphQLMetricsServicePublishNormalizationCacheWarmupDataMethodDescriptor = graphQLMetricsServiceServiceDescriptor.Methods().ByName("PublishNormalizationCacheWarmupData")
 )
 
 // GraphQLMetricsServiceClient is a client for the wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService
@@ -56,6 +60,7 @@ type GraphQLMetricsServiceClient interface {
 	// PublishGraphQLMetrics publishes the GraphQL metrics to the metrics service
 	PublishGraphQLMetrics(context.Context, *connect.Request[v1.PublishGraphQLRequestMetricsRequest]) (*connect.Response[v1.PublishOperationCoverageReportResponse], error)
 	PublishAggregatedGraphQLMetrics(context.Context, *connect.Request[v1.PublishAggregatedGraphQLRequestMetricsRequest]) (*connect.Response[v1.PublishAggregatedGraphQLRequestMetricsResponse], error)
+	PublishNormalizationCacheWarmupData(context.Context, *connect.Request[v1.PublishNormalizationCacheWarmupDataRequest]) (*connect.Response[v1.PublishNormalizationCacheWarmupDataResponse], error)
 }
 
 // NewGraphQLMetricsServiceClient constructs a client for the
@@ -81,13 +86,20 @@ func NewGraphQLMetricsServiceClient(httpClient connect.HTTPClient, baseURL strin
 			connect.WithSchema(graphQLMetricsServicePublishAggregatedGraphQLMetricsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		publishNormalizationCacheWarmupData: connect.NewClient[v1.PublishNormalizationCacheWarmupDataRequest, v1.PublishNormalizationCacheWarmupDataResponse](
+			httpClient,
+			baseURL+GraphQLMetricsServicePublishNormalizationCacheWarmupDataProcedure,
+			connect.WithSchema(graphQLMetricsServicePublishNormalizationCacheWarmupDataMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // graphQLMetricsServiceClient implements GraphQLMetricsServiceClient.
 type graphQLMetricsServiceClient struct {
-	publishGraphQLMetrics           *connect.Client[v1.PublishGraphQLRequestMetricsRequest, v1.PublishOperationCoverageReportResponse]
-	publishAggregatedGraphQLMetrics *connect.Client[v1.PublishAggregatedGraphQLRequestMetricsRequest, v1.PublishAggregatedGraphQLRequestMetricsResponse]
+	publishGraphQLMetrics               *connect.Client[v1.PublishGraphQLRequestMetricsRequest, v1.PublishOperationCoverageReportResponse]
+	publishAggregatedGraphQLMetrics     *connect.Client[v1.PublishAggregatedGraphQLRequestMetricsRequest, v1.PublishAggregatedGraphQLRequestMetricsResponse]
+	publishNormalizationCacheWarmupData *connect.Client[v1.PublishNormalizationCacheWarmupDataRequest, v1.PublishNormalizationCacheWarmupDataResponse]
 }
 
 // PublishGraphQLMetrics calls
@@ -102,12 +114,19 @@ func (c *graphQLMetricsServiceClient) PublishAggregatedGraphQLMetrics(ctx contex
 	return c.publishAggregatedGraphQLMetrics.CallUnary(ctx, req)
 }
 
+// PublishNormalizationCacheWarmupData calls
+// wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService.PublishNormalizationCacheWarmupData.
+func (c *graphQLMetricsServiceClient) PublishNormalizationCacheWarmupData(ctx context.Context, req *connect.Request[v1.PublishNormalizationCacheWarmupDataRequest]) (*connect.Response[v1.PublishNormalizationCacheWarmupDataResponse], error) {
+	return c.publishNormalizationCacheWarmupData.CallUnary(ctx, req)
+}
+
 // GraphQLMetricsServiceHandler is an implementation of the
 // wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService service.
 type GraphQLMetricsServiceHandler interface {
 	// PublishGraphQLMetrics publishes the GraphQL metrics to the metrics service
 	PublishGraphQLMetrics(context.Context, *connect.Request[v1.PublishGraphQLRequestMetricsRequest]) (*connect.Response[v1.PublishOperationCoverageReportResponse], error)
 	PublishAggregatedGraphQLMetrics(context.Context, *connect.Request[v1.PublishAggregatedGraphQLRequestMetricsRequest]) (*connect.Response[v1.PublishAggregatedGraphQLRequestMetricsResponse], error)
+	PublishNormalizationCacheWarmupData(context.Context, *connect.Request[v1.PublishNormalizationCacheWarmupDataRequest]) (*connect.Response[v1.PublishNormalizationCacheWarmupDataResponse], error)
 }
 
 // NewGraphQLMetricsServiceHandler builds an HTTP handler from the service implementation. It
@@ -128,12 +147,20 @@ func NewGraphQLMetricsServiceHandler(svc GraphQLMetricsServiceHandler, opts ...c
 		connect.WithSchema(graphQLMetricsServicePublishAggregatedGraphQLMetricsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	graphQLMetricsServicePublishNormalizationCacheWarmupDataHandler := connect.NewUnaryHandler(
+		GraphQLMetricsServicePublishNormalizationCacheWarmupDataProcedure,
+		svc.PublishNormalizationCacheWarmupData,
+		connect.WithSchema(graphQLMetricsServicePublishNormalizationCacheWarmupDataMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case GraphQLMetricsServicePublishGraphQLMetricsProcedure:
 			graphQLMetricsServicePublishGraphQLMetricsHandler.ServeHTTP(w, r)
 		case GraphQLMetricsServicePublishAggregatedGraphQLMetricsProcedure:
 			graphQLMetricsServicePublishAggregatedGraphQLMetricsHandler.ServeHTTP(w, r)
+		case GraphQLMetricsServicePublishNormalizationCacheWarmupDataProcedure:
+			graphQLMetricsServicePublishNormalizationCacheWarmupDataHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -149,4 +176,8 @@ func (UnimplementedGraphQLMetricsServiceHandler) PublishGraphQLMetrics(context.C
 
 func (UnimplementedGraphQLMetricsServiceHandler) PublishAggregatedGraphQLMetrics(context.Context, *connect.Request[v1.PublishAggregatedGraphQLRequestMetricsRequest]) (*connect.Response[v1.PublishAggregatedGraphQLRequestMetricsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService.PublishAggregatedGraphQLMetrics is not implemented"))
+}
+
+func (UnimplementedGraphQLMetricsServiceHandler) PublishNormalizationCacheWarmupData(context.Context, *connect.Request[v1.PublishNormalizationCacheWarmupDataRequest]) (*connect.Response[v1.PublishNormalizationCacheWarmupDataResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.graphqlmetrics.v1.GraphQLMetricsService.PublishNormalizationCacheWarmupData is not implemented"))
 }

@@ -186,8 +186,20 @@ type SubgraphTrafficRequestRule struct {
 }
 
 type GraphqlMetrics struct {
-	Enabled           bool   `yaml:"enabled" envDefault:"true" env:"GRAPHQL_METRICS_ENABLED"`
-	CollectorEndpoint string `yaml:"collector_endpoint" envDefault:"https://cosmo-metrics.wundergraph.com" env:"GRAPHQL_METRICS_COLLECTOR_ENDPOINT"`
+	Enabled           bool                       `yaml:"enabled" envDefault:"true" env:"GRAPHQL_METRICS_ENABLED"`
+	CollectorEndpoint string                     `yaml:"collector_endpoint" envDefault:"https://cosmo-metrics.wundergraph.com" env:"GRAPHQL_METRICS_COLLECTOR_ENDPOINT"`
+	BatchInterval     time.Duration              `yaml:"batch_interval" envDefault:"10s" env:"GRAPHQL_METRICS_BATCH_INTERVAL"`
+	BatchSize         int                        `yaml:"batch_size" envDefault:"1024" env:"GRAPHQL_METRICS_BATCH_SIZE"`
+	QueueSize         int                        `yaml:"queue_size" envDefault:"1024" env:"GRAPHQL_METRICS_QUEUE_SIZE"`
+	ExportTimeout     time.Duration              `yaml:"export_timeout" envDefault:"10s" env:"GRAPHQL_METRICS_EXPORT_TIMEOUT"`
+	RetryOptions      GraphQLMetricsRetryOptions `yaml:"retry_options"`
+}
+
+type GraphQLMetricsRetryOptions struct {
+	Enabled     bool          `yaml:"enabled" envDefault:"true" env:"GRAPHQL_METRICS_RETRY_ENABLED"`
+	MaxDuration time.Duration `yaml:"max_duration" envDefault:"10s" env:"GRAPHQL_METRICS_RETRY_MAX_DURATION"`
+	Interval    time.Duration `yaml:"interval" envDefault:"5s" env:"GRAPHQL_METRICS_RETRY_INTERVAL"`
+	MaxAttempts int           `yaml:"max_attempts" envDefault:"5" env:"GRAPHQL_METRICS_RETRY_MAX_ATTEMPTS"`
 }
 
 type BackoffJitterRetry struct {
@@ -436,10 +448,10 @@ type AuthorizationConfiguration struct {
 }
 
 type RateLimitConfiguration struct {
-	Enabled        bool                    `yaml:"enabled" envDefault:"false" env:"RATE_LIMIT_ENABLED"`
-	Strategy       string                  `yaml:"strategy" envDefault:"simple" env:"RATE_LIMIT_STRATEGY"`
-	SimpleStrategy RateLimitSimpleStrategy `yaml:"simple_strategy"`
-	Storage        RedisConfiguration      `yaml:"storage"`
+	Enabled        bool                        `yaml:"enabled" envDefault:"false" env:"RATE_LIMIT_ENABLED"`
+	Strategy       string                      `yaml:"strategy" envDefault:"simple" env:"RATE_LIMIT_STRATEGY"`
+	SimpleStrategy RateLimitSimpleStrategy     `yaml:"simple_strategy"`
+	Storage        RateLimitRedisConfiguration `yaml:"storage"`
 	// Debug ensures that retryAfter and resetAfter are set to stable values for testing
 	// Debug also exposes the rate limit key in the response extension for debugging purposes
 	Debug               bool                        `yaml:"debug" envDefault:"false" env:"RATE_LIMIT_DEBUG"`
@@ -452,7 +464,7 @@ type RateLimitErrorExtensionCode struct {
 	Code    string `yaml:"code" envDefault:"RATE_LIMIT_EXCEEDED" env:"RATE_LIMIT_ERROR_EXTENSION_CODE"`
 }
 
-type RedisConfiguration struct {
+type RateLimitRedisConfiguration struct {
 	URLs           []string `yaml:"urls,omitempty" env:"RATE_LIMIT_REDIS_URLS"`
 	ClusterEnabled bool     `yaml:"cluster_enabled,omitempty" envDefault:"false" env:"RATE_LIMIT_REDIS_CLUSTER_ENABLED"`
 	KeyPrefix      string   `yaml:"key_prefix,omitempty" envDefault:"cosmo_rate_limit" env:"RATE_LIMIT_REDIS_KEY_PREFIX"`

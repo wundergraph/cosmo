@@ -1,9 +1,11 @@
 package core
 
 import (
+	"strconv"
+
+	"github.com/wundergraph/cosmo/router/internal/normalizationcachewarmupexporter"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
-	"strconv"
 
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
@@ -22,28 +24,31 @@ type RouterMetrics interface {
 // routerMetrics encapsulates all data and configuration that the router
 // uses to collect and its metrics
 type routerMetrics struct {
-	metrics             metric.Store
-	gqlMetricsExporter  *graphqlmetrics.Exporter
-	routerConfigVersion string
-	logger              *zap.Logger
-	exportEnabled       bool
+	metrics                          metric.Store
+	gqlMetricsExporter               *graphqlmetrics.Exporter
+	normalizationCacheWarmupExporter *normalizationcachewarmupexporter.Exporter
+	routerConfigVersion              string
+	logger                           *zap.Logger
+	exportEnabled                    bool
 }
 
 type routerMetricsConfig struct {
-	metrics             metric.Store
-	gqlMetricsExporter  *graphqlmetrics.Exporter
-	routerConfigVersion string
-	logger              *zap.Logger
-	exportEnabled       bool
+	metrics                          metric.Store
+	gqlMetricsExporter               *graphqlmetrics.Exporter
+	normalizationCacheWarmupExporter *normalizationcachewarmupexporter.Exporter
+	routerConfigVersion              string
+	logger                           *zap.Logger
+	exportEnabled                    bool
 }
 
 func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
 	return &routerMetrics{
-		metrics:             cfg.metrics,
-		gqlMetricsExporter:  cfg.gqlMetricsExporter,
-		routerConfigVersion: cfg.routerConfigVersion,
-		logger:              cfg.logger,
-		exportEnabled:       cfg.exportEnabled,
+		metrics:                          cfg.metrics,
+		gqlMetricsExporter:               cfg.gqlMetricsExporter,
+		normalizationCacheWarmupExporter: cfg.normalizationCacheWarmupExporter,
+		routerConfigVersion:              cfg.routerConfigVersion,
+		logger:                           cfg.logger,
+		exportEnabled:                    cfg.exportEnabled,
 	}
 }
 
@@ -121,6 +126,9 @@ func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext
 	}
 
 	m.gqlMetricsExporter.RecordUsage(item, exportSynchronous)
+	if operationContext.normalizationWarmupData != nil {
+		m.normalizationCacheWarmupExporter.RecordUsage(operationContext.normalizationWarmupData, exportSynchronous)
+	}
 }
 
 func (m *routerMetrics) strCopy(s string) string {
