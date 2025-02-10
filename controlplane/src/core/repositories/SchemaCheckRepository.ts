@@ -9,6 +9,7 @@ import {
   schemaCheckChangeAction,
   schemaCheckChangeActionOperationUsage,
   schemaCheckComposition,
+  schemaCheckFederatedGraphs,
   schemaChecks,
 } from '../../db/schema.js';
 import { ComposedFederatedGraph } from '../composition/composer.js';
@@ -53,22 +54,11 @@ export class SchemaCheckRepository {
     return insertedSchemaCheck[0].id;
   }
 
-  public async update(data: {
-    schemaCheckID: string;
-    isComposable?: boolean;
-    hasClientTraffic?: boolean;
-    hasBreakingChanges?: boolean;
-    hasLintErrors?: boolean;
-    hasGraphPruningErrors?: boolean;
-  }): Promise<string | undefined> {
+  public async update(data: { schemaCheckID: string; hasLintErrors?: boolean }): Promise<string | undefined> {
     const updatedSchemaCheck = await this.db
       .update(schemaChecks)
       .set({
-        isComposable: data.isComposable,
-        hasBreakingChanges: data.hasBreakingChanges,
-        hasClientTraffic: data.hasClientTraffic,
         hasLintErrors: data.hasLintErrors,
-        hasGraphPruningErrors: data.hasGraphPruningErrors,
       })
       .where(eq(schemaChecks.id, data.schemaCheckID))
       .returning()
@@ -76,7 +66,33 @@ export class SchemaCheckRepository {
     return updatedSchemaCheck[0].id;
   }
 
-  public createSchemaCheckChanges(data: { schemaCheckID: string; changes: SchemaDiff[] }) {
+  public updateCheckFederatedGraphs(data: {
+    schemaCheckID: string;
+    federatedGraphId: string;
+    isComposable?: boolean;
+    hasClientTraffic?: boolean;
+    hasBreakingChanges?: boolean;
+    hasGraphPruningErrors?: boolean;
+  }) {
+    return this.db
+      .update(schemaCheckFederatedGraphs)
+      .set({
+        isComposable: data.isComposable,
+        hasBreakingChanges: data.hasBreakingChanges,
+        hasClientTraffic: data.hasClientTraffic,
+        hasGraphPruningErrors: data.hasGraphPruningErrors,
+      })
+      .where(
+        and(
+          eq(schemaCheckFederatedGraphs.checkId, data.schemaCheckID),
+          eq(schemaCheckFederatedGraphs.federatedGraphId, data.federatedGraphId),
+        ),
+      )
+      .returning()
+      .execute();
+  }
+
+  public createSchemaCheckChanges(data: { schemaCheckID: string; changes: SchemaDiff[]; federatedGraphId: string }) {
     if (data.changes.length === 0) {
       return [];
     }
@@ -89,6 +105,7 @@ export class SchemaCheckRepository {
           changeMessage: change.message,
           path: change.path,
           isBreaking: change.isBreaking,
+          federatedGraphId: data.federatedGraphId,
         })),
       )
       .returning();

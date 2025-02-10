@@ -1,4 +1,8 @@
-import { GraphPruningConfig, LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  GraphPruningConfig,
+  LintSeverity,
+  SchemaChange,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { and, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { GraphQLSchema } from 'graphql';
@@ -18,6 +22,7 @@ import SchemaGraphPruner from '../services/SchemaGraphPruner.js';
 import { UsageRepository } from './analytics/UsageRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
+import { SchemaCheckRepository } from './SchemaCheckRepository.js';
 
 export class SchemaGraphPruningRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
@@ -82,6 +87,14 @@ export class SchemaGraphPruningRepository {
     graphPruningIssues: GraphPruningIssueResult[];
   }) {
     if (graphPruningIssues.length > 0) {
+      const federatedGraphsWithPruningErrors = [
+        ...new Set(
+          graphPruningIssues
+            .filter((issue) => issue.severity === LintSeverity.error)
+            .map((issue) => issue.federatedGraphId),
+        ),
+      ];
+
       await this.db.insert(schemaCheckGraphPruningAction).values(
         graphPruningIssues.map((l) => {
           return {
@@ -95,6 +108,16 @@ export class SchemaGraphPruningRepository {
           };
         }),
       );
+
+      const schemaCheckRepo = new SchemaCheckRepository(this.db);
+      // update all the check federated graphs if it contains any graph pruning errors
+      for (const federatedGraphId of federatedGraphsWithPruningErrors) {
+        await schemaCheckRepo.updateCheckFederatedGraphs({
+          schemaCheckID: schemaCheckId,
+          federatedGraphId,
+          hasGraphPruningErrors: true,
+        });
+      }
     }
   }
 
@@ -169,7 +192,7 @@ export class SchemaGraphPruningRepository {
     isGraphPruningEnabled: boolean;
     subgraph: SubgraphDTO;
     chClient: ClickHouseClient | undefined;
-    schemaChanges: GetDiffBetweenGraphsSuccess;
+    schemaChanges: { breakingChanges: SchemaChange[]; nonBreakingChanges: SchemaChange[] };
     rangeInDays: number;
     fedGraphRepo: FederatedGraphRepository;
     subgraphRepo: SubgraphRepository;
@@ -180,11 +203,12 @@ export class SchemaGraphPruningRepository {
       if (graphPruningConfigs.length > 0) {
         const usageRepo = new UsageRepository(chClient);
         const schemaGraphPruner = new SchemaGraphPruner(fedGraphRepo, subgraphRepo, usageRepo, newGraphQLSchema);
+        const changes = [...schemaChanges.breakingChanges, ...schemaChanges.nonBreakingChanges];
 
         graphPruningIssues = await schemaGraphPruner.schemaGraphPruneCheck({
           subgraph,
           graphPruningConfigs,
-          updatedFields: schemaChanges.changes.filter(
+          updatedFields: changes.filter(
             (change) =>
               change.changeType === 'FIELD_ADDED' ||
               change.changeType === 'FIELD_TYPE_CHANGED' ||
@@ -194,7 +218,7 @@ export class SchemaGraphPruningRepository {
               change.changeType === 'FIELD_ARGUMENT_REMOVED' ||
               change.changeType === 'FIELD_DEPRECATION_ADDED',
           ),
-          removedFields: schemaChanges.changes.filter(
+          removedFields: changes.filter(
             (change) => change.changeType === 'FIELD_REMOVED' || change.changeType === 'INPUT_FIELD_REMOVED',
           ),
           organizationId: organizationID,

@@ -1476,9 +1476,9 @@ export class SchemaChange extends Message<SchemaChange> {
   changeType = "";
 
   /**
-   * @generated from field: optional string path = 3;
+   * @generated from field: string path = 3;
    */
-  path?: string;
+  path = "";
 
   /**
    * @generated from field: bool isBreaking = 4;
@@ -1490,6 +1490,16 @@ export class SchemaChange extends Message<SchemaChange> {
    */
   hasOverride?: boolean;
 
+  /**
+   * @generated from field: string federatedGraphId = 6;
+   */
+  federatedGraphId = "";
+
+  /**
+   * @generated from field: string federatedGraphName = 7;
+   */
+  federatedGraphName = "";
+
   constructor(data?: PartialMessage<SchemaChange>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1500,9 +1510,11 @@ export class SchemaChange extends Message<SchemaChange> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "changeType", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "isBreaking", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 5, name: "hasOverride", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 6, name: "federatedGraphId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaChange {

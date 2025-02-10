@@ -174,9 +174,11 @@ message DeleteFederatedSubgraphRequest {
 message SchemaChange{
   string message = 1;
   string changeType = 2;
-  optional string path = 3;
+  string path = 3;
   bool isBreaking = 4;
   optional bool hasOverride = 5;
+  string federatedGraphId = 6;
+  string federatedGraphName = 7;
 }
 
 message CompositionError {

@@ -7,12 +7,13 @@ import {
   CheckSubgraphSchemaResponse,
   CompositionError,
   CompositionWarning,
+  SchemaChange,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { GraphQLSchema, parse } from 'graphql';
 import { SchemaGraphPruningIssues, SchemaLintIssues } from '../../../types/index.js';
 import { Composer } from '../../composition/composer.js';
 import { buildSchema } from '../../composition/composition.js';
-import { getDiffBetweenGraphs } from '../../composition/schemaCheck.js';
+import { getDiffBetweenGraphs, GetDiffBetweenGraphsSuccess } from '../../composition/schemaCheck.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { GitHubRepository } from '../../repositories/GitHubRepository.js';
@@ -216,39 +217,6 @@ export function checkSubgraphSchema(
       vcsContext: req.vcsContext,
     });
 
-    const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL);
-    if (schemaChanges.kind === 'failure') {
-      logger.warn(`Error finding diff between graphs: ${schemaChanges.error}`);
-      return {
-        response: {
-          code: schemaChanges.errorCode,
-          details: schemaChanges.errorMessage,
-        },
-        breakingChanges: [],
-        nonBreakingChanges: [],
-        compositionErrors: [],
-        checkId: schemaCheckID,
-        checkedFederatedGraphs: [],
-        lintWarnings: [],
-        lintErrors: [],
-        graphPruneWarnings: [],
-        graphPruneErrors: [],
-        compositionWarnings: [],
-      };
-    }
-
-    const hasBreakingChanges = schemaChanges.breakingChanges.length > 0;
-
-    await schemaCheckRepo.createSchemaCheckChanges({
-      changes: schemaChanges.nonBreakingChanges,
-      schemaCheckID,
-    });
-
-    const storedBreakingChanges = await schemaCheckRepo.createSchemaCheckChanges({
-      changes: schemaChanges.breakingChanges,
-      schemaCheckID,
-    });
-
     const composer = new Composer(
       logger,
       opts.db,
@@ -259,29 +227,14 @@ export function checkSubgraphSchema(
       opts.chClient,
     );
 
-    const result = req.delete
+    const compositionResult = req.delete
       ? await composer.composeWithDeletedSubgraph(subgraph.labels, subgraph.name, subgraph.namespaceId)
       : await composer.composeWithProposedSDL(subgraph.labels, subgraph.name, subgraph.namespaceId, newSchemaSDL);
 
     await schemaCheckRepo.createSchemaCheckCompositions({
       schemaCheckID,
-      compositions: result.compositions,
+      compositions: compositionResult.compositions,
     });
-
-    let hasClientTraffic = false;
-
-    const trafficInspector = new SchemaUsageTrafficInspector(opts.chClient!);
-    const inspectedOperations: InspectorOperationResult[] = [];
-    const compositionErrors: PlainMessage<CompositionError>[] = [];
-    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
-
-    let inspectorChanges: InspectorSchemaChange[] = [];
-
-    // For operations checks we only consider breaking changes
-    inspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
-      schemaChanges.breakingChanges,
-      storedBreakingChanges,
-    );
 
     const changeRetention = await orgRepo.getFeature({
       organizationId: authContext.organizationId,
@@ -290,7 +243,17 @@ export function checkSubgraphSchema(
 
     const limit = changeRetention?.limit ?? 7;
 
-    for (const composition of result.compositions) {
+    const compositionErrors: PlainMessage<CompositionError>[] = [];
+    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
+    let hasClientTraffic = false;
+
+    const schemaChanges: { breakingChanges: SchemaChange[]; nonBreakingChanges: SchemaChange[] } = {
+      breakingChanges: [],
+      nonBreakingChanges: [],
+    };
+    const inspectedOperations: InspectorOperationResult[] = [];
+
+    for (const composition of compositionResult.compositions) {
       await schemaCheckRepo.createCheckedFederatedGraph(schemaCheckID, composition.id, limit);
 
       for (const error of composition.errors) {
@@ -310,6 +273,82 @@ export function checkSubgraphSchema(
           featureFlag: '',
         });
       }
+
+      if (composition.errors.length > 0 || !composition.composedSchema) {
+        // update schema check to show that diff is not performed.
+        continue;
+      }
+
+      const prevValidFederatedSDL = await fedGraphRepo.getLatestValidSchemaVersion({
+        targetId: composition.targetID,
+      });
+
+      const schemaChangesByFedGraph = await getDiffBetweenGraphs(
+        prevValidFederatedSDL?.schema || '',
+        composition.composedSchema,
+      );
+      if (schemaChangesByFedGraph.kind === 'failure') {
+        logger.warn(`Error finding diff between graphs: ${schemaChangesByFedGraph.error}`);
+        return {
+          response: {
+            code: schemaChangesByFedGraph.errorCode,
+            details: schemaChangesByFedGraph.errorMessage,
+          },
+          breakingChanges: [],
+          nonBreakingChanges: [],
+          compositionErrors: [],
+          checkId: schemaCheckID,
+          checkedFederatedGraphs: [],
+          lintWarnings: [],
+          lintErrors: [],
+          graphPruneWarnings: [],
+          graphPruneErrors: [],
+          compositionWarnings: [],
+        };
+      }
+
+      schemaChanges.breakingChanges.push(
+        ...schemaChangesByFedGraph.breakingChanges.map((change) => {
+          return new SchemaChange({
+            ...change,
+            federatedGraphId: composition.id,
+            federatedGraphName: composition.name,
+          });
+        }),
+      );
+
+      schemaChanges.nonBreakingChanges.push(
+        ...schemaChangesByFedGraph.breakingChanges.map((change) => {
+          return new SchemaChange({
+            ...change,
+            federatedGraphId: composition.id,
+            federatedGraphName: composition.name,
+          });
+        }),
+      );
+
+      const hasBreakingChanges = schemaChangesByFedGraph.breakingChanges.length > 0;
+
+      await schemaCheckRepo.createSchemaCheckChanges({
+        changes: schemaChangesByFedGraph.nonBreakingChanges,
+        schemaCheckID,
+        federatedGraphId: composition.id,
+      });
+
+      const storedBreakingChanges = await schemaCheckRepo.createSchemaCheckChanges({
+        changes: schemaChangesByFedGraph.breakingChanges,
+        schemaCheckID,
+        federatedGraphId: composition.id,
+      });
+
+      const trafficInspector = new SchemaUsageTrafficInspector(opts.chClient!);
+      let inspectorChanges: InspectorSchemaChange[] = [];
+
+      // For operations checks we only consider breaking changes
+      inspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
+        schemaChangesByFedGraph.breakingChanges,
+        storedBreakingChanges,
+      );
 
       /* 
           We don't collect operation usage when 
@@ -347,6 +386,13 @@ export function checkSubgraphSchema(
       for (const resultElement of overrideCheck.result.values()) {
         inspectedOperations.push(...resultElement);
       }
+
+      await schemaCheckRepo.updateCheckFederatedGraphs({
+        schemaCheckID,
+        federatedGraphId: composition.id,
+        hasClientTraffic,
+        hasBreakingChanges,
+      });
     }
 
     const lintIssues: SchemaLintIssues = await schemaLintRepo.performSchemaLintCheck({
@@ -354,6 +400,11 @@ export function checkSubgraphSchema(
       newSchemaSDL,
       namespaceId: namespace.id,
       isLintingEnabled: namespace.enableLinting,
+    });
+
+    await schemaCheckRepo.update({
+      schemaCheckID,
+      hasLintErrors: lintIssues.errors.length > 0,
     });
 
     const graphPruningIssues: SchemaGraphPruningIssues = await schemaGraphPruningRepo.performSchemaGraphPruningCheck({
@@ -371,13 +422,6 @@ export function checkSubgraphSchema(
     });
 
     // Update the overall schema check with the results
-    await schemaCheckRepo.update({
-      schemaCheckID,
-      hasClientTraffic,
-      hasBreakingChanges,
-      hasLintErrors: lintIssues.errors.length > 0,
-      hasGraphPruningErrors: graphPruningIssues.errors.length > 0,
-    });
 
     if (req.gitInfo && opts.githubApp) {
       try {
@@ -392,7 +436,7 @@ export function checkSubgraphSchema(
           subgraphName: subgraph.name,
           organizationSlug: org.slug,
           webBaseUrl: opts.webBaseUrl,
-          composedGraphs: result.compositions.map((c) => c.name),
+          composedGraphs: compositionResult.compositions.map((c) => c.name),
         });
       } catch (e) {
         logger.warn(e, 'Error creating commit check');
@@ -408,7 +452,7 @@ export function checkSubgraphSchema(
       operationUsageStats: collectOperationUsageStats(inspectedOperations),
       compositionErrors,
       checkId: schemaCheckID,
-      checkedFederatedGraphs: result.compositions.map((c) => ({
+      checkedFederatedGraphs: compositionResult.compositions.map((c) => ({
         id: c.id,
         name: c.name,
         namespace: c.namespace,

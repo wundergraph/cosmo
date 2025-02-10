@@ -1,5 +1,5 @@
 import { GraphQLSchema, isInputObjectType, isInterfaceType, isObjectType } from 'graphql';
-import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { LintSeverity, SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import pLimit from 'p-limit';
 import {
   FederatedGraphDTO,
@@ -84,7 +84,7 @@ export default class SchemaGraphPruner {
     organizationId: string;
     rangeInDays: number;
     // fields that were added in the proposed schema passed to the check command
-    addedFields: SchemaDiff[];
+    addedFields: SchemaChange[];
     severityLevel: LintSeverityLevel;
   }): Promise<GraphPruningIssueResult[]> => {
     const limit = pLimit(5);
@@ -92,15 +92,19 @@ export default class SchemaGraphPruner {
     // fetching all the fields of this subgraph that are in grace period
     const fieldsInGracePeriod = await this.subgraphRepo.getSubgraphFieldsInGracePeriod({ subgraphId, namespaceId });
 
-    // filtering out the fields that are in grace period and the fields that were added in the proposed schema
-    const fieldsToBeChecked = allFields.filter((field) => {
-      return !fieldsInGracePeriod.some((f) => f.path === field.path) && !addedFields.some((f) => f.path === field.path);
-    });
-
     const graphPruningIssues: GraphPruningIssueResult[] = [];
     const input = [];
 
     for (const federatedGraph of federatedGraphs) {
+      const addedFieldsInFederatedGraph = addedFields.filter((field) => field.federatedGraphId === federatedGraph.id);
+      // filtering out the fields that are in grace period and the fields that were added in the proposed schema
+      const fieldsToBeChecked = allFields.filter((field) => {
+        return (
+          !fieldsInGracePeriod.some((f) => f.path === field.path) &&
+          !addedFieldsInFederatedGraph.some((f) => f.path === field.path)
+        );
+      });
+
       input.push(
         limit(async () => {
           const unusedFieldsWithTypeNames = await this.usageRepo.getUnusedFields({
@@ -161,7 +165,7 @@ export default class SchemaGraphPruner {
     organizationId: string;
     rangeInDays: number;
     severityLevel: LintSeverityLevel;
-    addedDeprecatedFields: SchemaDiff[];
+    addedDeprecatedFields: SchemaChange[];
   }): Promise<GraphPruningIssueResult[]> => {
     const limit = pLimit(5);
     const allDeprecatedFields = this.getAllFields({ onlyDeprecated: true });
@@ -172,22 +176,31 @@ export default class SchemaGraphPruner {
       onlyDeprecated: true,
     });
 
-    // filtering out the deprecated fields that are in grace period and the deprecated fields that were added in the proposed schema
-    const deprecatedFieldsToBeChecked = allDeprecatedFields.filter((field) => {
-      return (
-        !deprecatedFieldsInGracePeriod.some((f) => f.path === field.path) &&
-        !addedDeprecatedFields.some((f) => f.path === field.path)
-      );
-    });
-
-    if (deprecatedFieldsToBeChecked.length === 0) {
-      return [];
-    }
-
     const graphPruningIssues: GraphPruningIssueResult[] = [];
     const input = [];
+    const allDeprecatedFieldsToBeChecked: (Field & { federatedGraphId: string })[] = [];
 
     for (const federatedGraph of federatedGraphs) {
+      const addedDeprecatedFieldsInFederatedGraph = addedDeprecatedFields.filter(
+        (field) => field.federatedGraphId === federatedGraph.id,
+      );
+
+      // filtering out the deprecated fields that are in grace period and the deprecated fields that were added in the proposed schema
+      const deprecatedFieldsToBeChecked = allDeprecatedFields.filter((field) => {
+        return (
+          !deprecatedFieldsInGracePeriod.some((f) => f.path === field.path) &&
+          !addedDeprecatedFieldsInFederatedGraph.some((f) => f.path === field.path)
+        );
+      });
+
+      if (deprecatedFieldsToBeChecked.length === 0) {
+        continue;
+      }
+
+      allDeprecatedFieldsToBeChecked.push(
+        ...deprecatedFieldsToBeChecked.map((field) => ({ ...field, federatedGraphId: federatedGraph.id })),
+      );
+
       input.push(
         limit(async () => {
           const usedDeprecatedFieldsWithTypeNames = await this.usageRepo.getUsedFields({
@@ -209,8 +222,11 @@ export default class SchemaGraphPruner {
 
     for (const r of result) {
       const { federatedGraphId, federatedGraphName, usedDeprecatedFieldsWithTypeNames } = r;
+      const deprecatedFieldsToBeCheckedByFederatedGraph = allDeprecatedFieldsToBeChecked.filter(
+        (field) => field.federatedGraphId === federatedGraphId,
+      );
 
-      for (const field of deprecatedFieldsToBeChecked) {
+      for (const field of deprecatedFieldsToBeCheckedByFederatedGraph) {
         const isUsed = usedDeprecatedFieldsWithTypeNames.some(
           (f) => f.name === field.name && f.typeName === field.typeName,
         );
@@ -237,14 +253,12 @@ export default class SchemaGraphPruner {
   };
 
   fetchNonDeprecatedDeletedFields = ({
-    federatedGraphs,
     severityLevel,
     removedFields,
     oldSchema,
   }: {
-    federatedGraphs: FederatedGraphDTO[];
     severityLevel: LintSeverityLevel;
-    removedFields: SchemaDiff[];
+    removedFields: SchemaChange[];
     oldSchema: string;
   }): GraphPruningIssueResult[] => {
     let oldGraphQLSchema: GraphQLSchema | undefined;
@@ -262,7 +276,7 @@ export default class SchemaGraphPruner {
     }
 
     const allDeprecatedFields = this.getAllFields({ schema: oldGraphQLSchema, onlyDeprecated: true });
-    const nonDeprecatedDeletedFields: SchemaDiff[] = [];
+    const nonDeprecatedDeletedFields: SchemaChange[] = [];
     const graphPruningIssues: GraphPruningIssueResult[] = [];
 
     for (const removedField of removedFields) {
@@ -272,24 +286,22 @@ export default class SchemaGraphPruner {
       }
     }
 
-    for (const federatedGraph of federatedGraphs) {
-      for (const field of nonDeprecatedDeletedFields) {
-        const [typeName, name] = field.path.split('.');
-        graphPruningIssues.push({
-          graphPruningRuleType: 'REQUIRE_DEPRECATION_BEFORE_DELETION',
-          severity: severityLevel === 'error' ? LintSeverity.error : LintSeverity.warn,
-          fieldPath: field.path,
-          message: `Field ${name} of type ${typeName} was removed without being deprecated first.`,
-          issueLocation: {
-            line: 0,
-            column: 0,
-            endLine: 0,
-            endColumn: 0,
-          },
-          federatedGraphId: federatedGraph.id,
-          federatedGraphName: federatedGraph.name,
-        });
-      }
+    for (const field of nonDeprecatedDeletedFields) {
+      const [typeName, name] = field.path.split('.');
+      graphPruningIssues.push({
+        graphPruningRuleType: 'REQUIRE_DEPRECATION_BEFORE_DELETION',
+        severity: severityLevel === 'error' ? LintSeverity.error : LintSeverity.warn,
+        fieldPath: field.path,
+        message: `Field ${name} of type ${typeName} was removed without being deprecated first.`,
+        issueLocation: {
+          line: 0,
+          column: 0,
+          endLine: 0,
+          endColumn: 0,
+        },
+        federatedGraphId: field.federatedGraphId,
+        federatedGraphName: field.federatedGraphName,
+      });
     }
 
     return graphPruningIssues;
@@ -308,8 +320,8 @@ export default class SchemaGraphPruner {
     organizationId: string;
     rangeInDays: number;
     // fields that were added/updated in the proposed schema passed to the check command
-    updatedFields: SchemaDiff[];
-    removedFields: SchemaDiff[];
+    updatedFields: SchemaChange[];
+    removedFields: SchemaChange[];
   }): Promise<SchemaGraphPruningIssues> => {
     const graphPruneWarnings: GraphPruningIssueResult[] = [];
     const graphPruneErrors: GraphPruningIssueResult[] = [];
@@ -365,7 +377,6 @@ export default class SchemaGraphPruner {
         case 'REQUIRE_DEPRECATION_BEFORE_DELETION': {
           const nonDeprecatedDeletedFields = this.fetchNonDeprecatedDeletedFields({
             oldSchema: subgraph.schemaSDL,
-            federatedGraphs,
             severityLevel: severity,
             removedFields,
           });

@@ -732,6 +732,7 @@ export const schemaChecks = pgTable(
     hasGraphPruningErrors: boolean('has_graph_pruning_errors').default(false),
     hasClientTraffic: boolean('has_client_traffic').default(false),
     clientTrafficCheckSkipped: boolean('client_traffic_check_skipped').default(false),
+    changeDetectionSkipped: boolean('change_detection_skipped').default(false),
     lintSkipped: boolean('lint_skipped'),
     graphPruningSkipped: boolean('graph_pruning_skipped'),
     proposedSubgraphSchemaSDL: text('proposed_subgraph_schema_sdl'),
@@ -809,6 +810,10 @@ export const schemaCheckFederatedGraphs = pgTable(
         onDelete: 'cascade',
       }),
     trafficCheckDays: integer('traffic_check_days').notNull(),
+    isComposable: boolean('is_composable').default(false),
+    hasBreakingChanges: boolean('has_breaking_changes').default(false),
+    hasGraphPruningErrors: boolean('has_graph_pruning_errors').default(false),
+    hasClientTraffic: boolean('has_client_traffic').default(false),
   },
   (t) => {
     return {
@@ -843,10 +848,14 @@ export const schemaCheckChangeAction = pgTable(
     isBreaking: boolean('is_breaking').default(false),
     path: text('path'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    federatedGraphId: uuid('federated_graph_id').references(() => federatedGraphs.id, {
+      onDelete: 'cascade',
+    }),
   },
   (t) => {
     return {
       schemaCheckIdIndex: index('scca_schema_check_id_idx').on(t.schemaCheckId),
+      federatedGraphIdIndex: index('scca_federated_graph_id_idx').on(t.federatedGraphId),
     };
   },
 );

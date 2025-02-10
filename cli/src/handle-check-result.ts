@@ -8,7 +8,12 @@ import { config } from './core/config.js';
 
 export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
   const changesTable = new Table({
-    head: [pc.bold(pc.white('CHANGE')), pc.bold(pc.white('TYPE')), pc.bold(pc.white('DESCRIPTION'))],
+    head: [
+      pc.bold(pc.white('CHANGE')),
+      pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
+      pc.bold(pc.white('TYPE')),
+      pc.bold(pc.white('DESCRIPTION')),
+    ],
     wordWrap: true,
   });
 
@@ -138,6 +143,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
           for (const breakingChange of resp.breakingChanges) {
             changesTable.push([
               `${logSymbols.error} ${pc.red('BREAKING')}`,
+              breakingChange.federatedGraphName,
               breakingChange.changeType,
               breakingChange.message,
             ]);
@@ -148,6 +154,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
           for (const nonBreakingChange of resp.nonBreakingChanges) {
             changesTable.push([
               `${logSymbols.success} NON-BREAKING`,
+              nonBreakingChange.federatedGraphName,
               nonBreakingChange.changeType,
               nonBreakingChange.message,
             ]);
