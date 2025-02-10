@@ -1,6 +1,9 @@
 dev:
 	go run cmd/router/main.go
 
+compose-demo-config:
+	pushd __schemas && ./compose.sh && popd
+
 update-snapshot:
 	cd ./pkg/config && go test -update -race ./...
 
