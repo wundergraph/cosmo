@@ -14,10 +14,10 @@ import (
 	natsserver "github.com/nats-io/nats-server/v2/server"
 	natstest "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
+	"github.com/ory/dockertest/v3"
+	"github.com/ory/dockertest/v3/docker"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/kafka"
-	"github.com/testcontainers/testcontainers-go/wait"
+	"github.com/twmb/franz-go/pkg/kgo"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
 
@@ -27,8 +27,7 @@ var (
 )
 
 type KafkaData struct {
-	Brokers   []string
-	Container *kafka.KafkaContainer
+	Brokers []string
 }
 
 func setupKafkaServers(t testing.TB) (*KafkaData, error) {
@@ -41,37 +40,67 @@ func setupKafkaServers(t testing.TB) (*KafkaData, error) {
 
 	kafkaData = &KafkaData{}
 
-	var err error
+	kafkaPort := freeport.GetOne(t)
+	kafkaPortDocker := fmt.Sprintf("%d/tcp", kafkaPort)
 
-	ctx := context.Background()
+	dockerPool, err := dockertest.NewPool("")
+	require.NoError(t, err, "could not connect to docker")
+	require.NoError(t, dockerPool.Client.Ping(), "could not ping docker")
+
+	kafkaResource, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
+		Repository: "confluentinc/confluent-local",
+		Tag:        "7.5.0",
+		PortBindings: map[docker.Port][]docker.PortBinding{
+			"9092/tcp": {{HostIP: "localhost", HostPort: kafkaPortDocker}},
+		},
+		ExposedPorts: []string{"9092/tcp"},
+		Hostname:     "broker",
+		Env: []string{
+			"KAFKA_BROKER_ID=1",
+			"KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT",
+			"KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092",
+			"KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1",
+			"KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0",
+			"KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1",
+			"KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1",
+			"KAFKA_PROCESS_ROLES=broker,controller",
+			"KAFKA_NODE_ID=1",
+			"KAFKA_CONTROLLER_QUORUM_VOTERS=1@broker:29093",
+			"KAFKA_LISTENERS=PLAINTEXT://broker:29092,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092",
+			"KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT",
+			"KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER",
+		},
+	})
+
+	require.NoError(t, err, "could not start kafka")
+
+	t.Cleanup(func() {
+		err := dockerPool.Purge(kafkaResource)
+		if err != nil {
+			panic(fmt.Errorf("could not purge kafka container, %w", err))
+		}
+	})
+
+	kafkaData.Brokers = []string{fmt.Sprintf("localhost:%d", kafkaPort)}
+
+	t.Logf("kafka has brokers: %v", kafkaData.Brokers)
+
+	client, err := kgo.NewClient(
+		kgo.SeedBrokers(kafkaData.Brokers...),
+	)
+	require.NoError(t, err, "could not create kafka client")
+
 	require.Eventually(t, func() bool {
-		// when using Docker Desktop on Mac, it's possible that it takes 2 attempts to get the network port of the container
-		// I've debugged this extensively and the issue is not with the testcontainers-go library, but with the Docker Desktop
-		// Error message: container logs (port not found)
-		// This is an internal issue coming from the Docker pkg
-		// It seems like Docker Desktop on Mac is not always capable of providing a port mapping
-		// The solution is to retry the container creation until we get the network port
-		// Please don't try to improve this code as this workaround allows running the tests without any issues
+		err := client.Ping(context.Background())
+		if err != nil {
+			t.Logf("could not ping kafka: %s", err)
+			return false
+		}
 
-		kafkaData.Container, err = kafka.Run(ctx, "confluentinc/confluent-local:7.6.1",
-			testcontainers.WithWaitStrategyAndDeadline(time.Second*10, wait.ForListeningPort("9093/tcp")),
-		)
-		return err == nil && kafkaData.Container != nil
-	}, time.Second*60, time.Second)
+		t.Logf("kafka is up")
 
-	require.NoError(t, err)
-	if err != nil {
-		return nil, err
-	}
-
-	require.NotNil(t, kafkaData.Container)
-	require.NoError(t, kafkaData.Container.Start(ctx))
-
-	kafkaData.Brokers, err = kafkaData.Container.Brokers(ctx)
-	require.NoError(t, err)
-	if err != nil {
-		return nil, err
-	}
+		return true
+	}, 60*time.Second, time.Second)
 
 	return kafkaData, nil
 }
