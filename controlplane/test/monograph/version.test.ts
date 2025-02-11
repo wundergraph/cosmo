@@ -149,7 +149,7 @@ describe('monograph version tests', () => {
       });
       expect(response.response).toBeDefined();
       expect(response.response!.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
-      expect(response.response!.details).toBe('9999 is not a valid router compatibility version.');
+      expect(response.response!.details).toBe('hello is not a valid router compatibility version.');
       expect(response.previousVersion).toBe(1);
       expect(response.newVersion).toBe(1);
       expect(response.compositionErrors).toHaveLength(0);

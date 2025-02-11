@@ -149,7 +149,9 @@ const latestValidRouterConfig = (storage: BlobStorage) => {
       return c.text('Bad Request', 400);
     }
 
-    const key = `${organizationId}/${federatedGraphId}/routerconfigs/${getRouterCompatibilityVersionPath(c.req.param('compatibility_version'))}latest.json`;
+    const key = `${organizationId}/${federatedGraphId}/routerconfigs/${getRouterCompatibilityVersionPath(
+      c.req.param('compatibility_version'),
+    )}latest.json`;
     const body = await c.req.json();
 
     let isModified = true;
@@ -273,7 +275,8 @@ export const cdn = <E extends Env, S extends Schema = {}, BasePath extends strin
     .use(draftRouterConfigs, jwtMiddleware(opts.authAdmissionJwtSecret))
     .get(draftRouterConfigs, draftRouterConfig(opts.blobStorage));
 
-  const latestValidVersionedRouterConfigs = '/:organization_id/:federated_graph_id/routerconfigs/:compatibility_version/latest.json';
+  const latestValidVersionedRouterConfigs =
+    '/:organization_id/:federated_graph_id/routerconfigs/:compatibility_version/latest.json';
   hono
     .use(latestValidVersionedRouterConfigs, jwtMiddleware(opts.authJwtSecret))
     .post(latestValidVersionedRouterConfigs, latestValidRouterConfig(opts.blobStorage));
