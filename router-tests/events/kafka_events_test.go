@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/cosmo/router/core"
 
 	"github.com/hasura/go-graphql-client"
@@ -437,11 +438,11 @@ func TestKafkaEvents(t *testing.T) {
 
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
-				var done atomic.Bool
+				var started atomic.Bool
+				var consumed atomic.Uint32
+				var produced atomic.Uint32
 
 				go func() {
-					defer done.Store(true)
-
 					client := http.Client{
 						Timeout: time.Second * 100,
 					}
@@ -451,18 +452,35 @@ func TestKafkaEvents(t *testing.T) {
 					require.Equal(t, http.StatusOK, resp.StatusCode)
 					defer resp.Body.Close()
 					reader := bufio.NewReader(resp.Body)
+					started.Store(true)
 
+					assert.Eventually(t, func() bool {
+						return produced.Load() == 1
+					}, KafkaWaitTimeout, time.Millisecond*100)
 					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
+					consumed.Add(1)
+
+					assert.Eventually(t, func() bool {
+						return produced.Load() == 2
+					}, KafkaWaitTimeout, time.Millisecond*100)
 					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
+					consumed.Add(1)
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
+				assert.Eventually(t, started.Load, KafkaWaitTimeout, time.Millisecond*100)
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+				produced.Add(1)
 
+				assert.Eventually(t, func() bool {
+					return consumed.Load() == 1
+				}, KafkaWaitTimeout, time.Millisecond*100)
 				produceKafkaMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+				produced.Add(1)
 
-				require.Eventually(t, done.Load, KafkaWaitTimeout, time.Millisecond*100)
+				// Wait for the client to finish
+				require.Eventually(t, func() bool { return consumed.Load() == 2 }, KafkaWaitTimeout*2, time.Millisecond*100)
 
 				xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
 				xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
