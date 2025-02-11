@@ -614,7 +614,7 @@ export const Playground = (input: {
 
     return createGraphiQLFetcher({
       url: url,
-      subscriptionUrl: window.location.protocol.replace('http', 'ws') + '//' + window.location.host + url,
+      subscriptionUrl: url.replace('http', 'ws'),
       fetch: (...args) =>
         graphiQLFetch(schema, clientValidationEnabled, input.scripts, onFetch, args[0] as URL, args[1] as RequestInit),
     });
