@@ -2,45 +2,63 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { Command } from 'commander';
 import pc from 'picocolors';
 import Table from 'cli-table3';
-import { ROUTER_COMPATIBILITY_VERSIONS } from '@wundergraph/composition';
+import { ROUTER_COMPATIBILITY_VERSIONS, SupportedRouterCompatibilityVersion } from '@wundergraph/composition';
+import ora from 'ora';
 import { getBaseHeaders } from '../../../../../core/config.js';
 import { CommonGraphCommandOptions } from '../../../../../core/types/types.js';
+import { handleCompositionResult } from '../../../../../handle-composition-result.js';
 
 export default (opts: CommonGraphCommandOptions) => {
   const graphType = opts.isMonograph ? 'monograph' : 'federated graph';
 
-  const command = new Command('get');
+  const command = new Command('set');
   command.description(`Sets a router compatibility version for the specified ${graphType}.`);
   command.argument('<name>', `The name of the ${graphType} for which to set the router compatibility version.`);
-  command.requiredOption('-v --version', `The router compatibility version to set for the ${graphType}.`);
+  command.requiredOption('-v --version [number]', `The router compatibility version to set for the ${graphType}.`);
   command.option('-n, --namespace [string]', `The namespace of the ${graphType}.`);
   command.option('-o, --out [string]', 'Destination file for the SDL.');
+  command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.action(async (name, options) => {
-    if (!ROUTER_COMPATIBILITY_VERSIONS.has(options.version)) {
+    const version = Number.parseInt(options.version, 10);
+    if (!ROUTER_COMPATIBILITY_VERSIONS.has(version as SupportedRouterCompatibilityVersion)) {
       console.log(
         `${pc.red(
-          `"${options.version}" is not a valid router compatibility version. Please input one of the following valid versions:\n`,
+          `${options.version} is not a valid router compatibility version. Please input one of the following valid versions:`,
         )}`,
       );
-      console.log([...ROUTER_COMPATIBILITY_VERSIONS].join(', '));
+      const versionsTable = new Table({
+        wordWrap: true,
+        wrapOnWordBoundary: false,
+      });
+
+      versionsTable.push([pc.bold(pc.white('VERSION')), ...ROUTER_COMPATIBILITY_VERSIONS]);
+      console.log(versionsTable.toString());
       process.exit(1);
     }
+
+    const spinner = ora('Recomposing the federated graph...').start();
+
     const response = await opts.client.platform.setGraphRouterCompatibilityVersion(
       {
         name,
         namespace: options.namespace,
-        version: options.version,
+        version,
       },
       {
         headers: getBaseHeaders(),
       },
     );
 
-    if (response.response?.code === EnumStatusCode.ERR_NOT_FOUND) {
-      console.log(`${pc.red(`No valid composition could be fetched for ${graphType} ${pc.bold(name)}`)}`);
-      console.log(`Please check the name and the composition status of the ${graphType} in the Studio.`);
+    if (!response.response) {
+      console.log(`${pc.red(`Failed to set router compatibility version for ${graphType} "${pc.bold(name)}".`)}`);
+      process.exit(1);
+    }
+
+    if (response.response.code === EnumStatusCode.ERR_NOT_FOUND) {
+      console.log(`${pc.red(`No valid record could be found for ${graphType} "${pc.bold(name)}".`)}`);
+      console.log(`Please check the name and namespace for the ${graphType} in Cosmo Studio.`);
       if (response.response?.details) {
-        console.log(pc.red(pc.bold(response.response?.details)));
+        console.log(pc.red(pc.bold(response.response.details)));
       }
       process.exit(1);
     }
@@ -56,8 +74,41 @@ export default (opts: CommonGraphCommandOptions) => {
       wrapOnWordBoundary: false,
     });
 
-    versionsTable.push([name, options.namespace, response.previousVersion, response.newVersion]);
+    versionsTable.push([name, options.namespace || 'default', response.previousVersion, response.newVersion]);
 
+    try {
+      handleCompositionResult({
+        responseCode: response.response.code,
+        responseDetails: response.response.details,
+        compositionErrors: response.compositionErrors,
+        compositionWarnings: response.compositionWarnings,
+        deploymentErrors: response.deploymentErrors,
+        spinner,
+        successMessage: `Successfully set the router compatibility version for ${graphType} "${pc.bold(
+          name,
+        )}" to ${version}.`,
+        subgraphCompositionBaseErrorMessage:
+          `The router composition version for ${graphType} "${pc.bold(name)}" was set to ${version}.` +
+          ` However, the new composition was unsuccessful.`,
+        subgraphCompositionDetailedErrorMessage:
+          `There were composition errors when recomposing ${graphType} "${pc.bold(
+            name,
+          )}" using router compatibility version ${version}.` + `\n${pc.bold('Please check the errors below:')}`,
+        deploymentErrorMessage:
+          `The ${graphType} "${pc.bold(
+            name,
+          )}" was recomposed with new router compatibility version ${version} but the updated composition could not be deployed.` +
+          `\nThis means the updated composition is not accessible to the router.` +
+          `\n${pc.bold('Please check the errors below:')}`,
+        defaultErrorMessage: `Failed to set the router compatibility version for ${graphType} "${pc.bold(
+          name,
+        )}" to ${version}.`,
+        suppressWarnings: options.suppressWarnings,
+      });
+    } catch {
+      console.log(versionsTable.toString());
+      process.exit(1);
+    }
     console.log(versionsTable.toString());
   });
 

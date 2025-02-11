@@ -219,6 +219,17 @@ export class Composer {
     });
   }
 
+  getRouterCompatibilityVersionPath(routerCompatibilityVersion: number): string {
+    switch (routerCompatibilityVersion) {
+      case 1: {
+        return '';
+      }
+      default: {
+        return `v${routerCompatibilityVersion}/`;
+      }
+    }
+  }
+
   async uploadRouterConfig({
     routerConfig,
     blobStorage,
@@ -229,6 +240,7 @@ export class Composer {
     admissionWebhookURL,
     admissionWebhookSecret,
     actorId,
+    routerCompatibilityVersion,
   }: {
     routerConfig: RouterConfig;
     blobStorage: BlobStorage;
@@ -242,14 +254,18 @@ export class Composer {
     admissionWebhookURL?: string;
     admissionWebhookSecret?: string;
     actorId: string;
+    routerCompatibilityVersion: number;
   }): Promise<{
     errors: ComposeDeploymentError[];
   }> {
     const routerConfigJsonStringBytes = Buffer.from(routerConfig.toJsonString(), 'utf8');
 
+    switch (routerCompatibilityVersion) {
+      default:
+    }
     // CDN path and bucket path are the same in this case
     const s3PathDraft = `${organizationId}/${federatedGraphId}/routerconfigs/draft.json`;
-    const s3PathReady = `${organizationId}/${federatedGraphId}/routerconfigs/latest.json`;
+    const s3PathReady = `${organizationId}/${federatedGraphId}/routerconfigs/${this.getRouterCompatibilityVersionPath(routerCompatibilityVersion)}latest.json`;
 
     // The signature will be added by the admission webhook
     let signatureSha256: undefined | string;
@@ -398,6 +414,9 @@ export class Composer {
     });
 
     const federatedGraph = await this.federatedGraphRepo.byId(federatedGraphId);
+    if (!federatedGraph) {
+      throw new Error(`Federated graph not found.`);
+    }
     const namespaceRepository = new NamespaceRepository(this.db, organizationId);
     const namespace = await namespaceRepository.byId(federatedGraph!.namespaceId);
 
@@ -424,6 +443,7 @@ export class Composer {
         jwtSecret: admissionConfig.jwtSecret,
       },
       actorId,
+      routerCompatibilityVersion: federatedGraph.routerCompatibilityVersion,
     });
 
     return {

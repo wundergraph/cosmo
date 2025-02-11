@@ -10,25 +10,24 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('list');
   command.description('Lists all supported router compatibility versions.');
   command.action(async () => {
-    const resp = await opts.client.platform.listRouterCompatibilityVersions(
+    const response = await opts.client.platform.listRouterCompatibilityVersions(
       {},
       {
         headers: getBaseHeaders(),
       },
     );
 
-    if (resp.response?.code !== EnumStatusCode.OK) {
-      console.log(pc.red(resp.response?.details));
+    if (response.response?.code !== EnumStatusCode.OK) {
+      console.log(pc.red(response.response?.details));
       program.error(pc.red('Could not fetch router compatibility versions.'));
     }
 
     const versionsTable = new Table({
-      head: [pc.bold(pc.white('VERSION'))],
       wordWrap: true,
       wrapOnWordBoundary: false,
     });
 
-    versionsTable.push([...resp.versions]);
+    versionsTable.push([pc.bold(pc.white('VERSION')), ...response.versions]);
 
     console.log(`The router compatibility versions currently supported are:\n` + versionsTable.toString());
   });

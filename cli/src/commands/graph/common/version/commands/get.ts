@@ -38,7 +38,7 @@ export default (opts: CommonGraphCommandOptions) => {
       wrapOnWordBoundary: false,
     });
 
-    versionsTable.push([name, options.namespace, response.graph.routerCompatibilityVersion]);
+    versionsTable.push([name, response.graph.namespace, response.graph.routerCompatibilityVersion]);
 
     console.log(versionsTable.toString());
   });

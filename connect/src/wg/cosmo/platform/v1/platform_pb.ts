@@ -19790,6 +19790,21 @@ export class SetGraphRouterCompatibilityVersionResponse extends Message<SetGraph
    */
   newVersion = 0;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 4;
+   */
+  compositionErrors: CompositionError[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 5;
+   */
+  deploymentErrors: DeploymentError[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 6;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
   constructor(data?: PartialMessage<SetGraphRouterCompatibilityVersionResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -19801,6 +19816,9 @@ export class SetGraphRouterCompatibilityVersionResponse extends Message<SetGraph
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "previous_version", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 3, name: "new_version", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 5, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 6, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetGraphRouterCompatibilityVersionResponse {

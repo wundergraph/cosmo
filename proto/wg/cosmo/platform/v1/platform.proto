@@ -2503,6 +2503,9 @@ message SetGraphRouterCompatibilityVersionResponse {
   Response response = 1;
   int32 previous_version = 2;
   int32 new_version = 3;
+  repeated CompositionError compositionErrors = 4;
+  repeated DeploymentError deploymentErrors = 5;
+  repeated CompositionWarning compositionWarnings = 6;
 }
 
 service PlatformService {

@@ -10,7 +10,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { SubgraphCommandJsonOutput } from './core/types/types.js';
 
-export const handleFeatureFlagResult = ({
+export const handleCompositionResult = ({
   responseCode,
   responseDetails,
   compositionErrors,
