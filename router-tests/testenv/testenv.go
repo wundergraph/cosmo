@@ -155,7 +155,6 @@ func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 			assertCacheMetrics(b, env, v, ff)
 		}
 	}
-
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -407,9 +406,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	ctx, cancel := context.WithCancelCause(context.Background())
 
-	var (
-		logObserver *observer.ObservedLogs
-	)
+	var logObserver *observer.ObservedLogs
 
 	if oc := cfg.LogObservation; oc.Enabled {
 		var zCore zapcore.Core
@@ -441,9 +438,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		Countries:    atomic.NewInt64(0),
 	}
 
-	var (
-		requiredPorts = 2
-	)
+	requiredPorts := 2
 
 	ports := freeport.GetN(t, requiredPorts)
 
@@ -1663,7 +1658,6 @@ func (e *Environment) ReadSSE(ctx context.Context, body io.ReadCloser, handler f
 				handler(data)
 			}
 		}
-
 	}
 }
 

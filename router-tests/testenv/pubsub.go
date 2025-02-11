@@ -22,11 +22,6 @@ import (
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
 
-var (
-	kafkaMux  sync.Mutex
-	kafkaData *KafkaData
-)
-
 type KafkaData struct {
 	Brokers []string
 }
@@ -44,14 +39,7 @@ func getHostPort(resource *dockertest.Resource, id string) string {
 }
 
 func setupKafkaServers(t testing.TB) (*KafkaData, error) {
-	kafkaMux.Lock()
-	defer kafkaMux.Unlock()
-
-	if kafkaData != nil {
-		return kafkaData, nil
-	}
-
-	kafkaData = &KafkaData{}
+	kafkaData := &KafkaData{}
 
 	dockerPool, err := dockertest.NewPool("")
 	require.NoError(t, err, "could not connect to docker")
