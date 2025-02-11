@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -20,6 +21,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/twmb/franz-go/pkg/kgo"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+)
+
+var (
+	kafkaMux  sync.Mutex
+	kafkaData *KafkaData
 )
 
 type KafkaData struct {
@@ -39,30 +45,42 @@ func getHostPort(resource *dockertest.Resource, id string) string {
 }
 
 func setupKafkaServers(t testing.TB) (*KafkaData, error) {
-	kafkaData := &KafkaData{}
+	kafkaMux.Lock()
+	defer kafkaMux.Unlock()
+
+	if kafkaData != nil {
+		return kafkaData, nil
+	}
+
+	kafkaData = &KafkaData{}
 
 	dockerPool, err := dockertest.NewPool("")
 	require.NoError(t, err, "could not connect to docker")
 	require.NoError(t, dockerPool.Client.Ping(), "could not ping docker")
 
+	ports, err := freeport.Take(1)
+	require.NoError(t, err, "could not get free port for kafka")
+
+	port := ports[0]
+
 	kafkaResource, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
-		Repository: "confluentinc/confluent-local",
-		Tag:        "7.5.0",
-		Hostname:   "broker",
+		Repository: "bitnami/kafka",
+		Tag:        "3.7.0",
+		PortBindings: map[docker.Port][]docker.PortBinding{
+			"9092/tcp": {docker.PortBinding{HostIP: "localhost", HostPort: strconv.Itoa(port)}},
+		},
 		Env: []string{
-			"KAFKA_BROKER_ID=1",
-			"KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT",
-			"KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092",
-			"KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1",
-			"KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0",
-			"KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1",
-			"KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1",
-			"KAFKA_PROCESS_ROLES=broker,controller",
-			"KAFKA_NODE_ID=1",
-			"KAFKA_CONTROLLER_QUORUM_VOTERS=1@broker:29093",
-			"KAFKA_LISTENERS=PLAINTEXT://broker:29092,CONTROLLER://broker:29093,PLAINTEXT_HOST://0.0.0.0:9092",
-			"KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT",
-			"KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER",
+			"KAFKA_ENABLE_KRAFT=yes",
+			"KAFKA_CFG_PROCESS_ROLES=controller,broker",
+			"KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER",
+			"KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093",
+			"KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT",
+			"KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@localhost:9093",
+			"KAFKA_CFG_TRANSACTION_PARTITION_VERIFICATION_ENABLE=false",
+			fmt.Sprintf("KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:%d", port),
+			"KAFKA_CFG_NODE_ID=1",
+			"ALLOW_PLAINTEXT_LISTENER=yes",
+			"KAFKA_KRAFT_CLUSTER_ID=XkpGZQ27R3eTl3OdTm2LYA",
 		},
 	}, func(hc *docker.HostConfig) {
 		hc.AutoRemove = true
