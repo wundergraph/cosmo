@@ -3,6 +3,12 @@ package testenv
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/hashicorp/consul/sdk/freeport"
 	natsserver "github.com/nats-io/nats-server/v2/server"
@@ -13,11 +19,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/kafka"
 	"github.com/testcontainers/testcontainers-go/wait"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"os"
-	"path/filepath"
-	"sync"
-	"testing"
-	"time"
 )
 
 var (
@@ -51,8 +52,8 @@ func setupKafkaServers(t testing.TB) (*KafkaData, error) {
 		// It seems like Docker Desktop on Mac is not always capable of providing a port mapping
 		// The solution is to retry the container creation until we get the network port
 		// Please don't try to improve this code as this workaround allows running the tests without any issues
-		kafkaData.Container, err = kafka.RunContainer(ctx,
-			testcontainers.WithImage("confluentinc/confluent-local:7.6.1"),
+
+		kafkaData.Container, err = kafka.Run(ctx, "confluentinc/confluent-local:7.6.1",
 			testcontainers.WithWaitStrategyAndDeadline(time.Second*10, wait.ForListeningPort("9093/tcp")),
 		)
 		return err == nil && kafkaData.Container != nil
