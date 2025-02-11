@@ -8,6 +8,7 @@ import (
 	"os"
 
 	log "github.com/jensneuse/abstractlogger"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
@@ -17,6 +18,8 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
+
+	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 )
@@ -125,6 +128,7 @@ func (pg *PlanGenerator) loadConfiguration(configFilePath string) error {
 		httpClient:         http.DefaultClient,
 		streamingClient:    http.DefaultClient,
 		subscriptionClient: subscriptionClient,
+		transportOptions:   &TransportOptions{SubgraphTransportOptions: NewSubgraphTransportOptions(config.TrafficShapingRules{})},
 	})
 
 	// this generates the plan configuration using the data source factories from the config package
