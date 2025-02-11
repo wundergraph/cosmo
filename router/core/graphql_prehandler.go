@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"net/http"
 	"strconv"
 	"strings"
@@ -30,6 +29,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 
 	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/pkg/art"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
