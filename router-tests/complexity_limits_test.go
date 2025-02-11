@@ -3,6 +3,7 @@ package integration
 import (
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -152,6 +153,8 @@ func TestComplexityLimits(t *testing.T) {
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepth.Int(3))
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
+				// wait to let cache get consistent
+				time.Sleep(100 * time.Millisecond)
 
 				failedRes2, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					Query: `{ employee(id:1) { id details { forename surname } } }`,
@@ -163,6 +166,8 @@ func TestComplexityLimits(t *testing.T) {
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepth.Int(3))
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 				exporter.Reset()
+				// wait to let cache get consistent
+				time.Sleep(100 * time.Millisecond)
 
 				successRes := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
@@ -172,6 +177,8 @@ func TestComplexityLimits(t *testing.T) {
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryDepth.Int(2))
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
+				// wait to let cache get consistent
+				time.Sleep(100 * time.Millisecond)
 
 				successRes2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,

@@ -96,6 +96,9 @@ func setupNatsData(t testing.TB) (*NatsData, error) {
 			nats.MaxReconnects(10),
 			nats.ReconnectWait(1*time.Second),
 			nats.Timeout(5*time.Second),
+			nats.ErrorHandler(func(conn *nats.Conn, subscription *nats.Subscription, err error) {
+				t.Log(err)
+			}),
 		)
 		if err != nil {
 			return nil, err

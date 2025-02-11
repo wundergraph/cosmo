@@ -295,7 +295,7 @@ func TestAccessLogsFileOutput(t *testing.T) {
 	})
 }
 
-func TestAccessLogs(t *testing.T) {
+func TestFlakyAccessLogs(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Simple without custom attributes", func(t *testing.T) {

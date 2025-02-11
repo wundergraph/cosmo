@@ -1,4 +1,4 @@
-package integration_test
+package events_test
 
 import (
 	"github.com/stretchr/testify/assert"
