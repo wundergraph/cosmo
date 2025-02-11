@@ -12,8 +12,6 @@ subgraphs:
     routing_url: http://localhost:4007/graphql
   - name: mood
     routing_url: http://localhost:4008/graphql
-  - name: test1
-    routing_url: http://localhost:4006/graphql
   - name: employeeUpdates
     schema:
       file: ../../demo/pkg/subgraphs/employeeupdated/subgraph/schema.graphqls
