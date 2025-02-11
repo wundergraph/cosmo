@@ -725,12 +725,8 @@ export const schemaChecks = pgTable(
       .references(() => targets.id, {
         onDelete: 'cascade',
       }),
-    isComposable: boolean('is_composable').default(false),
     isDeleted: boolean('is_deleted').default(false),
-    hasBreakingChanges: boolean('has_breaking_changes').default(false),
     hasLintErrors: boolean('has_lint_errors').default(false),
-    hasGraphPruningErrors: boolean('has_graph_pruning_errors').default(false),
-    hasClientTraffic: boolean('has_client_traffic').default(false),
     clientTrafficCheckSkipped: boolean('client_traffic_check_skipped').default(false),
     lintSkipped: boolean('lint_skipped'),
     graphPruningSkipped: boolean('graph_pruning_skipped'),

@@ -35,7 +35,6 @@ export class SchemaCheckRepository {
       .insert(schemaChecks)
       .values({
         targetId: data.targetId,
-        isComposable: data.isComposable,
         isDeleted: data.isDeleted,
         proposedSubgraphSchemaSDL: data.proposedSubgraphSchemaSDL,
         clientTrafficCheckSkipped: data.trafficCheckSkipped || false,
@@ -377,15 +376,22 @@ export class SchemaCheckRepository {
         )
         .execute();
 
-      // update the isComposable column in schema_checks table
-      await tx
-        .update(schemaChecks)
-        .set({
-          isComposable: !hasCompositionErrors,
-        })
-        .where(eq(schemaChecks.id, data.schemaCheckID))
-        .returning()
-        .execute();
+      for (const composition of data.compositions) {
+        // update the isComposable column in schema_checks_federated_graphs table
+        await tx
+          .update(schemaCheckFederatedGraphs)
+          .set({
+            isComposable: !hasCompositionErrors,
+          })
+          .where(
+            and(
+              eq(schemaCheckFederatedGraphs.checkId, data.schemaCheckID),
+              eq(schemaCheckFederatedGraphs.federatedGraphId, composition.id),
+            ),
+          )
+          .returning()
+          .execute();
+      }
     });
   }
 

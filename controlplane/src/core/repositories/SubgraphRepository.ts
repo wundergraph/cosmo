@@ -16,6 +16,7 @@ import {
   fieldGracePeriod,
   graphCompositionSubgraphs,
   graphCompositions,
+  schemaCheckFederatedGraphs,
   schemaChecks,
   schemaVersion,
   subgraphMembers,
@@ -925,61 +926,75 @@ export class SubgraphRepository {
 
   public async checkById(data: {
     id: string;
-    federatedGraphTargetId: string;
+    federatedGraphId: string;
   }): Promise<SchemaCheckSummaryDTO | undefined> {
-    const check = await this.db.query.schemaChecks.findFirst({
-      where: eq(schema.schemaChecks.id, data.id),
-      with: {
-        affectedGraphs: true,
-      },
-    });
+    const check = await this.db
+      .select({
+        id: schemaChecks.id,
+        targetId: schemaChecks.targetId,
+        hasBreakingChanges: schemaCheckFederatedGraphs.hasBreakingChanges,
+        subgraphName: targets.name,
+        createdAt: schemaChecks.createdAt,
+        isComposable: schemaCheckFederatedGraphs.isComposable,
+        isDeleted: schemaChecks.isDeleted,
+        hasClientTraffic: schemaCheckFederatedGraphs.hasClientTraffic,
+        proposedSubgraphSchemaSDL: schemaChecks.proposedSubgraphSchemaSDL,
+        forcedSuccess: schemaChecks.forcedSuccess,
+        trafficCheckDays: schemaCheckFederatedGraphs.trafficCheckDays,
+        ghDetails: schemaChecks.ghDetails,
+        hasLintErrors: schemaChecks.hasLintErrors,
+        hasGraphPruningErrors: schemaCheckFederatedGraphs.hasGraphPruningErrors,
+        clientTrafficCheckSkipped: schemaChecks.clientTrafficCheckSkipped,
+        lintSkipped: schemaChecks.lintSkipped,
+        graphPruningSkipped: schemaChecks.graphPruningSkipped,
+        vcsContext: schemaChecks.vcsContext,
+      })
+      .from(schemaChecks)
+      .innerJoin(subgraphs, eq(subgraphs.targetId, schemaChecks.targetId))
+      .innerJoin(targets, eq(targets.id, subgraphs.targetId))
+      .innerJoin(schemaCheckFederatedGraphs, eq(schemaCheckFederatedGraphs.checkId, schemaChecks.id))
+      .where(and(eq(schemaChecks.id, data.id), eq(schemaCheckFederatedGraphs.federatedGraphId, data.federatedGraphId)))
+      .execute();
 
-    if (!check) {
-      return;
-    }
-
-    const subgraphs = await this.listByFederatedGraph({
-      federatedGraphTargetId: data.federatedGraphTargetId,
-    });
-
-    const subgraph = subgraphs.find((s) => s.targetId === check.targetId);
-    if (!subgraph) {
+    if (check.length === 0) {
       return;
     }
 
     return {
-      id: check.id,
-      targetID: check.targetId,
-      subgraphName: subgraph.name ?? '',
-      timestamp: check.createdAt.toISOString(),
-      isBreaking: check.hasBreakingChanges ?? false,
-      isComposable: check.isComposable ?? false,
-      isDeleted: check.isDeleted ?? false,
-      hasClientTraffic: check.hasClientTraffic ?? false,
-      proposedSubgraphSchemaSDL: check.proposedSubgraphSchemaSDL ?? undefined,
-      isForcedSuccess: check.forcedSuccess ?? false,
-      affectedGraphs: check.affectedGraphs.map(({ federatedGraphId, trafficCheckDays }) => ({
-        id: federatedGraphId,
-        trafficCheckDays,
-      })),
-      ghDetails: check.ghDetails
+      id: check[0].id,
+      targetID: check[0].targetId,
+      subgraphName: check[0].subgraphName ?? '',
+      timestamp: check[0].createdAt.toISOString(),
+      isBreaking: check[0].hasBreakingChanges ?? false,
+      isComposable: check[0].isComposable ?? false,
+      isDeleted: check[0].isDeleted ?? false,
+      hasClientTraffic: check[0].hasClientTraffic ?? false,
+      proposedSubgraphSchemaSDL: check[0].proposedSubgraphSchemaSDL ?? undefined,
+      isForcedSuccess: check[0].forcedSuccess ?? false,
+      affectedGraphs: [
+        {
+          id: data.federatedGraphId,
+          trafficCheckDays: check[0].trafficCheckDays,
+        },
+      ],
+      ghDetails: check[0].ghDetails
         ? {
-            commitSha: check.ghDetails.commitSha,
-            ownerSlug: check.ghDetails.ownerSlug,
-            repositorySlug: check.ghDetails.repositorySlug,
-            checkRunId: check.ghDetails.checkRunId,
+            commitSha: check[0].ghDetails.commitSha,
+            ownerSlug: check[0].ghDetails.ownerSlug,
+            repositorySlug: check[0].ghDetails.repositorySlug,
+            checkRunId: check[0].ghDetails.checkRunId,
           }
         : undefined,
-      hasLintErrors: check.hasLintErrors ?? false,
-      hasGraphPruningErrors: check.hasGraphPruningErrors ?? false,
-      clientTrafficCheckSkipped: check.clientTrafficCheckSkipped ?? false,
-      lintSkipped: check.lintSkipped ?? false,
-      graphPruningSkipped: check.graphPruningSkipped ?? false,
-      vcsContext: check.vcsContext
+      hasLintErrors: check[0].hasLintErrors ?? false,
+      hasGraphPruningErrors: check[0].hasGraphPruningErrors ?? false,
+      clientTrafficCheckSkipped: check[0].clientTrafficCheckSkipped ?? false,
+      lintSkipped: check[0].lintSkipped ?? false,
+      graphPruningSkipped: check[0].graphPruningSkipped ?? false,
+      vcsContext: check[0].vcsContext
         ? {
-            author: check.vcsContext.author,
-            branch: check.vcsContext.branch,
-            commitSha: check.vcsContext.commitSha,
+            author: check[0].vcsContext.author,
+            branch: check[0].vcsContext.branch,
+            commitSha: check[0].vcsContext.commitSha,
           }
         : undefined,
     };
