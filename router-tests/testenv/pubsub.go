@@ -3,6 +3,7 @@ package testenv
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sync"
@@ -30,6 +31,18 @@ type KafkaData struct {
 	Brokers []string
 }
 
+func getHostPort(resource *dockertest.Resource, id string) string {
+	dockerURL := os.Getenv("DOCKER_HOST")
+	if dockerURL == "" {
+		return resource.GetHostPort(id)
+	}
+	u, err := url.Parse(dockerURL)
+	if err != nil {
+		panic(err)
+	}
+	return u.Hostname() + ":" + resource.GetPort(id)
+}
+
 func setupKafkaServers(t testing.TB) (*KafkaData, error) {
 	kafkaMux.Lock()
 	defer kafkaMux.Unlock()
@@ -40,9 +53,6 @@ func setupKafkaServers(t testing.TB) (*KafkaData, error) {
 
 	kafkaData = &KafkaData{}
 
-	kafkaPort := freeport.GetOne(t)
-	kafkaPortDocker := fmt.Sprintf("%d/tcp", kafkaPort)
-
 	dockerPool, err := dockertest.NewPool("")
 	require.NoError(t, err, "could not connect to docker")
 	require.NoError(t, dockerPool.Client.Ping(), "could not ping docker")
@@ -50,11 +60,7 @@ func setupKafkaServers(t testing.TB) (*KafkaData, error) {
 	kafkaResource, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "confluentinc/confluent-local",
 		Tag:        "7.5.0",
-		PortBindings: map[docker.Port][]docker.PortBinding{
-			"9092/tcp": {{HostIP: "localhost", HostPort: kafkaPortDocker}},
-		},
-		ExposedPorts: []string{"9092/tcp"},
-		Hostname:     "broker",
+		Hostname:   "broker",
 		Env: []string{
 			"KAFKA_BROKER_ID=1",
 			"KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT",
@@ -81,7 +87,7 @@ func setupKafkaServers(t testing.TB) (*KafkaData, error) {
 	// Tried using t.Cleanup here, but it was running far too early, not sure why.
 	require.NoError(t, kafkaResource.Expire(180))
 
-	kafkaData.Brokers = []string{fmt.Sprintf("localhost:%d", kafkaPort)}
+	kafkaData.Brokers = []string{getHostPort(kafkaResource, "9092/tcp")}
 
 	t.Logf("kafka has brokers: %v", kafkaData.Brokers)
 
