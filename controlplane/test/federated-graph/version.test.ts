@@ -169,7 +169,7 @@ describe('federated-graph version tests', () => {
         'http://localhost:8082',
       );
 
-      await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:8080');
+      await createFederatedGraph(client, fedGraphName, namespace, [joinLabel(label)], 'http://localhost:8080');
       const federatedGraphResponse = await client.getFederatedGraphByName({
         name: fedGraphName,
         namespace,
