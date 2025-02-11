@@ -958,10 +958,3 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 
 	return cfg, nil
 }
-
-func or[T any](maybe *T, or T) T {
-	if maybe != nil {
-		return *maybe
-	}
-	return or
-}
