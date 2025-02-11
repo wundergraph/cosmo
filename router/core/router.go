@@ -305,12 +305,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.subgraphTransportOptions = DefaultSubgraphTransportOptions()
 	}
 
-	for k, v := range r.subgraphTransportOptions.SubgraphMap {
-		if v == nil {
-			r.subgraphTransportOptions.SubgraphMap[k] = DefaultTransportRequestOptions()
-		}
-	}
-
 	if r.graphqlMetricsConfig == nil {
 		r.graphqlMetricsConfig = DefaultGraphQLMetricsConfig()
 	}
