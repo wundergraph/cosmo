@@ -70,16 +70,16 @@ func setupKafkaServers(t testing.TB) (*KafkaData, error) {
 			"KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT",
 			"KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER",
 		},
-	})
-
-	require.NoError(t, err, "could not start kafka")
-
-	t.Cleanup(func() {
-		err := dockerPool.Purge(kafkaResource)
-		if err != nil {
-			panic(fmt.Errorf("could not purge kafka container, %w", err))
+	}, func(hc *docker.HostConfig) {
+		hc.AutoRemove = true
+		hc.RestartPolicy = docker.RestartPolicy{
+			Name: "no",
 		}
 	})
+	require.NoError(t, err, "could not start kafka")
+
+	// Tried using t.Cleanup here, but it was running far too early, not sure why.
+	require.NoError(t, kafkaResource.Expire(60))
 
 	kafkaData.Brokers = []string{fmt.Sprintf("localhost:%d", kafkaPort)}
 
