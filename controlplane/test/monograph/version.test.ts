@@ -41,7 +41,7 @@ describe('monograph version tests', () => {
 
   describe('get tests', () => {
     test('that the router compatibility version of a monograph is returned', async () => {
-      const { client } = await SetupTest({ dbname, chClient });
+      const { client, server, } = await SetupTest({ dbname, chClient });
       const namespace = genID('namespace').toLowerCase();
       await createNamespace(client, namespace);
       const monographName = genID('monograph');
@@ -70,12 +70,14 @@ describe('monograph version tests', () => {
       expect(response.response!.code).toBe(EnumStatusCode.OK);
       expect(response.graph).toBeDefined();
       expect(response.graph!.routerCompatibilityVersion).toStrictEqual(1);
+
+      await server.close();
     });
   });
 
   describe('set tests', () => {
     test('that an error is returned if an invalid router compatibility version is provided #1', async () => {
-      const { client, blobStorage, } = await SetupTest({ dbname, chClient });
+      const { client, blobStorage, server, } = await SetupTest({ dbname, chClient });
       const namespace = genID('namespace').toLowerCase();
       await createNamespace(client, namespace);
       const monographName = genID('monograph');
@@ -120,10 +122,12 @@ describe('monograph version tests', () => {
       expect(response.deploymentErrors).toHaveLength(0);
 
       await assertNumberOfCompositions(client, monographName, 1, namespace);
+
+      await server.close();
     });
 
     test('that an error is returned if an invalid router compatibility version is provided #2', async () => {
-      const { client, blobStorage, } = await SetupTest({ dbname, chClient });
+      const { client, blobStorage, server, } = await SetupTest({ dbname, chClient });
       const namespace = genID('namespace').toLowerCase();
       await createNamespace(client, namespace);
       const monographName = genID('monograph');
@@ -168,10 +172,12 @@ describe('monograph version tests', () => {
       expect(response.deploymentErrors).toHaveLength(0);
 
       await assertNumberOfCompositions(client, monographName, 1, namespace);
+
+      await server.close();
     });
 
     test('that setting the same router compatibility version is benign', async () => {
-      const { client, blobStorage, } = await SetupTest({ dbname, chClient });
+      const { client, blobStorage, server, } = await SetupTest({ dbname, chClient });
       const namespace = genID('namespace').toLowerCase();
       await createNamespace(client, namespace);
       const monographName = genID('monograph');
@@ -216,6 +222,8 @@ describe('monograph version tests', () => {
       expect(response.deploymentErrors).toHaveLength(0);
 
       await assertNumberOfCompositions(client, monographName, 1, namespace);
+
+      await server.close();
     });
   });
 });
