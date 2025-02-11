@@ -262,6 +262,13 @@ events:
           sasl_plain:
             username: "admin"
             password: "admin"
+    redis:
+      - id: my-redis
+        cluster_enabled: true
+        urls:
+          - "test:password@localhost:7001"
+          - "test:password@localhost:7002"
+          - "test:password@localhost:7003"
 
 engine:
   enable_single_flight: true

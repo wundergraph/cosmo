@@ -1743,6 +1743,33 @@
                   }
                 }
               }
+            },
+            "redis": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["urls", "id"],
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "The ID of the redis provider. The ID is used to identify the provider in the configuration."
+                  },
+                  "urls": {
+                    "type": "array",
+                    "description": "The cluster connection URLs. The values are specified as a string with the format 'scheme://host:port'. If cluster enabled, will use these urls for a cluster connection. If cluster is not enabled, we will just select the first URL provided.",
+                    "default": [],
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "cluster_enabled": {
+                    "type": "boolean",
+                    "description": "Enable Redis Cluster connection, using the supplied URLs.",
+                    "default": false
+                  }
+                }
+              }
             }
           }
         }

@@ -20,7 +20,7 @@ import (
 	"github.com/klauspost/compress/gzip"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	redisClient "github.com/redis/go-redis/v9"
+	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/redis"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
@@ -1221,12 +1221,15 @@ func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig
 					if len(eventSource.URLs) == 0 {
 						return fmt.Errorf("no URLs provided for Redis provider with ID \"%s\"", providerID)
 					}
-					// TODO: fix URL parsing for cluster
-					urlEncodedOpts, err := redisClient.ParseURL(eventSource.URLs[0])
+					//client := redisClient.NewClient(urlEncodedOpts)
+					client, err := rd.NewRedisCloser(&rd.RedisCloserOptions{
+						URLs:           eventSource.URLs,
+						ClusterEnabled: eventSource.ClusterEnabled,
+						Logger:         s.logger,
+					})
 					if err != nil {
-						return fmt.Errorf("failed to parse the redis connection url: %w", err)
+						return fmt.Errorf("failed to create connection for Redis provider with ID \"%s\": %w", providerID, err)
 					}
-					client := redisClient.NewClient(urlEncodedOpts)
 					ps := redis.NewConnector(s.logger, client)
 
 					s.pubSubProviders.redis[providerID] = ps.New(ctx)

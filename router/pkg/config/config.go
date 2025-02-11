@@ -513,8 +513,9 @@ type KafkaEventSource struct {
 }
 
 type RedisEventSource struct {
-	ID   string   `yaml:"id,omitempty"`
-	URLs []string `yaml:"urls,omitempty"`
+	ID             string   `yaml:"id,omitempty"`
+	URLs           []string `yaml:"urls,omitempty"`
+	ClusterEnabled bool     `yaml:"cluster_enabled,omitempty"`
 }
 
 type EventProviders struct {
