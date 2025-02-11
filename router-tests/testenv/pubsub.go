@@ -79,7 +79,7 @@ func setupKafkaServers(t testing.TB) (*KafkaData, error) {
 	require.NoError(t, err, "could not start kafka")
 
 	// Tried using t.Cleanup here, but it was running far too early, not sure why.
-	require.NoError(t, kafkaResource.Expire(60))
+	require.NoError(t, kafkaResource.Expire(180))
 
 	kafkaData.Brokers = []string{fmt.Sprintf("localhost:%d", kafkaPort)}
 
