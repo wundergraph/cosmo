@@ -2496,7 +2496,7 @@ message ListRouterCompatibilityVersionsResponse {
 message SetGraphRouterCompatibilityVersionRequest {
   string name = 1;
   string namespace = 2;
-  int32 version = 3;
+  string version = 3;
 }
 
 message SetGraphRouterCompatibilityVersionResponse {

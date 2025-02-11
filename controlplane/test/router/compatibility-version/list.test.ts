@@ -1,11 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { ROUTER_COMPATIBILITY_VERSIONS } from '@wundergraph/composition';
 import { SetupTest } from '../../test-util.js';
 import { afterAllSetup, beforeAllSetup } from '../../../src/core/test-util.js';
 import { ClickHouseClient } from '../../../src/core/clickhouse/index.js';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { ROUTER_COMPATIBILITY_VERSIONS } from '@wundergraph/composition';
-
-
 
 describe('router compatibility-version list tests', () => {
   let chClient: ClickHouseClient;
@@ -29,5 +27,5 @@ describe('router compatibility-version list tests', () => {
     expect(response.response).toBeDefined();
     expect(response.response!.code).toBe(EnumStatusCode.OK);
     expect(response.versions).toStrictEqual([...ROUTER_COMPATIBILITY_VERSIONS]);
-  })
+  });
 });

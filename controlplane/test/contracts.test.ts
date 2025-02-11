@@ -1488,7 +1488,7 @@ describe('Contract tests', (ctx) => {
 
     expect(blobStorage.keys()).toHaveLength(1);
     const baseGraphKey = blobStorage.keys()[0];
-    expect(baseGraphKey).toContain(baseGraphResponse.graph!.id);
+    expect(baseGraphKey).toContain(`${baseGraphResponse.graph}/routerconfigs/latest.json`);
     await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
     // Two subgraph publishes for two compositions, the last of which is failing
     await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
@@ -1550,7 +1550,7 @@ describe('Contract tests', (ctx) => {
 
     expect(blobStorage.keys()).toHaveLength(1);
     const baseGraphKey = blobStorage.keys()[0];
-    expect(baseGraphKey).toContain(baseGraphResponse.graph!.id);
+    expect(baseGraphKey).toContain(`${baseGraphResponse.graph}/routerconfigs/latest.json`);
     await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
     // Two subgraph publishes for two compositions
     await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
@@ -1647,7 +1647,7 @@ describe('Contract tests', (ctx) => {
 
     expect(blobStorage.keys()).toHaveLength(1);
     const baseGraphKey = blobStorage.keys()[0];
-    expect(baseGraphKey).toContain(baseGraphResponse.graph!.id);
+    expect(baseGraphKey).toContain(`${baseGraphResponse.graph}/routerconfigs/latest.json`);
     await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
     // Two subgraph publishes for two compositions
     await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
@@ -1895,7 +1895,7 @@ describe('Contract tests', (ctx) => {
 
     expect(blobStorage.keys()).toHaveLength(1);
     const baseGraphKey = blobStorage.keys()[0];
-    expect(baseGraphKey).toContain(baseGraphResponse.graph!.id);
+    expect(baseGraphKey).toContain(`${baseGraphResponse.graph}/routerconfigs/latest.json`);
     await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
     // Two subgraph publishes for two compositions
     await assertNumberOfCompositions(client, baseGraphName, 2, namespace);

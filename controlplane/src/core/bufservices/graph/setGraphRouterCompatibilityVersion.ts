@@ -2,12 +2,10 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  CompositionError,
-  CompositionWarning,
-  DeploymentError,
   SetGraphRouterCompatibilityVersionRequest,
   SetGraphRouterCompatibilityVersionResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { ROUTER_COMPATIBILITY_VERSIONS, SupportedRouterCompatibilityVersion } from '@wundergraph/composition';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
@@ -49,9 +47,24 @@ export function setGraphRouterCompatibilityVersion(
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Graph "${req.name}" in namespace "${req.namespace}" not found.`,
         },
         previousVersion: -1,
         newVersion: -1,
+        compositionErrors: [],
+        compositionWarnings: [],
+        deploymentErrors: [],
+      };
+    }
+    const version = Number.parseInt(req.version, 10) as SupportedRouterCompatibilityVersion;
+    if (!ROUTER_COMPATIBILITY_VERSIONS.has(version)) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_BAD_REQUEST,
+          details: `${req.version} is not a valid router compatibility version.`,
+        },
+        previousVersion: federatedGraph.routerCompatibilityVersion,
+        newVersion: federatedGraph.routerCompatibilityVersion,
         compositionErrors: [],
         compositionWarnings: [],
         deploymentErrors: [],
@@ -69,21 +82,21 @@ export function setGraphRouterCompatibilityVersion(
       authContext,
     });
 
-    if (federatedGraph.routerCompatibilityVersion === req.version) {
+    if (federatedGraph.routerCompatibilityVersion === version) {
       return {
         response: {
           code: EnumStatusCode.OK,
           details: `The router compatibility version is already set to ${req.version}.`,
         },
-        previousVersion: req.version,
-        newVersion: req.version,
+        previousVersion: version,
+        newVersion: version,
         compositionErrors: [],
         compositionWarnings: [],
         deploymentErrors: [],
       };
     }
 
-    await fedGraphRepo.updateRouterCompatibilityVersion(federatedGraph.id, req.version);
+    await fedGraphRepo.updateRouterCompatibilityVersion(federatedGraph.id, version);
 
     const auditLogRepo = new AuditLogRepository(opts.db);
 
@@ -115,7 +128,7 @@ export function setGraphRouterCompatibilityVersion(
           details: `The router compatibility version was set to ${req.version} successfully.`,
         },
         previousVersion: federatedGraph.routerCompatibilityVersion,
-        newVersion: req.version,
+        newVersion: version,
         compositionErrors: [],
         compositionWarnings: [],
         deploymentErrors: [],
@@ -140,10 +153,10 @@ export function setGraphRouterCompatibilityVersion(
         return {
           response: {
             code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-            details: `The router compatibility version was set to ${req.version} but composition failed.`,
+            details: `The router compatibility version was set to ${version} but this caused composition to fail.`,
           },
           previousVersion: federatedGraph.routerCompatibilityVersion,
-          newVersion: req.version,
+          newVersion: version,
           compositionErrors: composition.compositionErrors,
           compositionWarnings: composition.compositionWarnings,
           deploymentErrors: composition.deploymentErrors,
@@ -157,7 +170,7 @@ export function setGraphRouterCompatibilityVersion(
             details: `The router compatibility version was set to ${req.version} but deployment failed.`,
           },
           previousVersion: federatedGraph.routerCompatibilityVersion,
-          newVersion: req.version,
+          newVersion: version,
           compositionErrors: composition.compositionErrors,
           compositionWarnings: composition.compositionWarnings,
           deploymentErrors: composition.deploymentErrors,
@@ -168,10 +181,10 @@ export function setGraphRouterCompatibilityVersion(
     return {
       response: {
         code: EnumStatusCode.OK,
-        details: `The router compatibility version was set to ${req.version} successfully.`,
+        details: `The router compatibility version was set to ${version} successfully.`,
       },
       previousVersion: federatedGraph.routerCompatibilityVersion,
-      newVersion: req.version,
+      newVersion: version,
       compositionErrors: [],
       compositionWarnings: [],
       deploymentErrors: [],

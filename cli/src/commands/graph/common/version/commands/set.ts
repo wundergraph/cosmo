@@ -19,30 +19,13 @@ export default (opts: CommonGraphCommandOptions) => {
   command.option('-o, --out [string]', 'Destination file for the SDL.');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.action(async (name, options) => {
-    const version = Number.parseInt(options.version, 10);
-    if (!ROUTER_COMPATIBILITY_VERSIONS.has(version as SupportedRouterCompatibilityVersion)) {
-      console.log(
-        `${pc.red(
-          `${options.version} is not a valid router compatibility version. Please input one of the following valid versions:`,
-        )}`,
-      );
-      const versionsTable = new Table({
-        wordWrap: true,
-        wrapOnWordBoundary: false,
-      });
-
-      versionsTable.push([pc.bold(pc.white('VERSION')), ...ROUTER_COMPATIBILITY_VERSIONS]);
-      console.log(versionsTable.toString());
-      process.exit(1);
-    }
-
-    const spinner = ora('Recomposing the federated graph...').start();
+    const spinner = ora('Validating the router compatibility version change...').start();
 
     const response = await opts.client.platform.setGraphRouterCompatibilityVersion(
       {
         name,
         namespace: options.namespace,
-        version,
+        version: options.version,
       },
       {
         headers: getBaseHeaders(),
@@ -60,6 +43,22 @@ export default (opts: CommonGraphCommandOptions) => {
       if (response.response?.details) {
         console.log(pc.red(pc.bold(response.response.details)));
       }
+      process.exit(1);
+    }
+
+    if (response.response.code === EnumStatusCode.ERR_BAD_REQUEST) {
+      console.log(
+        `${pc.red(
+          `${options.version} is not a valid router compatibility version. Please input one of the following valid versions:`,
+        )}`,
+      );
+      const validVersionsTable = new Table({
+        wordWrap: true,
+        wrapOnWordBoundary: false,
+      });
+
+      validVersionsTable.push([pc.bold(pc.white('VERSION')), ...ROUTER_COMPATIBILITY_VERSIONS]);
+      console.log(validVersionsTable.toString());
       process.exit(1);
     }
 
@@ -84,25 +83,26 @@ export default (opts: CommonGraphCommandOptions) => {
         compositionWarnings: response.compositionWarnings,
         deploymentErrors: response.deploymentErrors,
         spinner,
-        successMessage: `Successfully set the router compatibility version for ${graphType} "${pc.bold(
-          name,
-        )}" to ${version}.`,
+        successMessage: `Successfully set the router compatibility version for ${graphType} "${pc.bold(name)}" to ${
+          options.version
+        }.`,
         subgraphCompositionBaseErrorMessage:
-          `The router composition version for ${graphType} "${pc.bold(name)}" was set to ${version}.` +
+          `The router composition version for ${graphType} "${pc.bold(name)}" was set to ${options.version}.` +
           ` However, the new composition was unsuccessful.`,
         subgraphCompositionDetailedErrorMessage:
           `There were composition errors when recomposing ${graphType} "${pc.bold(
             name,
-          )}" using router compatibility version ${version}.` + `\n${pc.bold('Please check the errors below:')}`,
+          )}" using router compatibility version ${options.version}.` +
+          `\n${pc.bold('Please check the errors below:')}`,
         deploymentErrorMessage:
-          `The ${graphType} "${pc.bold(
-            name,
-          )}" was recomposed with new router compatibility version ${version} but the updated composition could not be deployed.` +
+          `The ${graphType} "${pc.bold(name)}" was recomposed with new router compatibility version ${
+            options.version
+          } but the updated composition could not be deployed.` +
           `\nThis means the updated composition is not accessible to the router.` +
           `\n${pc.bold('Please check the errors below:')}`,
-        defaultErrorMessage: `Failed to set the router compatibility version for ${graphType} "${pc.bold(
-          name,
-        )}" to ${version}.`,
+        defaultErrorMessage: `Failed to set the router compatibility version for ${graphType} "${pc.bold(name)}" to ${
+          options.version
+        }.`,
         suppressWarnings: options.suppressWarnings,
       });
     } catch {

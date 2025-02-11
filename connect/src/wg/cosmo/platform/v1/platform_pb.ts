@@ -19737,9 +19737,9 @@ export class SetGraphRouterCompatibilityVersionRequest extends Message<SetGraphR
   namespace = "";
 
   /**
-   * @generated from field: int32 version = 3;
+   * @generated from field: string version = 3;
    */
-  version = 0;
+  version = "";
 
   constructor(data?: PartialMessage<SetGraphRouterCompatibilityVersionRequest>) {
     super();
@@ -19751,7 +19751,7 @@ export class SetGraphRouterCompatibilityVersionRequest extends Message<SetGraphR
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "version", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetGraphRouterCompatibilityVersionRequest {

@@ -231,7 +231,7 @@ describe('Feature flag integration tests', () => {
       );
       expect(blobStorage.keys()).toHaveLength(1);
       const baseGraphKey = blobStorage.keys()[0];
-      expect(baseGraphKey).toContain(baseGraphResponse.graph!.id);
+      expect(baseGraphKey).toContain(`${baseGraphResponse.graph}/routerconfigs/latest.json`);
       await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
 
       // The base composition
@@ -300,7 +300,7 @@ describe('Feature flag integration tests', () => {
       );
       expect(blobStorage.keys()).toHaveLength(1);
       const baseGraphKey = blobStorage.keys()[0];
-      expect(baseGraphKey).toContain(baseGraphResponse.graph!.id);
+      expect(baseGraphKey).toContain(`${baseGraphResponse.graph}/routerconfigs/latest.json`);
       await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
 
       // The base composition
@@ -376,7 +376,7 @@ describe('Feature flag integration tests', () => {
       );
       expect(blobStorage.keys()).toHaveLength(1);
       const baseGraphKey = blobStorage.keys()[0];
-      expect(baseGraphKey).toContain(baseGraphResponse.graph!.id);
+      expect(baseGraphKey).toContain(`${baseGraphResponse.graph}/routerconfigs/latest.json`);
       await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
 
       // The base composition
@@ -431,7 +431,7 @@ describe('Feature flag integration tests', () => {
 
       expect(blobStorage.keys()).toHaveLength(1);
       const baseGraphKey = blobStorage.keys()[0];
-      expect(baseGraphKey).toContain(baseGraphResponse.graph!.id);
+      expect(baseGraphKey).toContain(`${baseGraphResponse.graph}/routerconfigs/latest.json`);
       await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
 
       // The successful base composition and the failing base composition
@@ -493,7 +493,7 @@ describe('Feature flag integration tests', () => {
       );
       expect(blobStorage.keys()).toHaveLength(1);
       const baseGraphKey = blobStorage.keys()[0];
-      expect(baseGraphKey).toContain(baseGraphResponse.graph!.id);
+      expect(baseGraphKey).toContain(`${baseGraphResponse.graph}/routerconfigs/latest.json`);
       await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
 
       // The base composition
@@ -577,7 +577,7 @@ describe('Feature flag integration tests', () => {
       );
       expect(blobStorage.keys()).toHaveLength(1);
       const baseGraphKey = blobStorage.keys()[0];
-      expect(baseGraphKey).toContain(baseGraphResponse.graph!.id);
+      expect(baseGraphKey).toContain(`${baseGraphResponse.graph}/routerconfigs/latest.json`);
       await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
 
       // The base composition
@@ -929,7 +929,7 @@ describe('Feature flag integration tests', () => {
 
     expect(blobStorage.keys()).toHaveLength(1);
     const baseGraphKey = blobStorage.keys()[0];
-    expect(baseGraphKey).toContain(baseGraphResponse.graph!.id);
+    expect(baseGraphKey).toContain(`${baseGraphResponse.graph}/routerconfigs/latest.json`);
     await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
 
     // The successful base composition
