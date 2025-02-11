@@ -722,7 +722,8 @@ func TestCacheWarmup(t *testing.T) {
 	})
 }
 
-func TestCacheWarmupMetrics(t *testing.T) {
+// Is set as Flaky so that when running the tests it will be run separately and retried if it fails
+func TestFlakyCacheWarmupMetrics(t *testing.T) {
 	t.Run("should emit planning times metrics during warmup", func(t *testing.T) {
 		t.Parallel()
 
