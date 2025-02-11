@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
@@ -16,12 +16,23 @@ describe('monograph version tests', () => {
   let chClient: ClickHouseClient;
   let dbname = '';
 
+  vi.mock('../src/core/clickhouse/index.js', () => {
+    const ClickHouseClient = vi.fn();
+    ClickHouseClient.prototype.queryPromise = vi.fn();
+
+    return { ClickHouseClient };
+  });
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
 
   beforeEach(() => {
     chClient = new ClickHouseClient();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
   afterAll(async () => {

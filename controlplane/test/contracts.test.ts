@@ -31,7 +31,7 @@ vi.mock('../src/core/clickhouse/index.js', () => {
   return { ClickHouseClient };
 });
 
-describe('Contract tests', (ctx) => {
+describe('Contract tests', () => {
   let chClient: ClickHouseClient;
 
   beforeEach(() => {
@@ -161,7 +161,7 @@ describe('Contract tests', (ctx) => {
   });
 
   test('that an error is returned if a contract is created with both excluded and included tags', async () => {
-    const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+    const { client, server, } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -738,7 +738,7 @@ describe('Contract tests', (ctx) => {
     await server.close();
   });
 
-  test('that moving source federated graph moves contract graph', async (testContext) => {
+  test('that moving source federated graph moves contract graph', async () => {
     const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
@@ -790,7 +790,7 @@ describe('Contract tests', (ctx) => {
     await server.close();
   });
 
-  test('that moving contract federated graph is not allowed', async (testContext) => {
+  test('that moving contract federated graph is not allowed', async () => {
     const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
@@ -835,7 +835,7 @@ describe('Contract tests', (ctx) => {
     await server.close();
   });
 
-  test('that contract graph for a monograph is also a monograph', async (testContext) => {
+  test('that contract graph for a monograph is also a monograph', async () => {
     const { client, server } = await SetupTest({ dbname, chClient });
 
     const monographName = genID('monograph');
@@ -869,7 +869,7 @@ describe('Contract tests', (ctx) => {
     await server.close();
   });
 
-  test('that moving source monograph also moves contract graph', async (testContext) => {
+  test('that moving source monograph also moves contract graph', async () => {
     const { client, server } = await SetupTest({ dbname, chClient });
 
     const monographName = genID('monograph');
@@ -914,7 +914,7 @@ describe('Contract tests', (ctx) => {
     await server.close();
   });
 
-  test('that contract is deleted upon deleting source monograph', async (testContext) => {
+  test('that contract is deleted upon deleting source monograph', async () => {
     const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
 
     const monographName = genID('monograph');
@@ -963,7 +963,7 @@ describe('Contract tests', (ctx) => {
     await server.close();
   });
 
-  test('that contract is migrated upon migrating monograph', async (testContext) => {
+  test('that contract is migrated upon migrating monograph', async () => {
     const { client, server } = await SetupTest({ dbname, chClient });
 
     const monographName = genID('monograph');
@@ -1002,7 +1002,7 @@ describe('Contract tests', (ctx) => {
     await server.close();
   });
 
-  test('that publishing subgraph recomposes contract with exclude tags', async (testContext) => {
+  test('that publishing subgraph recomposes contract with exclude tags', async () => {
     const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
@@ -1060,7 +1060,7 @@ describe('Contract tests', (ctx) => {
     await server.close();
   });
 
-  test('that publishing subgraph recomposes contract with include tags', async (testContext) => {
+  test('that publishing subgraph recomposes contract with include tags', async () => {
     const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
@@ -1113,7 +1113,7 @@ describe('Contract tests', (ctx) => {
     await server.close();
   });
 
-  test('that deleting subgraph recomposes contract with exclude tags', async (testContext) => {
+  test('that deleting subgraph recomposes contract with exclude tags', async () => {
     const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraph1Name = genID('subgraph1');
@@ -1180,7 +1180,7 @@ describe('Contract tests', (ctx) => {
     await server.close();
   });
 
-  test('that deleting subgraph recomposes contract with include tags', async (testContext) => {
+  test('that deleting subgraph recomposes contract with include tags', async () => {
     const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraph1Name = genID('subgraph1');
@@ -1488,7 +1488,7 @@ describe('Contract tests', (ctx) => {
 
     expect(blobStorage.keys()).toHaveLength(1);
     const baseGraphKey = blobStorage.keys()[0];
-    expect(baseGraphKey).toContain(`${baseGraphResponse.graph}/routerconfigs/latest.json`);
+    expect(baseGraphKey).toContain(`${baseGraphResponse.graph!.id}/routerconfigs/latest.json`);
     await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
     // Two subgraph publishes for two compositions, the last of which is failing
     await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
@@ -1550,7 +1550,7 @@ describe('Contract tests', (ctx) => {
 
     expect(blobStorage.keys()).toHaveLength(1);
     const baseGraphKey = blobStorage.keys()[0];
-    expect(baseGraphKey).toContain(`${baseGraphResponse.graph}/routerconfigs/latest.json`);
+    expect(baseGraphKey).toContain(`${baseGraphResponse.graph!.id}/routerconfigs/latest.json`);
     await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
     // Two subgraph publishes for two compositions
     await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
@@ -1573,7 +1573,7 @@ describe('Contract tests', (ctx) => {
     // There should be two keys (the source graph and the contract)
     expect(blobStorage.keys()).toHaveLength(2);
     const contractKey = blobStorage.keys()[1];
-    expect(contractKey).toContain(contractResponse.graph!.id);
+    expect(contractKey).toContain(`${contractResponse.graph!.id}/routerconfigs/latest.json`);
 
     // There should be a composition for the contract
     await assertNumberOfCompositions(client, contractName, 1, namespace);
@@ -1647,7 +1647,7 @@ describe('Contract tests', (ctx) => {
 
     expect(blobStorage.keys()).toHaveLength(1);
     const baseGraphKey = blobStorage.keys()[0];
-    expect(baseGraphKey).toContain(`${baseGraphResponse.graph}/routerconfigs/latest.json`);
+    expect(baseGraphKey).toContain(`${baseGraphResponse.graph!.id}/routerconfigs/latest.json`);
     await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
     // Two subgraph publishes for two compositions
     await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
@@ -1670,7 +1670,7 @@ describe('Contract tests', (ctx) => {
     // There should be two keys in storage (source graph and contract)
     expect(blobStorage.keys()).toHaveLength(2);
     const contractKey = blobStorage.keys()[1];
-    expect(contractKey).toContain(contractResponse.graph!.id);
+    expect(contractKey).toContain(`${contractResponse.graph!.id}/routerconfigs/latest.json`);
 
     // There should be a composition for the contract
     await assertNumberOfCompositions(client, contractName, 1, namespace);
@@ -1895,7 +1895,7 @@ describe('Contract tests', (ctx) => {
 
     expect(blobStorage.keys()).toHaveLength(1);
     const baseGraphKey = blobStorage.keys()[0];
-    expect(baseGraphKey).toContain(`${baseGraphResponse.graph}/routerconfigs/latest.json`);
+    expect(baseGraphKey).toContain(`${baseGraphResponse.graph!.id}/routerconfigs/latest.json`);
     await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, false);
     // Two subgraph publishes for two compositions
     await assertNumberOfCompositions(client, baseGraphName, 2, namespace);
@@ -1918,7 +1918,7 @@ describe('Contract tests', (ctx) => {
     // There should be two keys in storage (source graph and contract)
     expect(blobStorage.keys()).toHaveLength(2);
     const contractKey = blobStorage.keys()[1];
-    expect(contractKey).toContain(contractResponse.graph!.id);
+    expect(contractKey).toContain(`${contractResponse.graph!.id}/routerconfigs/latest.json`);
 
     // There should be a composition for the contract
     await assertNumberOfCompositions(client, contractName, 1, namespace);
