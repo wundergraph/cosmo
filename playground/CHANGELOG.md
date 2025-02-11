@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.8.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.3...@wundergraph/playground@0.8.4) (2025-02-11)
+
+### Bug Fixes
+
+* websocket url in router playground ([#1583](https://github.com/wundergraph/cosmo/issues/1583)) ([8523ace](https://github.com/wundergraph/cosmo/commit/8523aceca6ecbed7e0318c5cf1115f9c00a3f933)) (@thisisnithin)
+
 ## [0.8.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.2...@wundergraph/playground@0.8.3) (2025-02-03)
 
 ### Bug Fixes
