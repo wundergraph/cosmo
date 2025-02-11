@@ -146,8 +146,7 @@ type TrafficShapingRules struct {
 	// Apply to requests from clients to the router
 	Router RouterTrafficConfiguration `yaml:"router"`
 	// Subgraphs is a set of rules that apply to requests from the router to subgraphs. The key is the subgraph name.
-	Subgraphs         map[string]*GlobalSubgraphRequestRule `yaml:"-"`
-	SubgraphsNillable map[string]*NillableRequestRule       `yaml:"subgraphs,omitempty"`
+	Subgraphs map[string]*GlobalSubgraphRequestRule `yaml:"subgraphs,omitempty"`
 }
 
 type FileUpload struct {
@@ -168,24 +167,6 @@ type RouterTrafficConfiguration struct {
 type GlobalSubgraphRequestRule struct {
 	BackoffJitterRetry BackoffJitterRetry `yaml:"retry"`
 	// See https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
-	RequestTimeout         time.Duration `yaml:"request_timeout,omitempty" envDefault:"60s"`
-	DialTimeout            time.Duration `yaml:"dial_timeout,omitempty" envDefault:"30s"`
-	ResponseHeaderTimeout  time.Duration `yaml:"response_header_timeout,omitempty" envDefault:"0s"`
-	ExpectContinueTimeout  time.Duration `yaml:"expect_continue_timeout,omitempty" envDefault:"0s"`
-	TLSHandshakeTimeout    time.Duration `yaml:"tls_handshake_timeout,omitempty" envDefault:"10s"`
-	KeepAliveIdleTimeout   time.Duration `yaml:"keep_alive_idle_timeout,omitempty" envDefault:"0s"`
-	KeepAliveProbeInterval time.Duration `yaml:"keep_alive_probe_interval,omitempty" envDefault:"30s"`
-
-	// Connection configuration
-	MaxConnsPerHost     int `yaml:"max_conns_per_host,omitempty" envDefault:"100"`
-	MaxIdleConns        int `yaml:"max_idle_conns,omitempty" envDefault:"1024"`
-	MaxIdleConnsPerHost int `yaml:"max_idle_conns_per_host,omitempty" envDefault:"20"`
-}
-
-type NillableRequestRule struct {
-	BackoffJitterRetry BackoffJitterRetry `yaml:"retry"`
-	// See https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
-
 	RequestTimeout         *time.Duration `yaml:"request_timeout,omitempty" envDefault:"60s"`
 	DialTimeout            *time.Duration `yaml:"dial_timeout,omitempty" envDefault:"30s"`
 	ResponseHeaderTimeout  *time.Duration `yaml:"response_header_timeout,omitempty" envDefault:"0s"`
@@ -963,40 +944,6 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 		if err := yaml.Unmarshal(configFileBytes, &cfg.Config); err != nil {
 			return nil, err
 		}
-	}
-
-	// Merge in defaults for subgraph TrafficShapingRules
-	defaultRequestRule := GlobalSubgraphRequestRule{
-		RequestTimeout:         60 * time.Second,
-		TLSHandshakeTimeout:    10 * time.Second,
-		ResponseHeaderTimeout:  0 * time.Second,
-		ExpectContinueTimeout:  0 * time.Second,
-		KeepAliveProbeInterval: 30 * time.Second,
-		KeepAliveIdleTimeout:   0 * time.Second,
-		DialTimeout:            30 * time.Second,
-
-		MaxConnsPerHost:     100,
-		MaxIdleConns:        1024,
-		MaxIdleConnsPerHost: 20,
-	}
-
-	cfg.Config.TrafficShaping.Subgraphs = make(map[string]*GlobalSubgraphRequestRule)
-
-	for subgraphName, sgN := range cfg.Config.TrafficShaping.SubgraphsNillable {
-		subgraphRules := &GlobalSubgraphRequestRule{}
-
-		subgraphRules.RequestTimeout = or(sgN.RequestTimeout, defaultRequestRule.RequestTimeout)
-		subgraphRules.TLSHandshakeTimeout = or(sgN.TLSHandshakeTimeout, defaultRequestRule.TLSHandshakeTimeout)
-		subgraphRules.ResponseHeaderTimeout = or(sgN.ResponseHeaderTimeout, defaultRequestRule.ResponseHeaderTimeout)
-		subgraphRules.ExpectContinueTimeout = or(sgN.ExpectContinueTimeout, defaultRequestRule.ExpectContinueTimeout)
-		subgraphRules.KeepAliveProbeInterval = or(sgN.KeepAliveProbeInterval, defaultRequestRule.KeepAliveProbeInterval)
-		subgraphRules.KeepAliveIdleTimeout = or(sgN.KeepAliveIdleTimeout, defaultRequestRule.KeepAliveIdleTimeout)
-		subgraphRules.DialTimeout = or(sgN.DialTimeout, defaultRequestRule.DialTimeout)
-		subgraphRules.MaxConnsPerHost = or(sgN.MaxConnsPerHost, defaultRequestRule.MaxConnsPerHost)
-		subgraphRules.MaxIdleConns = or(sgN.MaxIdleConns, defaultRequestRule.MaxIdleConns)
-		subgraphRules.MaxIdleConnsPerHost = or(sgN.MaxIdleConnsPerHost, defaultRequestRule.MaxIdleConnsPerHost)
-
-		cfg.Config.TrafficShaping.Subgraphs[subgraphName] = subgraphRules
 	}
 
 	// Post-process the config

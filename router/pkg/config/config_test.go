@@ -117,31 +117,6 @@ func TestConfigSlicesHaveDefaults(t *testing.T) {
 	require.Equal(t, "cumulative", config.Exporters[0].Temporality)
 }
 
-// Confirms that defaults and fallthrough works properly
-func TestConfigMapsHaveDefaults(t *testing.T) {
-	f := createTempFileFromFixture(t, `
-# yaml-language-server: $schema=../config.schema.json
-
-version: "1"
-
-graph:
-  token: "token"
-
-traffic_shaping:
-  subgraphs:
-    foo:
-      request_timeout: 10s
-      dial_timeout: 0s
-`)
-	cfg, err := LoadConfig(f, "")
-
-	require.NoError(t, err)
-
-	require.Equal(t, 1024, cfg.Config.TrafficShaping.Subgraphs["foo"].MaxIdleConns, 1024)
-	require.Equal(t, time.Duration(0), cfg.Config.TrafficShaping.Subgraphs["foo"].DialTimeout)
-	require.Equal(t, time.Minute, cfg.Config.TrafficShaping.All.RequestTimeout)
-}
-
 func TestErrorWhenConfigNotExists(t *testing.T) {
 	_, err := LoadConfig("./fixtures/not_exists.yaml", "")
 

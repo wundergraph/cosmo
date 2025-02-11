@@ -131,8 +131,7 @@
       "MaxHeaderBytes": 0,
       "DecompressionEnabled": true
     },
-    "Subgraphs": {},
-    "SubgraphsNillable": null
+    "Subgraphs": null
   },
   "FileUpload": {
     "Enabled": true,

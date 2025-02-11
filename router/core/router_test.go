@@ -3,6 +3,7 @@ package core
 import (
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
@@ -207,4 +208,27 @@ func TestOverridesPriority(t *testing.T) {
 	assert.Equal(t, common.GraphQLSubscriptionProtocol_GRAPHQL_SUBSCRIPTION_PROTOCOL_WS.Enum(), routerConfig.EngineConfig.DatasourceConfigurations[0].CustomGraphql.Subscription.Protocol)
 	assert.Equal(t, common.GraphQLWebsocketSubprotocol_GRAPHQL_WEBSOCKET_SUBPROTOCOL_WS.Enum(), routerConfig.EngineConfig.DatasourceConfigurations[0].CustomGraphql.Subscription.WebsocketSubprotocol)
 	assert.Equal(t, parsedURL, subgraphs[0].Url)
+}
+
+// Confirms that defaults and fallthrough works properly
+func TestNewTransportRequestOptions(t *testing.T) {
+	defaults := DefaultTransportRequestOptions()
+
+	subgraphRequestTimeout := 10 * time.Second
+	subgraphDialTimeout := 0 * time.Second
+	subgraphConfig := &config.GlobalSubgraphRequestRule{
+		RequestTimeout: &subgraphRequestTimeout,
+		DialTimeout:    &subgraphDialTimeout,
+	}
+
+	// Test that the defaults are set properly
+	transportCfg := NewTransportRequestOptions(*subgraphConfig)
+
+	// The two set values are preserved, including the manually specified zero
+	assert.Equal(t, subgraphRequestTimeout, transportCfg.RequestTimeout)
+	assert.Equal(t, subgraphDialTimeout, transportCfg.DialTimeout)
+
+	// The rest of the values are set to the defaults
+	assert.Equal(t, defaults.MaxIdleConns, transportCfg.MaxIdleConns)
+	assert.Equal(t, defaults.MaxIdleConnsPerHost, transportCfg.MaxIdleConnsPerHost)
 }

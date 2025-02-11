@@ -265,27 +265,6 @@
           "Interval": 0
         },
         "RequestTimeout": 120000000000,
-        "DialTimeout": 30000000000,
-        "ResponseHeaderTimeout": 0,
-        "ExpectContinueTimeout": 0,
-        "TLSHandshakeTimeout": 10000000000,
-        "KeepAliveIdleTimeout": 0,
-        "KeepAliveProbeInterval": 30000000000,
-        "MaxConnsPerHost": 100,
-        "MaxIdleConns": 1024,
-        "MaxIdleConnsPerHost": 20
-      }
-    },
-    "SubgraphsNillable": {
-      "products": {
-        "BackoffJitterRetry": {
-          "Enabled": false,
-          "Algorithm": "",
-          "MaxAttempts": 0,
-          "MaxDuration": 0,
-          "Interval": 0
-        },
-        "RequestTimeout": 120000000000,
         "DialTimeout": null,
         "ResponseHeaderTimeout": null,
         "ExpectContinueTimeout": null,

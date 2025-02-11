@@ -23,7 +23,7 @@ func NewSubgraphTransport(transportOpts *SubgraphTransportOptions, roundTripper 
 
 	for subgraph, subgraphOpts := range transportOpts.SubgraphMap {
 		if subgraphOpts != nil {
-			tt.subgraphTrippers[subgraph] = newHTTPTransport(*subgraphOpts, proxy)
+			tt.subgraphTrippers[subgraph] = newHTTPTransport(subgraphOpts, proxy)
 		}
 	}
 
