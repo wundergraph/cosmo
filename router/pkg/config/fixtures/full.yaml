@@ -368,7 +368,7 @@ security:
 persisted_operations:
   safelist:
     enabled: true
-  log_unknown_operations: true
+  log_unknown: true
   cache:
     size: 100MB
   storage:

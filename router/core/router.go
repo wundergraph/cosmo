@@ -519,7 +519,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	if r.persistedOperationsConfig.Safelist.Enabled && r.automaticPersistedQueriesConfig.Enabled {
-		return nil, errors.New("automatic persisted queries and safelist cannot be enabled at the same time")
+		return nil, errors.New("automatic persisted queries and safelist cannot be enabled at the same time (as APQ would permit queries that are not in the safelist)")
 	}
 
 	if r.securityConfiguration.DepthLimit != nil {

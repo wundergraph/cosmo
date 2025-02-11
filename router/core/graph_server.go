@@ -453,7 +453,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 				break
 			}
 		}
-	} else if srv.persistedOperationsConfig.Safelist.Enabled || srv.persistedOperationsConfig.LogUnknownOperations {
+	} else if srv.persistedOperationsConfig.Safelist.Enabled || srv.persistedOperationsConfig.LogUnknown {
 		// In these case, we'll want to compute the sha256 for every operation, in order to check that the operation
 		// is present in the Persisted Operation cache
 		computeSha256 = true
@@ -1030,7 +1030,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			Condition: s.securityConfiguration.BlockNonPersistedOperations.Condition,
 		},
 		SafelistEnabled:             s.persistedOperationsConfig.Safelist.Enabled,
-		LogUnknownOperationsEnabled: s.persistedOperationsConfig.LogUnknownOperations,
+		LogUnknownOperationsEnabled: s.persistedOperationsConfig.LogUnknown,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create operation blocker: %w", err)

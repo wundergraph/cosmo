@@ -13,10 +13,11 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel/codes"
+
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -389,7 +390,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 	})
 }
 
-func (h *PreHandler) shouldComputeHash(operationKit *OperationKit) bool {
+func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit) bool {
 	if h.computeOperationSha256 {
 		return true
 	}
@@ -448,7 +449,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	}
 
 	// Compute the operation sha256 hash as soon as possible for observability reasons
-	if h.shouldComputeHash(operationKit) {
+	if h.shouldComputeOperationSha256(operationKit) {
 		if err := operationKit.ComputeOperationSha256(); err != nil {
 			return &httpGraphqlError{
 				message:    fmt.Sprintf("error hashing operation: %s", err),
@@ -486,22 +487,23 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		)
 
 		skipParse, isApq, err = operationKit.FetchPersistedOperation(ctx, requestContext.operation.clientInfo)
+		span.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
 		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+
 			var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
 			if h.operationBlocker.LogUnknownOperationsEnabled && errors.As(err, &poNotFoundErr) {
 				h.log.Warn("Unknown persisted operation found", zap.String("query", operationKit.parsedOperation.Request.Query), zap.String("sha256Hash", poNotFoundErr.Sha256Hash))
+				if h.operationBlocker.SafelistEnabled {
+					span.End()
+					return err
+				}
 			} else {
-				span.RecordError(err)
-				span.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
-				span.SetStatus(codes.Error, err.Error())
-
 				span.End()
-
 				return err
 			}
 		}
-
-		span.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
 
 		span.End()
 

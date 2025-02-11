@@ -369,7 +369,7 @@
     }
   },
   "PersistedOperationsConfig": {
-    "LogUnknownOperations": false,
+    "LogUnknown": false,
     "Safelist": {
       "Enabled": false
     },

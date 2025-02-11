@@ -133,11 +133,11 @@
           "properties": {
             "enabled": {
               "type": "boolean",
-              "description": "Only allows persisted operations (sent with operation body). If the value is true, all operations not explicitly added to the safelist are blocked. You can also specify a condition that is evaluated to determine if the non-persisted operation should be blocked."
+              "description": "Only allows persisted operations (sent with operation body). If the value is true, all operations not explicitly added to the safelist are blocked."
             }
           }
         },
-        "log_unknown_operations": {
+        "log_unknown": {
           "type": "boolean",
           "description": "Log operations (sent with the operation body) which haven't yet been persisted. If the value is true, all operations not yet persisted are logged to the router logs.",
           "additionalProperties": false

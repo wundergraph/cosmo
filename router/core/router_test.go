@@ -83,7 +83,7 @@ func TestApqAndSafelistErrors(t *testing.T) {
 	}
 	_, err := NewRouter(options...)
 	assert.NotNil(t, err)
-	assert.Contains(t, err.Error(), "automatic persisted queries and safelist cannot be enabled at the same time")
+	assert.Contains(t, err.Error(), "automatic persisted queries and safelist cannot be enabled at the same time (as APQ would permit queries that are not in the safelist)")
 }
 
 func TestOverridesConfig(t *testing.T) {

@@ -700,10 +700,10 @@ type AutomaticPersistedQueriesCacheConfig struct {
 }
 
 type PersistedOperationsConfig struct {
-	LogUnknownOperations bool                             `yaml:"log_unknown_operations" env:"PERSISTED_OPERATIONS_LOG_UNKNOWN_OPERATIONS" envDefault:"false"`
-	Safelist             SafelistConfiguration            `yaml:"safelist" envPrefix:"PERSISTED_OPERATIONS_SAFELIST_"`
-	Cache                PersistedOperationsCacheConfig   `yaml:"cache"`
-	Storage              PersistedOperationsStorageConfig `yaml:"storage"`
+	LogUnknown bool                             `yaml:"log_unknown" env:"PERSISTED_OPERATIONS_LOG_UNKNOWN" envDefault:"false"`
+	Safelist   SafelistConfiguration            `yaml:"safelist" envPrefix:"PERSISTED_OPERATIONS_SAFELIST_"`
+	Cache      PersistedOperationsCacheConfig   `yaml:"cache"`
+	Storage    PersistedOperationsStorageConfig `yaml:"storage"`
 }
 
 type SafelistConfiguration struct {
