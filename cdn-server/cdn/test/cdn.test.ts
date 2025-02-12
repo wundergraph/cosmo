@@ -385,7 +385,7 @@ describe('CDN handlers', () => {
     });
 
     test('it returns a 404 if the router config does not exist', async () => {
-      const res = await app.request(`/${organizationId}/${federatedGraphId}/routerconfigs/does_not_exist.json`, {
+      const res = await app.request(`/${organizationId}/${federatedGraphId}/routerconfigs/v3/does_not_exist.json`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
