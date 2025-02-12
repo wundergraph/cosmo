@@ -745,7 +745,7 @@ describe('Labels', (ctx) => {
     await server.close();
   });
 
-  test('Check if label matchers changed', async () => {
+  test('Check if label matchers changed', () => {
     // Case 1: isContract is true and newLabelMatchers is empty
     let result = checkIfLabelMatchersChanged({
       isContract: true,
