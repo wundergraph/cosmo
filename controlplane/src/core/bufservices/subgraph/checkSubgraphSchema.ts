@@ -326,6 +326,7 @@ export function checkSubgraphSchema(
         daysToConsider: limit,
         federatedGraphId: composition.id,
         organizationId: authContext.organizationId,
+        subgraphId: subgraph.id,
       });
 
       if (result.size === 0) {
