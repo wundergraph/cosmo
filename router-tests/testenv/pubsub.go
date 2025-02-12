@@ -23,9 +23,17 @@ import (
 )
 
 type KafkaData struct {
-	Client  *kgo.Client
-	Brokers []string
+	Client   *kgo.Client
+	Brokers  []string
+	Resource *dockertest.Resource
 }
+
+var (
+	kafkaMux       sync.Mutex
+	kafkaRefs      int32
+	kafkaData      *KafkaData
+	kafkaContainer *dockertest.Resource
+)
 
 func getHostPort(resource *dockertest.Resource, id string) string {
 	dockerURL := os.Getenv("DOCKER_HOST")
@@ -40,6 +48,32 @@ func getHostPort(resource *dockertest.Resource, id string) string {
 }
 
 func setupKafkaServer(t testing.TB) (*KafkaData, error) {
+	kafkaMux.Lock()
+	defer kafkaMux.Unlock()
+
+	kafkaRefs += 1
+
+	t.Cleanup(func() {
+		t.Log("cleaning up kafka")
+		if kafkaRefs > 1 {
+			kafkaRefs -= 1
+		} else {
+			if err := kafkaContainer.Close(); err != nil {
+				t.Fatalf("could not purge kafka container: %s", err.Error())
+			}
+			kafkaMux.Lock()
+			kafkaData = nil
+			kafkaRefs = 0
+			kafkaMux.Unlock()
+		}
+	})
+
+	if kafkaData != nil {
+		return kafkaData, nil
+	}
+
+	kafkaData = &KafkaData{}
+
 	pool, err := dockertest.NewPool("")
 	if err != nil {
 		return nil, err
@@ -51,7 +85,7 @@ func setupKafkaServer(t testing.TB) (*KafkaData, error) {
 
 	port := freeport.GetOne(t)
 
-	kafkaResource, err := pool.RunWithOptions(&dockertest.RunOptions{
+	container, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "bitnami/kafka",
 		Tag:        "3.7.0",
 		PortBindings: map[docker.Port][]docker.PortBinding{
@@ -75,14 +109,8 @@ func setupKafkaServer(t testing.TB) (*KafkaData, error) {
 		return nil, err
 	}
 
-	t.Cleanup(func() {
-		if err := pool.Purge(kafkaResource); err != nil {
-			t.Fatalf("could not purge kafka container: %s", err.Error())
-		}
-	})
-
 	client, err := kgo.NewClient(
-		kgo.SeedBrokers(getHostPort(kafkaResource, "9092/tcp")),
+		kgo.SeedBrokers(getHostPort(container, "9092/tcp")),
 	)
 	if err != nil {
 		return nil, err
@@ -95,10 +123,11 @@ func setupKafkaServer(t testing.TB) (*KafkaData, error) {
 		t.Fatalf("could not ping kafka: %s", err.Error())
 	}
 
-	return &KafkaData{
-		Client:  client,
-		Brokers: []string{getHostPort(kafkaResource, "9092/tcp")},
-	}, nil
+	kafkaData.Client = client
+	kafkaData.Brokers = []string{getHostPort(container, "9092/tcp")}
+	kafkaContainer = container
+
+	return kafkaData, nil
 }
 
 var (
