@@ -1,10 +1,10 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { addSeconds, formatISO, subDays } from 'date-fns';
-import { Label } from '../src/types/index.js';
-import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { Label } from '../src/types/index.js';
 import { checkIfLabelMatchersChanged } from '../src/core/util.js';
 import { createAndPublishSubgraph, createFederatedGraph, createThenPublishSubgraph, SetupTest } from './test-util.js';
 
@@ -587,6 +587,58 @@ describe('Labels', (ctx) => {
     });
     expect(graph2AfterSet.response?.code).toBe(EnumStatusCode.OK);
     expect(graph2AfterSet.subgraphs.length).toBe(1);
+
+    await server.close();
+  });
+
+  test('Updating subgraph label should result in a single composition', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+
+    const fedGraph1Name = genID('fedGraph1');
+    const subgraph1Name = genID('subgraph1');
+    const label1 = genUniqueLabel('label1');
+    const label2 = genUniqueLabel('label2');
+
+    await createFederatedGraph(
+      client,
+      fedGraph1Name,
+      'default',
+      [`${joinLabel(label1)},${joinLabel(label2)}`],
+      'http://localhost:8081',
+    );
+
+    await createAndPublishSubgraph(
+      client,
+      subgraph1Name,
+      'default',
+      `type Query { name: String! }`,
+      [label1],
+      'http://localhost:8083',
+    );
+
+    const graph1 = await client.getCompositions({
+      fedGraphName: fedGraph1Name,
+      namespace: 'default',
+      startDate: formatISO(subDays(new Date(), 1)),
+      endDate: formatISO(addSeconds(new Date(), 5)),
+    });
+    expect(graph1.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph1.compositions.length).toBe(1);
+
+    await client.updateSubgraph({
+      name: subgraph1Name,
+      namespace: 'default',
+      labels: [label2],
+    });
+
+    const updatedGraph = await client.getCompositions({
+      fedGraphName: fedGraph1Name,
+      namespace: 'default',
+      startDate: formatISO(subDays(new Date(), 1)),
+      endDate: formatISO(addSeconds(new Date(), 5)),
+    });
+    expect(updatedGraph.response?.code).toBe(EnumStatusCode.OK);
+    expect(updatedGraph.compositions.length).toBe(2);
 
     await server.close();
   });
