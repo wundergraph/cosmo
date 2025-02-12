@@ -251,8 +251,42 @@ export class FederatedGraphRepository {
         await targetRepo.updateReadmeOfTarget({ id: data.targetId, readme: data.readme });
       }
 
+      const haveLabelMatchersChanged = (() => {
+        if (federatedGraph.contract && data.labelMatchers.length === 0) {
+          return false;
+        }
+
+        // User tries to unset but no matchers exist, then nothing has changed
+        if (data.unsetLabelMatchers && federatedGraph.labelMatchers.length === 0) {
+          return false;
+        }
+
+        // If user tries to unset but matchers exist, then it has changed
+        if (data.unsetLabelMatchers) {
+          return true;
+        }
+
+        // Not a contract, not unsetting, no new matchers, then nothing has changed
+        if (data.labelMatchers.length === 0) {
+          return false;
+        }
+
+        // Not a contract, not unsetting but new matchers are passed, we need to check if they are different
+        if (data.labelMatchers.length !== federatedGraph.labelMatchers.length) {
+          return true;
+        }
+
+        for (const labelMatcher of data.labelMatchers) {
+          if (!federatedGraph.labelMatchers.includes(labelMatcher)) {
+            return true;
+          }
+        }
+
+        return false;
+      })();
+
       // Update label matchers (Is optional)
-      if (data.labelMatchers.length > 0 || data.unsetLabelMatchers) {
+      if (haveLabelMatchersChanged) {
         const labelMatchers = data.unsetLabelMatchers ? [] : normalizeLabelMatchers(data.labelMatchers);
 
         const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);
