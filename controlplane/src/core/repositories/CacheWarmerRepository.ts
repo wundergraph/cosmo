@@ -9,6 +9,7 @@ import {
 import { and, count, desc, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
+import { CacheWarmerOperation as ProtoCacheWarmerOperation } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import * as schema from '../../db/schema.js';
 import { cacheWarmerOperations, users } from '../../db/schema.js';
 import { DateRange } from '../../types/index.js';
@@ -455,5 +456,77 @@ export class CacheWarmerRepository {
     } catch (err: any) {
       logger.error(err, `Failed to upload the cache warmer operations for ${federatedGraphId} to the blob storage`);
     }
+  }
+
+  public async getOperationById({
+    id,
+    organizationId,
+    federatedGraphId,
+  }: {
+    id: string;
+    organizationId: string;
+    federatedGraphId: string;
+  }): Promise<ProtoCacheWarmerOperation | undefined> {
+    const operations = await this.db
+      .select({
+        id: cacheWarmerOperations.id,
+        operationName: cacheWarmerOperations.operationName,
+        operationContent: cacheWarmerOperations.operationContent,
+        operationPersistedID: cacheWarmerOperations.operationPersistedID,
+        operationHash: cacheWarmerOperations.operationHash,
+        clientName: cacheWarmerOperations.clientName,
+        clientVersion: cacheWarmerOperations.clientVersion,
+        planningTime: cacheWarmerOperations.planningTime,
+        isManuallyAdded: cacheWarmerOperations.isManuallyAdded,
+        createdAt: cacheWarmerOperations.createdAt,
+        createdBy: users.email,
+      })
+      .from(cacheWarmerOperations)
+      .leftJoin(users, eq(users.id, cacheWarmerOperations.createdById))
+      .where(
+        and(
+          eq(cacheWarmerOperations.organizationId, organizationId),
+          eq(cacheWarmerOperations.federatedGraphId, federatedGraphId),
+          eq(cacheWarmerOperations.id, id),
+        ),
+      )
+      .execute();
+
+    if (operations.length === 0) {
+      return undefined;
+    }
+    return new ProtoCacheWarmerOperation({
+      id: operations[0].id,
+      operationContent: operations[0].operationContent || '',
+      operationName: operations[0].operationName || '',
+      operationPersistedId: operations[0].operationPersistedID || '',
+      operationHash: operations[0].operationHash || '',
+      clientName: operations[0].clientName || '',
+      clientVersion: operations[0].clientVersion || '',
+      planningTime: operations[0].planningTime || 0,
+      isManuallyAdded: operations[0].isManuallyAdded,
+      createdAt: operations[0].createdAt.toISOString() || '',
+      createdBy: operations[0].createdBy || '',
+    });
+  }
+
+  public deleteOperationById({
+    id,
+    organizationId,
+    federatedGraphId,
+  }: {
+    id: string;
+    organizationId: string;
+    federatedGraphId: string;
+  }) {
+    return this.db
+      .delete(cacheWarmerOperations)
+      .where(
+        and(
+          eq(cacheWarmerOperations.organizationId, organizationId),
+          eq(cacheWarmerOperations.federatedGraphId, federatedGraphId),
+          eq(cacheWarmerOperations.id, id),
+        ),
+      );
   }
 }

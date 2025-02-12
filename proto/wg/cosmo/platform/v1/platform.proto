@@ -2484,6 +2484,16 @@ message GetCacheWarmerConfigResponse {
   bool isCacheWarmerEnabled = 2;
 }
 
+message DeleteCacheWarmerOperationRequest {
+  string id = 1;
+  string federatedGraphName = 2;
+  string namespace = 3;
+}
+
+message DeleteCacheWarmerOperationResponse {
+  Response response = 1;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -2801,6 +2811,8 @@ service PlatformService {
   rpc ConfigureCacheWarmer(ConfigureCacheWarmerRequest) returns (ConfigureCacheWarmerResponse) {}
   // GetCacheWarmerConfig gets the config of cache warming for that namespace.
   rpc GetCacheWarmerConfig(GetCacheWarmerConfigRequest) returns (GetCacheWarmerConfigResponse) {}
+  // DeleteCacheWarmerOperation deletes a cache warmer operation.
+  rpc DeleteCacheWarmerOperation(DeleteCacheWarmerOperationRequest) returns (DeleteCacheWarmerOperationResponse) {}
 
   //
   // Billing

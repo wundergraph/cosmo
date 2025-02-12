@@ -1,6 +1,6 @@
 import { CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
 import { CacheWarmerOperation } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, isValid } from "date-fns";
 import { useRouter } from "next/router";
 import { Button } from "../ui/button";
 import { Pagination } from "../ui/pagination";
@@ -14,21 +14,39 @@ import {
   TableWrapper,
 } from "../ui/table";
 import Link from "next/link";
-import { useContext } from "react";
+import { Dispatch, SetStateAction, useContext, useState } from "react";
 import { GraphContext } from "../layout/graph-layout";
 import { useUser } from "@/hooks/use-user";
 import { nanoTimestampToTime } from "@/components/analytics/charts";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
+import { useToast } from "../ui/use-toast";
+import { useMutation } from "@connectrpc/connect-query";
+import { deleteCacheWarmerOperation } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { checkUserAccess, cn } from "@/lib/utils";
 
 export const CacheOperationsTable = ({
   operations,
   totalCount,
+  refetch,
 }: {
   operations: CacheWarmerOperation[];
   totalCount: number;
+  refetch: () => void;
 }) => {
   const router = useRouter();
   const user = useUser();
+  const { toast } = useToast();
   const graphData = useContext(GraphContext);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [operationId, setOperationId] = useState<string | undefined>();
+  const { mutate, isPending } = useMutation(deleteCacheWarmerOperation);
 
   const pageNumber = router.query.page
     ? parseInt(router.query.page as string)
@@ -38,6 +56,66 @@ export const CacheOperationsTable = ({
 
   return (
     <>
+      {operationId &&
+        checkUserAccess({
+          rolesToBe: ["admin", "developer"],
+          userRoles: user?.currentOrganization.roles || [],
+        }) && (
+          <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Delete Cache Operation</DialogTitle>
+              </DialogHeader>
+              <div className="flex flex-col gap-y-2">
+                <span className="text-sm">
+                  Are you sure you want to delete this cache operation?
+                </span>
+              </div>
+              <div className="mt-2 flex justify-end gap-x-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setOpenDeleteDialog(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  isLoading={isPending}
+                  onClick={() => {
+                    mutate(
+                      {
+                        id: operationId,
+                        federatedGraphName: graphData?.graph?.name,
+                        namespace: graphData?.graph?.namespace,
+                      },
+                      {
+                        onSuccess: (d) => {
+                          toast({
+                            description:
+                              d.response?.details ||
+                              "Cache operation deleted successfully.",
+                            duration: 2000,
+                          });
+                          refetch();
+                        },
+                        onError: (error) => {
+                          toast({
+                            description:
+                              "Could not delete an cache operation. Please try again.",
+                            duration: 2000,
+                          });
+                        },
+                      },
+                    );
+                    setOpenDeleteDialog(false);
+                  }}
+                >
+                  Delete
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       <TableWrapper className="mb-3">
         <Table>
           <TableHeader>
@@ -48,7 +126,6 @@ export const CacheOperationsTable = ({
               <TableHead className="text-center">Is Persisted</TableHead>
               <TableHead className="text-center">Is Manually Added</TableHead>
               <TableHead className="px-4">Planning Time P90</TableHead>
-              <TableHead className="text-center">Details</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -99,7 +176,7 @@ export const CacheOperationsTable = ({
                         ? nanoTimestampToTime(planningTime * 1000000)
                         : "-"}
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="flex items-center justify-end gap-x-4 text-center">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -117,6 +194,32 @@ export const CacheOperationsTable = ({
                           Details
                         </Link>
                       </Button>
+                      <DropdownMenu>
+                        <div className="flex justify-center">
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <EllipsisVerticalIcon className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                        </div>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setOperationId(id);
+                              setOpenDeleteDialog(true);
+                            }}
+                            disabled={
+                              !checkUserAccess({
+                                rolesToBe: ["admin", "developer"],
+                                userRoles:
+                                  user?.currentOrganization.roles || [],
+                              }) || !isManuallyAdded
+                            }
+                          >
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ),

@@ -50,7 +50,6 @@ export function pushCacheWarmerOperation(
           code: EnumStatusCode.ERR_UPGRADE_PLAN,
           details: `Upgrade to a enterprise plan to enable cache warmer`,
         },
-        isCacheWarmerEnabled: false,
       };
     }
 
