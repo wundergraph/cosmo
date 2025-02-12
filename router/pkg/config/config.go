@@ -756,7 +756,7 @@ type ApolloCompatibilityFlags struct {
 	SuppressFetchErrors           ApolloCompatibilitySuppressFetchErrors           `yaml:"suppress_fetch_errors"`
 	ReplaceUndefinedOpFieldErrors ApolloCompatibilityReplaceUndefinedOpFieldErrors `yaml:"replace_undefined_op_field_errors"`
 	ReplaceInvalidVarErrors       ApolloCompatibilityReplaceInvalidVarErrors       `yaml:"replace_invalid_var_errors"`
-	ReplaceInvalidVarErrorStatus  ApolloCompatibilityReplaceValidationErrorStatus  `yaml:"replace_invalid_var_error_status"`
+	ReplaceInvalidVarErrorStatus  ApolloCompatibilityReplaceValidationErrorStatus  `yaml:"replace_validation_error_status"`
 }
 
 type ApolloCompatibilityValueCompletion struct {
