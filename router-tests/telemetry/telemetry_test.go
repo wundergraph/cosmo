@@ -89,7 +89,6 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 				MessagesSent:  sentMessages,
 				Triggers:      0,
 			})
-
 		})
 	})
 
@@ -175,7 +174,6 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 				MessagesSent:  sentMessages.Load(),
 				Triggers:      0,
 			})
-
 		})
 	})
 
@@ -463,7 +461,6 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 			}
 
 			metricdatatest.AssertEqual(t, messagesSentMetrics, *integration.GetMetricByName(engineScope, "router.engine.messages.sent"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
 		})
 	})
 }
@@ -492,7 +489,6 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				EnableOTLPRouterCache: true,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
 			})
@@ -834,7 +830,6 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				EnableOTLPRouterCache: true,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			// miss
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
@@ -1214,7 +1209,6 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				EnablePrometheusRouterCache: true,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
 			})
@@ -1559,7 +1553,6 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				EnableOTLPRouterCache: true,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
 			})
@@ -1749,7 +1742,6 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 							Value: 0,
 						},
 						{
-
 							Attributes: attribute.NewSet(append(baseAttributes,
 								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "added"),
@@ -3606,11 +3598,11 @@ func TestFlakyTelemetry(t *testing.T) {
 				core.WithSubgraphTransportOptions(
 					core.NewSubgraphTransportOptions(config.TrafficShapingRules{
 						All: config.GlobalSubgraphRequestRule{
-							RequestTimeout: 10 * time.Second,
+							RequestTimeout: integration.ToPtr(10 * time.Second),
 						},
 						Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
 							"hobbies": {
-								RequestTimeout: 3 * time.Second,
+								RequestTimeout: integration.ToPtr(3 * time.Second),
 							},
 						},
 					})),
@@ -5726,7 +5718,6 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, responseContentLengthMetric, rm.ScopeMetrics[0].Metrics[3], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, requestInFlightMetric, rm.ScopeMetrics[0].Metrics[4], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, rm.ScopeMetrics[0].Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
 		})
 	})
 
@@ -6128,7 +6119,6 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, responseContentLengthMetric, rm.ScopeMetrics[0].Metrics[3], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, requestInFlightMetric, rm.ScopeMetrics[0].Metrics[4], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, rm.ScopeMetrics[0].Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
 		})
 	})
 
@@ -6784,7 +6774,6 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Equal(t, trace.SpanKindServer, sn[10].SpanKind())
 			require.Equal(t, codes.Error, sn[10].Status().Code)
 			require.Contains(t, sn[10].Status().Description, "connect: connection refused\nFailed to fetch from Subgraph 'products' at Path: 'employees'.")
-
 		})
 	})
 
@@ -7149,7 +7138,6 @@ func TestFlakyTelemetry(t *testing.T) {
 				HeaderName: customTraceHeader,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
@@ -7172,7 +7160,6 @@ func TestFlakyTelemetry(t *testing.T) {
 				HeaderName: "x-wg-trace-id",
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
@@ -7236,7 +7223,6 @@ func TestFlakyTelemetry(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			MetricReader: metricReaderFull,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
@@ -7280,7 +7266,6 @@ func TestFlakyTelemetry(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
@@ -8560,7 +8545,6 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.Len(t, sn[8].Attributes(), 26)
 			})
 		})
-
 	})
 
 	t.Run("Complexity Cache Metrics", func(t *testing.T) {
@@ -8753,5 +8737,4 @@ func TestFlakyTelemetry(t *testing.T) {
 			})
 		})
 	})
-
 }

@@ -265,15 +265,15 @@
           "Interval": 0
         },
         "RequestTimeout": 120000000000,
-        "DialTimeout": 0,
-        "ResponseHeaderTimeout": 0,
-        "ExpectContinueTimeout": 0,
-        "TLSHandshakeTimeout": 0,
-        "KeepAliveIdleTimeout": 0,
-        "KeepAliveProbeInterval": 0,
-        "MaxConnsPerHost": 0,
-        "MaxIdleConns": 0,
-        "MaxIdleConnsPerHost": 0
+        "DialTimeout": null,
+        "ResponseHeaderTimeout": null,
+        "ExpectContinueTimeout": null,
+        "TLSHandshakeTimeout": null,
+        "KeepAliveIdleTimeout": null,
+        "KeepAliveProbeInterval": null,
+        "MaxConnsPerHost": null,
+        "MaxIdleConns": null,
+        "MaxIdleConnsPerHost": null
       }
     }
   },

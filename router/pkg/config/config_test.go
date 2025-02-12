@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/caarlos0/env/v11"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/sebdah/goldie/v2"
 	"github.com/stretchr/testify/require"
@@ -90,6 +91,32 @@ poll_interval: 11s
 	require.Equal(t, cfg.Config.PollInterval, time.Second*11)
 }
 
+// Confirms https://github.com/caarlos0/env/issues/354 is fixed
+func TestConfigSlicesHaveDefaults(t *testing.T) {
+	type TestMetricsOTLPExporter struct {
+		Value       string
+		Exporter    string `envDefault:"http"`
+		Temporality string `envDefault:"cumulative"`
+	}
+
+	type TestMetricsOTLP struct {
+		RouterRuntime bool `envDefault:"true" env:"METRICS_OTLP_ROUTER_RUNTIME"`
+		Exporters     []TestMetricsOTLPExporter
+	}
+
+	config := TestMetricsOTLP{
+		Exporters: []TestMetricsOTLPExporter{
+			{Value: "A"},
+		},
+	}
+
+	require.NoError(t, env.Parse(&config))
+
+	require.Equal(t, "A", config.Exporters[0].Value)
+	require.Equal(t, "http", config.Exporters[0].Exporter)
+	require.Equal(t, "cumulative", config.Exporters[0].Temporality)
+}
+
 func TestErrorWhenConfigNotExists(t *testing.T) {
 	_, err := LoadConfig("./fixtures/not_exists.yaml", "")
 
@@ -155,7 +182,6 @@ func TestErrorWhenEnvVariableConfigNotExists(t *testing.T) {
 }
 
 func TestConfigIsOptional(t *testing.T) {
-
 	require.NoError(t, os.Setenv("GRAPH_API_TOKEN", "XXX"))
 
 	t.Cleanup(func() {
@@ -498,5 +524,4 @@ version: "1"
 
 	require.True(t, c.Config.Telemetry.Metrics.Prometheus.EngineStats.Subscriptions)
 	require.True(t, c.Config.Telemetry.Metrics.OTLP.EngineStats.Subscriptions)
-
 }

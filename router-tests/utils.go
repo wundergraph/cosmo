@@ -2,6 +2,9 @@ package integration
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -10,8 +13,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	tracetest2 "go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.uber.org/zap"
-	"testing"
-	"time"
 )
 
 const (
@@ -84,4 +85,8 @@ func GetMetricScopeByName(metrics []metricdata.ScopeMetrics, name string) *metri
 		}
 	}
 	return nil
+}
+
+func ToPtr[T any](v T) *T {
+	return &v
 }
