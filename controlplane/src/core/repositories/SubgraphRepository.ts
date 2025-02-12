@@ -402,9 +402,17 @@ export class SubgraphRepository {
         // Generate a new router config for non-feature graphs upon routing/subscription urls and labels changes
       } else if (subgraphChanged || labelChanged) {
         // find all federated graphs that use this subgraph. We need evaluate them again.
-        updatedFederatedGraphs.push(
-          ...(await fedGraphRepo.bySubgraphLabels({ labels: subgraph.labels, namespaceId: data.namespaceId })),
-        );
+        const affectedGraphs = await fedGraphRepo.bySubgraphLabels({
+          labels: subgraph.labels,
+          namespaceId: data.namespaceId,
+        });
+
+        for (const graph of affectedGraphs) {
+          const exists = updatedFederatedGraphs.find((g) => g.name === graph.name);
+          if (!exists) {
+            updatedFederatedGraphs.push(graph);
+          }
+        }
       }
 
       // update the readme of the subgraph
