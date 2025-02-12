@@ -18,17 +18,12 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
-	"github.com/stretchr/testify/require"
 	"github.com/twmb/franz-go/pkg/kgo"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
 
-var (
-	kafkaMux  sync.Mutex
-	kafkaData *KafkaData
-)
-
 type KafkaData struct {
+	Client  *kgo.Client
 	Brokers []string
 }
 
@@ -44,26 +39,19 @@ func getHostPort(resource *dockertest.Resource, id string) string {
 	return u.Hostname() + ":" + resource.GetPort(id)
 }
 
-func setupKafkaServers(t testing.TB) (*KafkaData, error) {
-	kafkaMux.Lock()
-	defer kafkaMux.Unlock()
-
-	if kafkaData != nil {
-		return kafkaData, nil
+func setupKafkaServer(t testing.TB) (*KafkaData, error) {
+	pool, err := dockertest.NewPool("")
+	if err != nil {
+		return nil, err
 	}
 
-	kafkaData = &KafkaData{}
+	if err := pool.Client.Ping(); err != nil {
+		return nil, err
+	}
 
-	dockerPool, err := dockertest.NewPool("")
-	require.NoError(t, err, "could not connect to docker")
-	require.NoError(t, dockerPool.Client.Ping(), "could not ping docker")
+	port := freeport.GetOne(t)
 
-	ports, err := freeport.Take(1)
-	require.NoError(t, err, "could not get free port for kafka")
-
-	port := ports[0]
-
-	kafkaResource, err := dockerPool.RunWithOptions(&dockertest.RunOptions{
+	kafkaResource, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Repository: "bitnami/kafka",
 		Tag:        "3.7.0",
 		PortBindings: map[docker.Port][]docker.PortBinding{
@@ -82,40 +70,35 @@ func setupKafkaServers(t testing.TB) (*KafkaData, error) {
 			"ALLOW_PLAINTEXT_LISTENER=yes",
 			"KAFKA_KRAFT_CLUSTER_ID=XkpGZQ27R3eTl3OdTm2LYA",
 		},
-	}, func(hc *docker.HostConfig) {
-		hc.AutoRemove = true
-		hc.RestartPolicy = docker.RestartPolicy{
-			Name: "no",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	t.Cleanup(func() {
+		if err := pool.Purge(kafkaResource); err != nil {
+			t.Fatalf("could not purge kafka container: %s", err.Error())
 		}
 	})
-	require.NoError(t, err, "could not start kafka")
-
-	// Tried using t.Cleanup here, but it was running far too early, not sure why.
-	// This can mean running tests quickly in succession will make freeport errors
-	require.NoError(t, kafkaResource.Expire(30))
-
-	kafkaData.Brokers = []string{getHostPort(kafkaResource, "9092/tcp")}
-
-	t.Logf("kafka has brokers: %v", kafkaData.Brokers)
 
 	client, err := kgo.NewClient(
-		kgo.SeedBrokers(kafkaData.Brokers...),
+		kgo.SeedBrokers(getHostPort(kafkaResource, "9092/tcp")),
 	)
-	require.NoError(t, err, "could not create kafka client")
+	if err != nil {
+		return nil, err
+	}
 
-	require.Eventually(t, func() bool {
-		err := client.Ping(context.Background())
-		if err != nil {
-			t.Logf("could not ping kafka: %s", err)
-			return false
-		}
+	err = pool.Retry(func() error {
+		return client.Ping(context.Background())
+	})
+	if err != nil {
+		t.Fatalf("could not ping kafka: %s", err.Error())
+	}
 
-		t.Logf("kafka is up")
-
-		return true
-	}, 60*time.Second, time.Second)
-
-	return kafkaData, nil
+	return &KafkaData{
+		Client:  client,
+		Brokers: []string{getHostPort(kafkaResource, "9092/tcp")},
+	}, nil
 }
 
 var (
