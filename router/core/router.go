@@ -1822,6 +1822,7 @@ func WithApolloCompatibilityFlagsConfig(cfg config.ApolloCompatibilityFlags) Opt
 			cfg.SuppressFetchErrors.Enabled = true
 			cfg.ReplaceUndefinedOpFieldErrors.Enabled = true
 			cfg.ReplaceInvalidVarErrors.Enabled = true
+			cfg.ReplaceValidationErrorStatus.Enabled = true
 		}
 		r.apolloCompatibilityFlags = cfg
 	}

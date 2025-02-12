@@ -73,7 +73,7 @@ import {
 import { composeSubgraphsForContract, composeSubgraphsWithContracts } from '../composition/composition.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { AdmissionError } from '../services/AdmissionWebhookController.js';
-import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
+import { checkIfLabelMatchersChanged, normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { unsuccessfulBaseCompositionError } from '../errors/errors.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { ContractRepository } from './ContractRepository.js';
@@ -251,8 +251,15 @@ export class FederatedGraphRepository {
         await targetRepo.updateReadmeOfTarget({ id: data.targetId, readme: data.readme });
       }
 
+      const haveLabelMatchersChanged = checkIfLabelMatchersChanged({
+        isContract: !!federatedGraph.contract,
+        currentLabelMatchers: federatedGraph.labelMatchers,
+        newLabelMatchers: data.labelMatchers,
+        unsetLabelMatchers: data.unsetLabelMatchers,
+      });
+
       // Update label matchers (Is optional)
-      if (data.labelMatchers.length > 0 || data.unsetLabelMatchers) {
+      if (haveLabelMatchersChanged) {
         const labelMatchers = data.unsetLabelMatchers ? [] : normalizeLabelMatchers(data.labelMatchers);
 
         const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);

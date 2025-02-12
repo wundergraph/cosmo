@@ -1084,6 +1084,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			ClientHeader:              s.clientHeader,
 			Attributes:                baseOtelAttributes,
 			DisableVariablesRemapping: s.engineExecutionConfiguration.DisableVariablesRemapping,
+			ApolloCompatibilityFlags:  s.apolloCompatibilityFlags,
 		})
 
 		// When the playground path is equal to the graphql path, we need to handle

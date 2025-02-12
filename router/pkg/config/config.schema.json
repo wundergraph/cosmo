@@ -2374,7 +2374,18 @@
         },
         "replace_invalid_var_errors": {
           "type": "object",
-          "description": "Produces the same error (message, extension code, status code) as Apollo when an invalid variable is supplied.",
+          "description": "Produces the same error (message, extension code but not status code) as Apollo when an invalid variable is supplied.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "replace_validation_error_status": {
+          "type": "object",
+          "description": "Produces the same error status code (400) as Apollo when validation fails.",
           "additionalProperties": false,
           "properties": {
             "enabled": {

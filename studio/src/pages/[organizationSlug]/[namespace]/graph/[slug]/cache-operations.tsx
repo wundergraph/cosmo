@@ -10,7 +10,7 @@ import { Loader } from "@/components/ui/loader";
 import { useToast } from "@/components/ui/use-toast";
 import { useUser } from "@/hooks/use-user";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
+import { checkUserAccess, cn } from "@/lib/utils";
 import { useMutation, useQuery } from "@connectrpc/connect-query";
 import {
   ExclamationTriangleIcon,
@@ -188,7 +188,14 @@ const CacheOperationsPage: NextPageWithLayout = () => {
               onClick={() => {
                 mutate({ federatedGraphName, namespace });
               }}
-              disabled={isPending || recomputeDisabled}
+              disabled={
+                isPending ||
+                recomputeDisabled ||
+                !checkUserAccess({
+                  rolesToBe: ["admin", "developer"],
+                  userRoles: user?.currentOrganization.roles || [],
+                })
+              }
             >
               <UpdateIcon
                 className={cn("", {
@@ -234,6 +241,7 @@ const CacheOperationsPage: NextPageWithLayout = () => {
       <CacheOperationsTable
         operations={data.operations}
         totalCount={data.totalCount}
+        refetch={refetch}
       />
       <CacheDetailsSheet operations={data.operations} />
     </div>

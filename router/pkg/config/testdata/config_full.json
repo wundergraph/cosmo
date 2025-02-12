@@ -695,6 +695,9 @@
     },
     "ReplaceInvalidVarErrors": {
       "Enabled": false
+    },
+    "ReplaceValidationErrorStatus": {
+      "Enabled": false
     }
   },
   "ClientHeader": {

@@ -64,6 +64,8 @@ type WebsocketMiddlewareOptions struct {
 	Attributes             []attribute.KeyValue
 
 	DisableVariablesRemapping bool
+
+	ApolloCompatibilityFlags config.ApolloCompatibilityFlags
 }
 
 func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
@@ -85,6 +87,7 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		handlerSem:                semaphore.NewWeighted(128),
 		attributes:                opts.Attributes,
 		disableVariablesRemapping: opts.DisableVariablesRemapping,
+		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
 	}
 	if opts.WebSocketConfiguration != nil && opts.WebSocketConfiguration.AbsintheProtocol.Enabled {
 		handler.absintheHandlerEnabled = true
@@ -223,6 +226,8 @@ type WebsocketHandler struct {
 	clientHeader                config.ClientHeader
 
 	disableVariablesRemapping bool
+
+	apolloCompatibilityFlags config.ApolloCompatibilityFlags
 }
 
 func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.Request) {
@@ -325,6 +330,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		ForwardQueryParams:        h.forwardQueryParamsConfig,
 		Attributes:                h.attributes,
 		DisableVariablesRemapping: h.disableVariablesRemapping,
+		ApolloCompatibilityFlags:  h.apolloCompatibilityFlags,
 	})
 	err = handler.Initialize()
 	if err != nil {
@@ -664,6 +670,7 @@ type WebSocketConnectionHandlerOptions struct {
 	ForwardQueryParams        forwardConfig
 	Attributes                []attribute.KeyValue
 	DisableVariablesRemapping bool
+	ApolloCompatibilityFlags  config.ApolloCompatibilityFlags
 }
 
 type WebSocketConnectionHandler struct {
@@ -702,6 +709,8 @@ type WebSocketConnectionHandler struct {
 	forwardQueryParams    *forwardConfig
 
 	disableVariablesRemapping bool
+
+	apolloCompatibilityFlags config.ApolloCompatibilityFlags
 }
 
 type forwardConfig struct {
@@ -741,6 +750,7 @@ func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnection
 		plannerOptions:            opts.PlanOptions,
 		attributes:                opts.Attributes,
 		disableVariablesRemapping: opts.DisableVariablesRemapping,
+		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
 	}
 }
 
@@ -850,7 +860,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 	startValidation := time.Now()
 
-	if _, err := operationKit.Validate(h.plannerOptions.ExecutionOptions.SkipLoader, opContext.remapVariables); err != nil {
+	if _, err := operationKit.Validate(h.plannerOptions.ExecutionOptions.SkipLoader, opContext.remapVariables, &h.apolloCompatibilityFlags); err != nil {
 		opContext.validationTime = time.Since(startValidation)
 		return nil, nil, err
 	}
