@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.122.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.121.7...controlplane@0.122.0) (2025-02-12)
+
+### Bug Fixes
+
+* check if label matchers have changed before composing ([#1589](https://github.com/wundergraph/cosmo/issues/1589)) ([ead469c](https://github.com/wundergraph/cosmo/commit/ead469c7dd242282bb27c7eca4580f4480440d0f)) (@thisisnithin)
+* duplicate compositions on subgraph label update ([#1588](https://github.com/wundergraph/cosmo/issues/1588)) ([e40c215](https://github.com/wundergraph/cosmo/commit/e40c2157dcc5daccb146cb3aca05779e5c377159)) (@thisisnithin)
+* use subgraphId while performing operations check ([#1581](https://github.com/wundergraph/cosmo/issues/1581)) ([473d4da](https://github.com/wundergraph/cosmo/commit/473d4da3a187566f2b125434a90367e09e14359e)) (@JivusAyrus)
+
+### Features
+
+* add option to delete cache operation ([#1586](https://github.com/wundergraph/cosmo/issues/1586)) ([2946139](https://github.com/wundergraph/cosmo/commit/29461397e784eec0880546807df51dbfd8f2918c)) (@JivusAyrus)
+
 ## [0.121.7](https://github.com/wundergraph/cosmo/compare/controlplane@0.121.6...controlplane@0.121.7) (2025-02-06)
 
 **Note:** Version bump only for package controlplane
