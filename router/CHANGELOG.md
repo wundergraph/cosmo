@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.175.1](https://github.com/wundergraph/cosmo/compare/router@0.175.0...router@0.175.1) (2025-02-12)
+
+### Bug Fixes
+
+* interface objects typename checks ([#1585](https://github.com/wundergraph/cosmo/issues/1585)) ([07b6464](https://github.com/wundergraph/cosmo/commit/07b6464ef2a6af66390895e38dd7b7ecd2204ed2)) (@devsergiy)
+
+# [0.175.0](https://github.com/wundergraph/cosmo/compare/router@0.174.3...router@0.175.0) (2025-02-12)
+
+### Features
+
+* add apollo compatibility flag replace invalid var error status ([#1587](https://github.com/wundergraph/cosmo/issues/1587)) ([d95e910](https://github.com/wundergraph/cosmo/commit/d95e910003ebe3222fab09629fccbf6d55b67abc)) (@Aenimus)
+
+## [0.174.3](https://github.com/wundergraph/cosmo/compare/router@0.174.2...router@0.174.3) (2025-02-12)
+
+### Bug Fixes
+
+* makes default config options work properly within maps ([#1577](https://github.com/wundergraph/cosmo/issues/1577)) ([899de99](https://github.com/wundergraph/cosmo/commit/899de9913cb139125b9d5ff75e3db71b7df93011)) (@endigma)
+
+## [0.174.2](https://github.com/wundergraph/cosmo/compare/router@0.174.1...router@0.174.2) (2025-02-11)
+
+### Bug Fixes
+
+* websocket url in router playground ([#1583](https://github.com/wundergraph/cosmo/issues/1583)) ([8523ace](https://github.com/wundergraph/cosmo/commit/8523aceca6ecbed7e0318c5cf1115f9c00a3f933)) (@thisisnithin)
+
 ## [0.174.1](https://github.com/wundergraph/cosmo/compare/router@0.174.0...router@0.174.1) (2025-02-07)
 
 ### Bug Fixes

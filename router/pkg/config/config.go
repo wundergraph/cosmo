@@ -167,18 +167,18 @@ type RouterTrafficConfiguration struct {
 type GlobalSubgraphRequestRule struct {
 	BackoffJitterRetry BackoffJitterRetry `yaml:"retry"`
 	// See https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
-	RequestTimeout         time.Duration `yaml:"request_timeout,omitempty" envDefault:"60s"`
-	DialTimeout            time.Duration `yaml:"dial_timeout,omitempty" envDefault:"30s"`
-	ResponseHeaderTimeout  time.Duration `yaml:"response_header_timeout,omitempty" envDefault:"0s"`
-	ExpectContinueTimeout  time.Duration `yaml:"expect_continue_timeout,omitempty" envDefault:"0s"`
-	TLSHandshakeTimeout    time.Duration `yaml:"tls_handshake_timeout,omitempty" envDefault:"10s"`
-	KeepAliveIdleTimeout   time.Duration `yaml:"keep_alive_idle_timeout,omitempty" envDefault:"0s"`
-	KeepAliveProbeInterval time.Duration `yaml:"keep_alive_probe_interval,omitempty" envDefault:"30s"`
+	RequestTimeout         *time.Duration `yaml:"request_timeout,omitempty" envDefault:"60s"`
+	DialTimeout            *time.Duration `yaml:"dial_timeout,omitempty" envDefault:"30s"`
+	ResponseHeaderTimeout  *time.Duration `yaml:"response_header_timeout,omitempty" envDefault:"0s"`
+	ExpectContinueTimeout  *time.Duration `yaml:"expect_continue_timeout,omitempty" envDefault:"0s"`
+	TLSHandshakeTimeout    *time.Duration `yaml:"tls_handshake_timeout,omitempty" envDefault:"10s"`
+	KeepAliveIdleTimeout   *time.Duration `yaml:"keep_alive_idle_timeout,omitempty" envDefault:"0s"`
+	KeepAliveProbeInterval *time.Duration `yaml:"keep_alive_probe_interval,omitempty" envDefault:"30s"`
 
 	// Connection configuration
-	MaxConnsPerHost     int `yaml:"max_conns_per_host,omitempty" envDefault:"100"`
-	MaxIdleConns        int `yaml:"max_idle_conns,omitempty" envDefault:"1024"`
-	MaxIdleConnsPerHost int `yaml:"max_idle_conns_per_host,omitempty" envDefault:"20"`
+	MaxConnsPerHost     *int `yaml:"max_conns_per_host,omitempty" envDefault:"100"`
+	MaxIdleConns        *int `yaml:"max_idle_conns,omitempty" envDefault:"1024"`
+	MaxIdleConnsPerHost *int `yaml:"max_idle_conns_per_host,omitempty" envDefault:"20"`
 }
 
 type SubgraphTrafficRequestRule struct {
@@ -756,6 +756,7 @@ type ApolloCompatibilityFlags struct {
 	SuppressFetchErrors           ApolloCompatibilitySuppressFetchErrors           `yaml:"suppress_fetch_errors"`
 	ReplaceUndefinedOpFieldErrors ApolloCompatibilityReplaceUndefinedOpFieldErrors `yaml:"replace_undefined_op_field_errors"`
 	ReplaceInvalidVarErrors       ApolloCompatibilityReplaceInvalidVarErrors       `yaml:"replace_invalid_var_errors"`
+	ReplaceValidationErrorStatus  ApolloCompatibilityReplaceValidationErrorStatus  `yaml:"replace_validation_error_status"`
 }
 
 type ApolloCompatibilityValueCompletion struct {
@@ -781,6 +782,10 @@ type ApolloCompatibilityReplaceUndefinedOpFieldErrors struct {
 
 type ApolloCompatibilityReplaceInvalidVarErrors struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_ENABLED"`
+}
+
+type ApolloCompatibilityReplaceValidationErrorStatus struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_REPLACE_VALIDATION_ERROR_STATUS_ENABLED"`
 }
 
 type CacheWarmupSource struct {
