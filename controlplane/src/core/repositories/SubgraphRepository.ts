@@ -405,6 +405,7 @@ export class SubgraphRepository {
         // Generate a new router config for non-feature graphs upon routing/subscription urls and labels changes
       } else if (subgraphChanged || labelChanged) {
         // find all federated graphs that use this subgraph (with old labels). We need evaluate them again.
+        // When labels change, previous federated graphs may not match with the subgraph anymore.
         const affectedGraphs = await fedGraphRepo.bySubgraphLabels({
           labels: subgraph.labels,
           namespaceId: data.namespaceId,
