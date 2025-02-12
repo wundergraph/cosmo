@@ -2366,6 +2366,17 @@
               "default": false
             }
           }
+        },
+        "skip_enum_value_validation": {
+          "type": "object",
+          "description": "Skips the GraphQL scheme's exact check of Enums, allowing the value to be thrown as a string.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
         }
       }
     },

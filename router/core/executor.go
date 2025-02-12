@@ -95,6 +95,9 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 	if opts.ApolloCompatibilityFlags.ReplaceInvalidVarErrors.Enabled {
 		options.ResolvableOptions.ApolloCompatibilityReplaceInvalidVarError = true
 	}
+	if opts.ApolloCompatibilityFlags.SkipEnumValueValidation.Enabled {
+		options.ResolvableOptions.ApolloCompatibilitySkipEnumValueValidation = true
+	}
 
 	switch opts.RouterEngineConfig.SubgraphErrorPropagation.Mode {
 	case config.SubgraphErrorPropagationModePassthrough:
