@@ -45,11 +45,11 @@ func TestFlakyTimeouts(t *testing.T) {
 
 		trafficConfig := config.TrafficShapingRules{
 			All: config.GlobalSubgraphRequestRule{
-				RequestTimeout: 500 * time.Millisecond,
+				RequestTimeout: ToPtr(500 * time.Millisecond),
 			},
 			Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
 				"test1": {
-					ResponseHeaderTimeout: 100 * time.Millisecond,
+					ResponseHeaderTimeout: ToPtr(100 * time.Millisecond),
 				},
 			},
 		}
@@ -105,7 +105,7 @@ func TestFlakyTimeouts(t *testing.T) {
 
 		trafficConfig := config.TrafficShapingRules{
 			All: config.GlobalSubgraphRequestRule{
-				RequestTimeout: 200 * time.Millisecond,
+				RequestTimeout: ToPtr(200 * time.Millisecond),
 			},
 		}
 		t.Run("no timeout below global timeout value", func(t *testing.T) {
@@ -179,14 +179,14 @@ func TestFlakyTimeouts(t *testing.T) {
 
 		trafficConfig := config.TrafficShapingRules{
 			All: config.GlobalSubgraphRequestRule{
-				RequestTimeout: 200 * time.Millisecond,
+				RequestTimeout: ToPtr(200 * time.Millisecond),
 			},
 			Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
 				"hobbies": {
-					RequestTimeout: 300 * time.Millisecond,
+					RequestTimeout: ToPtr(300 * time.Millisecond),
 				},
 				"test1": {
-					RequestTimeout: 500 * time.Millisecond,
+					RequestTimeout: ToPtr(500 * time.Millisecond),
 				},
 			},
 		}
@@ -295,11 +295,11 @@ func TestFlakyTimeouts(t *testing.T) {
 
 		trafficConfig := config.TrafficShapingRules{
 			All: config.GlobalSubgraphRequestRule{
-				RequestTimeout: 500 * time.Millisecond,
+				RequestTimeout: ToPtr(500 * time.Millisecond),
 			},
 			Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
 				"hobbies": {
-					ResponseHeaderTimeout: 100 * time.Millisecond,
+					ResponseHeaderTimeout: ToPtr(100 * time.Millisecond),
 				},
 			},
 		}
