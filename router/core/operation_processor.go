@@ -1026,7 +1026,7 @@ func (o *OperationKit) Validate(skipLoader bool, remapVariables map[string]strin
 					message:       invalidVarErr.Error(),
 					statusCode:    http.StatusOK,
 				}
-				if apolloCompatibilityFlags != nil && apolloCompatibilityFlags.ReplaceInvalidVarErrorStatus.Enabled {
+				if apolloCompatibilityFlags != nil && apolloCompatibilityFlags.ReplaceValidationErrorStatus.Enabled {
 					graphqlErr.statusCode = http.StatusBadRequest
 				}
 				return false, graphqlErr

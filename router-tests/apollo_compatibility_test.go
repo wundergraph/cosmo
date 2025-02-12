@@ -435,7 +435,7 @@ func TestApolloCompatibility(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
-					ReplaceInvalidVarErrorStatus: config.ApolloCompatibilityReplaceValidationErrorStatus{
+					ReplaceValidationErrorStatus: config.ApolloCompatibilityReplaceValidationErrorStatus{
 						Enabled: true,
 					},
 				}),
@@ -458,7 +458,7 @@ func TestApolloCompatibility(t *testing.T) {
 					ReplaceInvalidVarErrors: config.ApolloCompatibilityReplaceInvalidVarErrors{
 						Enabled: true,
 					},
-					ReplaceInvalidVarErrorStatus: config.ApolloCompatibilityReplaceValidationErrorStatus{
+					ReplaceValidationErrorStatus: config.ApolloCompatibilityReplaceValidationErrorStatus{
 						Enabled: true,
 					},
 				}),
