@@ -17,6 +17,7 @@ export interface InspectorFilter {
   federatedGraphId: string;
   organizationId: string;
   daysToConsider: number;
+  subgraphId: string;
 }
 
 export interface InspectorOperationResult {
@@ -80,6 +81,7 @@ export class SchemaUsageTrafficInspector {
           -- Filter first on date and customer to reduce the amount of data
           Timestamp >= toStartOfDay(now()) - interval ${filter.daysToConsider} day AND
           FederatedGraphID = '${filter.federatedGraphId}' AND
+          hasAny(SubgraphIDs, ['${filter.subgraphId}']) AND
           OrganizationID = '${filter.organizationId}' AND
           ${where.join(' AND ')}
         GROUP BY OperationHash
