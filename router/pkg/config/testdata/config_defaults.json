@@ -369,6 +369,10 @@
     }
   },
   "PersistedOperationsConfig": {
+    "LogUnknown": false,
+    "Safelist": {
+      "Enabled": false
+    },
     "Cache": {
       "Size": 100000000
     },
