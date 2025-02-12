@@ -346,6 +346,68 @@ describe('CDN handlers', () => {
     });
   });
 
+  describe('Test versioned router config handler', async () => {
+    const federatedGraphId = 'federatedGraphId';
+    const organizationId = 'organizationId';
+    const token = await generateToken(organizationId, federatedGraphId, secretKey);
+    const blobStorage = new InMemoryBlobStorage();
+    const routerConfig = JSON.stringify({
+      engineConfig: {},
+    });
+
+    blobStorage.objects.set(`${organizationId}/${federatedGraphId}/routerconfigs/v2/latest.json`, {
+      buffer: Buffer.from(routerConfig),
+      metadata: {
+        version: '1',
+        'signature-sha256': 'signature',
+      },
+    });
+
+    const app = new Hono();
+
+    cdn(app, {
+      authJwtSecret: secretKey,
+      authAdmissionJwtSecret: secretAdmissionKey,
+      blobStorage,
+    });
+
+    test('it returns a router config', async () => {
+      const res = await app.request(`/${organizationId}/${federatedGraphId}/routerconfigs/v2/latest.json`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ version: '' }),
+      });
+      expect(res.status).toBe(200);
+      expect(res.headers.get(signatureSha256Header)).toBe('signature');
+      expect(await res.text()).toBe(routerConfig);
+    });
+
+    test('it returns a 404 if the router config does not exist', async () => {
+      const res = await app.request(`/${organizationId}/${federatedGraphId}/routerconfigs/does_not_exist.json`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ version: '' }),
+      });
+      expect(res.status).toBe(404);
+    });
+
+    test('it returns a 304 if the version is the same as before', async () => {
+      const res = await app.request(`/${organizationId}/${federatedGraphId}/routerconfigs/v2/latest.json`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ version: '1' }),
+      });
+      expect(res.status).toBe(304);
+      expect(res.headers.get(signatureSha256Header)).toBeFalsy();
+    });
+  });
+
   describe('Test draft router config handler', async () => {
     const federatedGraphId = 'federatedGraphId';
     const organizationId = 'organizationId';
