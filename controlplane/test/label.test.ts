@@ -5,6 +5,7 @@ import { addSeconds, formatISO, subDays } from 'date-fns';
 import { Label } from '../src/types/index.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
+import { checkIfLabelMatchersChanged } from '../src/core/util.js';
 import { createAndPublishSubgraph, createFederatedGraph, createThenPublishSubgraph, SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -742,5 +743,65 @@ describe('Labels', (ctx) => {
     expect(updatedGraph.compositions.length).toBe(1);
 
     await server.close();
+  });
+
+  test('Check if label matchers changed', async () => {
+    // Case 1: isContract is true and newLabelMatchers is empty
+    let result = checkIfLabelMatchersChanged({
+      isContract: true,
+      currentLabelMatchers: [],
+      newLabelMatchers: [],
+    });
+    expect(result).toBe(false);
+
+    // Case 2: unsetLabelMatchers is true and currentLabelMatchers is empty
+    result = checkIfLabelMatchersChanged({
+      isContract: false,
+      currentLabelMatchers: [],
+      newLabelMatchers: [],
+      unsetLabelMatchers: true,
+    });
+    expect(result).toBe(false);
+
+    // Case 3: unsetLabelMatchers is true and currentLabelMatchers is not empty
+    result = checkIfLabelMatchersChanged({
+      isContract: false,
+      currentLabelMatchers: ['label1'],
+      newLabelMatchers: [],
+      unsetLabelMatchers: true,
+    });
+    expect(result).toBe(true);
+
+    // Case 4: newLabelMatchers is empty and we are not unsetting
+    result = checkIfLabelMatchersChanged({
+      isContract: false,
+      currentLabelMatchers: ['label1'],
+      newLabelMatchers: [],
+    });
+    expect(result).toBe(false);
+
+    // Case 5: newLabelMatchers length is different from currentLabelMatchers length
+    result = checkIfLabelMatchersChanged({
+      isContract: false,
+      currentLabelMatchers: ['label1'],
+      newLabelMatchers: ['label1', 'label2'],
+    });
+    expect(result).toBe(true);
+
+    // Case 6: newLabelMatchers contains different labels from currentLabelMatchers
+    result = checkIfLabelMatchersChanged({
+      isContract: false,
+      currentLabelMatchers: ['label1'],
+      newLabelMatchers: ['label2'],
+    });
+    expect(result).toBe(true);
+
+    // Case 7: newLabelMatchers is the same as currentLabelMatchers
+    result = checkIfLabelMatchersChanged({
+      isContract: false,
+      currentLabelMatchers: ['label1'],
+      newLabelMatchers: ['label1'],
+    });
+    expect(result).toBe(false);
   });
 });

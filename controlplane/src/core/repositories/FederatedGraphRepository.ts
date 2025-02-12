@@ -73,7 +73,7 @@ import {
 import { composeSubgraphsForContract, composeSubgraphsWithContracts } from '../composition/composition.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { AdmissionError } from '../services/AdmissionWebhookController.js';
-import { normalizeLabelMatchers, normalizeLabels } from '../util.js';
+import { checkIfLabelMatchersChanged, normalizeLabelMatchers, normalizeLabels } from '../util.js';
 import { unsuccessfulBaseCompositionError } from '../errors/errors.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { ContractRepository } from './ContractRepository.js';
@@ -251,39 +251,12 @@ export class FederatedGraphRepository {
         await targetRepo.updateReadmeOfTarget({ id: data.targetId, readme: data.readme });
       }
 
-      const haveLabelMatchersChanged = (() => {
-        if (federatedGraph.contract && data.labelMatchers.length === 0) {
-          return false;
-        }
-
-        // User tries to unset but no matchers exist, then nothing has changed
-        if (data.unsetLabelMatchers && federatedGraph.labelMatchers.length === 0) {
-          return false;
-        }
-
-        // If user tries to unset but matchers exist, then it has changed
-        if (data.unsetLabelMatchers) {
-          return true;
-        }
-
-        // Not a contract, not unsetting, no new matchers, then nothing has changed
-        if (data.labelMatchers.length === 0) {
-          return false;
-        }
-
-        // Not a contract, not unsetting but new matchers are passed, we need to check if they are different
-        if (data.labelMatchers.length !== federatedGraph.labelMatchers.length) {
-          return true;
-        }
-
-        for (const labelMatcher of data.labelMatchers) {
-          if (!federatedGraph.labelMatchers.includes(labelMatcher)) {
-            return true;
-          }
-        }
-
-        return false;
-      })();
+      const haveLabelMatchersChanged = checkIfLabelMatchersChanged({
+        isContract: !!federatedGraph.contract,
+        currentLabelMatchers: federatedGraph.labelMatchers,
+        newLabelMatchers: data.labelMatchers,
+        unsetLabelMatchers: data.unsetLabelMatchers,
+      });
 
       // Update label matchers (Is optional)
       if (haveLabelMatchersChanged) {
