@@ -13,6 +13,10 @@ import (
 
 // FindEmployees is the resolver for the findEmployees field.
 func (r *queryResolver) FindEmployees(ctx context.Context, criteria *model.SearchInput) ([]*model.Employee, error) {
+	if criteria == nil {
+		return employees, nil
+	}
+
 	output := make([]*model.Employee, 0, len(employees))
 	for _, employee := range employees {
 		if criteria.HasPets != nil && *criteria.HasPets != (len(employee.Details.Pets) > 0) {

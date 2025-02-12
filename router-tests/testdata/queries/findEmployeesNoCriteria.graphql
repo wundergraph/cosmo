@@ -1,0 +1,7 @@
+query {
+  findEmployees {
+    details {
+      forename
+    }
+  }
+}
