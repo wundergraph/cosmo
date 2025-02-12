@@ -162,7 +162,7 @@ export function updateFederatedGraph(
     });
 
     // Send webhook event only when we update label matchers because this causes schema update
-    if (req.labelMatchers.length > 0 || req.unsetLabelMatchers) {
+    if (result) {
       orgWebhooks.send(
         {
           eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
