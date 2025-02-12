@@ -91,7 +91,8 @@ func setupKafkaServers(t testing.TB) (*KafkaData, error) {
 	require.NoError(t, err, "could not start kafka")
 
 	// Tried using t.Cleanup here, but it was running far too early, not sure why.
-	require.NoError(t, kafkaResource.Expire(180))
+	// This can mean running tests quickly in succession will make freeport errors
+	require.NoError(t, kafkaResource.Expire(30))
 
 	kafkaData.Brokers = []string{getHostPort(kafkaResource, "9092/tcp")}
 
