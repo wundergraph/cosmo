@@ -305,7 +305,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return nil, err
 	}
 
-	_, err = k.Validate(true, k.parsedOperation.RemapVariables)
+	_, err = k.Validate(true, k.parsedOperation.RemapVariables, nil)
 	if err != nil {
 		return nil, err
 	}
