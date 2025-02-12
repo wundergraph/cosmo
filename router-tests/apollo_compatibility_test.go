@@ -430,6 +430,29 @@ func TestApolloCompatibility(t *testing.T) {
 			assert.Equal(t, `{"errors":[{"message":"Variable \"$arg\" got invalid value \"INVALID\"; Float cannot represent non numeric value: \"INVALID\"","extensions":{"code":"BAD_USER_INPUT"}}]}`, res.Body)
 		})
 	})
+	t.Run("enable replace invalid variable error status", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+					ReplaceInvalidVarErrors: config.ApolloCompatibilityReplaceInvalidVarErrors{
+						Enabled: true,
+					},
+					ReplaceInvalidVarErrorStatus: config.ApolloCompatibilityReplaceInvalidVarErrorStatus{
+						Enabled: true,
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query FloatQuery($arg: Float) { floatField(arg: $arg) }`,
+				Variables: json.RawMessage(`{"arg":"INVALID"}`),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			assert.Equal(t, `{"errors":[{"message":"Variable \"$arg\" got invalid value \"INVALID\"; Float cannot represent non numeric value: \"INVALID\"","extensions":{"code":"BAD_USER_INPUT"}}]}`, res.Body)
+		})
+	})
 	t.Run("enable all: replace invalid variable error", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
@@ -444,7 +467,7 @@ func TestApolloCompatibility(t *testing.T) {
 				Variables: json.RawMessage(`{"arg":"INVALID"}`),
 			})
 			require.NoError(t, err)
-			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
 			assert.Equal(t, `{"errors":[{"message":"Variable \"$arg\" got invalid value \"INVALID\"; Float cannot represent non numeric value: \"INVALID\"","extensions":{"code":"BAD_USER_INPUT"}}]}`, res.Body)
 		})
 	})
