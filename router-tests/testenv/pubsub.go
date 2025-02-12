@@ -54,17 +54,19 @@ func setupKafkaServer(t testing.TB) (*KafkaData, error) {
 	kafkaRefs += 1
 
 	t.Cleanup(func() {
-		t.Log("cleaning up kafka")
+		kafkaMux.Lock()
+		defer kafkaMux.Unlock()
+
 		if kafkaRefs > 1 {
 			kafkaRefs -= 1
 		} else {
 			if err := kafkaContainer.Close(); err != nil {
 				t.Fatalf("could not purge kafka container: %s", err.Error())
 			}
-			kafkaMux.Lock()
+			// This shouldn't be needed, but just in case
 			kafkaData = nil
+			kafkaContainer = nil
 			kafkaRefs = 0
-			kafkaMux.Unlock()
 		}
 	})
 
