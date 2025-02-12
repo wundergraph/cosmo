@@ -395,7 +395,10 @@ export class SubgraphRepository {
             });
             // If an enabled feature flag includes the feature graph that has just been published, push it to the array
             if (enabledFeatureFlags.length > 0) {
-              updatedFederatedGraphs.push(federatedGraphDTO);
+              const exists = updatedFederatedGraphs.find((g) => g.name === federatedGraphDTO.name);
+              if (!exists) {
+                updatedFederatedGraphs.push(federatedGraphDTO);
+              }
             }
           }
         }
