@@ -62,6 +62,17 @@ export function deleteCacheWarmerOperation(
       };
     }
 
+    // check if the user is authorized to perform the action
+    await opts.authorizer.authorize({
+      db: opts.db,
+      graph: {
+        targetId: federatedGraph.targetId,
+        targetType: 'federatedGraph',
+      },
+      headers: ctx.requestHeader,
+      authContext,
+    });
+
     if (!opts.chClient) {
       return {
         response: {
@@ -82,7 +93,16 @@ export function deleteCacheWarmerOperation(
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `Could not delete the operation as it's not found`,
+          details: `Could not delete the operation as it's not found.`,
+        },
+      };
+    }
+
+    if (!operation.isManuallyAdded) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `The operation is not manually added and cannot be deleted.`,
         },
       };
     }
@@ -91,6 +111,13 @@ export function deleteCacheWarmerOperation(
       id: req.id,
       federatedGraphId: federatedGraph.id,
       organizationId: authContext.organizationId,
+    });
+
+    await cacheWarmerRepo.fetchAndUploadCacheWarmerOperations({
+      blobStorage: opts.blobStorage,
+      federatedGraphId: federatedGraph.id,
+      organizationId: authContext.organizationId,
+      logger,
     });
 
     return {

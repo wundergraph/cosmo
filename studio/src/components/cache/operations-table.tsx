@@ -29,7 +29,6 @@ import { useToast } from "../ui/use-toast";
 import { useMutation } from "@connectrpc/connect-query";
 import { deleteCacheWarmerOperation } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import { set } from "lodash";
 import { checkUserAccess, cn } from "@/lib/utils";
 
 export const CacheOperationsTable = ({
@@ -214,7 +213,7 @@ export const CacheOperationsTable = ({
                                 rolesToBe: ["admin", "developer"],
                                 userRoles:
                                   user?.currentOrganization.roles || [],
-                              })
+                              }) || !isManuallyAdded
                             }
                           >
                             Delete
