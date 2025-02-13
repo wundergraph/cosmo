@@ -1,5 +1,5 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { Command } from 'commander';
+import { Command, program } from 'commander';
 import pc from 'picocolors';
 import Table from 'cli-table3';
 import { getBaseHeaders } from '../../../../../core/config.js';
@@ -24,12 +24,13 @@ export default (opts: CommonGraphCommandOptions) => {
     );
 
     if (response.response?.code === EnumStatusCode.ERR_NOT_FOUND || !response.graph) {
-      console.log(`${pc.red(`No valid record could be found for ${graphType} ${pc.bold(name)}.`)}`);
-      console.log(`Please check the name and namespace for the ${graphType} in Cosmo Studio.`);
+      let message =
+        `${pc.red(`No valid record could be found for ${graphType} "${pc.bold(name)}".`)}` +
+        `\nPlease check the name and namespace for the ${graphType} in Cosmo Studio.`;
       if (response.response?.details) {
-        console.log(pc.red(pc.bold(response.response?.details)));
+        message += `${pc.red(pc.bold(response.response?.details))}`;
       }
-      process.exit(1);
+      program.error(message);
     }
 
     const versionsTable = new Table({

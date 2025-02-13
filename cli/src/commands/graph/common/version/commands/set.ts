@@ -1,5 +1,5 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { Command } from 'commander';
+import { Command, program } from 'commander';
 import pc from 'picocolors';
 import Table from 'cli-table3';
 import { ROUTER_COMPATIBILITY_VERSIONS, SupportedRouterCompatibilityVersion } from '@wundergraph/composition';
@@ -19,7 +19,7 @@ export default (opts: CommonGraphCommandOptions) => {
   command.option('-o, --out [string]', 'Destination file for the SDL.');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.action(async (name, options) => {
-    const spinner = ora('Validating the router compatibility version change...').start();
+    const spinner = ora(`Attempting to set router compatibility version ${options.version}...`).start();
 
     const response = await opts.client.platform.setGraphRouterCompatibilityVersion(
       {
@@ -33,20 +33,23 @@ export default (opts: CommonGraphCommandOptions) => {
     );
 
     if (!response.response) {
-      console.log(`${pc.red(`Failed to set router compatibility version for ${graphType} "${pc.bold(name)}".`)}`);
+      spinner.fail(`Failed to set router compatibility version for ${graphType} "${pc.bold(name)}".`);
       process.exit(1);
     }
 
     if (response.response.code === EnumStatusCode.ERR_NOT_FOUND) {
-      console.log(`${pc.red(`No valid record could be found for ${graphType} "${pc.bold(name)}".`)}`);
-      console.log(`Please check the name and namespace for the ${graphType} in Cosmo Studio.`);
+      spinner.fail(`Failed to set router compatibility version for ${graphType} "${pc.bold(name)}".`);
+      let message =
+        `${pc.red(`No valid record could be found for ${graphType} "${pc.bold(name)}".`)}\n` +
+        `Please check the name and namespace for the ${graphType} in Cosmo Studio.`;
       if (response.response?.details) {
-        console.log(pc.red(pc.bold(response.response.details)));
+        message += `\n${pc.red(pc.bold(response.response.details))}`;
       }
-      process.exit(1);
+      program.error(message);
     }
 
     if (response.response.code === EnumStatusCode.ERR_BAD_REQUEST) {
+      spinner.fail(`Failed to set router compatibility version for ${graphType} "${pc.bold(name)}".`);
       console.log(
         `${pc.red(
           `${options.version} is not a valid router compatibility version. Please input one of the following valid versions:`,
@@ -58,8 +61,7 @@ export default (opts: CommonGraphCommandOptions) => {
       });
 
       validVersionsTable.push([pc.bold(pc.white('VERSION')), ...ROUTER_COMPATIBILITY_VERSIONS]);
-      console.log(validVersionsTable.toString());
-      process.exit(1);
+      program.error(validVersionsTable.toString());
     }
 
     const versionsTable = new Table({
@@ -106,8 +108,7 @@ export default (opts: CommonGraphCommandOptions) => {
         suppressWarnings: options.suppressWarnings,
       });
     } catch {
-      console.log(versionsTable.toString());
-      process.exit(1);
+      program.error(versionsTable.toString());
     }
     console.log(versionsTable.toString());
   });

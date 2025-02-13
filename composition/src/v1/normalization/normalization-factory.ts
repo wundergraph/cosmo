@@ -244,7 +244,7 @@ import {
 } from '../../schema-building/ast';
 import { InvalidRootTypeFieldEventsDirectiveData } from '../../errors/utils';
 import { Graph } from '../../resolvability-graph/graph';
-import { DEFAULT_CONSUMER_INACTIVE_THRESHOLD, MAX_INT32 } from '../utils/integer-constants';
+import { DEFAULT_CONSUMER_INACTIVE_THRESHOLD } from '../utils/integer-constants';
 import { InternalSubgraph, Subgraph } from '../../subgraph/types';
 import { Warning } from '../../warnings/warnings';
 import { BatchNormalizationResult, NormalizationResult } from '../../normalization/types';
@@ -319,6 +319,7 @@ import {
   TOPIC,
   TOPICS,
 } from '../../utils/string-constants';
+import { MAX_INT32 } from '../../utils/integer-constants';
 
 export type BatchNormalizationContainer = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;

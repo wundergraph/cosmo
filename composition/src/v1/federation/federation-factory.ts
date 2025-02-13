@@ -147,7 +147,6 @@ import {
 import {
   addValidPersistedDirectiveDefinitionNodeByData,
   compareAndValidateInputValueDefaultValues,
-  doSetsIntersect,
   extractPersistedDirectives,
   generateDeprecatedDirective,
   getClientPersistedDirectiveNodes,
@@ -178,7 +177,6 @@ import {
   getMostRestrictiveMergedTypeNode,
 } from '../schema-building/type-merging';
 import { ConstDirectiveNode, ConstObjectValueNode, ListTypeNode, NonNullTypeNode, TypeNode } from 'graphql/index';
-import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
 import { Graph } from '../../resolvability-graph/graph';
 import { GraphNode } from '../../resolvability-graph/graph-nodes';
 import { InternalSubgraph, Subgraph, SubgraphConfig } from '../../subgraph/types';
@@ -210,6 +208,7 @@ import {
   UNION,
   VALUES,
 } from '../../utils/string-constants';
+import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../../utils/integer-constants';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -2529,7 +2528,7 @@ export class FederationFactory {
         accessibleChildren -= 1;
         continue;
       }
-      if (doSetsIntersect(tagNames, childTagData.tagNames)) {
+      if (!tagNames.isDisjointFrom(childTagData.tagNames)) {
         getValueOrDefault(childData.persistedDirectivesData.directives, INACCESSIBLE, () => [
           generateSimpleDirective(INACCESSIBLE),
         ]);
@@ -2558,7 +2557,7 @@ export class FederationFactory {
         continue;
       }
       const childTagData = childTagDataByChildName.get(childName);
-      if (!childTagData || !doSetsIntersect(tagNames, childTagData.tagNames)) {
+      if (!childTagData || tagNames.isDisjointFrom(childTagData.tagNames)) {
         getValueOrDefault(childData.persistedDirectivesData.directives, INACCESSIBLE, () => [
           generateSimpleDirective(INACCESSIBLE),
         ]);
@@ -2590,7 +2589,7 @@ export class FederationFactory {
         if (isNodeDataInaccessible(parentDefinitionData)) {
           continue;
         }
-        if (doSetsIntersect(contractTagOptions.tagNamesToExclude, parentTagData.tagNames)) {
+        if (!contractTagOptions.tagNamesToExclude.isDisjointFrom(parentTagData.tagNames)) {
           parentDefinitionData.persistedDirectivesData.directives.set(INACCESSIBLE, [
             generateSimpleDirective(INACCESSIBLE),
           ]);
@@ -2634,7 +2633,7 @@ export class FederationFactory {
                 accessibleFields -= 1;
                 continue;
               }
-              if (doSetsIntersect(contractTagOptions.tagNamesToExclude, childTagData.tagNames)) {
+              if (!contractTagOptions.tagNamesToExclude.isDisjointFrom(childTagData.tagNames)) {
                 getValueOrDefault(fieldData.persistedDirectivesData.directives, INACCESSIBLE, () => [
                   generateSimpleDirective(INACCESSIBLE),
                 ]);
@@ -2651,7 +2650,7 @@ export class FederationFactory {
                 if (isNodeDataInaccessible(inputValueData)) {
                   continue;
                 }
-                if (doSetsIntersect(tagNames, tagNames)) {
+                if (!tagNames.isDisjointFrom(tagNames)) {
                   getValueOrDefault(inputValueData.persistedDirectivesData.directives, INACCESSIBLE, () => [
                     generateSimpleDirective(INACCESSIBLE),
                   ]);
@@ -2681,7 +2680,7 @@ export class FederationFactory {
           // If the parent is inaccessible, there is no need to assess further
           continue;
         }
-        if (doSetsIntersect(contractTagOptions.tagNamesToInclude, parentTagData.tagNames)) {
+        if (!contractTagOptions.tagNamesToInclude.isDisjointFrom(parentTagData.tagNames)) {
           continue;
         }
         if (parentTagData.childTagDataByChildName.size < 1) {
@@ -2721,7 +2720,7 @@ export class FederationFactory {
                 continue;
               }
               const childTagData = parentTagData.childTagDataByChildName.get(fieldName);
-              if (!childTagData || !doSetsIntersect(contractTagOptions.tagNamesToInclude, childTagData.tagNames)) {
+              if (!childTagData || contractTagOptions.tagNamesToInclude.isDisjointFrom(childTagData.tagNames)) {
                 getValueOrDefault(fieldData.persistedDirectivesData.directives, INACCESSIBLE, () => [
                   generateSimpleDirective(INACCESSIBLE),
                 ]);

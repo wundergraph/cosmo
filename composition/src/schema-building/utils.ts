@@ -793,12 +793,3 @@ export function getDefinitionDataCoords(data: NodeData, useRenamedPath: boolean)
       return data.name;
   }
 }
-
-export function doSetsIntersect<T>(set: Set<T>, other: Set<T>): boolean {
-  for (const entry of set) {
-    if (other.has(entry)) {
-      return true;
-    }
-  }
-  return false;
-}

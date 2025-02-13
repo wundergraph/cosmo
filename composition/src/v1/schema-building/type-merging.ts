@@ -3,7 +3,7 @@ import { maximumTypeNestingExceededError } from '../../errors/errors';
 import { getMutableTypeNode, MutableIntermediateTypeNode } from '../../schema-building/ast';
 import { stringToNameNode } from '../../ast/utils';
 import { FieldData } from '../../schema-building/types';
-import { MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
+import { MAXIMUM_TYPE_NESTING } from '../../utils/integer-constants';
 
 export enum DivergentType {
   NONE,

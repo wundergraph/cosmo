@@ -73,7 +73,7 @@ describe('federated-graph version tests', () => {
   });
 
   describe('set tests', () => {
-    test('that an error is returned if an invalid router compatibility version is provided #1', async () => {
+    test('that an error is returned if an invalid router compatibility version integer is provided', async () => {
       const { client, blobStorage, server, } = await SetupTest({ dbname, chClient });
       const namespace = genID('namespace').toLowerCase();
       await createNamespace(client, namespace);
@@ -120,7 +120,7 @@ describe('federated-graph version tests', () => {
       await server.close();
     });
 
-    test('that an error is returned if an invalid router compatibility version is provided #2', async () => {
+    test('that an error is returned if an invalid router compatibility version string is provided', async () => {
       const { client, blobStorage, server, } = await SetupTest({ dbname, chClient });
       const namespace = genID('namespace').toLowerCase();
       await createNamespace(client, namespace);
@@ -167,7 +167,7 @@ describe('federated-graph version tests', () => {
       await server.close();
     });
 
-    test('that setting the same router compatibility version is benign', async () => {
+    test('that setting the same router compatibility version is idempotent and does not trigger further compositions', async () => {
       const { client, blobStorage, server, } = await SetupTest({ dbname, chClient });
       const namespace = genID('namespace').toLowerCase();
       await createNamespace(client, namespace);

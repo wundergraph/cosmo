@@ -12,7 +12,6 @@ import {
 } from '../v1/utils/utils';
 import { ObjectDefinitionData } from '../schema-building/types';
 import { InvalidRootTypeFieldEventsDirectiveData } from './utils';
-import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../v1/utils/integer-constants';
 import { UnresolvableFieldData } from '../resolvability-graph/utils';
 import { FieldSetDirective } from '../schema-building/utils';
 import {
@@ -33,6 +32,7 @@ import {
   UNION,
   VALUES,
 } from '../utils/string-constants';
+import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
