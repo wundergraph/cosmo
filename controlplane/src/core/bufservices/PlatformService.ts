@@ -152,6 +152,7 @@ import { inviteUser } from './user/inviteUser.js';
 import { removeInvitation } from './user/removeInvitation.js';
 import { removeOrganizationMember } from './user/removeOrganizationMember.js';
 import { updateOrgMemberRole } from './user/updateOrgMemberRole.js';
+import { deleteCacheWarmerOperation } from './cache-warmer/deleteCacheWarmerOperation.js';
 import { setGraphRouterCompatibilityVersion } from './graph/setGraphRouterCompatibilityVersion.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
@@ -430,6 +431,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     pushCacheWarmerOperation: (req, ctx) => {
       return pushCacheWarmerOperation(opts, req, ctx);
+    },
+
+    deleteCacheWarmerOperation: (req, ctx) => {
+      return deleteCacheWarmerOperation(opts, req, ctx);
     },
 
     /*

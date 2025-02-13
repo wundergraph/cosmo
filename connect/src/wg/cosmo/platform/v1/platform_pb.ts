@@ -3012,7 +3012,7 @@ export class GetFederatedGraphByNameResponse extends Message<GetFederatedGraphBy
   featureFlagsInLatestValidComposition: FeatureFlag[] = [];
 
   /**
-   * includes all the feature subgraphs that are part of the federated graph,
+   * includes all the feature subgraphs that are part of the federated graph;
    * even the ones that are not part of the latest composition
    *
    * @generated from field: repeated wg.cosmo.platform.v1.Subgraph featureSubgraphs = 6;
@@ -18891,7 +18891,7 @@ export class GetFederatedGraphByIdResponse extends Message<GetFederatedGraphById
   featureFlagsInLatestValidComposition: FeatureFlag[] = [];
 
   /**
-   * includes all the feature subgraphs that are part of the federated graph,
+   * includes all the feature subgraphs that are part of the federated graph;
    * even the ones that are not part of the latest composition
    *
    * @generated from field: repeated wg.cosmo.platform.v1.Subgraph featureSubgraphs = 6;
@@ -19645,6 +19645,92 @@ export class GetCacheWarmerConfigResponse extends Message<GetCacheWarmerConfigRe
 
   static equals(a: GetCacheWarmerConfigResponse | PlainMessage<GetCacheWarmerConfigResponse> | undefined, b: GetCacheWarmerConfigResponse | PlainMessage<GetCacheWarmerConfigResponse> | undefined): boolean {
     return proto3.util.equals(GetCacheWarmerConfigResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteCacheWarmerOperationRequest
+ */
+export class DeleteCacheWarmerOperationRequest extends Message<DeleteCacheWarmerOperationRequest> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string federatedGraphName = 2;
+   */
+  federatedGraphName = "";
+
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<DeleteCacheWarmerOperationRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteCacheWarmerOperationRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteCacheWarmerOperationRequest {
+    return new DeleteCacheWarmerOperationRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteCacheWarmerOperationRequest {
+    return new DeleteCacheWarmerOperationRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteCacheWarmerOperationRequest {
+    return new DeleteCacheWarmerOperationRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteCacheWarmerOperationRequest | PlainMessage<DeleteCacheWarmerOperationRequest> | undefined, b: DeleteCacheWarmerOperationRequest | PlainMessage<DeleteCacheWarmerOperationRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteCacheWarmerOperationRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteCacheWarmerOperationResponse
+ */
+export class DeleteCacheWarmerOperationResponse extends Message<DeleteCacheWarmerOperationResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<DeleteCacheWarmerOperationResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteCacheWarmerOperationResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteCacheWarmerOperationResponse {
+    return new DeleteCacheWarmerOperationResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteCacheWarmerOperationResponse {
+    return new DeleteCacheWarmerOperationResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteCacheWarmerOperationResponse {
+    return new DeleteCacheWarmerOperationResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteCacheWarmerOperationResponse | PlainMessage<DeleteCacheWarmerOperationResponse> | undefined, b: DeleteCacheWarmerOperationResponse | PlainMessage<DeleteCacheWarmerOperationResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteCacheWarmerOperationResponse, a, b);
   }
 }
 

@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.73.0](https://github.com/wundergraph/cosmo/compare/wgc@0.72.5...wgc@0.73.0) (2025-02-13)
+
+### Features
+
+* **router:** enable safelist for persisted operations ([#1561](https://github.com/wundergraph/cosmo/issues/1561)) ([b81b828](https://github.com/wundergraph/cosmo/commit/b81b8287c6f223ea6c7e9be4111f132c55128043)) (@df-wg)
+
+## [0.72.5](https://github.com/wundergraph/cosmo/compare/wgc@0.72.4...wgc@0.72.5) (2025-02-12)
+
+**Note:** Version bump only for package wgc
+
 ## [0.72.4](https://github.com/wundergraph/cosmo/compare/wgc@0.72.3...wgc@0.72.4) (2025-02-06)
 
 **Note:** Version bump only for package wgc

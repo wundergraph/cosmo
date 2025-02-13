@@ -48,7 +48,7 @@ import {
   schemaVersionChangeAction,
   targetLabelMatchers,
   targets,
-  users,
+  users
 } from '../../db/schema.js';
 import {
   DateRange,
@@ -72,7 +72,12 @@ import {
 } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { AdmissionError } from '../services/AdmissionWebhookController.js';
-import { getFederationResultWithPotentialContracts, normalizeLabelMatchers, normalizeLabels } from '../util.js';
+import {
+  checkIfLabelMatchersChanged,
+  getFederationResultWithPotentialContracts,
+  normalizeLabelMatchers,
+  normalizeLabels
+} from '../util.js';
 import { unsuccessfulBaseCompositionError } from '../errors/errors.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { ContractRepository } from './ContractRepository.js';
@@ -251,8 +256,15 @@ export class FederatedGraphRepository {
         await targetRepo.updateReadmeOfTarget({ id: data.targetId, readme: data.readme });
       }
 
+      const haveLabelMatchersChanged = checkIfLabelMatchersChanged({
+        isContract: !!federatedGraph.contract,
+        currentLabelMatchers: federatedGraph.labelMatchers,
+        newLabelMatchers: data.labelMatchers,
+        unsetLabelMatchers: data.unsetLabelMatchers,
+      });
+
       // Update label matchers (Is optional)
-      if (data.labelMatchers.length > 0 || data.unsetLabelMatchers) {
+      if (haveLabelMatchersChanged) {
         const labelMatchers = data.unsetLabelMatchers ? [] : normalizeLabelMatchers(data.labelMatchers);
 
         const contracts = await contractRepo.bySourceFederatedGraphId(federatedGraph.id);

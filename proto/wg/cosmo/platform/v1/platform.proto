@@ -382,7 +382,7 @@ message GetFederatedGraphByNameResponse {
   repeated Subgraph subgraphs = 3;
   string graphRequestToken = 4;
   repeated FeatureFlag featureFlagsInLatestValidComposition = 5;
-  // includes all the feature subgraphs that are part of the federated graph,
+  // includes all the feature subgraphs that are part of the federated graph;
   // even the ones that are not part of the latest composition
   repeated Subgraph featureSubgraphs = 6;
 }
@@ -2393,7 +2393,7 @@ message GetFederatedGraphByIdResponse {
   repeated Subgraph subgraphs = 3;
   string graphRequestToken = 4;
   repeated FeatureFlag featureFlagsInLatestValidComposition = 5;
-  // includes all the feature subgraphs that are part of the federated graph,
+  // includes all the feature subgraphs that are part of the federated graph;
   // even the ones that are not part of the latest composition
   repeated Subgraph featureSubgraphs = 6;
 }
@@ -2483,6 +2483,16 @@ message GetCacheWarmerConfigRequest {
 message GetCacheWarmerConfigResponse {
   Response response = 1;
   bool isCacheWarmerEnabled = 2;
+}
+
+message DeleteCacheWarmerOperationRequest {
+  string id = 1;
+  string federatedGraphName = 2;
+  string namespace = 3;
+}
+
+message DeleteCacheWarmerOperationResponse {
+  Response response = 1;
 }
 
 message ListRouterCompatibilityVersionsRequest {
@@ -2825,6 +2835,8 @@ service PlatformService {
   rpc ConfigureCacheWarmer(ConfigureCacheWarmerRequest) returns (ConfigureCacheWarmerResponse) {}
   // GetCacheWarmerConfig gets the config of cache warming for that namespace.
   rpc GetCacheWarmerConfig(GetCacheWarmerConfigRequest) returns (GetCacheWarmerConfigResponse) {}
+  // DeleteCacheWarmerOperation deletes a cache warmer operation.
+  rpc DeleteCacheWarmerOperation(DeleteCacheWarmerOperationRequest) returns (DeleteCacheWarmerOperationResponse) {}
 
   //
   // Billing
