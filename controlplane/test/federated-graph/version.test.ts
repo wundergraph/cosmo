@@ -203,7 +203,7 @@ describe('federated-graph version tests', () => {
       });
       expect(response.response).toBeDefined();
       expect(response.response!.code).toBe(EnumStatusCode.OK);
-      expect(response.response!.details).toBe('The router compatibility version is already set to "v1".');
+      expect(response.response!.details).toBe('The router compatibility version is already set to "1".');
       expect(response.previousVersion).toBe('1');
       expect(response.newVersion).toBe('1');
       expect(response.compositionErrors).toHaveLength(0);
