@@ -1,10 +1,6 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
-import {
-  buildASTSchema,
-  LATEST_ROUTER_COMPATIBILITY_VERSION,
-  SupportedRouterCompatibilityVersion,
-} from '@wundergraph/composition';
+import { buildASTSchema } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   CheckSubgraphSchemaRequest,
@@ -29,10 +25,10 @@ import { SchemaLintRepository } from '../../repositories/SchemaLintRepository.js
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import {
+  collectOperationUsageStats,
   InspectorOperationResult,
   InspectorSchemaChange,
   SchemaUsageTrafficInspector,
-  collectOperationUsageStats,
 } from '../../services/SchemaUsageTrafficInspector.js';
 import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError } from '../../util.js';
 
@@ -167,7 +163,7 @@ export function checkSubgraphSchema(
      * If no federated graphs have yet been created, the subgraph will be validated against the latest router
      * compatibility version.
      */
-    const routerCompatibilityVersion: number = getFederatedGraphRouterCompatibilityVersion(federatedGraphs);
+    const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion(federatedGraphs);
     const newSchemaSDL = req.delete ? '' : new TextDecoder().decode(req.schema);
     let newGraphQLSchema: GraphQLSchema | undefined;
     if (newSchemaSDL) {

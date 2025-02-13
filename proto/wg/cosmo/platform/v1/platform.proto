@@ -318,7 +318,7 @@ message FederatedGraph {
   bool supports_federation = 14;
   optional Contract contract = 15;
   optional string admission_webhook_url = 16;
-  int32 router_compatibility_version = 17;
+  string router_compatibility_version = 17;
 }
 
 message GetFederatedGraphsResponse {
@@ -2490,7 +2490,7 @@ message ListRouterCompatibilityVersionsRequest {
 
 message ListRouterCompatibilityVersionsResponse {
   Response response = 1;
-  repeated int32 versions = 2;
+  repeated string versions = 2;
 }
 
 message SetGraphRouterCompatibilityVersionRequest {
@@ -2501,8 +2501,8 @@ message SetGraphRouterCompatibilityVersionRequest {
 
 message SetGraphRouterCompatibilityVersionResponse {
   Response response = 1;
-  int32 previous_version = 2;
-  int32 new_version = 3;
+  string previous_version = 2;
+  string new_version = 3;
   repeated CompositionError compositionErrors = 4;
   repeated DeploymentError deploymentErrors = 5;
   repeated CompositionWarning compositionWarnings = 6;

@@ -18,7 +18,7 @@ import {
 export function composeFederatedGraphWithPotentialContracts(
   subgraphs: Subgraph[],
   tagOptionsByContractName: Map<string, ContractTagOptions>,
-  version: number,
+  version: string,
 ) {
   return federateSubgraphsWithContracts(
     subgraphs,
@@ -33,7 +33,7 @@ export function composeFederatedGraphWithPotentialContracts(
 export function composeFederatedContract(
   subgraphs: Subgraph[],
   contractTagOptions: ContractTagOptions,
-  version: number,
+  version: string,
 ) {
   return federateSubgraphsContract(subgraphs, contractTagOptions, validateRouterCompatibilityVersion(version));
 }
@@ -41,25 +41,25 @@ export function composeFederatedContract(
 /**
  * Composes a list of subgraphs into a single schema.
  */
-export function composeSubgraphs(subgraphs: Subgraph[], version: number): FederationResult {
+export function composeSubgraphs(subgraphs: Subgraph[], version: string): FederationResult {
   return federateSubgraphs(subgraphs, validateRouterCompatibilityVersion(version));
 }
 
 /**
  * Normalizes and builds a GraphQLSchema from a string. It is not the same as buildSchema from graphql-js.
  */
-export function buildSchema(schema: string, noLocation = true, version: number): NormalizationResult {
+export function buildSchema(schema: string, noLocation = true, version: string): NormalizationResult {
   return normalizeSubgraphFromString(schema, noLocation, validateRouterCompatibilityVersion(version));
 }
 
-function validateRouterCompatibilityVersion(version: number): SupportedRouterCompatibilityVersion {
-  const castedVersion = version as SupportedRouterCompatibilityVersion;
-  if (!ROUTER_COMPATIBILITY_VERSIONS.has(castedVersion)) {
+function validateRouterCompatibilityVersion(version: string): SupportedRouterCompatibilityVersion {
+  const castVersion = version as SupportedRouterCompatibilityVersion;
+  if (!ROUTER_COMPATIBILITY_VERSIONS.has(castVersion)) {
     throw new Error(
       `Router compatibility version ${version} is not supported by Cosmo.` +
         `Please set one of the following valid versions:\n ` +
         [...ROUTER_COMPATIBILITY_VERSIONS].join(','),
     );
   }
-  return castedVersion;
+  return castVersion;
 }

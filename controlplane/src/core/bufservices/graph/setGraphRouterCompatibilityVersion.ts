@@ -28,10 +28,10 @@ export function setGraphRouterCompatibilityVersion(
       return {
         response: {
           code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
+          details: `The user doesnt have the permissions to perform this operation.`,
         },
-        previousVersion: -1,
-        newVersion: -1,
+        previousVersion: '-',
+        newVersion: '-',
         compositionErrors: [],
         compositionWarnings: [],
         deploymentErrors: [],
@@ -49,19 +49,19 @@ export function setGraphRouterCompatibilityVersion(
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: `Graph "${req.name}" in namespace "${req.namespace}" not found.`,
         },
-        previousVersion: -1,
-        newVersion: -1,
+        previousVersion: '-',
+        newVersion: '-',
         compositionErrors: [],
         compositionWarnings: [],
         deploymentErrors: [],
       };
     }
-    const version = Number.parseInt(req.version, 10) as SupportedRouterCompatibilityVersion;
+    const version = req.version as SupportedRouterCompatibilityVersion;
     if (!ROUTER_COMPATIBILITY_VERSIONS.has(version)) {
       return {
         response: {
           code: EnumStatusCode.ERR_BAD_REQUEST,
-          details: `${req.version} is not a valid router compatibility version.`,
+          details: `Invalid router compatibility version "${req.version}".`,
         },
         previousVersion: federatedGraph.routerCompatibilityVersion,
         newVersion: federatedGraph.routerCompatibilityVersion,
@@ -86,7 +86,7 @@ export function setGraphRouterCompatibilityVersion(
       return {
         response: {
           code: EnumStatusCode.OK,
-          details: `The router compatibility version is already set to ${req.version}.`,
+          details: `The router compatibility version is already set to "${req.version}".`,
         },
         previousVersion: version,
         newVersion: version,
@@ -95,23 +95,6 @@ export function setGraphRouterCompatibilityVersion(
         deploymentErrors: [],
       };
     }
-
-    await fedGraphRepo.updateRouterCompatibilityVersion(federatedGraph.id, version);
-
-    const auditLogRepo = new AuditLogRepository(opts.db);
-
-    await auditLogRepo.addAuditLog({
-      organizationId: authContext.organizationId,
-      auditAction: `${federatedGraph.supportsFederation ? 'federated_graph' : 'monograph'}.updated`,
-      action: 'updated',
-      actorId: authContext.userId,
-      auditableType: `${federatedGraph.supportsFederation ? 'federated_graph' : 'monograph'}`,
-      auditableDisplayName: federatedGraph.name,
-      actorDisplayName: authContext.userDisplayName,
-      actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-      targetNamespaceId: federatedGraph.namespaceId,
-      targetNamespaceDisplayName: federatedGraph.namespace,
-    });
 
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const subgraphs = await subgraphRepo.listByFederatedGraph({
@@ -125,7 +108,7 @@ export function setGraphRouterCompatibilityVersion(
       return {
         response: {
           code: EnumStatusCode.OK,
-          details: `The router compatibility version was set to ${req.version} successfully.`,
+          details: `The router compatibility version was set to "${req.version}" successfully.`,
         },
         previousVersion: federatedGraph.routerCompatibilityVersion,
         newVersion: version,
@@ -137,6 +120,23 @@ export function setGraphRouterCompatibilityVersion(
 
     await opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
+
+      await fedGraphRepo.updateRouterCompatibilityVersion(federatedGraph.id, version);
+
+      const auditLogRepo = new AuditLogRepository(opts.db);
+
+      await auditLogRepo.addAuditLog({
+        organizationId: authContext.organizationId,
+        auditAction: `${federatedGraph.supportsFederation ? 'federated_graph' : 'monograph'}.updated`,
+        action: 'updated',
+        actorId: authContext.userId,
+        auditableType: `${federatedGraph.supportsFederation ? 'federated_graph' : 'monograph'}`,
+        auditableDisplayName: federatedGraph.name,
+        actorDisplayName: authContext.userDisplayName,
+        actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+        targetNamespaceId: federatedGraph.namespaceId,
+        targetNamespaceDisplayName: federatedGraph.namespace,
+      });
 
       const composition = await fedGraphRepo.composeAndDeployGraphs({
         federatedGraphs: [federatedGraph],
@@ -153,7 +153,7 @@ export function setGraphRouterCompatibilityVersion(
         return {
           response: {
             code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-            details: `The router compatibility version was set to ${version} but this caused composition to fail.`,
+            details: `The router compatibility version was set to "${version}" but this caused composition to fail.`,
           },
           previousVersion: federatedGraph.routerCompatibilityVersion,
           newVersion: version,
@@ -167,7 +167,7 @@ export function setGraphRouterCompatibilityVersion(
         return {
           response: {
             code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-            details: `The router compatibility version was set to ${req.version} but deployment failed.`,
+            details: `The router compatibility version was set to "${req.version}" but deployment failed.`,
           },
           previousVersion: federatedGraph.routerCompatibilityVersion,
           newVersion: version,
@@ -181,7 +181,7 @@ export function setGraphRouterCompatibilityVersion(
     return {
       response: {
         code: EnumStatusCode.OK,
-        details: `The router compatibility version was set to ${version} successfully.`,
+        details: `The router compatibility version was set to "${version}" successfully.`,
       },
       previousVersion: federatedGraph.routerCompatibilityVersion,
       newVersion: version,

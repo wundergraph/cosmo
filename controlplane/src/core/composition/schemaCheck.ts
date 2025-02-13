@@ -49,7 +49,7 @@ export async function getSchemaDiff(oldSchemaSDL: GraphQLSchema, newSchemaSDL: G
 export async function getDiffBetweenGraphs(
   oldSchemaSDL: string,
   newSchemaSDL: string,
-  routerCompatibilityVersion: number,
+  routerCompatibilityVersion: string,
 ): Promise<GetDiffBetweenGraphsResult> {
   try {
     let oldSchema: GraphQLSchema = new GraphQLSchema({});

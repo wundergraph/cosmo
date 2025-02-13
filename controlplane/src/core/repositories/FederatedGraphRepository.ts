@@ -1565,7 +1565,11 @@ export class FederatedGraphRepository {
           const federatedSchemaVersionId = randomUUID();
 
           // Build the router execution config if the composed schema is valid
-          const routerExecutionConfig = buildRouterExecutionConfig(composedGraph, federatedSchemaVersionId);
+          const routerExecutionConfig = buildRouterExecutionConfig(
+            composedGraph,
+            federatedSchemaVersionId,
+            federatedGraph.routerCompatibilityVersion,
+          );
 
           const baseComposition = await composer.saveComposition({
             composedGraph,
@@ -1634,7 +1638,11 @@ export class FederatedGraphRepository {
             const contractSchemaVersionId = randomUUID();
 
             // Build the router execution config if the composed schema is valid
-            const contractRouterExecutionConfig = buildRouterExecutionConfig(composedContract, contractSchemaVersionId);
+            const contractRouterExecutionConfig = buildRouterExecutionConfig(
+              composedContract,
+              contractSchemaVersionId,
+              federatedGraph.routerCompatibilityVersion,
+            );
 
             const contractComposition = await composer.saveComposition({
               composedGraph: composedContract,
@@ -1767,7 +1775,7 @@ export class FederatedGraphRepository {
     });
   };
 
-  public updateRouterCompatibilityVersion(id: string, version: number) {
+  public updateRouterCompatibilityVersion(id: string, version: string) {
     return this.db
       .update(federatedGraphs)
       .set({ routerCompatibilityVersion: version })

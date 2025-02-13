@@ -82,7 +82,7 @@ export interface FederatedGraphDTO {
   namespaceId: string;
   supportsFederation: boolean;
   contract?: ContractDTO;
-  routerCompatibilityVersion: number;
+  routerCompatibilityVersion: string;
 }
 
 export interface FederatedGraphChangelogDTO {

@@ -5,11 +5,14 @@ import {
   federateSubgraphsContract as federateSubgraphsContractV1,
   federateSubgraphsWithContracts as federateSubgraphsWithContractsV1,
 } from '../v1/federation/federation-factory';
-import { SupportedRouterCompatibilityVersion } from '../router-compatibility-version/router-compatibility-version';
+import {
+  ROUTER_COMPATIBILITY_VERSION_ONE,
+  SupportedRouterCompatibilityVersion,
+} from '../router-compatibility-version/router-compatibility-version';
 
 export function federateSubgraphs(
   subgraphs: Array<Subgraph>,
-  version: SupportedRouterCompatibilityVersion = 1,
+  version: SupportedRouterCompatibilityVersion = ROUTER_COMPATIBILITY_VERSION_ONE,
 ): FederationResult {
   switch (version) {
     default: {
@@ -22,7 +25,7 @@ export function federateSubgraphs(
 export function federateSubgraphsWithContracts(
   subgraphs: Subgraph[],
   tagOptionsByContractName: Map<string, ContractTagOptions>,
-  version: SupportedRouterCompatibilityVersion = 1,
+  version: SupportedRouterCompatibilityVersion = ROUTER_COMPATIBILITY_VERSION_ONE,
 ): FederationResultWithContracts {
   switch (version) {
     default: {
@@ -34,7 +37,7 @@ export function federateSubgraphsWithContracts(
 export function federateSubgraphsContract(
   subgraphs: Array<Subgraph>,
   contractTagOptions: ContractTagOptions,
-  version: SupportedRouterCompatibilityVersion = 1,
+  version: SupportedRouterCompatibilityVersion = ROUTER_COMPATIBILITY_VERSION_ONE,
 ): FederationResult {
   switch (version) {
     default: {

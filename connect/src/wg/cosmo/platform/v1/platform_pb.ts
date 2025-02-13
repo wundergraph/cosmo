@@ -2513,9 +2513,9 @@ export class FederatedGraph extends Message<FederatedGraph> {
   admissionWebhookUrl?: string;
 
   /**
-   * @generated from field: int32 router_compatibility_version = 17;
+   * @generated from field: string router_compatibility_version = 17;
    */
-  routerCompatibilityVersion = 0;
+  routerCompatibilityVersion = "";
 
   constructor(data?: PartialMessage<FederatedGraph>) {
     super();
@@ -2541,7 +2541,7 @@ export class FederatedGraph extends Message<FederatedGraph> {
     { no: 14, name: "supports_federation", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 15, name: "contract", kind: "message", T: Contract, opt: true },
     { no: 16, name: "admission_webhook_url", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 17, name: "router_compatibility_version", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 17, name: "router_compatibility_version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FederatedGraph {
@@ -19689,9 +19689,9 @@ export class ListRouterCompatibilityVersionsResponse extends Message<ListRouterC
   response?: Response;
 
   /**
-   * @generated from field: repeated int32 versions = 2;
+   * @generated from field: repeated string versions = 2;
    */
-  versions: number[] = [];
+  versions: string[] = [];
 
   constructor(data?: PartialMessage<ListRouterCompatibilityVersionsResponse>) {
     super();
@@ -19702,7 +19702,7 @@ export class ListRouterCompatibilityVersionsResponse extends Message<ListRouterC
   static readonly typeName = "wg.cosmo.platform.v1.ListRouterCompatibilityVersionsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "versions", kind: "scalar", T: 5 /* ScalarType.INT32 */, repeated: true },
+    { no: 2, name: "versions", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListRouterCompatibilityVersionsResponse {
@@ -19781,14 +19781,14 @@ export class SetGraphRouterCompatibilityVersionResponse extends Message<SetGraph
   response?: Response;
 
   /**
-   * @generated from field: int32 previous_version = 2;
+   * @generated from field: string previous_version = 2;
    */
-  previousVersion = 0;
+  previousVersion = "";
 
   /**
-   * @generated from field: int32 new_version = 3;
+   * @generated from field: string new_version = 3;
    */
-  newVersion = 0;
+  newVersion = "";
 
   /**
    * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 4;
@@ -19814,8 +19814,8 @@ export class SetGraphRouterCompatibilityVersionResponse extends Message<SetGraph
   static readonly typeName = "wg.cosmo.platform.v1.SetGraphRouterCompatibilityVersionResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "previous_version", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 3, name: "new_version", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "previous_version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "new_version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 5, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
     { no: 6, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },

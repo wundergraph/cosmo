@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
+import { ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../../src/core/test-util.js';
 import {
@@ -69,7 +70,7 @@ describe('monograph version tests', () => {
       expect(response.response).toBeDefined();
       expect(response.response!.code).toBe(EnumStatusCode.OK);
       expect(response.graph).toBeDefined();
-      expect(response.graph!.routerCompatibilityVersion).toStrictEqual(1);
+      expect(response.graph!.routerCompatibilityVersion).toStrictEqual(ROUTER_COMPATIBILITY_VERSION_ONE);
 
       await server.close();
     });
@@ -114,9 +115,9 @@ describe('monograph version tests', () => {
       });
       expect(response.response).toBeDefined();
       expect(response.response!.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
-      expect(response.response!.details).toBe('9999 is not a valid router compatibility version.');
-      expect(response.previousVersion).toBe(1);
-      expect(response.newVersion).toBe(1);
+      expect(response.response!.details).toBe('Invalid router compatibility version "9999".');
+      expect(response.previousVersion).toBe('v1');
+      expect(response.newVersion).toBe('v1');
       expect(response.compositionErrors).toHaveLength(0);
       expect(response.compositionWarnings).toHaveLength(0);
       expect(response.deploymentErrors).toHaveLength(0);
@@ -164,9 +165,9 @@ describe('monograph version tests', () => {
       });
       expect(response.response).toBeDefined();
       expect(response.response!.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
-      expect(response.response!.details).toBe('hello is not a valid router compatibility version.');
-      expect(response.previousVersion).toBe(1);
-      expect(response.newVersion).toBe(1);
+      expect(response.response!.details).toBe('Invalid router compatibility version "hello".');
+      expect(response.previousVersion).toBe('v1');
+      expect(response.newVersion).toBe('v1');
       expect(response.compositionErrors).toHaveLength(0);
       expect(response.compositionWarnings).toHaveLength(0);
       expect(response.deploymentErrors).toHaveLength(0);
@@ -210,13 +211,13 @@ describe('monograph version tests', () => {
       const response = await client.setGraphRouterCompatibilityVersion({
         name: monographName,
         namespace,
-        version: '1',
+        version: ROUTER_COMPATIBILITY_VERSION_ONE,
       });
       expect(response.response).toBeDefined();
       expect(response.response!.code).toBe(EnumStatusCode.OK);
-      expect(response.response!.details).toBe('The router compatibility version is already set to 1.');
-      expect(response.previousVersion).toBe(1);
-      expect(response.newVersion).toBe(1);
+      expect(response.response!.details).toBe('The router compatibility version is already set to "v1".');
+      expect(response.previousVersion).toBe('v1');
+      expect(response.newVersion).toBe('v1');
       expect(response.compositionErrors).toHaveLength(0);
       expect(response.compositionWarnings).toHaveLength(0);
       expect(response.deploymentErrors).toHaveLength(0);

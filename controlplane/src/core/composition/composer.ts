@@ -5,7 +5,10 @@ import {
   FederationResult,
   FieldConfiguration,
   newContractTagOptionsFromArrays,
+  ROUTER_COMPATIBILITY_VERSION_ONE,
+  ROUTER_COMPATIBILITY_VERSIONS,
   Subgraph,
+  SupportedRouterCompatibilityVersion,
   Warning,
 } from '@wundergraph/composition';
 import { buildRouterConfig, ComposedSubgraph as IComposedSubgraph } from '@wundergraph/cosmo-shared';
@@ -36,6 +39,16 @@ import { NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { composeSubgraphs, composeFederatedGraphWithPotentialContracts } from './composition.js';
 import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult } from './schemaCheck.js';
 
+export function getRouterCompatibilityVersionPath(routerCompatibilityVersion: string): string {
+  switch (routerCompatibilityVersion) {
+    case ROUTER_COMPATIBILITY_VERSION_ONE: {
+      return '';
+    }
+    default: {
+      return `${routerCompatibilityVersion}/`;
+    }
+  }
+}
 export type CompositionResult = {
   compositions: ComposedFederatedGraph[];
 };
@@ -71,6 +84,7 @@ export function routerConfigToFeatureFlagExecutionConfig(routerConfig: RouterCon
 export function buildRouterExecutionConfig(
   composedGraph: ComposedFederatedGraph,
   federatedSchemaVersionId: UUID,
+  routerCompatibilityVersion: string,
 ): RouterConfig | undefined {
   if (composedGraph.errors.length > 0 || !composedGraph.composedSchema) {
     return;
@@ -80,7 +94,7 @@ export function buildRouterExecutionConfig(
     federatedClientSDL,
     federatedSDL: composedGraph.composedSchema,
     fieldConfigurations: composedGraph.fieldConfigurations,
-    routerCompatibilityVersion: 1,
+    routerCompatibilityVersion,
     subgraphs: composedGraph.subgraphs,
     schemaVersionId: federatedSchemaVersionId,
   });
@@ -219,17 +233,6 @@ export class Composer {
     });
   }
 
-  getRouterCompatibilityVersionPath(routerCompatibilityVersion: number): string {
-    switch (routerCompatibilityVersion) {
-      case 1: {
-        return '';
-      }
-      default: {
-        return `v${routerCompatibilityVersion}/`;
-      }
-    }
-  }
-
   async uploadRouterConfig({
     routerConfig,
     blobStorage,
@@ -254,18 +257,29 @@ export class Composer {
     admissionWebhookURL?: string;
     admissionWebhookSecret?: string;
     actorId: string;
-    routerCompatibilityVersion: number;
+    routerCompatibilityVersion: string;
   }): Promise<{
     errors: ComposeDeploymentError[];
   }> {
     const routerConfigJsonStringBytes = Buffer.from(routerConfig.toJsonString(), 'utf8');
+    const errors: ComposeDeploymentError[] = [];
 
-    switch (routerCompatibilityVersion) {
-      default:
+    let versionPath = '';
+    if (routerCompatibilityVersion !== ROUTER_COMPATIBILITY_VERSION_ONE) {
+      if (ROUTER_COMPATIBILITY_VERSIONS.has(routerCompatibilityVersion as SupportedRouterCompatibilityVersion)) {
+        versionPath = `${routerCompatibilityVersion}/`;
+      } else {
+        errors.push(
+          new RouterConfigUploadError(`Invalid router compatibility version "${routerCompatibilityVersion}".`),
+        );
+        return {
+          errors,
+        };
+      }
     }
     // CDN path and bucket path are the same in this case
     const s3PathDraft = `${organizationId}/${federatedGraphId}/routerconfigs/draft.json`;
-    const s3PathReady = `${organizationId}/${federatedGraphId}/routerconfigs/${this.getRouterCompatibilityVersionPath(routerCompatibilityVersion)}latest.json`;
+    const s3PathReady = `${organizationId}/${federatedGraphId}/routerconfigs/${versionPath}latest.json`;
 
     // The signature will be added by the admission webhook
     let signatureSha256: undefined | string;
@@ -366,8 +380,6 @@ export class Composer {
         routerConfigSignature: signatureSha256,
       });
     }
-
-    const errors: ComposeDeploymentError[] = [];
 
     if (deploymentError) {
       errors.push(deploymentError);

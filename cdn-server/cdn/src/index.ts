@@ -4,6 +4,8 @@ import { stream } from 'hono/streaming';
 
 export const signatureSha256Header = 'X-Signature-SHA256';
 
+const routerCompatibilityVersionPattern = /^v1$/;
+
 export interface BlobObject {
   metadata?: Partial<Record<'version' | 'signature-sha256', string>>;
   stream: ReadableStream;
@@ -133,13 +135,6 @@ const persistedOperation = (storage: BlobStorage) => {
   };
 };
 
-function getRouterCompatibilityVersionPath(routerCompatibilityVersion: string): string {
-  if (routerCompatibilityVersion) {
-    return `${routerCompatibilityVersion}/`;
-  }
-  return '';
-}
-
 const latestValidRouterConfig = (storage: BlobStorage) => {
   return async (c: Context) => {
     const organizationId = c.get('authenticatedOrganizationId');
@@ -148,10 +143,16 @@ const latestValidRouterConfig = (storage: BlobStorage) => {
     if (organizationId !== c.req.param('organization_id') || federatedGraphId !== c.req.param('federated_graph_id')) {
       return c.text('Bad Request', 400);
     }
+    const compatibilityVersion = c.req.param('compatibility_version');
+    let key = `${organizationId}/${federatedGraphId}/routerconfigs/latest.json`;
+    // An empty string means v1, which takes the original un-versioned path.
+    if (compatibilityVersion) {
+      if (!routerCompatibilityVersionPattern.test(compatibilityVersion)) {
+        return c.text(`Invalid router compatibility version "${compatibilityVersion}".`, 400);
+      }
+      key = `${organizationId}/${federatedGraphId}/routerconfigs/${compatibilityVersion}/latest.json`;
+    }
 
-    const key = `${organizationId}/${federatedGraphId}/routerconfigs/${getRouterCompatibilityVersionPath(
-      c.req.param('compatibility_version'),
-    )}latest.json`;
     const body = await c.req.json();
 
     let isModified = true;

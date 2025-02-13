@@ -475,7 +475,7 @@ export function getFederationResultWithPotentialContracts(
   );
 }
 
-export function getFederatedGraphRouterCompatibilityVersion(federatedGraphDTOs: Array<FederatedGraphDTO>): number {
+export function getFederatedGraphRouterCompatibilityVersion(federatedGraphDTOs: Array<FederatedGraphDTO>): string {
   if (federatedGraphDTOs.length === 0) {
     return LATEST_ROUTER_COMPATIBILITY_VERSION;
   }
