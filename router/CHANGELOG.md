@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.176.0](https://github.com/wundergraph/cosmo/compare/router@0.175.1...router@0.176.0) (2025-02-13)
+
+### Bug Fixes
+
+* fix printing object value with optional fields in variables normalization ([#1592](https://github.com/wundergraph/cosmo/issues/1592)) ([267303c](https://github.com/wundergraph/cosmo/commit/267303c438171d8d493af553f52e6556f932c503)) (@devsergiy)
+
+### Features
+
+* **router:** enable safelist for persisted operations ([#1561](https://github.com/wundergraph/cosmo/issues/1561)) ([b81b828](https://github.com/wundergraph/cosmo/commit/b81b8287c6f223ea6c7e9be4111f132c55128043)) (@df-wg)
+* **router:** make header matching rules case insensitive ([#1584](https://github.com/wundergraph/cosmo/issues/1584)) ([c0bceaa](https://github.com/wundergraph/cosmo/commit/c0bceaa7410a27e9be981e8acb320db58d07b4b9)) (@df-wg)
+
 ## [0.175.1](https://github.com/wundergraph/cosmo/compare/router@0.175.0...router@0.175.1) (2025-02-12)
 
 ### Bug Fixes
