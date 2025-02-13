@@ -9,6 +9,8 @@ import { makeWebhookRequest } from './utils.js';
 interface User {
   user_id: string;
   user_email: string;
+  user_first_name: string;
+  user_last_name: string;
 }
 
 interface ApolloMigrate {
