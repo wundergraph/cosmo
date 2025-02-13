@@ -51,9 +51,10 @@ var (
 		"Sec-Websocket-Protocol",
 		"Sec-Websocket-Version",
 	}
-	cacheControlKey = "Cache-Control"
-	expiresKey      = "Expires"
-	noCache         = "no-cache"
+	cacheControlKey       = "Cache-Control"
+	expiresKey            = "Expires"
+	noCache               = "no-cache"
+	caseInsensitiveRegexp = "(?i)"
 )
 
 type responseHeaderPropagationKey struct{}
@@ -204,7 +205,7 @@ func (hf *HeaderPropagation) processRule(rule config.HeaderRule, index int) erro
 	case config.HeaderRuleOperationSet:
 	case config.HeaderRuleOperationPropagate:
 		if rule.GetMatching() != "" {
-			regex, err := regexp.Compile(rule.GetMatching())
+			regex, err := regexp.Compile(caseInsensitiveRegexp + rule.GetMatching())
 			if err != nil {
 				return fmt.Errorf("invalid regex '%s' for header rule %d: %w", rule.GetMatching(), index, err)
 			}
@@ -644,7 +645,8 @@ func PropagatedHeaders(rules []*config.RequestHeaderRule) (headerNames []string,
 			headerNames = append(headerNames, rule.Name)
 		case config.HeaderRuleOperationPropagate:
 			if rule.Matching != "" {
-				re, err := regexp.Compile(rule.Matching)
+				// Header Names are case insensitive: https://www.w3.org/Protocols/rfc2616/rfc2616.html
+				re, err := regexp.Compile(caseInsensitiveRegexp + rule.Matching)
 				if err != nil {
 					return nil, nil, fmt.Errorf("error compiling regular expression %q in header rule %+v: %w", rule.Matching, rule, err)
 				}
