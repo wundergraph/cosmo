@@ -292,7 +292,7 @@ For federation, it is only possible to use the default root types names ("Mutati
 `)}function ree(e,t){let n=`The field "${e}" is invalid because:
  The named type (root type) of an input must be on of Enum, Input Object, or Scalar type. For example: "Float", "[[String!]]!", or "[SomeInputObjectName]"
 `;for(let r of t)n+=`  The argument "${r.argumentName}" defines type "${r.typeName}" but the named type "${r.namedType}" is type "`+r.typeString+`", which is not a valid input type.
-`;return new Error(n)}function iee(e=!0){return new Error(`The ${e?"router":"client"} schema does not define at least one accessible query roottype field after federation was completed, which is necessary for a federated graph to be valid.
+`;return new Error(n)}function iee(e=!0){return new Error(`The ${e?"router":"client"} schema does not define at least one accessible query root type field after federation was completed, which is necessary for a federated graph to be valid.
  For example:
   type Query {
     dummy: String

@@ -589,7 +589,7 @@ export function invalidArgumentsError(fieldPath: string, invalidArguments: Inval
 export function noQueryRootTypeError(isRouterSchema = true): Error {
   return new Error(
     `The ${isRouterSchema ? 'router' : 'client'} schema does not define at least one accessible query root` +
-      `type field after federation was completed, which is necessary for a federated graph to be valid.\n` +
+      ` type field after federation was completed, which is necessary for a federated graph to be valid.\n` +
       ` For example:\n` +
       `  type Query {\n` +
       `    dummy: String\n` +
