@@ -21,7 +21,7 @@ func TestExecutionConfiguration(t *testing.T) {
 	t.Run("same compatibility version is supported", func(t *testing.T) {
 		observed, logs := observer.New(zapcore.DebugLevel)
 		logger := newLogger(observed)
-		assert.True(t, IsRouterCompatibleWithExecutionConfig(logger, fmt.Sprintf("%d:0.1.0", RouterCompatibilityVersionThreshold)))
+		assert.True(t, IsRouterCompatibleWithExecutionConfig(logger, fmt.Sprintf("v%d:0.1.0", RouterCompatibilityVersionThreshold)))
 		assert.Equal(t, 0, len(logs.All()))
 	})
 
@@ -69,7 +69,7 @@ func TestExecutionConfiguration(t *testing.T) {
 		logger := newLogger(observed)
 		nextVersion := int64(RouterCompatibilityVersionThreshold + 1)
 		compVersion := "0.1.0"
-		compatibilityVersion := fmt.Sprintf("%d:%s", nextVersion, compVersion)
+		compatibilityVersion := fmt.Sprintf("v%d:%s", nextVersion, compVersion)
 		assert.False(t, IsRouterCompatibleWithExecutionConfig(logger, compatibilityVersion))
 		logsSlice := logs.All()
 		assert.Equal(t, 1, len(logsSlice))
@@ -85,7 +85,7 @@ func TestExecutionConfiguration(t *testing.T) {
 		logger := newLogger(observed)
 		previousVersion := int64(RouterCompatibilityVersionThreshold - 1)
 		compVersion := "0.1.0"
-		compatibilityVersion := fmt.Sprintf("%d:%s", previousVersion, compVersion)
+		compatibilityVersion := fmt.Sprintf("v%d:%s", previousVersion, compVersion)
 		assert.True(t, IsRouterCompatibleWithExecutionConfig(logger, compatibilityVersion))
 		logsSlice := logs.All()
 		assert.Equal(t, 1, len(logsSlice))

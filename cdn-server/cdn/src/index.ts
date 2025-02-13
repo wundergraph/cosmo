@@ -4,7 +4,7 @@ import { stream } from 'hono/streaming';
 
 export const signatureSha256Header = 'X-Signature-SHA256';
 
-const routerCompatibilityVersionPattern = /^v1$/;
+const routerCompatibilityVersionPattern = /^1$/;
 
 export interface BlobObject {
   metadata?: Partial<Record<'version' | 'signature-sha256', string>>;
@@ -150,7 +150,7 @@ const latestValidRouterConfig = (storage: BlobStorage) => {
       if (!routerCompatibilityVersionPattern.test(compatibilityVersion)) {
         return c.text(`Invalid router compatibility version "${compatibilityVersion}".`, 400);
       }
-      key = `${organizationId}/${federatedGraphId}/routerconfigs/${compatibilityVersion}/latest.json`;
+      key = `${organizationId}/${federatedGraphId}/routerconfigs/v${compatibilityVersion}/latest.json`;
     }
 
     const body = await c.req.json();

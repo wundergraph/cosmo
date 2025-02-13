@@ -48,7 +48,7 @@ import {
   schemaVersionChangeAction,
   targetLabelMatchers,
   targets,
-  users
+  users,
 } from '../../db/schema.js';
 import {
   DateRange,
@@ -76,7 +76,7 @@ import {
   checkIfLabelMatchersChanged,
   getFederationResultWithPotentialContracts,
   normalizeLabelMatchers,
-  normalizeLabels
+  normalizeLabels,
 } from '../util.js';
 import { unsuccessfulBaseCompositionError } from '../errors/errors.js';
 import { ClickHouseClient } from '../clickhouse/index.js';

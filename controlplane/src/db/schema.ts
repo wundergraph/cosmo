@@ -42,7 +42,7 @@ export const federatedGraphs = pgTable(
     /* The version that composition returns to determine whether the router execution configuration is compatible
      * with a specific router version.
      */
-    routerCompatibilityVersion: text('router_compatibility_version').notNull().default('v1'),
+    routerCompatibilityVersion: text('router_compatibility_version').notNull().default('1'),
   },
   (t) => ({
     targetIdIndex: index('fgs_target_id_idx').on(t.targetId),

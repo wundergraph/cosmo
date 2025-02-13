@@ -3,6 +3,7 @@ package execution_config
 import (
 	"fmt"
 	"go.uber.org/zap"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -13,6 +14,8 @@ const (
 	compatibilityVersionParseErrorMessage       = "Failed to parse compatibility version."
 	routerCompatibilityVersionParseErrorMessage = "Failed to parse router execution config version of compatibility version."
 )
+
+var routerCompatibilityVersionPattern = regexp.MustCompile(`^v(\d+$)`)
 
 func IsRouterCompatibleWithExecutionConfig(logger *zap.Logger, compatibilityVersion string) bool {
 	if compatibilityVersion == "" {
@@ -30,7 +33,12 @@ func IsRouterCompatibleWithExecutionConfig(logger *zap.Logger, compatibilityVers
 		logger.Error(compatibilityVersionParseErrorMessage, zap.String("compatibility_version", compatibilityVersion))
 		return false
 	}
-	routerCompatibilityVersion, err := strconv.ParseInt(segments[0], 10, 32)
+	matches := routerCompatibilityVersionPattern.FindStringSubmatch(segments[0])
+	if len(matches) != 2 {
+		logger.Error(routerCompatibilityVersionParseErrorMessage, zap.String("compatibility_version", compatibilityVersion))
+		return false
+	}
+	routerCompatibilityVersion, err := strconv.ParseInt(matches[1], 10, 32)
 	if err != nil {
 		logger.Error(routerCompatibilityVersionParseErrorMessage, zap.String("compatibility_version", compatibilityVersion))
 		return false

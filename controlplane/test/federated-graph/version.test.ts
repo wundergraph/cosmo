@@ -110,8 +110,8 @@ describe('federated-graph version tests', () => {
       expect(response.response).toBeDefined();
       expect(response.response!.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
       expect(response.response!.details).toBe('Invalid router compatibility version "9999".');
-      expect(response.previousVersion).toBe('v1');
-      expect(response.newVersion).toBe('v1');
+      expect(response.previousVersion).toBe('1');
+      expect(response.newVersion).toBe('1');
       expect(response.compositionErrors).toHaveLength(0);
       expect(response.compositionWarnings).toHaveLength(0);
       expect(response.deploymentErrors).toHaveLength(0);
@@ -157,8 +157,8 @@ describe('federated-graph version tests', () => {
       expect(response.response).toBeDefined();
       expect(response.response!.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
       expect(response.response!.details).toBe('Invalid router compatibility version "hello".');
-      expect(response.previousVersion).toBe('v1');
-      expect(response.newVersion).toBe('v1');
+      expect(response.previousVersion).toBe('1');
+      expect(response.newVersion).toBe('1');
       expect(response.compositionErrors).toHaveLength(0);
       expect(response.compositionWarnings).toHaveLength(0);
       expect(response.deploymentErrors).toHaveLength(0);
@@ -204,8 +204,8 @@ describe('federated-graph version tests', () => {
       expect(response.response).toBeDefined();
       expect(response.response!.code).toBe(EnumStatusCode.OK);
       expect(response.response!.details).toBe('The router compatibility version is already set to "v1".');
-      expect(response.previousVersion).toBe('v1');
-      expect(response.newVersion).toBe('v1');
+      expect(response.previousVersion).toBe('1');
+      expect(response.newVersion).toBe('1');
       expect(response.compositionErrors).toHaveLength(0);
       expect(response.compositionWarnings).toHaveLength(0);
       expect(response.deploymentErrors).toHaveLength(0);
