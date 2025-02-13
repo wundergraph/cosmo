@@ -70,6 +70,7 @@ func NewDefaultFactoryResolver(
 	enableNetPoll bool,
 	natsPubSubBySourceID map[string]pubsub_datasource.NatsPubSub,
 	kafkaPubSubBySourceID map[string]pubsub_datasource.KafkaPubSub,
+	redisPubSubBySourceID map[string]pubsub_datasource.RedisPubSub,
 ) *DefaultFactoryResolver {
 	transportFactory := NewTransport(transportOptions)
 
@@ -105,7 +106,7 @@ func NewDefaultFactoryResolver(
 		transportFactory:   transportFactory,
 		transportOptions:   transportOptions,
 		static:             &staticdatasource.Factory[staticdatasource.Configuration]{},
-		pubsub:             pubsub_datasource.NewFactory(ctx, natsPubSubBySourceID, kafkaPubSubBySourceID),
+		pubsub:             pubsub_datasource.NewFactory(ctx, natsPubSubBySourceID, kafkaPubSubBySourceID, redisPubSubBySourceID),
 		log:                log,
 		factoryLogger:      factoryLogger,
 		engineCtx:          ctx,
@@ -440,6 +441,25 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 					},
 					Configuration: &pubsub_datasource.KafkaEventConfiguration{
 						Topics: eventConfiguration.GetTopics(),
+					},
+				})
+			}
+
+			for _, eventConfiguration := range in.GetCustomEvents().GetRedis() {
+				eventType, err := pubsub_datasource.EventTypeFromString(eventConfiguration.EngineEventConfiguration.Type.String())
+				if err != nil {
+					return nil, fmt.Errorf("invalid event type %q for data source %q: %w", eventConfiguration.EngineEventConfiguration.Type.String(), in.Id, err)
+				}
+
+				eventConfigurations = append(eventConfigurations, pubsub_datasource.EventConfiguration{
+					Metadata: &pubsub_datasource.EventMetadata{
+						ProviderID: eventConfiguration.EngineEventConfiguration.GetProviderId(),
+						Type:       eventType,
+						TypeName:   eventConfiguration.EngineEventConfiguration.GetTypeName(),
+						FieldName:  eventConfiguration.EngineEventConfiguration.GetFieldName(),
+					},
+					Configuration: &pubsub_datasource.RedisEventConfiguration{
+						Channels: eventConfiguration.GetChannels(),
 					},
 				})
 			}

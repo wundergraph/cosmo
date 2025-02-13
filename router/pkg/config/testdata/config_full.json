@@ -462,6 +462,17 @@
             "Enabled": true
           }
         }
+      ],
+      "Redis": [
+        {
+          "ID": "my-redis",
+          "URLs": [
+            "test:password@localhost:7001",
+            "test:password@localhost:7002",
+            "test:password@localhost:7003"
+          ],
+          "ClusterEnabled": true
+        }
       ]
     }
   },

@@ -276,6 +276,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		routerEngineCfg.Execution.EnableNetPoll,
 		pubSubProviders.nats,
 		pubSubProviders.kafka,
+		pubSubProviders.redis,
 	))
 
 	// this generates the plan config using the data source factories from the config package
