@@ -369,6 +369,10 @@
     }
   },
   "PersistedOperationsConfig": {
+    "LogUnknown": false,
+    "Safelist": {
+      "Enabled": false
+    },
     "Cache": {
       "Size": 100000000
     },
@@ -403,6 +407,9 @@
       "Enabled": false
     },
     "ReplaceInvalidVarErrors": {
+      "Enabled": false
+    },
+    "ReplaceValidationErrorStatus": {
       "Enabled": false
     }
   },

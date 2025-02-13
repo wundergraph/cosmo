@@ -17,13 +17,15 @@ func TestForwardHeaders(t *testing.T) {
 
 	const (
 		// Make sure you copy these to the struct tag in the subscription test
-		headerNameInGlobalRule   = "foo"
-		headerNameInSubgraphRule = "barista" // This matches the regex in test1 subgraph forwarding rules
-		headerValue              = "bar"
-		headerValue2             = "baz"
+		headerNameInGlobalRule        = "foo"
+		headerNameInSubgraphRule      = "barista"              // This matches the regex in test1 subgraph forwarding rules
+		headerNameCaseInsensitiveRule = "bAz-CAse-Insensitive" // This matches the regex in test1 subgraph forwarding rules
+		headerValue                   = "bar"
+		headerValue2                  = "baz"
 
-		subscriptionForGlobalRulePayload   = `{"query": "subscription { headerValue(name:\"foo\", repeat:3) { value }}"}`
-		subscriptionForSubgraphRulePayload = `{"query": "subscription { headerValue(name:\"barista\", repeat:3) { value }}"}`
+		subscriptionForGlobalRulePayload       = `{"query": "subscription { headerValue(name:\"foo\", repeat:3) { value }}"}`
+		subscriptionForSubgraphRulePayload     = `{"query": "subscription { headerValue(name:\"barista\", repeat:3) { value }}"}`
+		subscriptionForSubgraphCaseRulePayload = `{"query": "subscription { headerValue(name:\"baz-case-insensitive\", repeat:3) { value }}"}`
 	)
 
 	headerRules := config.HeaderRules{
@@ -42,6 +44,10 @@ func TestForwardHeaders(t *testing.T) {
 						Operation: config.HeaderRuleOperationPropagate,
 						Matching:  "(?i)^bar.*",
 					},
+					{
+						Operation: config.HeaderRuleOperationPropagate,
+						Matching:  "^baz-case-.*",
+					},
 				},
 			},
 		},
@@ -56,6 +62,7 @@ func TestForwardHeaders(t *testing.T) {
 		}{
 			{headerNameInGlobalRule, "global rule"},
 			{headerNameInSubgraphRule, "subgraph rule"},
+			{headerNameCaseInsensitiveRule, "subgraph rule"},
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
@@ -160,6 +167,7 @@ func TestForwardHeaders(t *testing.T) {
 			testName   string
 		}{
 			{headerNameInSubgraphRule, subscriptionForSubgraphRulePayload, "subgraph rule"},
+			{headerNameCaseInsensitiveRule, subscriptionForSubgraphCaseRulePayload, "subgraph case insensitive rule"},
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
@@ -227,6 +235,7 @@ func TestForwardHeaders(t *testing.T) {
 		}{
 			{headerNameInGlobalRule, subscriptionForGlobalRulePayload, "global rule"},
 			{headerNameInSubgraphRule, subscriptionForSubgraphRulePayload, "subgraph rule"},
+			{headerNameCaseInsensitiveRule, subscriptionForSubgraphCaseRulePayload, "subgraph case insensitive rule"},
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {

@@ -4,6 +4,46 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.175.1](https://github.com/wundergraph/cosmo/compare/router@0.175.0...router@0.175.1) (2025-02-12)
+
+### Bug Fixes
+
+* interface objects typename checks ([#1585](https://github.com/wundergraph/cosmo/issues/1585)) ([07b6464](https://github.com/wundergraph/cosmo/commit/07b6464ef2a6af66390895e38dd7b7ecd2204ed2)) (@devsergiy)
+
+# [0.175.0](https://github.com/wundergraph/cosmo/compare/router@0.174.3...router@0.175.0) (2025-02-12)
+
+### Features
+
+* add apollo compatibility flag replace invalid var error status ([#1587](https://github.com/wundergraph/cosmo/issues/1587)) ([d95e910](https://github.com/wundergraph/cosmo/commit/d95e910003ebe3222fab09629fccbf6d55b67abc)) (@Aenimus)
+
+## [0.174.3](https://github.com/wundergraph/cosmo/compare/router@0.174.2...router@0.174.3) (2025-02-12)
+
+### Bug Fixes
+
+* makes default config options work properly within maps ([#1577](https://github.com/wundergraph/cosmo/issues/1577)) ([899de99](https://github.com/wundergraph/cosmo/commit/899de9913cb139125b9d5ff75e3db71b7df93011)) (@endigma)
+
+## [0.174.2](https://github.com/wundergraph/cosmo/compare/router@0.174.1...router@0.174.2) (2025-02-11)
+
+### Bug Fixes
+
+* websocket url in router playground ([#1583](https://github.com/wundergraph/cosmo/issues/1583)) ([8523ace](https://github.com/wundergraph/cosmo/commit/8523aceca6ecbed7e0318c5cf1115f9c00a3f933)) (@thisisnithin)
+
+## [0.174.1](https://github.com/wundergraph/cosmo/compare/router@0.174.0...router@0.174.1) (2025-02-07)
+
+### Bug Fixes
+
+* extracting arguments input objects with optional variables ([#1574](https://github.com/wundergraph/cosmo/issues/1574)) ([f63ac1a](https://github.com/wundergraph/cosmo/commit/f63ac1a09e748ccf6996ea7abd948e0ba5a3b941)) (@devsergiy)
+
+# [0.174.0](https://github.com/wundergraph/cosmo/compare/router@0.173.0...router@0.174.0) (2025-02-07)
+
+### Bug Fixes
+
+* querying fields under external path used in a composite key with nested fields ([#1573](https://github.com/wundergraph/cosmo/issues/1573)) ([e053fad](https://github.com/wundergraph/cosmo/commit/e053fad861f639caf5eaff94cd52c0338c50d1cc)) (@devsergiy)
+
+### Features
+
+* add plan cmd and plan generator ([#1539](https://github.com/wundergraph/cosmo/issues/1539)) ([586ca21](https://github.com/wundergraph/cosmo/commit/586ca21a0da1eb7f3e889281cf4bc4ea0c15a2b6)) (@devsergiy)
+
 # [0.173.0](https://github.com/wundergraph/cosmo/compare/router@0.172.0...router@0.173.0) (2025-02-06)
 
 ### Features

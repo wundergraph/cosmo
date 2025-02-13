@@ -1,10 +1,12 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { Label } from '../src/types/index.js';
-import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { addSeconds, formatISO, subDays } from 'date-fns';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
-import { createFederatedGraph, createThenPublishSubgraph, SetupTest } from './test-util.js';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { Label } from '../src/types/index.js';
+import { checkIfLabelMatchersChanged } from '../src/core/util.js';
+import { createAndPublishSubgraph, createFederatedGraph, createThenPublishSubgraph, SetupTest } from './test-util.js';
 
 let dbname = '';
 
@@ -587,5 +589,271 @@ describe('Labels', (ctx) => {
     expect(graph2AfterSet.subgraphs.length).toBe(1);
 
     await server.close();
+  });
+
+  test('Updating subgraph label should result in a single composition', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+
+    const fedGraph1Name = genID('fedGraph1');
+    const subgraph1Name = genID('subgraph1');
+    const label1 = genUniqueLabel('label1');
+    const label2 = genUniqueLabel('label2');
+
+    await createFederatedGraph(
+      client,
+      fedGraph1Name,
+      'default',
+      [`${joinLabel(label1)},${joinLabel(label2)}`],
+      'http://localhost:8081',
+    );
+
+    await createAndPublishSubgraph(
+      client,
+      subgraph1Name,
+      'default',
+      `type Query { name: String! }`,
+      [label1],
+      'http://localhost:8083',
+    );
+
+    const graph1 = await client.getCompositions({
+      fedGraphName: fedGraph1Name,
+      namespace: 'default',
+      startDate: formatISO(subDays(new Date(), 1)),
+      endDate: formatISO(addSeconds(new Date(), 5)),
+    });
+    expect(graph1.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph1.compositions.length).toBe(1);
+
+    await client.updateSubgraph({
+      name: subgraph1Name,
+      namespace: 'default',
+      labels: [label2],
+    });
+
+    const updatedGraph = await client.getCompositions({
+      fedGraphName: fedGraph1Name,
+      namespace: 'default',
+      startDate: formatISO(subDays(new Date(), 1)),
+      endDate: formatISO(addSeconds(new Date(), 5)),
+    });
+    expect(updatedGraph.response?.code).toBe(EnumStatusCode.OK);
+    expect(updatedGraph.compositions.length).toBe(2);
+
+    await server.close();
+  });
+
+  test('Updating federated graph with same label matchers should not cause composition', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+
+    const fedGraph1Name = genID('fedGraph1');
+    const subgraph1Name = genID('subgraph1');
+    const label1 = genUniqueLabel('label1');
+    const label2 = genUniqueLabel('label2');
+
+    await createFederatedGraph(
+      client,
+      fedGraph1Name,
+      'default',
+      [`${joinLabel(label1)},${joinLabel(label2)}`],
+      'http://localhost:8081',
+    );
+
+    await createAndPublishSubgraph(
+      client,
+      subgraph1Name,
+      'default',
+      `type Query { name: String! }`,
+      [label1],
+      'http://localhost:8083',
+    );
+
+    const graph1 = await client.getCompositions({
+      fedGraphName: fedGraph1Name,
+      namespace: 'default',
+      startDate: formatISO(subDays(new Date(), 1)),
+      endDate: formatISO(addSeconds(new Date(), 5)),
+    });
+    expect(graph1.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph1.compositions.length).toBe(1);
+
+    const res = await client.updateFederatedGraph({
+      name: fedGraph1Name,
+      namespace: 'default',
+      labelMatchers: [`${joinLabel(label1)},${joinLabel(label2)}`],
+      routingUrl: 'http://localhost:8089',
+    });
+    expect(res.response?.code).toBe(EnumStatusCode.OK);
+
+    const updatedGraph = await client.getCompositions({
+      fedGraphName: fedGraph1Name,
+      namespace: 'default',
+      startDate: formatISO(subDays(new Date(), 1)),
+      endDate: formatISO(addSeconds(new Date(), 5)),
+    });
+    expect(updatedGraph.response?.code).toBe(EnumStatusCode.OK);
+    expect(updatedGraph.compositions.length).toBe(1);
+
+    await server.close();
+  });
+
+  test('Unsetting label matchers for graph with no matchers to begin with should not cause compositions', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+
+    const fedGraph1Name = genID('fedGraph1');
+    const subgraph1Name = genID('subgraph1');
+
+    await createFederatedGraph(client, fedGraph1Name, 'default', [], 'http://localhost:8081');
+
+    await createAndPublishSubgraph(
+      client,
+      subgraph1Name,
+      'default',
+      `type Query { name: String! }`,
+      [],
+      'http://localhost:8083',
+    );
+
+    const graph1 = await client.getCompositions({
+      fedGraphName: fedGraph1Name,
+      namespace: 'default',
+      startDate: formatISO(subDays(new Date(), 1)),
+      endDate: formatISO(addSeconds(new Date(), 5)),
+    });
+    expect(graph1.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph1.compositions.length).toBe(1);
+
+    const res = await client.updateFederatedGraph({
+      name: fedGraph1Name,
+      namespace: 'default',
+      unsetLabelMatchers: true,
+      routingUrl: 'http://localhost:8089',
+    });
+    expect(res.response?.code).toBe(EnumStatusCode.OK);
+
+    const updatedGraph = await client.getCompositions({
+      fedGraphName: fedGraph1Name,
+      namespace: 'default',
+      startDate: formatISO(subDays(new Date(), 1)),
+      endDate: formatISO(addSeconds(new Date(), 5)),
+    });
+    expect(updatedGraph.response?.code).toBe(EnumStatusCode.OK);
+    expect(updatedGraph.compositions.length).toBe(1);
+
+    await server.close();
+  });
+
+  test('Updating federated graph without any label matchers and also not unsetting should not cause compositions', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+
+    const fedGraph1Name = genID('fedGraph1');
+    const subgraph1Name = genID('subgraph1');
+    const label1 = genUniqueLabel('label1');
+    const label2 = genUniqueLabel('label2');
+
+    await createFederatedGraph(
+      client,
+      fedGraph1Name,
+      'default',
+      [`${joinLabel(label1)},${joinLabel(label2)}`],
+      'http://localhost:8081',
+    );
+
+    await createAndPublishSubgraph(
+      client,
+      subgraph1Name,
+      'default',
+      `type Query { name: String! }`,
+      [label1],
+      'http://localhost:8083',
+    );
+
+    const graph1 = await client.getCompositions({
+      fedGraphName: fedGraph1Name,
+      namespace: 'default',
+      startDate: formatISO(subDays(new Date(), 1)),
+      endDate: formatISO(addSeconds(new Date(), 5)),
+    });
+    expect(graph1.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph1.compositions.length).toBe(1);
+
+    const res = await client.updateFederatedGraph({
+      name: fedGraph1Name,
+      namespace: 'default',
+      labelMatchers: [],
+      routingUrl: 'http://localhost:8089',
+    });
+    expect(res.response?.code).toBe(EnumStatusCode.OK);
+
+    const updatedGraph = await client.getCompositions({
+      fedGraphName: fedGraph1Name,
+      namespace: 'default',
+      startDate: formatISO(subDays(new Date(), 1)),
+      endDate: formatISO(addSeconds(new Date(), 5)),
+    });
+    expect(updatedGraph.response?.code).toBe(EnumStatusCode.OK);
+    expect(updatedGraph.compositions.length).toBe(1);
+
+    await server.close();
+  });
+
+  test('Check if label matchers changed', () => {
+    // Case 1: isContract is true and newLabelMatchers is empty
+    let result = checkIfLabelMatchersChanged({
+      isContract: true,
+      currentLabelMatchers: [],
+      newLabelMatchers: [],
+    });
+    expect(result).toBe(false);
+
+    // Case 2: unsetLabelMatchers is true and currentLabelMatchers is empty
+    result = checkIfLabelMatchersChanged({
+      isContract: false,
+      currentLabelMatchers: [],
+      newLabelMatchers: [],
+      unsetLabelMatchers: true,
+    });
+    expect(result).toBe(false);
+
+    // Case 3: unsetLabelMatchers is true and currentLabelMatchers is not empty
+    result = checkIfLabelMatchersChanged({
+      isContract: false,
+      currentLabelMatchers: ['label1'],
+      newLabelMatchers: [],
+      unsetLabelMatchers: true,
+    });
+    expect(result).toBe(true);
+
+    // Case 4: newLabelMatchers is empty and we are not unsetting
+    result = checkIfLabelMatchersChanged({
+      isContract: false,
+      currentLabelMatchers: ['label1'],
+      newLabelMatchers: [],
+    });
+    expect(result).toBe(false);
+
+    // Case 5: newLabelMatchers length is different from currentLabelMatchers length
+    result = checkIfLabelMatchersChanged({
+      isContract: false,
+      currentLabelMatchers: ['label1'],
+      newLabelMatchers: ['label1', 'label2'],
+    });
+    expect(result).toBe(true);
+
+    // Case 6: newLabelMatchers contains different labels from currentLabelMatchers
+    result = checkIfLabelMatchersChanged({
+      isContract: false,
+      currentLabelMatchers: ['label1'],
+      newLabelMatchers: ['label2'],
+    });
+    expect(result).toBe(true);
+
+    // Case 7: newLabelMatchers is the same as currentLabelMatchers
+    result = checkIfLabelMatchersChanged({
+      isContract: false,
+      currentLabelMatchers: ['label1'],
+      newLabelMatchers: ['label1'],
+    });
+    expect(result).toBe(false);
   });
 });
