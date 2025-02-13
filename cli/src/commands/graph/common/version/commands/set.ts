@@ -88,20 +88,20 @@ export default (opts: CommonGraphCommandOptions) => {
         successMessage: `Successfully set the router compatibility version for ${graphType} "${pc.bold(name)}" to ${
           options.version
         }.`,
-        subgraphCompositionBaseErrorMessage:
-          `The router composition version for ${graphType} "${pc.bold(name)}" was set to "${options.version}".` +
-          ` However, the new composition was unsuccessful.`,
+        subgraphCompositionBaseErrorMessage: `Composition of ${graphType} "${pc.bold(
+          name,
+        )}" using router compatibility version "${options.version}" was unsuccessful.`,
         subgraphCompositionDetailedErrorMessage:
-          `There were composition errors when recomposing ${graphType} "${pc.bold(
-            name,
-          )}" using router compatibility version "${options.version}".` +
-          `\n${pc.bold('Please check the errors below:')}`,
+          `Because composition was unsuccessful, the router compatibility version has been reverted to "${response.previousVersion}".` +
+          `\n${pc.bold('Please check the errors below for details:')}`,
         deploymentErrorMessage:
-          `The ${graphType} "${pc.bold(name)}" was recomposed with new router compatibility version "${
+          `The ${graphType} "${pc.bold(name)}" was successfully recomposed using router compatibility version "${
             options.version
-          }" but the updated composition could not be deployed.` +
+          }".` +
+          `\nHowever, the updated composition could not be deployed.` +
           `\nThis means the updated composition is not accessible to the router.` +
-          `\n${pc.bold('Please check the errors below:')}`,
+          `\nConsequently, the router compatibility version has been reverted to "${response.previousVersion}".` +
+          `\n${pc.bold('Please check the errors below for details:')}`,
         defaultErrorMessage: `Failed to set the router compatibility version for ${graphType} "${pc.bold(name)}" to "${
           options.version
         }".`,

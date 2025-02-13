@@ -49,8 +49,8 @@ export function setGraphRouterCompatibilityVersion(
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: `Graph "${req.name}" in namespace "${req.namespace}" not found.`,
         },
-        previousVersion: '-',
-        newVersion: '-',
+        previousVersion: '-1',
+        newVersion: '-1',
         compositionErrors: [],
         compositionWarnings: [],
         deploymentErrors: [],
@@ -88,7 +88,7 @@ export function setGraphRouterCompatibilityVersion(
           code: EnumStatusCode.OK,
           details: `The router compatibility version is already set to "${req.version}".`,
         },
-        previousVersion: version,
+        previousVersion: federatedGraph.routerCompatibilityVersion,
         newVersion: version,
         compositionErrors: [],
         compositionWarnings: [],
@@ -153,10 +153,9 @@ export function setGraphRouterCompatibilityVersion(
         return {
           response: {
             code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-            details: `The router compatibility version was set to "${version}" but this caused composition to fail.`,
           },
           previousVersion: federatedGraph.routerCompatibilityVersion,
-          newVersion: version,
+          newVersion: federatedGraph.routerCompatibilityVersion,
           compositionErrors: composition.compositionErrors,
           compositionWarnings: composition.compositionWarnings,
           deploymentErrors: composition.deploymentErrors,
@@ -167,10 +166,9 @@ export function setGraphRouterCompatibilityVersion(
         return {
           response: {
             code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-            details: `The router compatibility version was set to "${req.version}" but deployment failed.`,
           },
           previousVersion: federatedGraph.routerCompatibilityVersion,
-          newVersion: version,
+          newVersion: federatedGraph.routerCompatibilityVersion,
           compositionErrors: composition.compositionErrors,
           compositionWarnings: composition.compositionWarnings,
           deploymentErrors: composition.deploymentErrors,
@@ -181,7 +179,6 @@ export function setGraphRouterCompatibilityVersion(
     return {
       response: {
         code: EnumStatusCode.OK,
-        details: `The router compatibility version was set to "${version}" successfully.`,
       },
       previousVersion: federatedGraph.routerCompatibilityVersion,
       newVersion: version,
