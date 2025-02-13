@@ -366,6 +366,9 @@ security:
       limit: 4
       ignore_persisted_operations: true
 persisted_operations:
+  safelist:
+    enabled: true
+  log_unknown: true
   cache:
     size: 100MB
   storage:
