@@ -54,7 +54,6 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			ensureTopicExists(t, xEnv, topics...)
 
 			var subscriptionOne struct {
@@ -115,7 +114,6 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			ensureTopicExists(t, xEnv, topics...)
 
 			var subscriptionOne struct {
@@ -201,7 +199,6 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			ensureTopicExists(t, xEnv, topics...)
 
 			var subscriptionOne struct {
@@ -268,7 +265,6 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			ensureTopicExists(t, xEnv, topics...)
 
 			var subscriptionOne struct {
@@ -364,7 +360,6 @@ func TestKafkaEvents(t *testing.T) {
 				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			ensureTopicExists(t, xEnv, topics...)
 
 			var subscriptionOne struct {
@@ -419,7 +414,7 @@ func TestKafkaEvents(t *testing.T) {
 	t.Run("multipart", func(t *testing.T) {
 		t.Parallel()
 
-		var multipartHeartbeatInterval = time.Second * 5
+		multipartHeartbeatInterval := time.Second * 5
 
 		t.Run("subscribe sync", func(t *testing.T) {
 			t.Parallel()
@@ -433,7 +428,6 @@ func TestKafkaEvents(t *testing.T) {
 					core.WithMultipartHeartbeatInterval(multipartHeartbeatInterval),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-
 				ensureTopicExists(t, xEnv, topics...)
 
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
@@ -529,7 +523,6 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			ensureTopicExists(t, xEnv, topics...)
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
@@ -565,7 +558,6 @@ func TestKafkaEvents(t *testing.T) {
 				line, _, gErr := reader.ReadLine()
 				require.NoError(t, gErr)
 				require.Equal(t, "", string(line))
-
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
@@ -590,7 +582,6 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			ensureTopicExists(t, xEnv, topics...)
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
@@ -694,7 +685,6 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			ensureTopicExists(t, xEnv, topics...)
 
 			type subscriptionPayload struct {
@@ -808,7 +798,6 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			ensureTopicExists(t, xEnv, topics...)
 
 			type subscriptionPayload struct {
@@ -922,7 +911,6 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			ensureTopicExists(t, xEnv, topics...)
 
 			type subscriptionPayload struct {
@@ -990,7 +978,6 @@ func TestKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			ensureTopicExists(t, xEnv, topics...)
 
 			var subscriptionOne struct {
@@ -1075,7 +1062,6 @@ func TestFlakyKafkaEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			ensureTopicExists(t, xEnv, topics...)
 
 			type subscriptionPayload struct {
