@@ -40,15 +40,6 @@ import {
   invalidRepeatedFederatedDirectiveErrorMessage,
   invalidRequiredInputValueError,
 } from '../errors/errors';
-import { IGNORED_PARENT_DIRECTIVES, PERSISTED_CLIENT_DIRECTIVES } from '../v1/utils/string-constants';
-import {
-  generateRequiresScopesDirective,
-  generateSimpleDirective,
-  getEntriesNotInHashSet,
-  getValueOrDefault,
-  InvalidRequiredInputValueData,
-} from '../v1/utils/utils';
-import { INHERITABLE_DIRECTIVE_NAMES } from '../v1/utils/constants';
 import { FieldConfiguration, SubscriptionFilterValue } from '../router-configuration/router-configuration';
 import {
   ARGUMENT,
@@ -60,10 +51,13 @@ import {
   EXTERNAL,
   FIELD,
   FLOAT_SCALAR,
+  IGNORED_PARENT_DIRECTIVES,
   INACCESSIBLE,
+  INHERITABLE_DIRECTIVE_NAMES,
   INPUT_FIELD,
   INT_SCALAR,
   MUTATION,
+  PERSISTED_CLIENT_DIRECTIVES,
   QUERY,
   REASON,
   REQUIRES_SCOPES,
@@ -73,6 +67,13 @@ import {
   SUBSCRIPTION,
   TAG,
 } from '../utils/string-constants';
+import {
+  generateRequiresScopesDirective,
+  generateSimpleDirective,
+  getEntriesNotInHashSet,
+  getValueOrDefault,
+  InvalidRequiredInputValueData,
+} from '../utils/utils';
 
 export function newPersistedDirectivesData(): PersistedDirectivesData {
   return {

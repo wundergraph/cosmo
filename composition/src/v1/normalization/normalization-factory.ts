@@ -76,25 +76,15 @@ import {
   VERSION_TWO_DIRECTIVE_DEFINITIONS,
 } from '../utils/constants';
 import {
-  addIterableValuesToSet,
   fieldDatasToSimpleFieldDatas,
-  generateSimpleDirective,
   getAuthorizationDataToUpdate,
-  getEntriesNotInHashSet,
-  getOrThrowError,
-  getValueOrDefault,
-  ImplementationErrors,
-  InvalidArgument,
-  InvalidFieldImplementation,
   isNodeKindInterface,
   isNodeKindObject,
   kindToConvertedTypeString,
-  kindToTypeString,
   mapToArrayOfValues,
   maxOrScopes,
   mergeAuthorizationDataByAND,
   newAuthorizationData,
-  numberToOrdinal,
   resetAuthorizationData,
   setAndGetValue,
   subtractSourceSetFromTargetSet,
@@ -320,6 +310,18 @@ import {
   TOPICS,
 } from '../../utils/string-constants';
 import { MAX_INT32 } from '../../utils/integer-constants';
+import {
+  addIterableValuesToSet,
+  generateSimpleDirective,
+  getEntriesNotInHashSet,
+  getOrThrowError,
+  getValueOrDefault,
+  ImplementationErrors,
+  InvalidArgument,
+  InvalidFieldImplementation,
+  kindToTypeString,
+  numberToOrdinal,
+} from '../../utils/utils';
 
 export type BatchNormalizationContainer = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;

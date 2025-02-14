@@ -1,15 +1,4 @@
 import { Kind, OperationTypeNode } from 'graphql';
-import {
-  EntityInterfaceFederationData,
-  getEntriesNotInHashSet,
-  getOrThrowError,
-  ImplementationErrors,
-  InvalidArgument,
-  InvalidEntityInterface,
-  InvalidRequiredInputValueData,
-  kindToTypeString,
-  numberToOrdinal,
-} from '../v1/utils/utils';
 import { ObjectDefinitionData } from '../schema-building/types';
 import { InvalidRootTypeFieldEventsDirectiveData } from './utils';
 import { UnresolvableFieldData } from '../resolvability-graph/utils';
@@ -33,6 +22,17 @@ import {
   VALUES,
 } from '../utils/string-constants';
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
+import {
+  EntityInterfaceFederationData,
+  getEntriesNotInHashSet,
+  getOrThrowError,
+  ImplementationErrors,
+  InvalidArgument,
+  InvalidEntityInterface,
+  InvalidRequiredInputValueData,
+  kindToTypeString,
+  numberToOrdinal,
+} from '../utils/utils';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 

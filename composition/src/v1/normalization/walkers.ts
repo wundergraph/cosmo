@@ -17,9 +17,6 @@ import {
   V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
 } from '../utils/constants';
 import {
-  getOrThrowError,
-  getValueOrDefault,
-  kindToTypeString,
   mergeAuthorizationDataByAND,
   newAuthorizationData,
   newFieldAuthorizationData,
@@ -60,6 +57,7 @@ import {
   SUBSCRIPTION_FILTER,
 } from '../../utils/string-constants';
 import { RootTypeName } from '../../utils/types';
+import { getOrThrowError, getValueOrDefault, kindToTypeString } from '../../utils/utils';
 
 /* Walker to collect schema definition, directive definitions, and entities.
  * Directives are not validated upon immediate extract because all types must be recorded first.

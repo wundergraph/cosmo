@@ -14,7 +14,6 @@ import {
   ObjectDefinitionData,
   ParentDefinitionData,
 } from '../../schema-building/types';
-import { addIterableValuesToSet, EntityInterfaceFederationData } from '../utils/utils';
 import { Graph } from '../../resolvability-graph/graph';
 import { getTypeNodeNamedTypeName, MutableFieldNode } from '../../schema-building/ast';
 import { BREAK, Kind, visit } from 'graphql/index';
@@ -26,6 +25,7 @@ import { GraphNode } from '../../resolvability-graph/graph-nodes';
 import { Warning } from '../../warnings/warnings';
 import { InternalSubgraph } from '../../subgraph/types';
 import { ContractTagOptions } from '../../federation/types';
+import { addIterableValuesToSet, EntityInterfaceFederationData } from '../../utils/utils';
 
 export type FederationFactoryParams = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;

@@ -18,6 +18,7 @@ export * from './subgraph/types';
 export * from './utils/composition-version';
 export * from './utils/string-constants';
 export * from './utils/types';
+export * from './utils/utils';
 export * from './warnings/warnings';
 
 // v1

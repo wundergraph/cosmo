@@ -1,4 +1,3 @@
-import { add, getOrThrowError, getValueOrDefault, GraphFieldData } from '../v1/utils/utils';
 import { Edge, EntityDataNode, GraphNode, GraphNodeOptions, RootNode } from './graph-nodes';
 import {
   EntityResolvabilityFailure,
@@ -10,6 +9,7 @@ import {
 } from './utils';
 import { NOT_APPLICABLE, ROOT_TYPE_NAMES } from '../utils/string-constants';
 import { RootTypeName } from '../utils/types';
+import { add, getOrThrowError, getValueOrDefault, GraphFieldData } from '../utils/utils';
 
 export class Graph {
   edgeId = -1;

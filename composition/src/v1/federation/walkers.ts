@@ -1,7 +1,6 @@
 import { FederationFactory } from './federation-factory';
 import { CompositeOutputData, InterfaceDefinitionData, ObjectDefinitionData } from '../../schema-building/types';
 import { visit } from 'graphql';
-import { getOrThrowError } from '../utils/utils';
 import { operationTypeNodeToDefaultType } from '../../ast/utils';
 import { renameNamedTypeName } from '../schema-building/type-merging';
 import { InternalSubgraph } from '../../subgraph/types';
@@ -11,6 +10,7 @@ import {
   PARENT_DEFINITION_DATA,
   SERVICE_FIELD,
 } from '../../utils/string-constants';
+import { getOrThrowError } from '../../utils/utils';
 
 export function renameRootTypes(ff: FederationFactory, subgraph: InternalSubgraph) {
   let parentData: CompositeOutputData | undefined;

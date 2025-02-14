@@ -81,21 +81,9 @@ import {
 } from './utils';
 import { SUBSCRIPTION_FILTER_INPUT_NAMES, SUBSCRIPTION_FILTER_LIST_INPUT_NAMES } from '../utils/string-constants';
 import {
-  addIterableValuesToSet,
   addMapEntries,
-  EntityInterfaceFederationData,
-  generateSimpleDirective,
-  getEntriesNotInHashSet,
-  getOrThrowError,
   getSingleSetEntry,
-  getValueOrDefault,
-  GraphFieldData,
-  ImplementationErrors,
-  InvalidEntityInterface,
-  InvalidFieldImplementation,
-  InvalidRequiredInputValueData,
   isNodeLeaf,
-  kindToTypeString,
   mapToArrayOfValues,
   maxOrScopes,
   newAuthorizationData,
@@ -209,6 +197,20 @@ import {
   VALUES,
 } from '../../utils/string-constants';
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../../utils/integer-constants';
+import {
+  addIterableValuesToSet,
+  EntityInterfaceFederationData,
+  generateSimpleDirective,
+  getEntriesNotInHashSet,
+  getOrThrowError,
+  getValueOrDefault,
+  GraphFieldData,
+  ImplementationErrors,
+  InvalidEntityInterface,
+  InvalidFieldImplementation,
+  InvalidRequiredInputValueData,
+  kindToTypeString,
+} from '../../utils/utils';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;

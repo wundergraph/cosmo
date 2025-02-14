@@ -908,6 +908,4 @@ export const CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION: MutableDirectiveDefinition
   repeatable: false,
 };
 
-export const INHERITABLE_DIRECTIVE_NAMES = [EXTERNAL, SHAREABLE];
-
 export const EDFS_ARGS_REGEXP = /{{\s*args\.([a-zA-Z0-9_]+)\s*}}/g;

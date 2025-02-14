@@ -1,5 +1,4 @@
 import { BREAK, ConstDirectiveNode, DocumentNode, Kind, OperationTypeNode, print, ValueNode, visit } from 'graphql';
-import { getOrThrowError, getValueOrDefault, kindToTypeString } from '../utils/utils';
 import { isKindAbstract, lexicographicallySortDocumentNode, safeParse } from '../../ast/utils';
 import { NormalizationFactory } from './normalization-factory';
 import {
@@ -104,6 +103,7 @@ import {
   SUBSCRIPTION_FILTER,
   TAG,
 } from '../../utils/string-constants';
+import { getOrThrowError, getValueOrDefault, kindToTypeString } from '../../utils/utils';
 
 export type KeyFieldSetData = {
   isUnresolvableByKeyFieldSet: Map<string, boolean>;
