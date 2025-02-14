@@ -413,7 +413,7 @@
       "Enabled": false
     }
   },
-  "ApolloRouterCompatabilityFlags": {
+  "ApolloRouterCompatibilityFlags": {
     "ReplaceInvalidVarErrors": {
       "Enabled": false
     }

@@ -14,7 +14,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-func TestApolloRouterCompatability(t *testing.T) {
+func TestApolloRouterCompatibility(t *testing.T) {
 	t.Parallel()
 
 	t.Run("enable replace invalid variable error", func(t *testing.T) {

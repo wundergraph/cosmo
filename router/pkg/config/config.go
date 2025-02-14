@@ -885,7 +885,7 @@ type Config struct {
 	PersistedOperationsConfig      PersistedOperationsConfig       `yaml:"persisted_operations"`
 	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
-	ApolloRouterCompatabilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatability_flags"`
+	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_Compatibility_flags"`
 	ClientHeader                   ClientHeader                    `yaml:"client_header"`
 }
 
