@@ -4,6 +4,7 @@ import {
   federateSubgraphs,
   FieldAuthorizationData,
   maxOrScopes,
+  normalizeSubgraph,
   normalizeSubgraphFromString,
   orScopesLimitError,
   parse,
@@ -19,17 +20,7 @@ import {
 describe('Authorization directives tests', () => {
   describe('Normalization Tests', () => {
     test('that authentication and scopes are inherited correctly', () => {
-      const { errors, normalizationResult } = normalizeSubgraphFromString(`
-        type Query {
-          object: Object @authenticated @requiresScopes(scopes: [["read:query"], ["read:object"]])
-        }
-        type Object @authenticated @requiresScopes(scopes: [["read:object", "read:field"], ["read:all"]]) {
-          b: Boolean! @authenticated @requiresScopes(scopes: [["read:bool"], ["read:field"]])
-          s: Scalar!
-         }
-         
-         scalar Scalar @authenticated @requiresScopes(scopes: [["read:field", "read:scalar"], ["read:all"]])
-      `);
+      const { errors, normalizationResult } = normalizeSubgraph(subgraphQ.definitions, subgraphQ.name);
       expect(errors).toBeUndefined();
       expect(normalizationResult!.authorizationDataByParentTypeName).toStrictEqual(
         new Map<string, AuthorizationData>([
@@ -125,7 +116,7 @@ describe('Authorization directives tests', () => {
         scalar Scalar @requiresScopes(scopes: [["a"], ["b"], ["c"], ["d"], ["e"], ["f"], ["g"], ["h"], ["i"], ["j"], ["k"], ["l"], ["m"], ["n"], ["o"], ["p"], ["q"]])
       `);
       expect(errors).toBeDefined();
-      expect(errors![0]).toStrictEqual(orScopesLimitError(maxOrScopes, ['Enum', 'Scalar', 'Query', 'Interface']));
+      expect(errors![0]).toStrictEqual(orScopesLimitError(maxOrScopes, ['Query', 'Interface', 'Enum', 'Scalar']));
     });
 
     test('that an error is returned if the limit of @requiresScopes scopes is exceeded #2', () => {
@@ -613,9 +604,9 @@ describe('Authorization directives tests', () => {
           type Entity {
             age: Int! @authenticated
             id: ID! @requiresScopes(scopes: [["read:subgraph-i"]]) @authenticated
-            isEntity: Boolean! @authenticated @requiresScopes(scopes: [["read:subgraph-j"]])
+            isEntity: Boolean! @requiresScopes(scopes: [["read:subgraph-j"]]) @authenticated
             name: String! @requiresScopes(scopes: [["read:subgraph-i"]])
-            scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:object", "read:scalar"], ["read:private", "read:object", "read:subgraph-j"], ["read:field", "read:object", "read:scalar"], ["read:field", "read:object", "read:subgraph-j"]])
+            scalar: Scalar! @requiresScopes(scopes: [["read:private", "read:object", "read:scalar"], ["read:private", "read:object", "read:subgraph-j"], ["read:field", "read:object", "read:scalar"], ["read:field", "read:object", "read:subgraph-j"]]) @authenticated
           }
           
           type Query {
@@ -682,9 +673,9 @@ describe('Authorization directives tests', () => {
         type Entity {
           age: Int! @authenticated
           id: ID! @authenticated @requiresScopes(scopes: [["read:subgraph-i"]])
-          isEntity: Boolean! @authenticated @requiresScopes(scopes: [["read:subgraph-j"]])
+          isEntity: Boolean! @requiresScopes(scopes: [["read:subgraph-j"]]) @authenticated
           name: String! @requiresScopes(scopes: [["read:subgraph-i"]])
-          scalar: Scalar! @authenticated @requiresScopes(scopes: [["read:private", "read:object", "read:scalar"], ["read:private", "read:object", "read:subgraph-j"], ["read:field", "read:object", "read:scalar"], ["read:field", "read:object", "read:subgraph-j"]])
+          scalar: Scalar! @requiresScopes(scopes: [["read:private", "read:object", "read:scalar"], ["read:private", "read:object", "read:subgraph-j"], ["read:field", "read:object", "read:scalar"], ["read:field", "read:object", "read:subgraph-j"]]) @authenticated
         }
         
         type Query {
@@ -1379,5 +1370,21 @@ const subgraphP: Subgraph = {
     }
     
     scalar Scalar @authenticated
+  `),
+};
+
+const subgraphQ: Subgraph = {
+  name: 'subgraph-q',
+  url: '',
+  definitions: parse(`
+    type Query {
+      object: Object @authenticated @requiresScopes(scopes: [["read:query"], ["read:object"]])
+    }
+    type Object @authenticated @requiresScopes(scopes: [["read:object", "read:field"], ["read:all"]]) {
+      b: Boolean! @authenticated @requiresScopes(scopes: [["read:bool"], ["read:field"]])
+      s: Scalar!
+    }
+
+    scalar Scalar @authenticated @requiresScopes(scopes: [["read:field", "read:scalar"], ["read:all"]])
   `),
 };

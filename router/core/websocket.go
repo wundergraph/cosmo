@@ -62,26 +62,32 @@ type WebsocketMiddlewareOptions struct {
 	WebSocketConfiguration *config.WebSocketConfiguration
 	ClientHeader           config.ClientHeader
 	Attributes             []attribute.KeyValue
+
+	DisableVariablesRemapping bool
+
+	ApolloCompatibilityFlags config.ApolloCompatibilityFlags
 }
 
 func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
 
 	handler := &WebsocketHandler{
-		ctx:                ctx,
-		operationProcessor: opts.OperationProcessor,
-		operationBlocker:   opts.OperationBlocker,
-		planner:            opts.Planner,
-		graphqlHandler:     opts.GraphQLHandler,
-		preHandler:         opts.PreHandler,
-		metrics:            opts.Metrics,
-		accessController:   opts.AccessController,
-		logger:             opts.Logger,
-		stats:              opts.Stats,
-		readTimeout:        opts.ReadTimeout,
-		config:             opts.WebSocketConfiguration,
-		clientHeader:       opts.ClientHeader,
-		handlerSem:         semaphore.NewWeighted(128),
-		attributes:         opts.Attributes,
+		ctx:                       ctx,
+		operationProcessor:        opts.OperationProcessor,
+		operationBlocker:          opts.OperationBlocker,
+		planner:                   opts.Planner,
+		graphqlHandler:            opts.GraphQLHandler,
+		preHandler:                opts.PreHandler,
+		metrics:                   opts.Metrics,
+		accessController:          opts.AccessController,
+		logger:                    opts.Logger,
+		stats:                     opts.Stats,
+		readTimeout:               opts.ReadTimeout,
+		config:                    opts.WebSocketConfiguration,
+		clientHeader:              opts.ClientHeader,
+		handlerSem:                semaphore.NewWeighted(128),
+		attributes:                opts.Attributes,
+		disableVariablesRemapping: opts.DisableVariablesRemapping,
+		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
 	}
 	if opts.WebSocketConfiguration != nil && opts.WebSocketConfiguration.AbsintheProtocol.Enabled {
 		handler.absintheHandlerEnabled = true
@@ -218,6 +224,10 @@ type WebsocketHandler struct {
 	forwardUpgradeHeadersConfig forwardConfig
 	forwardQueryParamsConfig    forwardConfig
 	clientHeader                config.ClientHeader
+
+	disableVariablesRemapping bool
+
+	apolloCompatibilityFlags config.ApolloCompatibilityFlags
 }
 
 func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.Request) {
@@ -299,26 +309,28 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	}
 
 	handler := NewWebsocketConnectionHandler(h.ctx, WebSocketConnectionHandlerOptions{
-		OperationProcessor:    h.operationProcessor,
-		OperationBlocker:      h.operationBlocker,
-		Planner:               h.planner,
-		GraphQLHandler:        h.graphqlHandler,
-		PreHandler:            h.preHandler,
-		Metrics:               h.metrics,
-		PlanOptions:           planOptions,
-		ResponseWriter:        w,
-		Request:               r,
-		Connection:            conn,
-		Protocol:              protocol,
-		Logger:                requestLogger,
-		Stats:                 h.stats,
-		ConnectionID:          h.connectionIDs.Inc(),
-		ClientInfo:            clientInfo,
-		InitRequestID:         requestID,
-		Config:                h.config,
-		ForwardUpgradeHeaders: h.forwardUpgradeHeadersConfig,
-		ForwardQueryParams:    h.forwardQueryParamsConfig,
-		Attributes:            h.attributes,
+		OperationProcessor:        h.operationProcessor,
+		OperationBlocker:          h.operationBlocker,
+		Planner:                   h.planner,
+		GraphQLHandler:            h.graphqlHandler,
+		PreHandler:                h.preHandler,
+		Metrics:                   h.metrics,
+		PlanOptions:               planOptions,
+		ResponseWriter:            w,
+		Request:                   r,
+		Connection:                conn,
+		Protocol:                  protocol,
+		Logger:                    requestLogger,
+		Stats:                     h.stats,
+		ConnectionID:              h.connectionIDs.Inc(),
+		ClientInfo:                clientInfo,
+		InitRequestID:             requestID,
+		Config:                    h.config,
+		ForwardUpgradeHeaders:     h.forwardUpgradeHeadersConfig,
+		ForwardQueryParams:        h.forwardQueryParamsConfig,
+		Attributes:                h.attributes,
+		DisableVariablesRemapping: h.disableVariablesRemapping,
+		ApolloCompatibilityFlags:  h.apolloCompatibilityFlags,
 	})
 	err = handler.Initialize()
 	if err != nil {
@@ -637,26 +649,28 @@ type graphqlError struct {
 }
 
 type WebSocketConnectionHandlerOptions struct {
-	Config                *config.WebSocketConfiguration
-	OperationProcessor    *OperationProcessor
-	OperationBlocker      *OperationBlocker
-	Planner               *OperationPlanner
-	GraphQLHandler        *GraphQLHandler
-	PreHandler            *PreHandler
-	Metrics               RouterMetrics
-	ResponseWriter        http.ResponseWriter
-	Request               *http.Request
-	Connection            *wsConnectionWrapper
-	Protocol              wsproto.Proto
-	Logger                *zap.Logger
-	Stats                 statistics.EngineStatistics
-	PlanOptions           PlanOptions
-	ConnectionID          int64
-	ClientInfo            *ClientInfo
-	InitRequestID         string
-	ForwardUpgradeHeaders forwardConfig
-	ForwardQueryParams    forwardConfig
-	Attributes            []attribute.KeyValue
+	Config                    *config.WebSocketConfiguration
+	OperationProcessor        *OperationProcessor
+	OperationBlocker          *OperationBlocker
+	Planner                   *OperationPlanner
+	GraphQLHandler            *GraphQLHandler
+	PreHandler                *PreHandler
+	Metrics                   RouterMetrics
+	ResponseWriter            http.ResponseWriter
+	Request                   *http.Request
+	Connection                *wsConnectionWrapper
+	Protocol                  wsproto.Proto
+	Logger                    *zap.Logger
+	Stats                     statistics.EngineStatistics
+	PlanOptions               PlanOptions
+	ConnectionID              int64
+	ClientInfo                *ClientInfo
+	InitRequestID             string
+	ForwardUpgradeHeaders     forwardConfig
+	ForwardQueryParams        forwardConfig
+	Attributes                []attribute.KeyValue
+	DisableVariablesRemapping bool
+	ApolloCompatibilityFlags  config.ApolloCompatibilityFlags
 }
 
 type WebSocketConnectionHandler struct {
@@ -693,6 +707,10 @@ type WebSocketConnectionHandler struct {
 
 	forwardUpgradeHeaders *forwardConfig
 	forwardQueryParams    *forwardConfig
+
+	disableVariablesRemapping bool
+
+	apolloCompatibilityFlags config.ApolloCompatibilityFlags
 }
 
 type forwardConfig struct {
@@ -710,27 +728,29 @@ var (
 func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnectionHandlerOptions) *WebSocketConnectionHandler {
 
 	return &WebSocketConnectionHandler{
-		ctx:                   ctx,
-		operationProcessor:    opts.OperationProcessor,
-		operationBlocker:      opts.OperationBlocker,
-		planner:               opts.Planner,
-		graphqlHandler:        opts.GraphQLHandler,
-		preHandler:            opts.PreHandler,
-		metrics:               opts.Metrics,
-		w:                     opts.ResponseWriter,
-		request:               opts.Request,
-		conn:                  opts.Connection,
-		protocol:              opts.Protocol,
-		logger:                opts.Logger,
-		connectionID:          opts.ConnectionID,
-		stats:                 opts.Stats,
-		clientInfo:            opts.ClientInfo,
-		initRequestID:         opts.InitRequestID,
-		forwardUpgradeHeaders: &opts.ForwardUpgradeHeaders,
-		forwardQueryParams:    &opts.ForwardQueryParams,
-		forwardInitialPayload: opts.Config != nil && opts.Config.ForwardInitialPayload,
-		plannerOptions:        opts.PlanOptions,
-		attributes:            opts.Attributes,
+		ctx:                       ctx,
+		operationProcessor:        opts.OperationProcessor,
+		operationBlocker:          opts.OperationBlocker,
+		planner:                   opts.Planner,
+		graphqlHandler:            opts.GraphQLHandler,
+		preHandler:                opts.PreHandler,
+		metrics:                   opts.Metrics,
+		w:                         opts.ResponseWriter,
+		request:                   opts.Request,
+		conn:                      opts.Connection,
+		protocol:                  opts.Protocol,
+		logger:                    opts.Logger,
+		connectionID:              opts.ConnectionID,
+		stats:                     opts.Stats,
+		clientInfo:                opts.ClientInfo,
+		initRequestID:             opts.InitRequestID,
+		forwardUpgradeHeaders:     &opts.ForwardUpgradeHeaders,
+		forwardQueryParams:        &opts.ForwardQueryParams,
+		forwardInitialPayload:     opts.Config != nil && opts.Config.ForwardInitialPayload,
+		plannerOptions:            opts.PlanOptions,
+		attributes:                opts.Attributes,
+		disableVariablesRemapping: opts.DisableVariablesRemapping,
+		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
 	}
 }
 
@@ -822,7 +842,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 		return nil, nil, err
 	}
 
-	if err := operationKit.RemapVariables(); err != nil {
+	if err := operationKit.RemapVariables(h.disableVariablesRemapping); err != nil {
 		opContext.normalizationTime = time.Since(startNormalization)
 		return nil, nil, err
 	}
@@ -840,7 +860,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 	startValidation := time.Now()
 
-	if _, err := operationKit.Validate(h.plannerOptions.ExecutionOptions.SkipLoader, opContext.remapVariables); err != nil {
+	if _, err := operationKit.Validate(h.plannerOptions.ExecutionOptions.SkipLoader, opContext.remapVariables, &h.apolloCompatibilityFlags); err != nil {
 		opContext.validationTime = time.Since(startValidation)
 		return nil, nil, err
 	}

@@ -246,11 +246,15 @@
       "ExpectContinueTimeout": 0,
       "TLSHandshakeTimeout": 0,
       "KeepAliveIdleTimeout": 0,
-      "KeepAliveProbeInterval": 30000000000
+      "KeepAliveProbeInterval": 30000000000,
+      "MaxConnsPerHost": 100,
+      "MaxIdleConns": 1024,
+      "MaxIdleConnsPerHost": 20
     },
     "Router": {
       "MaxRequestBodyBytes": 5000000,
-      "MaxHeaderBytes": 4194304
+      "MaxHeaderBytes": 4194304,
+      "DecompressionEnabled": false
     },
     "Subgraphs": {
       "products": {
@@ -262,12 +266,15 @@
           "Interval": 0
         },
         "RequestTimeout": 120000000000,
-        "DialTimeout": 0,
-        "ResponseHeaderTimeout": 0,
-        "ExpectContinueTimeout": 0,
-        "TLSHandshakeTimeout": 0,
-        "KeepAliveIdleTimeout": 0,
-        "KeepAliveProbeInterval": 0
+        "DialTimeout": null,
+        "ResponseHeaderTimeout": null,
+        "ExpectContinueTimeout": null,
+        "TLSHandshakeTimeout": null,
+        "KeepAliveIdleTimeout": null,
+        "KeepAliveProbeInterval": null,
+        "MaxConnsPerHost": null,
+        "MaxIdleConns": null,
+        "MaxIdleConnsPerHost": null
       }
     }
   },
@@ -565,7 +572,8 @@
     "EnableValidationCache": true,
     "ValidationCacheSize": 1024,
     "ResolverMaxRecyclableParserSize": 4096,
-    "EnableSubgraphFetchOperationName": true
+    "EnableSubgraphFetchOperationName": true,
+    "DisableVariablesRemapping": false
   },
   "WebSocket": {
     "Enabled": true,
@@ -651,6 +659,10 @@
     }
   },
   "PersistedOperationsConfig": {
+    "LogUnknown": true,
+    "Safelist": {
+      "Enabled": true
+    },
     "Cache": {
       "Size": 100000000
     },
@@ -685,6 +697,9 @@
       "Enabled": false
     },
     "ReplaceInvalidVarErrors": {
+      "Enabled": false
+    },
+    "ReplaceValidationErrorStatus": {
       "Enabled": false
     }
   },

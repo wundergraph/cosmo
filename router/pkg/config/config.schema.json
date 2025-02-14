@@ -126,6 +126,22 @@
       "additionalProperties": false,
       "description": "The configuration for the persisted operations.",
       "properties": {
+        "safelist": {
+          "type": "object",
+          "description": "The configuration for safelisting persisted operations.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Only allows persisted operations (sent with operation body). If the value is true, all operations not explicitly added to the safelist are blocked."
+            }
+          }
+        },
+        "log_unknown": {
+          "type": "boolean",
+          "description": "Log operations (sent with the operation body) which haven't yet been persisted. If the value is true, all operations not yet persisted are logged to the router logs.",
+          "additionalProperties": false
+        },
         "cache": {
           "type": "object",
           "additionalProperties": false,
@@ -562,7 +578,7 @@
           "description": "The configuration for the router access logs",
           "properties": {
             "fields": {
-              "$ref": "#/definitions/context_fields"
+              "$ref": "#/$defs/context_fields"
             }
           }
         },
@@ -579,7 +595,7 @@
             "fields": {
               "allOf": [
                 {
-                  "$ref": "#/definitions/context_fields"
+                  "$ref": "#/$defs/context_fields"
                 },
                 {
                   "items": {
@@ -1251,19 +1267,24 @@
               "description": "The maximum size of the request headers. Setting this to 0 uses the default value from the http standard lib, which is 1MiB.",
               "default": "0MiB",
               "bytes": {}
+            },
+            "decompression_enabled": {
+              "type": "boolean",
+              "description": "When enabled, the router will check incoming requests for a 'Content-Encoding' header and decompress the body accordingly. Currently only gzip is supported",
+              "default": true
             }
           }
         },
         "all": {
           "type": "object",
           "description": "The configuration for all subgraphs. The configuration is used to configure the traffic shaping for all subgraphs.",
-          "$ref": "#/definitions/traffic_shaping_subgraph_request_rule"
+          "$ref": "#/$defs/traffic_shaping_subgraph_request_rule"
         },
         "subgraphs": {
           "type": "object",
           "description": "The configuration to control traffic shaping for specific subgraphs.",
           "additionalProperties": {
-            "$ref": "#/definitions/traffic_shaping_subgraph_request_rule"
+            "$ref": "#/$defs/traffic_shaping_subgraph_request_rule"
           }
         }
       }
@@ -1281,10 +1302,10 @@
               "items": {
                 "oneOf": [
                   {
-                    "$ref": "#/definitions/traffic_shaping_header_rule"
+                    "$ref": "#/$defs/traffic_shaping_header_rule"
                   },
                   {
-                    "$ref": "#/definitions/set_header_rule"
+                    "$ref": "#/$defs/set_header_rule"
                   }
                 ]
               }
@@ -1294,10 +1315,10 @@
               "items": {
                 "oneOf": [
                   {
-                    "$ref": "#/definitions/traffic_shaping_header_response_rule"
+                    "$ref": "#/$defs/traffic_shaping_header_response_rule"
                   },
                   {
-                    "$ref": "#/definitions/set_header_rule"
+                    "$ref": "#/$defs/set_header_rule"
                   }
                 ]
               }
@@ -1315,10 +1336,10 @@
                 "items": {
                   "oneOf": [
                     {
-                      "$ref": "#/definitions/traffic_shaping_header_rule"
+                      "$ref": "#/$defs/traffic_shaping_header_rule"
                     },
                     {
-                      "$ref": "#/definitions/set_header_rule"
+                      "$ref": "#/$defs/set_header_rule"
                     }
                   ]
                 }
@@ -1328,10 +1349,10 @@
                 "items": {
                   "oneOf": [
                     {
-                      "$ref": "#/definitions/traffic_shaping_header_response_rule"
+                      "$ref": "#/$defs/traffic_shaping_header_response_rule"
                     },
                     {
-                      "$ref": "#/definitions/set_header_rule"
+                      "$ref": "#/$defs/set_header_rule"
                     }
                   ]
                 }
@@ -1549,7 +1570,7 @@
             },
             "urls": {
               "type": "array",
-              "description": "The Redis connection URLs. The values are specified as a string with the format 'scheme://host:port'. If cluster is enabled, will use them to instantiate a cluster connection. f",
+              "description": "The Redis connection URLs. The values are specified as a string with the format 'scheme://host:port', with optional auth and options added in to the URL. If cluster is enabled, will use them to instantiate a cluster connection.",
               "default": [],
               "items": {
                 "type": "string"
@@ -1907,7 +1928,7 @@
           "properties": {
             "enabled": {
               "type": "boolean",
-              "description": "Block non-persisted operations. If the value is true, all Operations are blocked. You can also specify a condition that is evaluated to determine if the non-persisted operation should be blocked."
+              "description": "Block non-persisted operations (sent with operation ID). If the value is true, all Operations are blocked. You can also specify a condition that is evaluated to determine if the non-persisted operation should be blocked."
             },
             "condition": {
               "type": "string",
@@ -2231,6 +2252,11 @@
           "type": "boolean",
           "default": false,
           "description": "Enable appending the operation name to subgraph fetches. This will ensure that the operation name will be included in the corresponding subgraph requests using the following format: $operationName__$subgraphName__$sequenceID."
+        },
+        "disable_variables_remapping": {
+          "type": "boolean",
+          "default": false,
+          "description": "Disables variables renaming during normalization. This option could have a negative impact on planner cache hits."
         }
       }
     },
@@ -2356,7 +2382,18 @@
         },
         "replace_invalid_var_errors": {
           "type": "object",
-          "description": "Produces the same error (message, extension code, status code) as Apollo when an invalid variable is supplied.",
+          "description": "Produces the same error (message, extension code but not status code) as Apollo when an invalid variable is supplied.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "replace_validation_error_status": {
+          "type": "object",
+          "description": "Produces the same error status code (400) as Apollo when validation fails.",
           "additionalProperties": false,
           "properties": {
             "enabled": {
@@ -2383,7 +2420,7 @@
       }
     }
   },
-  "definitions": {
+  "$defs": {
     "traffic_shaping_subgraph_request_rule": {
       "type": "object",
       "additionalProperties": false,
@@ -2427,6 +2464,21 @@
             "minimum": "5s"
           },
           "description": "The keep alive probe interval. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "max_idle_conns": {
+          "type": "integer",
+          "default": 1024,
+          "description": "MaxIdleConns controls the maximum number of idle (keep-alive) connections across all hosts. Zero means no limit"
+        },
+        "max_conns_per_host": {
+          "type": "integer",
+          "default": 100,
+          "description": "MaxConnsPerHost limits the total number of connections per host, including connections in the dialing, active, and idle states. Zero means no limit."
+        },
+        "max_idle_conns_per_host": {
+          "type": "integer",
+          "default": 20,
+          "description": "MaxIdleConnsPerHost, if non-zero, controls the maximum idle (keep-alive) connections to keep per-host. Zero will default to 2"
         },
         "retry": {
           "type": "object",

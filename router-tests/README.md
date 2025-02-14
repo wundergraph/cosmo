@@ -4,6 +4,10 @@ This directory contains integration tests for the router. It is a separate packa
 to prevent dependencies of the tests and demos from becoming dependencies of
 github.com/wundergraph/cosmo/router.
 
+## Updating the demo subgraphs
+
+Regenerate the router execution config with `./update-config-no-edg.sh`. This will propogate any changes from the SDLs.
+
 ## Running the tests
 
 ```bash

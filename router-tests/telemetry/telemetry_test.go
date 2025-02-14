@@ -2,8 +2,6 @@ package telemetry
 
 import (
 	"context"
-	"errors"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"net/http"
 	"regexp"
@@ -14,6 +12,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -35,7 +35,7 @@ import (
 	integration "github.com/wundergraph/cosmo/router-tests"
 )
 
-func TestEngineStatisticsTelemetry(t *testing.T) {
+func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Should provide correct metrics for one subscription over SSE", func(t *testing.T) {
@@ -92,7 +92,6 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 				MessagesSent:  sentMessages,
 				Triggers:      0,
 			})
-
 		})
 	})
 
@@ -178,7 +177,6 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 				MessagesSent:  sentMessages.Load(),
 				Triggers:      0,
 			})
-
 		})
 	})
 
@@ -214,6 +212,7 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 			err = conn.ReadJSON(&res)
 			require.NoError(t, err)
 
+			xEnv.WaitForMinMessagesSent(1, time.Second*5)
 			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
 				Subscriptions: 1,
 				Connections:   1,
@@ -225,6 +224,7 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 			err = conn.ReadJSON(&complete)
 			require.NoError(t, err)
 
+			xEnv.WaitForMinMessagesSent(2, time.Second*5)
 			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
 				Subscriptions: 1,
 				Connections:   1,
@@ -293,6 +293,7 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 			wg.Wait()
 
 			xEnv.WaitForSubscriptionCount(2, time.Second*5)
+			xEnv.WaitForTriggerCount(1, time.Second*5)
 
 			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
 				Subscriptions: 2,
@@ -305,6 +306,7 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 			err := conn1.ReadJSON(&res)
 			require.NoError(t, err)
 
+			xEnv.WaitForMinMessagesSent(1, time.Second*5)
 			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
 				Subscriptions: 2,
 				Connections:   2,
@@ -315,6 +317,7 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 			err = conn2.ReadJSON(&res)
 			require.NoError(t, err)
 
+			xEnv.WaitForMinMessagesSent(2, time.Second*5)
 			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
 				Subscriptions: 2,
 				Connections:   2,
@@ -329,6 +332,7 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 			err = conn2.ReadJSON(&complete)
 			require.NoError(t, err)
 
+			xEnv.WaitForMinMessagesSent(4, time.Second*5)
 			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
 				Subscriptions: 2,
 				Connections:   2,
@@ -460,12 +464,12 @@ func TestEngineStatisticsTelemetry(t *testing.T) {
 			}
 
 			metricdatatest.AssertEqual(t, messagesSentMetrics, *integration.GetMetricByName(engineScope, "router.engine.messages.sent"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
 		})
 	})
 }
 
-func TestOperationCacheTelemetry(t *testing.T) {
+// Is set as Flaky so that when running the tests it will be run separately and retried if it fails
+func TestFlakyOperationCacheTelemetry(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -488,7 +492,6 @@ func TestOperationCacheTelemetry(t *testing.T) {
 				EnableOTLPRouterCache: true,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
 			})
@@ -830,7 +833,6 @@ func TestOperationCacheTelemetry(t *testing.T) {
 				EnableOTLPRouterCache: true,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			// miss
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
@@ -1210,7 +1212,6 @@ func TestOperationCacheTelemetry(t *testing.T) {
 				EnablePrometheusRouterCache: true,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
 			})
@@ -1555,7 +1556,6 @@ func TestOperationCacheTelemetry(t *testing.T) {
 				EnableOTLPRouterCache: true,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
 			})
@@ -1745,7 +1745,6 @@ func TestOperationCacheTelemetry(t *testing.T) {
 							Value: 0,
 						},
 						{
-
 							Attributes: attribute.NewSet(append(baseAttributes,
 								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "added"),
@@ -2527,7 +2526,8 @@ func TestOperationCacheTelemetry(t *testing.T) {
 	})
 }
 
-func TestRuntimeTelemetry(t *testing.T) {
+// Is set as Flaky so that when running the tests it will be run separately and retried if it fails
+func TestFlakyRuntimeTelemetry(t *testing.T) {
 	t.Parallel()
 
 	const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
@@ -2904,7 +2904,8 @@ func TestRuntimeTelemetry(t *testing.T) {
 	})
 }
 
-func TestTelemetry(t *testing.T) {
+// Is set as Flaky so that when running the tests it will be run separately and retried if it fails
+func TestFlakyTelemetry(t *testing.T) {
 	t.Parallel()
 
 	const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
@@ -3600,11 +3601,11 @@ func TestTelemetry(t *testing.T) {
 				core.WithSubgraphTransportOptions(
 					core.NewSubgraphTransportOptions(config.TrafficShapingRules{
 						All: config.GlobalSubgraphRequestRule{
-							RequestTimeout: 10 * time.Second,
+							RequestTimeout: integration.ToPtr(10 * time.Second),
 						},
 						Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
 							"hobbies": {
-								RequestTimeout: 3 * time.Second,
+								RequestTimeout: integration.ToPtr(3 * time.Second),
 							},
 						},
 					})),
@@ -4038,7 +4039,7 @@ func TestTelemetry(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, `{"data":{"rootFieldWithListArg":["a"]}}`, res.Body)
-			require.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
+			assert.Equal(t, "HIT", res.Response.Header.Get(core.PersistedOperationCacheHeader))
 
 			sn = exporter.GetSpans().Snapshots()
 
@@ -5720,7 +5721,6 @@ func TestTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, responseContentLengthMetric, rm.ScopeMetrics[0].Metrics[3], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, requestInFlightMetric, rm.ScopeMetrics[0].Metrics[4], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, rm.ScopeMetrics[0].Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
 		})
 	})
 
@@ -6122,7 +6122,6 @@ func TestTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, responseContentLengthMetric, rm.ScopeMetrics[0].Metrics[3], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, requestInFlightMetric, rm.ScopeMetrics[0].Metrics[4], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, rm.ScopeMetrics[0].Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
 		})
 	})
 
@@ -6778,7 +6777,6 @@ func TestTelemetry(t *testing.T) {
 			require.Equal(t, trace.SpanKindServer, sn[10].SpanKind())
 			require.Equal(t, codes.Error, sn[10].Status().Code)
 			require.Contains(t, sn[10].Status().Description, "connect: connection refused\nFailed to fetch from Subgraph 'products' at Path: 'employees'.")
-
 		})
 	})
 
@@ -7143,7 +7141,6 @@ func TestTelemetry(t *testing.T) {
 				HeaderName: customTraceHeader,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
@@ -7166,7 +7163,6 @@ func TestTelemetry(t *testing.T) {
 				HeaderName: "x-wg-trace-id",
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
@@ -7230,7 +7226,6 @@ func TestTelemetry(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			MetricReader: metricReaderFull,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
@@ -7274,7 +7269,6 @@ func TestTelemetry(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
@@ -8554,7 +8548,6 @@ func TestTelemetry(t *testing.T) {
 				require.Len(t, sn[8].Attributes(), 26)
 			})
 		})
-
 	})
 
 	t.Run("Complexity Cache Metrics", func(t *testing.T) {
@@ -8598,8 +8591,10 @@ func TestTelemetry(t *testing.T) {
 				require.Equal(t, `{"errors":[{"message":"The total number of fields 2 exceeds the limit allowed (1)"}]}`, failedRes2.Body)
 
 				testSpan2 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
-				require.Contains(t, testSpan2.Attributes(), otel.WgQueryTotalFields.Int(2))
-				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
+				assert.Contains(t, testSpan2.Attributes(), otel.WgQueryTotalFields.Int(2))
+				assert.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
+				assert.Equal(t, codes.Unset, testSpan2.Status().Code)
+				assert.Equal(t, []sdktrace.Event(nil), testSpan2.Events())
 				exporter.Reset()
 
 				successRes := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{

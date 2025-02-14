@@ -243,19 +243,7 @@ services:
     profiles:
       - dev
 
-#  3 node minimum for a cluster, per redis documentation
-  redis-cluster-node-0:
-    image: redis:${DC_REDIS_VERSION:-7.2.4}-alpine
-    command: redis-server /usr/local/etc/redis/redis.conf
-    networks:
-      - primary
-    ports:
-      - "7000:6379"
-    volumes:
-      - ./docker/redis/redis-cluster.conf:/usr/local/etc/redis/redis.conf
-    profiles:
-      - dev
-
+  #  3 node minimum for a cluster, per redis documentation
   redis-cluster-node-1:
     image: redis:${DC_REDIS_VERSION:-7.2.4}-alpine
     command: redis-server /usr/local/etc/redis/redis.conf
@@ -263,6 +251,7 @@ services:
       - primary
     ports:
       - "7001:6379"
+      - "16371:16379"
     volumes:
       - ./docker/redis/redis-cluster.conf:/usr/local/etc/redis/redis.conf
     profiles:
@@ -275,6 +264,20 @@ services:
       - primary
     ports:
       - "7002:6379"
+      - "16372:16379"
+    volumes:
+      - ./docker/redis/redis-cluster.conf:/usr/local/etc/redis/redis.conf
+    profiles:
+      - dev
+
+  redis-cluster-node-3:
+    image: redis:${DC_REDIS_VERSION:-7.2.4}-alpine
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - primary
+    ports:
+      - "7003:6379"
+      - "16373:16379"
     volumes:
       - ./docker/redis/redis-cluster.conf:/usr/local/etc/redis/redis.conf
     profiles:
@@ -286,11 +289,13 @@ services:
     networks:
       - primary
     depends_on:
-      - redis-cluster-node-0
       - redis-cluster-node-1
       - redis-cluster-node-2
+      - redis-cluster-node-3
     volumes:
       - ./docker/redis/:/usr/local/etc/redis/
+    profiles:
+      - dev
 
   kafka:
     image: bitnami/kafka:3.7.0
@@ -329,6 +334,6 @@ volumes:
   redis:
   redis-slave:
   redis-cluster-configure:
-  redis-cluster-node-0:
   redis-cluster-node-1:
   redis-cluster-node-2:
+  redis-cluster-node-3:

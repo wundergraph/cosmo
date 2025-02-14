@@ -34,8 +34,10 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 )
 
-type TransportPreHandler func(req *http.Request, ctx RequestContext) (*http.Request, *http.Response)
-type TransportPostHandler func(resp *http.Response, ctx RequestContext) *http.Response
+type (
+	TransportPreHandler  func(req *http.Request, ctx RequestContext) (*http.Request, *http.Response)
+	TransportPostHandler func(resp *http.Response, ctx RequestContext) *http.Response
+)
 
 type CustomTransport struct {
 	roundTripper http.RoundTripper
@@ -62,7 +64,6 @@ func NewCustomTransport(
 	metricStore metric.Store,
 	enableSingleFlight bool,
 ) *CustomTransport {
-
 	ct := &CustomTransport{
 		metricStore: metricStore,
 	}
@@ -81,7 +82,6 @@ func NewCustomTransport(
 }
 
 func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err error, resp *http.Response) {
-
 	reqContext := getRequestContext(req.Context())
 	activeSubgraph := reqContext.ActiveSubgraph(req)
 
@@ -120,7 +120,6 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 // RoundTrip of the engine upstream requests. The handler is called concurrently for each request.
 // Be aware that multiple modules can be active at the same time. Must be concurrency safe.
 func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
-
 	moduleContext := &moduleRequestContext{
 		requestContext: getRequestContext(req.Context()),
 		sendError:      nil,
@@ -195,7 +194,6 @@ func (ct *CustomTransport) allowSingleFlight(req *http.Request) bool {
 }
 
 func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Response, error) {
-
 	key := ct.singleFlightKey(req)
 	ct.sfMu.RLock()
 	item, shared := ct.sf[key]
@@ -345,7 +343,7 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 
 func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport http.RoundTripper) http.RoundTripper {
 	if t.subgraphTransportOptions != nil && t.subgraphTransportOptions.SubgraphMap != nil && len(t.subgraphTransportOptions.SubgraphMap) > 0 {
-		baseTransport = NewTimeoutTransport(t.subgraphTransportOptions, baseTransport, t.logger, t.proxy)
+		baseTransport = NewSubgraphTransport(t.subgraphTransportOptions, baseTransport, t.logger, t.proxy)
 	}
 
 	if t.localhostFallbackInsideDocker && docker.Inside() {
@@ -380,7 +378,6 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport ht
 			attributes = append(attributes, reqContext.telemetry.traceAttrs...)
 
 			span.SetAttributes(attributes...)
-
 		}),
 	)
 	tp := NewCustomTransport(
