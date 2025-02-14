@@ -186,6 +186,7 @@ type (
 		persistedOperationsConfig       config.PersistedOperationsConfig
 		automaticPersistedQueriesConfig config.AutomaticPersistedQueriesConfig
 		apolloCompatibilityFlags        config.ApolloCompatibilityFlags
+		apolloRouterCompatibilityFlags  config.ApolloRouterCompatibilityFlags
 		storageProviders                config.StorageProviders
 		eventsConfig                    config.EventsConfiguration
 		prometheusServer                *http.Server
@@ -1825,6 +1826,12 @@ func WithApolloCompatibilityFlagsConfig(cfg config.ApolloCompatibilityFlags) Opt
 			cfg.ReplaceValidationErrorStatus.Enabled = true
 		}
 		r.apolloCompatibilityFlags = cfg
+	}
+}
+
+func WithApolloRouterCompatibilityFlags(cfg config.ApolloRouterCompatibilityFlags) Option {
+	return func(r *Router) {
+		r.apolloRouterCompatibilityFlags = cfg
 	}
 }
 

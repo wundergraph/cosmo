@@ -2404,6 +2404,24 @@
         }
       }
     },
+    "apollo_router_compatibility_flags": {
+      "type": "object",
+      "description": "To enable full compatibility with Apollo Router you can enable certain compatibility flags, allowing you to use Cosmo Router as a drop-in replacement for Apollo Router",
+      "additionalProperties": false,
+      "properties": {
+        "replace_invalid_var_errors": {
+          "type": "object",
+          "description": "Produces the same error (message, extension code but not status code) as Apollo Router when an invalid variable is supplied.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      }
+    },
     "client_header": {
       "type": "object",
       "description": "The configuration to set custom client name and version header.",
