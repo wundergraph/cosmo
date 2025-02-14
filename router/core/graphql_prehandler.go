@@ -338,7 +338,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		if requestContext.telemetry.attributeExpressions != nil {
-			traceMetrics := requestContext.telemetry.attributeExpressions.expressionsAttributes(requestContext)
+			traceMetrics, err := requestContext.telemetry.attributeExpressions.expressionsAttributes(requestContext)
+			if err != nil {
+				requestLogger.Error("failed to resolve trace attribute", zap.Error(err))
+			}
 			requestContext.telemetry.addCommonAttribute(
 				traceMetrics...,
 			)
@@ -346,8 +349,12 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		if requestContext.telemetry.metricAttributeExpressions != nil {
+			metricAttrs, err := requestContext.telemetry.metricAttributeExpressions.expressionsAttributes(requestContext)
+			if err != nil {
+				requestLogger.Error("failed to resolve metric attribute", zap.Error(err))
+			}
 			requestContext.telemetry.addMetricAttribute(
-				requestContext.telemetry.metricAttributeExpressions.expressionsAttributes(requestContext)...,
+				metricAttrs...,
 			)
 		}
 

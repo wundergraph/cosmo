@@ -1,7 +1,9 @@
 package core
 
 import (
+	"errors"
 	"fmt"
+
 	"github.com/expr-lang/expr/vm"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -36,20 +38,22 @@ func newAttributeExpressions(logger *zap.Logger, attr []config.CustomAttribute) 
 	}, nil
 }
 
-func (r *attributeExpressions) expressionsAttributes(reqCtx *requestContext) []attribute.KeyValue {
+func (r *attributeExpressions) expressionsAttributes(reqCtx *requestContext) ([]attribute.KeyValue, error) {
 	if reqCtx == nil {
-		return nil
+		return nil, nil
 	}
+	errs := make([]error, 0)
 
 	var result []attribute.KeyValue
 	for exprKey, exprVal := range r.expressions {
 		val, err := reqCtx.ResolveStringExpression(exprVal)
 		if err != nil {
+			errs = append(errs, err)
 			r.logger.Error("failed to resolve expression", zap.Error(err))
 			continue
 		}
 		result = append(result, attribute.String(exprKey, val))
 	}
 
-	return result
+	return result, errors.Join(errs...)
 }

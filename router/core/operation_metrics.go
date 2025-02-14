@@ -2,9 +2,10 @@ package core
 
 import (
 	"context"
+	"time"
+
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	otelmetric "go.opentelemetry.io/otel/metric"
-	"time"
 
 	"go.uber.org/zap"
 
@@ -50,7 +51,11 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 	attrs = append(attrs, reqContext.telemetry.metricAttrs...)
 
 	if reqContext.telemetry.attributeExpressions != nil {
-		attrs = append(attrs, reqContext.telemetry.attributeExpressions.expressionsAttributes(reqContext)...)
+		additionalAttrs, err := reqContext.telemetry.attributeExpressions.expressionsAttributes(reqContext)
+		if err != nil {
+			m.logger.Error("failed to resolve metric attribute expressions", zap.Error(err))
+		}
+		attrs = append(attrs, additionalAttrs...)
 	}
 
 	rm := m.routerMetrics.MetricStore()
