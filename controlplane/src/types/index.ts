@@ -381,6 +381,8 @@ export type CustomAccessTokenClaims = {
   email: string;
   preferred_username: string;
   groups?: string[];
+  given_name?: string;
+  family_name?: string;
 };
 
 export type UserInfoEndpointResponse = {

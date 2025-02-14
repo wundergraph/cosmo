@@ -126,6 +126,8 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
         const userId = accessTokenPayload.sub!;
         const userEmail = accessTokenPayload.email!;
+        const firstName = accessTokenPayload.given_name || '';
+        const lastName = accessTokenPayload.family_name || '';
 
         const insertedSession = await opts.db.transaction(async (tx) => {
           // Upsert the user
@@ -278,6 +280,8 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           opts.platformWebhooks.send(PlatformEventName.USER_REGISTER_SUCCESS, {
             user_id: userId,
             user_email: userEmail,
+            user_first_name: firstName,
+            user_last_name: lastName,
           });
         }
 
