@@ -914,6 +914,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		ParseKitPoolSize:                    s.engineExecutionConfiguration.ParseKitPoolSize,
 		IntrospectionEnabled:                s.Config.introspection,
 		ApolloCompatibilityFlags:            s.apolloCompatibilityFlags,
+		ApolloRouterCompatibilityFlags:      s.apolloRouterCompatibilityFlags,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
