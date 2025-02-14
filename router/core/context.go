@@ -154,8 +154,14 @@ type requestTelemetryAttributes struct {
 	mapper *attributeMapper
 	// traceAttributeExpressions is a map of expressions that can be used to resolve dynamic attributes in traces
 	traceAttributeExpressions *attributeExpressions
+	// traceAttributeExpressionsAfterAuth is a map of expressions that can be used to resolve dynamic attributes in
+	// traces and also need authentication data
+	traceAttributeExpressionsAfterAuth *attributeExpressions
 	// metricAttributeExpressions is a map of expressions that can be used to resolve dynamic attributes in metrics
 	metricAttributeExpressions *attributeExpressions
+	// metricAttributeExpressionsAfterAuth is a map of expressions that can be used to resolve dynamic attributes in
+	// metrics and also need authentication data
+	metricAttributeExpressionsAfterAuth *attributeExpressions
 
 	// metricsEnabled indicates if metrics are enabled. If false, no metrics attributes will be added
 	metricsEnabled bool

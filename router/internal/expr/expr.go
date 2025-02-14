@@ -9,6 +9,7 @@ import (
 	"reflect"
 
 	"github.com/expr-lang/expr"
+	"github.com/expr-lang/expr/ast"
 	"github.com/expr-lang/expr/file"
 	"github.com/expr-lang/expr/vm"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -139,6 +140,16 @@ func CompileBoolExpression(s string) (*vm.Program, error) {
 // The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
 func CompileStringExpression(s string) (*vm.Program, error) {
 	v, err := expr.Compile(s, compileOptions(expr.AsKind(reflect.String))...)
+	if err != nil {
+		return nil, handleExpressionError(err)
+	}
+	return v, nil
+}
+
+// CompileStringExpression compiles an expression and returns the program. It is used for expressions that return strings
+// The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
+func CompileStringExpressionWithPatch(s string, visitor ast.Visitor) (*vm.Program, error) {
+	v, err := expr.Compile(s, compileOptions(expr.AsKind(reflect.String), expr.Patch(visitor))...)
 	if err != nil {
 		return nil, handleExpressionError(err)
 	}
