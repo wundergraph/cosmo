@@ -617,7 +617,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	// We might want to remap or exclude known attributes based on the configuration for metrics
 	mapper := newAttributeMapper(enableAttributeMapper, s.metricConfig.Attributes)
-	attExpressions, attErr := newAttributeExpressions(s.logger, s.metricConfig.Attributes)
+	attExpressions, attErr := newAttributeExpressions(s.metricConfig.Attributes)
 	if attErr != nil {
 		return nil, attErr
 	}
@@ -625,7 +625,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	var telemetryAttExpressions *attributeExpressions
 	if len(s.telemetryAttributes) > 0 {
 		var telemetryAttErr error
-		telemetryAttExpressions, telemetryAttErr = newAttributeExpressions(s.logger, s.telemetryAttributes)
+		telemetryAttExpressions, telemetryAttErr = newAttributeExpressions(s.telemetryAttributes)
 		if telemetryAttErr != nil {
 			return nil, telemetryAttErr
 		}

@@ -8,18 +8,15 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.opentelemetry.io/otel/attribute"
-	"go.uber.org/zap"
 )
 
 // attributeExpressions maps context attributes to custom attributes.
 type attributeExpressions struct {
-	logger *zap.Logger
-
 	// expressionsMapper is a map of expressions that can be used to resolve dynamic attributes
 	expressions map[string]*vm.Program
 }
 
-func newAttributeExpressions(logger *zap.Logger, attr []config.CustomAttribute) (*attributeExpressions, error) {
+func newAttributeExpressions(attr []config.CustomAttribute) (*attributeExpressions, error) {
 	attrExprMap := make(map[string]*vm.Program)
 
 	for _, a := range attr {
@@ -33,7 +30,6 @@ func newAttributeExpressions(logger *zap.Logger, attr []config.CustomAttribute) 
 	}
 
 	return &attributeExpressions{
-		logger:      logger,
 		expressions: attrExprMap,
 	}, nil
 }
@@ -49,7 +45,6 @@ func (r *attributeExpressions) expressionsAttributes(reqCtx *requestContext) ([]
 		val, err := reqCtx.ResolveStringExpression(exprVal)
 		if err != nil {
 			errs = append(errs, err)
-			r.logger.Error("failed to resolve expression", zap.Error(err))
 			continue
 		}
 		result = append(result, attribute.String(exprKey, val))
