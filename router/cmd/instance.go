@@ -72,6 +72,7 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 		core.WithPersistedOperationsConfig(cfg.PersistedOperationsConfig),
 		core.WithAutomatedPersistedQueriesConfig(cfg.AutomaticPersistedQueries),
 		core.WithApolloCompatibilityFlagsConfig(cfg.ApolloCompatibilityFlags),
+		core.WithApolloRouterCompatibilityFlags(cfg.ApolloRouterCompatabilityFlags),
 		core.WithStorageProviders(cfg.StorageProviders),
 		core.WithGraphQLPath(cfg.GraphQLPath),
 		core.WithModulesConfig(cfg.Modules),
