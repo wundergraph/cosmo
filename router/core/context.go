@@ -152,8 +152,8 @@ type requestTelemetryAttributes struct {
 	// configured in the custom attributes list. The mapper will potentially filter out attributes or include them.
 	// It will also remap the key if configured.
 	mapper *attributeMapper
-	// attributeExpressions is a map of expressions that can be used to resolve dynamic attributes
-	attributeExpressions *attributeExpressions
+	// traceAttributeExpressions is a map of expressions that can be used to resolve dynamic attributes in traces
+	traceAttributeExpressions *attributeExpressions
 	// metricAttributeExpressions is a map of expressions that can be used to resolve dynamic attributes in metrics
 	metricAttributeExpressions *attributeExpressions
 
@@ -639,7 +639,7 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 			metricsEnabled:             opts.metricsEnabled,
 			traceEnabled:               opts.traceEnabled,
 			mapper:                     opts.mapper,
-			attributeExpressions:       opts.telemetryAttributeExpressions,
+			traceAttributeExpressions:  opts.telemetryAttributeExpressions,
 			metricAttributeExpressions: opts.metricAttributeExpressions,
 		},
 		expressionContext: rootCtx,

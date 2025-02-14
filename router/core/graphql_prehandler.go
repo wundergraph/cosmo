@@ -337,8 +337,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			requestContext.expressionContext.Request.Auth = expr.LoadAuth(r.Context())
 		}
 
-		if requestContext.telemetry.attributeExpressions != nil {
-			traceMetrics, err := requestContext.telemetry.attributeExpressions.expressionsAttributes(requestContext)
+		if requestContext.telemetry.traceAttributeExpressions != nil {
+			traceMetrics, err := requestContext.telemetry.traceAttributeExpressions.expressionsAttributes(requestContext)
 			if err != nil {
 				requestLogger.Error("failed to resolve trace attribute", zap.Error(err))
 			}

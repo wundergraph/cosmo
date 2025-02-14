@@ -8938,7 +8938,7 @@ func TestFlakyTelemetry(t *testing.T) {
 		})
 	})
 
-	t.Run("custom telemetry metric with expression", func(t *testing.T) {
+	t.Run("custom trace metrics with expression", func(t *testing.T) {
 		t.Parallel()
 
 		const employeesQuery = `{"query":"{ employees { id } }"}`
