@@ -413,6 +413,11 @@
       "Enabled": false
     }
   },
+  "ApolloRouterCompatabilityFlags": {
+    "ReplaceInvalidVarErrors": {
+      "Enabled": false
+    }
+  },
   "ClientHeader": {
     "Name": "",
     "Version": ""
