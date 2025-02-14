@@ -8744,7 +8744,6 @@ func TestFlakyTelemetry(t *testing.T) {
 	t.Run("custom metric with expression", func(t *testing.T) {
 		t.Parallel()
 
-		const employeesQuery = `{"query":"{ employees { id } }"}`
 		const employeesQueryRequiringClaims = `{"query":"{ employees { id startDate } }"}`
 
 		t.Run("existing JWT claim is added", func(t *testing.T) {
@@ -8909,7 +8908,6 @@ func TestFlakyTelemetry(t *testing.T) {
 	t.Run("custom trace metrics with expression", func(t *testing.T) {
 		t.Parallel()
 
-		const employeesQuery = `{"query":"{ employees { id } }"}`
 		const employeesQueryRequiringClaims = `{"query":"{ employees { id startDate } }"}`
 
 		t.Run("existing JWT claim is added", func(t *testing.T) {
