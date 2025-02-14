@@ -14,7 +14,58 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-func TestApolloCompatibility(t *testing.T) {
+func TestApolloRouterCompatibility(t *testing.T) {
+	t.Parallel()
+
+	t.Run("enable replace invalid variable error", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
+					ReplaceInvalidVarErrors: config.ApolloRouterCompatibilityReplaceInvalidVarErrors{
+						Enabled: true,
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query FloatQuery($arg: Float) { floatField(arg: $arg) }`,
+				Variables: json.RawMessage(`{"arg":"INVALID"}`),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.Equal(t, `{"errors":[{"message":"invalid type for variable: 'arg'","extensions":{"code":"VALIDATION_INVALID_TYPE_VARIABLE"}}]}`, res.Body)
+		})
+	})
+
+	t.Run("enable replace invalid variable error AND replace validation error status", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+					ReplaceValidationErrorStatus: config.ApolloCompatibilityReplaceValidationErrorStatus{
+						Enabled: true,
+					},
+				}),
+				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
+					ReplaceInvalidVarErrors: config.ApolloRouterCompatibilityReplaceInvalidVarErrors{
+						Enabled: true,
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query FloatQuery($arg: Float) { floatField(arg: $arg) }`,
+				Variables: json.RawMessage(`{"arg":"INVALID"}`),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			assert.Equal(t, `{"errors":[{"message":"invalid type for variable: 'arg'","extensions":{"code":"VALIDATION_INVALID_TYPE_VARIABLE"}}]}`, res.Body)
+		})
+	})
+}
+
+func TestApolloGatewayCompatibility(t *testing.T) {
 	t.Parallel()
 
 	t.Run("enable all", func(t *testing.T) {
