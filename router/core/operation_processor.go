@@ -37,9 +37,11 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-// staticOperationName is used to replace the operation name in the document when generating the operation ID
-// this ensures that the operation ID is the same for the same operation regardless of the operation name
-var staticOperationName = []byte("O")
+var (
+	// staticOperationName is used to replace the operation name in the document when generating the operation ID
+	// this ensures that the operation ID is the same for the same operation regardless of the operation name
+	staticOperationName = []byte("O")
+)
 
 type ParsedOperation struct {
 	// ID represents a unique-ish ID for the operation calculated by hashing
@@ -87,7 +89,9 @@ func (e invalidExtensionsTypeError) ExtensionCode() string {
 	return ""
 }
 
-var _ HttpError = invalidExtensionsTypeError(0)
+var (
+	_ HttpError = invalidExtensionsTypeError(0)
+)
 
 type OperationProcessorOptions struct {
 	Executor                            *Executor
@@ -219,6 +223,7 @@ func (o *OperationKit) Free() {
 // It follows the GraphQL over HTTP specification for GET requests https://graphql.github.io/graphql-over-http/draft/#sec-GET
 // We always compact the variables and extensions to ensure that we produce easy to parse JSON for the engine
 func (o *OperationKit) UnmarshalOperationFromURL(url *url.URL) error {
+
 	values := url.Query()
 
 	query := values.Get("query")
@@ -433,8 +438,8 @@ const (
 )
 
 func (o *OperationKit) isIntrospectionQuery() (result bool, err error) {
-	operationDefinitionRef := ast.InvalidRef
-	possibleOperationDefinitionRefs := make([]int, 0)
+	var operationDefinitionRef = ast.InvalidRef
+	var possibleOperationDefinitionRefs = make([]int, 0)
 
 	for i := 0; i < len(o.kit.doc.RootNodes); i++ {
 		if o.kit.doc.RootNodes[i].Kind == ast.NodeKindOperationDefinition {
@@ -517,6 +522,7 @@ func (o *OperationKit) Parse() error {
 
 	if !o.introspectionEnabled {
 		isIntrospection, err := o.isIntrospectionQuery()
+
 		if err != nil {
 			return &httpGraphqlError{
 				message:    "could not determine if operation was an introspection query",
@@ -672,6 +678,7 @@ type ComplexityCacheEntry struct {
 }
 
 func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error) {
+
 	skipIncludeVariableNames := o.skipIncludeVariableNames()
 	cacheKey := o.normalizationCacheKey(skipIncludeVariableNames)
 	if o.cache != nil && o.cache.normalizationCache != nil {
@@ -859,6 +866,7 @@ func (o *OperationKit) RemapVariables(disabled bool) error {
 }
 
 func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bool, includeOpName bool, err error) {
+
 	if o.cache == nil || o.cache.persistedOperationNormalizationCache == nil {
 		return false, false, nil
 	}
@@ -1112,7 +1120,9 @@ func (o *OperationKit) runComplexityComparisons(complexityLimitConfig *config.Co
 	return nil
 }
 
-var literalIF = []byte("if")
+var (
+	literalIF = []byte("if")
+)
 
 func (o *OperationKit) skipIncludeVariableNames() []string {
 	if len(o.kit.doc.Directives) == 0 {
