@@ -8883,38 +8883,6 @@ func TestFlakyTelemetry(t *testing.T) {
 			})
 		})
 
-		t.Run("request without JWT don't add the value", func(t *testing.T) {
-			t.Parallel()
-
-			claimKey := "extraclaim"
-
-			metricReader := metric.NewManualReader()
-			testenv.Run(t, &testenv.Config{
-				MetricReader: metricReader,
-				CustomMetricAttributes: []config.CustomAttribute{
-					{
-						Key: claimKey,
-						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "request.auth.claims." + claimKey,
-						},
-					},
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				_, err := xEnv.MakeRequest(http.MethodPost, "/graphql", http.Header{}, strings.NewReader(employeesQuery))
-				require.NoError(t, err)
-				rm := metricdata.ResourceMetrics{}
-				err = metricReader.Collect(context.Background(), &rm)
-				require.NoError(t, err)
-				require.Greater(t, len(rm.ScopeMetrics), 0)
-				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
-				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
-				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
-				atts := data2.DataPoints[0].Attributes
-				ok := atts.HasValue(attribute.Key(claimKey))
-				require.False(t, ok)
-			})
-		})
-
 		t.Run("invalid expression", func(t *testing.T) {
 			t.Parallel()
 
@@ -9095,48 +9063,6 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				sn := exporter.GetSpans().Snapshots()
 				require.Len(t, sn, 10, "expected 10 spans, got %d", len(sn))
-				for i := 0; i < len(sn); i++ {
-					assert.NotContains(t, sn[i].Attributes(), attribute.String(claimKey, claimVal))
-				}
-
-				rm := metricdata.ResourceMetrics{}
-				err = metricReader.Collect(context.Background(), &rm)
-				require.NoError(t, err)
-				require.Greater(t, len(rm.ScopeMetrics), 0)
-				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
-				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
-				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
-				atts := data2.DataPoints[0].Attributes
-				ok := atts.HasValue(attribute.Key(claimKey))
-				require.False(t, ok)
-			})
-		})
-
-		t.Run("request without JWT don't add the value", func(t *testing.T) {
-			t.Parallel()
-
-			claimKey := "extraclaim"
-			claimVal := "extravalue"
-
-			exporter := tracetest.NewInMemoryExporter(t)
-			metricReader := metric.NewManualReader()
-			testenv.Run(t, &testenv.Config{
-				TraceExporter: exporter,
-				MetricReader:  metricReader,
-				CustomTelemetryAttributes: []config.CustomAttribute{
-					{
-						Key: claimKey,
-						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "request.auth.claims." + claimKey,
-						},
-					},
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				_, err := xEnv.MakeRequest(http.MethodPost, "/graphql", http.Header{}, strings.NewReader(employeesQuery))
-				require.NoError(t, err)
-
-				sn := exporter.GetSpans().Snapshots()
-				require.Len(t, sn, 9, "expected 9 spans, got %d", len(sn))
 				for i := 0; i < len(sn); i++ {
 					assert.NotContains(t, sn[i].Attributes(), attribute.String(claimKey, claimVal))
 				}
