@@ -43,7 +43,6 @@ func (v *VisitorCheckForRequestAuthAccess) Visit(node *ast.Node) {
 			}
 		}
 	}
-	return
 }
 
 func newAttributeExpressions(attr []config.CustomAttribute) (*attributeExpressions, error) {

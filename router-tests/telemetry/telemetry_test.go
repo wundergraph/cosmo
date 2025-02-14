@@ -8916,16 +8916,24 @@ func TestFlakyTelemetry(t *testing.T) {
 			exporter := tracetest.NewInMemoryExporter(t)
 			metricReader := metric.NewManualReader()
 			authenticators, authServer := integration.ConfigureAuth(t)
-			claimKey := "extraclaim"
-			claimVal := "extravalue"
+			claimKeyWithAuth := "extraclaim"
+			claimValWithAuth := "extravalue"
+			headerKey := "X-Custom-Header"
+			headerVal := "extravalue2"
 			testenv.Run(t, &testenv.Config{
 				TraceExporter: exporter,
 				MetricReader:  metricReader,
 				CustomTelemetryAttributes: []config.CustomAttribute{
 					{
-						Key: claimKey,
+						Key: claimKeyWithAuth,
 						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "request.auth.claims.custom_value." + claimKey,
+							Expression: "request.auth.claims.custom_value." + claimKeyWithAuth,
+						},
+					},
+					{
+						Key: headerKey,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.header.Get('" + headerKey + "')",
 						},
 					},
 				},
@@ -8937,12 +8945,13 @@ func TestFlakyTelemetry(t *testing.T) {
 				token, err := authServer.Token(map[string]any{
 					"scope": "read:employee read:private",
 					"custom_value": map[string]string{
-						claimKey: claimVal,
+						claimKeyWithAuth: claimValWithAuth,
 					},
 				})
 				require.NoError(t, err)
 				header := http.Header{
 					"Authorization": []string{"Bearer " + token},
+					headerKey:       []string{headerVal},
 				}
 				_, err = xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
 				require.NoError(t, err)
@@ -8951,10 +8960,13 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.Len(t, sn, 10, "expected 10 spans, got %d", len(sn))
 				for i := 0; i < len(sn); i++ {
 					if slices.Contains([]string{"HTTP - Read Body", "Authenticate"}, sn[i].Name()) {
-						assert.NotContains(t, sn[i].Attributes(), attribute.String(claimKey, claimVal))
+						assert.NotContains(t, sn[i].Attributes(), attribute.String(claimKeyWithAuth, claimValWithAuth))
 					} else {
-						assert.Contains(t, sn[i].Attributes(), attribute.String(claimKey, claimVal))
+						assert.Contains(t, sn[i].Attributes(), attribute.String(claimKeyWithAuth, claimValWithAuth))
 					}
+				}
+				for i := 0; i < len(sn); i++ {
+					assert.Contains(t, sn[i].Attributes(), attribute.String(headerKey, headerVal))
 				}
 
 				rm := metricdata.ResourceMetrics{}
@@ -8965,9 +8977,9 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
 				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
 				atts := data2.DataPoints[0].Attributes
-				val, ok := atts.Value(attribute.Key(claimKey))
+				val, ok := atts.Value(attribute.Key(claimKeyWithAuth))
 				require.True(t, ok)
-				require.Equal(t, claimVal, val.AsString())
+				require.Equal(t, claimValWithAuth, val.AsString())
 			})
 		})
 
