@@ -1168,7 +1168,7 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 			ApolloCompatibilityFlags: apollocompatibility.Flags{
 				ReplaceInvalidVarError: options.apolloCompatibilityFlags.ReplaceInvalidVarErrors.Enabled,
 			},
-			ApolloRouterCompatabilityFlags: apollocompatibility.ApolloRouterFlags{
+			ApolloRouterCompatibilityFlags: apollocompatibility.ApolloRouterFlags{
 				ReplaceInvalidVarError: options.apolloRouterCompatibilityFlags.ReplaceInvalidVarErrors.Enabled,
 			},
 		}),
