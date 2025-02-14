@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.123.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.122.0...controlplane@0.123.0) (2025-02-14)
+
+### Features
+
+* send user's firstName and lastName on user's successful registration ([#1590](https://github.com/wundergraph/cosmo/issues/1590)) ([7bdcc9d](https://github.com/wundergraph/cosmo/commit/7bdcc9dbbc8af76370ff02b80697cec664c6ce3b)) (@JivusAyrus)
+
 # [0.122.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.121.7...controlplane@0.122.0) (2025-02-12)
 
 ### Bug Fixes
