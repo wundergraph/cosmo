@@ -125,7 +125,7 @@ func TestBlockOperations(t *testing.T) {
 		t.Run("should block operation by scope expression condition", func(t *testing.T) {
 			t.Parallel()
 
-			authenticators, authServer := configureAuth(t)
+			authenticators, authServer := ConfigureAuth(t)
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -278,7 +278,7 @@ func TestBlockOperations(t *testing.T) {
 		t.Run("should block subscriptions by scope match expression", func(t *testing.T) {
 			t.Parallel()
 
-			authenticators, authServer := configureAuth(t)
+			authenticators, authServer := ConfigureAuth(t)
 
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
@@ -370,7 +370,7 @@ func TestBlockOperations(t *testing.T) {
 		t.Run("should block subscriptions by scope match expression and from initial payload enabled", func(t *testing.T) {
 			t.Parallel()
 
-			authenticators, authServer := configureAuth(t)
+			authenticators, authServer := ConfigureAuth(t)
 
 			testenv.Run(t, &testenv.Config{
 				ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
