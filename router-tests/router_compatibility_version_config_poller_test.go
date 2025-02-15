@@ -44,8 +44,8 @@ func TestRouterCompatibilityVersionConfigPoller(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			resp, err := configPoller.GetRouterConfig(context.Background())
-			require.NoError(t, err)
+			resp, configErr := configPoller.GetRouterConfig(context.Background())
+			require.NoError(t, configErr)
 			require.NotNil(t, resp)
 			assert.Equal(t, "1:routerconfigs/latest.json", resp.Config.CompatibilityVersion)
 		})
@@ -76,8 +76,8 @@ func TestRouterCompatibilityVersionConfigPoller(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			resp, err := configPoller.GetRouterConfig(context.Background())
-			require.NoError(t, err)
+			resp, configErr := configPoller.GetRouterConfig(context.Background())
+			require.NoError(t, configErr)
 			require.NotNil(t, resp)
 			// The threshold in the config itself remains at 1 as the real router threshold is currently 1
 			assert.Equal(t, "1:routerconfigs/v2/latest.json", resp.Config.CompatibilityVersion)
@@ -89,14 +89,17 @@ func TestVersionPath(t *testing.T) {
 	t.Parallel()
 
 	t.Run("test that v1 returns the correct path", func(t *testing.T) {
+		t.Parallel()
 		assert.Equal(t, "", routerconfig.VersionPath(1))
 	})
 
 	t.Run("test that v2 returns the correct path", func(t *testing.T) {
+		t.Parallel()
 		assert.Equal(t, "v2/", routerconfig.VersionPath(2))
 	})
 
 	t.Run("test that v99 returns the correct path", func(t *testing.T) {
+		t.Parallel()
 		assert.Equal(t, "v99/", routerconfig.VersionPath(99))
 	})
 }
