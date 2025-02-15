@@ -184,7 +184,8 @@
           "ValueFrom": {
             "RequestHeader": "",
             "ContextField": "operation_name",
-            "ResponseHeader": ""
+            "ResponseHeader": "",
+            "Expression": ""
           }
         }
       ],
@@ -306,7 +307,18 @@
           "ValueFrom": {
             "RequestHeader": "",
             "ContextField": "operation_name",
-            "ResponseHeader": ""
+            "ResponseHeader": "",
+            "Expression": ""
+          }
+        },
+        {
+          "Key": "request_information",
+          "Default": "",
+          "ValueFrom": {
+            "RequestHeader": "",
+            "ContextField": "",
+            "ResponseHeader": "",
+            "Expression": "request.error ?? 'success'"
           }
         }
       ]
@@ -320,7 +332,8 @@
           "ValueFrom": {
             "RequestHeader": "",
             "ContextField": "",
-            "ResponseHeader": "X-Response-Field"
+            "ResponseHeader": "X-Response-Field",
+            "Expression": ""
           }
         }
       ]
