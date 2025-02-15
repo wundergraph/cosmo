@@ -794,6 +794,14 @@ type ApolloCompatibilityReplaceValidationErrorStatus struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_REPLACE_VALIDATION_ERROR_STATUS_ENABLED"`
 }
 
+type ApolloRouterCompatibilityFlags struct {
+	ReplaceInvalidVarErrors ApolloRouterCompatibilityReplaceInvalidVarErrors `yaml:"replace_invalid_var_errors"`
+}
+
+type ApolloRouterCompatibilityReplaceInvalidVarErrors struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_ENABLED"`
+}
+
 type CacheWarmupSource struct {
 	Filesystem *CacheWarmupFileSystemSource `yaml:"filesystem,omitempty"`
 }
@@ -872,12 +880,13 @@ type Config struct {
 
 	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation"`
 
-	StorageProviders          StorageProviders                `yaml:"storage_providers"`
-	ExecutionConfig           ExecutionConfig                 `yaml:"execution_config"`
-	PersistedOperationsConfig PersistedOperationsConfig       `yaml:"persisted_operations"`
-	AutomaticPersistedQueries AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
-	ApolloCompatibilityFlags  ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
-	ClientHeader              ClientHeader                    `yaml:"client_header"`
+	StorageProviders               StorageProviders                `yaml:"storage_providers"`
+	ExecutionConfig                ExecutionConfig                 `yaml:"execution_config"`
+	PersistedOperationsConfig      PersistedOperationsConfig       `yaml:"persisted_operations"`
+	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
+	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
+	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
+	ClientHeader                   ClientHeader                    `yaml:"client_header"`
 }
 
 type PlaygroundConfig struct {

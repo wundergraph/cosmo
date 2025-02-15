@@ -108,6 +108,7 @@ type OperationProcessorOptions struct {
 	ParseKitPoolSize               int
 	IntrospectionEnabled           bool
 	ApolloCompatibilityFlags       config.ApolloCompatibilityFlags
+	ApolloRouterCompatibilityFlags config.ApolloRouterCompatibilityFlags
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -1152,7 +1153,8 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 }
 
 type parseKitOptions struct {
-	apolloCompatibilityFlags config.ApolloCompatibilityFlags
+	apolloCompatibilityFlags       config.ApolloCompatibilityFlags
+	apolloRouterCompatibilityFlags config.ApolloRouterCompatibilityFlags
 }
 
 func createParseKit(i int, options *parseKitOptions) *parseKit {
@@ -1176,6 +1178,9 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 			ApolloCompatibilityFlags: apollocompatibility.Flags{
 				ReplaceInvalidVarError: options.apolloCompatibilityFlags.ReplaceInvalidVarErrors.Enabled,
 			},
+			ApolloRouterCompatibilityFlags: apollocompatibility.ApolloRouterFlags{
+				ReplaceInvalidVarError: options.apolloRouterCompatibilityFlags.ReplaceInvalidVarErrors.Enabled,
+			},
 		}),
 		operationValidator: astvalidation.DefaultOperationValidator(astvalidation.WithApolloCompatibilityFlags(
 			apollocompatibility.Flags{
@@ -1197,7 +1202,8 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		parseKitSemaphore:        make(chan int, opts.ParseKitPoolSize),
 		introspectionEnabled:     opts.IntrospectionEnabled,
 		parseKitOptions: &parseKitOptions{
-			apolloCompatibilityFlags: opts.ApolloCompatibilityFlags,
+			apolloCompatibilityFlags:       opts.ApolloCompatibilityFlags,
+			apolloRouterCompatibilityFlags: opts.ApolloRouterCompatibilityFlags,
 		},
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {
