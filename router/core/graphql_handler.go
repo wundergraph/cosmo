@@ -6,13 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
-	"strings"
-
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
+	"io"
+	"net/http"
+	"strings"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 
@@ -182,6 +181,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		w.WriteHeader(http.StatusOK)
+
 		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(resp.ResolveAcquireWaitTime.Milliseconds()))
 	case *plan.SubscriptionResponsePlan:
 		var (
@@ -223,6 +224,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errCouldNotResolveResponse), requestContext.logger)
 			return
 		}
+
+		w.WriteHeader(http.StatusOK)
 	default:
 		requestContext.logger.Error("unsupported plan kind")
 		trackFinalResponseError(ctx.Context(), errOperationPlanUnsupported)
