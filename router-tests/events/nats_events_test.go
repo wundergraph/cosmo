@@ -460,6 +460,7 @@ func TestNatsEvents(t *testing.T) {
 					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":1}}}")
 					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":2}}}")
 					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":3}}}")
+					assertLineEquals(t, reader, "")
 					assertLineEquals(t, reader, "--graphql--")
 				}()
 
