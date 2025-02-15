@@ -58,6 +58,42 @@ func TestPropagateHeaderRule(t *testing.T) {
 		assert.Equal(t, "test3", updatedClientReq.Header.Get("X-Test-3"))
 	})
 
+	t.Run("Should propagate repeated header names", func(t *testing.T) {
+
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{
+						Operation: "propagate",
+						Named:     "X-Test-1",
+					},
+				},
+			},
+		})
+		assert.Nil(t, err)
+
+		rr := httptest.NewRecorder()
+
+		clientReq, err := http.NewRequest("POST", "http://localhost", nil)
+		require.NoError(t, err)
+		clientReq.Header.Add("X-Test-1", "test1")
+		clientReq.Header.Add("X-Test-1", "test2")
+
+		originReq, err := http.NewRequest("POST", "http://localhost", nil)
+		assert.Nil(t, err)
+
+		updatedClientReq, _ := ht.OnOriginRequest(originReq, &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			request:          clientReq,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver(nil),
+		})
+
+		assert.Len(t, updatedClientReq.Header, 1)
+		assert.Equal(t, []string{"test1", "test2"}, updatedClientReq.Header.Values("X-Test-1"))
+	})
+
 	t.Run("Should propagate based on matching regex / matching", func(t *testing.T) {
 		ht, err := NewHeaderPropagation(&config.HeaderRules{
 			All: &config.GlobalHeaderRule{
@@ -217,7 +253,7 @@ func TestPropagateHeaderRule(t *testing.T) {
 
 	})
 
-	t.Run("Should handle nil resonses", func(t *testing.T) {
+	t.Run("Should handle nil responses", func(t *testing.T) {
 		ht, err := NewHeaderPropagation(&config.HeaderRules{
 			All: &config.GlobalHeaderRule{},
 		})
