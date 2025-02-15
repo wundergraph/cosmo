@@ -50,6 +50,21 @@ func TestVisitorCheckForRequestAuthAccess_Visit(t *testing.T) {
 			expr:            "request.auth.claims['val'] == 'test' ? 'yes' : 'no'",
 			expectedHasAuth: true,
 		},
+		{
+			name:            "using request.url and request.auth.claims",
+			expr:            "request.auth.claims['val'] == 'test' || request.url.path == '/test' ? 'yes' : 'no'",
+			expectedHasAuth: true,
+		},
+		{
+			name:            "using request.auth as an argument in a array function",
+			expr:            "one(request.auth.scopes, # == 'test') ? 'yes' : 'no'",
+			expectedHasAuth: true,
+		},
+		{
+			name:            "using request.auth as an argument in a map function",
+			expr:            "values(request.auth.claims) == ['test'] ? 'yes' : 'no'",
+			expectedHasAuth: true,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			v := VisitorCheckForRequestAuthAccess{}
