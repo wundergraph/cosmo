@@ -1,4 +1,4 @@
-import { randomFill } from 'node:crypto';
+import { randomFill, randomUUID } from 'node:crypto';
 import { S3ClientConfig } from '@aws-sdk/client-s3';
 import { HandlerContext } from '@connectrpc/connect';
 import {
@@ -79,9 +79,12 @@ export const enrichLogger = (
   logger: FastifyBaseLogger,
   authContext: Partial<AuthContext & GraphKeyAuthContext>,
 ) => {
+  const requestId = ctx.requestHeader.get('x-request-id') ?? randomUUID();
+
   const newLogger = logger.child({
     service: ctx.service.typeName,
     method: ctx.method.name,
+    requestId,
     actor: {
       userId: authContext.userId,
       organizationId: authContext.organizationId,
