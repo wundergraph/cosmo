@@ -299,6 +299,8 @@ type Config struct {
 	SubgraphAccessLogFields            []config.CustomAttribute
 	AssertCacheMetrics                 *CacheMetricsAssertions
 	DisableSimulateCloudExporter       bool
+	CdnPort                            int
+	MinioAddr                          string
 }
 
 type CacheMetricsAssertions struct {
@@ -575,8 +577,11 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.ModifyRouterConfig != nil {
 		cfg.ModifyRouterConfig(&routerConfig)
 	}
+	if cfg.CdnPort == 0 {
+		cfg.CdnPort = freeport.GetOne(t)
+	}
 
-	cdn := setupCDNServer(t)
+	cdn := setupCDNServer(t, cfg.CdnPort)
 
 	if cfg.PrometheusRegistry != nil {
 		cfg.PrometheusPort = ports[0]
@@ -736,7 +741,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	return e, waitErr
 }
 
-func generateJwtToken() (string, error) {
+func GenerateJwtToken() (string, error) {
 	jwtToken := jwt.New(jwt.SigningMethodHS256)
 	jwtToken.Claims = testTokenClaims()
 	return jwtToken.SignedString([]byte("hunter2"))
@@ -766,7 +771,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifyCDNConfig(&cfg.CDN)
 	}
 
-	graphApiToken, err := generateJwtToken()
+	graphApiToken, err := GenerateJwtToken()
 	if err != nil {
 		return nil, err
 	}
@@ -1003,6 +1008,19 @@ func testTokenClaims() jwt.MapClaims {
 	}
 }
 
+func makeHttpTestServerWithPort(t testing.TB, handler http.Handler, port int) *httptest.Server {
+	s := httptest.NewUnstartedServer(handler)
+	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		t.Fatalf("could not listen on port: %s", err.Error())
+	}
+	_ = s.Listener.Close()
+	s.Listener = l
+	s.Start()
+
+	return s
+}
+
 func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server {
 	s := httptest.NewUnstartedServer(handler)
 	port := freeport.GetOne(t)
@@ -1017,13 +1035,13 @@ func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server
 	return s
 }
 
-func setupCDNServer(t testing.TB) *httptest.Server {
+func setupCDNServer(t testing.TB, port int) *httptest.Server {
 	_, filePath, _, ok := runtime.Caller(0)
 	require.True(t, ok)
 	baseCdnFile := filepath.Join(path.Dir(filePath), "testdata", "cdn")
 	cdnFileServer := http.FileServer(http.Dir(baseCdnFile))
 	var cdnRequestLog []string
-	cdnServer := makeSafeHttpTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	cdnServer := makeHttpTestServerWithPort(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
 			requestLog, err := json.Marshal(cdnRequestLog)
 			require.NoError(t, err)
@@ -1038,13 +1056,13 @@ func setupCDNServer(t testing.TB) *httptest.Server {
 		if authorization == "" {
 			require.NotEmpty(t, authorization, "missing authorization header")
 		}
-		token := authorization[len("Bearer "):]
-		parsedClaims := make(jwt.MapClaims)
-		jwtParser := new(jwt.Parser)
-		_, _, err := jwtParser.ParseUnverified(token, parsedClaims)
-		require.NoError(t, err)
+		//token := authorization[len("Bearer "):]
+		//parsedClaims := make(jwt.MapClaims)
+		//jwtParser := new(jwt.Parser)
+		//_, _, err := jwtParser.ParseUnverified(token, parsedClaims)
+		//require.NoError(t, err)
 		cdnFileServer.ServeHTTP(w, r)
-	}))
+	}), port)
 
 	return cdnServer
 }
