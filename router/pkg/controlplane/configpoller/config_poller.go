@@ -30,16 +30,15 @@ type ConfigPoller interface {
 }
 
 type configPoller struct {
-	graphApiToken              string
-	logger                     *zap.Logger
-	latestRouterConfigVersion  string
-	latestRouterConfigDate     time.Time
-	poller                     controlplane.Poller
-	pollInterval               time.Duration
-	pollJitter                 time.Duration
-	configClient               routerconfig.Client
-	fallbackConfigClient       *routerconfig.Client
-	routerCompatibilityVersion int
+	graphApiToken             string
+	logger                    *zap.Logger
+	latestRouterConfigVersion string
+	latestRouterConfigDate    time.Time
+	poller                    controlplane.Poller
+	pollInterval              time.Duration
+	pollJitter                time.Duration
+	configClient              routerconfig.Client
+	fallbackConfigClient      *routerconfig.Client
 }
 
 func New(token string, opts ...Option) ConfigPoller {
