@@ -65,6 +65,11 @@ func TestVisitorCheckForRequestAuthAccess_Visit(t *testing.T) {
 			expr:            "values(request.auth.claims) == ['test'] ? 'yes' : 'no'",
 			expectedHasAuth: true,
 		},
+		{
+			name:            "using request.auth as an argument of len and request url path",
+			expr:            "request.url.path + string(len(request.auth.claims))",
+			expectedHasAuth: true,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			v := VisitorCheckForRequestAuthAccess{}
