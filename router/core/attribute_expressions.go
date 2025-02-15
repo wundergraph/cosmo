@@ -38,7 +38,7 @@ func (v *VisitorCheckForRequestAuthAccess) Visit(node *ast.Node) {
 		property, propertyOk := n.Property.(*ast.StringNode)
 		node, nodeOk := n.Node.(*ast.IdentifierNode)
 		if propertyOk && nodeOk {
-			if node.Value == "request" && property.Value == "auth" {
+			if node.Value == expr.ExprRequestKey && property.Value == expr.ExprRequestAuthKey {
 				v.HasAuth = true
 			}
 		}

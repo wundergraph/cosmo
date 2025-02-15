@@ -31,15 +31,18 @@ import (
 * See https://github.com/expr-lang/expr/issues/734
  */
 
+const ExprRequestKey = "request"
+const ExprRequestAuthKey = "auth"
+
 // Context is the context for expressions parser when evaluating dynamic expressions
 type Context struct {
-	Request Request `expr:"request"`
+	Request Request `expr:"request"` // if changing the expr tag, the ExprRequestKey should be updated
 }
 
 // Request is the context for the request object in expressions. Be aware, that only value receiver methods
 // are exported in the expr environment. This is because the expressions are evaluated in a read-only context.
 type Request struct {
-	Auth   RequestAuth    `expr:"auth"`
+	Auth   RequestAuth    `expr:"auth"` // if changing the expr tag, the ExprRequestAuthKey should be updated
 	URL    RequestURL     `expr:"url"`
 	Header RequestHeaders `expr:"header"`
 }
