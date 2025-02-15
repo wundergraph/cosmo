@@ -299,8 +299,7 @@ type Config struct {
 	SubgraphAccessLogFields            []config.CustomAttribute
 	AssertCacheMetrics                 *CacheMetricsAssertions
 	DisableSimulateCloudExporter       bool
-	CdnPort                            int
-	MinioAddr                          string
+	CdnSever                           *httptest.Server
 }
 
 type CacheMetricsAssertions struct {
@@ -577,11 +576,11 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.ModifyRouterConfig != nil {
 		cfg.ModifyRouterConfig(&routerConfig)
 	}
-	if cfg.CdnPort == 0 {
-		cfg.CdnPort = freeport.GetOne(t)
-	}
 
-	cdn := setupCDNServer(t, cfg.CdnPort)
+	cdnServer := cfg.CdnSever
+	if cfg.CdnSever == nil {
+		cdnServer = SetupCDNServer(t, freeport.GetOne(t))
+	}
 
 	if cfg.PrometheusRegistry != nil {
 		cfg.PrometheusPort = ports[0]
@@ -604,7 +603,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	kafkaStarted.Wait()
 
-	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdn, natsSetup)
+	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
 	if err != nil {
 		return nil, err
 	}
@@ -701,7 +700,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		Router:                  rr,
 		RouterURL:               rr.BaseURL(),
 		RouterClient:            client,
-		CDN:                     cdn,
+		CDN:                     cdnServer,
 		NatsData:                natsSetup,
 		SubgraphRequestCount:    counters,
 		KafkaAdminClient:        kafkaAdminClient,
@@ -1035,7 +1034,7 @@ func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server
 	return s
 }
 
-func setupCDNServer(t testing.TB, port int) *httptest.Server {
+func SetupCDNServer(t testing.TB, port int) *httptest.Server {
 	_, filePath, _, ok := runtime.Caller(0)
 	require.True(t, ok)
 	baseCdnFile := filepath.Join(path.Dir(filePath), "testdata", "cdn")

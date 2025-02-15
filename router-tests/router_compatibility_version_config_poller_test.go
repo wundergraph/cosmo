@@ -22,6 +22,7 @@ func TestRouterCompatibilityVersionConfigPoller(t *testing.T) {
 	t.Run("test that a v1 router compatibility version config is requested from the correct cdn path", func(t *testing.T) {
 		t.Parallel()
 		cdnPort := freeport.GetOne(t)
+		cdnServer := testenv.SetupCDNServer(t, cdnPort)
 		token, err := testenv.GenerateJwtToken()
 		require.NoError(t, err)
 		client, err := cdn.NewClient(fmt.Sprintf("http://127.0.0.1:%d", cdnPort), token, &cdn.Options{
@@ -36,7 +37,7 @@ func TestRouterCompatibilityVersionConfigPoller(t *testing.T) {
 		)
 
 		testenv.Run(t, &testenv.Config{
-			CdnPort: cdnPort,
+			CdnSever: cdnServer,
 			RouterConfig: &testenv.RouterConfig{
 				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
 					return configPoller
@@ -53,6 +54,7 @@ func TestRouterCompatibilityVersionConfigPoller(t *testing.T) {
 	t.Run("test that a v2 router compatibility version config is requested from the correct cdn path", func(t *testing.T) {
 		t.Parallel()
 		cdnPort := freeport.GetOne(t)
+		cdnServer := testenv.SetupCDNServer(t, cdnPort)
 		token, err := testenv.GenerateJwtToken()
 		require.NoError(t, err)
 		client, err := cdn.NewClient(fmt.Sprintf("http://127.0.0.1:%d", cdnPort), token, &cdn.Options{
@@ -67,7 +69,7 @@ func TestRouterCompatibilityVersionConfigPoller(t *testing.T) {
 		)
 
 		testenv.Run(t, &testenv.Config{
-			CdnPort: cdnPort,
+			CdnSever: cdnServer,
 			RouterConfig: &testenv.RouterConfig{
 				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
 					return configPoller
