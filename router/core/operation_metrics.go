@@ -50,14 +50,6 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 	attrs = append(attrs, semconv.HTTPStatusCode(statusCode))
 	attrs = append(attrs, reqContext.telemetry.metricAttrs...)
 
-	if reqContext.telemetry.traceAttributeExpressions != nil {
-		additionalAttrs, err := reqContext.telemetry.traceAttributeExpressions.expressionsAttributes(reqContext)
-		if err != nil {
-			m.logger.Error("failed to resolve metric attribute expressions", zap.Error(err))
-		}
-		attrs = append(attrs, additionalAttrs...)
-	}
-
 	rm := m.routerMetrics.MetricStore()
 
 	latency := time.Since(m.operationStartTime)
