@@ -44,7 +44,7 @@ func TestRouterCompatibilityVersionConfigPoller(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			resp, configErr := configPoller.GetRouterConfig(context.Background())
+			resp, configErr := client.RouterConfig(context.Background(), "1", time.Now())
 			require.NoError(t, configErr)
 			require.NotNil(t, resp)
 			assert.Equal(t, "1:routerconfigs/latest.json", resp.Config.CompatibilityVersion)
@@ -76,7 +76,7 @@ func TestRouterCompatibilityVersionConfigPoller(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			resp, configErr := configPoller.GetRouterConfig(context.Background())
+			resp, configErr := client.RouterConfig(context.Background(), "1", time.Now())
 			require.NoError(t, configErr)
 			require.NotNil(t, resp)
 			// The threshold in the config itself remains at 1 as the real router threshold is currently 1
