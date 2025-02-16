@@ -17,8 +17,10 @@ import {
   TypeNode,
 } from 'graphql';
 import {
+  AuthorizationData,
   ChildData,
   CompositeOutputData,
+  ConditionalFieldData,
   DefinitionData,
   EnumDefinitionData,
   EnumValueData,
@@ -30,7 +32,7 @@ import {
   PersistedDirectiveDefinitionData,
   PersistedDirectivesData,
   ScalarDefinitionData,
-} from './type-definition-data';
+} from './types';
 import { MutableFieldNode, MutableInputValueNode, MutableTypeDefinitionNode } from './ast';
 import { ObjectTypeNode, setToNameNodeArray, stringToNameNode } from '../ast/utils';
 import {
@@ -38,6 +40,7 @@ import {
   invalidRepeatedFederatedDirectiveErrorMessage,
   invalidRequiredInputValueError,
 } from '../errors/errors';
+import { FieldConfiguration, SubscriptionFilterValue } from '../router-configuration/router-configuration';
 import {
   ARGUMENT,
   AUTHENTICATED,
@@ -50,6 +53,7 @@ import {
   FLOAT_SCALAR,
   IGNORED_PARENT_DIRECTIVES,
   INACCESSIBLE,
+  INHERITABLE_DIRECTIVE_NAMES,
   INPUT_FIELD,
   INT_SCALAR,
   MUTATION,
@@ -64,19 +68,12 @@ import {
   TAG,
 } from '../utils/string-constants';
 import {
-  AuthorizationData,
   generateRequiresScopesDirective,
   generateSimpleDirective,
   getEntriesNotInHashSet,
   getValueOrDefault,
   InvalidRequiredInputValueData,
 } from '../utils/utils';
-import { INHERITABLE_DIRECTIVE_NAMES } from '../utils/constants';
-import {
-  FieldConfiguration,
-  FieldSetCondition,
-  SubscriptionFilterValue,
-} from '../router-configuration/router-configuration';
 
 export function newPersistedDirectivesData(): PersistedDirectivesData {
   return {
@@ -769,11 +766,6 @@ export enum FieldSetDirective {
   PROVIDES = 'provides',
   REQUIRES = 'requires',
 }
-
-export type ConditionalFieldData = {
-  providedBy: Array<FieldSetCondition>;
-  requiredBy: Array<FieldSetCondition>;
-};
 
 export function newConditionalFieldData(): ConditionalFieldData {
   return {

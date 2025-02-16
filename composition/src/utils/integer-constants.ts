@@ -1,7 +1,3 @@
 export const MAXIMUM_TYPE_NESTING = 30;
-
 export const MAX_SUBSCRIPTION_FILTER_DEPTH = 5;
-
 export const MAX_INT32 = 2 ** 31 - 1;
-
-export const DEFAULT_CONSUMER_INACTIVE_THRESHOLD = 30;

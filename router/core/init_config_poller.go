@@ -3,9 +3,9 @@ package core
 import (
 	"errors"
 	"fmt"
-
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	configCDNProvider "github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
 	configs3Provider "github.com/wundergraph/cosmo/router/pkg/routerconfig/s3"
@@ -26,8 +26,9 @@ func getConfigClient(r *Router, cdnProviders map[string]config.BaseStorageProvid
 			provider.URL,
 			r.graphApiToken,
 			&configCDNProvider.Options{
-				Logger:       r.logger,
-				SignatureKey: r.routerConfigPollerConfig.GraphSignKey,
+				Logger:                     r.logger,
+				SignatureKey:               r.routerConfigPollerConfig.GraphSignKey,
+				RouterCompatibilityVersion: execution_config.RouterCompatibilityVersionThreshold,
 			})
 		if err != nil {
 			return nil, err
@@ -93,8 +94,9 @@ func getConfigClient(r *Router, cdnProviders map[string]config.BaseStorageProvid
 	}
 
 	c, err := configCDNProvider.NewClient(r.cdnConfig.URL, r.graphApiToken, &configCDNProvider.Options{
-		Logger:       r.logger,
-		SignatureKey: r.routerConfigPollerConfig.GraphSignKey,
+		Logger:                     r.logger,
+		SignatureKey:               r.routerConfigPollerConfig.GraphSignKey,
+		RouterCompatibilityVersion: execution_config.RouterCompatibilityVersionThreshold,
 	})
 	if err != nil {
 		return nil, err

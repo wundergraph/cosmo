@@ -5,7 +5,7 @@ import pc from 'picocolors';
 import Table from 'cli-table3';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { handleFeatureFlagResult } from '../../../handle-feature-flag-result.js';
+import { handleCompositionResult } from '../../../handle-composition-result.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('disable');
@@ -28,7 +28,7 @@ export default (opts: BaseCommandOptions) => {
     );
 
     try {
-      handleFeatureFlagResult({
+      handleCompositionResult({
         responseCode: resp.response?.code,
         responseDetails: resp.response?.details,
         compositionErrors: resp.compositionErrors,

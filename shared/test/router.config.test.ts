@@ -3,7 +3,11 @@ import * as path from 'node:path';
 import * as url from 'node:url';
 import { describe, expect, test } from 'vitest';
 import { printSchema } from 'graphql';
-import { federateSubgraphs } from '@wundergraph/composition';
+import {
+  federateSubgraphs,
+  FederationResultSuccess,
+  LATEST_ROUTER_COMPATIBILITY_VERSION
+} from '@wundergraph/composition';
 import { buildRouterConfig, ComposedSubgraph } from '../src';
 import { normalizationFailureError } from '../src/router-config/errors';
 import {
@@ -19,17 +23,12 @@ const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
 describe('Router Config Builder', () => {
   test('Build Subgraph schema', () => {
-    const { errors, federationResult } = federateTestSubgraphs();
-    expect(errors).toBeUndefined();
-    expect(federationResult).toBeDefined();
-    const accountsSubgraphConfig = federationResult?.subgraphConfigBySubgraphName.get('accounts');
-    expect(accountsSubgraphConfig).toBeDefined();
-    const productsSubgraphConfig = federationResult?.subgraphConfigBySubgraphName.get('products');
-    expect(productsSubgraphConfig).toBeDefined();
-    const reviewsSubgraphConfig = federationResult?.subgraphConfigBySubgraphName.get('reviews');
-    expect(reviewsSubgraphConfig).toBeDefined();
-    const inventorySubgraphConfig = federationResult?.subgraphConfigBySubgraphName.get('inventory');
-    expect(inventorySubgraphConfig).toBeDefined();
+    const result = federateTestSubgraphs() as FederationResultSuccess;
+    expect(result.success).toBe(true);
+    const accountsSubgraphConfig = result.subgraphConfigBySubgraphName.get('accounts');
+    const productsSubgraphConfig = result.subgraphConfigBySubgraphName.get('products');
+    const reviewsSubgraphConfig = result.subgraphConfigBySubgraphName.get('reviews');
+    const inventorySubgraphConfig = result.subgraphConfigBySubgraphName.get('inventory');
 
     const accounts: ComposedSubgraph = {
       id: '0',
@@ -87,6 +86,7 @@ describe('Router Config Builder', () => {
       // if the federatedClientSDL is empty, it is not added to the config
       federatedClientSDL: `type Query {}`,
       fieldConfigurations: [],
+      routerCompatibilityVersion: LATEST_ROUTER_COMPATIBILITY_VERSION,
       subgraphs: [accounts, products, reviews, inventory],
       // Passed as it is to the router config
       federatedSDL: `type Query {}`,
@@ -100,13 +100,10 @@ describe('Router Config Builder', () => {
   });
 
   test('that the federatedClientSDL property is not propagated if it is empty', () => {
-    const { errors, federationResult } = federateSubgraphs([simpleAccounts, simpleProducts]);
-    expect(errors).toBeUndefined();
-    expect(federationResult).toBeDefined();
-    const accountsSubgraphConfig = federationResult?.subgraphConfigBySubgraphName.get('accounts');
-    expect(accountsSubgraphConfig).toBeDefined();
-    const productsSubgraphConfig = federationResult?.subgraphConfigBySubgraphName.get('products');
-    expect(productsSubgraphConfig).toBeDefined();
+    const result = federateSubgraphs([simpleAccounts, simpleProducts], LATEST_ROUTER_COMPATIBILITY_VERSION) as FederationResultSuccess;
+    expect(result.success).toBe(true);
+    const accountsSubgraphConfig = result.subgraphConfigBySubgraphName.get('accounts');
+    const productsSubgraphConfig = result.subgraphConfigBySubgraphName.get('products');
 
     const accounts: ComposedSubgraph = {
       id: '0',
@@ -134,13 +131,14 @@ describe('Router Config Builder', () => {
     };
     const routerConfig = buildRouterConfig({
       // if the federatedClientSDL is empty, it is not added to the config
-      federatedClientSDL: federationResult!.shouldIncludeClientSchema
-        ? printSchema(federationResult!.federatedGraphClientSchema)
+      federatedClientSDL: result!.shouldIncludeClientSchema
+        ? printSchema(result!.federatedGraphClientSchema)
         : '',
       fieldConfigurations: [],
+      routerCompatibilityVersion: LATEST_ROUTER_COMPATIBILITY_VERSION,
       subgraphs: [accounts, products],
       // Passed as it is to the router config
-      federatedSDL: printSchema(federationResult!.federatedGraphSchema),
+      federatedSDL: printSchema(result!.federatedGraphSchema),
       schemaVersionId: '',
     });
     const json = routerConfig.toJsonString({
@@ -151,13 +149,10 @@ describe('Router Config Builder', () => {
   });
 
   test('that the federatedClientSDL property is propagated if a schema uses the @tag directive', () => {
-    const { errors, federationResult } = federateSubgraphs([simpleAccounts, simpleProductsWithTags]);
-    expect(errors).toBeUndefined();
-    expect(federationResult).toBeDefined();
-    const accountsSubgraphConfig = federationResult?.subgraphConfigBySubgraphName.get('accounts');
-    expect(accountsSubgraphConfig).toBeDefined();
-    const productsSubgraphConfig = federationResult?.subgraphConfigBySubgraphName.get('products');
-    expect(productsSubgraphConfig).toBeDefined();
+    const result = federateSubgraphs([simpleAccounts, simpleProductsWithTags], LATEST_ROUTER_COMPATIBILITY_VERSION) as FederationResultSuccess;
+    expect(result.success).toBe(true);
+    const accountsSubgraphConfig = result.subgraphConfigBySubgraphName.get('accounts');
+    const productsSubgraphConfig = result.subgraphConfigBySubgraphName.get('products');
 
     const accounts: ComposedSubgraph = {
       id: '0',
@@ -185,13 +180,14 @@ describe('Router Config Builder', () => {
     };
     const routerConfig = buildRouterConfig({
       // if the federatedClientSDL is empty, it is not added to the config
-      federatedClientSDL: federationResult!.shouldIncludeClientSchema
-        ? printSchema(federationResult!.federatedGraphClientSchema)
+      federatedClientSDL: result!.shouldIncludeClientSchema
+        ? printSchema(result!.federatedGraphClientSchema)
         : '',
       fieldConfigurations: [],
+      routerCompatibilityVersion: LATEST_ROUTER_COMPATIBILITY_VERSION,
       subgraphs: [accounts, products],
       // Passed as it is to the router config
-      federatedSDL: printSchema(federationResult!.federatedGraphSchema),
+      federatedSDL: printSchema(result!.federatedGraphSchema),
       schemaVersionId: '',
     });
     const json = routerConfig.toJsonString({
@@ -202,13 +198,10 @@ describe('Router Config Builder', () => {
   });
 
   test('that the federatedClientSDL property is propagated if a schema uses the @inaccessible directive', () => {
-    const { errors, federationResult } = federateSubgraphs([simpleAccounts, simpleProductsWithInaccessible]);
-    expect(errors).toBeUndefined();
-    expect(federationResult).toBeDefined();
-    const accountsSubgraphConfig = federationResult?.subgraphConfigBySubgraphName.get('accounts');
-    expect(accountsSubgraphConfig).toBeDefined();
-    const productsSubgraphConfig = federationResult?.subgraphConfigBySubgraphName.get('products');
-    expect(productsSubgraphConfig).toBeDefined();
+    const result = federateSubgraphs([simpleAccounts, simpleProductsWithInaccessible], LATEST_ROUTER_COMPATIBILITY_VERSION) as FederationResultSuccess;
+    expect(result.success).toBe(true);
+    const accountsSubgraphConfig = result.subgraphConfigBySubgraphName.get('accounts');
+    const productsSubgraphConfig = result.subgraphConfigBySubgraphName.get('products');
 
     const accounts: ComposedSubgraph = {
       id: '0',
@@ -236,13 +229,14 @@ describe('Router Config Builder', () => {
     };
     const routerConfig = buildRouterConfig({
       // if the federatedClientSDL is empty, it is not added to the config
-      federatedClientSDL: federationResult!.shouldIncludeClientSchema
-        ? printSchema(federationResult!.federatedGraphClientSchema)
+      federatedClientSDL: result!.shouldIncludeClientSchema
+        ? printSchema(result!.federatedGraphClientSchema)
         : '',
       fieldConfigurations: [],
+      routerCompatibilityVersion: LATEST_ROUTER_COMPATIBILITY_VERSION,
       subgraphs: [accounts, products],
       // Passed as it is to the router config
-      federatedSDL: printSchema(federationResult!.federatedGraphSchema),
+      federatedSDL: printSchema(result!.federatedGraphSchema),
       schemaVersionId: '',
     });
     const json = routerConfig.toJsonString({
@@ -269,6 +263,7 @@ describe('Router Config Builder', () => {
       buildRouterConfig({
         federatedClientSDL: '',
         fieldConfigurations: [],
+        routerCompatibilityVersion: LATEST_ROUTER_COMPATIBILITY_VERSION,
         subgraphs: [subgraph],
         federatedSDL: '',
         schemaVersionId: '',
