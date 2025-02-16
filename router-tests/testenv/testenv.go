@@ -300,6 +300,7 @@ type Config struct {
 	AssertCacheMetrics                 *CacheMetricsAssertions
 	DisableSimulateCloudExporter       bool
 	CdnSever                           *httptest.Server
+	UseVersionedGraph                  bool
 }
 
 type CacheMetricsAssertions struct {
@@ -740,9 +741,15 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	return e, waitErr
 }
 
-func GenerateJwtToken() (string, error) {
+func generateJwtToken() (string, error) {
 	jwtToken := jwt.New(jwt.SigningMethodHS256)
 	jwtToken.Claims = testTokenClaims()
+	return jwtToken.SignedString([]byte("hunter2"))
+}
+
+func GenerateVersionedJwtToken() (string, error) {
+	jwtToken := jwt.New(jwt.SigningMethodHS256)
+	jwtToken.Claims = testVersionedTokenClaims()
 	return jwtToken.SignedString([]byte("hunter2"))
 }
 
@@ -770,7 +777,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		testConfig.ModifyCDNConfig(&cfg.CDN)
 	}
 
-	graphApiToken, err := GenerateJwtToken()
+	graphApiToken, err := generateJwtToken()
+	if testConfig.UseVersionedGraph {
+		graphApiToken, err = GenerateVersionedJwtToken()
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -1007,6 +1017,13 @@ func testTokenClaims() jwt.MapClaims {
 	}
 }
 
+func testVersionedTokenClaims() jwt.MapClaims {
+	return jwt.MapClaims{
+		"federated_graph_id": "versioned-graph",
+		"organization_id":    "organization",
+	}
+}
+
 func makeHttpTestServerWithPort(t testing.TB, handler http.Handler, port int) *httptest.Server {
 	s := httptest.NewUnstartedServer(handler)
 	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
@@ -1055,11 +1072,11 @@ func SetupCDNServer(t testing.TB, port int) *httptest.Server {
 		if authorization == "" {
 			require.NotEmpty(t, authorization, "missing authorization header")
 		}
-		//token := authorization[len("Bearer "):]
-		//parsedClaims := make(jwt.MapClaims)
-		//jwtParser := new(jwt.Parser)
-		//_, _, err := jwtParser.ParseUnverified(token, parsedClaims)
-		//require.NoError(t, err)
+		token := authorization[len("Bearer "):]
+		parsedClaims := make(jwt.MapClaims)
+		jwtParser := new(jwt.Parser)
+		_, _, err := jwtParser.ParseUnverified(token, parsedClaims)
+		require.NoError(t, err)
 		cdnFileServer.ServeHTTP(w, r)
 	}), port)
 

@@ -76,7 +76,7 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 
 	port := freeport.GetOne(t)
 	listenerAddr := fmt.Sprintf("localhost:%d", port)
-	token, err := GenerateJwtToken()
+	token, err := generateJwtToken()
 	require.NoError(t, err)
 	testCdn := SetupCDNServer(t, freeport.GetOne(t))
 	vals := ""

@@ -23,7 +23,7 @@ func TestRouterCompatibilityVersionConfigPoller(t *testing.T) {
 		t.Parallel()
 		cdnPort := freeport.GetOne(t)
 		cdnServer := testenv.SetupCDNServer(t, cdnPort)
-		token, err := testenv.GenerateJwtToken()
+		token, err := testenv.GenerateVersionedJwtToken()
 		require.NoError(t, err)
 		client, err := cdn.NewClient(fmt.Sprintf("http://127.0.0.1:%d", cdnPort), token, &cdn.Options{
 			Logger:                     nil,
@@ -43,6 +43,7 @@ func TestRouterCompatibilityVersionConfigPoller(t *testing.T) {
 					return configPoller
 				},
 			},
+			UseVersionedGraph: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			resp, configErr := client.RouterConfig(context.Background(), "1", time.Now())
 			require.NoError(t, configErr)
@@ -55,7 +56,7 @@ func TestRouterCompatibilityVersionConfigPoller(t *testing.T) {
 		t.Parallel()
 		cdnPort := freeport.GetOne(t)
 		cdnServer := testenv.SetupCDNServer(t, cdnPort)
-		token, err := testenv.GenerateJwtToken()
+		token, err := testenv.GenerateVersionedJwtToken()
 		require.NoError(t, err)
 		client, err := cdn.NewClient(fmt.Sprintf("http://127.0.0.1:%d", cdnPort), token, &cdn.Options{
 			Logger:                     nil,
@@ -75,6 +76,7 @@ func TestRouterCompatibilityVersionConfigPoller(t *testing.T) {
 					return configPoller
 				},
 			},
+			UseVersionedGraph: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			resp, configErr := client.RouterConfig(context.Background(), "1", time.Now())
 			require.NoError(t, configErr)
