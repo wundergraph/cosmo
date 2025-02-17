@@ -234,6 +234,7 @@ export class GraphCompositionRepository {
       isLatestValid: isCurrentDeployed,
       admissionError: composition.admissionError || undefined,
       deploymentError: composition.deploymentError || undefined,
+      routerCompatibilityVersion: composition.routerCompatibilityVersion,
     };
   }
 
@@ -256,6 +257,7 @@ export class GraphCompositionRepository {
         routerConfigSignature: graphCompositions.routerConfigSignature,
         admissionError: graphCompositions.admissionError,
         deploymentError: graphCompositions.deploymentError,
+        routerCompatibilityVersion: graphCompositions.routerCompatibilityVersion,
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
@@ -286,6 +288,7 @@ export class GraphCompositionRepository {
       routerConfigSignature: composition.routerConfigSignature || undefined,
       admissionError: composition.admissionError || undefined,
       deploymentError: composition.deploymentError || undefined,
+      routerCompatibilityVersion: composition.routerCompatibilityVersion,
     };
   }
 
@@ -345,6 +348,7 @@ export class GraphCompositionRepository {
         routerConfigSignature: graphCompositions.routerConfigSignature,
         admissionError: graphCompositions.admissionError,
         deploymentError: graphCompositions.deploymentError,
+        routerCompatibilityVersion: graphCompositions.routerCompatibilityVersion,
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
@@ -386,6 +390,7 @@ export class GraphCompositionRepository {
         deploymentError: r.deploymentError || undefined,
         hasMultipleChangedSubgraphs: compositionSubgraphs.filter((s) => s.changeType !== 'unchanged').length > 1,
         triggeredBySubgraphName: compositionSubgraphs.find((s) => s.changeType !== 'unchanged')?.name || '',
+        routerCompatibilityVersion: r.routerCompatibilityVersion,
       });
     }
 

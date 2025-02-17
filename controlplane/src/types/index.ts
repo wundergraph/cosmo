@@ -497,6 +497,7 @@ export interface GraphCompositionDTO {
   isLatestValid: boolean;
   admissionError?: string;
   deploymentError?: string;
+  routerCompatibilityVersion: string;
 }
 
 export interface FeatureFlagCompositionDTO {
