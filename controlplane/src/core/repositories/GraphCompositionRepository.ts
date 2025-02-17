@@ -24,6 +24,7 @@ export class GraphCompositionRepository {
     admissionErrorString,
     deploymentErrorString,
     isFeatureFlagComposition,
+    routerCompatibilityVersion,
   }: {
     fedGraphTargetId: string;
     fedGraphSchemaVersionId: string;
@@ -35,6 +36,7 @@ export class GraphCompositionRepository {
     admissionErrorString?: string;
     deploymentErrorString?: string;
     isFeatureFlagComposition: boolean;
+    routerCompatibilityVersion: string;
   }) {
     await this.db.transaction(async (tx) => {
       const actor = await tx.query.users.findFirst({
@@ -72,6 +74,7 @@ export class GraphCompositionRepository {
           deploymentError: deploymentErrorString,
           admissionError: admissionErrorString,
           isFeatureFlagComposition,
+          routerCompatibilityVersion,
         })
         .returning()
         .execute();
@@ -199,6 +202,7 @@ export class GraphCompositionRepository {
         routerConfigSignature: graphCompositions.routerConfigSignature,
         admissionError: graphCompositions.admissionError,
         deploymentError: graphCompositions.deploymentError,
+        routerCompatibilityVersion: graphCompositions.routerCompatibilityVersion,
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
@@ -230,6 +234,7 @@ export class GraphCompositionRepository {
       isLatestValid: isCurrentDeployed,
       admissionError: composition.admissionError || undefined,
       deploymentError: composition.deploymentError || undefined,
+      routerCompatibilityVersion: composition.routerCompatibilityVersion,
     };
   }
 
@@ -252,6 +257,7 @@ export class GraphCompositionRepository {
         routerConfigSignature: graphCompositions.routerConfigSignature,
         admissionError: graphCompositions.admissionError,
         deploymentError: graphCompositions.deploymentError,
+        routerCompatibilityVersion: graphCompositions.routerCompatibilityVersion,
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
@@ -282,6 +288,7 @@ export class GraphCompositionRepository {
       routerConfigSignature: composition.routerConfigSignature || undefined,
       admissionError: composition.admissionError || undefined,
       deploymentError: composition.deploymentError || undefined,
+      routerCompatibilityVersion: composition.routerCompatibilityVersion,
     };
   }
 
@@ -341,6 +348,7 @@ export class GraphCompositionRepository {
         routerConfigSignature: graphCompositions.routerConfigSignature,
         admissionError: graphCompositions.admissionError,
         deploymentError: graphCompositions.deploymentError,
+        routerCompatibilityVersion: graphCompositions.routerCompatibilityVersion,
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
@@ -382,6 +390,7 @@ export class GraphCompositionRepository {
         deploymentError: r.deploymentError || undefined,
         hasMultipleChangedSubgraphs: compositionSubgraphs.filter((s) => s.changeType !== 'unchanged').length > 1,
         triggeredBySubgraphName: compositionSubgraphs.find((s) => s.changeType !== 'unchanged')?.name || '',
+        routerCompatibilityVersion: r.routerCompatibilityVersion,
       });
     }
 

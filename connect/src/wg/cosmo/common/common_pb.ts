@@ -93,6 +93,11 @@ export enum EnumStatusCode {
    * @generated from enum value: ERR_UPGRADE_PLAN = 16;
    */
   ERR_UPGRADE_PLAN = 16,
+
+  /**
+   * @generated from enum value: ERR_BAD_REQUEST = 17;
+   */
+  ERR_BAD_REQUEST = 17,
 }
 // Retrieve enum metadata with: proto3.getEnumType(EnumStatusCode)
 proto3.util.setEnumType(EnumStatusCode, "wg.cosmo.common.EnumStatusCode", [
@@ -113,6 +118,7 @@ proto3.util.setEnumType(EnumStatusCode, "wg.cosmo.common.EnumStatusCode", [
   { no: 14, name: "ERR_DEPLOYMENT_FAILED" },
   { no: 15, name: "ERR_INVALID_NAME" },
   { no: 16, name: "ERR_UPGRADE_PLAN" },
+  { no: 17, name: "ERR_BAD_REQUEST" },
 ]);
 
 /**

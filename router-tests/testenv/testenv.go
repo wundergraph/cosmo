@@ -299,6 +299,8 @@ type Config struct {
 	SubgraphAccessLogFields            []config.CustomAttribute
 	AssertCacheMetrics                 *CacheMetricsAssertions
 	DisableSimulateCloudExporter       bool
+	CdnSever                           *httptest.Server
+	UseVersionedGraph                  bool
 }
 
 type CacheMetricsAssertions struct {
@@ -576,7 +578,10 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.ModifyRouterConfig(&routerConfig)
 	}
 
-	cdn := setupCDNServer(t)
+	cdnServer := cfg.CdnSever
+	if cfg.CdnSever == nil {
+		cdnServer = SetupCDNServer(t, freeport.GetOne(t))
+	}
 
 	if cfg.PrometheusRegistry != nil {
 		cfg.PrometheusPort = ports[0]
@@ -599,7 +604,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	kafkaStarted.Wait()
 
-	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdn, natsSetup)
+	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
 	if err != nil {
 		return nil, err
 	}
@@ -696,7 +701,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		Router:                  rr,
 		RouterURL:               rr.BaseURL(),
 		RouterClient:            client,
-		CDN:                     cdn,
+		CDN:                     cdnServer,
 		NatsData:                natsSetup,
 		SubgraphRequestCount:    counters,
 		KafkaAdminClient:        kafkaAdminClient,
@@ -742,6 +747,12 @@ func generateJwtToken() (string, error) {
 	return jwtToken.SignedString([]byte("hunter2"))
 }
 
+func GenerateVersionedJwtToken() (string, error) {
+	jwtToken := jwt.New(jwt.SigningMethodHS256)
+	jwtToken.Claims = testVersionedTokenClaims()
+	return jwtToken.SignedString([]byte("hunter2"))
+}
+
 func configureRouter(listenerAddr string, testConfig *Config, routerConfig *nodev1.RouterConfig, cdn *httptest.Server, natsData *NatsData) (*core.Router, error) {
 	cfg := config.Config{
 		Graph: config.Graph{},
@@ -767,6 +778,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	graphApiToken, err := generateJwtToken()
+	if testConfig.UseVersionedGraph {
+		graphApiToken, err = GenerateVersionedJwtToken()
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -1003,6 +1017,26 @@ func testTokenClaims() jwt.MapClaims {
 	}
 }
 
+func testVersionedTokenClaims() jwt.MapClaims {
+	return jwt.MapClaims{
+		"federated_graph_id": "versioned-graph",
+		"organization_id":    "organization",
+	}
+}
+
+func makeHttpTestServerWithPort(t testing.TB, handler http.Handler, port int) *httptest.Server {
+	s := httptest.NewUnstartedServer(handler)
+	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		t.Fatalf("could not listen on port: %s", err.Error())
+	}
+	_ = s.Listener.Close()
+	s.Listener = l
+	s.Start()
+
+	return s
+}
+
 func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server {
 	s := httptest.NewUnstartedServer(handler)
 	port := freeport.GetOne(t)
@@ -1017,13 +1051,13 @@ func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server
 	return s
 }
 
-func setupCDNServer(t testing.TB) *httptest.Server {
+func SetupCDNServer(t testing.TB, port int) *httptest.Server {
 	_, filePath, _, ok := runtime.Caller(0)
 	require.True(t, ok)
 	baseCdnFile := filepath.Join(path.Dir(filePath), "testdata", "cdn")
 	cdnFileServer := http.FileServer(http.Dir(baseCdnFile))
 	var cdnRequestLog []string
-	cdnServer := makeSafeHttpTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	cdnServer := makeHttpTestServerWithPort(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
 			requestLog, err := json.Marshal(cdnRequestLog)
 			require.NoError(t, err)
@@ -1044,7 +1078,7 @@ func setupCDNServer(t testing.TB) *httptest.Server {
 		_, _, err := jwtParser.ParseUnverified(token, parsedClaims)
 		require.NoError(t, err)
 		cdnFileServer.ServeHTTP(w, r)
-	}))
+	}), port)
 
 	return cdnServer
 }
