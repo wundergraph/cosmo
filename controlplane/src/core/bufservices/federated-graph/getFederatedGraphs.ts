@@ -91,6 +91,7 @@ export function getFederatedGraphs(
         supportsFederation: g.supportsFederation,
         contract: g.contract,
         admissionWebhookUrl: g.admissionWebhookURL,
+        routerCompatibilityVersion: g.routerCompatibilityVersion,
       })),
       response: {
         code: EnumStatusCode.OK,

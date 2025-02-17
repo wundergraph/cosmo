@@ -36,8 +36,9 @@ var (
 )
 
 type Options struct {
-	Logger       *zap.Logger
-	SignatureKey string
+	Logger                     *zap.Logger
+	SignatureKey               string
+	RouterCompatibilityVersion int
 }
 
 type Client struct {
@@ -48,10 +49,11 @@ type Client struct {
 	federatedGraphID string
 	// organizationID is the ID of the organization for this graph that was obtained
 	// from the token, already url-escaped
-	organizationID string
-	httpClient     *http.Client
-	logger         *zap.Logger
-	hash           hash.Hash
+	organizationID             string
+	httpClient                 *http.Client
+	logger                     *zap.Logger
+	hash                       hash.Hash
+	routerCompatibilityVersion int
 }
 
 type routerConfigNotFoundError struct {
@@ -94,12 +96,13 @@ func NewClient(endpoint string, token string, opts *Options) (routerconfig.Clien
 	logger := opts.Logger.With(zap.String("component", "router_config_client"))
 
 	c := &Client{
-		cdnURL:              u,
-		authenticationToken: token,
-		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
-		organizationID:      url.PathEscape(claims.OrganizationID),
-		httpClient:          httpclient.NewRetryableHTTPClient(logger),
-		logger:              opts.Logger,
+		cdnURL:                     u,
+		authenticationToken:        token,
+		federatedGraphID:           url.PathEscape(claims.FederatedGraphID),
+		organizationID:             url.PathEscape(claims.OrganizationID),
+		httpClient:                 httpclient.NewRetryableHTTPClient(logger),
+		logger:                     opts.Logger,
+		routerCompatibilityVersion: opts.RouterCompatibilityVersion,
 	}
 
 	if opts.SignatureKey != "" {
@@ -109,10 +112,11 @@ func NewClient(endpoint string, token string, opts *Options) (routerconfig.Clien
 	return c, nil
 }
 
-func (cdn *Client) getRouterConfig(ctx context.Context, version string, modifiedSince time.Time) ([]byte, error) {
-	routerConfigPath := fmt.Sprintf("/%s/%s/routerconfigs/latest.json",
+func (cdn *Client) getRouterConfig(ctx context.Context, version string, _ time.Time) ([]byte, error) {
+	routerConfigPath := fmt.Sprintf("/%s/%s/routerconfigs/%slatest.json",
 		cdn.organizationID,
 		cdn.federatedGraphID,
+		routerconfig.VersionPath(cdn.routerCompatibilityVersion),
 	)
 	routerConfigURL := cdn.cdnURL.ResolveReference(&url.URL{Path: routerConfigPath})
 

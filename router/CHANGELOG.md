@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.178.0](https://github.com/wundergraph/cosmo/compare/router@0.177.2...router@0.178.0) (2025-02-17)
+
+### Features
+
+* add composition versioning ([#1575](https://github.com/wundergraph/cosmo/issues/1575)) ([ee32cbb](https://github.com/wundergraph/cosmo/commit/ee32cbb3dbe7c46fa984920bbd95e4a00d01c9c3)) (@Aenimus)
+
+## [0.177.2](https://github.com/wundergraph/cosmo/compare/router@0.177.1...router@0.177.2) (2025-02-15)
+
+### Bug Fixes
+
+* **engine:** deadlock when waiting on inflight events of a trigger ([#1597](https://github.com/wundergraph/cosmo/issues/1597)) ([297273d](https://github.com/wundergraph/cosmo/commit/297273d749ebbafe61732a261bd19477bab3115a)) (@StarpTech)
+
 ## [0.177.1](https://github.com/wundergraph/cosmo/compare/router@0.177.0...router@0.177.1) (2025-02-14)
 
 ### Bug Fixes
