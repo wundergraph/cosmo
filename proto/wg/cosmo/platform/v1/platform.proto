@@ -1633,6 +1633,7 @@ message GraphComposition {
   optional bool hasMultipleChangedSubgraphs = 11;
   optional string triggeredBySubgraphName = 12;
   optional string compositionWarnings = 13;
+  string router_compatibility_version = 14;
 }
 
 message GraphCompositionSubgraph {

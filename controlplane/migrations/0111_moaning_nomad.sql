@@ -1,1 +1,0 @@
-ALTER TABLE "federated_graphs" ADD COLUMN "router_compatibility_version" text DEFAULT '1' NOT NULL;

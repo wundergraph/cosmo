@@ -1598,6 +1598,7 @@ export const graphCompositions = pgTable(
     }),
     createdByEmail: text('created_by_email'),
     isFeatureFlagComposition: boolean('is_feature_flag_composition').default(false).notNull(),
+    routerCompatibilityVersion: text('router_compatibility_version').notNull().default('1'),
   },
   (t) => {
     return {

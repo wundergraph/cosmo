@@ -815,6 +815,7 @@ export class FederatedGraphRepository {
         compositionWarningString,
         composedById,
         isFeatureFlagComposition,
+        routerCompatibilityVersion: fedGraph.routerCompatibilityVersion,
       });
 
       return {

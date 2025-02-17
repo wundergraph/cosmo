@@ -24,6 +24,7 @@ export class GraphCompositionRepository {
     admissionErrorString,
     deploymentErrorString,
     isFeatureFlagComposition,
+    routerCompatibilityVersion,
   }: {
     fedGraphTargetId: string;
     fedGraphSchemaVersionId: string;
@@ -35,6 +36,7 @@ export class GraphCompositionRepository {
     admissionErrorString?: string;
     deploymentErrorString?: string;
     isFeatureFlagComposition: boolean;
+    routerCompatibilityVersion: string;
   }) {
     await this.db.transaction(async (tx) => {
       const actor = await tx.query.users.findFirst({
@@ -72,6 +74,7 @@ export class GraphCompositionRepository {
           deploymentError: deploymentErrorString,
           admissionError: admissionErrorString,
           isFeatureFlagComposition,
+          routerCompatibilityVersion,
         })
         .returning()
         .execute();
@@ -199,6 +202,7 @@ export class GraphCompositionRepository {
         routerConfigSignature: graphCompositions.routerConfigSignature,
         admissionError: graphCompositions.admissionError,
         deploymentError: graphCompositions.deploymentError,
+        routerCompatibilityVersion: graphCompositions.routerCompatibilityVersion,
       })
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
