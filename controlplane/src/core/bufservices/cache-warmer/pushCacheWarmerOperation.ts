@@ -85,6 +85,7 @@ export function pushCacheWarmerOperation(
     }
 
     let clientName = '';
+    let operationContent = '';
 
     if (req.operationPersistedId) {
       const operationsRepository = new OperationsRepository(opts.db, federatedGraph.id);
@@ -92,7 +93,7 @@ export function pushCacheWarmerOperation(
         operationId: req.operationPersistedId,
       });
 
-      if (!existingPersistedOperation) {
+      if (!existingPersistedOperation || !existingPersistedOperation.contents) {
         return {
           response: {
             code: EnumStatusCode.ERR,
@@ -102,6 +103,7 @@ export function pushCacheWarmerOperation(
       }
 
       clientName = existingPersistedOperation.clientName;
+      operationContent = existingPersistedOperation.contents;
     }
 
     if (req.operationContent) {
@@ -151,7 +153,8 @@ export function pushCacheWarmerOperation(
       federatedGraphId: federatedGraph.id,
       organizationId: authContext.organizationId,
       persistedId: req.operationPersistedId,
-      operationContent: req.operationContent,
+      // persisted operation has more precedence than operation content
+      operationContent: operationContent || req.operationContent,
       clientName,
     });
 
@@ -169,7 +172,8 @@ export function pushCacheWarmerOperation(
         {
           operationName: req.operationName,
           operationPersistedID: req.operationPersistedId,
-          operationContent: req.operationContent,
+          // persisted operation has more precedence than operation content
+          operationContent: operationContent || req.operationContent,
           federatedGraphId: federatedGraph.id,
           organizationId: authContext.organizationId,
           createdById: authContext.userId,
