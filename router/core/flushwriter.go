@@ -3,13 +3,14 @@ package core
 import (
 	"bytes"
 	"context"
-	"github.com/wundergraph/astjson"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"io"
 	"mime"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/wundergraph/astjson"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 const (
@@ -35,6 +36,9 @@ type HttpFlushWriter struct {
 	multipart     bool
 	buf           *bytes.Buffer
 	firstMessage  bool
+	// apolloSubscriptionMultipartPrintBoundary if set to true will send the multipart boundary at the end of the message to allow
+	// misbehaving client (like apollo client) to read the message just sent before the next one or the heartbeat
+	apolloSubscriptionMultipartPrintBoundary bool
 }
 
 func (f *HttpFlushWriter) Complete() {
@@ -45,7 +49,11 @@ func (f *HttpFlushWriter) Complete() {
 		_, _ = f.writer.Write([]byte("event: complete"))
 	} else if f.multipart {
 		// Write the final boundary in the multipart response
-		_, _ = f.writer.Write([]byte("--\n"))
+		if f.apolloSubscriptionMultipartPrintBoundary {
+			_, _ = f.writer.Write([]byte("--\n"))
+		} else {
+			_, _ = f.writer.Write([]byte("--" + multipartBoundary + "--\n"))
+		}
 	}
 	f.Close()
 }
@@ -74,7 +82,7 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	resp := f.buf.Bytes()
 	f.buf.Reset()
 
-	flushBreak := GetWriterPrefix(f.sse, f.multipart, f.firstMessage)
+	flushBreak := GetWriterPrefix(f.sse, f.multipart, !f.apolloSubscriptionMultipartPrintBoundary || f.firstMessage)
 	if f.firstMessage {
 		f.firstMessage = false
 	}
@@ -88,7 +96,11 @@ func (f *HttpFlushWriter) Flush() (err error) {
 
 	separation := "\n\n"
 	if f.multipart {
-		separation = "\n" + multipartStart
+		if !f.apolloSubscriptionMultipartPrintBoundary {
+			separation = "\n"
+		} else {
+			separation = "\n" + multipartStart
+		}
 	} else if f.subscribeOnce {
 		separation = ""
 	}
@@ -105,7 +117,7 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	return nil
 }
 
-func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http.ResponseWriter) (*resolve.Context, resolve.SubscriptionResponseWriter, bool) {
+func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http.ResponseWriter, apolloSubscriptionMultipartPrintBoundary bool) (*resolve.Context, resolve.SubscriptionResponseWriter, bool) {
 	type withFlushWriter interface {
 		SubscriptionResponseWriter() resolve.SubscriptionResponseWriter
 	}
@@ -124,13 +136,14 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 	flusher.Flush()
 
 	flushWriter := &HttpFlushWriter{
-		writer:        w,
-		flusher:       flusher,
-		sse:           wgParams.UseSse,
-		multipart:     wgParams.UseMultipart,
-		subscribeOnce: wgParams.SubscribeOnce,
-		buf:           &bytes.Buffer{},
-		firstMessage:  true,
+		writer:                                   w,
+		flusher:                                  flusher,
+		sse:                                      wgParams.UseSse,
+		multipart:                                wgParams.UseMultipart,
+		subscribeOnce:                            wgParams.SubscribeOnce,
+		buf:                                      &bytes.Buffer{},
+		firstMessage:                             true,
+		apolloSubscriptionMultipartPrintBoundary: apolloSubscriptionMultipartPrintBoundary,
 	}
 
 	flushWriter.ctx, flushWriter.cancel = context.WithCancel(ctx.Context())

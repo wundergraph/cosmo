@@ -2393,6 +2393,17 @@
               "default": false
             }
           }
+        },
+        "subscription_multipart_print_boundary": {
+          "type": "object",
+          "description": "Prints the multipart boundary right after the message in multipart subscriptions.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
         }
       }
     },

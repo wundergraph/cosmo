@@ -460,7 +460,6 @@ func TestNatsEvents(t *testing.T) {
 					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":1}}}")
 					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":2}}}")
 					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":3}}}")
-					assertLineEquals(t, reader, "")
 					assertLineEquals(t, reader, "--graphql--")
 				}()
 
@@ -500,6 +499,144 @@ func TestNatsEvents(t *testing.T) {
 
 					assertMultipartValueEventually(t, reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
 				}
+			})
+		})
+		t.Run("subscribe after message don't a boundary", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+				RouterOptions: []core.Option{
+					core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+						SubscriptionMultipartPrintBoundary: config.ApolloCompatibilitySubscriptionMultipartPrintBoundary{
+							Enabled: false,
+						},
+					}),
+				},
+				EnableNats: true,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+
+				subscribePayload := []byte(`{"query":"subscription { countFor(count: 0) }"}`)
+
+				var done atomic.Bool
+
+				go func() {
+					defer done.Store(true)
+
+					client := http.Client{}
+					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
+					resp, err := client.Do(req)
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, resp.StatusCode)
+					defer resp.Body.Close()
+
+					reader := bufio.NewReader(resp.Body)
+
+					// Read the first part
+
+					expected := "\r\n--graphql\nContent-Type: application/json\r\n\r\n{\"payload\":{\"data\":{\"countFor\":0}}}\n"
+					read := make([]byte, len(expected))
+					_, err = reader.Read(read)
+					assert.NoError(t, err)
+					assert.Equal(t, expected, string(read))
+				}()
+
+				xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+				require.Eventually(t, done.Load, NatsWaitTimeout, time.Millisecond*100)
+			})
+		})
+	})
+
+	t.Run("multipart with apollo compatibility", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("subscribe after message add a boundary", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+				RouterOptions: []core.Option{
+					core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+						SubscriptionMultipartPrintBoundary: config.ApolloCompatibilitySubscriptionMultipartPrintBoundary{
+							Enabled: true,
+						},
+					}),
+				},
+				EnableNats: true,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+
+				subscribePayload := []byte(`{"query":"subscription { countFor(count: 0) }"}`)
+
+				var done atomic.Bool
+
+				go func() {
+					defer done.Store(true)
+
+					client := http.Client{}
+					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
+					resp, err := client.Do(req)
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, resp.StatusCode)
+					defer resp.Body.Close()
+
+					reader := bufio.NewReader(resp.Body)
+
+					// Read the first part
+
+					expected := "\r\n--graphql\nContent-Type: application/json\r\n\r\n{\"payload\":{\"data\":{\"countFor\":0}}}\n\r\n--graphql"
+					read := make([]byte, len(expected))
+					_, err = reader.Read(read)
+					assert.NoError(t, err)
+					assert.Equal(t, expected, string(read))
+				}()
+
+				xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+				require.Eventually(t, done.Load, NatsWaitTimeout, time.Millisecond*100)
+			})
+		})
+
+		t.Run("subscribe with closing channel", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+				RouterOptions: []core.Option{
+					core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+						SubscriptionMultipartPrintBoundary: config.ApolloCompatibilitySubscriptionMultipartPrintBoundary{
+							Enabled: true,
+						},
+					}),
+				},
+				EnableNats: true,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+
+				subscribePayload := []byte(`{"query":"subscription { countFor(count: 3) }"}`)
+
+				var done atomic.Bool
+
+				go func() {
+					defer done.Store(true)
+
+					client := http.Client{}
+					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
+					resp, err := client.Do(req)
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, resp.StatusCode)
+					defer resp.Body.Close()
+
+					reader := bufio.NewReader(resp.Body)
+
+					// Read the first part
+					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":0}}}")
+					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":1}}}")
+					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":2}}}")
+					assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":3}}}")
+					assertLineEquals(t, reader, "")
+					assertLineEquals(t, reader, "--graphql--")
+				}()
+
+				xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+				require.Eventually(t, done.Load, NatsWaitTimeout, time.Millisecond*100)
 			})
 		})
 	})
