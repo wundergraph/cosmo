@@ -12632,6 +12632,11 @@ export class GraphComposition extends Message<GraphComposition> {
    */
   compositionWarnings?: string;
 
+  /**
+   * @generated from field: string router_compatibility_version = 14;
+   */
+  routerCompatibilityVersion = "";
+
   constructor(data?: PartialMessage<GraphComposition>) {
     super();
     proto3.util.initPartial(data, this);
@@ -12653,6 +12658,7 @@ export class GraphComposition extends Message<GraphComposition> {
     { no: 11, name: "hasMultipleChangedSubgraphs", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 12, name: "triggeredBySubgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 13, name: "compositionWarnings", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 14, name: "router_compatibility_version", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GraphComposition {
