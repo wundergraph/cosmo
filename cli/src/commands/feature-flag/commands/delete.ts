@@ -6,7 +6,7 @@ import Table from 'cli-table3';
 import ora from 'ora';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
-import { handleFeatureFlagResult } from '../../../handle-feature-flag-result.js';
+import { handleCompositionResult } from '../../../handle-composition-result.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('delete');
@@ -40,7 +40,7 @@ export default (opts: BaseCommandOptions) => {
     );
 
     try {
-      handleFeatureFlagResult({
+      handleCompositionResult({
         responseCode: resp.response?.code,
         responseDetails: resp.response?.details,
         compositionErrors: resp.compositionErrors,

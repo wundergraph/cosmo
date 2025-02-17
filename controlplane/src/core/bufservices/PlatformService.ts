@@ -120,6 +120,7 @@ import { createPlaygroundScript } from './playground/createPlaygroundScript.js';
 import { deletePlaygroundScript } from './playground/deletePlaygroundScript.js';
 import { getPlaygroundScripts } from './playground/getPlaygroundScripts.js';
 import { updatePlaygroundScript } from './playground/updatePlaygroundScript.js';
+import { listRouterCompatibilityVersions } from './router/listRouterCompatibilityVersions.js';
 import { getChangelogBySchemaVersion } from './schema-version/getChangelogBySchemaVersion.js';
 import { getSdlBySchemaVersion } from './schema-version/getSdlBySchemaVersion.js';
 import { createOIDCProvider } from './sso/createOIDCProvider.js';
@@ -152,6 +153,7 @@ import { removeInvitation } from './user/removeInvitation.js';
 import { removeOrganizationMember } from './user/removeOrganizationMember.js';
 import { updateOrgMemberRole } from './user/updateOrgMemberRole.js';
 import { deleteCacheWarmerOperation } from './cache-warmer/deleteCacheWarmerOperation.js';
+import { setGraphRouterCompatibilityVersion } from './graph/setGraphRouterCompatibilityVersion.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -768,6 +770,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getNamespace: (req, ctx) => {
       return getNamespace(opts, req, ctx);
+    },
+
+    listRouterCompatibilityVersions: () => {
+      return listRouterCompatibilityVersions();
+    },
+
+    setGraphRouterCompatibilityVersion: (req, ctx) => {
+      return setGraphRouterCompatibilityVersion(opts, req, ctx);
     },
   };
 }

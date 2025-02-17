@@ -82,6 +82,7 @@ export interface FederatedGraphDTO {
   namespaceId: string;
   supportsFederation: boolean;
   contract?: ContractDTO;
+  routerCompatibilityVersion: string;
 }
 
 export interface FederatedGraphChangelogDTO {
@@ -496,6 +497,7 @@ export interface GraphCompositionDTO {
   isLatestValid: boolean;
   admissionError?: string;
   deploymentError?: string;
+  routerCompatibilityVersion: string;
 }
 
 export interface FeatureFlagCompositionDTO {

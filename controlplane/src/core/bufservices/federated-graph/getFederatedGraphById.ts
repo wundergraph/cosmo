@@ -142,6 +142,7 @@ export function getFederatedGraphById(
         supportsFederation: federatedGraph.supportsFederation,
         contract: federatedGraph.contract,
         admissionWebhookUrl: federatedGraph.admissionWebhookURL,
+        routerCompatibilityVersion: federatedGraph.routerCompatibilityVersion,
       },
       subgraphs: list.map((g) => ({
         id: g.id,

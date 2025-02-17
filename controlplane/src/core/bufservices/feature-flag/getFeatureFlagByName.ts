@@ -112,6 +112,7 @@ export function getFeatureFlagByName(
           contract: g.contract,
           admissionWebhookUrl: g.admissionWebhookURL,
           requestSeries: [],
+          routerCompatibilityVersion: g.routerCompatibilityVersion,
         },
         isConnected: federatedGraphs.some((f) => f.id === g.id),
       })),

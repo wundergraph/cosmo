@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { LATEST_ROUTER_COMPATIBILITY_VERSION } from '@wundergraph/composition';
 import { getDiffBetweenGraphs } from '../src/core/composition/schemaCheck.js';
 import { SchemaChangeType } from '../src/types/index.js';
 
@@ -7,7 +8,7 @@ describe('BreakingChanges', () => {
     const schemaA = 'type Query { hello: String! }';
     const schemaB = 'type Query { a: String! }';
 
-    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB);
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
 
     expect(schemaChanges.kind).toBe('success');
 
@@ -23,7 +24,7 @@ describe('BreakingChanges', () => {
     const schemaA = 'type Query { hello: String! } type User { name: String! }';
     const schemaB = 'type Query { hello: String! }';
 
-    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB);
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
 
     expect(schemaChanges.kind).toBe('success');
 
@@ -39,7 +40,7 @@ describe('BreakingChanges', () => {
     const schemaA = 'type Query { hello: String! }';
     const schemaB = 'type Query { hello: String! a: String! }';
 
-    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB);
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
 
     expect(schemaChanges.kind).toBe('success');
 
@@ -52,7 +53,7 @@ describe('BreakingChanges', () => {
     const schemaA = 'type Query { hello: String! } type User { name: String! }';
     const schemaB = 'type Query { hello: String! } type User { name: Int! }';
 
-    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB);
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
 
     expect(schemaChanges.kind).toBe('success');
 
@@ -68,7 +69,7 @@ describe('BreakingChanges', () => {
     const schemaA = 'type Query { hello: String! } input User { name: String! a: String! }';
     const schemaB = 'type Query { hello: String! } input User { a: String! }';
 
-    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB);
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
 
     expect(schemaChanges.kind).toBe('success');
 
@@ -86,7 +87,7 @@ describe('BreakingChanges', () => {
     const schemaA = 'type Query { hello: String! } enum Alphabet { A B C }';
     const schemaB = 'type Query { hello: String! } enum Alphabet { A B }';
 
-    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB);
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
 
     expect(schemaChanges.kind).toBe('success');
 
@@ -102,7 +103,7 @@ describe('BreakingChanges', () => {
     const schemaA = 'type Query { hello: String! @shareable } type User { name: String! }';
     const schemaB = 'type Query { hello: String! @shareable } type User { name: String! @shareable }';
 
-    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB);
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
 
     expect(schemaChanges.kind).toBe('success');
 
@@ -118,7 +119,7 @@ describe('BreakingChanges', () => {
     const schemaA = 'type Query { hello: String! @shareable } type User { name: String! @shareable }';
     const schemaB = 'type Query { hello: String! @shareable } type User { name: String! }';
 
-    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB);
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
 
     expect(schemaChanges.kind).toBe('success');
 
@@ -134,7 +135,7 @@ describe('BreakingChanges', () => {
     const schemaA = 'type Query { hello: String! } type User { name: String! }';
     const schemaB = 'type Query { hello: String! } type User @key(fields: "name") { name: String! }';
 
-    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB);
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
 
     expect(schemaChanges.kind).toBe('success');
 
@@ -150,7 +151,7 @@ describe('BreakingChanges', () => {
     const schemaA = 'type Query { hello: String! } type User @key(fields: "name") { name: String! }';
     const schemaB = 'type Query { hello: String! } type User { name: String! }';
 
-    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB);
+    const schemaChanges = await getDiffBetweenGraphs(schemaA, schemaB, LATEST_ROUTER_COMPATIBILITY_VERSION);
 
     expect(schemaChanges.kind).toBe('success');
 

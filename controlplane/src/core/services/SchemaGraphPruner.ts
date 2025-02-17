@@ -1,6 +1,7 @@
 import { GraphQLSchema, isInputObjectType, isInterfaceType, isObjectType } from 'graphql';
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import pLimit from 'p-limit';
+import { LATEST_ROUTER_COMPATIBILITY_VERSION } from '@wundergraph/composition';
 import {
   FederatedGraphDTO,
   Field,
@@ -15,6 +16,7 @@ import { SubgraphRepository } from '../repositories/SubgraphRepository.js';
 import { UsageRepository } from '../repositories/analytics/UsageRepository.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { buildSchema } from '../composition/composition.js';
+import { getFederatedGraphRouterCompatibilityVersion } from '../util.js';
 
 export default class SchemaGraphPruner {
   constructor(
@@ -250,12 +252,22 @@ export default class SchemaGraphPruner {
     let oldGraphQLSchema: GraphQLSchema | undefined;
 
     try {
-      const { errors, normalizationResult } = buildSchema(oldSchema, false);
-      if (errors && errors.length > 0) {
+      const result = buildSchema(
+        oldSchema,
+        false,
+        /*
+         * If there are any federated graphs for which the subgraph is a constituent, the subgraph will be validated
+         * against the first router compatibility version encountered.
+         * If no federated graphs have yet been created, the subgraph will be validated against the latest router
+         * compatibility version.
+         */
+        getFederatedGraphRouterCompatibilityVersion(federatedGraphs),
+      );
+      if (!result.success) {
         oldGraphQLSchema = undefined;
       }
-      if (normalizationResult?.schema) {
-        oldGraphQLSchema = normalizationResult.schema;
+      if (result.success) {
+        oldGraphQLSchema = result.schema;
       }
     } catch {
       oldGraphQLSchema = undefined;
