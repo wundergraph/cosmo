@@ -24,7 +24,7 @@ type VerifyScopesModule struct {
 
 func (m *VerifyScopesModule) Middleware(ctx core.RequestContext, next http.Handler) {
 	auth := ctx.Authentication()
-	if m.Scopes != nil && slices.Compare(m.Scopes, auth.Scopes()) != 0 {
+	if m.Scopes != nil && (auth == nil || slices.Compare(m.Scopes, auth.Scopes()) != 0) {
 		ctx.ResponseWriter().WriteHeader(http.StatusBadRequest)
 		next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 		return

@@ -448,9 +448,9 @@ func (c *requestContext) SetAuthenticationScopes(scopes []string) {
 	auth := authentication.FromContext(c.request.Context())
 	if auth == nil {
 		auth = authentication.NewEmptyAuthentication()
+		c.request = c.request.WithContext(authentication.NewContext(c.request.Context(), auth))
 	}
 	auth.SetScopes(scopes)
-	c.request = c.request.WithContext(authentication.NewContext(c.request.Context(), auth))
 }
 
 type OperationContext interface {
