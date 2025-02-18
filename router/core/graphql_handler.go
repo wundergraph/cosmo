@@ -77,6 +77,7 @@ type HandlerOptions struct {
 	RateLimitConfig                             *config.RateLimitConfiguration
 	SubgraphErrorPropagation                    config.SubgraphErrorPropagationConfiguration
 	EngineLoaderHooks                           resolve.LoaderHooks
+	ApolloSubscriptionMultipartPrintBoundary    bool
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -92,11 +93,12 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 			"wundergraph/cosmo/router/graphql_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
-		authorizer:               opts.Authorizer,
-		rateLimiter:              opts.RateLimiter,
-		rateLimitConfig:          opts.RateLimitConfig,
-		subgraphErrorPropagation: opts.SubgraphErrorPropagation,
-		engineLoaderHooks:        opts.EngineLoaderHooks,
+		authorizer:                               opts.Authorizer,
+		rateLimiter:                              opts.RateLimiter,
+		rateLimitConfig:                          opts.RateLimitConfig,
+		subgraphErrorPropagation:                 opts.SubgraphErrorPropagation,
+		engineLoaderHooks:                        opts.EngineLoaderHooks,
+		apolloSubscriptionMultipartPrintBoundary: opts.ApolloSubscriptionMultipartPrintBoundary,
 	}
 	return graphQLHandler
 }
@@ -127,6 +129,8 @@ type GraphQLHandler struct {
 	enablePersistedOperationCacheResponseHeader bool
 	enableNormalizationCacheResponseHeader      bool
 	enableResponseHeaderPropagation             bool
+
+	apolloSubscriptionMultipartPrintBoundary bool
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -191,7 +195,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.setDebugCacheHeaders(w, requestContext.operation)
 
 		defer propagateSubgraphErrors(ctx)
-		ctx, writer, ok = GetSubscriptionResponseWriter(ctx, r, w)
+		ctx, writer, ok = GetSubscriptionResponseWriter(ctx, r, w, h.apolloSubscriptionMultipartPrintBoundary)
 		if !ok {
 			requestContext.logger.Error("unable to get subscription response writer", zap.Error(errCouldNotFlushResponse))
 			trackFinalResponseError(r.Context(), errCouldNotFlushResponse)

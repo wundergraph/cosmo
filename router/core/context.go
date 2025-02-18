@@ -129,6 +129,10 @@ type RequestContext interface {
 
 	// Authentication returns the authentication information for the request, if any
 	Authentication() authentication.Authentication
+
+	// SetAuthenticationScopes sets the scopes for the request on Authentication
+	// If Authentication is not set, it will be initialized with the scopes
+	SetAuthenticationScopes(scopes []string)
 }
 
 var metricAttrsPool = sync.Pool{
@@ -438,6 +442,15 @@ func (c *requestContext) SubgraphByID(subgraphID string) *Subgraph {
 
 func (c *requestContext) Authentication() authentication.Authentication {
 	return authentication.FromContext(c.request.Context())
+}
+
+func (c *requestContext) SetAuthenticationScopes(scopes []string) {
+	auth := authentication.FromContext(c.request.Context())
+	if auth == nil {
+		auth = authentication.NewEmptyAuthentication()
+		c.request = c.request.WithContext(authentication.NewContext(c.request.Context(), auth))
+	}
+	auth.SetScopes(scopes)
 }
 
 type OperationContext interface {
