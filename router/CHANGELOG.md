@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.180.0](https://github.com/wundergraph/cosmo/compare/router@0.179.0...router@0.180.0) (2025-02-18)
+
+### Features
+
+* set the scopes on request without authentication ([#1598](https://github.com/wundergraph/cosmo/issues/1598)) ([43b4ea5](https://github.com/wundergraph/cosmo/commit/43b4ea556e3915ddba3b771428426e00c09991f6)) (@alepane21)
+
 # [0.179.0](https://github.com/wundergraph/cosmo/compare/router@0.178.0...router@0.179.0) (2025-02-18)
 
 ### Features
