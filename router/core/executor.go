@@ -48,13 +48,14 @@ type Executor struct {
 }
 
 type ExecutorBuildOptions struct {
-	EngineConfig             *nodev1.EngineConfiguration
-	Subgraphs                []*nodev1.Subgraph
-	RouterEngineConfig       *RouterEngineConfiguration
-	PubSubProviders          *EnginePubSubProviders
-	Reporter                 resolve.Reporter
-	ApolloCompatibilityFlags config.ApolloCompatibilityFlags
-	HeartbeatInterval        time.Duration
+	EngineConfig                   *nodev1.EngineConfiguration
+	Subgraphs                      []*nodev1.Subgraph
+	RouterEngineConfig             *RouterEngineConfiguration
+	PubSubProviders                *EnginePubSubProviders
+	Reporter                       resolve.Reporter
+	ApolloCompatibilityFlags       config.ApolloCompatibilityFlags
+	ApolloRouterCompatibilityFlags config.ApolloRouterCompatibilityFlags
+	HeartbeatInterval              time.Duration
 }
 
 func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *ExecutorBuildOptions) (*Executor, error) {
@@ -94,6 +95,10 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 	}
 	if opts.ApolloCompatibilityFlags.ReplaceInvalidVarErrors.Enabled {
 		options.ResolvableOptions.ApolloCompatibilityReplaceInvalidVarError = true
+	}
+
+	if opts.ApolloRouterCompatibilityFlags.SubrequestHTTPError.Enabled {
+		options.ResolvableOptions.ApolloRouterCompatibilitySubrequestHTTPError = true
 	}
 
 	switch opts.RouterEngineConfig.SubgraphErrorPropagation.Mode {

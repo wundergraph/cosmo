@@ -703,6 +703,9 @@
   "ApolloRouterCompatibilityFlags": {
     "ReplaceInvalidVarErrors": {
       "Enabled": false
+    },
+    "SubrequestHTTPError": {
+      "Enabled": false
     }
   },
   "ClientHeader": {

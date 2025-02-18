@@ -887,13 +887,14 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	executor, err := ecb.Build(
 		ctx,
 		&ExecutorBuildOptions{
-			EngineConfig:             engineConfig,
-			Subgraphs:                configSubgraphs,
-			RouterEngineConfig:       routerEngineConfig,
-			PubSubProviders:          s.pubSubProviders,
-			Reporter:                 s.engineStats,
-			ApolloCompatibilityFlags: s.apolloCompatibilityFlags,
-			HeartbeatInterval:        s.multipartHeartbeatInterval,
+			EngineConfig:                   engineConfig,
+			Subgraphs:                      configSubgraphs,
+			RouterEngineConfig:             routerEngineConfig,
+			PubSubProviders:                s.pubSubProviders,
+			Reporter:                       s.engineStats,
+			ApolloCompatibilityFlags:       s.apolloCompatibilityFlags,
+			ApolloRouterCompatibilityFlags: s.apolloRouterCompatibilityFlags,
+			HeartbeatInterval:              s.multipartHeartbeatInterval,
 		},
 	)
 	if err != nil {

@@ -34,7 +34,16 @@ func TestApolloRouterCompatibility(t *testing.T) {
 			})
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
-			assert.Equal(t, `{"errors":[{"message":"invalid type for variable: 'arg'","extensions":{"code":"VALIDATION_INVALID_TYPE_VARIABLE"}}]}`, res.Body)
+			assert.JSONEq(t, `{
+				"errors": [
+					{
+						"message": "invalid type for variable: 'arg'",
+						"extensions": {
+							"code": "VALIDATION_INVALID_TYPE_VARIABLE"
+						}
+					}
+				]
+			}`, res.Body)
 		})
 	})
 
@@ -60,7 +69,232 @@ func TestApolloRouterCompatibility(t *testing.T) {
 			})
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-			assert.Equal(t, `{"errors":[{"message":"invalid type for variable: 'arg'","extensions":{"code":"VALIDATION_INVALID_TYPE_VARIABLE"}}]}`, res.Body)
+			assert.JSONEq(t, `{
+				"errors": [
+					{
+						"message": "invalid type for variable: 'arg'",
+						"extensions": {
+							"code": "VALIDATION_INVALID_TYPE_VARIABLE"
+						}
+					}
+				]
+			}`, res.Body)
+		})
+	})
+
+	errorWithStatus := func(statusCode int) func(http.Handler) http.Handler {
+		return func(_ http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(statusCode)
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]interface{}{
+					"errors": []map[string]interface{}{
+						{
+							"message": "Unknown access token",
+							"extensions": map[string]interface{}{
+								"code": "UNAUTHENTICATED",
+							},
+						},
+					},
+				})
+			})
+		}
+	}
+
+	t.Run("enable subrequest http error compatibility with error propagation disabled", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
+					SubrequestHTTPError: config.ApolloRouterCompatibilitySubrequestHTTPError{
+						Enabled: true,
+					},
+				}),
+				core.WithSubgraphErrorPropagation(config.SubgraphErrorPropagationConfiguration{
+					Enabled: false,
+				}),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Test1: testenv.SubgraphConfig{
+					Middleware: errorWithStatus(http.StatusForbidden),
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query FloatQuery($arg: Float) { floatField(arg: $arg) }`,
+				Variables: json.RawMessage(`{"arg": 2.5}`),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.JSONEq(t, `{
+				"errors": [
+					{
+						"message": "HTTP fetch failed from 'test1': 403: Forbidden",
+						"path": [],
+						"extensions": {
+							"code": "SUBREQUEST_HTTP_ERROR",
+							"service": "test1",
+							"reason": "403: Forbidden",
+							"http": {
+								"status": 403
+							}
+						}
+					},
+					{
+						"message": "Failed to fetch from Subgraph 'test1'."
+					}
+				],
+				"data": {
+					"floatField": null
+				}
+			}`, res.Body)
+		})
+	})
+
+	t.Run("enable subrequest http error compatibility with subgraph error propagation enabled", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
+					SubrequestHTTPError: config.ApolloRouterCompatibilitySubrequestHTTPError{
+						Enabled: true,
+					},
+				}),
+				core.WithSubgraphErrorPropagation(config.SubgraphErrorPropagationConfiguration{
+					Enabled:                true,
+					Mode:                   "pass-through",
+					AllowedExtensionFields: []string{"code"},
+				}),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Test1: testenv.SubgraphConfig{
+					Middleware: errorWithStatus(http.StatusForbidden),
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query FloatQuery($arg: Float) { floatField(arg: $arg) }`,
+				Variables: json.RawMessage(`{"arg": 2.5}`),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.JSONEq(t, `{
+				"errors": [
+					{
+						"message": "HTTP fetch failed from 'test1': 403: Forbidden",
+						"path": [],
+						"extensions": {
+							"code": "SUBREQUEST_HTTP_ERROR",
+							"service": "test1",
+							"reason": "403: Forbidden",
+							"http": {
+								"status": 403
+							}
+						}
+					},
+					{
+						"message": "Unknown access token",
+						"extensions": {
+							"code": "UNAUTHENTICATED"
+						}
+					}
+				],
+				"data": {
+					"floatField": null
+				}
+			}`, res.Body)
+		})
+	})
+
+	t.Run("disable subrequest http error compatibility", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
+					SubrequestHTTPError: config.ApolloRouterCompatibilitySubrequestHTTPError{
+						Enabled: false,
+					},
+				}),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Test1: testenv.SubgraphConfig{
+					Middleware: errorWithStatus(http.StatusForbidden),
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query FloatQuery($arg: Float) { floatField(arg: $arg) }`,
+				Variables: json.RawMessage(`{"arg": 2.5}`),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.JSONEq(t, `{
+				"errors": [
+					{
+						"message": "Failed to fetch from Subgraph 'test1'.",
+						"extensions": {
+							"errors": [
+								{
+									"message": "Unknown access token",
+									"extensions": {
+										"code": "UNAUTHENTICATED"
+									}
+								}
+							],
+							"statusCode": 403
+						}
+					}
+				],
+				"data": {
+					"floatField": null
+				}
+			}`, res.Body)
+		})
+	})
+
+	t.Run("enable subrequest http error compatibility and return non-error code", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
+					SubrequestHTTPError: config.ApolloRouterCompatibilitySubrequestHTTPError{
+						Enabled: true,
+					},
+				}),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Test1: testenv.SubgraphConfig{
+					Middleware: errorWithStatus(http.StatusOK),
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query FloatQuery($arg: Float) { floatField(arg: $arg) }`,
+				Variables: json.RawMessage(`{"arg": 2.5}`),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.JSONEq(t, `{
+				"errors": [
+					{
+						"message": "Failed to fetch from Subgraph 'test1'.",
+						"extensions": {
+							"errors": [
+								{
+									"message": "Unknown access token",
+									"extensions": {
+										"code": "UNAUTHENTICATED"
+									}
+								}
+							],
+							"statusCode": 200
+						}
+					}
+				],
+				"data": {
+					"floatField": null
+				}
+			}`, res.Body)
 		})
 	})
 }
