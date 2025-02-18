@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.180.1](https://github.com/wundergraph/cosmo/compare/router@0.180.0...router@0.180.1) (2025-02-18)
+
+### Bug Fixes
+
+* **router:** send graphql closing boundary to fit Apollo client ([#1579](https://github.com/wundergraph/cosmo/issues/1579)) ([c3d089a](https://github.com/wundergraph/cosmo/commit/c3d089a284f76469a2486032fb42f3c4f650c986)) (@df-wg)
+
 # [0.180.0](https://github.com/wundergraph/cosmo/compare/router@0.179.0...router@0.180.0) (2025-02-18)
 
 ### Features
