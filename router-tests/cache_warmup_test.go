@@ -648,11 +648,11 @@ func TestCacheWarmup(t *testing.T) {
 						QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount,
 						QueryNormalizationHits:            0,
 						PersistedQueryNormalizationMisses: cdnPOCount + 2,
-						PersistedQueryNormalizationHits:   1,
+						PersistedQueryNormalizationHits:   2, // its 2 because the second query is normalization miss
 						ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
-						ValidationHits:                    2,
+						ValidationHits:                    3,
 						PlanMisses:                        cdnOperationCount + cdnPOCount + cdnPOCountWithQuery,
-						PlanHits:                          2,
+						PlanHits:                          3,
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -675,6 +675,14 @@ func TestCacheWarmup(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
 				require.Equal(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+
+				res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					OperationName: []byte(`"AB"`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "21abb40a2be3f4eb457bc77446f9a103c547fa35cb55695eed1cc5c6b4c86c70"}}`),
+					Header:        header,
+				})
+				require.NoError(t, err)
+				require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
 			})
 		})
 
