@@ -3,6 +3,7 @@ import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../../core/config.js';
+import { customRpcHeadersOption } from '../../../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');
@@ -19,6 +20,7 @@ export default (opts: BaseCommandOptions) => {
     '-r, --raw',
     'Prints the token in raw format. This is useful if you want to pipe the token into another command.',
   );
+  command.option.apply(command, customRpcHeadersOption);
   command.action(async (name, options) => {
     const resp = await opts.client.platform.createFederatedGraphToken(
       {
@@ -27,7 +29,7 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

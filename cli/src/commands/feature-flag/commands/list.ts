@@ -7,6 +7,7 @@ import { joinLabel } from '@wundergraph/cosmo-shared';
 import { resolve } from 'pathe';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
+import { customRpcHeadersOption } from '../../shared-options.js';
 
 type OutputFile = {
   name: string;
@@ -25,6 +26,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option('-o, --out [string]', 'Destination file for the json output.');
   command.option('-j, --json', 'Prints to the console in json format instead of table');
+  command.option.apply(command, customRpcHeadersOption);
   command.action(async (options) => {
     const resp = await opts.client.platform.getFeatureFlags(
       {
@@ -33,7 +35,7 @@ export default (opts: BaseCommandOptions) => {
         offset: 0,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

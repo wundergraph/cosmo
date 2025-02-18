@@ -4,10 +4,11 @@ import { joinLabel } from '@wundergraph/cosmo-shared';
 import Table from 'cli-table3';
 import { Command } from 'commander';
 import pc from 'picocolors';
-import { join, resolve } from 'pathe';
+import { resolve } from 'pathe';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import program from '../../index.js';
+import { customRpcHeadersOption } from '../../shared-options.js';
 
 type OutputFile = {
   name: string;
@@ -23,6 +24,8 @@ export default (opts: BaseCommandOptions) => {
   command.option('-o, --out [string]', 'Destination file for the json output.');
   command.option('-r, --raw', 'Prints to the console in json format instead of table');
   command.option('-j, --json', 'Prints to the console in json format instead of table');
+  command.option.apply(command, customRpcHeadersOption);
+
   command.action(async (options) => {
     const resp = await opts.client.platform.getSubgraphs(
       {
@@ -32,7 +35,7 @@ export default (opts: BaseCommandOptions) => {
         offset: 0,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

@@ -8,6 +8,7 @@ import { getBaseHeaders } from '../../../../core/config.js';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { verifyGitHubIntegration } from '../../../../github.js';
 import { handleCheckResult } from '../../../../handle-check-result.js';
+import { customRpcHeadersOption } from '../../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('check');
@@ -19,6 +20,7 @@ export default (opts: BaseCommandOptions) => {
     '--skip-traffic-check',
     'This will skip checking for client traffic and any breaking change will fail the run.',
   );
+  command.option.apply(command, customRpcHeadersOption);
 
   command.action(async (name, options) => {
     const schemaFile = resolve(options.schema);
@@ -32,7 +34,7 @@ export default (opts: BaseCommandOptions) => {
       return;
     }
 
-    const { gitInfo, ignoreErrorsDueToGitHubIntegration } = await verifyGitHubIntegration(opts.client);
+    const { gitInfo, ignoreErrorsDueToGitHubIntegration } = await verifyGitHubIntegration(opts.client, options.header);
 
     const graphResp = await opts.client.platform.getFederatedGraphByName(
       {
@@ -41,7 +43,7 @@ export default (opts: BaseCommandOptions) => {
         includeMetrics: false,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 
@@ -65,7 +67,7 @@ export default (opts: BaseCommandOptions) => {
         skipTrafficCheck: options.skipTrafficCheck,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

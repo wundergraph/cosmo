@@ -43,7 +43,7 @@ export function useGitHub() {
   };
 }
 
-export const verifyGitHubIntegration = async (client: Client) => {
+export const verifyGitHubIntegration = async (client: Client, customHeaderParams?: string[]) => {
   let gitInfo: PartialMessage<GitInfo> | undefined;
   const { isPr, commit: commitSha, repository, accountId } = useGitHub();
   if (isPr && commitSha && repository && accountId) {
@@ -63,7 +63,7 @@ export const verifyGitHubIntegration = async (client: Client) => {
         gitInfo,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(customHeaderParams),
       },
     );
     ignoreErrorsDueToGitHubIntegration = integrationCheckResponse.isInstalled;

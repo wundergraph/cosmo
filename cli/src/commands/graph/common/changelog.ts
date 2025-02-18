@@ -6,6 +6,7 @@ import pc from 'picocolors';
 import { resolve } from 'pathe';
 import { getBaseHeaders } from '../../../core/config.js';
 import { CommonGraphCommandOptions } from '../../../core/types/types.js';
+import { customRpcHeadersOption } from '../../shared-options.js';
 
 type OutputFile = {
   createdAt: string;
@@ -31,6 +32,7 @@ export default (opts: CommonGraphCommandOptions) => {
   command.option('-s, --start [date]', 'Start date. Defaults to 3 days back');
   command.option('-e, --end [date]', 'End date. Defaults to today');
   command.option('-o, --out [string]', 'Destination file for changelog. Defaults to changelog.json', 'changelog.json');
+  command.option.apply(command, customRpcHeadersOption);
   command.action(async (name, options) => {
     let startDate = subDays(new Date(), 3);
     let endDate = new Date();
@@ -56,7 +58,7 @@ export default (opts: CommonGraphCommandOptions) => {
         namespace: options.namespace,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

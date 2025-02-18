@@ -5,12 +5,14 @@ import { Command, program } from 'commander';
 import pc from 'picocolors';
 import { getBaseHeaders } from '../../../../core/config.js';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
+import { customRpcHeadersOption } from '../../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('migrate');
   command.description('Migrates the monograph into a federated graph. This action is irreversible.');
   command.argument('<name>', 'The name of the monograph to migrate.');
   command.option('-n, --namespace [string]', 'The namespace of the monograph.');
+  command.option.apply(command, customRpcHeadersOption);
   command.action(async (name, options) => {
     const inquiry = await inquirer.prompt({
       name: 'confirmMigration',
@@ -29,7 +31,7 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

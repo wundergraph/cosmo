@@ -1,11 +1,10 @@
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Command } from 'commander';
 import ora from 'ora';
 import pc from 'picocolors';
-import Table from 'cli-table3';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { handleCompositionResult } from '../../../handle-composition-result.js';
+import { customRpcHeadersOption } from '../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('enable');
@@ -13,6 +12,7 @@ export default (opts: BaseCommandOptions) => {
   command.argument('<name>', 'The name of the feature flag to enable.');
   command.option('-n, --namespace [string]', 'The namespace of the feature flag.');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option.apply(command, customRpcHeadersOption);
 
   command.action(async (name, options) => {
     const spinner = ora(`The feature flag "${name}" is being enabled...`).start();
@@ -23,7 +23,7 @@ export default (opts: BaseCommandOptions) => {
         enabled: true,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

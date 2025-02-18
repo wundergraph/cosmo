@@ -3,6 +3,7 @@ import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
+import { customRpcHeadersOption } from '../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');
@@ -10,13 +11,14 @@ export default (opts: BaseCommandOptions) => {
     'Creates a new namespace. This helps you scope your graphs so you can isolate into different environments.',
   );
   command.argument('<name>', 'The name of the namespace to create.');
+  command.option.apply(command, customRpcHeadersOption);
   command.action(async (name, options) => {
     const resp = await opts.client.platform.createNamespace(
       {
         name,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

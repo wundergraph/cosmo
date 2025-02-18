@@ -6,6 +6,7 @@ import { resolve } from 'pathe';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../../core/config.js';
+import { customRpcHeadersOption } from '../../../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('push');
@@ -27,6 +28,7 @@ export default (opts: BaseCommandOptions) => {
     '-f, --file <file>',
     'The file with the operation to push - supports .graphql, .gql. If both the file and the persisted operation id are provided, the persisted operation id will be used.',
   );
+  command.option.apply(command, customRpcHeadersOption);
 
   command.action(async (name, options) => {
     if (!options.file && !options.persistedOperationId) {
@@ -67,7 +69,7 @@ export default (opts: BaseCommandOptions) => {
         operationPersistedId: options.persistedOperationId,
         namespace: options.namespace,
       },
-      { headers: getBaseHeaders() },
+      { headers: getBaseHeaders(options.header) },
     );
 
     if (result.response?.code === EnumStatusCode.OK) {

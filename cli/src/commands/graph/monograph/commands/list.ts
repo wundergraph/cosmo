@@ -8,6 +8,7 @@ import logSymbols from 'log-symbols';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../core/config.js';
 import program from '../../../index.js';
+import { customRpcHeadersOption } from '../../../shared-options.js';
 
 type OutputFile = {
   name: string;
@@ -29,6 +30,7 @@ export default (opts: BaseCommandOptions) => {
   command.option('-r, --raw', 'Prints to the console in json format instead of table');
   command.option('-j, --json', 'Prints to the console in json format instead of table');
   command.option('--only-contracts', 'Filter to show contracts only');
+  command.option.apply(command, customRpcHeadersOption);
   command.action(async (options) => {
     const resp = await opts.client.platform.getFederatedGraphs(
       {
@@ -40,7 +42,7 @@ export default (opts: BaseCommandOptions) => {
         supportsFederation: false,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

@@ -40,10 +40,13 @@ export const config = {
   checkBranch: process.env.COSMO_VCS_BRANCH || '',
 };
 
-export const getBaseHeaders = (): HeadersInit => {
+export const getBaseHeaders = (customHeaderParams: string[] = []): HeadersInit => {
+  const customHeaders = Object.fromEntries(customHeaderParams.map((header: string) => header.split('=')));
+
   return {
     'user-agent': `cosmo-cli/${info.version}`,
     authorization: 'Bearer ' + config.apiKey,
     'cosmo-org-slug': getLoginDetails()?.organizationSlug || '',
+    ...customHeaders,
   };
 };

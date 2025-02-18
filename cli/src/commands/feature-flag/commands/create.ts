@@ -5,6 +5,7 @@ import pc from 'picocolors';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { handleCompositionResult } from '../../../handle-composition-result.js';
+import { customRpcHeadersOption } from '../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');
@@ -30,6 +31,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option('-j, --json', 'Prints to the console in json format instead of table');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option.apply(command, customRpcHeadersOption);
   command.action(async (name, options) => {
     const spinner = ora('The feature flag is being created...');
     if (!options.json) {
@@ -44,7 +46,7 @@ export default (opts: BaseCommandOptions) => {
         isEnabled: !!options.enabled,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

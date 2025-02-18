@@ -5,6 +5,7 @@ import Table from 'cli-table3';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../../core/config.js';
 import program from '../../../../index.js';
+import { customRpcHeadersOption } from '../../../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('list');
@@ -13,6 +14,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.argument('<name>', 'The name of the federated graph or monograph.');
   command.option('-n, --namespace [string]', 'The namespace of the federated graph or monograph.');
+  command.option.apply(command, customRpcHeadersOption);
   command.action(async (name, options) => {
     const resp = await opts.client.platform.getRouterTokens(
       {
@@ -20,7 +22,7 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

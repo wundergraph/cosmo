@@ -8,6 +8,7 @@ import pc from 'picocolors';
 import ora from 'ora';
 import { getBaseHeaders } from '../../../../core/config.js';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
+import { customRpcHeadersOption } from '../../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('publish');
@@ -28,6 +29,7 @@ export default (opts: BaseCommandOptions) => {
     false,
   );
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option.apply(command, customRpcHeadersOption);
 
   command.action(async (name, options) => {
     const schemaFile = resolve(options.schema);
@@ -56,7 +58,7 @@ export default (opts: BaseCommandOptions) => {
         schema,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

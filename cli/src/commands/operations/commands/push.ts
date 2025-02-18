@@ -9,6 +9,7 @@ import { PublishedOperationStatus, PersistedOperation } from '@wundergraph/cosmo
 
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
+import { customRpcHeadersOption } from '../../shared-options.js';
 
 type OperationOutputStatus = 'created' | 'up_to_date' | 'conflict';
 
@@ -143,6 +144,7 @@ export default (opts: BaseCommandOptions) => {
   command.option('-q, --quiet', 'Do not print any output', false);
   command.option('--allow-conflicts', 'Exit with success even if there are conflicts', false);
   command.option('--format <output-format>', 'Output format: supported ones are text and json', 'text');
+  command.option.apply(command, customRpcHeadersOption);
   command.action(async (name, options) => {
     if (options.file.length === 0) {
       command.error(pc.red('No files provided'));
@@ -164,7 +166,7 @@ export default (opts: BaseCommandOptions) => {
         clientName: options.client,
         operations,
       },
-      { headers: getBaseHeaders() },
+      { headers: getBaseHeaders(options.header) },
     );
     if (result.response?.code === EnumStatusCode.OK) {
       if (options.quiet) {

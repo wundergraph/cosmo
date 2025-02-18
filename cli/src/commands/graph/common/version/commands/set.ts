@@ -7,6 +7,7 @@ import ora from 'ora';
 import { getBaseHeaders } from '../../../../../core/config.js';
 import { CommonGraphCommandOptions } from '../../../../../core/types/types.js';
 import { handleCompositionResult } from '../../../../../handle-composition-result.js';
+import { customRpcHeadersOption } from '../../../../shared-options.js';
 
 export default (opts: CommonGraphCommandOptions) => {
   const graphType = opts.isMonograph ? 'monograph' : 'federated graph';
@@ -18,6 +19,7 @@ export default (opts: CommonGraphCommandOptions) => {
   command.option('-n, --namespace [string]', `The namespace of the ${graphType}.`);
   command.option('-o, --out [string]', 'Destination file for the SDL.');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option.apply(command, customRpcHeadersOption);
   command.action(async (name, options) => {
     const spinner = ora(`Attempting to set router compatibility version ${options.version}...`).start();
 
@@ -28,7 +30,7 @@ export default (opts: CommonGraphCommandOptions) => {
         version: options.version,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

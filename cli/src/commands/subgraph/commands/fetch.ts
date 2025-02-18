@@ -7,6 +7,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import program from '../../index.js';
+import { customRpcHeadersOption } from '../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('fetch');
@@ -20,6 +21,7 @@ export default (opts: BaseCommandOptions) => {
     'The name of the federated graph to fetch the latest valid subgraph SDL from.',
   );
   command.option('-o, --out [string]', 'Destination file for the SDL.');
+  command.option.apply(command, customRpcHeadersOption);
   command.action(async (name, options) => {
     let subgraphSDL = '';
     let response: Response | undefined;
@@ -32,7 +34,7 @@ export default (opts: BaseCommandOptions) => {
           namespace: options.namespace,
         },
         {
-          headers: getBaseHeaders(),
+          headers: getBaseHeaders(options.header),
         },
       );
 
@@ -45,7 +47,7 @@ export default (opts: BaseCommandOptions) => {
           namespace: options.namespace,
         },
         {
-          headers: getBaseHeaders(),
+          headers: getBaseHeaders(options.header),
         },
       );
 

@@ -3,17 +3,19 @@ import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { BaseCommandOptions, WhoAmICommandJsonOutput } from '../../../core/types/types.js';
 import { getBaseHeaders, config } from '../../../core/config.js';
+import { customRpcHeadersOption } from '../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('whoami');
   command.description('Displays the users/service identity currently authenticated and in use.');
   command.option('-j, --json', 'Output the information in JSON format');
+  command.option.apply(command, customRpcHeadersOption);
 
   command.action(async (options) => {
     const resp = await opts.client.platform.whoAmI(
       {},
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 
