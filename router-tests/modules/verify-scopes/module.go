@@ -8,11 +8,6 @@ import (
 	"go.uber.org/zap"
 )
 
-func init() {
-	// Register your module here
-	core.RegisterModule(&VerifyScopesModule{})
-}
-
 const myModuleID = "verifyScopesModule"
 
 // VerifyScopesModule is a simple module that has access to the GraphQL operation and adds custom scopes to the response
