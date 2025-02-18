@@ -82,6 +82,25 @@ func TestApolloRouterCompatibility(t *testing.T) {
 		})
 	})
 
+	errorWithStatus := func(statusCode int) func(http.Handler) http.Handler {
+		return func(_ http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(statusCode)
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]interface{}{
+					"errors": []map[string]interface{}{
+						{
+							"message": "Unknown access token",
+							"extensions": map[string]interface{}{
+								"code": "UNAUTHENTICATED",
+							},
+						},
+					},
+				})
+			})
+		}
+	}
+
 	t.Run("enable subrequest http error compatibility with error propagation disabled", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
@@ -97,22 +116,7 @@ func TestApolloRouterCompatibility(t *testing.T) {
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Test1: testenv.SubgraphConfig{
-					Middleware: func(handler http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							w.WriteHeader(http.StatusForbidden)
-							w.Header().Set("Content-Type", "application/json")
-							_ = json.NewEncoder(w).Encode(map[string]interface{}{
-								"errors": []map[string]interface{}{
-									{
-										"message": "Unknown access token",
-										"extensions": map[string]interface{}{
-											"code": "UNAUTHENTICATED",
-										},
-									},
-								},
-							})
-						})
-					},
+					Middleware: errorWithStatus(http.StatusForbidden),
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -164,22 +168,7 @@ func TestApolloRouterCompatibility(t *testing.T) {
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Test1: testenv.SubgraphConfig{
-					Middleware: func(handler http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							w.WriteHeader(http.StatusForbidden)
-							w.Header().Set("Content-Type", "application/json")
-							_ = json.NewEncoder(w).Encode(map[string]interface{}{
-								"errors": []map[string]interface{}{
-									{
-										"message": "Unknown access token",
-										"extensions": map[string]interface{}{
-											"code": "UNAUTHENTICATED",
-										},
-									},
-								},
-							})
-						})
-					},
+					Middleware: errorWithStatus(http.StatusForbidden),
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -229,11 +218,7 @@ func TestApolloRouterCompatibility(t *testing.T) {
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Test1: testenv.SubgraphConfig{
-					Middleware: func(handler http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							w.WriteHeader(http.StatusForbidden)
-						})
-					},
+					Middleware: errorWithStatus(http.StatusForbidden),
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -246,8 +231,16 @@ func TestApolloRouterCompatibility(t *testing.T) {
 			assert.JSONEq(t, `{
 				"errors": [
 					{
-						"message": "Failed to fetch from Subgraph 'test1', Reason: empty response.",
+						"message": "Failed to fetch from Subgraph 'test1'.",
 						"extensions": {
+							"errors": [
+								{
+									"message": "Unknown access token",
+									"extensions": {
+										"code": "UNAUTHENTICATED"
+									}
+								}
+							],
 							"statusCode": 403
 						}
 					}
@@ -271,11 +264,7 @@ func TestApolloRouterCompatibility(t *testing.T) {
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Test1: testenv.SubgraphConfig{
-					Middleware: func(handler http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							w.WriteHeader(http.StatusOK)
-						})
-					},
+					Middleware: errorWithStatus(http.StatusOK),
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -288,8 +277,16 @@ func TestApolloRouterCompatibility(t *testing.T) {
 			assert.JSONEq(t, `{
 				"errors": [
 					{
-						"message": "Failed to fetch from Subgraph 'test1', Reason: empty response.",
+						"message": "Failed to fetch from Subgraph 'test1'.",
 						"extensions": {
+							"errors": [
+								{
+									"message": "Unknown access token",
+									"extensions": {
+										"code": "UNAUTHENTICATED"
+									}
+								}
+							],
 							"statusCode": 200
 						}
 					}
