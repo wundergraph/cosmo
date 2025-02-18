@@ -2411,6 +2411,17 @@
               "default": false
             }
           }
+        },
+        "subrequest_http_error": {
+          "type": "object",
+          "description": "Prepends an additional error when subgraph HTTP response code is non-2XX, similar to Apollo Router.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
         }
       }
     },
