@@ -796,10 +796,15 @@ type ApolloCompatibilityReplaceValidationErrorStatus struct {
 
 type ApolloRouterCompatibilityFlags struct {
 	ReplaceInvalidVarErrors ApolloRouterCompatibilityReplaceInvalidVarErrors `yaml:"replace_invalid_var_errors"`
+	SubrequestHTTPError     ApolloRouterCompatibilitySubrequestHTTPError     `yaml:"subrequest_http_error"`
 }
 
 type ApolloRouterCompatibilityReplaceInvalidVarErrors struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_ENABLED"`
+}
+
+type ApolloRouterCompatibilitySubrequestHTTPError struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_ROUTER_COMPATIBILITY_SUBREQUEST_HTTP_ERROR_ENABLED"`
 }
 
 type CacheWarmupSource struct {
@@ -882,7 +887,7 @@ type Config struct {
 
 	StorageProviders               StorageProviders                `yaml:"storage_providers"`
 	ExecutionConfig                ExecutionConfig                 `yaml:"execution_config"`
-	PersistedOperationsConfig      PersistedOperationsConfig       `yaml:"persisted_operations"`
+	PersistedOperationsConfig      PersistedOperationsConfig       `yaml:"persisted_operations,omitempty"`
 	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
 	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
