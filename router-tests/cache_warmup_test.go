@@ -786,7 +786,6 @@ func TestFlakyCacheWarmupMetrics(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								otel.WgClientName.String(""),
-								otel.WgClientVersion.String(""),
 								// This is a miss, because we just planned it
 								otel.WgEnginePlanCacheHit.Bool(false),
 								otel.WgFeatureFlag.String(""),
@@ -803,7 +802,6 @@ func TestFlakyCacheWarmupMetrics(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								otel.WgClientName.String("unknown"),
-								otel.WgClientVersion.String("missing"),
 								// This is a hit, because we planned it for the base graph
 								otel.WgEnginePlanCacheHit.Bool(true),
 								otel.WgOperationHash.String("1163600561566987607"),
