@@ -96,7 +96,7 @@ export function pushCacheWarmerOperation(
       if (!existingPersistedOperation || !existingPersistedOperation.contents) {
         return {
           response: {
-            code: EnumStatusCode.ERR,
+            code: EnumStatusCode.ERR_NOT_FOUND,
             details: `Persisted Operation with ID ${req.operationPersistedId} does not exist`,
           },
         };
@@ -161,7 +161,7 @@ export function pushCacheWarmerOperation(
     if (exists) {
       return {
         response: {
-          code: EnumStatusCode.ERR,
+          code: EnumStatusCode.ERR_ALREADY_EXISTS,
           details: `Operation already exists`,
         },
       };
