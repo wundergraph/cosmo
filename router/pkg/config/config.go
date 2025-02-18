@@ -801,10 +801,15 @@ type ApolloCompatibilitySubscriptionMultipartPrintBoundary struct {
 
 type ApolloRouterCompatibilityFlags struct {
 	ReplaceInvalidVarErrors ApolloRouterCompatibilityReplaceInvalidVarErrors `yaml:"replace_invalid_var_errors"`
+	SubrequestHTTPError     ApolloRouterCompatibilitySubrequestHTTPError     `yaml:"subrequest_http_error"`
 }
 
 type ApolloRouterCompatibilityReplaceInvalidVarErrors struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_ENABLED"`
+}
+
+type ApolloRouterCompatibilitySubrequestHTTPError struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_ROUTER_COMPATIBILITY_SUBREQUEST_HTTP_ERROR_ENABLED"`
 }
 
 type CacheWarmupSource struct {

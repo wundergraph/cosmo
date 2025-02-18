@@ -2,12 +2,13 @@ package module_test
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.uber.org/zap/zapcore"
-	"testing"
 
 	"github.com/wundergraph/cosmo/router/cmd/custom/module"
 	"github.com/wundergraph/cosmo/router/core"
@@ -27,6 +28,7 @@ func TestModuleSetCustomHeader(t *testing.T) {
 	testenv.Run(t, &testenv.Config{
 		RouterOptions: []core.Option{
 			core.WithModulesConfig(cfg.Modules),
+			core.WithCustomModules(&module.MyModule{}),
 		},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -56,6 +58,7 @@ func TestCustomModuleLogs(t *testing.T) {
 	testenv.Run(t, &testenv.Config{
 		RouterOptions: []core.Option{
 			core.WithModulesConfig(cfg.Modules),
+			core.WithCustomModules(&module.MyModule{}),
 		},
 		LogObservation: testenv.LogObservationConfig{
 			Enabled:  true,
