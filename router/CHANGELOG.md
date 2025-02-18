@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.179.0](https://github.com/wundergraph/cosmo/compare/router@0.178.0...router@0.179.0) (2025-02-18)
+
+### Features
+
+* **engine:** apollo router compatible non-2XX response errors ([#1602](https://github.com/wundergraph/cosmo/issues/1602)) ([efa3ff4](https://github.com/wundergraph/cosmo/commit/efa3ff45b8076eba63f588155b979d9b9fdc3ef8)) (@endigma)
+
 # [0.178.0](https://github.com/wundergraph/cosmo/compare/router@0.177.2...router@0.178.0) (2025-02-17)
 
 ### Features
