@@ -121,7 +121,6 @@ export function getCacheWarmerOperations(
         operationPersistedId: op.operationPersistedID || '',
         operationHash: op.operationHash || '',
         clientName: op.clientName || '',
-        clientVersion: op.clientVersion || '',
         planningTime: op.planningTime || 0,
         isManuallyAdded: op.isManuallyAdded,
         createdAt: op.createdAt.toISOString() || '',
