@@ -1015,6 +1015,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 	}
 
+	if s.apolloCompatibilityFlags.SubscriptionMultipartPrintBoundary.Enabled {
+		handlerOpts.ApolloSubscriptionMultipartPrintBoundary = s.apolloCompatibilityFlags.SubscriptionMultipartPrintBoundary.Enabled
+	}
+
 	graphqlHandler := NewGraphQLHandler(handlerOpts)
 	executor.Resolver.SetAsyncErrorWriter(graphqlHandler)
 

@@ -756,13 +756,14 @@ type AccessLogsSubgraphsConfig struct {
 }
 
 type ApolloCompatibilityFlags struct {
-	EnableAll                     bool                                             `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
-	ValueCompletion               ApolloCompatibilityValueCompletion               `yaml:"value_completion"`
-	TruncateFloats                ApolloCompatibilityTruncateFloats                `yaml:"truncate_floats"`
-	SuppressFetchErrors           ApolloCompatibilitySuppressFetchErrors           `yaml:"suppress_fetch_errors"`
-	ReplaceUndefinedOpFieldErrors ApolloCompatibilityReplaceUndefinedOpFieldErrors `yaml:"replace_undefined_op_field_errors"`
-	ReplaceInvalidVarErrors       ApolloCompatibilityReplaceInvalidVarErrors       `yaml:"replace_invalid_var_errors"`
-	ReplaceValidationErrorStatus  ApolloCompatibilityReplaceValidationErrorStatus  `yaml:"replace_validation_error_status"`
+	EnableAll                          bool                                                  `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
+	ValueCompletion                    ApolloCompatibilityValueCompletion                    `yaml:"value_completion"`
+	TruncateFloats                     ApolloCompatibilityTruncateFloats                     `yaml:"truncate_floats"`
+	SuppressFetchErrors                ApolloCompatibilitySuppressFetchErrors                `yaml:"suppress_fetch_errors"`
+	ReplaceUndefinedOpFieldErrors      ApolloCompatibilityReplaceUndefinedOpFieldErrors      `yaml:"replace_undefined_op_field_errors"`
+	ReplaceInvalidVarErrors            ApolloCompatibilityReplaceInvalidVarErrors            `yaml:"replace_invalid_var_errors"`
+	ReplaceValidationErrorStatus       ApolloCompatibilityReplaceValidationErrorStatus       `yaml:"replace_validation_error_status"`
+	SubscriptionMultipartPrintBoundary ApolloCompatibilitySubscriptionMultipartPrintBoundary `yaml:"subscription_multipart_print_boundary"`
 }
 
 type ApolloCompatibilityValueCompletion struct {
@@ -792,6 +793,10 @@ type ApolloCompatibilityReplaceInvalidVarErrors struct {
 
 type ApolloCompatibilityReplaceValidationErrorStatus struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_REPLACE_VALIDATION_ERROR_STATUS_ENABLED"`
+}
+
+type ApolloCompatibilitySubscriptionMultipartPrintBoundary struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_SUBSCRIPTION_MULTIPART_PRINT_BOUNDARY_ENABLED"`
 }
 
 type ApolloRouterCompatibilityFlags struct {
