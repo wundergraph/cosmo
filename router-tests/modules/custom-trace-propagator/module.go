@@ -11,11 +11,6 @@ import (
 	"github.com/wundergraph/cosmo/router/core"
 )
 
-func init() {
-	// Register your module here
-	core.RegisterModule(&CustomTracePropagatorModule{})
-}
-
 const myModuleID = "tracePropagatorModule"
 
 // CustomTracePropagatorModule is a simple module that provides a custom trace propagator for the router
