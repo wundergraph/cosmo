@@ -38,7 +38,6 @@ func (c *CacheWarmupMockProcessor) ProcessOperation(ctx context.Context, item *n
 		OperationName: "",
 		OperationType: "",
 		ClientName:    item.GetClient().Name,
-		ClientVersion: item.GetClient().Version,
 		PlanningTime:  0,
 	}, nil
 }

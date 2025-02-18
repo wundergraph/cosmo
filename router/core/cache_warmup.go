@@ -221,7 +221,6 @@ type CacheWarmupOperationPlanResult struct {
 	OperationName string
 	OperationType string
 	ClientName    string
-	ClientVersion string
 	PlanningTime  time.Duration
 }
 
@@ -260,7 +259,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 			Extensions:    s,
 		},
 		Client: &ClientInfo{
-			Name:    operation.GetClient().GetName(),
+			Name: operation.GetClient().GetName(),
 		},
 	}
 
@@ -351,7 +350,6 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		OperationName: k.parsedOperation.Request.OperationName,
 		OperationType: k.parsedOperation.Type,
 		ClientName:    item.Client.Name,
-		ClientVersion: item.Client.Version,
 		PlanningTime:  time.Since(planningStart),
 	}, nil
 }
