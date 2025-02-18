@@ -545,6 +545,7 @@ func TestCacheWarmup(t *testing.T) {
 		// keep in sync with testenv/testdata/cache_warmup/cdn/operation.json
 		cdnOperationCount := int64(5)
 		cdnPOCount := int64(1)
+		cdnPOCountWithQuery := int64(1)
 		featureOperationCount := int64(1)
 		invalidOperationCount := int64(1)
 
@@ -591,9 +592,9 @@ func TestCacheWarmup(t *testing.T) {
 						QueryNormalizationHits:            3,
 						PersistedQueryNormalizationMisses: cdnPOCount,
 						PersistedQueryNormalizationHits:   0,
-						ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
+						ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
 						ValidationHits:                    3 + employeeQueryCount,
-						PlanMisses:                        cdnOperationCount + cdnPOCount,
+						PlanMisses:                        cdnOperationCount + cdnPOCount + cdnPOCountWithQuery,
 						PlanHits:                          3 + employeeQueryCount,
 					},
 				},
@@ -648,9 +649,9 @@ func TestCacheWarmup(t *testing.T) {
 						QueryNormalizationHits:            0,
 						PersistedQueryNormalizationMisses: cdnPOCount + 2,
 						PersistedQueryNormalizationHits:   1,
-						ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
+						ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
 						ValidationHits:                    2,
-						PlanMisses:                        cdnOperationCount + cdnPOCount,
+						PlanMisses:                        cdnOperationCount + cdnPOCount + cdnPOCountWithQuery,
 						PlanHits:                          2,
 					},
 				},
@@ -690,9 +691,9 @@ func TestCacheWarmup(t *testing.T) {
 						QueryNormalizationHits:            0,
 						PersistedQueryNormalizationMisses: cdnPOCount,
 						PersistedQueryNormalizationHits:   0,
-						ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
+						ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
 						ValidationHits:                    0,
-						PlanMisses:                        cdnOperationCount + cdnPOCount,
+						PlanMisses:                        cdnOperationCount + cdnPOCount + cdnPOCountWithQuery,
 						PlanHits:                          0,
 					},
 					FeatureFlagAssertions: map[string]testenv.CacheMetricsAssertion{
@@ -701,9 +702,9 @@ func TestCacheWarmup(t *testing.T) {
 							QueryNormalizationHits:            1,
 							PersistedQueryNormalizationMisses: cdnPOCount,
 							PersistedQueryNormalizationHits:   0,
-							ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
+							ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
 							ValidationHits:                    1,
-							PlanMisses:                        cdnOperationCount + featureOperationCount + featureOperationCount,
+							PlanMisses:                        cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount,
 							PlanHits:                          1,
 						},
 					},
