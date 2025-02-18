@@ -109,3 +109,7 @@ func Authenticate(ctx context.Context, authenticators []Authenticator, p Provide
 	// even if to claims were found.
 	return nil, joinedErrors
 }
+
+func NewEmptyAuthentication() Authentication {
+	return &authentication{}
+}
