@@ -1824,6 +1824,7 @@ func WithApolloCompatibilityFlagsConfig(cfg config.ApolloCompatibilityFlags) Opt
 			cfg.ReplaceUndefinedOpFieldErrors.Enabled = true
 			cfg.ReplaceInvalidVarErrors.Enabled = true
 			cfg.ReplaceValidationErrorStatus.Enabled = true
+			cfg.SubscriptionMultipartPrintBoundary.Enabled = true
 		}
 		r.apolloCompatibilityFlags = cfg
 	}
