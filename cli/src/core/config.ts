@@ -38,6 +38,7 @@ export const config = {
   checkAuthor: process.env.COSMO_VCS_AUTHOR || '',
   checkCommitSha: process.env.COSMO_VCS_COMMIT || '',
   checkBranch: process.env.COSMO_VCS_BRANCH || '',
+  rpcTimeout: process.env.COSMO_RPC_TIMEOUT || 75_000,
 };
 
 export const getBaseHeaders = (customHeaderParams: string[] = []): HeadersInit => {
