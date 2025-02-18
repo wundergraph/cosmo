@@ -160,7 +160,6 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 						w.log.Warn("Failed to process operation, skipping",
 							zap.Error(err),
 							zap.String("client_name", item.Client.Name),
-							zap.String("client_version", item.Client.Version),
 							zap.String("query", item.Request.Query),
 							zap.String("operation_name", item.Request.OperationName),
 						)
@@ -262,7 +261,6 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		},
 		Client: &ClientInfo{
 			Name:    operation.GetClient().GetName(),
-			Version: operation.GetClient().GetVersion(),
 		},
 	}
 
