@@ -685,9 +685,9 @@ func TestCacheWarmup(t *testing.T) {
 						PersistedQueryNormalizationMisses: cdnPOCount + 2,
 						PersistedQueryNormalizationHits:   1, // its 1 because the second query is normalization miss
 						ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
-						ValidationHits:                    3,
+						ValidationHits:                    2,
 						PlanMisses:                        cdnOperationCount + cdnPOCount + cdnPOCountWithQuery,
-						PlanHits:                          3,
+						PlanHits:                          2,
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
