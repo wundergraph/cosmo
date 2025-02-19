@@ -5,7 +5,7 @@ import (
 	"slices"
 )
 
-func CookieWhitelist(cookieWhitelist []string) func(next http.Handler) http.Handler {
+func CookieWhitelist(cookieWhitelist []string, cookieSafelist []string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, rr *http.Request) {
 			if len(cookieWhitelist) == 0 {
@@ -17,7 +17,8 @@ func CookieWhitelist(cookieWhitelist []string) func(next http.Handler) http.Hand
 			rr.Header.Del("Cookie")
 
 			for _, cookie := range cookies {
-				if slices.Contains(cookieWhitelist, cookie.Name) {
+				if slices.Contains(cookieWhitelist, cookie.Name) ||
+					slices.Contains(cookieSafelist, cookie.Name) {
 					rr.AddCookie(cookie)
 				}
 			}
