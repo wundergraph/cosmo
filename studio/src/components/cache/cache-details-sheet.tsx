@@ -165,6 +165,7 @@ export const CacheOperationDetails = ({
   const {
     operationContent,
     clientName,
+    clientVersion,
     operationHash,
     operationName,
     operationPersistedId,
@@ -216,6 +217,17 @@ export const CacheOperationDetails = ({
                   <span>:</span>
                   <div className="flex flex-wrap gap-x-3">
                     {clientName || "-"}
+                  </div>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td className="pr-6">Client Version</td>
+              <td>
+                <div className="flex items-center gap-x-3">
+                  <span>:</span>
+                  <div className="flex flex-wrap gap-x-3">
+                    {clientVersion || "-"}
                   </div>
                 </div>
               </td>

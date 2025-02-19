@@ -950,7 +950,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 					append([]attribute.KeyValue{
 						otel.WgOperationName.String(item.OperationName),
 						otel.WgClientName.String(item.ClientName),
-						otel.WgClientVersion.String(""),
+						otel.WgClientVersion.String(item.ClientVersion),
 						otel.WgFeatureFlag.String(featureFlagName),
 						otel.WgOperationHash.String(item.OperationHash),
 						otel.WgOperationType.String(item.OperationType),

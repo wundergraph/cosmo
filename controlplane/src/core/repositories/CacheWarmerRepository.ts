@@ -172,6 +172,7 @@ export class CacheWarmerRepository {
             client: operation.clientName
               ? new ClientInfo({
                   name: operation.clientName,
+                  version: operation.clientVersion || undefined,
                 })
               : undefined,
           }),
@@ -186,6 +187,7 @@ export class CacheWarmerRepository {
             client: operation.clientName
               ? new ClientInfo({
                   name: operation.clientName,
+                  version: operation.clientVersion || undefined,
                 })
               : undefined,
           }),
@@ -232,6 +234,7 @@ export class CacheWarmerRepository {
             client: operation.clientName
               ? new ClientInfo({
                   name: operation.clientName,
+                  version: operation.clientVersion,
                 })
               : undefined,
           }),
@@ -243,6 +246,7 @@ export class CacheWarmerRepository {
           operationContent: persistedOperation.contents,
           operationPersistedID: operation.operationPersistedID,
           clientName: operation.clientName,
+          clientVersion: operation.clientVersion,
           planningTime: operation.planningTime,
           federatedGraphId: props.federatedGraphId,
           organizationId: props.organizationId,
@@ -262,6 +266,7 @@ export class CacheWarmerRepository {
         operationHash: operation.operationHash,
         operationPersistedID: operation.operationPersistedID,
         clientName: operation.clientName,
+        clientVersion: operation.clientVersion,
         planningTime: operation.planningTime,
         federatedGraphId: props.federatedGraphId,
         organizationId: props.organizationId,
@@ -278,6 +283,7 @@ export class CacheWarmerRepository {
           client: operation.clientName
             ? new ClientInfo({
                 name: operation.clientName,
+                version: operation.clientVersion,
               })
             : undefined,
         }),
@@ -361,6 +367,7 @@ export class CacheWarmerRepository {
         operationPersistedID: cacheWarmerOperations.operationPersistedID,
         operationHash: cacheWarmerOperations.operationHash,
         clientName: cacheWarmerOperations.clientName,
+        clientVersion: cacheWarmerOperations.clientVersion,
         planningTime: cacheWarmerOperations.planningTime,
         isManuallyAdded: cacheWarmerOperations.isManuallyAdded,
         createdAt: cacheWarmerOperations.createdAt,
@@ -482,6 +489,7 @@ export class CacheWarmerRepository {
         operationPersistedID: cacheWarmerOperations.operationPersistedID,
         operationHash: cacheWarmerOperations.operationHash,
         clientName: cacheWarmerOperations.clientName,
+        clientVersion: cacheWarmerOperations.clientVersion,
         planningTime: cacheWarmerOperations.planningTime,
         isManuallyAdded: cacheWarmerOperations.isManuallyAdded,
         createdAt: cacheWarmerOperations.createdAt,
@@ -508,6 +516,7 @@ export class CacheWarmerRepository {
       operationPersistedId: operations[0].operationPersistedID || '',
       operationHash: operations[0].operationHash || '',
       clientName: operations[0].clientName || '',
+      clientVersion: operations[0].clientVersion || '',
       planningTime: operations[0].planningTime || 0,
       isManuallyAdded: operations[0].isManuallyAdded,
       createdAt: operations[0].createdAt.toISOString() || '',

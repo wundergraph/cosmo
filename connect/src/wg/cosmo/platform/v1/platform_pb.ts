@@ -19297,6 +19297,11 @@ export class CacheWarmerOperation extends Message<CacheWarmerOperation> {
   clientName = "";
 
   /**
+   * @generated from field: string clientVersion = 7;
+   */
+  clientVersion = "";
+
+  /**
    * @generated from field: float planningTime = 8;
    */
   planningTime = 0;
@@ -19330,6 +19335,7 @@ export class CacheWarmerOperation extends Message<CacheWarmerOperation> {
     { no: 4, name: "operationPersistedId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "operationHash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "clientName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "clientVersion", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 8, name: "planningTime", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
     { no: 9, name: "isManuallyAdded", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 10, name: "createdAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },

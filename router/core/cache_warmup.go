@@ -160,6 +160,7 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 						w.log.Warn("Failed to process operation, skipping",
 							zap.Error(err),
 							zap.String("client_name", item.Client.Name),
+							zap.String("client_version", item.Client.Version),
 							zap.String("query", item.Request.Query),
 							zap.String("operation_name", item.Request.OperationName),
 						)
@@ -221,6 +222,7 @@ type CacheWarmupOperationPlanResult struct {
 	OperationName string
 	OperationType string
 	ClientName    string
+	ClientVersion string
 	PlanningTime  time.Duration
 }
 
@@ -260,6 +262,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		},
 		Client: &ClientInfo{
 			Name: operation.GetClient().GetName(),
+			Version: operation.GetClient().GetVersion(),
 		},
 	}
 
@@ -350,6 +353,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		OperationName: k.parsedOperation.Request.OperationName,
 		OperationType: k.parsedOperation.Type,
 		ClientName:    item.Client.Name,
+		ClientVersion: item.Client.Version,
 		PlanningTime:  time.Since(planningStart),
 	}, nil
 }

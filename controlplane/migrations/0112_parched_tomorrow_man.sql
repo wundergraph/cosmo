@@ -1,1 +1,0 @@
-ALTER TABLE "cache_warmer_operations" DROP COLUMN IF EXISTS "client_version";

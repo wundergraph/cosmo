@@ -343,4 +343,5 @@ message PersistedQuery {
 
 message ClientInfo {
   string name = 1;
+  string version = 2;
 }

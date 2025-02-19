@@ -2041,6 +2041,7 @@ export const cacheWarmerOperations = pgTable(
     operationPersistedID: text('operation_persisted_id'),
     operationName: text('operation_name'),
     clientName: text('client_name'),
+    clientVersion: text('client_version'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     planningTime: real('planning_time'),
     // is true if the operation is added by the user

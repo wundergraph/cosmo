@@ -2445,6 +2445,7 @@ message CacheWarmerOperation {
   string operationPersistedId = 4;
   string operationHash = 5;
   string clientName = 6;
+  string clientVersion = 7;
   float planningTime = 8;
   bool isManuallyAdded = 9;
   string createdAt = 10;
