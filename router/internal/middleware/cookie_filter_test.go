@@ -38,7 +38,7 @@ func TestCookieWhitelist(t *testing.T) {
 			req.AddCookie(cookie)
 		}
 
-		CookieWhitelist(cookieWhitelist)(next).ServeHTTP(recorder, req)
+		CookieWhitelist(cookieWhitelist, []string{})(next).ServeHTTP(recorder, req)
 
 		require.Equal(t, http.StatusOK, recorder.Code)
 		require.Equal(t, cookies, filteredCookies)
@@ -81,13 +81,13 @@ func TestCookieWhitelist(t *testing.T) {
 			req.AddCookie(cookie)
 		}
 
-		CookieWhitelist(cookieWhitelist)(next).ServeHTTP(recorder, req)
+		CookieWhitelist(cookieWhitelist, []string{})(next).ServeHTTP(recorder, req)
 
 		require.Equal(t, http.StatusOK, recorder.Code)
 		require.Equal(t, expectedFilteredCookies, filteredCookies)
 	})
 
-	t.Run("never filter feature flag cookie", func(t *testing.T) {
+	t.Run("never filter safe listed cookie", func(t *testing.T) {
 		t.Parallel()
 
 		cookieWhitelist := []string{"allowed"}
@@ -101,8 +101,8 @@ func TestCookieWhitelist(t *testing.T) {
 				Value: "disallowed",
 			},
 			{
-				Name:  "feature_flag",
-				Value: "feature_flag",
+				Name:  "safelisted",
+				Value: "safelisted",
 			},
 		}
 
@@ -112,8 +112,8 @@ func TestCookieWhitelist(t *testing.T) {
 				Value: "allowed",
 			},
 			{
-				Name:  "feature_flag",
-				Value: "feature_flag",
+				Name:  "safelisted",
+				Value: "safelisted",
 			},
 		}
 
@@ -132,7 +132,7 @@ func TestCookieWhitelist(t *testing.T) {
 			req.AddCookie(cookie)
 		}
 
-		CookieWhitelist(cookieWhitelist)(next).ServeHTTP(recorder, req)
+		CookieWhitelist(cookieWhitelist, []string{"safelisted"})(next).ServeHTTP(recorder, req)
 
 		require.Equal(t, http.StatusOK, recorder.Code)
 		require.Equal(t, expectedFilteredCookies, filteredCookies)
