@@ -228,7 +228,11 @@
           }
         ]
       }
-    }
+    },
+    "CookieWhitelist": [
+      "cookie1",
+      "cookie2"
+    ]
   },
   "TrafficShaping": {
     "All": {

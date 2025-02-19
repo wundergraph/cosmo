@@ -1351,6 +1351,14 @@
               }
             }
           }
+        },
+        "cookie_whitelist": {
+          "type": "array",
+          "description": "A list of Cookie keys allowed to be forwarded to the subgraph. If the list is empty or unspecified, all cookies are forwarded. This option will do nothing if the 'Cookie' header is not propagated.",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
