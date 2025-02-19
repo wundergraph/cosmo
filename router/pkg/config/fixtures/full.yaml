@@ -211,6 +211,9 @@ headers:
         - op: "set"
           name: "X-Subgraph-Key"
           value: "some-subgraph-secret"
+  cookie_whitelist:
+    - "cookie1"
+    - "cookie2"
 
 # Authentication and Authorization
 # See https://cosmo-docs.wundergraph.com/router/authentication-and-authorization for more information

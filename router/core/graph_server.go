@@ -235,6 +235,8 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			return wrapper(h)
 		})
 
+		cr.Use(rmiddleware.CookieWhitelist(s.headerRules.CookieWhitelist))
+
 		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
 		cr.Handle(r.graphqlPath, multiGraphHandler)
 

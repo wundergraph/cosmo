@@ -211,8 +211,9 @@ type CacheControlPolicy struct {
 
 type HeaderRules struct {
 	// All is a set of rules that apply to all requests
-	All       *GlobalHeaderRule            `yaml:"all,omitempty"`
-	Subgraphs map[string]*GlobalHeaderRule `yaml:"subgraphs,omitempty"`
+	All             *GlobalHeaderRule            `yaml:"all,omitempty"`
+	Subgraphs       map[string]*GlobalHeaderRule `yaml:"subgraphs,omitempty"`
+	CookieWhitelist []string                     `yaml:"cookie_whitelist,omitempty"`
 }
 
 type GlobalHeaderRule struct {
