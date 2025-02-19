@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.181.0](https://github.com/wundergraph/cosmo/compare/router@0.180.1...router@0.181.0) (2025-02-19)
+
+### Features
+
+* **router:** cookie header whitelist ([#1604](https://github.com/wundergraph/cosmo/issues/1604)) ([7784207](https://github.com/wundergraph/cosmo/commit/778420703ea46ddb2bd82d262cdbc8d52e6badcd)) (@endigma)
+
 ## [0.180.1](https://github.com/wundergraph/cosmo/compare/router@0.180.0...router@0.180.1) (2025-02-18)
 
 ### Bug Fixes
