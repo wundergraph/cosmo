@@ -2401,6 +2401,17 @@
               "default": false
             }
           }
+        },
+        "subscription_multipart_print_boundary": {
+          "type": "object",
+          "description": "Prints the multipart boundary right after the message in multipart subscriptions. Without this flag, the Apollo client wouldn’t parse a message until the next one is pushed.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
         }
       }
     },
@@ -2412,6 +2423,17 @@
         "replace_invalid_var_errors": {
           "type": "object",
           "description": "Produces the same error (message, extension code but not status code) as Apollo Router when an invalid variable is supplied.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "subrequest_http_error": {
+          "type": "object",
+          "description": "Prepends an additional error when subgraph HTTP response code is non-2XX, similar to Apollo Router.",
           "additionalProperties": false,
           "properties": {
             "enabled": {

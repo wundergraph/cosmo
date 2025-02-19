@@ -701,10 +701,16 @@
     },
     "ReplaceValidationErrorStatus": {
       "Enabled": false
+    },
+    "SubscriptionMultipartPrintBoundary": {
+      "Enabled": false
     }
   },
   "ApolloRouterCompatibilityFlags": {
     "ReplaceInvalidVarErrors": {
+      "Enabled": false
+    },
+    "SubrequestHTTPError": {
       "Enabled": false
     }
   },
