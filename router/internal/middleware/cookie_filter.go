@@ -5,6 +5,8 @@ import (
 	"slices"
 )
 
+var whitelistedCookies = []string{"feature_flag"}
+
 func CookieWhitelist(cookieWhitelist []string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, rr *http.Request) {
@@ -17,7 +19,8 @@ func CookieWhitelist(cookieWhitelist []string) func(next http.Handler) http.Hand
 			rr.Header.Del("Cookie")
 
 			for _, cookie := range cookies {
-				if slices.Contains(cookieWhitelist, cookie.Name) {
+				if slices.Contains(cookieWhitelist, cookie.Name) ||
+					slices.Contains(whitelistedCookies, cookie.Name) {
 					rr.AddCookie(cookie)
 				}
 			}
