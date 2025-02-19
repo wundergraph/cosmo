@@ -264,6 +264,32 @@ export class OrganizationWebhookService {
             return tempData;
           }
 
+          if (changedChanges.length > 0) {
+            tempData.attachments.unshift({
+              color: '#8D879D',
+              blocks: [
+                {
+                  type: 'rich_text',
+                  elements: [
+                    {
+                      type: 'rich_text_list',
+                      style: 'bullet',
+                      elements: changedChanges.map((r) => ({
+                        type: 'rich_text_section',
+                        elements: [
+                          {
+                            type: 'text',
+                            text: r.changeMessage,
+                          },
+                        ],
+                      })),
+                    },
+                  ],
+                },
+              ],
+            });
+          }
+
           if (removedChanges.length > 0) {
             tempData.attachments.unshift({
               color: '#e11d48',
@@ -289,6 +315,7 @@ export class OrganizationWebhookService {
               ],
             });
           }
+
           if (addedChanges.length > 0) {
             tempData.attachments.unshift({
               color: '#22c55e',
