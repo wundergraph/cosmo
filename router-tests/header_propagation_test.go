@@ -18,7 +18,9 @@ func TestHeaderPropagation(t *testing.T) {
 	const (
 		customHeader = "X-Custom-Header"
 		employeeVal  = "employee-value"
+		employeeVal2 = "employee-value-2"
 		hobbyVal     = "hobby-value"
+		hobbyVal2    = "hobby-value-2"
 	)
 
 	const queryEmployeeWithHobby = `{
@@ -97,12 +99,12 @@ func TestHeaderPropagation(t *testing.T) {
 		}
 	}
 
-	setSubgraphPropagateHeader := func(header, valA, valB string) testenv.SubgraphsConfig {
+	setSubgraphPropagateHeader := func(header string, valA, valB []string) testenv.SubgraphsConfig {
 		return testenv.SubgraphsConfig{
 			Employees: testenv.SubgraphConfig{
 				Middleware: func(handler http.Handler) http.Handler {
 					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						w.Header().Set(header, valA)
+						w.Header()[header] = valA
 						handler.ServeHTTP(w, r)
 					})
 				},
@@ -110,7 +112,7 @@ func TestHeaderPropagation(t *testing.T) {
 			Hobbies: testenv.SubgraphConfig{
 				Middleware: func(handler http.Handler) http.Handler {
 					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-						w.Header().Set(header, valB)
+						w.Header()[header] = valB
 						handler.ServeHTTP(w, r)
 					})
 				},
@@ -140,11 +142,12 @@ func TestHeaderPropagation(t *testing.T) {
 	}
 
 	cacheOptions := func(cacheControlEmployees, cacheControlHobbies string) testenv.SubgraphsConfig {
-		return setSubgraphPropagateHeader("Cache-Control", cacheControlEmployees, cacheControlHobbies)
+		return setSubgraphPropagateHeader("Cache-Control", []string{cacheControlEmployees}, []string{cacheControlHobbies})
 	}
 
 	var (
-		subgraphsPropagateCustomHeader = setSubgraphPropagateHeader(customHeader, employeeVal, hobbyVal)
+		subgraphsPropagateCustomHeader         = setSubgraphPropagateHeader(customHeader, []string{employeeVal}, []string{hobbyVal})
+		subgraphsPropagateRepeatedCustomHeader = setSubgraphPropagateHeader(customHeader, []string{employeeVal, employeeVal2}, []string{hobbyVal, hobbyVal2})
 	)
 
 	t.Run(" no propagate", func(t *testing.T) {
@@ -234,6 +237,21 @@ func TestHeaderPropagation(t *testing.T) {
 				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 			})
 		})
+
+		t.Run("repeated header names last write wins", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: global(config.ResponseHeaderRuleAlgorithmLastWrite, customHeader, ""),
+				Subgraphs:     subgraphsPropagateRepeatedCustomHeader,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				ch := strings.Join(res.Response.Header.Values(customHeader), ",")
+				require.Equal(t, "hobby-value,hobby-value-2", ch)
+				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+			})
+		})
 	})
 
 	// Test for the First Write Wins Algorithm
@@ -283,6 +301,21 @@ func TestHeaderPropagation(t *testing.T) {
 				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 			})
 		})
+
+		t.Run("repeated header names first write wins", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: partial(config.ResponseHeaderRuleAlgorithmFirstWrite, customHeader, ""),
+				Subgraphs:     subgraphsPropagateRepeatedCustomHeader,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				ch := strings.Join(res.Response.Header.Values(customHeader), ",")
+				require.Equal(t, "employee-value,employee-value-2", ch)
+				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+			})
+		})
 	})
 
 	// Test for the Append Algorithm
@@ -329,6 +362,21 @@ func TestHeaderPropagation(t *testing.T) {
 				})
 				ch := strings.Join(res.Response.Header.Values(customHeader), ",")
 				require.Equal(t, employeeVal, ch) // Only employee's header is appended
+				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
+			})
+		})
+
+		t.Run("repeated header names append headers", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: global(config.ResponseHeaderRuleAlgorithmAppend, customHeader, ""),
+				Subgraphs:     subgraphsPropagateRepeatedCustomHeader,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				ch := strings.Join(res.Response.Header.Values(customHeader), ",")
+				require.Equal(t, "employee-value,employee-value-2,hobby-value,hobby-value-2", ch)
 				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 			})
 		})
@@ -716,6 +764,36 @@ func TestHeaderPropagation(t *testing.T) {
 					require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 				})
 			})
+		})
+	})
+
+	t.Run("header name canonicalization", func(t *testing.T) {
+		t.Parallel()
+		nonCanonicalCustomHeader := "x-Custom-header"
+		subgraphsNonCanonicalHeader := testenv.SubgraphsConfig{
+			Employees: testenv.SubgraphConfig{
+				Middleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.Header()[nonCanonicalCustomHeader] = []string{employeeVal}
+						handler.ServeHTTP(w, r)
+					})
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: global(config.ResponseHeaderRuleAlgorithmAppend, nonCanonicalCustomHeader, ""),
+			Subgraphs:     subgraphsNonCanonicalHeader,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: queryEmployeeWithHobby,
+			})
+			cch := strings.Join(res.Response.Header.Values(customHeader), ",")
+			require.Equal(t, employeeVal, cch)
+			ncch := strings.Join(res.Response.Header[nonCanonicalCustomHeader], ",")
+			require.Equal(t, "", ncch)
+
+			require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 		})
 	})
 }
