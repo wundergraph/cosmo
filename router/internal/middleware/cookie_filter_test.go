@@ -86,4 +86,55 @@ func TestCookieWhitelist(t *testing.T) {
 		require.Equal(t, http.StatusOK, recorder.Code)
 		require.Equal(t, expectedFilteredCookies, filteredCookies)
 	})
+
+	t.Run("never filter feature flag cookie", func(t *testing.T) {
+		t.Parallel()
+
+		cookieWhitelist := []string{"allowed"}
+		cookies := []*http.Cookie{
+			{
+				Name:  "allowed",
+				Value: "allowed",
+			},
+			{
+				Name:  "disallowed",
+				Value: "disallowed",
+			},
+			{
+				Name:  "feature_flag",
+				Value: "feature_flag",
+			},
+		}
+
+		expectedFilteredCookies := []*http.Cookie{
+			{
+				Name:  "allowed",
+				Value: "allowed",
+			},
+			{
+				Name:  "feature_flag",
+				Value: "feature_flag",
+			},
+		}
+
+		recorder := httptest.NewRecorder()
+
+		filteredCookies := []*http.Cookie{}
+
+		next := http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			filteredCookies = r.Cookies()
+		})
+
+		req, err := http.NewRequest(http.MethodGet, "/", strings.NewReader("test"))
+		require.NoError(t, err)
+
+		for _, cookie := range cookies {
+			req.AddCookie(cookie)
+		}
+
+		CookieWhitelist(cookieWhitelist)(next).ServeHTTP(recorder, req)
+
+		require.Equal(t, http.StatusOK, recorder.Code)
+		require.Equal(t, expectedFilteredCookies, filteredCookies)
+	})
 }
