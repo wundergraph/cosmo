@@ -129,6 +129,10 @@ type RequestContext interface {
 
 	// Authentication returns the authentication information for the request, if any
 	Authentication() authentication.Authentication
+
+	// SetAuthenticationScopes sets the scopes for the request on Authentication
+	// If Authentication is not set, it will be initialized with the scopes
+	SetAuthenticationScopes(scopes []string)
 }
 
 var metricAttrsPool = sync.Pool{
@@ -440,6 +444,15 @@ func (c *requestContext) Authentication() authentication.Authentication {
 	return authentication.FromContext(c.request.Context())
 }
 
+func (c *requestContext) SetAuthenticationScopes(scopes []string) {
+	auth := authentication.FromContext(c.request.Context())
+	if auth == nil {
+		auth = authentication.NewEmptyAuthentication()
+		c.request = c.request.WithContext(authentication.NewContext(c.request.Context(), auth))
+	}
+	auth.SetScopes(scopes)
+}
+
 type OperationContext interface {
 	// Name is the name of the operation
 	Name() string
@@ -476,7 +489,9 @@ type operationContext struct {
 	internalHash uint64
 	// remapVariables is a map of variables that have been remapped to the new names
 	remapVariables map[string]string
-	// Content is the content of the operation
+	// RawContent is the raw content of the operation
+	rawContent string
+	// Content is the normalized content of the operation
 	content    string
 	variables  *astjson.Value
 	files      []httpclient.File

@@ -2,10 +2,8 @@ import {
   ConstDirectiveNode,
   ConstValueNode,
   DirectiveDefinitionNode,
-  EnumTypeDefinitionNode,
   EnumValueDefinitionNode,
   FieldDefinitionNode,
-  InputObjectTypeDefinitionNode,
   InputValueDefinitionNode,
   InterfaceTypeDefinitionNode,
   InterfaceTypeExtensionNode,
@@ -14,10 +12,8 @@ import {
   NameNode,
   ObjectTypeDefinitionNode,
   ObjectTypeExtensionNode,
-  ScalarTypeDefinitionNode,
   StringValueNode,
   TypeNode,
-  UnionTypeDefinitionNode,
 } from 'graphql';
 import { formatDescription, stringToNameNode } from '../ast/utils';
 import { maximumTypeNestingExceededError, unexpectedTypeNodeKindFatalError } from '../errors/errors';
@@ -290,5 +286,14 @@ export function getTypeNodeNamedTypeName(typeNode: TypeNode): string {
     // intentional fallthrough
     case Kind.NON_NULL_TYPE:
       return getTypeNodeNamedTypeName(typeNode.type);
+  }
+}
+
+export function getNamedTypeNode(typeNode: TypeNode): TypeNode {
+  switch (typeNode.kind) {
+    case Kind.NAMED_TYPE:
+      return typeNode;
+    default:
+      return getNamedTypeNode(typeNode.type);
   }
 }

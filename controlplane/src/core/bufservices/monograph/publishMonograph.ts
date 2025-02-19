@@ -73,19 +73,19 @@ export function publishMonograph(
 
     try {
       // Here we check if the schema is valid as a subgraph SDL
-      const { errors, normalizationResult } = buildSchema(subgraphSchemaSDL);
-      if (errors && errors.length > 0) {
+      const result = buildSchema(subgraphSchemaSDL, true, graph.routerCompatibilityVersion);
+      if (!result.success) {
         return {
           response: {
             code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA,
-            details: errors.map((e) => e.toString()).join('\n'),
+            details: result.errors.map((e) => e.toString()).join('\n'),
           },
           compositionErrors: [],
           deploymentErrors: [],
           compositionWarnings: [],
         };
       }
-      isV2Graph = normalizationResult?.isVersionTwo;
+      isV2Graph = result.isVersionTwo;
     } catch (e: any) {
       return {
         response: {

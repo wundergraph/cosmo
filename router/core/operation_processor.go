@@ -16,7 +16,7 @@ import (
 
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
-	"github.com/dgraph-io/ristretto"
+	"github.com/dgraph-io/ristretto/v2"
 	"github.com/pkg/errors"
 	"github.com/tidwall/sjson"
 	fastjson "github.com/wundergraph/astjson"
@@ -108,6 +108,7 @@ type OperationProcessorOptions struct {
 	ParseKitPoolSize               int
 	IntrospectionEnabled           bool
 	ApolloCompatibilityFlags       config.ApolloCompatibilityFlags
+	ApolloRouterCompatibilityFlags config.ApolloRouterCompatibilityFlags
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -811,20 +812,19 @@ func (o *OperationKit) NormalizeVariables() error {
 	return nil
 }
 
-func (o *OperationKit) RemapVariables() error {
+func (o *OperationKit) RemapVariables(disabled bool) error {
 	report := &operationreport.Report{}
-	variablesMap := o.kit.variablesRemapper.NormalizeOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
-	if report.HasErrors() {
-		return &reportError{
-			report: report,
-		}
-	}
-	o.parsedOperation.RemapVariables = variablesMap
 
-	// Hash the normalized operation with the static operation name to avoid different IDs for the same operation
-	err := o.kit.printer.Print(o.kit.doc, o.kit.keyGen)
-	if err != nil {
-		return errors.WithStack(fmt.Errorf("RemapVariables failed generating operation hash: %w", err))
+	// even if the variables are disabled, we still need to execute rest of the method,
+	// as it generates InternalID for the operation, which is used as planner cache key
+	if !disabled {
+		variablesMap := o.kit.variablesRemapper.NormalizeOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
+		if report.HasErrors() {
+			return &reportError{
+				report: report,
+			}
+		}
+		o.parsedOperation.RemapVariables = variablesMap
 	}
 
 	// Print the operation without the operation name to get the pure normalized form
@@ -837,9 +837,9 @@ func (o *OperationKit) RemapVariables() error {
 	staticNameRef := o.kit.doc.Input.AppendInputBytes([]byte(""))
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = staticNameRef
 
-	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
+	err := o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
-		return err
+		return errors.WithStack(fmt.Errorf("RemapVariables failed generating operation hash: %w", err))
 	}
 	// Reset the doc with the original name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = nameRef
@@ -1013,7 +1013,7 @@ func (o *OperationKit) writeSkipIncludeCacheKeyToKeyGen(skipIncludeVariableNames
 }
 
 // Validate validates the operation variables.
-func (o *OperationKit) Validate(skipLoader bool, remapVariables map[string]string) (cacheHit bool, err error) {
+func (o *OperationKit) Validate(skipLoader bool, remapVariables map[string]string, apolloCompatibilityFlags *config.ApolloCompatibilityFlags) (cacheHit bool, err error) {
 	if !skipLoader {
 		// in case we're skipping the loader, it means that we won't execute the operation
 		// this means that we don't need to validate the variables as they are not used
@@ -1022,11 +1022,15 @@ func (o *OperationKit) Validate(skipLoader bool, remapVariables map[string]strin
 		if err != nil {
 			var invalidVarErr *variablesvalidation.InvalidVariableError
 			if errors.As(err, &invalidVarErr) {
-				return false, &httpGraphqlError{
+				graphqlErr := &httpGraphqlError{
 					extensionCode: invalidVarErr.ExtensionCode,
 					message:       invalidVarErr.Error(),
 					statusCode:    http.StatusOK,
 				}
+				if apolloCompatibilityFlags != nil && apolloCompatibilityFlags.ReplaceValidationErrorStatus.Enabled {
+					graphqlErr.statusCode = http.StatusBadRequest
+				}
+				return false, graphqlErr
 			}
 			return false, &httpGraphqlError{
 				message:    err.Error(),
@@ -1149,7 +1153,8 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 }
 
 type parseKitOptions struct {
-	apolloCompatibilityFlags config.ApolloCompatibilityFlags
+	apolloCompatibilityFlags       config.ApolloCompatibilityFlags
+	apolloRouterCompatibilityFlags config.ApolloRouterCompatibilityFlags
 }
 
 func createParseKit(i int, options *parseKitOptions) *parseKit {
@@ -1173,6 +1178,9 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 			ApolloCompatibilityFlags: apollocompatibility.Flags{
 				ReplaceInvalidVarError: options.apolloCompatibilityFlags.ReplaceInvalidVarErrors.Enabled,
 			},
+			ApolloRouterCompatibilityFlags: apollocompatibility.ApolloRouterFlags{
+				ReplaceInvalidVarError: options.apolloRouterCompatibilityFlags.ReplaceInvalidVarErrors.Enabled,
+			},
 		}),
 		operationValidator: astvalidation.DefaultOperationValidator(astvalidation.WithApolloCompatibilityFlags(
 			apollocompatibility.Flags{
@@ -1194,7 +1202,8 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		parseKitSemaphore:        make(chan int, opts.ParseKitPoolSize),
 		introspectionEnabled:     opts.IntrospectionEnabled,
 		parseKitOptions: &parseKitOptions{
-			apolloCompatibilityFlags: opts.ApolloCompatibilityFlags,
+			apolloCompatibilityFlags:       opts.ApolloCompatibilityFlags,
+			apolloRouterCompatibilityFlags: opts.ApolloRouterCompatibilityFlags,
 		},
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {

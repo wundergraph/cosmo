@@ -12,10 +12,19 @@ import { formatISO, subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
 import { parse, visit } from 'graphql';
 import { uid } from 'uid/secure';
+import {
+  ContractTagOptions,
+  FederationResult,
+  FederationResultWithContracts,
+  LATEST_ROUTER_COMPATIBILITY_VERSION,
+  newContractTagOptionsFromArrays,
+} from '@wundergraph/composition';
 import { MemberRole, WebsocketSubprotocol } from '../db/models.js';
-import { AuthContext, DateRange, Label, ResponseMessage, S3StorageOptions } from '../types/index.js';
+import { AuthContext, DateRange, FederatedGraphDTO, Label, ResponseMessage, S3StorageOptions } from '../types/index.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
+import { composeFederatedContract, composeFederatedGraphWithPotentialContracts } from './composition/composition.js';
+import { SubgraphsToCompose } from './repositories/FeatureFlagRepository.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
 const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
@@ -444,4 +453,70 @@ export function createBatches<T>(array: T[], batchSize: number): T[][] {
   }
 
   return batches;
+}
+
+export const checkIfLabelMatchersChanged = (data: {
+  isContract: boolean;
+  currentLabelMatchers: string[];
+  newLabelMatchers: string[];
+  unsetLabelMatchers?: boolean;
+}) => {
+  if (data.isContract && data.newLabelMatchers.length === 0) {
+    return false;
+  }
+
+  // User tries to unset but no matchers exist, then nothing has changed
+  if (data.unsetLabelMatchers && data.currentLabelMatchers.length === 0) {
+    return false;
+  }
+
+  // If user tries to unset but matchers exist, then it has changed
+  if (data.unsetLabelMatchers) {
+    return true;
+  }
+
+  // Not a contract, not unsetting, no new matchers, then nothing has changed
+  if (data.newLabelMatchers.length === 0) {
+    return false;
+  }
+
+  // Not a contract, not unsetting but new matchers are passed, we need to check if they are different
+  if (data.newLabelMatchers.length !== data.currentLabelMatchers.length) {
+    return true;
+  }
+
+  for (const labelMatcher of data.newLabelMatchers) {
+    if (!data.currentLabelMatchers.includes(labelMatcher)) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+export function getFederationResultWithPotentialContracts(
+  federatedGraph: FederatedGraphDTO,
+  subgraphsToCompose: SubgraphsToCompose,
+  tagOptionsByContractName: Map<string, ContractTagOptions>,
+): FederationResult | FederationResultWithContracts {
+  // This condition is only true when entering the method to specifically create/update a contract
+  if (federatedGraph.contract) {
+    return composeFederatedContract(
+      subgraphsToCompose.compositionSubgraphs,
+      newContractTagOptionsFromArrays(federatedGraph.contract.excludeTags, federatedGraph.contract.includeTags),
+      federatedGraph.routerCompatibilityVersion,
+    );
+  }
+  return composeFederatedGraphWithPotentialContracts(
+    subgraphsToCompose.compositionSubgraphs,
+    tagOptionsByContractName,
+    federatedGraph.routerCompatibilityVersion,
+  );
+}
+
+export function getFederatedGraphRouterCompatibilityVersion(federatedGraphDTOs: Array<FederatedGraphDTO>): string {
+  if (federatedGraphDTOs.length === 0) {
+    return LATEST_ROUTER_COMPATIBILITY_VERSION;
+  }
+  return federatedGraphDTOs[0].routerCompatibilityVersion;
 }

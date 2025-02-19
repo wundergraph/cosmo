@@ -13,10 +13,11 @@ import (
 	"sync"
 	"time"
 
+	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
+
 	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
-	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -85,7 +86,7 @@ type (
 		proxy             ProxyFunc
 	}
 
-	TransportTimeoutOptions struct {
+	TransportRequestOptions struct {
 		RequestTimeout         time.Duration
 		ResponseHeaderTimeout  time.Duration
 		ExpectContinueTimeout  time.Duration
@@ -93,11 +94,15 @@ type (
 		DialTimeout            time.Duration
 		TLSHandshakeTimeout    time.Duration
 		KeepAliveProbeInterval time.Duration
+
+		MaxConnsPerHost     int
+		MaxIdleConns        int
+		MaxIdleConnsPerHost int
 	}
 
 	SubgraphTransportOptions struct {
-		TransportTimeoutOptions
-		SubgraphMap map[string]*TransportTimeoutOptions
+		*TransportRequestOptions
+		SubgraphMap map[string]*TransportRequestOptions
 	}
 
 	GraphQLMetricsConfig struct {
@@ -181,6 +186,7 @@ type (
 		persistedOperationsConfig       config.PersistedOperationsConfig
 		automaticPersistedQueriesConfig config.AutomaticPersistedQueriesConfig
 		apolloCompatibilityFlags        config.ApolloCompatibilityFlags
+		apolloRouterCompatibilityFlags  config.ApolloRouterCompatibilityFlags
 		storageProviders                config.StorageProviders
 		eventsConfig                    config.EventsConfiguration
 		prometheusServer                *http.Server
@@ -196,7 +202,7 @@ type (
 		fileUploadConfig                *config.FileUpload
 		accessController                *AccessController
 		retryOptions                    retrytransport.RetryOptions
-		redisClient                     *redis.Client
+		redisClient                     rd.RDCloser
 		processStartTime                time.Time
 		developmentMode                 bool
 		healthcheck                     health.Checker
@@ -511,6 +517,10 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.logger.Warn("No graph token provided. The following Cosmo Cloud features are disabled. Not recommended for Production.",
 			zap.Strings("features", disabledFeatures),
 		)
+	}
+
+	if r.persistedOperationsConfig.Safelist.Enabled && r.automaticPersistedQueriesConfig.Enabled {
+		return nil, errors.New("automatic persisted queries and safelist cannot be enabled at the same time (as APQ would permit queries that are not in the safelist)")
 	}
 
 	if r.securityConfiguration.DepthLimit != nil {
@@ -840,12 +850,16 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
-		options, err := redis.ParseURL(r.Config.rateLimit.Storage.Url)
+		var err error
+		r.redisClient, err = rd.NewRedisCloser(&rd.RedisCloserOptions{
+			URLs:           r.Config.rateLimit.Storage.URLs,
+			ClusterEnabled: r.Config.rateLimit.Storage.ClusterEnabled,
+			Logger:         r.logger,
+		})
 		if err != nil {
-			return fmt.Errorf("failed to parse the redis connection url: %w", err)
+			return fmt.Errorf("failed to create redis client: %w", err)
 		}
 
-		r.redisClient = redis.NewClient(options)
 	}
 
 	if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
@@ -865,6 +879,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.playgroundHandler = graphiql.NewPlayground(&graphiql.PlaygroundOptions{
 			Html:             graphiql.PlaygroundHTML(),
 			GraphqlURL:       r.graphqlWebURL,
+			PlaygroundPath:   r.playgroundPath,
 			ConcurrencyLimit: int64(r.playgroundConfig.ConcurrencyLimit),
 		})
 	}
@@ -903,7 +918,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 func (r *Router) buildClients() error {
 	s3Providers := map[string]config.S3StorageProvider{}
 	cdnProviders := map[string]config.BaseStorageProvider{}
-	redisProviders := map[string]config.BaseStorageProvider{}
+	redisProviders := map[string]config.RedisStorageProvider{}
 
 	for _, provider := range r.storageProviders.S3 {
 		if _, ok := s3Providers[provider.ID]; ok {
@@ -1654,27 +1669,47 @@ func DefaultFileUploadConfig() *config.FileUpload {
 	}
 }
 
-func NewTransportTimeoutOptions(cfg config.GlobalSubgraphRequestRule) TransportTimeoutOptions {
-	return TransportTimeoutOptions{
-		RequestTimeout:         cfg.RequestTimeout,
-		ResponseHeaderTimeout:  cfg.ResponseHeaderTimeout,
-		ExpectContinueTimeout:  cfg.ExpectContinueTimeout,
-		KeepAliveIdleTimeout:   cfg.KeepAliveIdleTimeout,
-		DialTimeout:            cfg.DialTimeout,
-		TLSHandshakeTimeout:    cfg.TLSHandshakeTimeout,
-		KeepAliveProbeInterval: cfg.KeepAliveProbeInterval,
+func NewTransportRequestOptions(cfg config.GlobalSubgraphRequestRule) *TransportRequestOptions {
+	defaults := DefaultTransportRequestOptions()
+
+	return &TransportRequestOptions{
+		RequestTimeout:         or(cfg.RequestTimeout, defaults.RequestTimeout),
+		TLSHandshakeTimeout:    or(cfg.TLSHandshakeTimeout, defaults.TLSHandshakeTimeout),
+		ResponseHeaderTimeout:  or(cfg.ResponseHeaderTimeout, defaults.ResponseHeaderTimeout),
+		ExpectContinueTimeout:  or(cfg.ExpectContinueTimeout, defaults.ExpectContinueTimeout),
+		KeepAliveProbeInterval: or(cfg.KeepAliveProbeInterval, defaults.KeepAliveProbeInterval),
+		KeepAliveIdleTimeout:   or(cfg.KeepAliveIdleTimeout, defaults.KeepAliveIdleTimeout),
+		DialTimeout:            or(cfg.DialTimeout, defaults.DialTimeout),
+		MaxConnsPerHost:        or(cfg.MaxConnsPerHost, defaults.MaxConnsPerHost),
+		MaxIdleConns:           or(cfg.MaxIdleConns, defaults.MaxIdleConns),
+		MaxIdleConnsPerHost:    or(cfg.MaxIdleConnsPerHost, defaults.MaxIdleConnsPerHost),
+	}
+}
+
+func DefaultTransportRequestOptions() *TransportRequestOptions {
+	return &TransportRequestOptions{
+		RequestTimeout:         60 * time.Second,
+		TLSHandshakeTimeout:    10 * time.Second,
+		ResponseHeaderTimeout:  0 * time.Second,
+		ExpectContinueTimeout:  0 * time.Second,
+		KeepAliveProbeInterval: 30 * time.Second,
+		KeepAliveIdleTimeout:   0 * time.Second,
+		DialTimeout:            30 * time.Second,
+
+		MaxConnsPerHost:     100,
+		MaxIdleConns:        1024,
+		MaxIdleConnsPerHost: 20,
 	}
 }
 
 func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransportOptions {
 	base := &SubgraphTransportOptions{
-		TransportTimeoutOptions: NewTransportTimeoutOptions(cfg.All),
-		SubgraphMap:             map[string]*TransportTimeoutOptions{},
+		TransportRequestOptions: NewTransportRequestOptions(cfg.All),
+		SubgraphMap:             map[string]*TransportRequestOptions{},
 	}
 
 	for k, v := range cfg.Subgraphs {
-		opts := NewTransportTimeoutOptions(*v)
-		base.SubgraphMap[k] = &opts
+		base.SubgraphMap[k] = NewTransportRequestOptions(*v)
 	}
 
 	return base
@@ -1682,16 +1717,8 @@ func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransp
 
 func DefaultSubgraphTransportOptions() *SubgraphTransportOptions {
 	return &SubgraphTransportOptions{
-		TransportTimeoutOptions: TransportTimeoutOptions{
-			RequestTimeout:         60 * time.Second,
-			TLSHandshakeTimeout:    10 * time.Second,
-			ResponseHeaderTimeout:  0 * time.Second,
-			ExpectContinueTimeout:  0 * time.Second,
-			KeepAliveProbeInterval: 30 * time.Second,
-			KeepAliveIdleTimeout:   0 * time.Second,
-			DialTimeout:            30 * time.Second,
-		},
-		SubgraphMap: map[string]*TransportTimeoutOptions{},
+		TransportRequestOptions: DefaultTransportRequestOptions(),
+		SubgraphMap:             map[string]*TransportRequestOptions{},
 	}
 }
 
@@ -1796,8 +1823,16 @@ func WithApolloCompatibilityFlagsConfig(cfg config.ApolloCompatibilityFlags) Opt
 			cfg.SuppressFetchErrors.Enabled = true
 			cfg.ReplaceUndefinedOpFieldErrors.Enabled = true
 			cfg.ReplaceInvalidVarErrors.Enabled = true
+			cfg.ReplaceValidationErrorStatus.Enabled = true
+			cfg.SubscriptionMultipartPrintBoundary.Enabled = true
 		}
 		r.apolloCompatibilityFlags = cfg
+	}
+}
+
+func WithApolloRouterCompatibilityFlags(cfg config.ApolloRouterCompatibilityFlags) Option {
+	return func(r *Router) {
+		r.apolloRouterCompatibilityFlags = cfg
 	}
 }
 
@@ -1821,7 +1856,7 @@ func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 
 type ProxyFunc func(req *http.Request) (*url.URL, error)
 
-func newHTTPTransport(opts TransportTimeoutOptions, proxy ProxyFunc) *http.Transport {
+func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc) *http.Transport {
 	dialer := &net.Dialer{
 		Timeout:   opts.DialTimeout,
 		KeepAlive: opts.KeepAliveProbeInterval,
@@ -1834,13 +1869,13 @@ func newHTTPTransport(opts TransportTimeoutOptions, proxy ProxyFunc) *http.Trans
 		},
 		// The defaults value 0 = unbounded.
 		// We set to some value to prevent resource exhaustion e.g max requests and ports.
-		MaxConnsPerHost: 100,
+		MaxConnsPerHost: opts.MaxConnsPerHost,
 		// The defaults value 0 = unbounded. 100 is used by the default go transport.
 		// This value should be significant higher than MaxIdleConnsPerHost.
-		MaxIdleConns: 1024,
+		MaxIdleConns: opts.MaxIdleConns,
 		// The default value is 2. Such a low limit will open and close connections too often.
 		// Details: https://gitlab.com/gitlab-org/gitlab-pages/-/merge_requests/274
-		MaxIdleConnsPerHost: 20,
+		MaxIdleConnsPerHost: opts.MaxIdleConnsPerHost,
 		ForceAttemptHTTP2:   true,
 		IdleConnTimeout:     opts.KeepAliveIdleTimeout,
 		// Set more timeouts https://gitlab.com/gitlab-org/gitlab-pages/-/issues/495
@@ -1994,4 +2029,11 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
 		},
 	}
+}
+
+func or[T any](maybe *T, or T) T {
+	if maybe != nil {
+		return *maybe
+	}
+	return or
 }

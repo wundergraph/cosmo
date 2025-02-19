@@ -39,6 +39,10 @@ export const federatedGraphs = pgTable(
     admissionWebhookURL: text('admission_webhook_url'),
     admissionWebhookSecret: text('admission_webhook_secret'),
     supportsFederation: boolean('supports_federation').default(true).notNull(),
+    /* The version that composition returns to determine whether the router execution configuration is compatible
+     * with a specific router version.
+     */
+    routerCompatibilityVersion: text('router_compatibility_version').notNull().default('1'),
   },
   (t) => ({
     targetIdIndex: index('fgs_target_id_idx').on(t.targetId),
@@ -600,7 +604,7 @@ export const schemaVersion = pgTable(
   },
 );
 
-// https://github.com/kamilkisiela/graphql-inspector/blob/f3b9ed7e277f1a4928da7d0fdc212685ff77752a/packages/core/src/diff/changes/change.ts
+// https://github.com/kamilkisiela/graphql-inspector/blob/master/packages/core/src/diff/changes/change.ts
 export const schemaChangeTypeEnum = pgEnum('schema_change_type', [
   'FIELD_ARGUMENT_DESCRIPTION_CHANGED',
   'FIELD_ARGUMENT_DEFAULT_CHANGED',
@@ -654,6 +658,30 @@ export const schemaChangeTypeEnum = pgEnum('schema_change_type', [
   'TYPE_DESCRIPTION_ADDED',
   'UNION_MEMBER_REMOVED',
   'UNION_MEMBER_ADDED',
+  'DIRECTIVE_USAGE_UNION_MEMBER_ADDED',
+  'DIRECTIVE_USAGE_UNION_MEMBER_REMOVED',
+  'DIRECTIVE_USAGE_ENUM_ADDED',
+  'DIRECTIVE_USAGE_ENUM_REMOVED',
+  'DIRECTIVE_USAGE_ENUM_VALUE_ADDED',
+  'DIRECTIVE_USAGE_ENUM_VALUE_REMOVED',
+  'DIRECTIVE_USAGE_INPUT_OBJECT_ADDED',
+  'DIRECTIVE_USAGE_INPUT_OBJECT_REMOVED',
+  'DIRECTIVE_USAGE_FIELD_ADDED',
+  'DIRECTIVE_USAGE_FIELD_REMOVED',
+  'DIRECTIVE_USAGE_SCALAR_ADDED',
+  'DIRECTIVE_USAGE_SCALAR_REMOVED',
+  'DIRECTIVE_USAGE_OBJECT_ADDED',
+  'DIRECTIVE_USAGE_OBJECT_REMOVED',
+  'DIRECTIVE_USAGE_INTERFACE_ADDED',
+  'DIRECTIVE_USAGE_INTERFACE_REMOVED',
+  'DIRECTIVE_USAGE_ARGUMENT_DEFINITION_ADDED',
+  'DIRECTIVE_USAGE_ARGUMENT_DEFINITION_REMOVED',
+  'DIRECTIVE_USAGE_SCHEMA_ADDED',
+  'DIRECTIVE_USAGE_SCHEMA_REMOVED',
+  'DIRECTIVE_USAGE_FIELD_DEFINITION_ADDED',
+  'DIRECTIVE_USAGE_FIELD_DEFINITION_REMOVED',
+  'DIRECTIVE_USAGE_INPUT_FIELD_DEFINITION_ADDED',
+  'DIRECTIVE_USAGE_INPUT_FIELD_DEFINITION_REMOVED',
 ] as const);
 
 export const schemaVersionChangeAction = pgTable(
@@ -1570,6 +1598,7 @@ export const graphCompositions = pgTable(
     }),
     createdByEmail: text('created_by_email'),
     isFeatureFlagComposition: boolean('is_feature_flag_composition').default(false).notNull(),
+    routerCompatibilityVersion: text('router_compatibility_version').notNull().default('1'),
   },
   (t) => {
     return {

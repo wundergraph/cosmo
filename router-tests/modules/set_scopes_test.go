@@ -1,6 +1,12 @@
 package module_test
 
 import (
+	"io"
+	"net/http"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/require"
 	integration "github.com/wundergraph/cosmo/router-tests"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
@@ -11,11 +17,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/zap"
-	"io"
-	"net/http"
-	"strings"
-	"testing"
-	"time"
 )
 
 const (
@@ -28,10 +29,14 @@ func configureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) 
 	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
-	tokenDecoder, _ := authentication.NewJwksTokenDecoder(integration.NewContextWithCancel(t), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+	tokenDecoder, _ := authentication.NewJwksTokenDecoder(integration.NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
+		{
+			URL:             authServer.JWKSURL(),
+			RefreshInterval: time.Second * 5,
+		},
+	})
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{
 		Name:         jwksName,
-		URL:          authServer.JWKSURL(),
 		TokenDecoder: tokenDecoder,
 	}
 	authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -60,6 +65,7 @@ func TestCustomModuleSetScopes(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
 				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&module.MyModule{}, &setScopesModule.SetScopesModule{}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
@@ -99,6 +105,7 @@ func TestCustomModuleSetScopes(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
 				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&module.MyModule{}, &setScopesModule.SetScopesModule{}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed

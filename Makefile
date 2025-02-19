@@ -122,7 +122,10 @@ dc-federation-demo:
 
 DC_FLAGS=
 dc-subgraphs-demo:
-	OTEL_AUTH_TOKEN=$(OTEL_AUTH_TOKEN) docker compose -f docker-compose.full.yml --profile subgraphs up --remove-orphans --detach $(DC_FLAGS)
+	OTEL_AUTH_TOKEN=$(OTEL_AUTH_TOKEN) docker compose -f docker-compose.full.yml --profile subgraphs up --remove-orphans --detach $(DC_FLAGS) && make dc-subgraphs-config
+
+dc-subgraphs-config:
+	pushd router && make compose-demo-config && popd
 
 dc-subgraphs-demo-down:
 	docker compose -f docker-compose.full.yml --profile subgraphs down --remove-orphans
@@ -159,8 +162,6 @@ run-subgraphs-local:
 sync-go-workspace:
 	cd router && go mod tidy
 	cd demo && make bump-deps
-	cd composition-go && go mod tidy
-	cd graphqlmetrics && go mod tidy
 	cd router-tests && make bump-deps
 
 # Validates if any breaking changes has been introduced.

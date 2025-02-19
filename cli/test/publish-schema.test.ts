@@ -23,6 +23,7 @@ describe('Schema Command', () => {
   test('Publish Schema', () => {
     const client: Client = {
       platform: createPromiseClient(PlatformService, mockPlatformTransport()),
+      // @ts-ignore
       node: null,
     };
 

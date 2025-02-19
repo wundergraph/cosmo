@@ -2,6 +2,9 @@ package integration
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -10,8 +13,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	tracetest2 "go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.uber.org/zap"
-	"testing"
-	"time"
 )
 
 const (
@@ -45,10 +46,15 @@ func configureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) 
 	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
-	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
+		{
+			URL:             authServer.JWKSURL(),
+			RefreshInterval: time.Second * 5,
+		},
+	})
+
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{
 		Name:         jwksName,
-		URL:          authServer.JWKSURL(),
 		TokenDecoder: tokenDecoder,
 	}
 	authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -79,4 +85,8 @@ func GetMetricScopeByName(metrics []metricdata.ScopeMetrics, name string) *metri
 		}
 	}
 	return nil
+}
+
+func ToPtr[T any](v T) *T {
+	return &v
 }

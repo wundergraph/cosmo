@@ -42,6 +42,7 @@ func TestModuleCustomPropagator(t *testing.T) {
 			},
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&module.MyModule{}, &custom_trace_propagator.CustomTracePropagatorModule{}),
 				core.WithTracing(&rtrace.Config{
 					Enabled: true,
 				}),

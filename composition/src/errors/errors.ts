@@ -1,12 +1,27 @@
-import { nodeKindToDirectiveLocation } from '../ast/utils';
+import { Kind, OperationTypeNode } from 'graphql';
+import { ObjectDefinitionData } from '../schema-building/types';
+import { InvalidRootTypeFieldEventsDirectiveData } from './utils';
+import { UnresolvableFieldData } from '../resolvability-graph/utils';
+import { FieldSetDirective } from '../schema-building/utils';
 import {
-  ConstDirectiveNode,
-  Kind,
-  OperationTypeNode,
-  SchemaExtensionNode,
-  TypeDefinitionNode,
-  TypeExtensionNode,
-} from 'graphql';
+  AND_UPPER,
+  ARGUMENT,
+  FIELD_PATH,
+  IN_UPPER,
+  INPUT_FIELD,
+  INTERFACE,
+  LITERAL_NEW_LINE,
+  NOT_UPPER,
+  OR_UPPER,
+  QUOTATION_JOIN,
+  SUBSCRIPTION_FIELD_CONDITION,
+  SUBSCRIPTION_FILTER,
+  SUBSCRIPTION_FILTER_CONDITION,
+  SUBSCRIPTION_FILTER_VALUE,
+  UNION,
+  VALUES,
+} from '../utils/string-constants';
+import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
 import {
   EntityInterfaceFederationData,
   getEntriesNotInHashSet,
@@ -18,28 +33,6 @@ import {
   kindToTypeString,
   numberToOrdinal,
 } from '../utils/utils';
-import {
-  AND_UPPER,
-  ARGUMENT,
-  FIELD_PATH,
-  IN_UPPER,
-  INPUT_FIELD,
-  INTERFACE,
-  NOT_UPPER,
-  OR_UPPER,
-  QUOTATION_JOIN,
-  SUBSCRIPTION_FIELD_CONDITION,
-  SUBSCRIPTION_FILTER,
-  SUBSCRIPTION_FILTER_CONDITION,
-  SUBSCRIPTION_FILTER_VALUE,
-  UNION,
-  VALUES,
-} from '../utils/string-constants';
-import { ObjectDefinitionData } from '../schema-building/type-definition-data';
-import { InvalidRootTypeFieldEventsDirectiveData } from './utils';
-import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
-import { UnresolvableFieldData } from '../resolvability-graph/utils';
-import { FieldSetDirective } from '../schema-building/utils';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -51,13 +44,6 @@ export function multipleNamedTypeDefinitionError(
   return new Error(
     `The named type "${typeName}" is defined as both types "${firstTypeString}" and "${secondTypeString}".` +
       `\nHowever, there must be only one type named "${typeName}".`,
-  );
-}
-
-export function incompatibleExtensionError(typeName: string, baseKind: Kind, extensionKind: Kind) {
-  return new Error(
-    `Extension error:\n Incompatible types: ` +
-      `"${typeName}" is type "${baseKind}", but an extension of the same name is type "${extensionKind}.`,
   );
 }
 
@@ -114,15 +100,6 @@ export function incompatibleSharedEnumError(parentName: string): Error {
   return new Error(
     `Enum "${parentName}" was used as both an input and output but was inconsistently defined across inclusive subgraphs.`,
   );
-}
-
-// The @extends directive means a TypeDefinitionNode is possible
-export function incompatibleExtensionKindsError(
-  node: TypeDefinitionNode | TypeExtensionNode | SchemaExtensionNode,
-  existingKind: Kind,
-) {
-  const name = node.kind === Kind.SCHEMA_EXTENSION ? 'schema' : node.name.value;
-  return new Error(`Expected extension "${name}" to be type ${existingKind} but received ${node.kind}.`);
 }
 
 export function invalidSubgraphNamesError(names: string[], invalidNameErrorMessages: string[]): Error {
@@ -242,106 +219,97 @@ export function invalidFieldShareabilityError(objectData: ObjectDefinitionData, 
   );
 }
 
-export function undefinedDirectiveErrorMessage(directiveName: string, hostPath: string): string {
-  return (
-    `The directive "${directiveName}" is declared on "${hostPath}",` +
-    ` but the directive is not defined in the schema.`
+export function undefinedDirectiveError(directiveName: string, directiveCoords: string): Error {
+  return new Error(
+    `The directive "@${directiveName}" declared on coordinates "${directiveCoords}" is not defined in the schema.`,
   );
 }
-
 export function undefinedTypeError(typeName: string): Error {
   return new Error(` The type "${typeName}" was referenced in the schema, but it was never defined.`);
 }
 
-export function invalidRepeatedDirectiveErrorMessage(directiveName: string, hostPath: string): string {
-  return (
-    `The definition for the directive "${directiveName}" does not define it as repeatable, ` +
-    `but the same directive is declared more than once on type "${hostPath}".`
-  );
+export function invalidRepeatedDirectiveErrorMessage(directiveName: string): string {
+  return `The definition for the directive "@${directiveName}" does not define it as repeatable, but it is declared more than once on these coordinates.`;
 }
 
-export function invalidRepeatedFederatedDirectiveErrorMessage(directiveName: string, hostPath: string): Error {
+export function invalidDirectiveError(
+  directiveName: string,
+  directiveCoords: string,
+  ordinal: string,
+  errorMessages: Array<string>,
+): Error {
   return new Error(
-    `The definition for the directive "${directiveName}" does not define it as repeatable,` +
-      ` but the directive has been declared on more than one instance of the type "${hostPath}".`,
-  );
-}
-
-export function invalidDirectiveError(directiveName: string, hostPath: string, errorMessages: string[]): Error {
-  return new Error(
-    `The directive "${directiveName}" declared on "${hostPath}" is invalid for the following reason` +
+    `The ${ordinal} instance of the directive "@${directiveName}" declared on coordinates "${directiveCoords}" is invalid for the following reason` +
       (errorMessages.length > 1 ? 's:\n' : ':\n') +
       errorMessages.join('\n'),
   );
 }
 
-export function invalidDirectiveLocationErrorMessage(hostPath: string, kind: Kind, directiveName: string): string {
-  return (
-    ` "${hostPath}" is type "${kind}", but the directive "${directiveName}" ` +
-    `does not define "${nodeKindToDirectiveLocation(kind)}" as a valid location.`
+export function invalidRepeatedFederatedDirectiveErrorMessage(directiveName: string, directiveCoords: string): Error {
+  return new Error(
+    `The definition for the directive "@${directiveName}" does not define it as repeatable,` +
+      ` but the directive has been declared on more than one instance of the type "${directiveCoords}".`,
   );
 }
 
-export function unexpectedDirectiveArgumentsErrorMessage(directive: ConstDirectiveNode, hostPath: string): string {
-  const directiveName = directive.name.value;
-  const argumentNumber = directive.arguments?.length || 1; // should never be less than 1
-  return (
-    ` The definition for the directive "${directiveName}" does not define any arguments.\n` +
-    ` However, the same directive declared on "${hostPath}" defines ${argumentNumber} argument` +
-    (argumentNumber > 1 ? 's.' : '.')
-  );
+export function invalidDirectiveLocationErrorMessage(directiveName: string, location: string): string {
+  return ` The definition for "@${directiveName}" does not define "${location}" as a valid location.`;
 }
 
 export function undefinedRequiredArgumentsErrorMessage(
   directiveName: string,
-  hostPath: string,
-  requiredArguments: string[],
-  missingRequiredArguments: string[] = [],
+  requiredArgumentNames: string[],
+  undefinedArgumentNames: string[],
 ): string {
   let message =
-    ` The definition for the directive "${directiveName}" defines the following ` +
-    requiredArguments.length +
+    ` The definition for "@${directiveName}" defines the following ` +
+    requiredArgumentNames.length +
     ` required argument` +
-    (requiredArguments.length > 1 ? 's: ' : ': ') +
+    (requiredArgumentNames.length > 1 ? 's: ' : ': ') +
     `"` +
-    requiredArguments.join('", "') +
+    requiredArgumentNames.join('", "') +
     `"` +
-    `.\n However, the same directive that is declared on "${hostPath}" does not define`;
-  if (missingRequiredArguments.length < 1) {
-    return message + ` any arguments.`;
+    `.\n However,`;
+  if (undefinedArgumentNames.length < 1) {
+    return message + ` no arguments are defined on this instance.`;
   }
   return (
     message +
     ` the following required argument` +
-    (missingRequiredArguments.length > 1 ? `s` : ``) +
-    `: "` +
-    missingRequiredArguments.join(QUOTATION_JOIN) +
+    (undefinedArgumentNames.length > 1 ? `s are` : ` is`) +
+    ` not defined on this instance: "` +
+    undefinedArgumentNames.join(QUOTATION_JOIN) +
     `".`
   );
 }
 
 export function unexpectedDirectiveArgumentErrorMessage(directiveName: string, argumentNames: string[]): string {
   return (
-    ` The definition for the directive "${directiveName}" does not define the following provided argument` +
-    (argumentNames.length > 1 ? 's' : '') +
-    `: "` +
+    ` The definition for "@${directiveName}" does not define the following argument` +
+    (argumentNames.length > 1 ? 's that are' : ' that is') +
+    ` provided: "` +
     argumentNames.join(QUOTATION_JOIN) +
     `".`
   );
 }
 
-export function duplicateDirectiveArgumentDefinitionsErrorMessage(
-  directiveName: string,
-  hostPath: string,
-  argumentNames: string[],
-): string {
+export function duplicateDirectiveArgumentDefinitionsErrorMessage(argumentNames: string[]): string {
   return (
-    ` The directive "${directiveName}" that is declared on "${hostPath}" defines the following argument` +
-    (argumentNames.length > 1 ? 's' : '') +
-    ` more than once: "` +
+    ` The following argument` +
+    (argumentNames.length > 1 ? 's are' : ' is') +
+    ` defined more than once: "` +
     argumentNames.join(QUOTATION_JOIN) +
     `"`
   );
+}
+
+export function invalidArgumentValueErrorMessage(
+  value: string,
+  hostName: string,
+  argumentName: string,
+  expectedTypeString: string,
+): string {
+  return ` The value "${value}" provided to argument "${hostName}(${argumentName}: ...)" is not a valid "${expectedTypeString}" type.`;
 }
 
 export function invalidDirectiveArgumentTypeErrorMessage(
@@ -354,10 +322,6 @@ export function invalidDirectiveArgumentTypeErrorMessage(
     ` The ${required ? 'required ' : ''}argument "${argumentName} must be type` +
     ` "${expectedKind}" and not type "${actualKind}".`
   );
-}
-
-export function invalidKeyDirectiveArgumentErrorMessage(directiveKind: Kind): string {
-  return ` The required argument named "fields" must be type "String" and not type "${directiveKind}".`;
 }
 
 export function invalidKeyDirectivesError(parentTypeName: string, errorMessages: string[]): Error {
@@ -438,14 +402,6 @@ export const subgraphValidationFailureError: Error = new Error(
 export const federationFactoryInitializationFatalError = new Error(
   'Fatal: FederationFactory was unsuccessfully initialized.',
 );
-
-export function unexpectedParentKindErrorMessage(
-  parentTypeName: string,
-  expectedTypeString: string,
-  actualTypeString: string,
-): string {
-  return ` Expected "${parentTypeName}" to be type ${expectedTypeString} but received "${actualTypeString}".`;
-}
 
 export function unexpectedParentKindForChildError(
   parentTypeName: string,
@@ -630,13 +586,16 @@ export function invalidArgumentsError(fieldPath: string, invalidArguments: Inval
   return new Error(message);
 }
 
-export const noQueryRootTypeError = new Error(
-  `A valid federated graph must have at least one accessible query root type field.\n` +
-    ` For example:\n` +
-    `  type Query {\n` +
-    `    dummy: String\n` +
-    `  }`,
-);
+export function noQueryRootTypeError(isRouterSchema = true): Error {
+  return new Error(
+    `The ${isRouterSchema ? 'router' : 'client'} schema does not define at least one accessible query root` +
+      ` type field after federation was completed, which is necessary for a federated graph to be valid.\n` +
+      ` For example:\n` +
+      `  type Query {\n` +
+      `    dummy: String\n` +
+      `  }`,
+  );
+}
 
 export const inaccessibleQueryRootTypeError = new Error(
   `The root query type "Query" must be present in the client schema;` +
@@ -973,13 +932,11 @@ export function undefinedEntityInterfaceImplementationsError(
   return new Error(message);
 }
 
-export function orScopesLimitError(maxOrScopes: number, hostPaths: string[]): Error {
+export function orScopesLimitError(maxOrScopes: number, directiveCoords: string[]): Error {
   return new Error(
     `The maximum number of OR scopes that can be defined by @requiresScopes on a single field is ${maxOrScopes}.` +
-      ` However, the following path` +
-      (hostPaths.length > 1 ? 's attempt' : ' attempts') +
-      ` to define more:\n "` +
-      hostPaths.join(QUOTATION_JOIN) +
+      ` However, the following coordinates attempt to define more:\n "` +
+      directiveCoords.join(QUOTATION_JOIN) +
       `"\nIf you require more, please contact support.`,
   );
 }
@@ -1052,12 +1009,6 @@ export function invalidRootTypeFieldResponseTypesEventDrivenErrorMessage(
 export const invalidNatsStreamInputErrorMessage =
   `The "streamConfiguration" argument must be a valid input object with the following form:\n` +
   `  input edfs__NatsStreamConfiguration {\n    consumerInactiveThreshold: Int! = 30\n    consumerName: String!\n    streamName: String!\n  }`;
-
-export function invalidArgumentValueErrorMessage(hostCoords: string, kind: Kind, value?: string): string {
-  return (
-    `The value ` + (value ? `"${value}" ` : ``) + `passed to "${hostCoords}" is not type "${kindToTypeString(kind)}".`
-  );
-}
 
 export function invalidNatsStreamInputFieldsErrorMessage(
   missingRequiredFieldNames: string[],
@@ -1178,11 +1129,6 @@ export function nonKeyComposingObjectTypeNamesEventDrivenErrorMessage(typeNames:
 export const invalidEdfsPublishResultObjectErrorMessage =
   ` The object "edfs__PublishResult" that was defined in the Event Driven graph is invalid and must instead have` +
   ` the following definition:\n  type edfs__PublishResult {\n   success: Boolean!\n  }`;
-
-export const undefinedNatsStreamConfigurationInputErrorMessage =
-  ` The input object "edfs__NatsStreamConfiguration" must be defined in the event-driven graph to satisfy the` +
-  ` "@edfs__natsSubscribe" directive.\n The following input must be defined in the event-driven graph:\n` +
-  `  input edfs__NatsStreamConfiguration {\n   consumerInactiveThreshold: Int! = 30\n   consumerName: String!\n   streamName: String!\n  }`;
 
 export const invalidNatsStreamConfigurationDefinitionErrorMessage =
   ` The input object "edfs__NatsStreamConfiguration" that was defined in the Event Driven graph is invalid and must` +
@@ -1641,5 +1587,49 @@ export function invalidExternalDirectiveError(fieldCoords: string): Error {
       ` be declared "@external" if it is part of a "@key", "@provides", or "@requires" FieldSet, or the Field is` +
       ` necessary to satisfy an Interface implementation. In the case that none of these conditions is true, the` +
       ` "@external" directive should be removed.`,
+  );
+}
+
+export function configureDescriptionNoDescriptionError(typeString: string, typeName: string): Error {
+  return new Error(
+    `The "@openfed__configureDescription" directive defined on ${typeString} "${typeName}" is invalid` +
+      ` because neither a description nor the "descriptionOverride" argument is defined.`,
+  );
+}
+
+export function configureDescriptionPropagationError(coords: string, subgraphNames: Array<string>): Error {
+  return new Error(
+    `The coordinates "${coords}" declare "@openfed__configureDescription(propagate: true)" in the following subgraphs:\n "` +
+      subgraphNames.join(QUOTATION_JOIN) +
+      '"\n' +
+      `A federated graph only supports a single description; consequently, only one subgraph may define argument "propagate" as true (this is the default value).`,
+  );
+}
+
+export function duplicateDirectiveDefinitionArgumentErrorMessage(argumentNames: Array<string>): string {
+  return (
+    `- The following argument` +
+    (argumentNames.length > 1 ? 's are' : ' is') +
+    ' defined more than once:\n "' +
+    argumentNames.join(QUOTATION_JOIN) +
+    '"'
+  );
+}
+
+export function duplicateDirectiveDefinitionLocationErrorMessage(locationName: string): string {
+  return `- The location "${locationName}" is defined multiple times.`;
+}
+
+export function invalidDirectiveDefinitionLocationErrorMessage(locationName: string): string {
+  return `- "${locationName}" is not a valid directive location.`;
+}
+
+export function invalidDirectiveDefinitionError(directiveName: string, errorMessages: Array<string>): Error {
+  return new Error(
+    `The directive definition for "@${directiveName}" is invalid for the following reason` +
+      (errorMessages.length > 1 ? 's' : '') +
+      ':\n' +
+      errorMessages.join(LITERAL_NEW_LINE) +
+      '"',
   );
 }

@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.94.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.93.0...@wundergraph/cosmo-connect@0.94.0) (2025-02-17)
+
+### Features
+
+* add composition versioning ([#1575](https://github.com/wundergraph/cosmo/issues/1575)) ([ee32cbb](https://github.com/wundergraph/cosmo/commit/ee32cbb3dbe7c46fa984920bbd95e4a00d01c9c3)) (@Aenimus)
+
+# [0.93.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.92.0...@wundergraph/cosmo-connect@0.93.0) (2025-02-12)
+
+### Features
+
+* add option to delete cache operation ([#1586](https://github.com/wundergraph/cosmo/issues/1586)) ([2946139](https://github.com/wundergraph/cosmo/commit/29461397e784eec0880546807df51dbfd8f2918c)) (@JivusAyrus)
+
 # [0.92.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.91.0...@wundergraph/cosmo-connect@0.92.0) (2025-01-24)
 
 ### Features

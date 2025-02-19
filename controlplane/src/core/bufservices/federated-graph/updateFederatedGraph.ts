@@ -161,25 +161,28 @@ export function updateFederatedGraph(
       targetNamespaceDisplayName: federatedGraph.namespace,
     });
 
-    orgWebhooks.send(
-      {
-        eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
-        payload: {
-          federated_graph: {
-            id: federatedGraph.id,
-            name: federatedGraph.name,
-            namespace: federatedGraph.namespace,
+    // Send webhook event only when we update label matchers because this causes schema update
+    if (result) {
+      orgWebhooks.send(
+        {
+          eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+          payload: {
+            federated_graph: {
+              id: federatedGraph.id,
+              name: federatedGraph.name,
+              namespace: federatedGraph.namespace,
+            },
+            organization: {
+              id: authContext.organizationId,
+              slug: authContext.organizationSlug,
+            },
+            errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
+            actor_id: authContext.userId,
           },
-          organization: {
-            id: authContext.organizationId,
-            slug: authContext.organizationSlug,
-          },
-          errors: compositionErrors.length > 0 || deploymentErrors.length > 0,
-          actor_id: authContext.userId,
         },
-      },
-      authContext.userId,
-    );
+        authContext.userId,
+      );
+    }
 
     if (compositionErrors.length > 0) {
       return {

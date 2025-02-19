@@ -6,6 +6,8 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -21,6 +23,7 @@ const (
 	sseMimeType          = "text/event-stream"
 	heartbeat            = "{}"
 	multipartContent     = multipartMime + "; boundary=" + multipartBoundary
+	multipartStart       = "\r\n--" + multipartBoundary
 )
 
 type HttpFlushWriter struct {
@@ -32,6 +35,10 @@ type HttpFlushWriter struct {
 	sse           bool
 	multipart     bool
 	buf           *bytes.Buffer
+	firstMessage  bool
+	// apolloSubscriptionMultipartPrintBoundary if set to true will send the multipart boundary at the end of the message to allow
+	// misbehaving client (like apollo client) to read the message just sent before the next one or the heartbeat
+	apolloSubscriptionMultipartPrintBoundary bool
 }
 
 func (f *HttpFlushWriter) Complete() {
@@ -42,7 +49,11 @@ func (f *HttpFlushWriter) Complete() {
 		_, _ = f.writer.Write([]byte("event: complete"))
 	} else if f.multipart {
 		// Write the final boundary in the multipart response
-		_, _ = f.writer.Write([]byte("--" + multipartBoundary + "--\n"))
+		if f.apolloSubscriptionMultipartPrintBoundary {
+			_, _ = f.writer.Write([]byte("--\n"))
+		} else {
+			_, _ = f.writer.Write([]byte("--" + multipartBoundary + "--\n"))
+		}
 	}
 	f.Close()
 }
@@ -71,7 +82,10 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	resp := f.buf.Bytes()
 	f.buf.Reset()
 
-	flushBreak := GetWriterPrefix(f.sse, f.multipart)
+	flushBreak := GetWriterPrefix(f.sse, f.multipart, !f.apolloSubscriptionMultipartPrintBoundary || f.firstMessage)
+	if f.firstMessage {
+		f.firstMessage = false
+	}
 	if f.multipart && len(resp) > 0 {
 		var err error
 		resp, err = wrapMultipartMessage(resp)
@@ -82,7 +96,11 @@ func (f *HttpFlushWriter) Flush() (err error) {
 
 	separation := "\n\n"
 	if f.multipart {
-		separation = "\n"
+		if !f.apolloSubscriptionMultipartPrintBoundary {
+			separation = "\n"
+		} else {
+			separation = "\n" + multipartStart
+		}
 	} else if f.subscribeOnce {
 		separation = ""
 	}
@@ -99,7 +117,7 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	return nil
 }
 
-func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http.ResponseWriter) (*resolve.Context, resolve.SubscriptionResponseWriter, bool) {
+func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http.ResponseWriter, apolloSubscriptionMultipartPrintBoundary bool) (*resolve.Context, resolve.SubscriptionResponseWriter, bool) {
 	type withFlushWriter interface {
 		SubscriptionResponseWriter() resolve.SubscriptionResponseWriter
 	}
@@ -118,12 +136,14 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 	flusher.Flush()
 
 	flushWriter := &HttpFlushWriter{
-		writer:        w,
-		flusher:       flusher,
-		sse:           wgParams.UseSse,
-		multipart:     wgParams.UseMultipart,
-		subscribeOnce: wgParams.SubscribeOnce,
-		buf:           &bytes.Buffer{},
+		writer:                                   w,
+		flusher:                                  flusher,
+		sse:                                      wgParams.UseSse,
+		multipart:                                wgParams.UseMultipart,
+		subscribeOnce:                            wgParams.SubscribeOnce,
+		buf:                                      &bytes.Buffer{},
+		firstMessage:                             true,
+		apolloSubscriptionMultipartPrintBoundary: apolloSubscriptionMultipartPrintBoundary,
 	}
 
 	flushWriter.ctx, flushWriter.cancel = context.WithCancel(ctx.Context())
@@ -183,14 +203,42 @@ func setSubscriptionHeaders(wgParams SubscriptionParams, r *http.Request, w http
 
 func NegotiateSubscriptionParams(r *http.Request) SubscriptionParams {
 	q := r.URL.Query()
-	acceptHeader := r.Header.Get("Accept")
+	acceptHeaders := r.Header.Get("Accept")
+	elements := strings.Split(acceptHeaders, ",")
+	// Per RFC 9110, Accept header can be in the form`text/event-stream,application/json`, with an optional q-value to
+	// specify preference. We want to parse this and find the best option to use, and default to the first option if no
+	// q-value is provided.
+	// Eventually a solution will be in the stdlib: see https://github.com/golang/go/issues/19307, at which point we should
+	// remove this
+	var (
+		useMultipart = false
+		useSse       = q.Has(WgSseParam)
+		bestType     = ""
+		bestQ        = -1.0 // Default to lowest possible q-value
+	)
 
-	mediaType, _, _ := mime.ParseMediaType(acceptHeader)
+	for _, acceptHeader := range elements {
+		mediaType, params, _ := mime.ParseMediaType(acceptHeader)
+		qValue := 1.0                            // Default quality factor
+		if qStr, exists := params["q"]; exists { // If a quality factor exists, parse it and prefer it
+			if parsedQ, err := strconv.ParseFloat(qStr, 64); err == nil {
+				qValue = parsedQ
+			}
+		}
+
+		// Find the media type with the highest q-value. If none is provided, it will default to the first option
+		// in the header, per https://www.rfc-editor.org/rfc/rfc9110.html#name-accept
+		if qValue > bestQ {
+			bestQ = qValue
+			bestType = mediaType
+		}
+	}
 	subscribeOnce := q.Has(WgSubscribeOnceParam)
-	useMultipart := mediaType == multipartMime
+	useSse = useSse || bestType == sseMimeType
+	useMultipart = bestType == multipartMime
 
 	return SubscriptionParams{
-		UseSse:        q.Has(WgSseParam) || mediaType == sseMimeType,
+		UseSse:        useSse,
 		SubscribeOnce: subscribeOnce,
 		UseMultipart:  useMultipart,
 	}
@@ -202,12 +250,16 @@ type SubscriptionParams struct {
 	UseMultipart  bool
 }
 
-func GetWriterPrefix(sse bool, multipart bool) string {
+func GetWriterPrefix(sse bool, multipart bool, firstMessage bool) string {
 	flushBreak := ""
 	if sse {
 		flushBreak = "event: next\ndata: "
 	} else if multipart {
-		flushBreak = "\r\n--" + multipartBoundary + "\nContent-Type: " + jsonContent + "\r\n\r\n"
+		messageStart := ""
+		if firstMessage {
+			messageStart = multipartStart
+		}
+		flushBreak = messageStart + "\nContent-Type: " + jsonContent + "\r\n\r\n"
 	}
 
 	return flushBreak
