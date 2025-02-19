@@ -53,6 +53,122 @@ func TestForwardHeaders(t *testing.T) {
 		},
 	}
 
+	t.Run("cookie filtering should remove no cookies when not specified", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+			},
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "Cookie",
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Cookies: []*http.Cookie{
+					{
+						Name:  "allowed",
+						Value: "allowed",
+					},
+					{
+						Name:  "allowed_as_well",
+						Value: "allowed",
+					},
+				},
+				Query: `query { headerValue(name:"Cookie") }`,
+			})
+			require.Equal(t, `{"data":{"headerValue":"allowed=allowed; allowed_as_well=allowed"}}`, res.Body)
+
+		})
+	})
+
+	t.Run("cookie filtering should remove no cookies when whitelist is empty", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+			},
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					CookieWhitelist: []string{},
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "Cookie",
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Cookies: []*http.Cookie{
+					{
+						Name:  "allowed",
+						Value: "allowed",
+					},
+					{
+						Name:  "allowed_as_well",
+						Value: "allowed",
+					},
+				},
+				Query: `query { headerValue(name:"Cookie") }`,
+			})
+			require.Equal(t, `{"data":{"headerValue":"allowed=allowed; allowed_as_well=allowed"}}`, res.Body)
+
+		})
+	})
+
+	t.Run("cookie filtering should remove cookies not on the whitelist", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+			},
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					CookieWhitelist: []string{"allowed"},
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "Cookie",
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Cookies: []*http.Cookie{
+					{
+						Name:  "allowed",
+						Value: "allowed",
+					},
+					{
+						Name:  "disallowed",
+						Value: "disallowed",
+					},
+				},
+				Query: `query { headerValue(name:"Cookie") }`,
+			})
+			require.Equal(t, `{"data":{"headerValue":"allowed=allowed"}}`, res.Body)
+
+		})
+	})
+
 	t.Run("HTTP", func(t *testing.T) {
 		t.Parallel()
 

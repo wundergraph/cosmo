@@ -1241,6 +1241,7 @@ type GraphQLRequest struct {
 	OperationName json.RawMessage `json:"operationName,omitempty"`
 	Header        http.Header     `json:"-"`
 	Files         [][]byte        `json:"-"`
+	Cookies       []*http.Cookie  `json:"-"`
 }
 
 type TestResponse struct {
@@ -1299,6 +1300,13 @@ func (e *Environment) MakeGraphQLRequestWithContext(ctx context.Context, request
 	if request.Header != nil {
 		req.Header = request.Header
 	}
+
+	if request.Cookies != nil {
+		for _, c := range request.Cookies {
+			req.AddCookie(c)
+		}
+	}
+
 	req.Header.Set("Accept-Encoding", "identity")
 	return e.MakeGraphQLRequestRaw(req)
 }

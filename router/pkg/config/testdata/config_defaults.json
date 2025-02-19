@@ -104,7 +104,8 @@
   "Modules": null,
   "Headers": {
     "All": null,
-    "Subgraphs": null
+    "Subgraphs": null,
+    "CookieWhitelist": null
   },
   "TrafficShaping": {
     "All": {
