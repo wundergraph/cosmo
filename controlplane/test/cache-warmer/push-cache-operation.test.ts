@@ -175,13 +175,14 @@ describe('PushCacheOperation', (ctx) => {
     });
     expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.OK);
 
-    const operationId = genID('sendHello')
+    const operationId = genID('sendHello');
+    const operationContent = `query sendHello { sendHello }`;
 
     const publishOperationsResp = await client.publishPersistedOperations({
       fedGraphName: federatedGraphName,
       namespace: 'default',
       clientName: 'my-client',
-      operations: [{ id: operationId, contents: `query sendHello { sendHello }` }],
+      operations: [{ id: operationId, contents: operationContent }],
     });
     expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -199,6 +200,7 @@ describe('PushCacheOperation', (ctx) => {
     });
     expect(getCacheOperationsResp.response?.code).toBe(EnumStatusCode.OK);
     expect(getCacheOperationsResp.totalCount).toBe(1);
+    expect(getCacheOperationsResp.operations[0].operationContent).toBe(operationContent);
 
     await server.close();
   });
@@ -221,13 +223,15 @@ describe('PushCacheOperation', (ctx) => {
     });
     expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.OK);
 
-    const operationId = genID('sendHello')
+    const operationId = genID('sendHello');
+    const operationContent = `query sendHello { sendHello }`;
     const publishOperationsResp = await client.publishPersistedOperations({
       fedGraphName: federatedGraphName,
       namespace: 'default',
       clientName: 'my-client',
-      operations: [{ id: operationId, contents: `query sendHello { sendHello }` }],
+      operations: [{ id: operationId, contents: operationContent }],
     });
+    expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
 
     let pushCacheOperationResp = await client.pushCacheWarmerOperation({
       federatedGraphName,
@@ -243,12 +247,13 @@ describe('PushCacheOperation', (ctx) => {
     });
     expect(getCacheOperationsResp.response?.code).toBe(EnumStatusCode.OK);
     expect(getCacheOperationsResp.totalCount).toBe(1);
+    expect(getCacheOperationsResp.operations[0].operationContent).toBe(operationContent);
 
     pushCacheOperationResp = await client.pushCacheWarmerOperation({
       federatedGraphName,
       namespace: 'default',
       operationName: 'sendHello',
-      operationPersistedId:operationId,
+      operationPersistedId: operationId,
     });
     expect(pushCacheOperationResp.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
 
