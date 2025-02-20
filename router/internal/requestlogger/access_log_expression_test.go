@@ -10,6 +10,8 @@ func TestAccessLogExpressionParsing(t *testing.T) {
 	t.Parallel()
 
 	t.Run("no expression attributes", func(t *testing.T) {
+		t.Parallel()
+
 		customAttributes := []config.CustomAttribute{
 			{
 				Key:     "custom",
@@ -36,6 +38,8 @@ func TestAccessLogExpressionParsing(t *testing.T) {
 	})
 
 	t.Run("parse expression attributes", func(t *testing.T) {
+		t.Parallel()
+
 		customAttributes := []config.CustomAttribute{
 			{
 				Key:     "nonexpr",
@@ -63,16 +67,18 @@ func TestAccessLogExpressionParsing(t *testing.T) {
 		expressions, err := GetAccessLogConfigExpressions(customAttributes)
 		require.NoError(t, err)
 
-		require.Equal(t, 2, len(expressions))
+		require.Len(t, len(expressions), 2)
 
 		// Validate the validity of the entry
 		entry1 := expressions[0]
-		require.Equal(t, entry1.Key, "expr1")
-		require.Equal(t, entry1.Default, "value_different1")
+		require.Equal(t, "expr1", entry1.Key)
+		require.Equal(t, "value_different1", entry1.Default)
 		require.NotNil(t, entry1.Expr)
 	})
 
 	t.Run("failure on parsing the expression", func(t *testing.T) {
+		t.Parallel()
+
 		customAttributes := []config.CustomAttribute{
 			{
 				Key:     "custom",

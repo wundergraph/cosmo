@@ -34,12 +34,13 @@ const (
 // Helper functions to create zap fields for custom attributes.
 
 func NewExpressionLogField(val any, key string, defaultValue any) zap.Field {
-	// Depending on the condition exprlang will dereference reportError sometimes
-	// and as the method receivers are all pointers (*reportError)
-	// the Error() function wont get called unless its of type *reportError
-	switch result := val.(type) {
-	case ExprWrapError:
-		val = &result
+	// Depending on the condition exprlang will dereference a pointer or a non pointer type
+	// of the error (if an error is existing), thus if the method receiver is of the pointer
+	// type, the Error() wont be printed to the output
+	// By wrapping all errors in a common type we can always unwrap it (some types wont be exported
+	// like errors.joinErrors for example), and ensure its Error() function is then called
+	if assertVal, ok := val.(ExprWrapError); ok {
+		val = &assertVal
 	}
 
 	if v := val; v != "" {
