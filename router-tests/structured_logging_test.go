@@ -1898,13 +1898,6 @@ func TestFlakyAccessLogs(t *testing.T) {
 								Expression: "request.url.method",
 							},
 						},
-						{
-							Key:     "test_default_value",
-							Default: "value-defined",
-							ValueFrom: &config.CustomDynamicAttribute{
-								Expression: "request.header.Get('some-value-that-does-not-exist')",
-							},
-						},
 					},
 					LogObservation: testenv.LogObservationConfig{
 						Enabled:  true,
@@ -1931,7 +1924,71 @@ func TestFlakyAccessLogs(t *testing.T) {
 						"service_name":          "service-name",        // From request header
 						"operation_hash":        "1163600561566987607", // From context
 						"url_method_expression": "POST",                // From expression
-						"test_default_value":    "value-defined",       // From expression test default value
+					}
+					additionalExpectedKeys := []string{
+						"user_agent",
+						"latency",
+						"config_version",
+						"request_id",
+						"pid",
+						"hostname",
+					}
+					checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+				},
+			)
+		})
+
+		t.Run("validate expression evaluation for default value", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "service_name",
+							ValueFrom: &config.CustomDynamicAttribute{
+								RequestHeader: "service-name",
+							},
+						},
+						{
+							Key: "operation_hash",
+							ValueFrom: &config.CustomDynamicAttribute{
+								ContextField: core.ContextFieldOperationHash,
+							},
+						},
+						{
+							Key:     "test_default_value",
+							Default: "value-defined",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.header.Get('some-value-that-does-not-exist')",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query:  `query employees { employees { id } }`,
+						Header: map[string][]string{"service-name": {"service-name"}},
+					})
+					require.JSONEq(t, employeesIDData, res.Body)
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestLogAll := requestLog.All()
+					requestContext := requestLogAll[0].ContextMap()
+
+					expectedValues := map[string]interface{}{
+						"log_type":           "request",
+						"status":             int64(200),
+						"method":             "POST",
+						"path":               "/graphql",
+						"query":              "",
+						"ip":                 "[REDACTED]",
+						"service_name":       "service-name",        // From request header
+						"operation_hash":     "1163600561566987607", // From context
+						"test_default_value": "value-defined",       // From expression test default value
 					}
 					additionalExpectedKeys := []string{
 						"user_agent",
