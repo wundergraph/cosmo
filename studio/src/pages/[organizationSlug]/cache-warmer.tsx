@@ -2,22 +2,185 @@ import { NamespaceSelector } from "@/components/dashboard/NamespaceSelector";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Loader } from "@/components/ui/loader";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useFeature } from "@/hooks/use-feature";
 import { useUser } from "@/hooks/use-user";
+import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { checkUserAccess } from "@/lib/utils";
 import { useMutation, useQuery } from "@connectrpc/connect-query";
-import { ExclamationTriangleIcon, InfoCircledIcon } from "@radix-ui/react-icons";
+import {
+  ExclamationTriangleIcon,
+  InfoCircledIcon,
+} from "@radix-ui/react-icons";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   configureCacheWarmer,
   getCacheWarmerConfig,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
+
+const CacheWarmerConfig = ({
+  currentOperationsCount,
+  cacheWarmerEnabled,
+  refetch,
+}: {
+  currentOperationsCount: number;
+  cacheWarmerEnabled: boolean;
+  refetch: () => void;
+}) => {
+  const router = useRouter();
+  const user = useUser();
+  const namespace = router.query.namespace as string;
+  const { mutate: configureCacheWarmerConfig, isPending } =
+    useMutation(configureCacheWarmer);
+  const [maxOperationsCount, setMaxOperationsCount] = useState(
+    currentOperationsCount.toString(),
+  );
+  const { toast } = useToast();
+
+  console.log(
+    "currentOperationsCount",
+    currentOperationsCount,
+    maxOperationsCount,
+  );
+
+  const operationsCountOptions = [
+    { value: "100", label: "100" },
+    { value: "200", label: "200" },
+    { value: "300", label: "300" },
+    { value: "400", label: "400" },
+    { value: "500", label: "500" },
+    { value: "1000", label: "1000" },
+  ];
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex w-full items-center justify-between">
+          <div className="flex flex-col gap-y-2">
+            <CardTitle>Cache Warmer Configuration</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground">
+              {cacheWarmerEnabled
+                ? "Configure the cache warmer configuration of this namespace."
+                : "Enable cache warmer to set the configuration."}
+            </CardDescription>
+          </div>
+          <Button
+            type="submit"
+            variant="default"
+            isLoading={isPending}
+            disabled={
+              !cacheWarmerEnabled ||
+              !checkUserAccess({
+                rolesToBe: ["admin", "developer"],
+                userRoles: user?.currentOrganization.roles || [],
+              })
+            }
+            onClick={() => {
+              configureCacheWarmerConfig(
+                {
+                  namespace,
+                  enableCacheWarmer: cacheWarmerEnabled,
+                  maxOperationsCount: parseInt(maxOperationsCount),
+                },
+                {
+                  onSuccess: (d) => {
+                    if (d.response?.code === EnumStatusCode.OK) {
+                      toast({
+                        description: "Cache warmer config set successfully.",
+                        duration: 3000,
+                      });
+                    } else if (d.response?.details) {
+                      toast({
+                        description: d.response.details,
+                        duration: 3000,
+                      });
+                    }
+                    refetch();
+                  },
+                  onError: (error) => {
+                    toast({
+                      description:
+                        "Could not set the cache warmer config. Please try again.",
+                      duration: 3000,
+                    });
+                  },
+                },
+              );
+            }}
+          >
+            Apply
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="flex w-full flex-col gap-y-3">
+          <div className="flex w-full flex-col justify-between gap-y-4 rounded-md border p-4 md:flex-row md:items-center">
+            <div className="flex flex-col gap-y-1">
+              <label
+                htmlFor="OperationsCount"
+                className="break-all text-sm font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Operations Count
+              </label>
+              <span className="text-sm text-muted-foreground">
+                Maximum number of operations used for warming the cache.
+              </span>
+            </div>
+            <div className="ml-8 flex gap-x-3 md:ml-0">
+              <Select
+                value={maxOperationsCount}
+                onValueChange={(value) => {
+                  setMaxOperationsCount(value);
+                }}
+                disabled={
+                  !cacheWarmerEnabled ||
+                  !checkUserAccess({
+                    rolesToBe: ["admin", "developer"],
+                    userRoles: user?.currentOrganization.roles || [],
+                  })
+                }
+              >
+                <SelectTrigger className="h-8 w-36">
+                  <SelectValue placeholder={maxOperationsCount} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {operationsCountOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 const CacheWarmerPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -32,10 +195,12 @@ const CacheWarmerPage: NextPageWithLayout = () => {
   });
 
   const [cacheWarmerEnabled, setCacheWarmerEnabled] = useState(false);
+  const [currentOperationsCount, setCurrentOperationsCount] = useState(100);
 
   useEffect(() => {
     if (!data || data?.response?.code !== EnumStatusCode.OK) return;
     setCacheWarmerEnabled(data.isCacheWarmerEnabled);
+    setCurrentOperationsCount(data.maxOperationsCount || 100);
   }, [data]);
 
   if (isLoading) {
@@ -86,7 +251,15 @@ const CacheWarmerPage: NextPageWithLayout = () => {
           <p className="text-sm text-muted-foreground">
             {!!cacheWarmerFeature?.enabled
               ? "Enable cache warmer to warm the router with your top opeartions."
-              : "Upgrade your billing plan to use this cacheWarmer."}
+              : "Upgrade your billing plan to use this cacheWarmer."}{" "}
+            <Link
+              href={docsBaseURL + "/concepts/cache-warmer"}
+              className="text-primary"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Learn more
+            </Link>
           </p>
         </div>
         <Switch
@@ -104,6 +277,7 @@ const CacheWarmerPage: NextPageWithLayout = () => {
               {
                 enableCacheWarmer: checked,
                 namespace: namespace || "default",
+                maxOperationsCount: checked ? 100 : undefined,
               },
               {
                 onSuccess: (d) => {
@@ -135,6 +309,12 @@ const CacheWarmerPage: NextPageWithLayout = () => {
           }}
         />
       </div>
+      <CacheWarmerConfig
+        key={currentOperationsCount}
+        cacheWarmerEnabled={cacheWarmerEnabled}
+        currentOperationsCount={currentOperationsCount}
+        refetch={refetch}
+      />
     </div>
   );
 };

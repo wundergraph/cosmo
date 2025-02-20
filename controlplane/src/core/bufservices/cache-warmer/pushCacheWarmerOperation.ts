@@ -183,6 +183,7 @@ export function pushCacheWarmerOperation(
       blobStorage: opts.blobStorage,
       federatedGraphId: federatedGraph.id,
       organizationId: authContext.organizationId,
+      namespaceId: namespace.id,
       logger,
     });
 

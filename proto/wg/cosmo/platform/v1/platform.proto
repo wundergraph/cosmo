@@ -2471,6 +2471,7 @@ message ComputeCacheWarmerOperationsResponse {
 message ConfigureCacheWarmerRequest {
   string namespace = 1;
   bool enableCacheWarmer = 2;
+  int32 maxOperationsCount = 3;
 }
 
 message ConfigureCacheWarmerResponse {
@@ -2484,6 +2485,7 @@ message GetCacheWarmerConfigRequest {
 message GetCacheWarmerConfigResponse {
   Response response = 1;
   bool isCacheWarmerEnabled = 2;
+  int32 maxOperationsCount = 3;
 }
 
 message DeleteCacheWarmerOperationRequest {

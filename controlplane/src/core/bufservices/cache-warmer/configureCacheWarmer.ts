@@ -9,6 +9,7 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationRepository } from '../../../core/repositories/OrganizationRepository.js';
+import { CacheWarmerRepository } from '../../../core/repositories/CacheWarmerRepository.js';
 
 export function configureCacheWarmer(
   opts: RouterOptions,
@@ -21,6 +22,7 @@ export function configureCacheWarmer(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
     const organizationRepo = new OrganizationRepository(logger, opts.db);
+    const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
     if (!authContext.hasWriteAccess) {
       return {
@@ -44,7 +46,15 @@ export function configureCacheWarmer(
       };
     }
 
-    const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+    if (!opts.chClient) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `ClickHouse client is not available`,
+        },
+      };
+    }
+
     const namespace = await namespaceRepo.byName(req.namespace);
     if (!namespace) {
       return {
@@ -56,6 +66,18 @@ export function configureCacheWarmer(
     }
 
     await namespaceRepo.toggleEnableCacheWarmer({ id: namespace.id, enableCacheWarming: req.enableCacheWarmer });
+
+    const cacheWarmerRepo = new CacheWarmerRepository(opts.chClient, opts.db);
+    if (req.enableCacheWarmer) {
+      await cacheWarmerRepo.configureCacheWarmerConfig({
+        namespaceId: namespace.id,
+        maxOperationsCount: req.maxOperationsCount || 100,
+      });
+    } else {
+      await cacheWarmerRepo.deleteCacheWarmerConfig({
+        namespaceId: namespace.id,
+      });
+    }
 
     return {
       response: {
