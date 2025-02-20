@@ -16,6 +16,8 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 	t.Parallel()
 
 	t.Run("run without any expressions", func(t *testing.T) {
+		t.Parallel()
+
 		logger := &zap.Logger{}
 
 		req, err := http.NewRequest("POST", "http://localhost:3002/graphql", nil)
@@ -32,13 +34,16 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 			nil,
 		)
 
-		require.Equal(t, len(response), 1)
+		require.Len(t, response, 1)
 	})
 
 	t.Run("run expression without error", func(t *testing.T) {
+		t.Parallel()
+
 		logger := &zap.Logger{}
 
-		req, err := http.NewRequest("POST", "http://localhost:3002/graphql", nil)
+		req, err := http.NewRequest(http.MethodPost, "http://localhost:3002/graphql", nil)
+
 		require.NoError(t, err)
 		rcc := buildRequestContext(requestContextOptions{r: req})
 		req = req.WithContext(withRequestContext(req.Context(), rcc))
@@ -70,6 +75,8 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 	})
 
 	t.Run("run expression with an error", func(t *testing.T) {
+		t.Parallel()
+		
 		logger := &zap.Logger{}
 
 		req, err := http.NewRequest("POST", "http://localhost:3002/graphql", nil)
@@ -110,7 +117,7 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 		)
 
 		expressionResponse := response[1]
-		require.IsType(t, expressionResponse.Interface, &ExprWrapError{})
+		require.IsType(t, &ExprWrapError{}, expressionResponse.Interface)
 		require.Equal(t, expressionResponseKey, expressionResponse.Key)
 		require.Equal(t, &ExprWrapError{requestError}, expressionResponse.Interface)
 	})

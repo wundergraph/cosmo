@@ -180,7 +180,7 @@ func ValidateAnyExpression(s string) error {
 	}
 
 	if expectedType == nil {
-		return handleExpressionError(fmt.Errorf("disallowed nil"))
+		return handleExpressionError(errors.New("disallowed nil"))
 	}
 
 	// Disallowed types
