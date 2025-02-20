@@ -220,16 +220,16 @@ export function validateKeyFieldSets(
            * If a field is external, but it's part of a key FieldSet, it should be included in its respective
            * root or child node */
           if (currentDepth === 0) {
-            // @TODO
-            fieldNames.add(fieldName);
+            // @TODO removed
+            // fieldNames.add(fieldName);
           } else {
             const nestedConfigurationData = nf.configurationDataByTypeName.get(parentTypeName);
             if (!nestedConfigurationData) {
               errorMessages.push(invalidConfigurationDataErrorMessage(parentTypeName, fieldName, rawFieldSet));
               return BREAK;
             }
-            // @TODO
-            nestedConfigurationData.fieldNames.add(fieldName);
+            // @TODO removed
+            // nestedConfigurationData.fieldNames.add(fieldName);
           }
           getValueOrDefault(nf.keyFieldNamesByParentTypeName, parentTypeName, () => new Set<string>()).add(fieldName);
           const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);

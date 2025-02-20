@@ -1775,9 +1775,10 @@ export class NormalizationFactory {
               }
               return;
             }
-            if (!isFieldConditional) {
-              return;
-            }
+            // @TODO removed
+            // if (!isFieldConditional) {
+            //   return;
+            // }
             const conditionalFieldData = getValueOrDefault(
               nf.conditionalFieldDataByCoords,
               currentFieldCoords,
@@ -1797,7 +1798,8 @@ export class NormalizationFactory {
             errorMessages.push(unknownTypeInFieldSetErrorMessage(fieldSet, currentFieldCoords, namedTypeName));
             return BREAK;
           }
-          if (isFieldConditional) {
+          // TODO isFieldConditional
+          if (isDefinedExternal) {
             const conditionalFieldData = getValueOrDefault(
               nf.conditionalFieldDataByCoords,
               currentFieldCoords,
