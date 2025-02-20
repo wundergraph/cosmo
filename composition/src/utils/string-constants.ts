@@ -50,6 +50,7 @@ export const FOR = 'for';
 export const FRAGMENT_DEFINITION_UPPER = 'FRAGMENT_DEFINITION';
 export const FRAGMENT_SPREAD_UPPER = 'FRAGMENT_SPREAD';
 export const FROM = 'from';
+export const HYPHEN_JOIN = `\n -`;
 export const ID_SCALAR = 'ID';
 export const IMPORT = 'import';
 export const IN_UPPER = 'IN';

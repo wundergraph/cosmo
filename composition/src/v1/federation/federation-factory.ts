@@ -36,6 +36,7 @@ import {
   invalidImplementedTypeError,
   invalidInputFieldTypeErrorMessage,
   invalidInterfaceImplementationError,
+  invalidInterfaceObjectImplementationDefinitionsError,
   invalidReferencesOfInaccessibleTypeError,
   invalidRepeatedFederatedDirectiveErrorMessage,
   invalidRequiredInputValueError,
@@ -101,7 +102,7 @@ import {
   SubscriptionCondition,
   SubscriptionFieldCondition,
   SubscriptionFilterValue,
-} from '../../router-configuration/router-configuration';
+} from '../../router-configuration/types';
 import {
   AUTHENTICATED_DEFINITION,
   BASE_SCALARS,
@@ -118,6 +119,7 @@ import {
   ChildData,
   CompositeOutputData,
   EntityData,
+  EntityInterfaceFederationData,
   EnumDefinitionData,
   EnumValueData,
   ExtensionType,
@@ -168,7 +170,7 @@ import { ConstDirectiveNode, ConstObjectValueNode, ListTypeNode, NonNullTypeNode
 import { Graph } from '../../resolvability-graph/graph';
 import { GraphNode } from '../../resolvability-graph/graph-nodes';
 import { InternalSubgraph, Subgraph, SubgraphConfig } from '../../subgraph/types';
-import { Warning } from '../../warnings/warnings';
+import { Warning } from '../../warnings/types';
 import { ContractTagOptions, FederationResult, FederationResultWithContracts } from '../../federation/types';
 import {
   AND_UPPER,
@@ -199,18 +201,19 @@ import {
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../../utils/integer-constants';
 import {
   addIterableValuesToSet,
-  EntityInterfaceFederationData,
   generateSimpleDirective,
   getEntriesNotInHashSet,
   getOrThrowError,
   getValueOrDefault,
+  kindToTypeString,
+} from '../../utils/utils';
+import {
   GraphFieldData,
   ImplementationErrors,
   InvalidEntityInterface,
   InvalidFieldImplementation,
   InvalidRequiredInputValueData,
-  kindToTypeString,
-} from '../../utils/utils';
+} from '../../utils/types';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -264,7 +267,7 @@ export class FederationFactory {
       return interfaces;
     }
     const isParentInaccessible = isNodeDataInaccessible(data);
-    const implementationErrorsMap = new Map<string, ImplementationErrors>();
+    const implementationErrorsByInterfaceName = new Map<string, ImplementationErrors>();
     const invalidImplementationTypeStringByTypeName = new Map<string, string>();
     for (const interfaceName of data.implementedInterfaceTypeNames) {
       interfaces.push(stringToNamedTypeNode(interfaceName));
@@ -356,15 +359,19 @@ export class FederationFactory {
         }
       }
       if (hasErrors) {
-        implementationErrorsMap.set(interfaceName, implementationErrors);
+        implementationErrorsByInterfaceName.set(interfaceName, implementationErrors);
       }
     }
     if (invalidImplementationTypeStringByTypeName.size > 0) {
       this.errors.push(invalidImplementedTypeError(data.name, invalidImplementationTypeStringByTypeName));
     }
-    if (implementationErrorsMap.size) {
+    if (implementationErrorsByInterfaceName.size > 0) {
       this.errors.push(
-        invalidInterfaceImplementationError(data.node.name.value, kindToTypeString(data.kind), implementationErrorsMap),
+        invalidInterfaceImplementationError(
+          data.node.name.value,
+          kindToTypeString(data.kind),
+          implementationErrorsByInterfaceName,
+        ),
       );
     }
     return interfaces;
@@ -392,15 +399,16 @@ export class FederationFactory {
     const configurationData = getOrThrowError(
       internalSubgraph.configurationDataByTypeName,
       entityData.typeName,
-      'internalSubgraph.configurationDataByParentTypeName',
+      'internalSubgraph.configurationDataByTypeName',
     );
     const implicitKeys: RequiredFieldConfiguration[] = [];
     const graphNode = this.internalGraph.nodeByNodeName.get(`${this.currentSubgraphName}.${entityData.typeName}`);
     // Any errors in the field sets would be caught when evaluating the explicit entities, so they are ignored here
     validateImplicitFieldSets({
-      conditionalFieldDataByCoordinates: internalSubgraph.conditionalFieldDataByCoordinates,
+      conditionalFieldDataByCoords: internalSubgraph.conditionalFieldDataByCoordinates,
       configurationData,
-      fieldSets: entityData.keyFieldSets,
+      currentSubgraphName: this.currentSubgraphName,
+      entityData,
       graphNode,
       implicitKeys,
       objectData,
@@ -415,9 +423,10 @@ export class FederationFactory {
         continue;
       }
       validateImplicitFieldSets({
-        conditionalFieldDataByCoordinates: internalSubgraph.conditionalFieldDataByCoordinates,
+        conditionalFieldDataByCoords: internalSubgraph.conditionalFieldDataByCoordinates,
         configurationData,
-        fieldSets: interfaceObjectEntityData.keyFieldSets,
+        currentSubgraphName: this.currentSubgraphName,
+        entityData: interfaceObjectEntityData,
         implicitKeys,
         objectData,
         parentDefinitionDataByTypeName,
@@ -460,14 +469,15 @@ export class FederationFactory {
     const configurationData = getOrThrowError(
       internalSubgraph.configurationDataByTypeName,
       entityData.typeName,
-      'internalSubgraph.configurationDataByParentTypeName',
+      'internalSubgraph.configurationDataByTypeName',
     );
     const implicitKeys: RequiredFieldConfiguration[] = [];
     // Any errors in the field sets would be caught when evaluating the explicit entities, so they are ignored here
     validateImplicitFieldSets({
-      conditionalFieldDataByCoordinates: internalSubgraph.conditionalFieldDataByCoordinates,
+      conditionalFieldDataByCoords: internalSubgraph.conditionalFieldDataByCoordinates,
       configurationData,
-      fieldSets: entityData.keyFieldSets,
+      currentSubgraphName: internalSubgraph.name,
+      entityData,
       implicitKeys,
       objectData: interfaceObjectData,
       parentDefinitionDataByTypeName,
@@ -886,7 +896,7 @@ export class FederationFactory {
     );
     setLongestDescription(existingData, incomingData);
     existingData.isInaccessible ||= incomingData.isInaccessible;
-    addMapEntries(incomingData.isExternalBySubgraphName, existingData.isExternalBySubgraphName);
+    addMapEntries(incomingData.externalFieldDataBySubgraphName, existingData.externalFieldDataBySubgraphName);
     addMapEntries(incomingData.isShareableBySubgraphName, existingData.isShareableBySubgraphName);
     addIterableValuesToSet(incomingData.subgraphNames, existingData.subgraphNames);
   }
@@ -2820,48 +2830,62 @@ function initializeFederationFactory(subgraphs: Subgraph[]): FederationFactoryRe
     return { errors: result.errors, success: false, warnings: result.warnings };
   }
   const entityInterfaceFederationDataByTypeName = new Map<string, EntityInterfaceFederationData>();
-  const invalidEntityInterfacesByTypeName = new Map<string, InvalidEntityInterface[]>();
-  const validEntityInterfaceTypeNames = new Set<string>();
+  const invalidEntityInterfacesByTypeName = new Map<string, Array<InvalidEntityInterface>>();
   for (const [subgraphName, internalSubgraph] of result.internalSubgraphBySubgraphName) {
     for (const [typeName, entityInterfaceData] of internalSubgraph.entityInterfaces) {
-      // Always add each entity interface to the invalid entity interfaces map
-      // If not, earlier checks would not account for implementations not yet seen
-      getValueOrDefault(invalidEntityInterfacesByTypeName, typeName, () => []).push({
-        subgraphName,
-        concreteTypeNames: entityInterfaceData.concreteTypeNames || new Set<string>(),
-      });
       const existingData = entityInterfaceFederationDataByTypeName.get(typeName);
       if (!existingData) {
-        validEntityInterfaceTypeNames.add(typeName);
         entityInterfaceFederationDataByTypeName.set(
           typeName,
           newEntityInterfaceFederationData(entityInterfaceData, subgraphName),
         );
         continue;
       }
-      const areAnyImplementationsUndefined = upsertEntityInterfaceFederationData(
-        existingData,
-        entityInterfaceData,
+      upsertEntityInterfaceFederationData(existingData, entityInterfaceData, subgraphName);
+    }
+  }
+  const entityInterfaceErrors: Array<Error> = [];
+  for (const [typeName, entityInterfaceData] of entityInterfaceFederationDataByTypeName) {
+    const implementations = entityInterfaceData.concreteTypeNames.size;
+    for (const [subgraphName, subgraphData] of entityInterfaceData.subgraphDataByTypeName) {
+      if (!subgraphData.isInterfaceObject) {
+        if (subgraphData.resolvable && subgraphData.concreteTypeNames.size !== implementations) {
+          getValueOrDefault(invalidEntityInterfacesByTypeName, typeName, () => []).push({
+            subgraphName,
+            concreteTypeNames: subgraphData.concreteTypeNames,
+          });
+        }
+        continue;
+      }
+      const parentDefinitionDataByTypeName = getOrThrowError(
+        result.internalSubgraphBySubgraphName,
         subgraphName,
-      );
-      if (areAnyImplementationsUndefined) {
-        validEntityInterfaceTypeNames.delete(typeName);
+        'internalSubgraphBySubgraphName',
+      ).parentDefinitionDataByTypeName;
+      const invalidTypeNames: Array<string> = [];
+      for (const concreteTypeName of entityInterfaceData.concreteTypeNames) {
+        if (parentDefinitionDataByTypeName.has(concreteTypeName)) {
+          invalidTypeNames.push(concreteTypeName);
+        }
+      }
+      if (invalidTypeNames.length > 0) {
+        entityInterfaceErrors.push(
+          invalidInterfaceObjectImplementationDefinitionsError(typeName, subgraphName, invalidTypeNames),
+        );
       }
     }
   }
-
-  // Remove the valid entity interfaces type names so only genuinely invalid entity interfaces remain
-  for (const typeName of validEntityInterfaceTypeNames) {
-    invalidEntityInterfacesByTypeName.delete(typeName);
-  }
   if (invalidEntityInterfacesByTypeName.size > 0) {
+    entityInterfaceErrors.push(
+      undefinedEntityInterfaceImplementationsError(
+        invalidEntityInterfacesByTypeName,
+        entityInterfaceFederationDataByTypeName,
+      ),
+    );
+  }
+  if (entityInterfaceErrors.length > 0) {
     return {
-      errors: [
-        undefinedEntityInterfaceImplementationsError(
-          invalidEntityInterfacesByTypeName,
-          entityInterfaceFederationDataByTypeName,
-        ),
-      ],
+      errors: entityInterfaceErrors,
       success: false,
       warnings: result.warnings,
     };

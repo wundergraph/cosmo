@@ -7,8 +7,9 @@ import {
   duplicateFieldInFieldSetErrorMessage,
   federateSubgraphs,
   FederationResultSuccess,
-  FieldSetDirective,
+  FIRST_ORDINAL,
   INTERFACE,
+  invalidDirectiveError,
   invalidInlineFragmentTypeConditionErrorMessage,
   invalidInlineFragmentTypeErrorMessage,
   invalidKeyDirectivesError,
@@ -16,6 +17,7 @@ import {
   invalidSelectionOnUnionErrorMessage,
   invalidSelectionSetDefinitionErrorMessage,
   invalidSelectionSetErrorMessage,
+  KEY,
   nonExternalConditionalFieldError,
   nonExternalConditionalFieldWarning,
   NormalizationResultFailure,
@@ -37,7 +39,7 @@ import {
   unparsableFieldSetErrorMessage,
 } from '../../src';
 import { schemaQueryDefinition, versionTwoDirectiveDefinitions } from './utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+import { normalizeString, normalizeSubgraphSuccess, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('openfed_FieldSet tests', () => {
   describe('@key FieldSets', () => {
@@ -106,7 +108,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           unexpectedArgumentErrorMessage(`id(undefinedArg: "hi")`, 'Entity.id', 'undefinedArg'),
         ]),
       );
@@ -125,7 +127,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           argumentsInKeyFieldSetErrorMessage(`id(undefinedArg: "hi")`, 'Entity.id'),
         ]),
       );
@@ -144,7 +146,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [argumentsInKeyFieldSetErrorMessage(`id`, 'Entity.id')]),
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [argumentsInKeyFieldSetErrorMessage(`id`, 'Entity.id')]),
       );
     });
 
@@ -161,7 +163,9 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [undefinedFieldInFieldSetErrorMessage(`name`, 'Entity', 'name')]),
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
+          undefinedFieldInFieldSetErrorMessage(`name`, 'Entity', 'name'),
+        ]),
       );
     });
 
@@ -175,7 +179,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           abstractTypeInKeyFieldSetErrorMessage(`id`, 'Entity.id', INTERFACE, INTERFACE),
         ]),
       );
@@ -204,7 +208,9 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [abstractTypeInKeyFieldSetErrorMessage(`id`, 'Entity.id', UNION, UNION)]),
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
+          abstractTypeInKeyFieldSetErrorMessage(`id`, 'Entity.id', UNION, UNION),
+        ]),
       );
     });
 
@@ -221,7 +227,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           unparsableFieldSetErrorMessage('', new Error(`Syntax Error: Expected Name, found "}".`)),
         ]),
       );
@@ -244,7 +250,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           unparsableFieldSetErrorMessage('id { }', new Error(`Syntax Error: Expected Name, found "}".`)),
         ]),
       );
@@ -267,7 +273,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           unparsableFieldSetErrorMessage('id { { name } }', new Error(`Syntax Error: Expected Name, found "{".`)),
         ]),
       );
@@ -286,7 +292,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           invalidSelectionSetDefinitionErrorMessage('id { something }', ['Entity.id'], 'ID', SCALAR),
         ]),
       );
@@ -309,7 +315,9 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [invalidSelectionSetErrorMessage('id', ['Entity.id'], OBJECT, OBJECT)]),
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
+          invalidSelectionSetErrorMessage('id', ['Entity.id'], OBJECT, OBJECT),
+        ]),
       );
     });
 
@@ -338,7 +346,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           invalidSelectionSetErrorMessage(
             'id { object { object } }',
             ['AnotherObject.object'],
@@ -365,7 +373,9 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [duplicateFieldInFieldSetErrorMessage('id name age size id', 'Entity.id')]),
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
+          duplicateFieldInFieldSetErrorMessage('id name age size id', 'Entity.id'),
+        ]),
       );
     });
 
@@ -394,7 +404,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           duplicateFieldInFieldSetErrorMessage(
             'id { object { object { name } object { name } } }',
             'AnotherObject.object',
@@ -496,7 +506,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-          ` On "Object.entity" —` +
+          ` On field "Object.entity":\n -` +
             invalidInlineFragmentTypeErrorMessage('... on I { name }', ['Object.entity'], 'I', 'Entity'),
         ]),
       );
@@ -627,7 +637,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-          ` On "Object.entity" —` +
+          ` On field "Object.entity":\n -` +
             invalidInlineFragmentTypeConditionErrorMessage(
               'interface { ... on AnotherObject { name } }',
               ['Entity.interface'],
@@ -720,7 +730,8 @@ describe('openfed_FieldSet tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-          ` On "Object.entity" —` + invalidSelectionOnUnionErrorMessage('union { name }', ['Entity.union'], 'U'),
+          ` On field "Object.entity":\n -` +
+            invalidSelectionOnUnionErrorMessage('union { name }', ['Entity.union'], 'U'),
         ]),
       );
     });
@@ -754,7 +765,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-          ` On "Object.entity" —` +
+          ` On field "Object.entity":\n -` +
             invalidInlineFragmentTypeConditionErrorMessage(
               'union { ... on YetAnotherObject { name } }',
               ['Entity.union'],
@@ -871,12 +882,7 @@ describe('openfed_FieldSet tests', () => {
     });
 
     test('that a @provides directive produces the correct conditional field datas', () => {
-      const result = normalizeSubgraph(
-        subgraphA.definitions,
-        subgraphA.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      const result = normalizeSubgraphSuccess(subgraphA, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.conditionalFieldDataByCoordinates).toStrictEqual(
         new Map<string, ConditionalFieldData>([
@@ -977,7 +983,7 @@ describe('openfed_FieldSet tests', () => {
           `subgraph-c`,
           `NestedObject.age`,
           `object { nestedObject { age name } }`,
-          FieldSetDirective.PROVIDES,
+          PROVIDES,
         ),
       );
       expect(result.errors[1]).toStrictEqual(
@@ -986,7 +992,7 @@ describe('openfed_FieldSet tests', () => {
           `subgraph-c`,
           `NestedObject.name`,
           `object { nestedObject { age name } }`,
-          FieldSetDirective.PROVIDES,
+          PROVIDES,
         ),
       );
       expect(result.errors[2]).toStrictEqual(
@@ -995,7 +1001,7 @@ describe('openfed_FieldSet tests', () => {
           `subgraph-c`,
           `NestedObject.age`,
           `object { nestedObject { age name } }`,
-          FieldSetDirective.PROVIDES,
+          PROVIDES,
         ),
       );
       expect(result.errors[3]).toStrictEqual(
@@ -1004,7 +1010,7 @@ describe('openfed_FieldSet tests', () => {
           `subgraph-c`,
           `NestedObject.name`,
           `object { nestedObject { age name } }`,
-          FieldSetDirective.PROVIDES,
+          PROVIDES,
         ),
       );
     });
@@ -1038,13 +1044,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.warnings).toHaveLength(2);
       expect(result.warnings[0]).toStrictEqual(requiresDefinedOnNonEntityFieldWarning(`Object.name`, NOT_APPLICABLE));
       expect(result.warnings[1]).toStrictEqual(
-        nonExternalConditionalFieldWarning(
-          'Object.name',
-          NOT_APPLICABLE,
-          'Object.id',
-          'id',
-          FieldSetDirective.REQUIRES,
-        ),
+        nonExternalConditionalFieldWarning('Object.name', NOT_APPLICABLE, 'Object.id', 'id', REQUIRES),
       );
       expect(result.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -1107,7 +1107,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
-          ` On "Entity.age" —` + invalidInlineFragmentTypeErrorMessage('... on I { name }', [], 'I', 'Entity'),
+          ` On field "Entity.age":\n -` + invalidInlineFragmentTypeErrorMessage('... on I { name }', [], 'I', 'Entity'),
         ]),
       );
     });
@@ -1219,7 +1219,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
-          ` On "Entity.age" —` +
+          ` On field "Entity.age":\n -` +
             invalidInlineFragmentTypeConditionErrorMessage(
               'interface { ... on Object { age } }',
               ['Entity.interface'],
@@ -1298,7 +1298,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
-          ` On "Entity.name" —` + invalidSelectionOnUnionErrorMessage('union { name }', ['Entity.union'], 'U'),
+          ` On field "Entity.name":\n -` + invalidSelectionOnUnionErrorMessage('union { name }', ['Entity.union'], 'U'),
         ]),
       );
     });
@@ -1330,7 +1330,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
-          ` On "Entity.age" —` +
+          ` On field "Entity.age":\n -` +
             invalidInlineFragmentTypeConditionErrorMessage(
               'union { ... on AnotherObject { age } }',
               ['Entity.union'],
@@ -1688,7 +1688,7 @@ describe('openfed_FieldSet tests', () => {
           'subgraph-f',
           'NestedObject.name',
           'object { nestedObject { name } }',
-          FieldSetDirective.REQUIRES,
+          REQUIRES,
         ),
       );
       expect(result.warnings[0].subgraph.name).toBe('subgraph-f');
@@ -1812,7 +1812,7 @@ describe('openfed_FieldSet tests', () => {
           'subgraph-g',
           'NestedObject.name',
           'object { nestedObject { name } }',
-          FieldSetDirective.PROVIDES,
+          PROVIDES,
         ),
       );
       expect(result.warnings[0].subgraph.name).toBe('subgraph-g');

@@ -1,7 +1,7 @@
-import { Warning } from '../warnings/warnings';
+import { Warning } from '../warnings/types';
 import { DocumentNode, GraphQLSchema } from 'graphql';
 import { ParentDefinitionData } from '../schema-building/types';
-import { FieldConfiguration } from '../router-configuration/router-configuration';
+import { FieldConfiguration } from '../router-configuration/types';
 import { SubgraphConfig } from '../subgraph/types';
 
 export type FederationResultFailure = {

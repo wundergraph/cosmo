@@ -1,5 +1,5 @@
 import { DocumentNode, GraphQLSchema, OperationTypeNode } from 'graphql';
-import { ConfigurationData } from '../router-configuration/router-configuration';
+import { ConfigurationData } from '../router-configuration/types';
 import {
   ConditionalFieldData,
   EntityInterfaceSubgraphData,

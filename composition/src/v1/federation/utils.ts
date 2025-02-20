@@ -1,14 +1,11 @@
 import { ConstDirectiveNode, StringValueNode } from 'graphql';
-import {
-  ConfigurationData,
-  FieldSetCondition,
-  RequiredFieldConfiguration,
-} from '../../router-configuration/router-configuration';
+import { ConfigurationData, FieldSetConditionData, RequiredFieldConfiguration } from '../../router-configuration/types';
 import {
   AuthorizationData,
   CompositeOutputData,
   ConditionalFieldData,
   EntityData,
+  EntityInterfaceFederationData,
   FieldData,
   InterfaceDefinitionData,
   ObjectDefinitionData,
@@ -18,14 +15,13 @@ import { Graph } from '../../resolvability-graph/graph';
 import { getTypeNodeNamedTypeName, MutableFieldNode } from '../../schema-building/ast';
 import { BREAK, Kind, visit } from 'graphql/index';
 import { BASE_SCALARS } from '../utils/constants';
-import { isKindAbstract, safeParse } from '../../ast/utils';
-import { getNormalizedFieldSet } from '../normalization/utils';
+import { isKindAbstract } from '../../ast/utils';
 import { GraphNode } from '../../resolvability-graph/graph-nodes';
 
-import { Warning } from '../../warnings/warnings';
+import { Warning } from '../../warnings/types';
 import { InternalSubgraph } from '../../subgraph/types';
 import { ContractTagOptions } from '../../federation/types';
-import { addIterableValuesToSet, EntityInterfaceFederationData } from '../../utils/utils';
+import { addIterableValuesToSet } from '../../utils/utils';
 
 export type FederationFactoryParams = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -86,9 +82,10 @@ export type InterfaceObjectForInternalGraphOptions = {
 };
 
 export type VisitFieldSetOptions = {
-  conditionalFieldDataByCoordinates: Map<string, ConditionalFieldData>;
+  conditionalFieldDataByCoords: Map<string, ConditionalFieldData>;
   configurationData: ConfigurationData;
-  fieldSets: Set<string>;
+  currentSubgraphName: string;
+  entityData: EntityData;
   implicitKeys: Array<RequiredFieldConfiguration>;
   objectData: ObjectDefinitionData | InterfaceDefinitionData;
   parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
@@ -96,138 +93,140 @@ export type VisitFieldSetOptions = {
 };
 
 export function validateImplicitFieldSets({
-  conditionalFieldDataByCoordinates,
+  conditionalFieldDataByCoords,
   configurationData,
-  fieldSets,
+  currentSubgraphName,
+  entityData,
   implicitKeys,
   objectData,
   parentDefinitionDataByTypeName,
   graphNode,
 }: VisitFieldSetOptions) {
-  for (const fieldSet of fieldSets) {
-    // Create a new selection set so that the value can be parsed as a new DocumentNode
-    const { error, documentNode } = safeParse('{' + fieldSet + '}');
-    if (error || !documentNode) {
-      // This would be caught as an error elsewhere
+  for (const [subgraphName, keyFieldSetDataByFieldSet] of entityData.keyFieldSetDatasBySubgraphName) {
+    if (subgraphName === currentSubgraphName) {
       continue;
     }
-    const parentDatas: CompositeOutputData[] = [objectData];
-    const definedFields: Set<string>[] = [];
-    const keyFieldNames = new Set<string>();
-    const fieldSetConditions: Array<FieldSetCondition> = [];
-    let currentDepth = -1;
-    let shouldDefineSelectionSet = true;
-    let shouldAddKeyFieldSet = true;
-    visit(documentNode, {
-      Argument: {
-        enter() {
-          // Fields that define arguments are never allowed in a key FieldSet
-          // However, at this stage, it actually means the argument is undefined on the field
-          shouldAddKeyFieldSet = false;
-          return BREAK;
+    for (const [fieldSet, { documentNode, isUnresolvable }] of keyFieldSetDataByFieldSet) {
+      if (isUnresolvable) {
+        continue;
+      }
+      const parentDatas: CompositeOutputData[] = [objectData];
+      const definedFields: Set<string>[] = [];
+      const keyFieldNames = new Set<string>();
+      const fieldSetConditions: Array<FieldSetConditionData> = [];
+      let currentDepth = -1;
+      let shouldDefineSelectionSet = true;
+      let shouldAddKeyFieldSet = true;
+      visit(documentNode, {
+        Argument: {
+          enter() {
+            // Fields that define arguments are never allowed in a key FieldSet
+            // However, at this stage, it actually means the argument is undefined on the field
+            shouldAddKeyFieldSet = false;
+            return BREAK;
+          },
         },
-      },
-      Field: {
-        enter(node) {
-          const parentData = parentDatas[currentDepth];
-          // If an object-like was just visited, a selection set should have been entered
-          if (shouldDefineSelectionSet) {
-            shouldAddKeyFieldSet = false;
-            return BREAK;
-          }
-          const fieldName = node.name.value;
-          const fieldData = parentData.fieldDataByFieldName.get(fieldName);
-          // undefined if the field does not exist on the parent
-          if (!fieldData || fieldData.argumentDataByArgumentName.size || definedFields[currentDepth].has(fieldName)) {
-            shouldAddKeyFieldSet = false;
-            return BREAK;
-          }
-          const conditionalData = conditionalFieldDataByCoordinates.get(
-            `${fieldData.renamedParentTypeName}.${fieldName}`,
-          );
-          if (conditionalData) {
-            if (conditionalData.providedBy.length > 0) {
-              fieldSetConditions.push(...conditionalData.providedBy);
-            } else if (conditionalData.requiredBy.length > 0) {
+        Field: {
+          enter(node) {
+            const parentData = parentDatas[currentDepth];
+            // If an object-like was just visited, a selection set should have been entered
+            if (shouldDefineSelectionSet) {
               shouldAddKeyFieldSet = false;
               return BREAK;
             }
-          }
-          definedFields[currentDepth].add(fieldName);
-          // Depth 0 is the original parent type
-          // If a field is external, but it's part of a key FieldSet, it will be included in the root configuration
-          if (currentDepth === 0) {
-            keyFieldNames.add(fieldName);
-          }
-          const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
-          // The base scalars are not in the parents map
-          if (BASE_SCALARS.has(namedTypeName)) {
-            return;
-          }
-          // The child could itself be a parent
-          const fieldNamedTypeData = parentDefinitionDataByTypeName.get(namedTypeName);
-          if (!fieldNamedTypeData) {
-            shouldAddKeyFieldSet = false;
-            return BREAK;
-          }
-          if (fieldNamedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION) {
-            shouldDefineSelectionSet = true;
-            parentDatas.push(fieldNamedTypeData);
-            return;
-          }
-          // interfaces and unions are invalid in a key directive
-          if (isKindAbstract(fieldNamedTypeData.kind)) {
-            shouldAddKeyFieldSet = false;
-            return BREAK;
-          }
+            const fieldName = node.name.value;
+            const fieldData = parentData.fieldDataByFieldName.get(fieldName);
+            // undefined if the field does not exist on the parent
+            if (!fieldData || fieldData.argumentDataByArgumentName.size || definedFields[currentDepth].has(fieldName)) {
+              shouldAddKeyFieldSet = false;
+              return BREAK;
+            }
+            const conditionalData = conditionalFieldDataByCoords.get(`${fieldData.renamedParentTypeName}.${fieldName}`);
+            if (conditionalData) {
+              if (conditionalData.providedBy.length > 0) {
+                fieldSetConditions.push(...conditionalData.providedBy);
+              } else if (conditionalData.requiredBy.length > 0) {
+                shouldAddKeyFieldSet = false;
+                return BREAK;
+              }
+            }
+            definedFields[currentDepth].add(fieldName);
+            // Depth 0 is the original parent type
+            // If a field is external, but it's part of a key FieldSet, it will be included in the root configuration
+            if (currentDepth === 0) {
+              // @TODO removed for testing
+              // keyFieldNames.add(fieldName);
+            }
+            const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+            // The base scalars are not in the parents map
+            if (BASE_SCALARS.has(namedTypeName)) {
+              return;
+            }
+            // The child could itself be a parent
+            const fieldNamedTypeData = parentDefinitionDataByTypeName.get(namedTypeName);
+            if (!fieldNamedTypeData) {
+              shouldAddKeyFieldSet = false;
+              return BREAK;
+            }
+            if (fieldNamedTypeData.kind === Kind.OBJECT_TYPE_DEFINITION) {
+              shouldDefineSelectionSet = true;
+              parentDatas.push(fieldNamedTypeData);
+              return;
+            }
+            // interfaces and unions are invalid in a key directive
+            if (isKindAbstract(fieldNamedTypeData.kind)) {
+              shouldAddKeyFieldSet = false;
+              return BREAK;
+            }
+          },
         },
-      },
-      InlineFragment: {
-        enter() {
-          shouldAddKeyFieldSet = false;
-          return BREAK;
-        },
-      },
-      SelectionSet: {
-        enter() {
-          if (!shouldDefineSelectionSet) {
+        InlineFragment: {
+          enter() {
             shouldAddKeyFieldSet = false;
             return BREAK;
-          }
-          currentDepth += 1;
-          shouldDefineSelectionSet = false;
-          if (currentDepth < 0 || currentDepth >= parentDatas.length) {
-            shouldAddKeyFieldSet = false;
-            return BREAK;
-          }
-          definedFields.push(new Set<string>());
+          },
         },
-        leave() {
-          if (shouldDefineSelectionSet) {
-            shouldAddKeyFieldSet = false;
-            return BREAK;
-          }
-          // Empty selection sets would be a parse error, so it is unnecessary to handle them
-          currentDepth -= 1;
-          parentDatas.pop();
-          definedFields.pop();
+        SelectionSet: {
+          enter() {
+            if (!shouldDefineSelectionSet) {
+              shouldAddKeyFieldSet = false;
+              return BREAK;
+            }
+            currentDepth += 1;
+            shouldDefineSelectionSet = false;
+            if (currentDepth < 0 || currentDepth >= parentDatas.length) {
+              shouldAddKeyFieldSet = false;
+              return BREAK;
+            }
+            definedFields.push(new Set<string>());
+          },
+          leave() {
+            if (shouldDefineSelectionSet) {
+              shouldAddKeyFieldSet = false;
+              return BREAK;
+            }
+            // Empty selection sets would be a parse error, so it is unnecessary to handle them
+            currentDepth -= 1;
+            parentDatas.pop();
+            definedFields.pop();
+          },
         },
-      },
-    });
-    if (!shouldAddKeyFieldSet) {
-      continue;
-    }
-    // Add any top-level fields that compose the key in case they are external
-    addIterableValuesToSet(keyFieldNames, configurationData.fieldNames);
-    const normalizedFieldSet = getNormalizedFieldSet(documentNode);
-    implicitKeys.push({
-      fieldName: '',
-      selectionSet: normalizedFieldSet,
-      ...(fieldSetConditions.length > 0 ? { conditions: fieldSetConditions } : {}),
-      disableEntityResolver: true,
-    });
-    if (graphNode) {
-      graphNode.satisfiedFieldSets.add(normalizedFieldSet);
+      });
+      if (!shouldAddKeyFieldSet) {
+        continue;
+      }
+      // Add any top-level fields that compose the key in case they are external
+      // @TODO removed for testing
+      // addIterableValuesToSet(keyFieldNames, configurationData.fieldNames);
+      implicitKeys.push({
+        fieldName: '',
+        selectionSet: fieldSet,
+        ...(fieldSetConditions.length > 0 ? { conditions: fieldSetConditions } : {}),
+        disableEntityResolver: true,
+      });
+      if (graphNode) {
+        graphNode.satisfiedFieldSets.add(fieldSet);
+      }
     }
   }
 }

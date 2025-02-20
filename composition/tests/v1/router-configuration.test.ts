@@ -1,18 +1,16 @@
 import { describe, expect, test } from 'vitest';
 import {
   BatchNormalizationResultSuccess,
+  batchNormalize,
   ConfigurationData,
-  federateSubgraphs,
-  FederationResultSuccess,
-  NormalizationResultSuccess,
-  normalizeSubgraphFromString,
   ROUTER_COMPATIBILITY_VERSION_ONE,
+  Subgraph,
 } from '../../src';
-import { createSubgraph } from './utils/utils';
 import fs from 'node:fs';
 import path, { join } from 'node:path';
-import { batchNormalize } from '../../src/v1/normalization/normalization-factory';
 import { fileURLToPath } from 'node:url';
+import { parse } from 'graphql';
+import { federateSubgraphsSuccess, normalizeSubgraphSuccess } from '../utils/utils';
 
 // @ts-ignore
 const __filename = fileURLToPath(import.meta.url);
@@ -21,11 +19,7 @@ const __dirname = path.dirname(__filename);
 describe('Router Configuration tests', () => {
   describe('Normalization tests', () => {
     test('that the router configuration for employees.graphql is correctly generated', () => {
-      const result = normalizeSubgraphFromString(
-        employees,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      const result = normalizeSubgraphSuccess(employees, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       const configurationDataMap = result.configurationDataByTypeName;
       expect(configurationDataMap).toStrictEqual(
@@ -159,11 +153,7 @@ describe('Router Configuration tests', () => {
     });
 
     test('that the router configuration for family.graphql is correctly generated', () => {
-      const result = normalizeSubgraphFromString(
-        family,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      const result = normalizeSubgraphSuccess(family, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       const configurationDataMap = result.configurationDataByTypeName;
       expect(configurationDataMap).toStrictEqual(
@@ -262,11 +252,7 @@ describe('Router Configuration tests', () => {
     });
 
     test('that the router configuration for hobbies.graphql is correctly generated', () => {
-      const result = normalizeSubgraphFromString(
-        hobbies,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      const result = normalizeSubgraphSuccess(hobbies, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       const configurationDataMap = result.configurationDataByTypeName;
       expect(configurationDataMap).toStrictEqual(
@@ -350,11 +336,7 @@ describe('Router Configuration tests', () => {
     });
 
     test('that the router configuration for products.graphql is correctly generated', () => {
-      const result = normalizeSubgraphFromString(
-        products,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      const result = normalizeSubgraphSuccess(products, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       const configurationDataMap = result.configurationDataByTypeName;
       expect(configurationDataMap).toStrictEqual(
@@ -439,39 +421,7 @@ describe('Router Configuration tests', () => {
     });
 
     test('that FieldSet configuration is generated', () => {
-      const result = normalizeSubgraphFromString(
-        `
-      type Entity @key(fields: "id") {
-        id: ID! @external
-        name: String! @external
-      }
-      
-      type Object {
-        age: Int!
-        entity: AnotherEntity @provides(fields: "field")
-        name: String!
-       }
-       
-      type AnotherEntity @key(fields: "id") {
-        id: ID!
-        field: String! @external
-        anotherField: OtherObject! @external
-        myField: Boolean @requires(fields: "anotherField { nested { name } name, age }")
-      }
-      
-      type OtherObject {
-        age: Int!
-        name: String!
-        nested: NestedObject!
-      }
-      
-      type NestedObject {
-        name: String!
-      }
-      `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      const result = normalizeSubgraphSuccess(subgraphA, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       const configurationDataMap = result.configurationDataByTypeName;
       expect(configurationDataMap).toStrictEqual(
@@ -527,22 +477,7 @@ describe('Router Configuration tests', () => {
     });
 
     test('that entity interfaces produce the correct configuration', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Entity implements Interface @key(fields: "id") {
-          id: ID!
-          age: Int!
-          field: String!
-        }
-        
-        interface Interface @key(fields: "id") {
-          id: ID!
-          age: Int!
-        }
-      `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      const result = normalizeSubgraphSuccess(subgraphB, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -571,16 +506,7 @@ describe('Router Configuration tests', () => {
     });
 
     test('that interface objects produce the correct configuration', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Interface @key(fields: "id") @interfaceObject {
-          id: ID!
-          name: String!
-        }
-      `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      const result = normalizeSubgraphSuccess(subgraphC, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -600,19 +526,7 @@ describe('Router Configuration tests', () => {
     });
 
     test('that nested external fields that are part of a key FieldSet are added to configuration', () => {
-      const result = normalizeSubgraphFromString(
-        `
-      type Entity @key(fields: "id object { id }") {
-        id: ID @external
-        object: Object! @external
-      }
-      type Object {
-        id: ID! @external
-      }
-    `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      const result = normalizeSubgraphSuccess(subgraphD, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       const configurationData = result.configurationDataByTypeName;
       expect(configurationData).toStrictEqual(
@@ -643,15 +557,7 @@ describe('Router Configuration tests', () => {
 
   describe('Federation tests', () => {
     test('that field configurations are correctly generated', () => {
-      const result = federateSubgraphs(
-        [
-          createSubgraph('employees', employees),
-          createSubgraph('family', family),
-          createSubgraph('hobbies', hobbies),
-          createSubgraph('products', products),
-        ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([employees, family, hobbies, products], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.fieldConfigurations).toStrictEqual([
         {
@@ -785,11 +691,10 @@ describe('Router Configuration tests', () => {
     });
 
     test('that the router configuration is correctly generated', () => {
-      const result = batchNormalize([
-        createSubgraph('monolith', monolith),
-        createSubgraph('reviews', reviews),
-        createSubgraph('users', users),
-      ]) as BatchNormalizationResultSuccess;
+      const result = batchNormalize(
+        [monolith, reviews, users],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      ) as BatchNormalizationResultSuccess;
       expect(result.success).toBe(true);
       expect(result.internalSubgraphBySubgraphName.get('monolith')!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -855,51 +760,158 @@ describe('Router Configuration tests', () => {
   });
 });
 
-const employees = fs.readFileSync(join(__dirname, 'test-data/employees.graphql')).toString();
-const family = fs.readFileSync(join(__dirname, 'test-data/family.graphql')).toString();
-const hobbies = fs.readFileSync(join(__dirname, 'test-data/hobbies.graphql')).toString();
-const products = fs.readFileSync(join(__dirname, '/test-data/products.graphql')).toString();
+const employeesSDL = fs.readFileSync(join(__dirname, 'test-data/employees.graphql')).toString();
+const familySDL = fs.readFileSync(join(__dirname, 'test-data/family.graphql')).toString();
+const hobbiesSDL = fs.readFileSync(join(__dirname, 'test-data/hobbies.graphql')).toString();
+const productsSDL = fs.readFileSync(join(__dirname, '/test-data/products.graphql')).toString();
 
-const monolith = `
-  type Query {
-    getUser(id: Int!): User
-  }
-  
-  type Review {
-    content: String!
-    rating: Int!
-  }
-  
-  type User {
+const employees: Subgraph = {
+  name: 'employees',
+  url: '',
+  definitions: parse(employeesSDL),
+};
+
+const family: Subgraph = {
+  name: 'family',
+  url: '',
+  definitions: parse(familySDL),
+};
+
+const hobbies: Subgraph = {
+  name: 'hobbies',
+  url: '',
+  definitions: parse(hobbiesSDL),
+};
+
+const products: Subgraph = {
+  name: 'products',
+  url: '',
+  definitions: parse(productsSDL),
+};
+
+const monolith: Subgraph = {
+  name: 'monolith',
+  url: '',
+  definitions: parse(`
+    type Query {
+      getUser(id: Int!): User
+    }
+    
+    type Review {
+      content: String!
+      rating: Int!
+    }
+    
+    type User {
+      id: ID!
+      username: String!
+      reviews: [Review!]
+    }
+  `),
+};
+
+const reviews: Subgraph = {
+  name: 'reviews',
+  url: '',
+  definitions: parse(`
+    type Query {
+      getUser(id: Int!): User @shareable
+    }
+    
+    type Review {
+      content: String! @override(from: "monolith")
+      rating: Int! @override(from: "monolith")
+    }
+    
+    type User {
+      id: ID! @shareable
+      reviews: [Review!] @override(from: "monolith")
+    }
+  `),
+};
+
+const users: Subgraph = {
+  name: 'users',
+  url: '',
+  definitions: parse(`
+    type Query {
+      getUser(id: Int!): User @shareable
+    }
+    
+    type User {
+      id: ID! @override(from: "monolith") @shareable
+      username: String! @override(from: "monolith")
+    }
+  `),
+};
+
+const subgraphA: Subgraph = {
+  name: 'subgraph-a',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID! @external
+      name: String! @external
+    }
+    type Object {
+      age: Int!
+      entity: AnotherEntity @provides(fields: "field")
+      name: String!
+    }
+    type AnotherEntity @key(fields: "id") {
+      id: ID!
+      field: String! @external
+      anotherField: OtherObject! @external
+      myField: Boolean @requires(fields: "anotherField { nested { name } name, age }")
+    }
+    type OtherObject {
+      age: Int!
+      name: String!
+      nested: NestedObject!
+    }
+    type NestedObject {
+      name: String!
+    }
+  `),
+};
+
+const subgraphB: Subgraph = {
+  name: 'subgraph-b',
+  url: '',
+  definitions: parse(`
+    type Entity implements Interface @key(fields: "id") {
+      id: ID!
+      age: Int!
+      field: String!
+    }
+    interface Interface @key(fields: "id") {
+      id: ID!
+      age: Int!
+    }
+  `),
+};
+
+const subgraphC: Subgraph = {
+  name: 'subgraph-c',
+  url: '',
+  definitions: parse(`
+    type Interface @key(fields: "id") @interfaceObject {
     id: ID!
-    username: String!
-    reviews: [Review!]
-  }
-`;
+    name: String!
+    }
+  `),
+};
 
-const users = `
-  type Query {
-    getUser(id: Int!): User @shareable
-  }
-  
-  type User {
-    id: ID! @override(from: "monolith") @shareable
-    username: String! @override(from: "monolith")
-  }
-`;
-
-const reviews = `
-  type Query {
-    getUser(id: Int!): User @shareable
-  }
-  
-  type Review {
-    content: String! @override(from: "monolith")
-    rating: Int! @override(from: "monolith")
-  }
-  
-  type User {
-    id: ID! @shareable
-    reviews: [Review!] @override(from: "monolith")
-  }
-`;
+const subgraphD: Subgraph = {
+  name: 'subgraph-d',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id object { id }") {
+      id: ID @external
+      object: Object! @external
+    }
+    type Object {
+      id: ID! @external
+    }
+  `),
+};
