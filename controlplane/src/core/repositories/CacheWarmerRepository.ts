@@ -187,7 +187,10 @@ export class CacheWarmerRepository {
       }
     }
 
-    const topOperationsByPlanningTime = await this.getTopOperationsByPlanningTime(props);
+    const topOperationsByPlanningTime = await this.getTopOperationsByPlanningTime({
+      ...props,
+      maxOperationsCount: props.maxOperationsCount - manuallyAddedOperations.length,
+    });
 
     if (topOperationsByPlanningTime.length === 0) {
       return new CacheWarmerOperations({
