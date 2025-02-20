@@ -262,6 +262,32 @@ type requestContext struct {
 	expressionContext expr.Context
 }
 
+func (c *requestContext) SetError(err error) {
+	c.error = err
+	c.expressionContext.Request.Error = err
+}
+
+func (c *requestContext) ResolveAnyExpressionWithWrappedError(expression *vm.Program) (any, error) {
+	// If an error exists already, wrap it and resolve the expression with the copied context
+	currExprContext := c.expressionContext.Request
+	if currExprContext.Error != nil {
+		copyExprContext := expr.Context{
+			Request: expr.Request{
+				Auth:   currExprContext.Auth,
+				URL:    currExprContext.URL,
+				Header: currExprContext.Header,
+				Error:  &ExprWrapError{currExprContext.Error},
+			},
+		}
+		return expr.ResolveAnyExpression(expression, copyExprContext)
+	}
+	return expr.ResolveAnyExpression(expression, c.expressionContext)
+}
+
+func (c *requestContext) ResolveAnyExpression(expression *vm.Program) (any, error) {
+	return expr.ResolveAnyExpression(expression, c.expressionContext)
+}
+
 func (c *requestContext) ResolveStringExpression(expression *vm.Program) (string, error) {
 	return expr.ResolveStringExpression(expression, c.expressionContext)
 }
