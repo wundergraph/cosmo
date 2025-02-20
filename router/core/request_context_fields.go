@@ -97,7 +97,7 @@ func RouterAccessLogsFieldHandler(
 ) []zapcore.Field {
 	resFields := make([]zapcore.Field, 0, len(attributes))
 
-	reqContext, resFields := processRequestIdField(request, resFields)
+	reqContext, resFields := processRequestIDField(request, resFields)
 	resFields = processCustomAttributes(attributes, responseHeader, resFields, request, reqContext, passedErr)
 	resFields = processExpressionAttributes(logger, exprAttributes, reqContext, resFields)
 
@@ -114,13 +114,13 @@ func SubgraphAccessLogsFieldHandler(
 ) []zapcore.Field {
 	resFields := make([]zapcore.Field, 0, len(attributes))
 
-	reqContext, resFields := processRequestIdField(request, resFields)
+	reqContext, resFields := processRequestIDField(request, resFields)
 	resFields = processCustomAttributes(attributes, responseHeader, resFields, request, reqContext, passedErr)
 
 	return resFields
 }
 
-func processRequestIdField(request *http.Request, resFields []zapcore.Field) (*requestContext, []zapcore.Field) {
+func processRequestIDField(request *http.Request, resFields []zapcore.Field) (*requestContext, []zapcore.Field) {
 	var reqContext *requestContext
 	if request == nil {
 		return reqContext, resFields
