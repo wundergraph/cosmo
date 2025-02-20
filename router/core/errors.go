@@ -117,7 +117,7 @@ func trackFinalResponseError(ctx context.Context, err error) {
 		return
 	}
 
-	requestContext.error = err
+	requestContext.SetError(err)
 	requestContext.graphQLErrorServices = getAggregatedSubgraphServiceNames(requestContext.error)
 	requestContext.graphQLErrorCodes = getAggregatedSubgraphErrorCodes(requestContext.error)
 
@@ -315,4 +315,15 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 	default:
 		writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errInternalServer), requestLogger)
 	}
+}
+
+type ExprWrapError struct {
+	Err error
+}
+
+func (e *ExprWrapError) Error() string {
+	if e.Err == nil {
+		return ""
+	}
+	return e.Err.Error()
 }

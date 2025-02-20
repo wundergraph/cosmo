@@ -33,7 +33,7 @@ type CustomDynamicAttribute struct {
 	RequestHeader  string `yaml:"request_header,omitempty"`
 	ContextField   string `yaml:"context_field,omitempty"`
 	ResponseHeader string `yaml:"response_header,omitempty"`
-	Expression     string `yaml:"expression,omitempty"` // only implemented by CustomAttribute in Metrics and Telemetry
+	Expression     string `yaml:"expression,omitempty"` // only implemented by CustomAttribute in Metrics and Telemetry and Router Access Logs
 }
 
 type CustomAttribute struct {
