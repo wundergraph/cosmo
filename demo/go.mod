@@ -178,4 +178,4 @@ require (
 )
 
 // if the below line is uncommented, it breaks 'make dc-subgraphs-demo'
-replace github.com/wundergraph/cosmo/router => ../router
+// replace github.com/wundergraph/cosmo/router => ../router
