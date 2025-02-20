@@ -1,7 +1,7 @@
 package core
 
 import (
-	"fmt"
+	"errors"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
@@ -20,7 +20,7 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 
 		logger := &zap.Logger{}
 
-		req, err := http.NewRequest("POST", "http://localhost:3002/graphql", nil)
+		req, err := http.NewRequest(http.MethodPost, "http://localhost:3002/graphql", nil)
 		require.NoError(t, err)
 		rcc := buildRequestContext(requestContextOptions{r: req})
 		req = req.WithContext(withRequestContext(req.Context(), rcc))
@@ -76,17 +76,17 @@ func TestAccessLogsFieldHandler(t *testing.T) {
 
 	t.Run("run expression with an error", func(t *testing.T) {
 		t.Parallel()
-		
+
 		logger := &zap.Logger{}
 
-		req, err := http.NewRequest("POST", "http://localhost:3002/graphql", nil)
+		req, err := http.NewRequest(http.MethodPost, "http://localhost:3002/graphql", nil)
 		require.NoError(t, err)
 		rcc := buildRequestContext(requestContextOptions{r: req})
 
 		requestError := &reportError{
 			report: &operationreport.Report{
 				InternalErrors: []error{
-					fmt.Errorf("new error"),
+					errors.New("new error"),
 				},
 				ExternalErrors: nil,
 			},

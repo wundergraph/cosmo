@@ -1958,7 +1958,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 						},
 					},
 				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
+			}, func(t *testing.T, _ *testenv.Environment) {
 				assert.Fail(t, "should not be called")
 			})
 
@@ -1978,7 +1978,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 						},
 					},
 				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
+			}, func(t *testing.T, _ *testenv.Environment) {
 				assert.Fail(t, "should not be called")
 			})
 
@@ -1997,7 +1997,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 						},
 					},
 				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
+			}, func(t *testing.T, _ *testenv.Environment) {
 				assert.Fail(t, "should not be called")
 			})
 
@@ -2136,8 +2136,8 @@ func TestFlakyAccessLogs(t *testing.T) {
 				},
 				Subgraphs: testenv.SubgraphsConfig{
 					Products: testenv.SubgraphConfig{
-						Middleware: func(handler http.Handler) http.Handler {
-							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						Middleware: func(_ http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 								w.Header().Set("Content-Type", "application/json")
 								w.WriteHeader(http.StatusForbidden)
 								_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
