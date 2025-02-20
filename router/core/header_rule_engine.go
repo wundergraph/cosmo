@@ -310,11 +310,11 @@ func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropaga
 			return
 		}
 
-		value := res.Header.Get(rule.Named)
-		if value != "" {
-			h.applyResponseRuleKeyValue(res, propagation, rule, rule.Named, value)
+		values := res.Header.Values(rule.Named)
+		if len(values) > 0 {
+			h.applyResponseRuleKeyValue(res, propagation, rule, rule.Named, values)
 		} else if rule.Default != "" {
-			h.applyResponseRuleKeyValue(res, propagation, rule, rule.Named, rule.Default)
+			h.applyResponseRuleKeyValue(res, propagation, rule, rule.Named, []string{rule.Default})
 		}
 
 		return
@@ -325,31 +325,34 @@ func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropaga
 					if slices.Contains(ignoredHeaders, name) {
 						continue
 					}
-					h.applyResponseRuleKeyValue(res, propagation, rule, name, res.Header.Get(name))
+					values := res.Header.Values(name)
+					h.applyResponseRuleKeyValue(res, propagation, rule, name, values)
 				}
 			}
 		}
 	} else if rule.Algorithm == config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl {
 		// Explicitly apply the CacheControl algorithm on the headers
-		h.applyResponseRuleKeyValue(res, propagation, rule, "", "")
+		h.applyResponseRuleKeyValue(res, propagation, rule, "", []string{""})
 	}
 }
 
-func (h *HeaderPropagation) applyResponseRuleKeyValue(res *http.Response, propagation *responseHeaderPropagation, rule *config.ResponseHeaderRule, key, value string) {
+func (h *HeaderPropagation) applyResponseRuleKeyValue(res *http.Response, propagation *responseHeaderPropagation, rule *config.ResponseHeaderRule, key string, values []string) {
+	// Since we'll be setting the header map directly, we need to canonicalize the key
+	key = http.CanonicalHeaderKey(key)
 	switch rule.Algorithm {
 	case config.ResponseHeaderRuleAlgorithmFirstWrite:
 		propagation.m.Lock()
 		if val := propagation.header.Get(key); val == "" {
-			propagation.header.Set(key, value)
+			propagation.header[key] = values
 		}
 		propagation.m.Unlock()
 	case config.ResponseHeaderRuleAlgorithmLastWrite:
 		propagation.m.Lock()
-		propagation.header.Set(key, value)
+		propagation.header[key] = values
 		propagation.m.Unlock()
 	case config.ResponseHeaderRuleAlgorithmAppend:
 		propagation.m.Lock()
-		propagation.header.Add(key, value)
+		propagation.header[key] = append(propagation.header[key], values...)
 		propagation.m.Unlock()
 	case config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl:
 		h.applyResponseRuleMostRestrictiveCacheControl(res, propagation, rule)
@@ -408,9 +411,9 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 			return
 		}
 
-		value := ctx.Request().Header.Get(rule.Named)
-		if value != "" {
-			request.Header.Set(rule.Named, ctx.Request().Header.Get(rule.Named))
+		values := ctx.Request().Header.Values(rule.Named)
+		if len(values) > 0 {
+			request.Header[http.CanonicalHeaderKey(rule.Named)] = values
 		} else if rule.Default != "" {
 			request.Header.Set(rule.Named, rule.Default)
 		}
