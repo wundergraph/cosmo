@@ -67,7 +67,7 @@ func TestAccessLogExpressionParsing(t *testing.T) {
 		expressions, err := GetAccessLogConfigExpressions(customAttributes)
 		require.NoError(t, err)
 
-		require.Len(t, len(expressions), 2)
+		require.Len(t, expressions, 2)
 
 		// Validate the validity of the entry
 		entry1 := expressions[0]
