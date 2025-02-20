@@ -380,7 +380,12 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// and enrich the context to make it available in the request context as well for metrics etc.
 		next.ServeHTTP(ww, r)
 
-		statusCode = ww.Status()
+		if status := ww.Status(); status != 0 {
+			statusCode = status
+		} else {
+			statusCode = http.StatusTeapot
+		}
+
 		writtenBytes = ww.BytesWritten()
 
 		// Mark the root span of the router as failed, so we can easily identify failed requests
