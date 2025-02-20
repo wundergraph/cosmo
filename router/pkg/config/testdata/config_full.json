@@ -574,7 +574,8 @@
     "ValidationCacheSize": 1024,
     "ResolverMaxRecyclableParserSize": 4096,
     "EnableSubgraphFetchOperationName": true,
-    "DisableVariablesRemapping": false
+    "DisableVariablesRemapping": false,
+    "SubscriptionFetchTimeout": 30000000000
   },
   "WebSocket": {
     "Enabled": true,
