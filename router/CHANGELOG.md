@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.182.0](https://github.com/wundergraph/cosmo/compare/router@0.181.1...router@0.182.0) (2025-02-20)
+
+### Bug Fixes
+
+* **router:** handle repeated headers in response ([#1537](https://github.com/wundergraph/cosmo/issues/1537)) ([39aa96b](https://github.com/wundergraph/cosmo/commit/39aa96b107000b2a57c8c88f5b1b7aade0110bdd)) (@cmtm)
+
+### Features
+
+* **subscription:** mutex free subscription implementation ([#1613](https://github.com/wundergraph/cosmo/issues/1613)) ([c17f8f6](https://github.com/wundergraph/cosmo/commit/c17f8f635e00bab24e7184a9ac0a2ec5df180c92)) (@StarpTech)
+
 ## [0.181.1](https://github.com/wundergraph/cosmo/compare/router@0.181.0...router@0.181.1) (2025-02-19)
 
 ### Bug Fixes
