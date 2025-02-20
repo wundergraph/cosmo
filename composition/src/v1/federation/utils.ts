@@ -154,8 +154,8 @@ export function validateImplicitFieldSets({
             // Depth 0 is the original parent type
             // If a field is external, but it's part of a key FieldSet, it will be included in the root configuration
             if (currentDepth === 0) {
-              // @TODO removed for testing
-              // keyFieldNames.add(fieldName);
+              // @TODO
+              keyFieldNames.add(fieldName);
             }
             const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
             // The base scalars are not in the parents map
@@ -216,8 +216,8 @@ export function validateImplicitFieldSets({
         continue;
       }
       // Add any top-level fields that compose the key in case they are external
-      // @TODO removed for testing
-      // addIterableValuesToSet(keyFieldNames, configurationData.fieldNames);
+      // @TODO
+      addIterableValuesToSet(keyFieldNames, configurationData.fieldNames);
       implicitKeys.push({
         fieldName: '',
         selectionSet: fieldSet,

@@ -35,4 +35,3 @@ export * from './v1/utils/constants';
 export * from './v1/utils/utils';
 export * from './v1/utils/string-constants';
 export * from './v1/warnings/warnings';
-export { newFieldSetConditionData } from './router-configuration/utils';
