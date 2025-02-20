@@ -235,6 +235,10 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			return wrapper(h)
 		})
 
+		if s.headerRules != nil {
+			cr.Use(rmiddleware.CookieWhitelist(s.headerRules.CookieWhitelist, []string{featureFlagCookie}))
+		}
+
 		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
 		cr.Handle(r.graphqlPath, multiGraphHandler)
 
@@ -887,13 +891,14 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	executor, err := ecb.Build(
 		ctx,
 		&ExecutorBuildOptions{
-			EngineConfig:             engineConfig,
-			Subgraphs:                configSubgraphs,
-			RouterEngineConfig:       routerEngineConfig,
-			PubSubProviders:          s.pubSubProviders,
-			Reporter:                 s.engineStats,
-			ApolloCompatibilityFlags: s.apolloCompatibilityFlags,
-			HeartbeatInterval:        s.multipartHeartbeatInterval,
+			EngineConfig:                   engineConfig,
+			Subgraphs:                      configSubgraphs,
+			RouterEngineConfig:             routerEngineConfig,
+			PubSubProviders:                s.pubSubProviders,
+			Reporter:                       s.engineStats,
+			ApolloCompatibilityFlags:       s.apolloCompatibilityFlags,
+			ApolloRouterCompatibilityFlags: s.apolloRouterCompatibilityFlags,
+			HeartbeatInterval:              s.multipartHeartbeatInterval,
 		},
 	)
 	if err != nil {
@@ -1012,6 +1017,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		if err != nil {
 			return nil, fmt.Errorf("failed to create rate limiter: %w", err)
 		}
+	}
+
+	if s.apolloCompatibilityFlags.SubscriptionMultipartPrintBoundary.Enabled {
+		handlerOpts.ApolloSubscriptionMultipartPrintBoundary = s.apolloCompatibilityFlags.SubscriptionMultipartPrintBoundary.Enabled
 	}
 
 	graphqlHandler := NewGraphQLHandler(handlerOpts)

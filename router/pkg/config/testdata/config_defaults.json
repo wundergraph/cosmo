@@ -104,7 +104,8 @@
   "Modules": null,
   "Headers": {
     "All": null,
-    "Subgraphs": null
+    "Subgraphs": null,
+    "CookieWhitelist": null
   },
   "TrafficShaping": {
     "All": {
@@ -411,10 +412,16 @@
     },
     "ReplaceValidationErrorStatus": {
       "Enabled": false
+    },
+    "SubscriptionMultipartPrintBoundary": {
+      "Enabled": false
     }
   },
   "ApolloRouterCompatibilityFlags": {
     "ReplaceInvalidVarErrors": {
+      "Enabled": false
+    },
+    "SubrequestHTTPError": {
       "Enabled": false
     }
   },
