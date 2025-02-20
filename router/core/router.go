@@ -232,6 +232,7 @@ type (
 		clientHeader               config.ClientHeader
 		cacheWarmup                *config.CacheWarmupConfiguration
 		multipartHeartbeatInterval time.Duration
+		subscriptionFetchTimeout   time.Duration
 		hostName                   string
 	}
 	// Option defines the method to customize server.
