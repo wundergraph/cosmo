@@ -53,6 +53,21 @@ _For any questions, feedback, or support, please [contact](https://wundergraph.c
 </a>
 </p>
 
+## From the WunderGraph Blog
+
+Here's a selection of blog posts that focus on the technical aspects of Cosmo:
+
+- [**How we scaled Cosmo Router for the SuperBowl**](https://wundergraph.com/blog/scaling-graphql-federation-for-the-superbowl)
+- [**The Architecture of our Observability Stack**](https://wundergraph.com/blog/scaling_graphql_observability)
+- [**How Normalization affects Query Planning**](https://wundergraph.com/blog/normalization_query_planning_graphql_federation)
+- [**Zero cost abstraction for the @skip and @include Directives**](https://wundergraph.com/blog/zero_cost_abstraction_for_skip_include_in_federated_graphql)
+- [**Algorithm to minify GraphQL ASTs by up to 99%**](https://wundergraph.com/blog/graphql_query_ast_minification)
+- [**Federated GraphQL Subscriptions with NATS and Event Driven Architecture**](https://wundergraph.com/blog/distributed_graphql_subscriptions_with_nats_and_event_driven_architecture)
+- [**Implementing the viewer pattern in GraphQL Federation**](https://wundergraph.com/blog/graphql_federation_viewer_pattern)
+- [**How we're using Epoll/Kqueue to scale GraphQL Subscriptions**](https://wundergraph.com/blog/edfs_scaling_graphql_subscriptions_in_go)
+- [**ASTJSON - A fast way to merge JSON objects**](https://wundergraph.com/blog/astjson_high_performance_json_transformations_in_golang)
+- [**Dataloader 3.0, an efficient algorithm for Federation data loading**](https://wundergraph.com/blog/dataloader_3_0_breadth_first_data_loading)
+
 ## Contributing
 
 We welcome contributions from the community! Whether it's fixing a bug, adding new features, or improving documentation, your help is greatly appreciated. Please take a look in our [Contributing Guide](CONTRIBUTING.md) to get started.
