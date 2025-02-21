@@ -456,7 +456,7 @@ describe('CDN handlers', () => {
     });
   });
 
-  describe('Test cache warmer opeartions handler', async () => {
+  describe('Test cache warmer operations handler', async () => {
     const federatedGraphId = 'federatedGraphId';
     const organizationId = 'organizationId';
     const token = await generateToken(organizationId, federatedGraphId, secretKey);
