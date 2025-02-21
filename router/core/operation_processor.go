@@ -1169,6 +1169,7 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 			astnormalization.WithInlineFragmentSpreads(),
 			astnormalization.WithRemoveFragmentDefinitions(),
 			astnormalization.WithRemoveUnusedVariables(),
+			astnormalization.WithSortSelectionSetsVisitor(),
 		),
 		variablesNormalizer: astnormalization.NewVariablesNormalizer(),
 		variablesRemapper:   astnormalization.NewVariablesMapper(),

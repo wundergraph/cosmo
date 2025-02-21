@@ -1205,3 +1205,42 @@ func TestDataNotSetOnPreExecutionErrors(t *testing.T) {
 		require.Equal(t, `{"errors":[{"message":"unexpected token - got: RBRACE want one of: [COLON]","locations":[{"line":1,"column":46}]}]}`, res.Body)
 	})
 }
+
+func TestFieldSortingTransformer_Integration(t *testing.T) {
+	input := `
+		query MyQuery {
+			findEmployees(criteria: { nationality: AMERICAN }) {
+				id
+				details {
+					surname
+					forename
+				}
+			}
+		}`
+
+	expectedOutput := `{
+		"data": {
+			"findEmployees": [
+				{
+					"details": {
+						"forename": "Stefan",
+						"surname": "Avram"
+					},
+					"id": 3
+				}
+			]
+		}
+	}`
+
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query: input,
+		})
+
+		var jsonResponse map[string]interface{}
+		err := json.Unmarshal([]byte(res.Body), &jsonResponse)
+		require.NoError(t, err, "response is not valid JSON")
+
+		require.JSONEq(t, expectedOutput, res.Body, "fields are not sorted correctly")
+	})
+}
