@@ -9,6 +9,7 @@ import (
 	"reflect"
 
 	"github.com/expr-lang/expr"
+	"github.com/expr-lang/expr/ast"
 	"github.com/expr-lang/expr/file"
 	"github.com/expr-lang/expr/vm"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -30,15 +31,18 @@ import (
 * See https://github.com/expr-lang/expr/issues/734
  */
 
+const ExprRequestKey = "request"
+const ExprRequestAuthKey = "auth"
+
 // Context is the context for expressions parser when evaluating dynamic expressions
 type Context struct {
-	Request Request `expr:"request"`
+	Request Request `expr:"request"` // if changing the expr tag, the ExprRequestKey should be updated
 }
 
 // Request is the context for the request object in expressions. Be aware, that only value receiver methods
 // are exported in the expr environment. This is because the expressions are evaluated in a read-only context.
 type Request struct {
-	Auth   RequestAuth    `expr:"auth"`
+	Auth   RequestAuth    `expr:"auth"` // if changing the expr tag, the ExprRequestAuthKey should be updated
 	URL    RequestURL     `expr:"url"`
 	Header RequestHeaders `expr:"header"`
 }
@@ -139,6 +143,16 @@ func CompileBoolExpression(s string) (*vm.Program, error) {
 // The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
 func CompileStringExpression(s string) (*vm.Program, error) {
 	v, err := expr.Compile(s, compileOptions(expr.AsKind(reflect.String))...)
+	if err != nil {
+		return nil, handleExpressionError(err)
+	}
+	return v, nil
+}
+
+// CompileStringExpression compiles an expression and returns the program. It is used for expressions that return strings
+// The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
+func CompileStringExpressionWithPatch(s string, visitor ast.Visitor) (*vm.Program, error) {
+	v, err := expr.Compile(s, compileOptions(expr.AsKind(reflect.String), expr.Patch(visitor))...)
 	if err != nil {
 		return nil, handleExpressionError(err)
 	}

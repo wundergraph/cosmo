@@ -2,9 +2,10 @@ package core
 
 import (
 	"context"
+	"time"
+
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	otelmetric "go.opentelemetry.io/otel/metric"
-	"time"
 
 	"go.uber.org/zap"
 

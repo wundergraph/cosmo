@@ -2,8 +2,11 @@ package jwks
 
 import (
 	"context"
+	"fmt"
 	"github.com/MicahParks/jwkset"
+	"github.com/hashicorp/consul/sdk/freeport"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -110,7 +113,18 @@ func NewServerWithCrypto(t *testing.T, providers ...Crypto) (*Server, error) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc(jwksHTTPPath, s.jwksJSON)
-	s.httpServer = httptest.NewServer(mux)
+
+	httpServer := httptest.NewUnstartedServer(mux)
+	port := freeport.GetOne(t)
+	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		t.Fatalf("could not listen on port: %s", err.Error())
+	}
+	_ = httpServer.Listener.Close()
+	httpServer.Listener = l
+	httpServer.Start()
+
+	s.httpServer = httpServer
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 	if err := s.waitForServer(ctx); err != nil {
