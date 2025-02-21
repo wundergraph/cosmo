@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.183.0](https://github.com/wundergraph/cosmo/compare/router@0.182.0...router@0.183.0) (2025-02-21)
+
+### Features
+
+* add expressions to metrics ([#1556](https://github.com/wundergraph/cosmo/issues/1556)) ([a7f643a](https://github.com/wundergraph/cosmo/commit/a7f643aaa65c0a6d7882b17bd9bb3f3249f6b88e)) (@alepane21)
+
 # [0.182.0](https://github.com/wundergraph/cosmo/compare/router@0.181.1...router@0.182.0) (2025-02-20)
 
 ### Bug Fixes
