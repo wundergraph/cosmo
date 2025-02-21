@@ -15,8 +15,9 @@ import (
 
 	"go.opentelemetry.io/otel/codes"
 
-	"github.com/go-chi/chi/v5/middleware"
+	"github.com/getsentry/sentry-go"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/wundergraph/cosmo/router/internal/middleware"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -422,7 +423,12 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// and enrich the context to make it available in the request context as well for metrics etc.
 		next.ServeHTTP(ww, r)
 
+		if !ww.WroteHeader() {
+			sentry.CaptureException(errors.New("http: WriteHeader not called"))
+		}
+
 		statusCode = ww.Status()
+
 		writtenBytes = ww.BytesWritten()
 
 		// Mark the root span of the router as failed, so we can easily identify failed requests
