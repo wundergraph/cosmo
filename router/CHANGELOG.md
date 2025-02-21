@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.183.1](https://github.com/wundergraph/cosmo/compare/router@0.183.0...router@0.183.1) (2025-02-21)
+
+### Bug Fixes
+
+* set responseWriter in requestContext to the wrapped one ([#1609](https://github.com/wundergraph/cosmo/issues/1609)) ([e96525e](https://github.com/wundergraph/cosmo/commit/e96525e6fea14a5250fb2c56d05ec6be805dec62)) (@endigma)
+
 # [0.183.0](https://github.com/wundergraph/cosmo/compare/router@0.182.0...router@0.183.0) (2025-02-21)
 
 ### Features
