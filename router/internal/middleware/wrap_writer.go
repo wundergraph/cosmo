@@ -5,7 +5,7 @@ package middleware
 
 import (
 	"bufio"
-	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -84,8 +84,8 @@ type basicWriter struct {
 }
 
 func (b *basicWriter) WriteHeader(code int) {
-	if code == 0 {
-		sentry.CaptureException(errors.New("http: WriteHeader called with code 0"))
+	if code != http.StatusOK {
+		sentry.CaptureException(fmt.Errorf("http: WriteHeader called with code %d", code))
 	}
 
 	if code >= 100 && code <= 199 && code != http.StatusSwitchingProtocols {
