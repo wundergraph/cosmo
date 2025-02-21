@@ -1,4 +1,5 @@
 import {
+  DocumentNode,
   EnumTypeDefinitionNode,
   FieldDefinitionNode,
   InterfaceTypeDefinitionNode,
@@ -6,10 +7,11 @@ import {
   ObjectTypeDefinitionNode,
   ScalarTypeDefinitionNode,
 } from 'graphql';
-import { FieldConfiguration } from '../../router-configuration/router-configuration';
+import { FieldConfiguration } from '../../router-configuration/types';
 import {
   AuthorizationData,
   EntityData,
+  EntityInterfaceFederationData,
   EntityInterfaceSubgraphData,
   FieldAuthorizationData,
   FieldData,
@@ -31,7 +33,8 @@ import {
   STRING_SCALAR,
   UNION,
 } from '../../utils/string-constants';
-import { addIterableValuesToSet, EntityInterfaceFederationData, getValueOrDefault } from '../../utils/utils';
+import { addIterableValuesToSet, getValueOrDefault } from '../../utils/utils';
+import { KeyFieldSetData } from '../normalization/types';
 
 export function subtractSourceSetFromTargetSet<T>(source: Set<T>, target: Set<T>) {
   for (const entry of source) {
@@ -45,18 +48,6 @@ export function mapToArrayOfValues<K, V>(map: Map<K, V>): V[] {
     output.push(value);
   }
   return output;
-}
-
-export function addSetsAndReturnMutationBoolean<T>(source: Set<T>, target: Set<T>): boolean {
-  let wasMutated = false;
-  for (const entry of source) {
-    if (target.has(entry)) {
-      continue;
-    }
-    wasMutated = true;
-    target.add(entry);
-  }
-  return wasMutated;
 }
 
 export function kindToConvertedTypeString(kind: Kind): string {
@@ -153,55 +144,42 @@ export function newEntityInterfaceFederationData(
   subgraphName: string,
 ): EntityInterfaceFederationData {
   return {
-    fieldDatasBySubgraphName: new Map<string, Array<SimpleFieldData>>().set(
-      subgraphName,
-      entityInterfaceData.fieldDatas,
-    ),
+    concreteTypeNames: new Set<string>(entityInterfaceData.concreteTypeNames),
+    fieldDatasBySubgraphName: new Map<string, Array<SimpleFieldData>>([[subgraphName, entityInterfaceData.fieldDatas]]),
     interfaceFieldNames: new Set<string>(entityInterfaceData.interfaceFieldNames),
     interfaceObjectFieldNames: new Set<string>(entityInterfaceData.interfaceObjectFieldNames),
     interfaceObjectSubgraphs: new Set<string>(entityInterfaceData.isInterfaceObject ? [subgraphName] : []),
+    subgraphDataByTypeName: new Map<string, EntityInterfaceSubgraphData>([[subgraphName, entityInterfaceData]]),
     typeName: entityInterfaceData.typeName,
-    ...(entityInterfaceData.isInterfaceObject
-      ? {}
-      : { concreteTypeNames: new Set<string>(entityInterfaceData.concreteTypeNames) }),
   };
 }
 
-// Returns true if the federation data concrete types set was mutated and false otherwise
 export function upsertEntityInterfaceFederationData(
   federationData: EntityInterfaceFederationData,
   subgraphData: EntityInterfaceSubgraphData,
   subgraphName: string,
-): boolean {
+) {
+  addIterableValuesToSet(subgraphData.concreteTypeNames, federationData.concreteTypeNames);
+  federationData.subgraphDataByTypeName.set(subgraphName, subgraphData);
   federationData.fieldDatasBySubgraphName.set(subgraphName, subgraphData.fieldDatas);
   addIterableValuesToSet(subgraphData.interfaceFieldNames, federationData.interfaceFieldNames);
   addIterableValuesToSet(subgraphData.interfaceObjectFieldNames, federationData.interfaceObjectFieldNames);
-  // interface objects should not define any concrete types
   if (subgraphData.isInterfaceObject) {
     federationData.interfaceObjectSubgraphs.add(subgraphName);
-    return false;
   }
-  // the concreteTypeNames set is null if only interfaceObjects have been encountered
-  if (!federationData.concreteTypeNames) {
-    federationData.concreteTypeNames = new Set<string>(subgraphData.concreteTypeNames);
-    return false;
-  }
-  // entity interface concrete types should be consistent
-  return addSetsAndReturnMutationBoolean(
-    subgraphData.concreteTypeNames || new Set<string>(),
-    federationData.concreteTypeNames,
-  );
 }
 
-export type EntityDataParams = {
+export type EntityDataParamsDep = {
   typeName: string;
   fieldNames?: Iterable<string>;
   keyFieldSets?: Iterable<string>;
   subgraphNames?: Iterable<string>;
 };
 
-export function newEntityData(params: EntityDataParams): EntityData {
+export function newEntityDataDep(params: EntityDataParamsDep): EntityData {
   return {
+    documentNodeByKeyFieldSet: new Map<string, DocumentNode>(),
+    keyFieldSetDatasBySubgraphName: new Map<string, Map<string, KeyFieldSetData>>(),
     fieldNames: new Set<string>(params.fieldNames),
     keyFieldSets: new Set<string>(params.keyFieldSets),
     subgraphNames: new Set<string>(params.subgraphNames),
@@ -209,20 +187,101 @@ export function newEntityData(params: EntityDataParams): EntityData {
   };
 }
 
-function addEntityDataProperties(source: EntityData | EntityDataParams, target: EntityData) {
+function addEntityDataProperties(source: EntityData | EntityDataParamsDep, target: EntityData) {
   addIterableValuesToSet(source.fieldNames || [], target.fieldNames);
   addIterableValuesToSet(source.keyFieldSets || [], target.keyFieldSets);
   addIterableValuesToSet(source.subgraphNames || [], target.subgraphNames);
 }
 
-export function upsertEntityDataProperties(entityDataByTypeName: Map<string, EntityData>, params: EntityDataParams) {
+export function upsertEntityDataProperties(entityDataByTypeName: Map<string, EntityData>, params: EntityDataParamsDep) {
   const existingData = entityDataByTypeName.get(params.typeName);
   existingData
     ? addEntityDataProperties(params, existingData)
-    : entityDataByTypeName.set(params.typeName, newEntityData(params));
+    : entityDataByTypeName.set(params.typeName, newEntityDataDep(params));
 }
 
-export function upsertEntityData(entityDataByTypeName: Map<string, EntityData>, incomingData: EntityData) {
+type NewEntityDataParams = {
+  keyFieldSetDataByFieldSet: Map<string, KeyFieldSetData>;
+  subgraphName: string;
+  typeName: string;
+};
+
+function newEntityData({ keyFieldSetDataByFieldSet, subgraphName, typeName }: NewEntityDataParams): EntityData {
+  const keyFieldSetDatasBySubgraphName = new Map<string, Map<string, KeyFieldSetData>>([
+    [subgraphName, keyFieldSetDataByFieldSet],
+  ]);
+  const documentNodeByKeyFieldSet = new Map<string, DocumentNode>();
+  for (const [keyFieldSet, { documentNode, isUnresolvable }] of keyFieldSetDataByFieldSet) {
+    // Do not propagate invalid key targets
+    if (isUnresolvable) {
+      continue;
+    }
+    documentNodeByKeyFieldSet.set(keyFieldSet, documentNode);
+  }
+  return {
+    keyFieldSetDatasBySubgraphName,
+    documentNodeByKeyFieldSet,
+    fieldNames: new Set<string>(),
+    keyFieldSets: new Set<string>(),
+    subgraphNames: new Set<string>([subgraphName]),
+    typeName,
+  };
+}
+
+export type UpsertEntityDataParams = {
+  entityDataByTypeName: Map<string, EntityData>;
+  keyFieldSetDataByFieldSet: Map<string, KeyFieldSetData>;
+  subgraphName: string;
+  typeName: string;
+};
+
+export function upsertEntityData({
+  entityDataByTypeName,
+  keyFieldSetDataByFieldSet,
+  subgraphName,
+  typeName,
+}: UpsertEntityDataParams) {
+  const existingData = entityDataByTypeName.get(typeName);
+  existingData
+    ? updateEntityData({ entityData: existingData, keyFieldSetDataByFieldSet, subgraphName })
+    : entityDataByTypeName.set(typeName, newEntityData({ keyFieldSetDataByFieldSet, subgraphName, typeName }));
+}
+
+export type UpdateEntityDataParams = {
+  entityData: EntityData;
+  keyFieldSetDataByFieldSet: Map<string, KeyFieldSetData>;
+  subgraphName: string;
+};
+
+export function updateEntityData({ entityData, keyFieldSetDataByFieldSet, subgraphName }: UpdateEntityDataParams) {
+  entityData.subgraphNames.add(subgraphName);
+  const existingKeyFieldSetDataByFieldSet = entityData.keyFieldSetDatasBySubgraphName.get(subgraphName);
+  if (!existingKeyFieldSetDataByFieldSet) {
+    entityData.keyFieldSetDatasBySubgraphName.set(subgraphName, keyFieldSetDataByFieldSet);
+    for (const [keyFieldSet, { documentNode, isUnresolvable }] of keyFieldSetDataByFieldSet) {
+      // Do not propagate invalid key targets
+      if (isUnresolvable) {
+        continue;
+      }
+      entityData.documentNodeByKeyFieldSet.set(keyFieldSet, documentNode);
+    }
+    return;
+  }
+  for (const [keyFieldSet, keyFieldSetData] of keyFieldSetDataByFieldSet) {
+    // Do not propagate invalid key targets
+    if (!keyFieldSetData.isUnresolvable) {
+      entityData.documentNodeByKeyFieldSet.set(keyFieldSet, keyFieldSetData.documentNode);
+    }
+    const existingKeyFieldSetData = existingKeyFieldSetDataByFieldSet.get(keyFieldSet);
+    if (existingKeyFieldSetData) {
+      existingKeyFieldSetData.isUnresolvable ||= keyFieldSetData.isUnresolvable;
+      continue;
+    }
+    existingKeyFieldSetDataByFieldSet.set(keyFieldSet, keyFieldSetData);
+  }
+}
+
+export function upsertEntityDataDeprecated(entityDataByTypeName: Map<string, EntityData>, incomingData: EntityData) {
   const existingData = entityDataByTypeName.get(incomingData.typeName);
   existingData
     ? addEntityDataProperties(incomingData, existingData)

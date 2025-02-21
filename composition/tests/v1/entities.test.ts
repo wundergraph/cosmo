@@ -639,7 +639,7 @@ describe('Entity tests', () => {
             'Entity',
             {
               externalFieldNames: new Set<string>(['id']),
-              fieldNames: new Set<string>(['name', 'id']),
+              fieldNames: new Set<string>(['name']),
               isRootNode: true,
               keys: [{ disableEntityResolver: true, fieldName: '', selectionSet: 'id' }],
               typeName: 'Entity',

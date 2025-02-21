@@ -21,10 +21,10 @@ import {
   newAuthorizationData,
   newFieldAuthorizationData,
   setAndGetValue,
-  upsertEntityDataProperties,
+  upsertEntityData,
 } from '../utils/utils';
-import { formatDescription, isNodeInterfaceObject, isObjectLikeNodeEntity, SchemaNode } from '../../ast/utils';
-import { extractFieldSetValue, newFieldSetData, newKeyFieldSetData } from './utils';
+import { formatDescription, isNodeInterfaceObject, isObjectLikeNodeEntity } from '../../ast/utils';
+import { extractFieldSetValue, newFieldSetData } from './utils';
 import { EVENT_DIRECTIVE_NAMES } from '../utils/string-constants';
 import {
   getRenamedRootTypeName,
@@ -51,13 +51,13 @@ import {
   PARENT_DEFINITION_DATA,
   PROVIDES,
   REQUIRES,
-  SCHEMA,
   SERVICE_FIELD,
   SERVICE_OBJECT,
   SUBSCRIPTION_FILTER,
 } from '../../utils/string-constants';
 import { RootTypeName } from '../../utils/types';
 import { getOrThrowError, getValueOrDefault, kindToTypeString } from '../../utils/utils';
+import { KeyFieldSetData } from './types';
 
 /* Walker to collect schema definition, directive definitions, and entities.
  * Directives are not validated upon immediate extract because all types must be recorded first.
@@ -112,12 +112,17 @@ export function upsertDirectiveSchemaAndEntityDefinitions(nf: NormalizationFacto
         if (!isObjectLikeNodeEntity(node)) {
           return;
         }
-        const keyFieldSetData = getValueOrDefault(nf.keyFieldSetDataByTypeName, typeName, newKeyFieldSetData);
-        nf.extractKeyFieldSets(node, keyFieldSetData);
-        upsertEntityDataProperties(nf.entityDataByTypeName, {
+        const keyFieldSetDataByFieldSet = getValueOrDefault(
+          nf.keyFieldSetDatasByTypeName,
           typeName,
-          keyFieldSets: keyFieldSetData.isUnresolvableByKeyFieldSet.keys(),
-          ...(nf.subgraphName ? { subgraphNames: [nf.subgraphName] } : {}),
+          () => new Map<string, KeyFieldSetData>(),
+        );
+        nf.extractKeyFieldSets(node, keyFieldSetDataByFieldSet);
+        upsertEntityData({
+          entityDataByTypeName: nf.entityDataByTypeName,
+          keyFieldSetDataByFieldSet,
+          subgraphName: nf.subgraphName,
+          typeName,
         });
         getValueOrDefault(nf.entityInterfaceDataByTypeName, typeName, () => ({
           concreteTypeNames: new Set<string>(),
@@ -125,6 +130,7 @@ export function upsertDirectiveSchemaAndEntityDefinitions(nf: NormalizationFacto
           interfaceFieldNames: new Set<string>(),
           interfaceObjectFieldNames: new Set<string>(),
           isInterfaceObject: false,
+          resolvable: false,
           typeName,
         }));
       },
@@ -136,13 +142,27 @@ export function upsertDirectiveSchemaAndEntityDefinitions(nf: NormalizationFacto
         if (!isObjectLikeNodeEntity(node)) {
           return;
         }
-        const keyFieldSetData = getValueOrDefault(nf.keyFieldSetDataByTypeName, typeName, newKeyFieldSetData);
-        nf.extractKeyFieldSets(node, keyFieldSetData);
-        upsertEntityDataProperties(nf.entityDataByTypeName, {
+        const keyFieldSetDataByFieldSet = getValueOrDefault(
+          nf.keyFieldSetDatasByTypeName,
           typeName,
-          keyFieldSets: keyFieldSetData.isUnresolvableByKeyFieldSet.keys(),
-          ...(nf.subgraphName ? { subgraphNames: [nf.subgraphName] } : {}),
+          () => new Map<string, KeyFieldSetData>(),
+        );
+        nf.extractKeyFieldSets(node, keyFieldSetDataByFieldSet);
+        upsertEntityData({
+          entityDataByTypeName: nf.entityDataByTypeName,
+          keyFieldSetDataByFieldSet,
+          subgraphName: nf.subgraphName,
+          typeName,
         });
+        getValueOrDefault(nf.entityInterfaceDataByTypeName, typeName, () => ({
+          concreteTypeNames: new Set<string>(),
+          fieldDatas: [],
+          interfaceFieldNames: new Set<string>(),
+          interfaceObjectFieldNames: new Set<string>(),
+          isInterfaceObject: false,
+          resolvable: false,
+          typeName,
+        }));
       },
     },
     ObjectTypeDefinition: {
@@ -153,20 +173,27 @@ export function upsertDirectiveSchemaAndEntityDefinitions(nf: NormalizationFacto
         const typeName = node.name.value;
         if (isNodeInterfaceObject(node)) {
           nf.entityInterfaceDataByTypeName.set(typeName, {
+            concreteTypeNames: new Set<string>(),
             fieldDatas: [],
             interfaceObjectFieldNames: new Set<string>(),
             interfaceFieldNames: new Set<string>(),
             isInterfaceObject: true,
+            resolvable: false,
             typeName,
           });
           nf.internalGraph.addOrUpdateNode(typeName, { isAbstract: true });
         }
-        const keyFieldSetData = getValueOrDefault(nf.keyFieldSetDataByTypeName, typeName, newKeyFieldSetData);
-        nf.extractKeyFieldSets(node, keyFieldSetData);
-        upsertEntityDataProperties(nf.entityDataByTypeName, {
+        const keyFieldSetDataByFieldSet = getValueOrDefault(
+          nf.keyFieldSetDatasByTypeName,
           typeName,
-          keyFieldSets: keyFieldSetData.isUnresolvableByKeyFieldSet.keys(),
-          ...(nf.subgraphName ? { subgraphNames: [nf.subgraphName] } : {}),
+          () => new Map<string, KeyFieldSetData>(),
+        );
+        nf.extractKeyFieldSets(node, keyFieldSetDataByFieldSet);
+        upsertEntityData({
+          entityDataByTypeName: nf.entityDataByTypeName,
+          keyFieldSetDataByFieldSet,
+          subgraphName: nf.subgraphName,
+          typeName,
         });
       },
     },
@@ -176,12 +203,17 @@ export function upsertDirectiveSchemaAndEntityDefinitions(nf: NormalizationFacto
           return;
         }
         const typeName = node.name.value;
-        const keyFieldSetData = getValueOrDefault(nf.keyFieldSetDataByTypeName, typeName, newKeyFieldSetData);
-        nf.extractKeyFieldSets(node, keyFieldSetData);
-        upsertEntityDataProperties(nf.entityDataByTypeName, {
+        const keyFieldSetDataByFieldSet = getValueOrDefault(
+          nf.keyFieldSetDatasByTypeName,
           typeName,
-          keyFieldSets: keyFieldSetData.isUnresolvableByKeyFieldSet.keys(),
-          ...(nf.subgraphName ? { subgraphNames: [nf.subgraphName] } : {}),
+          () => new Map<string, KeyFieldSetData>(),
+        );
+        nf.extractKeyFieldSets(node, keyFieldSetDataByFieldSet);
+        upsertEntityData({
+          entityDataByTypeName: nf.entityDataByTypeName,
+          keyFieldSetDataByFieldSet,
+          subgraphName: nf.subgraphName,
+          typeName,
         });
       },
     },

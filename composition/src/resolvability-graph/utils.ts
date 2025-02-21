@@ -1,6 +1,7 @@
 import { unexpectedEdgeFatalError, unresolvablePathError } from '../errors/errors';
 import { LITERAL_SPACE, QUOTATION_JOIN } from '../utils/string-constants';
-import { getEntriesNotInHashSet, getOrThrowError, GraphFieldData } from '../utils/utils';
+import { getEntriesNotInHashSet, getOrThrowError } from '../utils/utils';
+import { GraphFieldData } from '../utils/types';
 
 export class NodeResolutionData {
   fieldDataByFieldName: Map<string, GraphFieldData>;
