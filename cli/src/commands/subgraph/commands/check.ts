@@ -8,6 +8,7 @@ import { config, getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { verifyGitHubIntegration } from '../../../github.js';
 import { handleCheckResult } from '../../../handle-check-result.js';
+import { customRpcHeadersOption } from '../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('check');
@@ -20,6 +21,7 @@ export default (opts: BaseCommandOptions) => {
     '--skip-traffic-check',
     'This will skip checking for client traffic and any breaking change will fail the run.',
   );
+  command.option.apply(command, customRpcHeadersOption);
 
   command.action(async (name, options) => {
     let schemaFile;
@@ -64,7 +66,7 @@ export default (opts: BaseCommandOptions) => {
         vcsContext,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

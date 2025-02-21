@@ -14,6 +14,7 @@ import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { validateSubscriptionProtocols } from '../../../utils.js';
 import { websocketSubprotocolDescription } from '../../../constants.js';
+import { customRpcHeadersOption } from '../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');
@@ -53,6 +54,7 @@ export default (opts: BaseCommandOptions) => {
     'Set whether the subgraph is an Event-Driven Graph (EDG).' +
       ' Errors will be returned for the inclusion of most other parameters if the subgraph is an Event-Driven Graph.',
   );
+  command.option.apply(command, customRpcHeadersOption);
   command.action(async (name, options) => {
     let readmeFile;
     if (options.readme) {
@@ -90,7 +92,7 @@ export default (opts: BaseCommandOptions) => {
         isEventDrivenGraph: !!options.eventDrivenGraph,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

@@ -38,12 +38,16 @@ export const config = {
   checkAuthor: process.env.COSMO_VCS_AUTHOR || '',
   checkCommitSha: process.env.COSMO_VCS_COMMIT || '',
   checkBranch: process.env.COSMO_VCS_BRANCH || '',
+  rpcTimeout: process.env.COSMO_RPC_TIMEOUT || 75_000,
 };
 
-export const getBaseHeaders = (): HeadersInit => {
+export const getBaseHeaders = (customHeaderParams: string[] = []): HeadersInit => {
+  const customHeaders = Object.fromEntries(customHeaderParams.map((header: string) => header.split('=')));
+
   return {
     'user-agent': `cosmo-cli/${info.version}`,
     authorization: 'Bearer ' + config.apiKey,
     'cosmo-org-slug': getLoginDetails()?.organizationSlug || '',
+    ...customHeaders,
   };
 };

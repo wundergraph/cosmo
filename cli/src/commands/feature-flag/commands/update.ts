@@ -5,6 +5,7 @@ import pc from 'picocolors';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { handleCompositionResult } from '../../../handle-composition-result.js';
+import { customRpcHeadersOption } from '../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('update');
@@ -28,6 +29,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option('-j, --json', 'Prints to the console in json format instead of table');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option.apply(command, customRpcHeadersOption);
 
   command.action(async (name, options) => {
     if (options.featureGraphs && options.featureSubgraphs.length === 0) {
@@ -54,7 +56,7 @@ export default (opts: BaseCommandOptions) => {
         unsetLabels: options.unsetLabels,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

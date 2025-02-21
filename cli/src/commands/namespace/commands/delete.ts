@@ -4,12 +4,14 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import inquirer from 'inquirer';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
+import { customRpcHeadersOption } from '../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('delete');
   command.description('Deletes a namespace and all resources in it.');
   command.argument('<name>', 'The name of the namespace to delete.');
   command.option('-f --force', 'Option to force delete');
+  command.option.apply(command, customRpcHeadersOption);
   command.action(async (name, options) => {
     if (!options.force) {
       const deletionConfirmed = await inquirer.prompt({
@@ -27,7 +29,7 @@ export default (opts: BaseCommandOptions) => {
         name,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

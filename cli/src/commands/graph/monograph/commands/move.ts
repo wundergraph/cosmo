@@ -5,6 +5,7 @@ import pc from 'picocolors';
 import ora from 'ora';
 import { getBaseHeaders } from '../../../../core/config.js';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
+import { customRpcHeadersOption } from '../../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('move');
@@ -12,6 +13,7 @@ export default (opts: BaseCommandOptions) => {
   command.argument('<name>', 'The name of the monograph to move.');
   command.option('-n, --namespace [string]', 'The namespace of the monograph.');
   command.requiredOption('-t, --to [string]', 'The new namespace of the monograph.');
+  command.option.apply(command, customRpcHeadersOption);
   command.action(async (name, options) => {
     const spinner = ora('Monograph is being moved...').start();
 
@@ -22,7 +24,7 @@ export default (opts: BaseCommandOptions) => {
         newNamespace: options.to,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

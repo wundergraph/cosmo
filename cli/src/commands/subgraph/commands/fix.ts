@@ -7,6 +7,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import logSymbols from 'log-symbols';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
+import { customRpcHeadersOption } from '../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('fix');
@@ -19,6 +20,7 @@ export default (opts: BaseCommandOptions) => {
   command.option('-n, --namespace [string]', 'The namespace of the subgraph.');
   command.requiredOption('--schema <path-to-schema>', 'The path of the new schema file.');
   command.option('--out-schema <path-to-out-schema>', 'The path where the fixed schema file should be written.');
+  command.option.apply(command, customRpcHeadersOption);
 
   command.action(async (name, options) => {
     const schemaFile = resolve(options.schema);
@@ -45,7 +47,7 @@ export default (opts: BaseCommandOptions) => {
         schema,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

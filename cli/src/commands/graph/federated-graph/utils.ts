@@ -11,10 +11,12 @@ export const fetchRouterConfig = async ({
   client,
   name,
   namespace,
+  customHeaderParams,
 }: {
   client: Client;
   name: string;
   namespace?: string;
+  customHeaderParams?: string[];
 }) => {
   const resp = await client.platform.generateRouterToken(
     {
@@ -22,7 +24,7 @@ export const fetchRouterConfig = async ({
       namespace,
     },
     {
-      headers: getBaseHeaders(),
+      headers: getBaseHeaders(customHeaderParams),
     },
   );
 
@@ -80,10 +82,12 @@ export const getSubgraphsOfFedGraph = async ({
   client,
   name,
   namespace,
+  customHeaderParams,
 }: {
   client: Client;
   name: string;
   namespace?: string;
+  customHeaderParams?: string[];
 }): Promise<Subgraph[]> => {
   const resp = await client.platform.getFederatedGraphByName(
     {
@@ -92,7 +96,7 @@ export const getSubgraphsOfFedGraph = async ({
       includeMetrics: false,
     },
     {
-      headers: getBaseHeaders(),
+      headers: getBaseHeaders(customHeaderParams),
     },
   );
 
@@ -122,10 +126,12 @@ export const getFederatedGraphSDL = async ({
   client,
   name,
   namespace,
+  customHeaderParams,
 }: {
   client: Client;
   name: string;
   namespace?: string;
+  customHeaderParams?: string[];
 }) => {
   const resp = await client.platform.getFederatedGraphSDLByName(
     {
@@ -133,7 +139,7 @@ export const getFederatedGraphSDL = async ({
       namespace,
     },
     {
-      headers: getBaseHeaders(),
+      headers: getBaseHeaders(customHeaderParams),
     },
   );
 
@@ -156,11 +162,13 @@ export const getSubgraphSDL = async ({
   fedGraphName,
   subgraphName,
   namespace,
+  customHeaderParams,
 }: {
   client: Client;
   fedGraphName: string;
   subgraphName: string;
   namespace?: string;
+  customHeaderParams?: string[];
 }) => {
   const resp = await client.platform.getSubgraphSDLFromLatestComposition(
     {
@@ -169,7 +177,7 @@ export const getSubgraphSDL = async ({
       fedGraphName,
     },
     {
-      headers: getBaseHeaders(),
+      headers: getBaseHeaders(customHeaderParams),
     },
   );
 

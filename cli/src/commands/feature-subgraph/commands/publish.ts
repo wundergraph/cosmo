@@ -11,6 +11,7 @@ import { BaseCommandOptions, SubgraphCommandJsonOutput } from '../../../core/typ
 import { getBaseHeaders } from '../../../core/config.js';
 import { validateSubscriptionProtocols } from '../../../utils.js';
 import { websocketSubprotocolDescription } from '../../../constants.js';
+import { customRpcHeadersOption } from '../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('publish');
@@ -60,6 +61,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option('-r, --raw', 'Prints to the console in json format instead of table');
   command.option('-j, --json', 'Prints to the console in json format instead of table');
+  command.option.apply(command, customRpcHeadersOption);
 
   command.action(async (name, options) => {
     const schemaFile = resolve(options.schema);
@@ -110,7 +112,7 @@ export default (opts: BaseCommandOptions) => {
         baseSubgraphName: options.subgraph,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 
