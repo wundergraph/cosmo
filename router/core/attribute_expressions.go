@@ -1,7 +1,6 @@
 package core
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/expr-lang/expr/ast"
@@ -74,19 +73,17 @@ func expressionAttributes(expressions map[string]*vm.Program, reqCtx *requestCon
 	if reqCtx == nil {
 		return nil, nil
 	}
-	errs := make([]error, 0)
 
 	var result []attribute.KeyValue
 	for exprKey, exprVal := range expressions {
 		val, err := reqCtx.ResolveStringExpression(exprVal)
 		if err != nil {
-			errs = append(errs, err)
-			continue
+			return nil, err
 		}
 		result = append(result, attribute.String(exprKey, val))
 	}
 
-	return result, errors.Join(errs...)
+	return result, nil
 }
 
 func (r *attributeExpressions) expressionsAttributes(reqCtx *requestContext) ([]attribute.KeyValue, error) {
