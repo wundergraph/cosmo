@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto/v2"
+	"github.com/getsentry/sentry-go"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
@@ -1104,6 +1106,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		} else {
 			httpRouter.Use(wsMiddleware)
 		}
+	}
+
+	if err := sentry.Init(sentry.ClientOptions{
+		Dsn: "https://8e423a0215ecbd70c0e79afb59ba7ca5@o1359785.ingest.us.sentry.io/4508858114572289",
+	}); err != nil {
+		log.Fatalf("sentry.Init: %s", err)
 	}
 
 	httpRouter.Use(
