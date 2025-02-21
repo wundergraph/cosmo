@@ -417,6 +417,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		// The request context needs to be updated with the latest request to ensure that the context is up to date
 		requestContext.request = r
+		requestContext.responseWriter = ww
 
 		// Call the final handler that resolves the operation
 		// and enrich the context to make it available in the request context as well for metrics etc.
