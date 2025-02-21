@@ -85,7 +85,7 @@ const CacheWarmerPage: NextPageWithLayout = () => {
           <h3 className="font-semibold tracking-tight">Enable Cache Warmer</h3>
           <p className="text-sm text-muted-foreground">
             {!!cacheWarmerFeature?.enabled
-              ? "Enable cache warmer to warm the router with your top opeartions."
+              ? "Enable cache warmer to warm the router with your top operations."
               : "Upgrade your billing plan to use this cacheWarmer."}
           </p>
         </div>
@@ -143,7 +143,7 @@ CacheWarmerPage.getLayout = (page) => {
   return getDashboardLayout(
     page,
     "Cache Warmer",
-    "Configure cache warming to warm your router with top opeartions..",
+    "Configure cache warming to warm your router with top operations..",
     undefined,
     undefined,
     [<NamespaceSelector key="0" />],
