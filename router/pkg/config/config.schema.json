@@ -1359,6 +1359,14 @@
               }
             }
           }
+        },
+        "cookie_whitelist": {
+          "type": "array",
+          "description": "A list of Cookie keys allowed to be forwarded to the subgraph. If the list is empty or unspecified, all cookies are forwarded. This option will do nothing if the 'Cookie' header is not propagated.",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -2257,6 +2265,12 @@
           "type": "boolean",
           "default": false,
           "description": "Disables variables renaming during normalization. This option could have a negative impact on planner cache hits."
+        },
+        "subscription_fetch_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "default": "30s",
+          "description": "The maximum time a subscription fetch can take before it is considered timed out. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         }
       }
     },
