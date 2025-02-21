@@ -1,3 +1,4 @@
+import { CacheWarmerConfig } from "@/components/cache/cache-warmer-config";
 import { NamespaceSelector } from "@/components/dashboard/NamespaceSelector";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
@@ -7,15 +8,20 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useFeature } from "@/hooks/use-feature";
 import { useUser } from "@/hooks/use-user";
+import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { checkUserAccess } from "@/lib/utils";
 import { useMutation, useQuery } from "@connectrpc/connect-query";
-import { ExclamationTriangleIcon, InfoCircledIcon } from "@radix-ui/react-icons";
+import {
+  ExclamationTriangleIcon,
+  InfoCircledIcon,
+} from "@radix-ui/react-icons";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   configureCacheWarmer,
   getCacheWarmerConfig,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 
@@ -32,10 +38,12 @@ const CacheWarmerPage: NextPageWithLayout = () => {
   });
 
   const [cacheWarmerEnabled, setCacheWarmerEnabled] = useState(false);
+  const [currentOperationsCount, setCurrentOperationsCount] = useState(100);
 
   useEffect(() => {
     if (!data || data?.response?.code !== EnumStatusCode.OK) return;
     setCacheWarmerEnabled(data.isCacheWarmerEnabled);
+    setCurrentOperationsCount(data.maxOperationsCount || 100);
   }, [data]);
 
   if (isLoading) {
@@ -86,7 +94,15 @@ const CacheWarmerPage: NextPageWithLayout = () => {
           <p className="text-sm text-muted-foreground">
             {!!cacheWarmerFeature?.enabled
               ? "Enable cache warmer to warm the router with your top opeartions."
-              : "Upgrade your billing plan to use this cacheWarmer."}
+              : "Upgrade your billing plan to use this cacheWarmer."}{" "}
+            <Link
+              href={docsBaseURL + "/concepts/cache-warmer"}
+              className="text-primary"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Learn more
+            </Link>
           </p>
         </div>
         <Switch
@@ -104,6 +120,7 @@ const CacheWarmerPage: NextPageWithLayout = () => {
               {
                 enableCacheWarmer: checked,
                 namespace: namespace || "default",
+                maxOperationsCount: checked ? 100 : undefined,
               },
               {
                 onSuccess: (d) => {
@@ -135,6 +152,12 @@ const CacheWarmerPage: NextPageWithLayout = () => {
           }}
         />
       </div>
+      <CacheWarmerConfig
+        key={currentOperationsCount}
+        cacheWarmerEnabled={cacheWarmerEnabled}
+        currentOperationsCount={currentOperationsCount}
+        refetch={refetch}
+      />
     </div>
   );
 };
