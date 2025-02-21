@@ -261,7 +261,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 			Extensions:    s,
 		},
 		Client: &ClientInfo{
-			Name:    operation.GetClient().GetName(),
+			Name: operation.GetClient().GetName(),
 			Version: operation.GetClient().GetVersion(),
 		},
 	}
@@ -278,7 +278,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return nil, err
 	}
 
-	if k.parsedOperation.IsPersistedOperation {
+	if k.parsedOperation.IsPersistedOperation && k.parsedOperation.Request.Query == "" {
 		_, isAPQ, err = k.FetchPersistedOperation(ctx, item.Client)
 		if err != nil {
 			return nil, err

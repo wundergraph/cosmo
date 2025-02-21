@@ -31,7 +31,7 @@
       }
     },
     {
-      "hint": "This is a persisted operation query",
+      "hint": "This is a persisted operation query (no query is passed in the request)",
       "request": {
         "extensions": {
           "persistedQuery": {
@@ -41,8 +41,22 @@
         }
       },
       "client": {
-        "name": "my-client",
-        "version": "missing"
+        "name": "my-client"
+      }
+    },
+    {
+      "hint": "This is a persisted operation query (query is passed in the request)",
+      "request": {
+        "query": "query AB {\n  employees {\n    tag\n    id\n    derivedMood\n    products\n  }\n}",
+        "extensions": {
+          "persistedQuery": {
+            "version": 1,
+            "sha256Hash": "21abb40a2be3f4eb457bc77446f9a103c547fa35cb55695eed1cc5c6b4c86c70"
+          }
+        }
+      },
+      "client": {
+        "name": "my-client"
       }
     },
     {

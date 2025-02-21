@@ -37,8 +37,6 @@ export const CacheDetailsSheet: React.FC<any> = ({
     setIndex(operationIndex);
   }, [operationId, operations]);
 
-  console.log("operations", operations, operationId, index);
-
   const nextTrace = () => {
     if (index + 1 < operations.length) {
       const newQuery = { ...router.query };
