@@ -314,6 +314,16 @@
             "ResponseHeader": "",
             "Expression": ""
           }
+        },
+        {
+          "Key": "request_information",
+          "Default": "",
+          "ValueFrom": {
+            "RequestHeader": "",
+            "ContextField": "",
+            "ResponseHeader": "",
+            "Expression": "request.error ?? 'success'"
+          }
         }
       ]
     },
