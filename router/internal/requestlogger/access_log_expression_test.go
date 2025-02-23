@@ -105,3 +105,79 @@ func TestAccessLogExpressionParsing(t *testing.T) {
 		require.Fail(t, "error should have been detected")
 	})
 }
+
+func TestCleanupExpressionAttributes(t *testing.T) {
+	t.Parallel()
+
+	t.Run("ValueFrom nil entries gets included", func(t *testing.T) {
+		t.Parallel()
+
+		entry := config.CustomAttribute{
+			Key:       "custom",
+			Default:   "value_different",
+			ValueFrom: nil,
+		}
+
+		result := CleanupExpressionAttributes([]config.CustomAttribute{
+			entry,
+		})
+		require.Len(t, result, 1)
+		require.Equal(t, entry, result[0])
+	})
+
+	t.Run("Expression empty entries gets included", func(t *testing.T) {
+		t.Parallel()
+
+		entry := config.CustomAttribute{
+			Key:     "custom",
+			Default: "value_different",
+			ValueFrom: &config.CustomDynamicAttribute{
+				ContextField: "x-custom-header",
+			},
+		}
+
+		result := CleanupExpressionAttributes([]config.CustomAttribute{
+			entry,
+		})
+
+		require.Len(t, result, 1)
+		require.Equal(t, entry, result[0])
+	})
+
+	t.Run("Skip expression entries", func(t *testing.T) {
+		t.Parallel()
+
+		valueFromNil := config.CustomAttribute{
+			Key:       "custom",
+			Default:   "value_different",
+			ValueFrom: nil,
+		}
+		expressionPresent := config.CustomAttribute{
+			Key:     "custom",
+			Default: "value_different",
+			ValueFrom: &config.CustomDynamicAttribute{
+				ContextField: "x-custom-header",
+				Expression:   "request.URL",
+			},
+		}
+		expressionEmpty := config.CustomAttribute{
+			Key:     "custom",
+			Default: "value_different",
+			ValueFrom: &config.CustomDynamicAttribute{
+				ContextField: "x-custom-header",
+				// Expression empty value is ""
+			},
+		}
+
+		result := CleanupExpressionAttributes([]config.CustomAttribute{
+			valueFromNil,
+			expressionPresent,
+			expressionEmpty,
+		})
+
+		require.Len(t, result, 2)
+		require.Equal(t, valueFromNil, result[0])
+		require.Equal(t, expressionEmpty, result[1])
+	})
+
+}

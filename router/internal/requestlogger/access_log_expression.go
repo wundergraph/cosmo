@@ -14,7 +14,7 @@ type ExpressionAttribute struct {
 }
 
 func GetAccessLogConfigExpressions(attributes []config.CustomAttribute) ([]ExpressionAttribute, error) {
-	exprSlice := make([]ExpressionAttribute, 0)
+	exprSlice := make([]ExpressionAttribute, 0, len(attributes))
 	for _, sAttribute := range attributes {
 		if sAttribute.ValueFrom == nil || sAttribute.ValueFrom.Expression == "" {
 			continue
