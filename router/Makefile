@@ -22,7 +22,7 @@ clean-testcache:
 bump-engine:
 	go get github.com/wundergraph/graphql-go-tools/v2@upgrade
 	go mod tidy
-	cd .. && make sync-go-workspace
+	cd ../router-tests && make bump-deps
 
 VERSION?=dev
 # RFC3339 format
