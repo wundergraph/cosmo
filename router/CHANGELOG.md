@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.183.2](https://github.com/wundergraph/cosmo/compare/router@0.183.1...router@0.183.2) (2025-02-24)
+
+### Bug Fixes
+
+* fix node selections do not select external parents of unique node ([#1622](https://github.com/wundergraph/cosmo/issues/1622)) ([902bda8](https://github.com/wundergraph/cosmo/commit/902bda8bda6473b896c6f0945dd6ea17490a2cf2)) (@devsergiy)
+
 ## [0.183.1](https://github.com/wundergraph/cosmo/compare/router@0.183.0...router@0.183.1) (2025-02-21)
 
 ### Bug Fixes
