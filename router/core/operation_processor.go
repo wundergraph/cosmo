@@ -109,6 +109,7 @@ type OperationProcessorOptions struct {
 	IntrospectionEnabled           bool
 	ApolloCompatibilityFlags       config.ApolloCompatibilityFlags
 	ApolloRouterCompatibilityFlags config.ApolloRouterCompatibilityFlags
+	NormalizationConfig            *config.OperationNormalizationConfig
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -1152,12 +1153,51 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 	return names
 }
 
+type additionalNormalizationOptions struct {
+	sortSelectionSetFields bool
+}
+
+type normalizationOptions struct {
+	additionalNormalization additionalNormalizationOptions
+}
+
+func newNormalizationOptionsFromConfig(cfg *config.OperationNormalizationConfig) normalizationOptions {
+	options := normalizationOptions{}
+	if cfg == nil {
+		return options
+	}
+	options.additionalNormalization.sortSelectionSetFields = cfg.AdditionalNormalization.SortSelectionSetFields
+
+	return options
+}
+
+func (n normalizationOptions) toNormalizerOpts() []astnormalization.Option {
+	opts := make([]astnormalization.Option, 0)
+	if n.additionalNormalization.sortSelectionSetFields {
+		opts = append(
+			opts,
+			astnormalization.WithSortSelectionSetFields(astnormalization.CompareSelectionSetFieldsLexicographically),
+		)
+	}
+
+	return opts
+}
+
 type parseKitOptions struct {
 	apolloCompatibilityFlags       config.ApolloCompatibilityFlags
 	apolloRouterCompatibilityFlags config.ApolloRouterCompatibilityFlags
+	normalizerOptions              normalizationOptions
 }
 
 func createParseKit(i int, options *parseKitOptions) *parseKit {
+	defaultNormalizerOpts := []astnormalization.Option{
+		astnormalization.WithRemoveNotMatchingOperationDefinitions(),
+		astnormalization.WithInlineFragmentSpreads(),
+		astnormalization.WithRemoveFragmentDefinitions(),
+		astnormalization.WithRemoveUnusedVariables(),
+	}
+	staticNormalizerOpts := append(defaultNormalizerOpts, options.normalizerOptions.toNormalizerOpts()...)
+
 	return &parseKit{
 		i:          i,
 		parser:     astparser.NewParser(),
@@ -1165,10 +1205,7 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 		keyGen:     xxhash.New(),
 		sha256Hash: sha256.New(),
 		staticNormalizer: astnormalization.NewWithOpts(
-			astnormalization.WithRemoveNotMatchingOperationDefinitions(),
-			astnormalization.WithInlineFragmentSpreads(),
-			astnormalization.WithRemoveFragmentDefinitions(),
-			astnormalization.WithRemoveUnusedVariables(),
+			staticNormalizerOpts...,
 		),
 		variablesNormalizer: astnormalization.NewVariablesNormalizer(),
 		variablesRemapper:   astnormalization.NewVariablesMapper(),
@@ -1204,6 +1241,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		parseKitOptions: &parseKitOptions{
 			apolloCompatibilityFlags:       opts.ApolloCompatibilityFlags,
 			apolloRouterCompatibilityFlags: opts.ApolloRouterCompatibilityFlags,
+			normalizerOptions:              newNormalizationOptionsFromConfig(opts.NormalizationConfig),
 		},
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {

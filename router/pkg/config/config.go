@@ -833,6 +833,14 @@ type CacheWarmupConfiguration struct {
 	Timeout        time.Duration     `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
 }
 
+type OperationNormalizationOpts struct {
+	SortSelectionSetFields bool `yaml:"sort_selection_set_fields"`
+}
+
+type OperationNormalizationConfig struct {
+	AdditionalNormalization OperationNormalizationOpts `yaml:"additional_normalization"`
+}
+
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 

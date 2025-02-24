@@ -187,6 +187,7 @@ type (
 		automaticPersistedQueriesConfig config.AutomaticPersistedQueriesConfig
 		apolloCompatibilityFlags        config.ApolloCompatibilityFlags
 		apolloRouterCompatibilityFlags  config.ApolloRouterCompatibilityFlags
+		operationNormalizationConfig    *config.OperationNormalizationConfig
 		storageProviders                config.StorageProviders
 		eventsConfig                    config.EventsConfiguration
 		prometheusServer                *http.Server
@@ -1851,6 +1852,12 @@ func WithClientHeader(cfg config.ClientHeader) Option {
 func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 	return func(r *Router) {
 		r.cacheWarmup = cfg
+	}
+}
+
+func WithOperationNormalizationConfig(cfg *config.OperationNormalizationConfig) Option {
+	return func(r *Router) {
+		r.operationNormalizationConfig = cfg
 	}
 }
 

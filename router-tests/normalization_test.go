@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.opentelemetry.io/otel/codes"
@@ -192,5 +194,40 @@ func TestNormalization(t *testing.T) {
 			})
 		}
 
+	})
+
+	t.Run("Normalize selection set fields order with normalization config", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithOperationNormalizationConfig(&config.OperationNormalizationConfig{
+					AdditionalNormalization: config.OperationNormalizationOpts{
+						SortSelectionSetFields: true,
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			query := `{
+    "query": "query Find($criteria: SearchInput!) {\n  findEmployees(criteria: $criteria) {\n    id\n details {\n surname\n forename\n \n} \n} \n}",
+    "variables": {
+        "criteria": {
+			"nationality": "AMERICAN"
+		}
+    },
+    "operationName": "Find"
+}`
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(query))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+
+			t.Log(string(body))
+
+			require.JSONEq(t, `{"data":{"findEmployees":[{"id":3,"details":{"surname":"Avram","forename":"Stefan"}}]}}`, string(body))
+			require.Equal(t, `{"data":{"findEmployees":[{"details":{"forename":"Stefan","surname":"Avram"},"id":3}]}}`, string(body))
+		})
 	})
 }
