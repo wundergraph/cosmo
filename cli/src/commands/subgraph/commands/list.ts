@@ -61,12 +61,12 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.raw) {
-      console.log(pc.yellow('Please use the --json option. The --raw option is deprecated.'));
+      console.warn(pc.yellow('Please use the --json option. The --raw option is deprecated.'));
     }
 
     if (options.raw || options.json) {
       console.log(JSON.stringify(resp.graphs));
-      process.exit(0);
+      return;
     }
 
     const graphsTable = new Table({
