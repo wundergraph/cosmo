@@ -269,17 +269,17 @@ func (c *requestContext) SetError(err error) {
 
 func (c *requestContext) ResolveAnyExpressionWithWrappedError(expression *vm.Program) (any, error) {
 	// If an error exists already, wrap it and resolve the expression with the copied context
-	currExprContext := c.expressionContext.Request
-	if currExprContext.Error != nil {
-		copyExprContext := expr.Context{
+	if c.expressionContext.Request.Error != nil {
+		return expr.ResolveAnyExpression(expression, expr.Context{
+			// Note that req.Auth, req.URL, req.Header are all complex structs, we are using the existing values
+			// as we only care about modifying the req.Error type
 			Request: expr.Request{
-				Auth:   currExprContext.Auth,
-				URL:    currExprContext.URL,
-				Header: currExprContext.Header,
-				Error:  &ExprWrapError{currExprContext.Error},
+				Auth:   c.expressionContext.Request.Auth,
+				URL:    c.expressionContext.Request.URL,
+				Header: c.expressionContext.Request.Header,
+				Error:  &ExprWrapError{c.expressionContext.Request.Error},
 			},
-		}
-		return expr.ResolveAnyExpression(expression, copyExprContext)
+		})
 	}
 	return expr.ResolveAnyExpression(expression, c.expressionContext)
 }
