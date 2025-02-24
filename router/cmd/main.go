@@ -5,27 +5,34 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/core"
-	"github.com/wundergraph/cosmo/router/internal/versioninfo"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/logging"
-	"github.com/wundergraph/cosmo/router/pkg/profile"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/internal/versioninfo"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/cosmo/router/pkg/profile"
+
 	"go.uber.org/zap"
 )
 
 var (
-	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
-	configPathFlag  = flag.String("config", os.Getenv("CONFIG_PATH"), "Path to the router config file e.g. config.yaml")
-	routerVersion   = flag.Bool("version", false, "Prints the version and dependency information")
-	pprofListenAddr = flag.String("pprof-addr", os.Getenv("PPROF_ADDR"), "Address to listen for pprof requests. e.g. :6060 for localhost:6060")
-	memProfilePath  = flag.String("memprofile", "", "Path to write memory profile. Memory is a snapshot taken at the time the program exits")
-	cpuProfilePath  = flag.String("cpuprofile", "", "Path to write cpu profile. CPU is measured from when the program starts until the program exits")
-	help            = flag.Bool("help", false, "Prints the help message")
+	overrideEnvFlag                     = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
+	configPathFlag                      = flag.String("config", os.Getenv("CONFIG_PATH"), "Path to the router config file e.g. config.yaml")
+	routerVersion                       = flag.Bool("version", false, "Prints the version and dependency information")
+	pprofListenAddr                     = flag.String("pprof-addr", os.Getenv("PPROF_ADDR"), "Address to listen for pprof requests. e.g. :6060 for localhost:6060")
+	memProfilePath                      = flag.String("memprofile", "", "Path to write memory profile. Memory is a snapshot taken at the time the program exits")
+	cpuProfilePath                      = flag.String("cpuprofile", "", "Path to write cpu profile. CPU is measured from when the program starts until the program exits")
+	help                                = flag.Bool("help", false, "Prints the help message")
+	queryPlanFlag                       = flag.Bool("query-plan", false, "Use the query plan command")
+	queryPlanExecutionConfigFilePath    = flag.String("qp-execution-config", "config.json", "when using query-plan flag, execution config file location")
+	queryPlanSourceOperationFoldersPath = flag.String("qp-operations", "operations", "when using query-plan flag, source operations folder location")
+	queryPlanPlansOutPath               = flag.String("qp-plans", "plans", "when using query-plan flag, output plans folder location")
+	queryPlanOperationFilterFilePath    = flag.String("qp-filter", "", "when using query-plan flag, operation filter file location which should contain file names of operations to include")
+	queryPlanConcurrency                = flag.Int("qp-concurrency", 1, "when using query-plan flag, number of concurrent operations to process")
 )
 
 func Main() {
@@ -39,6 +46,9 @@ func Main() {
 	} else if *routerVersion {
 		bi := versioninfo.New(core.Version, core.Commit, core.Date)
 		fmt.Println(bi.String())
+		os.Exit(0)
+	} else if queryPlanFlag != nil && *queryPlanFlag {
+		planGenerator()
 		os.Exit(0)
 	}
 
