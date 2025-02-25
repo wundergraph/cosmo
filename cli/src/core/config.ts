@@ -1,14 +1,9 @@
 import { readFileSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
 import { join } from 'pathe';
 import yaml from 'js-yaml';
 import envPaths from 'env-paths';
 
-const info = JSON.parse(
-  await readFile(new URL('../../package.json', import.meta.url), {
-    encoding: 'utf8',
-  }),
-);
+import info from '../../package.json' with { type: 'json' };
 
 const paths = envPaths('cosmo', { suffix: '' });
 export const configDir = paths.config;
@@ -25,6 +20,7 @@ const getLoginDetails = (): { accessToken: string; organizationSlug: string } | 
 };
 
 export const config = {
+  version: info.version,
   baseURL: process.env.COSMO_API_URL || 'https://cosmo-cp.wundergraph.com',
   // environment var first to allow overriding
   apiKey: process.env.COSMO_API_KEY,
@@ -33,7 +29,6 @@ export const config = {
   kcClientId: process.env.KC_CLIENT_ID || 'cosmo-cli',
   kcRealm: process.env.KC_REALM || 'cosmo',
   cdnURL: process.env.CDN_URL || 'https://cosmo-cdn.wundergraph.com',
-  version: info.version,
   disableUpdateCheck: process.env.DISABLE_UPDATE_CHECK || 'false',
   checkAuthor: process.env.COSMO_VCS_AUTHOR || '',
   checkCommitSha: process.env.COSMO_VCS_COMMIT || '',
