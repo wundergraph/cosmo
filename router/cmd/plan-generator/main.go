@@ -22,7 +22,6 @@ func main() {
 		SourceDir:       *sourceOperationFoldersPath,
 		OutDir:          *plansOutPath,
 		Filter:          *operationFilterFilePath,
-		Concurrency:     8,
 	})
 	if err != nil {
 		log.Fatalf("Error during command plan-generator: %s", err)

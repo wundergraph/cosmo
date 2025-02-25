@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -20,7 +21,7 @@ type QueryPlanConfig struct {
 	ExecutionConfig string `env:"QUERY_PLAN_EXECUTION_CONFIG"`
 	SourceDir       string `env:"QUERY_PLAN_SOURCE_DIR"`
 	OutDir          string `env:"QUERY_PLAN_OUT_DIR"`
-	Concurrency     int    `env:"QUERY_PLAN_CONCURRENCY" envDefault:"8" `
+	Concurrency     int    `env:"QUERY_PLAN_CONCURRENCY" envDefault:"0" `
 	Filter          string `env:"QUERY_PLAN_FILTER"`
 	Timeout         string `env:"QUERY_PLAN_TIMEOUT" envDefault:"30s"`
 }
@@ -30,6 +31,9 @@ func getParseGeneratorConfig() (QueryPlanConfig, error) {
 	_ = godotenv.Load(".env.local")
 	_ = godotenv.Load()
 	err := env.Parse(&cfg)
+	if cfg.Concurrency == 0 {
+		cfg.Concurrency = runtime.GOMAXPROCS(0)
+	}
 	if err != nil {
 		return cfg, err
 	}
