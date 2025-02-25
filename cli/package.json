@@ -20,6 +20,7 @@
   },
   "scripts": {
     "build": "del dist && tsc",
+    "build:bun": "bun build --compile src/index.ts --outfile wgc",
     "wgc": "tsx --env-file .env src/index.ts",
     "test": "pnpm lint && vitest run",
     "coverage": "vitest run --coverage",
