@@ -14,3 +14,12 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "nscwc_namespace_id_idx" ON "namespace_cache_warmer_config" USING btree ("namespace_id");
+
+BEGIN TRANSACTION;
+
+INSERT INTO "namespace_cache_warmer_config" ("namespace_id", "max_operations_count")
+SELECT "id", 100
+FROM "namespaces"
+WHERE "enable_cache_warming" = true;
+
+COMMIT;
