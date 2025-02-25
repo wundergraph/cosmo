@@ -62,7 +62,7 @@ export default (opts: BaseCommandOptions) => {
       } else {
         console.log('No monographs found');
       }
-      process.exit(0);
+      return;
     }
 
     if (options.out) {
@@ -77,7 +77,7 @@ export default (opts: BaseCommandOptions) => {
           }) satisfies OutputFile[number],
       );
       await writeFile(resolve(options.out), JSON.stringify(output));
-      process.exit(0);
+      return;
     }
 
     if (options.raw) {
