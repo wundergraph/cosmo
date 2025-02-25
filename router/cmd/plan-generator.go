@@ -31,9 +31,6 @@ func getParseGeneratorConfig() (QueryPlanConfig, error) {
 	_ = godotenv.Load(".env.local")
 	_ = godotenv.Load()
 	err := env.Parse(&cfg)
-	if cfg.Concurrency == 0 {
-		cfg.Concurrency = runtime.GOMAXPROCS(0)
-	}
 	if err != nil {
 		return cfg, err
 	}
@@ -50,6 +47,10 @@ func planGeneratorCmd() error {
 }
 
 func PlanGenerator(cfg QueryPlanConfig) error {
+	if cfg.Concurrency == 0 {
+		cfg.Concurrency = runtime.GOMAXPROCS(0)
+	}
+
 	queriesPath, err := filepath.Abs(cfg.SourceDir)
 	if err != nil {
 		return fmt.Errorf("failed to get absolute path for queries: %v", err)
@@ -115,7 +116,7 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 						return
 					}
 
-					if filepath.Ext(queryFile.Name()) != ".graphql" {
+					if !slices.Contains([]string{".graphql", ".gql", ".graphqls"}, filepath.Ext(queryFile.Name())) {
 						continue
 					}
 
