@@ -3,7 +3,7 @@ import { join } from 'pathe';
 import yaml from 'js-yaml';
 import envPaths from 'env-paths';
 
-import { version } from '../../package.json';
+import info from '../../package.json' with { type: "json" };
 
 const paths = envPaths('cosmo', { suffix: '' });
 export const configDir = paths.config;
@@ -20,7 +20,7 @@ const getLoginDetails = (): { accessToken: string; organizationSlug: string } | 
 };
 
 export const config = {
-  version,
+  version: info.version,
   baseURL: process.env.COSMO_API_URL || 'https://cosmo-cp.wundergraph.com',
   // environment var first to allow overriding
   apiKey: process.env.COSMO_API_KEY,
@@ -37,7 +37,7 @@ export const config = {
 
 export const getBaseHeaders = (): HeadersInit => {
   return {
-    'user-agent': `cosmo-cli/${version}`,
+    'user-agent': `cosmo-cli/${info.version}`,
     authorization: 'Bearer ' + config.apiKey,
     'cosmo-org-slug': getLoginDetails()?.organizationSlug || '',
   };
