@@ -235,6 +235,10 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			return wrapper(h)
 		})
 
+		if s.headerRules != nil {
+			cr.Use(rmiddleware.CookieWhitelist(s.headerRules.CookieWhitelist, []string{featureFlagCookie}))
+		}
+
 		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
 		cr.Handle(r.graphqlPath, multiGraphHandler)
 
@@ -617,7 +621,20 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	// We might want to remap or exclude known attributes based on the configuration for metrics
 	mapper := newAttributeMapper(enableAttributeMapper, s.metricConfig.Attributes)
+	attExpressions, attErr := newAttributeExpressions(s.metricConfig.Attributes)
+	if attErr != nil {
+		return nil, attErr
+	}
 	baseMetricAttributes := mapper.mapAttributes(baseOtelAttributes)
+	var telemetryAttExpressions *attributeExpressions
+	if len(s.telemetryAttributes) > 0 {
+		var telemetryAttErr error
+		telemetryAttExpressions, telemetryAttErr = newAttributeExpressions(s.telemetryAttributes)
+		if telemetryAttErr != nil {
+			return nil, telemetryAttErr
+		}
+	}
+
 	// Prometheus metricStore rely on OTLP metricStore
 	if metricsEnabled {
 		m, err := rmetric.NewStore(
@@ -681,14 +698,16 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
 
 			reqContext := buildRequestContext(requestContextOptions{
-				operationContext:    nil,
-				requestLogger:       requestLogger,
-				metricSetAttributes: b,
-				metricsEnabled:      metricsEnabled,
-				traceEnabled:        s.traceConfig.Enabled,
-				mapper:              mapper,
-				w:                   w,
-				r:                   r,
+				operationContext:              nil,
+				requestLogger:                 requestLogger,
+				metricSetAttributes:           b,
+				metricsEnabled:                metricsEnabled,
+				traceEnabled:                  s.traceConfig.Enabled,
+				mapper:                        mapper,
+				metricAttributeExpressions:    attExpressions,
+				telemetryAttributeExpressions: telemetryAttExpressions,
+				w:                             w,
+				r:                             r,
 			})
 
 			r = r.WithContext(withRequestContext(r.Context(), reqContext))

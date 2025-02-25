@@ -2,9 +2,12 @@ package telemetry
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"regexp"
 	"runtime"
+	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -8737,4 +8740,377 @@ func TestFlakyTelemetry(t *testing.T) {
 			})
 		})
 	})
+
+	t.Run("custom metric with expression", func(t *testing.T) {
+		t.Parallel()
+
+		const employeesQueryRequiringClaims = `{"query":"{ employees { id startDate } }"}`
+
+		t.Run("existing JWT claim is added", func(t *testing.T) {
+			t.Parallel()
+
+			metricReader := metric.NewManualReader()
+			authenticators, authServer := integration.ConfigureAuth(t)
+			claimKey := "extraclaim"
+			claimVal := "extravalue"
+			testenv.Run(t, &testenv.Config{
+				MetricReader: metricReader,
+				CustomMetricAttributes: []config.CustomAttribute{
+					{
+						Key: claimKey,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.auth.claims.custom_value." + claimKey,
+						},
+					},
+				},
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, false)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Operations with a token should succeed
+				token, err := authServer.Token(map[string]any{
+					"scope": "read:employee read:private",
+					"custom_value": map[string]string{
+						claimKey: claimVal,
+					},
+				})
+				require.NoError(t, err)
+				header := http.Header{
+					"Authorization": []string{"Bearer " + token},
+				}
+				_, err = xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+				require.NoError(t, err)
+				rm := metricdata.ResourceMetrics{}
+				err = metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
+				require.Greater(t, len(rm.ScopeMetrics), 0)
+				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
+				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
+				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+				atts := data2.DataPoints[0].Attributes
+				val, ok := atts.Value(attribute.Key(claimKey))
+				require.True(t, ok)
+				require.Equal(t, claimVal, val.AsString())
+			})
+		})
+
+		t.Run("JWT claim ignored if is string but expression is expecting a map", func(t *testing.T) {
+			t.Parallel()
+
+			metricReader := metric.NewManualReader()
+			authenticators, authServer := integration.ConfigureAuth(t)
+			claimKey := "extraclaim"
+			testenv.Run(t, &testenv.Config{
+				MetricReader: metricReader,
+				CustomMetricAttributes: []config.CustomAttribute{
+					{
+						Key: claimKey,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.auth.claims.custom_value." + claimKey,
+						},
+					},
+				},
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, false)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Operations with a token should succeed
+				token, err := authServer.Token(map[string]any{
+					"scope":        "read:employee read:private",
+					"custom_value": "asasas",
+				})
+				require.NoError(t, err)
+				header := http.Header{
+					"Authorization": []string{"Bearer " + token},
+				}
+				_, err = xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+				require.NoError(t, err)
+				rm := metricdata.ResourceMetrics{}
+				err = metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
+				require.Greater(t, len(rm.ScopeMetrics), 0)
+				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
+				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
+				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+				atts := data2.DataPoints[0].Attributes
+				_, ok := atts.Value(attribute.Key(claimKey))
+				require.False(t, ok)
+			})
+		})
+
+		t.Run("not existing JWT claim is not added", func(t *testing.T) {
+			t.Parallel()
+
+			claimKey := "extraclaim"
+
+			metricReader := metric.NewManualReader()
+			authenticators, authServer := integration.ConfigureAuth(t)
+			testenv.Run(t, &testenv.Config{
+				MetricReader: metricReader,
+				CustomMetricAttributes: []config.CustomAttribute{
+					{
+						Key: claimKey,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.auth.claims." + claimKey,
+						},
+					},
+				},
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, false)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Operations with a token should succeed
+				token, err := authServer.Token(map[string]any{
+					"scope": "read:employee read:private",
+				})
+				require.NoError(t, err)
+				header := http.Header{
+					"Authorization": []string{"Bearer " + token},
+				}
+				_, err = xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+				require.NoError(t, err)
+				rm := metricdata.ResourceMetrics{}
+				err = metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
+				require.Greater(t, len(rm.ScopeMetrics), 0)
+				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
+				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
+				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+				atts := data2.DataPoints[0].Attributes
+				ok := atts.HasValue(attribute.Key(claimKey))
+				require.False(t, ok)
+			})
+		})
+
+		t.Run("invalid expression", func(t *testing.T) {
+			t.Parallel()
+
+			claimKey := "extraclaim"
+			metricReader := metric.NewManualReader()
+			err := testenv.RunWithError(t, &testenv.Config{
+				MetricReader: metricReader,
+				CustomMetricAttributes: []config.CustomAttribute{
+					{
+						Key: claimKey,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "TEST request.auth.claims." + claimKey,
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				assert.FailNow(t, "should not be called")
+			})
+			expectedErr := errors.New("failed to build base mux: custom attribute error, unable to compile 'extraclaim' with expression 'TEST request.auth.claims.extraclaim': line 1, column 5: unexpected token Identifier(\"request\")")
+			assert.ErrorAs(t, err, &expectedErr)
+		})
+	})
+
+	t.Run("custom trace metrics with expression", func(t *testing.T) {
+		t.Parallel()
+
+		const employeesQueryRequiringClaims = `{"query":"{ employees { id startDate } }"}`
+
+		t.Run("existing JWT claim is added", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+			metricReader := metric.NewManualReader()
+			authenticators, authServer := integration.ConfigureAuth(t)
+			claimKeyWithAuth := "extraclaim"
+			claimValWithAuth := "extravalue"
+			headerKey := "X-Custom-Header"
+			headerVal := "extravalue2"
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				MetricReader:  metricReader,
+				CustomTelemetryAttributes: []config.CustomAttribute{
+					{
+						Key: claimKeyWithAuth,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.auth.claims.custom_value." + claimKeyWithAuth,
+						},
+					},
+					{
+						Key: headerKey,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.header.Get('" + headerKey + "')",
+						},
+					},
+				},
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, false)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Operations with a token should succeed
+				token, err := authServer.Token(map[string]any{
+					"scope": "read:employee read:private",
+					"custom_value": map[string]string{
+						claimKeyWithAuth: claimValWithAuth,
+					},
+				})
+				require.NoError(t, err)
+				header := http.Header{
+					"Authorization": []string{"Bearer " + token},
+					headerKey:       []string{headerVal},
+				}
+				_, err = xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+				require.NoError(t, err)
+
+				sn := exporter.GetSpans().Snapshots()
+				require.Len(t, sn, 10, "expected 10 spans, got %d", len(sn))
+				for i := 0; i < len(sn); i++ {
+					if slices.Contains([]string{"HTTP - Read Body", "Authenticate"}, sn[i].Name()) {
+						assert.NotContains(t, sn[i].Attributes(), attribute.String(claimKeyWithAuth, claimValWithAuth))
+					} else {
+						assert.Contains(t, sn[i].Attributes(), attribute.String(claimKeyWithAuth, claimValWithAuth))
+					}
+				}
+				for i := 0; i < len(sn); i++ {
+					assert.Contains(t, sn[i].Attributes(), attribute.String(headerKey, headerVal))
+				}
+
+				rm := metricdata.ResourceMetrics{}
+				err = metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
+				require.Greater(t, len(rm.ScopeMetrics), 0)
+				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
+				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
+				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+				atts := data2.DataPoints[0].Attributes
+				val, ok := atts.Value(attribute.Key(claimKeyWithAuth))
+				require.True(t, ok)
+				require.Equal(t, claimValWithAuth, val.AsString())
+			})
+		})
+
+		t.Run("JWT claim ignored if is string but expression is expecting a map", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+			metricReader := metric.NewManualReader()
+			authenticators, authServer := integration.ConfigureAuth(t)
+			claimKey := "extraclaim"
+			claimVal := "extravalue"
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				MetricReader:  metricReader,
+				CustomTelemetryAttributes: []config.CustomAttribute{
+					{
+						Key: claimKey,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.auth.claims.custom_value." + claimKey,
+						},
+					},
+				},
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, false)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Operations with a token should succeed
+				token, err := authServer.Token(map[string]any{
+					"scope":        "read:employee read:private",
+					"custom_value": "asasas",
+				})
+				require.NoError(t, err)
+				header := http.Header{
+					"Authorization": []string{"Bearer " + token},
+				}
+				_, err = xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+				require.NoError(t, err)
+
+				sn := exporter.GetSpans().Snapshots()
+				require.Len(t, sn, 10, "expected 10 spans, got %d", len(sn))
+				for i := 0; i < len(sn); i++ {
+					assert.NotContains(t, sn[i].Attributes(), attribute.String(claimKey, claimVal))
+				}
+
+				rm := metricdata.ResourceMetrics{}
+				err = metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
+				require.Greater(t, len(rm.ScopeMetrics), 0)
+				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
+				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
+				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+				atts := data2.DataPoints[0].Attributes
+				_, ok := atts.Value(attribute.Key(claimKey))
+				require.False(t, ok)
+			})
+		})
+
+		t.Run("not existing JWT claim is not added", func(t *testing.T) {
+			t.Parallel()
+
+			claimKey := "extraclaim"
+			claimVal := "extravalue"
+			metricReader := metric.NewManualReader()
+			exporter := tracetest.NewInMemoryExporter(t)
+			authenticators, authServer := integration.ConfigureAuth(t)
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				MetricReader:  metricReader,
+				CustomTelemetryAttributes: []config.CustomAttribute{
+					{
+						Key: claimKey,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.auth.claims." + claimKey,
+						},
+					},
+				},
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, false)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Operations with a token should succeed
+				token, err := authServer.Token(map[string]any{
+					"scope": "read:employee read:private",
+				})
+				require.NoError(t, err)
+				header := http.Header{
+					"Authorization": []string{"Bearer " + token},
+				}
+				_, err = xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQueryRequiringClaims))
+				require.NoError(t, err)
+
+				sn := exporter.GetSpans().Snapshots()
+				require.Len(t, sn, 10, "expected 10 spans, got %d", len(sn))
+				for i := 0; i < len(sn); i++ {
+					assert.NotContains(t, sn[i].Attributes(), attribute.String(claimKey, claimVal))
+				}
+
+				rm := metricdata.ResourceMetrics{}
+				err = metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
+				require.Greater(t, len(rm.ScopeMetrics), 0)
+				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
+				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
+				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+				atts := data2.DataPoints[0].Attributes
+				ok := atts.HasValue(attribute.Key(claimKey))
+				require.False(t, ok)
+			})
+		})
+
+		t.Run("invalid expression", func(t *testing.T) {
+			t.Parallel()
+
+			claimKey := "extraclaim"
+			metricReader := metric.NewManualReader()
+			err := testenv.RunWithError(t, &testenv.Config{
+				MetricReader: metricReader,
+				CustomTelemetryAttributes: []config.CustomAttribute{
+					{
+						Key: claimKey,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "TEST request.auth.claims." + claimKey,
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				assert.FailNow(t, "should not be called")
+			})
+			expectedErr := errors.New("failed to build base mux: custom attribute error, unable to compile 'extraclaim' with expression 'TEST request.auth.claims.extraclaim': line 1, column 5: unexpected token Identifier(\"request\")")
+			assert.ErrorAs(t, err, &expectedErr)
+		})
+	})
+
 }

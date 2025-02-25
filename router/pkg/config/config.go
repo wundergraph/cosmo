@@ -33,6 +33,7 @@ type CustomDynamicAttribute struct {
 	RequestHeader  string `yaml:"request_header,omitempty"`
 	ContextField   string `yaml:"context_field,omitempty"`
 	ResponseHeader string `yaml:"response_header,omitempty"`
+	Expression     string `yaml:"expression,omitempty"` // only implemented by CustomAttribute in Metrics and Telemetry
 }
 
 type CustomAttribute struct {
@@ -211,8 +212,9 @@ type CacheControlPolicy struct {
 
 type HeaderRules struct {
 	// All is a set of rules that apply to all requests
-	All       *GlobalHeaderRule            `yaml:"all,omitempty"`
-	Subgraphs map[string]*GlobalHeaderRule `yaml:"subgraphs,omitempty"`
+	All             *GlobalHeaderRule            `yaml:"all,omitempty"`
+	Subgraphs       map[string]*GlobalHeaderRule `yaml:"subgraphs,omitempty"`
+	CookieWhitelist []string                     `yaml:"cookie_whitelist,omitempty"`
 }
 
 type GlobalHeaderRule struct {
@@ -346,6 +348,7 @@ type EngineExecutionConfiguration struct {
 	ResolverMaxRecyclableParserSize        int                      `envDefault:"32768" env:"ENGINE_RESOLVER_MAX_RECYCLABLE_PARSER_SIZE" yaml:"resolver_max_recyclable_parser_size,omitempty"`
 	EnableSubgraphFetchOperationName       bool                     `envDefault:"false" env:"ENGINE_ENABLE_SUBGRAPH_FETCH_OPERATION_NAME" yaml:"enable_subgraph_fetch_operation_name"`
 	DisableVariablesRemapping              bool                     `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping"`
+	SubscriptionFetchTimeout               time.Duration            `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
 }
 
 type BlockOperationConfiguration struct {

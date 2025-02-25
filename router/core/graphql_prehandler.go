@@ -200,6 +200,27 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		routerSpan.SetAttributes(requestContext.telemetry.traceAttrs...)
 
+		if requestContext.telemetry.traceAttributeExpressions != nil {
+			traceMetrics, err := requestContext.telemetry.traceAttributeExpressions.expressionsAttributes(requestContext)
+			if err != nil {
+				requestLogger.Error("failed to resolve trace attribute", zap.Error(err))
+			}
+			requestContext.telemetry.addCommonAttribute(
+				traceMetrics...,
+			)
+			routerSpan.SetAttributes(traceMetrics...)
+		}
+
+		if requestContext.telemetry.metricAttributeExpressions != nil {
+			metricAttrs, err := requestContext.telemetry.metricAttributeExpressions.expressionsAttributes(requestContext)
+			if err != nil {
+				requestLogger.Error("failed to resolve metric attribute", zap.Error(err))
+			}
+			requestContext.telemetry.addMetricAttribute(
+				metricAttrs...,
+			)
+		}
+
 		requestContext.operation = &operationContext{
 			clientInfo: clientInfo,
 		}
@@ -337,6 +358,27 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			requestContext.expressionContext.Request.Auth = expr.LoadAuth(r.Context())
 		}
 
+		if requestContext.telemetry.traceAttributeExpressions != nil {
+			traceMetrics, err := requestContext.telemetry.traceAttributeExpressions.expressionsAttributesWithAuth(requestContext)
+			if err != nil {
+				requestLogger.Error("failed to resolve trace attribute", zap.Error(err))
+			}
+			requestContext.telemetry.addCommonAttribute(
+				traceMetrics...,
+			)
+			routerSpan.SetAttributes(traceMetrics...)
+		}
+
+		if requestContext.telemetry.metricAttributeExpressions != nil {
+			metricAttrs, err := requestContext.telemetry.metricAttributeExpressions.expressionsAttributesWithAuth(requestContext)
+			if err != nil {
+				requestLogger.Error("failed to resolve metric attribute", zap.Error(err))
+			}
+			requestContext.telemetry.addMetricAttribute(
+				metricAttrs...,
+			)
+		}
+
 		err = h.handleOperation(r, variablesParser, &httpOperation{
 			requestContext:   requestContext,
 			requestLogger:    requestLogger,
@@ -375,6 +417,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		// The request context needs to be updated with the latest request to ensure that the context is up to date
 		requestContext.request = r
+		requestContext.responseWriter = ww
 
 		// Call the final handler that resolves the operation
 		// and enrich the context to make it available in the request context as well for metrics etc.

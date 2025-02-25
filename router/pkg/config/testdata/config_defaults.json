@@ -104,7 +104,8 @@
   "Modules": null,
   "Headers": {
     "All": null,
-    "Subgraphs": null
+    "Subgraphs": null,
+    "CookieWhitelist": null
   },
   "TrafficShaping": {
     "All": {
@@ -302,7 +303,8 @@
     "ValidationCacheSize": 1024,
     "ResolverMaxRecyclableParserSize": 32768,
     "EnableSubgraphFetchOperationName": false,
-    "DisableVariablesRemapping": false
+    "DisableVariablesRemapping": false,
+    "SubscriptionFetchTimeout": 30000000000
   },
   "WebSocket": {
     "Enabled": true,
