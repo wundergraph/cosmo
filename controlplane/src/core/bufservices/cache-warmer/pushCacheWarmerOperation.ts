@@ -164,6 +164,16 @@ export function pushCacheWarmerOperation(
       };
     }
 
+    const cacheWarmerConfig = await cacheWarmerRepo.getCacheWarmerConfig({
+      namespaceId: namespace.id,
+    });
+
+    const manuallyAddedOperationsCount = await cacheWarmerRepo.getCacheWarmerOperationsCount({
+      federatedGraphId: federatedGraph.id,
+      organizationId: authContext.organizationId,
+      isManuallyAdded: true,
+    });
+
     await cacheWarmerRepo.addCacheWarmerOperations({
       operations: [
         {
@@ -178,6 +188,15 @@ export function pushCacheWarmerOperation(
         },
       ],
     });
+
+    if (cacheWarmerConfig && manuallyAddedOperationsCount >= cacheWarmerConfig.maxOperationsCount) {
+      const difference = manuallyAddedOperationsCount - cacheWarmerConfig.maxOperationsCount + 1;
+      await cacheWarmerRepo.deleteExcessManuallyAddedOperations({
+        federatedGraphId: federatedGraph.id,
+        organizationId: authContext.organizationId,
+        noOfExcessOperations: difference,
+      });
+    }
 
     await cacheWarmerRepo.fetchAndUploadCacheWarmerOperations({
       blobStorage: opts.blobStorage,

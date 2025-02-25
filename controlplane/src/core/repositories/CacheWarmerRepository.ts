@@ -6,7 +6,7 @@ import {
   OperationRequest,
   PersistedQuery,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { and, count, desc, eq } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { CacheWarmerOperation as ProtoCacheWarmerOperation } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -388,9 +388,11 @@ export class CacheWarmerRepository {
   public async getCacheWarmerOperationsCount({
     organizationId,
     federatedGraphId,
+    isManuallyAdded,
   }: {
     organizationId: string;
     federatedGraphId: string;
+    isManuallyAdded?: boolean;
   }) {
     const operationsCount = await this.db
       .select({
@@ -401,6 +403,7 @@ export class CacheWarmerRepository {
         and(
           eq(cacheWarmerOperations.organizationId, organizationId),
           eq(cacheWarmerOperations.federatedGraphId, federatedGraphId),
+          isManuallyAdded === undefined ? undefined : eq(cacheWarmerOperations.isManuallyAdded, isManuallyAdded),
         ),
       )
       .execute();
@@ -536,6 +539,49 @@ export class CacheWarmerRepository {
           eq(cacheWarmerOperations.id, id),
         ),
       );
+  }
+
+  public async deleteExcessManuallyAddedOperations({
+    organizationId,
+    federatedGraphId,
+    noOfExcessOperations,
+  }: {
+    organizationId: string;
+    federatedGraphId: string;
+    noOfExcessOperations: number;
+  }) {
+    const operationsIdsToDelete = await this.db
+      .select({
+        id: cacheWarmerOperations.id,
+      })
+      .from(cacheWarmerOperations)
+      .where(
+        and(
+          eq(cacheWarmerOperations.organizationId, organizationId),
+          eq(cacheWarmerOperations.federatedGraphId, federatedGraphId),
+          eq(cacheWarmerOperations.isManuallyAdded, true),
+        ),
+      )
+      .orderBy(asc(cacheWarmerOperations.createdAt))
+      .limit(noOfExcessOperations)
+      .execute();
+
+    if (operationsIdsToDelete.length === 0) {
+      return;
+    }
+
+    const ids = operationsIdsToDelete.map((op) => op.id);
+
+    await this.db
+      .delete(cacheWarmerOperations)
+      .where(
+        and(
+          eq(cacheWarmerOperations.organizationId, organizationId),
+          eq(cacheWarmerOperations.federatedGraphId, federatedGraphId),
+          inArray(cacheWarmerOperations.id, ids),
+        ),
+      )
+      .execute();
   }
 
   public configureCacheWarmerConfig({
