@@ -1,0 +1,45 @@
+name: Build wgc binaries
+on:
+  pull_request:
+    paths:
+      - "cli/**/*"
+      - "connect/**/*"
+      - ".github/workflows/cli-ci.yaml"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build_test:
+    name: Build wgc binaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      matrix:
+        target: [bun-linux-x64, bun-linux-arm64, bun-darwin-x64, bun-darwin-arm64, bun-windows-x64]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - uses: oven-sh/setup-bun@v2
+    
+      - uses: ./.github/actions/node
+
+      - name: Install dependencies
+        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition install --frozen-lockfile
+
+      - name: Build
+        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition run build
+
+      - name: "Build wgc binary"
+        working-directory: cli
+        run: bun build --compile --target ${{ matrix.target }} src/index.ts --outfile out/wgc-${{ github.sha }}-${{ matrix.target }}
+
+      - name: "Upload builds as artifacts"
+        uses: actions/upload-artifact@v4
+        with:
+          name: wgc-${{ github.sha }}-${{ matrix.target }}
+          path: cli/out/wgc-${{ github.sha }}-${{ matrix.target }}*

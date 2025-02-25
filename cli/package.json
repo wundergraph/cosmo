@@ -1,6 +1,6 @@
 {
   "name": "wgc",
-  "version": "0.74.0",
+  "version": "0.75.0",
   "description": "The official CLI tool to manage the GraphQL Federation Platform Cosmo",
   "type": "module",
   "main": "dist/index.js",
@@ -20,6 +20,7 @@
   },
   "scripts": {
     "build": "del dist && tsc",
+    "build:bun": "bun build --compile src/index.ts --outfile wgc",
     "wgc": "tsx --env-file .env src/index.ts",
     "test": "pnpm lint && vitest run",
     "coverage": "vitest run --coverage",
