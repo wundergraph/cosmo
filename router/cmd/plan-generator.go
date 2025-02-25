@@ -50,11 +50,6 @@ func planGeneratorCmd() error {
 }
 
 func PlanGenerator(cfg QueryPlanConfig) error {
-	cfg, err := getParseGeneratorConfig()
-	if err != nil {
-		return err
-	}
-
 	queriesPath, err := filepath.Abs(cfg.SourceDir)
 	if err != nil {
 		return fmt.Errorf("failed to get absolute path for queries: %v", err)
