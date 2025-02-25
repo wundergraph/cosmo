@@ -682,8 +682,16 @@
                   "request_header": {
                     "type": "string",
                     "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                  },
+                  "expression": {
+                    "type": "string",
+                    "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
                   }
-                }
+                },
+                "oneOf": [
+                  {"required": ["request_header"]},
+                  {"required": ["expression"]}
+                ]
               }
             }
           }
@@ -2257,6 +2265,12 @@
           "type": "boolean",
           "default": false,
           "description": "Disables variables renaming during normalization. This option could have a negative impact on planner cache hits."
+        },
+        "subscription_fetch_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "default": "30s",
+          "description": "The maximum time a subscription fetch can take before it is considered timed out. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         }
       }
     },

@@ -13,6 +13,11 @@ LOG_LEVEL="info"
 CORS_ALLOW_CREDENTIALS="true"
 CLUSTER_NAME="fly-lax"
 CACHE_WARMUP_ENABLED="true"
+# ENGINE_DEBUG_REPORT_WEBSOCKET_CONNECTIONS="true"
+
+[[vm]]
+size = "shared-cpu-1x"
+memory = "256mb"
 
 [build]
   dockerfile = "./router/Dockerfile"

@@ -166,7 +166,7 @@ CacheWarmerPage.getLayout = (page) => {
   return getDashboardLayout(
     page,
     "Cache Warmer",
-    "Configure cache warming to warm your router with top opeartions..",
+    "Configure cache warming to warm your router with top operations..",
     undefined,
     undefined,
     [<NamespaceSelector key="0" />],
