@@ -3,7 +3,7 @@ import { join } from 'pathe';
 import yaml from 'js-yaml';
 import envPaths from 'env-paths';
 
-import info from '../../package.json' with { type: "json" };
+import info from '../../package.json' with { type: 'json' };
 
 const paths = envPaths('cosmo', { suffix: '' });
 export const configDir = paths.config;
