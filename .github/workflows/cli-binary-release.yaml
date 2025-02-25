@@ -38,16 +38,18 @@ jobs:
           separator: "@"
           msg: "${{ github.event.release.tag_name }}"
 
-      - name: Set BUILD_TIME env
-        run: echo BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ') >> ${GITHUB_ENV}
-
       - name: "Build wgc binary"
         working-directory: cli
-        run: bun build --compile --target ${{ matrix.target }} src/index.ts --outfile out/wgc-${{ steps.split.outputs._1 }}-${{ matrix.target }}
+        run: bun build --compile --minify --sourcemap --target ${{ matrix.target }} src/index.ts --outfile out/wgc-experimental-${{ steps.split.outputs._1 }}-${{ matrix.target }}
+
+      - name: "Gzip wgc binary"
+        working-directory: cli
+        shell: bash
+        run: gzip -9 -v out/wgc-experimental-${{ steps.split.outputs._1 }}-${{ matrix.target }}*
 
       - name: "Upload build to release"
         working-directory: cli
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
-        run: gh release upload ${{ github.event.release.tag_name }} out/wgc-${{ steps.split.outputs._1 }}-${{ matrix.target }} --clobber
+        run: gh release upload ${{ github.event.release.tag_name }} out/wgc-experimental-${{ steps.split.outputs._1 }}-${{ matrix.target }}*.gz --clobber
