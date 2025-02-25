@@ -118,7 +118,7 @@ export const getSubgraphsOfFedGraph = async ({
   });
 };
 
-export const getFederatedGraphSDL = async ({
+export const getFederatedGraphSchemas = async ({
   client,
   name,
   namespace,
@@ -145,9 +145,10 @@ export const getFederatedGraphSDL = async ({
     );
   }
 
-  const sdl = await resp.sdl;
-
-  return sdl;
+  return {
+    sdl: resp.sdl,
+    clientSchema: resp.clientSchema,
+  };
 };
 
 // Returns the latest valid schema version of a subgraph that was composed to form the provided federated graph.
