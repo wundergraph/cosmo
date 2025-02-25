@@ -215,4 +215,159 @@ describe('PushCacheOperation', (ctx) => {
 
     await server.close();
   });
+
+  test('Should be able to push a cache operation when the maually added operations are already equal to the number of maxOperationsCount.', async (testContext) => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: {
+        plan: 'enterprise',
+      },
+    });
+
+    const federatedGraphName = genID('fedGraph');
+    await createFederatedAndSubgraph(client, federatedGraphName);
+
+    const configureCacheWarmerResp = await client.configureCacheWarmer({
+      namespace: 'default',
+      enableCacheWarmer: true,
+      maxOperationsCount: 5,
+    });
+    expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.OK);
+
+    const cacheWarmerConfigResp = await client.getCacheWarmerConfig({
+      namespace: 'default',
+    });
+    expect(cacheWarmerConfigResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(cacheWarmerConfigResp.isCacheWarmerEnabled).toBe(true);
+    expect(cacheWarmerConfigResp.maxOperationsCount).toBe(5);
+
+    (chClient.queryPromise as Mock).mockResolvedValue([]);
+
+    const operations = [
+      { content: 'query Hello1 { hello { message } }', name: 'Hello1' },
+      { content: 'query Hello2 { hello { message } }', name: 'Hello2' },
+      { content: 'query Hello3 { hello { message } }', name: 'Hello3' },
+      { content: 'query Hello4 { hello { message } }', name: 'Hello4' },
+      { content: 'query Hello5 { hello { message } }', name: 'Hello5' },
+      { content: 'query Hello6 { hello { message } }', name: 'Hello6' },
+    ];
+
+    for (const operation of operations) {
+      const pushCacheOperationResp = await client.pushCacheWarmerOperation({
+        federatedGraphName,
+        namespace: 'default',
+        operationName: operation.name,
+        operationContent: operation.content,
+      });
+      expect(pushCacheOperationResp.response?.code).toBe(EnumStatusCode.OK);
+    }
+
+    const getCacheOperationsResp = await client.getCacheWarmerOperations({
+      federatedGraphName,
+      namespace: 'default',
+    });
+
+    expect(getCacheOperationsResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(getCacheOperationsResp.totalCount).toBe(5);
+    expect(getCacheOperationsResp.operations[0].operationContent).not.toBe(operations[0].content);
+    expect(getCacheOperationsResp.operations[1].operationContent).not.toBe(operations[1].content);
+    expect(getCacheOperationsResp.operations[2].operationContent).not.toBe(operations[2].content);
+    expect(getCacheOperationsResp.operations[3].operationContent).not.toBe(operations[3].content);
+    expect(getCacheOperationsResp.operations[4].operationContent).not.toBe(operations[4].content);
+
+    await server.close();
+  });
+
+  test('Should be able to push multiple queries in a doc if the operation name passed matches with one of them', async (testContext) => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: {
+        plan: 'enterprise',
+      },
+    });
+
+    const federatedGraphName = genID('fedGraph');
+    await createFederatedAndSubgraph(client, federatedGraphName);
+
+    const configureCacheWarmerResp = await client.configureCacheWarmer({
+      namespace: 'default',
+      enableCacheWarmer: true,
+      maxOperationsCount: 5,
+    });
+    expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.OK);
+
+    const cacheWarmerConfigResp = await client.getCacheWarmerConfig({
+      namespace: 'default',
+    });
+    expect(cacheWarmerConfigResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(cacheWarmerConfigResp.isCacheWarmerEnabled).toBe(true);
+    expect(cacheWarmerConfigResp.maxOperationsCount).toBe(5);
+
+    (chClient.queryPromise as Mock).mockResolvedValue([]);
+
+    const pushCacheOperationResp = await client.pushCacheWarmerOperation({
+      federatedGraphName,
+      namespace: 'default',
+      operationName: 'Hello1',
+      operationContent: 'query Hello1 { hello { message } } query Hello2 { hello { message } }',
+    });
+    expect(pushCacheOperationResp.response?.code).toBe(EnumStatusCode.OK);
+
+    await server.close();
+  });
+
+  test('Should not be able to push a cache operation whose operation name is not present in the operation', async (testContext) => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: {
+        plan: 'enterprise',
+      },
+    });
+
+    const federatedGraphName = genID('fedGraph');
+    await createFederatedAndSubgraph(client, federatedGraphName);
+
+    const configureCacheWarmerResp = await client.configureCacheWarmer({
+      namespace: 'default',
+      enableCacheWarmer: true,
+      maxOperationsCount: 5,
+    });
+    expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.OK);
+
+    const cacheWarmerConfigResp = await client.getCacheWarmerConfig({
+      namespace: 'default',
+    });
+    expect(cacheWarmerConfigResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(cacheWarmerConfigResp.isCacheWarmerEnabled).toBe(true);
+    expect(cacheWarmerConfigResp.maxOperationsCount).toBe(5);
+
+    (chClient.queryPromise as Mock).mockResolvedValue([]);
+
+    let pushCacheOperationResp = await client.pushCacheWarmerOperation({
+      federatedGraphName,
+      namespace: 'default',
+      operationName: 'Hello1',
+      operationContent: 'query Hello { hello { message } }',
+    });
+    expect(pushCacheOperationResp.response?.code).toBe(EnumStatusCode.ERR);
+    expect(pushCacheOperationResp.response?.details).toBe(
+      `An operation definition with the name 'Hello1' was not found in the provided operation content`,
+    );
+
+    pushCacheOperationResp = await client.pushCacheWarmerOperation({
+      federatedGraphName,
+      namespace: 'default',
+      operationName: 'Hello',
+      operationContent: 'query Hello1 { hello { message } } query Hello2 { hello { message } }',
+    });
+    expect(pushCacheOperationResp.response?.code).toBe(EnumStatusCode.ERR);
+    expect(pushCacheOperationResp.response?.details).toBe(
+      `An operation definition with the name 'Hello' was not found in the provided operation content`,
+    );
+
+    await server.close();
+  });
 });
