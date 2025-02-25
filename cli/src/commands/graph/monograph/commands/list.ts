@@ -85,7 +85,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (options.raw || options.json) {
-      console.log(filteredGraphs);
+      console.log(JSON.stringify(filteredGraphs));
       return;
     }
 
