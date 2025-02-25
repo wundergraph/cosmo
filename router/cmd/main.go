@@ -43,7 +43,7 @@ func Main() {
 		fmt.Println(bi.String())
 		os.Exit(0)
 	} else if queryPlanFlag != nil && *queryPlanFlag {
-		planErr := planGenerator()
+		planErr := planGeneratorCmd()
 		if planErr != nil {
 			log.Fatalf("Failed to generate query plans: %s", planErr.Error())
 		}

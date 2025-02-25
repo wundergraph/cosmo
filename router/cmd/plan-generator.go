@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,14 +21,32 @@ type QueryPlanConfig struct {
 	SourceDir       string `env:"QUERY_PLAN_SOURCE_DIR"`
 	OutDir          string `env:"QUERY_PLAN_OUT_DIR"`
 	Concurrency     int    `env:"QUERY_PLAN_CONCURRENCY" envDefault:"8" `
+	Filter          string `env:"QUERY_PLAN_FILTER"`
 	Timeout         string `env:"QUERY_PLAN_TIMEOUT" envDefault:"30s"`
 }
 
-func planGenerator() error {
+func getParseGeneratorConfig() (QueryPlanConfig, error) {
 	cfg := QueryPlanConfig{}
 	_ = godotenv.Load(".env.local")
 	_ = godotenv.Load()
 	err := env.Parse(&cfg)
+	if err != nil {
+		return cfg, err
+	}
+	return cfg, nil
+}
+
+func planGeneratorCmd() error {
+	cfg, err := getParseGeneratorConfig()
+	if err != nil {
+		return err
+	}
+
+	return PlanGenerator(cfg)
+}
+
+func PlanGenerator(cfg QueryPlanConfig) error {
+	cfg, err := getParseGeneratorConfig()
 	if err != nil {
 		return err
 	}
@@ -44,10 +64,19 @@ func planGenerator() error {
 		log.Fatalf("failed to create output directory: %v", err)
 	}
 
-	supergraphConfigPath, err := filepath.Abs(cfg.ExecutionConfig)
-	log.Println("supergraphPath:", supergraphConfigPath)
+	executionConfigPath, err := filepath.Abs(cfg.ExecutionConfig)
 	if err != nil {
-		return fmt.Errorf("failed to get absolute path for supergraph: %v", err)
+		return fmt.Errorf("failed to get absolute path for execution config: %v", err)
+	}
+
+	var filter []string
+	if cfg.Filter != "" {
+		filterContent, err := os.ReadFile(cfg.Filter)
+		if err != nil {
+			return fmt.Errorf("failed to read filter file: %v", err)
+		}
+
+		filter = strings.Split(string(filterContent), "\n")
 	}
 
 	queries, err := os.ReadDir(queriesPath)
@@ -74,7 +103,7 @@ func planGenerator() error {
 	for i := 0; i < cfg.Concurrency; i++ {
 		go func(i int) {
 			defer wg.Done()
-			pg, err := core.NewPlanGenerator(supergraphConfigPath)
+			pg, err := core.NewPlanGenerator(executionConfigPath)
 			if err != nil {
 				log.Fatalf("failed to create plan generator: %v", err)
 			}
@@ -86,9 +115,15 @@ func planGenerator() error {
 					if !ok {
 						return
 					}
+
 					if filepath.Ext(queryFile.Name()) != ".graphql" {
 						continue
 					}
+
+					if len(filter) > 0 && !slices.Contains(filter, queryFile.Name()) {
+						continue
+					}
+
 					queryFilePath := filepath.Join(queriesPath, queryFile.Name())
 
 					outContent, err := pg.PlanOperation(queryFilePath)
