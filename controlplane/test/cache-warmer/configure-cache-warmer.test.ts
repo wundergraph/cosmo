@@ -123,4 +123,56 @@ describe('DeleteCacheOperation', (ctx) => {
 
     await server.close();
   });
+
+  test('Should not be able to set the max operations count to more than 1000', async (testContext) => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: {
+        plan: 'enterprise',
+      },
+    });
+
+    let configureCacheWarmerResp = await client.configureCacheWarmer({
+      namespace: 'default',
+      enableCacheWarmer: true,
+      maxOperationsCount: 1000,
+    });
+    expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.OK);
+
+    let cacheWarmerConfigResp = await client.getCacheWarmerConfig({
+      namespace: 'default',
+    });
+    expect(cacheWarmerConfigResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(cacheWarmerConfigResp.isCacheWarmerEnabled).toBe(true);
+    expect(cacheWarmerConfigResp.maxOperationsCount).toBe(1000);
+
+    configureCacheWarmerResp = await client.configureCacheWarmer({
+      namespace: 'default',
+      enableCacheWarmer: false,
+    });
+    expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.OK);
+
+    cacheWarmerConfigResp = await client.getCacheWarmerConfig({
+      namespace: 'default',
+    });
+    expect(cacheWarmerConfigResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(cacheWarmerConfigResp.isCacheWarmerEnabled).toBe(false);
+
+    configureCacheWarmerResp = await client.configureCacheWarmer({
+      namespace: 'default',
+      enableCacheWarmer: true,
+      maxOperationsCount: 1001,
+    });
+    expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.ERR);
+    expect(configureCacheWarmerResp.response?.details).toBe('Max operations count should be less than 1000');
+
+    cacheWarmerConfigResp = await client.getCacheWarmerConfig({
+      namespace: 'default',
+    });
+    expect(cacheWarmerConfigResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(cacheWarmerConfigResp.isCacheWarmerEnabled).toBe(false);
+
+    await server.close();
+  });
 });

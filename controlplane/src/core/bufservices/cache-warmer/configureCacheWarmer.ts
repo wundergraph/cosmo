@@ -65,6 +65,15 @@ export function configureCacheWarmer(
       };
     }
 
+    if (req.maxOperationsCount > 1000) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Max operations count should be less than 1000`,
+        },
+      };
+    }
+
     await namespaceRepo.toggleEnableCacheWarmer({ id: namespace.id, enableCacheWarming: req.enableCacheWarmer });
 
     const cacheWarmerRepo = new CacheWarmerRepository(opts.chClient, opts.db);
