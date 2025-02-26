@@ -62,7 +62,8 @@ export default (opts: BaseCommandOptions) => {
       if (response?.details) {
         console.log(pc.red(pc.bold(response?.details)));
       }
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     if (options.out) {
