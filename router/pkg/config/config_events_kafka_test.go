@@ -1,12 +1,15 @@
 package config
 
 import (
-	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestFullValidKafkaProvider(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -32,6 +35,8 @@ events:
 }
 
 func TestValidAuthenticatedKafkaProviderWithSaslPlain(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -56,6 +61,8 @@ events:
 }
 
 func TestInvalidAuthenticatedKafkaProviderWithoutPasswordSaslPlain(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -79,6 +86,8 @@ events:
 }
 
 func TestInvalidAuthenticatedKafkaProviderWithoutUsernameSaslPlain(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -104,7 +113,7 @@ events:
 func createTempFileFromFixture(t *testing.T, fixture string) string {
 	t.Helper()
 
-	f, err := os.CreateTemp("", "config_test")
+	f, err := os.CreateTemp(t.TempDir(), "config_test")
 	require.NoError(t, err)
 
 	t.Cleanup(func() {
