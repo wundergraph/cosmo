@@ -129,9 +129,10 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		MultipleUpload    func(childComplexity int, files []*graphql.Upload) int
-		SingleUpload      func(childComplexity int, file graphql.Upload) int
-		UpdateEmployeeTag func(childComplexity int, id int, tag string) int
+		MultipleUpload        func(childComplexity int, files []*graphql.Upload) int
+		SingleUpload          func(childComplexity int, file graphql.Upload) int
+		SingleUploadWithInput func(childComplexity int, arg model.FileUpload) int
+		UpdateEmployeeTag     func(childComplexity int, id int, tag string) int
 	}
 
 	Operator struct {
@@ -198,6 +199,7 @@ type MarketerResolver interface {
 type MutationResolver interface {
 	UpdateEmployeeTag(ctx context.Context, id int, tag string) (*model.Employee, error)
 	SingleUpload(ctx context.Context, file graphql.Upload) (bool, error)
+	SingleUploadWithInput(ctx context.Context, arg model.FileUpload) (bool, error)
 	MultipleUpload(ctx context.Context, files []*graphql.Upload) (bool, error)
 }
 type OperatorResolver interface {
@@ -561,6 +563,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.SingleUpload(childComplexity, args["file"].(graphql.Upload)), true
 
+	case "Mutation.singleUploadWithInput":
+		if e.complexity.Mutation.SingleUploadWithInput == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_singleUploadWithInput_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SingleUploadWithInput(childComplexity, args["arg"].(model.FileUpload)), true
+
 	case "Mutation.updateEmployeeTag":
 		if e.complexity.Mutation.UpdateEmployeeTag == nil {
 			break
@@ -776,7 +790,10 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	opCtx := graphql.GetOperationContext(ctx)
 	ec := executionContext{opCtx, e, 0, 0, make(chan graphql.DeferredResult)}
-	inputUnmarshalMap := graphql.BuildUnmarshalerMap()
+	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
+		ec.unmarshalInputDeeplyNestedFileUpload,
+		ec.unmarshalInputFileUpload,
+	)
 	first := true
 
 	switch opCtx.Operation.Operation {
@@ -931,7 +948,16 @@ type Mutation {
   updateEmployeeTag(id: Int!, tag: String!): Employee
 
   singleUpload(file: Upload!): Boolean!
+  singleUploadWithInput(arg: FileUpload!): Boolean!
   multipleUpload(files: [Upload!]!): Boolean!
+}
+
+input FileUpload {
+  nested: DeeplyNestedFileUpload
+}
+
+input DeeplyNestedFileUpload {
+  file: Upload!
 }
 
 type Subscription {
@@ -1287,6 +1313,34 @@ func (ec *executionContext) field_Mutation_multipleUpload_argsFiles(
 	}
 
 	var zeroVal []*graphql.Upload
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Mutation_singleUploadWithInput_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Mutation_singleUploadWithInput_argsArg(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["arg"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Mutation_singleUploadWithInput_argsArg(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (model.FileUpload, error) {
+	if _, ok := rawArgs["arg"]; !ok {
+		var zeroVal model.FileUpload
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("arg"))
+	if tmp, ok := rawArgs["arg"]; ok {
+		return ec.unmarshalNFileUpload2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐFileUpload(ctx, tmp)
+	}
+
+	var zeroVal model.FileUpload
 	return zeroVal, nil
 }
 
@@ -3831,6 +3885,61 @@ func (ec *executionContext) fieldContext_Mutation_singleUpload(ctx context.Conte
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_singleUpload_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_singleUploadWithInput(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_singleUploadWithInput(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().SingleUploadWithInput(rctx, fc.Args["arg"].(model.FileUpload))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_singleUploadWithInput(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_singleUploadWithInput_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -7145,6 +7254,60 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(_ context.Context
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputDeeplyNestedFileUpload(ctx context.Context, obj any) (model.DeeplyNestedFileUpload, error) {
+	var it model.DeeplyNestedFileUpload
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"file"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "file":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("file"))
+			data, err := ec.unmarshalNUpload2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.File = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputFileUpload(ctx context.Context, obj any) (model.FileUpload, error) {
+	var it model.FileUpload
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"nested"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "nested":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nested"))
+			data, err := ec.unmarshalODeeplyNestedFileUpload2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDeeplyNestedFileUpload(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Nested = data
+		}
+	}
+
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -8106,6 +8269,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "singleUpload":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_singleUpload(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "singleUploadWithInput":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_singleUploadWithInput(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -9209,6 +9379,11 @@ func (ec *executionContext) marshalNFieldSet2string(ctx context.Context, sel ast
 	return res
 }
 
+func (ec *executionContext) unmarshalNFileUpload2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐFileUpload(ctx context.Context, v any) (model.FileUpload, error) {
+	res, err := ec.unmarshalInputFileUpload(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v any) (string, error) {
 	res, err := graphql.UnmarshalID(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -10064,6 +10239,14 @@ func (ec *executionContext) marshalOCountry2ᚖgithubᚗcomᚋwundergraphᚋcosm
 		return graphql.Null
 	}
 	return ec._Country(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalODeeplyNestedFileUpload2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDeeplyNestedFileUpload(ctx context.Context, v any) (*model.DeeplyNestedFileUpload, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputDeeplyNestedFileUpload(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalOEmployee2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v []*model.Employee) graphql.Marshaler {

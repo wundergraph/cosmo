@@ -7,7 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -24,6 +26,8 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/astjson"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization/uploads"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -101,7 +105,7 @@ type PreHandler struct {
 type httpOperation struct {
 	requestContext   *requestContext
 	body             []byte
-	files            []httpclient.File
+	files            []*httpclient.FileUpload
 	requestLogger    *zap.Logger
 	routerSpan       trace.Span
 	operationMetrics *OperationMetrics
@@ -259,7 +263,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		var body []byte
-		var files []httpclient.File
+		var files []*httpclient.FileUpload
 
 		if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
 			if !h.fileUploadEnabled {
@@ -486,7 +490,6 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 		// If we have files, we need to set them on the parsed operation
 		if len(httpOperation.files) > 0 {
-			operationKit.parsedOperation.Files = httpOperation.files
 			requestContext.operation.files = httpOperation.files
 		}
 	}
@@ -665,7 +668,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	* Normalize the variables
 	 */
 
-	err = operationKit.NormalizeVariables()
+	uploadsMapping, err := operationKit.NormalizeVariables()
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 
@@ -678,6 +681,16 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		engineNormalizeSpan.End()
 
 		return err
+	}
+
+	for file := range slices.Values(requestContext.operation.files) {
+		idx := slices.IndexFunc(uploadsMapping, func(value uploads.UploadPathMapping) bool {
+			return file.VariablePath() == value.OriginalUploadPath
+		})
+
+		if idx != -1 && uploadsMapping[idx].NewUploadPath != "" {
+			file.SetVariablePath(uploadsMapping[idx].NewUploadPath)
+		}
 	}
 
 	err = operationKit.RemapVariables(h.disableVariablesRemapping)
@@ -698,6 +711,24 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	requestContext.operation.hash = operationKit.parsedOperation.ID
 	requestContext.operation.internalHash = operationKit.parsedOperation.InternalID
 	requestContext.operation.remapVariables = operationKit.parsedOperation.RemapVariables
+
+	for to, from := range maps.All(requestContext.operation.remapVariables) {
+		idx := slices.IndexFunc(uploadsMapping, func(value uploads.UploadPathMapping) bool {
+			return value.VariableName == from
+		})
+
+		if idx == -1 {
+			continue
+		}
+
+		for file := range slices.Values(requestContext.operation.files) {
+			if file.VariablePath() == uploadsMapping[idx].OriginalUploadPath {
+				updatedPath := fmt.Sprintf("variables.%s.%s", to, strings.TrimPrefix(uploadsMapping[idx].OriginalUploadPath, fmt.Sprintf("variables.%s.", from)))
+
+				file.SetVariablePath(updatedPath)
+			}
+		}
+	}
 
 	operationHashString := strconv.FormatUint(operationKit.parsedOperation.ID, 10)
 
