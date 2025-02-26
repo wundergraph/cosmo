@@ -2,6 +2,7 @@ package plan_generator
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -17,6 +18,8 @@ import (
 	"github.com/wundergraph/cosmo/router/core"
 )
 
+const ResultsFileName = "results.jsonl"
+
 type QueryPlanConfig struct {
 	ExecutionConfig string `env:"QUERY_PLAN_EXECUTION_CONFIG"`
 	SourceDir       string `env:"QUERY_PLAN_SOURCE_DIR"`
@@ -24,6 +27,12 @@ type QueryPlanConfig struct {
 	Concurrency     int    `env:"QUERY_PLAN_CONCURRENCY" envDefault:"0" `
 	Filter          string `env:"QUERY_PLAN_FILTER"`
 	Timeout         string `env:"QUERY_PLAN_TIMEOUT" envDefault:"30s"`
+}
+
+type QueryPlanResult struct {
+	FileName string `json:"file_name"`
+	Plan     string `json:"plan,omitempty"`
+	Error    string `json:"error,omitempty"`
 }
 
 func getParseGeneratorConfig() (QueryPlanConfig, error) {
@@ -90,12 +99,38 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 	}
 	close(queriesQueue)
 
+	results := make(chan QueryPlanResult, len(queries))
+
 	duration, parseErr := time.ParseDuration(cfg.Timeout)
 	if parseErr != nil {
 		return fmt.Errorf("failed to parse timeout: %v", parseErr)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), duration)
 	defer cancel()
+
+	go func() {
+		resultsFilePath := filepath.Join(outPath, ResultsFileName)
+		resultsFile, err := os.Create(resultsFilePath)
+		if err != nil {
+			cancel()
+			log.Printf("failed to create results file: %v", err)
+		}
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case res := <-results:
+				data, jsonErr := json.Marshal(res)
+				if jsonErr != nil {
+					log.Printf("failed to marshal result: %v", jsonErr)
+				}
+				_, writeErr := resultsFile.WriteString(fmt.Sprintf("%s\n", data))
+				if writeErr != nil {
+					log.Printf("failed to write result: %v", writeErr)
+				}
+			}
+		}
+	}()
 
 	t := time.Now()
 	wg := sync.WaitGroup{}
@@ -127,7 +162,12 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 					queryFilePath := filepath.Join(queriesPath, queryFile.Name())
 
 					outContent, err := pg.PlanOperation(queryFilePath)
+					res := QueryPlanResult{
+						FileName: queryFile.Name(),
+						Plan:     outContent,
+					}
 					if err != nil {
+						res.Error = err.Error()
 						log.Printf("failed operation #%d: %s err: %v\n", i, queryFile.Name(), err.Error())
 					}
 
@@ -136,6 +176,7 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 					if err != nil {
 						log.Printf("failed to write file: %v", err)
 					}
+					results <- res
 				}
 			}
 		}(i)
