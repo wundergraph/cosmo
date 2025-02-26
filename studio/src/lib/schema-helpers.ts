@@ -1,3 +1,4 @@
+import { normalizeSubgraphFromString } from "@wundergraph/composition";
 import { noCase } from "change-case";
 import {
   GraphQLArgument,
@@ -11,13 +12,12 @@ import {
   GraphQLScalarType,
   GraphQLSchema,
   GraphQLUnionType,
-  Kind,
-  Location,
-  buildASTSchema,
   isInputObjectType,
   isInterfaceType,
   isObjectType,
   isScalarType,
+  Kind,
+  Location,
   parse,
 } from "graphql";
 import babelPlugin from "prettier/plugins/babel";
@@ -445,15 +445,15 @@ export const parseSchema = (schema?: string) => {
   if (!schema) return null;
 
   try {
-    const doc = parse(schema);
+    const res = normalizeSubgraphFromString(schema, true);
+    if (res.success) {
+      return res.schema;
+    }
 
-    const ast = buildASTSchema(doc, {
-      assumeValid: true,
-      assumeValidSDL: true,
-    });
-
-    return ast;
-  } catch {
+    console.log(res.errors);
+    return null;
+  } catch (e) {
+    console.log(e);
     return null;
   }
 };
@@ -470,7 +470,8 @@ export const formatAndParseSchema = async (schema?: string) => {
     });
 
     return parseSchema(res);
-  } catch {
+  } catch (e) {
+    console.log(e);
     return null;
   }
 };
