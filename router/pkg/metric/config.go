@@ -1,13 +1,14 @@
 package metric
 
 import (
+	"net/url"
+	"regexp"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	"net/url"
-	"regexp"
 )
 
 // DefaultServerName Default resource name.
@@ -25,6 +26,8 @@ type PrometheusConfig struct {
 	ExcludeMetricLabels []*regexp.Regexp
 	// TestRegistry is used for testing purposes. If set, the registry will be used instead of the default one.
 	TestRegistry *prometheus.Registry
+	// Whether or not to include scope info
+	IncludeScopeInfo bool
 }
 
 type OpenTelemetryExporter struct {
@@ -133,9 +136,10 @@ func DefaultConfig(serviceVersion string) *Config {
 			},
 		},
 		Prometheus: PrometheusConfig{
-			Enabled:    false,
-			ListenAddr: "0.0.0.0:8088",
-			Path:       "/metrics",
+			Enabled:          false,
+			ListenAddr:       "0.0.0.0:8088",
+			Path:             "/metrics",
+			IncludeScopeInfo: true,
 		},
 	}
 }

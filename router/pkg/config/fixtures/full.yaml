@@ -132,6 +132,7 @@ telemetry:
         subscriptions: true
       exclude_metrics: []
       exclude_metric_labels: []
+      include_scope_info: true
 
 cache_control_policy:
   enabled: true
@@ -184,15 +185,15 @@ traffic_shaping:
 headers:
   all: # Header rules for all subgraph requests.
     request:
-      - op: "propagate"            # Forward a client header
-        named: X-Test-Header       # Exact match (Use the canonical version)
+      - op: "propagate" # Forward a client header
+        named: X-Test-Header # Exact match (Use the canonical version)
 
       - op: "propagate"
         matching: (?i)^X-Custom-.* # Regex match (Case insensitive)
 
       - op: "propagate"
         named: "X-User-Id"
-        default: "123"             # Set the value when the header was not set
+        default: "123" # Set the value when the header was not set
       - op: "set"
         name: "X-API-Key"
         value: "some-secret"
@@ -356,9 +357,9 @@ security:
     size: 1024
   complexity_limits:
     depth:
-        enabled: true
-        limit: 5
-        ignore_persisted_operations: true
+      enabled: true
+      limit: 5
+      ignore_persisted_operations: true
     total_fields:
       enabled: true
       limit: 7
