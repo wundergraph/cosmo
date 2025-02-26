@@ -43,7 +43,7 @@ export default (opts: BaseCommandOptions) => {
 
     if (resp.graphs.length === 0) {
       console.log('No subgraphs found');
-      process.exit(0);
+      return;
     }
 
     if (options.out) {
@@ -57,16 +57,16 @@ export default (opts: BaseCommandOptions) => {
           }) as OutputFile[number],
       );
       await writeFile(resolve(options.out), JSON.stringify(output));
-      process.exit(0);
+      return;
     }
 
     if (options.raw) {
-      console.log(pc.yellow('Please use the --json option. The --raw option is deprecated.'));
+      console.warn(pc.yellow('Please use the --json option. The --raw option is deprecated.'));
     }
 
     if (options.raw || options.json) {
       console.log(JSON.stringify(resp.graphs));
-      process.exit(0);
+      return;
     }
 
     const graphsTable = new Table({

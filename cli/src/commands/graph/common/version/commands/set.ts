@@ -34,7 +34,8 @@ export default (opts: CommonGraphCommandOptions) => {
 
     if (!response.response) {
       spinner.fail(`Failed to set router compatibility version for ${graphType} "${pc.bold(name)}".`);
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     if (response.response.code === EnumStatusCode.ERR_NOT_FOUND) {
