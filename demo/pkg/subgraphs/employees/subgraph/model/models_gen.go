@@ -157,7 +157,8 @@ type ErrorWrapper struct {
 }
 
 type FileUpload struct {
-	Nested *DeeplyNestedFileUpload `json:"nested,omitempty"`
+	Nested     *DeeplyNestedFileUpload `json:"nested,omitempty"`
+	NestedList []*graphql.Upload       `json:"nestedList,omitempty"`
 }
 
 type Marketer struct {
