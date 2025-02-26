@@ -151,11 +151,6 @@ func (p *MultipartParser) Parse(r *http.Request, buf *bytes.Buffer) ([]byte, []*
 	return body, p.files, err
 }
 
-type uploadMapItem struct {
-	index int
-	path  string
-}
-
 func (p *MultipartParser) parseUploadMap(rawUploadsMap string) (map[int]string, error) {
 	var uploadsMap map[string][]string
 	if err := json.Unmarshal([]byte(rawUploadsMap), &uploadsMap); err != nil {
