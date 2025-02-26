@@ -19,6 +19,8 @@ func PlanGenerator(args []string) {
 	f.StringVar(&cfg.Filter, "filter", "", "operation filter file location which should contain file names of operations to include")
 	f.StringVar(&cfg.Timeout, "timeout", "30s", "timeout")
 	f.IntVar(&cfg.Concurrency, "concurrency", 0, "how many query plan run concurrently")
+	f.BoolVar(&cfg.OutputFiles, "print-per-file", true, "write a file for each query, with inside the plan or the query plan error")
+	f.BoolVar(&cfg.OutputResult, "print-result", false, "write a result.json file, with all the query plans and errors sorted by file name")
 
 	if err := f.Parse(args[1:]); err != nil {
 		log.Fatalf("Failed to parse flags: %v", err)

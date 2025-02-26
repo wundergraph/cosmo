@@ -16,7 +16,7 @@ import (
 	"github.com/wundergraph/cosmo/router/core"
 )
 
-const ResultsFileName = "results.jsonl"
+const ResultsFileName = "results.json"
 
 type QueryPlanConfig struct {
 	ExecutionConfig string
@@ -25,6 +25,8 @@ type QueryPlanConfig struct {
 	Concurrency     int
 	Filter          string
 	Timeout         string
+	OutputFiles     bool
+	OutputResult    bool
 }
 
 type QueryPlanResult struct {
@@ -77,7 +79,8 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 	}
 	close(queriesQueue)
 
-	results := make(chan QueryPlanResult, len(queries))
+	resultsCh := make(chan QueryPlanResult, len(queries))
+	var results []QueryPlanResult
 
 	duration, parseErr := time.ParseDuration(cfg.Timeout)
 	if parseErr != nil {
@@ -87,30 +90,16 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 	defer cancel()
 
 	go func() {
-		resultsFilePath := filepath.Join(outPath, ResultsFileName)
-		resultsFile, err := os.Create(resultsFilePath)
-		if err != nil {
-			cancel()
-			log.Printf("failed to create results file: %v", err)
-		}
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case res := <-results:
-				data, jsonErr := json.Marshal(res)
-				if jsonErr != nil {
-					log.Printf("failed to marshal result: %v", jsonErr)
-				}
-				_, writeErr := resultsFile.WriteString(fmt.Sprintf("%s\n", data))
-				if writeErr != nil {
-					log.Printf("failed to write result: %v", writeErr)
-				}
+			case res := <-resultsCh:
+				results = append(results, res)
 			}
 		}
 	}()
 
-	t := time.Now()
 	wg := sync.WaitGroup{}
 	wg.Add(cfg.Concurrency)
 	for i := 0; i < cfg.Concurrency; i++ {
@@ -146,21 +135,43 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 					}
 					if err != nil {
 						res.Error = err.Error()
-						log.Printf("failed operation #%d: %s err: %v\n", i, queryFile.Name(), err.Error())
+						outContent = fmt.Sprintf("Error: %v", err)
 					}
 
-					outFileName := filepath.Join(outPath, queryFile.Name())
-					err = os.WriteFile(outFileName, []byte(outContent), 0644)
-					if err != nil {
-						log.Printf("failed to write file: %v", err)
+					if cfg.OutputFiles {
+						outFileName := filepath.Join(outPath, queryFile.Name())
+						err = os.WriteFile(outFileName, []byte(outContent), 0644)
+						if err != nil {
+							log.Printf("failed to write file: %v", err)
+						}
 					}
-					results <- res
+					resultsCh <- res
 				}
 			}
 		}(i)
 	}
 	wg.Wait()
-	log.Println("Total planning time:", time.Since(t))
+
+	if cfg.OutputResult && ctx.Err() == nil {
+		resultsFilePath := filepath.Join(outPath, ResultsFileName)
+		resultsFile, err := os.Create(resultsFilePath)
+		defer resultsFile.Close()
+		if err != nil {
+			cancel()
+			log.Printf("failed to create results file: %v", err)
+		}
+		slices.SortFunc(results, func(a, b QueryPlanResult) int {
+			return strings.Compare(a.FileName, b.FileName)
+		})
+		data, jsonErr := json.Marshal(results)
+		if jsonErr != nil {
+			log.Printf("failed to marshal result: %v", jsonErr)
+		}
+		_, writeErr := resultsFile.WriteString(fmt.Sprintf("%s\n", data))
+		if writeErr != nil {
+			log.Printf("failed to write result: %v", writeErr)
+		}
+	}
 
 	return ctx.Err()
 }
