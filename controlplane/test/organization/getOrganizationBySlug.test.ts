@@ -16,7 +16,6 @@ describe('router compatibility-version list tests', () => {
     return { ClickHouseClient };
   });
 
-
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -33,7 +32,7 @@ describe('router compatibility-version list tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that a list of supported router compatibility versions is returned', async () => {
+  test('that an organization can be fetched by slug', async () => {
     const organizationId = randomUUID();
     const organizationSlug = `slug-${organizationId}`;
     const organizationName = 'company-a';
