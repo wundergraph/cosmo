@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -142,7 +141,7 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 						outFileName := filepath.Join(outPath, queryFile.Name())
 						err = os.WriteFile(outFileName, []byte(outContent), 0644)
 						if err != nil {
-							log.Printf("failed to write file: %v", err)
+							cancelError(fmt.Errorf("failed to write file: %v", err))
 						}
 					}
 					resultsMux.Lock()
@@ -159,7 +158,7 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 		reportFile, err := os.Create(reportFilePath)
 		if err != nil {
 			cancel()
-			log.Printf("failed to create results file: %v", err)
+			return fmt.Errorf("failed to create results file: %v", err)
 		}
 		defer reportFile.Close()
 		slices.SortFunc(results, func(a, b QueryPlanResult) int {
@@ -167,11 +166,11 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 		})
 		data, jsonErr := json.Marshal(results)
 		if jsonErr != nil {
-			log.Printf("failed to marshal result: %v", jsonErr)
+			return fmt.Errorf("failed to marshal result: %v", jsonErr)
 		}
 		_, writeErr := reportFile.WriteString(fmt.Sprintf("%s\n", data))
 		if writeErr != nil {
-			log.Printf("failed to write result: %v", writeErr)
+			return fmt.Errorf("failed to write result: %v", writeErr)
 		}
 	}
 
