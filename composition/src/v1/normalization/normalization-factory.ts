@@ -84,7 +84,6 @@ import {
   subtractSourceSetFromTargetSet,
   upsertAuthorizationData,
   upsertEntityData,
-  upsertEntityDataDeprecated,
   upsertFieldAuthorizationData,
 } from '../utils/utils';
 import {
@@ -109,7 +108,6 @@ import {
   inlineFragmentWithoutTypeConditionErrorMessage,
   invalidArgumentsError,
   invalidArgumentValueErrorMessage,
-  invalidConfigurationResultFatalError,
   invalidDirectiveDefinitionError,
   invalidDirectiveDefinitionLocationErrorMessage,
   invalidDirectiveError,
@@ -1678,6 +1676,7 @@ export class NormalizationFactory {
     let currentDepth = -1;
     let shouldDefineSelectionSet = true;
     let lastFieldName = directiveFieldName;
+    let hasConditionalField = false;
     visit(documentNode, {
       Argument: {
         enter() {
@@ -1726,7 +1725,10 @@ export class NormalizationFactory {
             nf.subgraphName,
             `${currentFieldCoords}.externalFieldDataBySubgraphName`,
           );
-          let isFieldConditional = isDefinedExternal && !isUnconditionallyProvided;
+          const isFieldConditional = isDefinedExternal && !isUnconditionallyProvided;
+          if (!isUnconditionallyProvided) {
+            hasConditionalField = true;
+          }
           const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
           // The child could itself be a parent
           const namedTypeData = nf.parentDefinitionDataByTypeName.get(namedTypeName);
@@ -1736,18 +1738,6 @@ export class NormalizationFactory {
             namedTypeData?.kind === Kind.SCALAR_TYPE_DEFINITION ||
             namedTypeData?.kind === Kind.ENUM_TYPE_DEFINITION
           ) {
-            if (isDefinedExternal && externalAncestors.size < 1 && isUnconditionallyProvided) {
-              // V2 subgraphs return an error when an external key field on an entity extension is provided.
-              if (nf.isSubgraphVersionTwo) {
-                errorMessages.push(
-                  fieldAlreadyProvidedErrorMessage(currentFieldCoords, nf.subgraphName, directiveName),
-                );
-              } else {
-                nf.warnings.push(
-                  fieldAlreadyProvidedWarning(currentFieldCoords, directiveName, directiveCoords, nf.subgraphName),
-                );
-              }
-            }
             if (externalAncestors.size < 1 && !isDefinedExternal) {
               if (nf.isSubgraphVersionTwo) {
                 nf.errors.push(
@@ -1759,26 +1749,40 @@ export class NormalizationFactory {
                     directiveName,
                   ),
                 );
+                return;
+              }
+              /* In V1, @requires and @provides do not need to declare any part of the field set @external.
+               * It would appear that any such non-external fields are treated as if they are non-conditionally provided.
+               * */
+              nf.warnings.push(
+                nonExternalConditionalFieldWarning(
+                  directiveCoords,
+                  nf.subgraphName,
+                  currentFieldCoords,
+                  fieldSet,
+                  directiveName,
+                ),
+              );
+              return;
+            }
+            if (externalAncestors.size < 1 && isUnconditionallyProvided) {
+              // V2 subgraphs return an error when an external key field on an entity extension is provided.
+              if (nf.isSubgraphVersionTwo) {
+                errorMessages.push(
+                  fieldAlreadyProvidedErrorMessage(currentFieldCoords, nf.subgraphName, directiveName),
+                );
               } else {
-                /* In V1, @requires and @provides do not need to declare any part of the field set @external.
-                 * It would appear that any such non-external fields are treated as if they are non-conditionally provided.
-                 * */
                 nf.warnings.push(
-                  nonExternalConditionalFieldWarning(
-                    directiveCoords,
-                    nf.subgraphName,
-                    currentFieldCoords,
-                    fieldSet,
-                    directiveName,
-                  ),
+                  fieldAlreadyProvidedWarning(currentFieldCoords, directiveName, directiveCoords, nf.subgraphName),
                 );
               }
               return;
             }
-            // @TODO removed
-            // if (!isFieldConditional) {
-            //   return;
-            // }
+            // @TODO re-assess in v2 because this is breaking for provides in v1
+            if (!isFieldConditional && !isProvides) {
+              // Do not add unnecessary @requires configurations
+              return;
+            }
             const conditionalFieldData = getValueOrDefault(
               nf.conditionalFieldDataByCoords,
               currentFieldCoords,
@@ -1967,7 +1971,7 @@ export class NormalizationFactory {
         },
       },
     });
-    if (errorMessages.length > 0) {
+    if (errorMessages.length > 0 || !hasConditionalField) {
       return { errorMessages };
     }
     return {
@@ -2010,16 +2014,23 @@ export class NormalizationFactory {
         isProvides,
         parentTypeName,
       );
+      /*
+       * It is possible to return no error messages nor configuration if the @provides or @requires directive is
+       * considered completely redundant, i.e.,:
+       * 1. All fields to which the directive refers are declared @external but are also key fields on an entity extension.
+       * 2. The subgraph is V1 and all fields to which the directive refers are not declared @external.
+       * In these cases, the fields are considered unconditionally provided.
+       * If all the fields to which the directive refers are unconditionally provided, the directive is redundant.
+       * For V2 subgraphs, this will propagate as an error; for V1 subgraphs, this will propagate as a warning.
+       * */
       if (errorMessages.length > 0) {
         allErrorMessages.push(` On field "${fieldCoords}":\n -` + errorMessages.join(HYPHEN_JOIN));
         continue;
       }
+
       if (configuration) {
         configurations.push(configuration);
-        continue;
       }
-      // Should never happen
-      throw invalidConfigurationResultFatalError(fieldCoords);
     }
     if (allErrorMessages.length > 0) {
       this.errors.push(
@@ -2027,24 +2038,9 @@ export class NormalizationFactory {
       );
       return;
     }
+
     if (configurations.length > 0) {
       return configurations;
-    }
-  }
-
-  validateAndAddConditionalFieldSetsToConfiguration(parentData: CompositeOutputData, fieldSetData: FieldSetData) {
-    const configurationData = getOrThrowError(
-      this.configurationDataByTypeName,
-      getParentTypeName(parentData),
-      'configurationDataByTypeName',
-    );
-    const provides = this.validateProvidesOrRequires(parentData, fieldSetData.provides, true);
-    if (provides) {
-      configurationData.provides = provides;
-    }
-    const requires = this.validateProvidesOrRequires(parentData, fieldSetData.requires, false);
-    if (requires) {
-      configurationData.requires = requires;
     }
   }
 
@@ -3067,6 +3063,7 @@ export class NormalizationFactory {
               }
               const fieldName = node.name.value;
               const fieldCoords = `${parentTypeName}.${fieldName}`;
+              // If a field declared @external is a key field, it is valid use of @external.
               nf.unvalidatedExternalFieldCoords.delete(fieldCoords);
               const fieldData = parentData.fieldDataByFieldName.get(fieldName);
               // undefined if the field does not exist on the parent
@@ -3075,13 +3072,19 @@ export class NormalizationFactory {
               }
               // Fields that form part of an entity key are intrinsically shareable
               fieldData.isShareableBySubgraphName.set(nf.subgraphName, true);
-              /* According to Apollo behaviour:
-               * V1 entities with @extends may define unique nested key fields as @external without restriction.
-               * However, V1 entity extensions (extend keyword) cannot do this.
+              /* !!! IMPORTANT NOTE REGARDING INCONSISTENT APOLLO BEHAVIOUR !!!
+               * V1 entities with "@extends" may define unique nested key fields as @external without restriction.
+               * However, V1 entity extensions (with the "extend" keyword) cannot do this.
                * Instead, an error is returned stating that there must be a non-external definition of the field.
-               * This appears to be a bug where the behaviour is inconsistent.
+               * This inconsistency in behaviour appears to be a bug.
                * It doesn't make much sense to enforce "origin fields" only sometimes (or ever, honestly).
                * Consequently, a decision was made not ever to enforce meaningless origin fields for extensions.
+               *
+               * In the event the nested key field is not unique, the error may propagate as a field resolvability
+               * error, e.g., unable to use the nested @external key field to satisfy a field set in another subgraph.
+               *
+               * In addition, the nested key field of a V2 entity extension (either "@extends" or "extend" keyword)
+               * are considered unconditionally provided regardless of the presence of "@external".
                *
                * However, if the subgraph is an EDG, the @external state should be kept regardless of extension.
                * */
@@ -3095,9 +3098,7 @@ export class NormalizationFactory {
                 /*
                  * The key field is unconditionally provided if all the following are true:
                  * 1. The root entity is an extension type.
-                 * 2. The parent of the key field (which might still be the root entity) is also an entity.
-                 * 3. The parent of the key field is an extension type.
-                 * 4. The key field is also a key field for the parent entity.
+                 * 2. The field is also a key field for the parent entity.
                  */
                 if (entityParentData.extensionType !== ExtensionType.NONE) {
                   externalFieldData.isUnconditionallyProvided = true;

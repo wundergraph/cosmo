@@ -399,9 +399,6 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         }
         const entityData = nf.entityDataByTypeName.get(nf.originalParentTypeName);
         const fieldSetData = getValueOrDefault(nf.fieldSetDataByTypeName, nf.originalParentTypeName, newFieldSetData);
-        if (entityData) {
-          entityData.fieldNames.add(nf.childName);
-        }
         if (providesDirectives) {
           extractFieldSetValue(nf.childName, fieldSetData.provides, providesDirectives);
         }

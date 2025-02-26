@@ -249,8 +249,8 @@ export type DefinitionData =
 export type NodeData = ParentDefinitionData | ChildData;
 
 export type EntityData = {
+  // If propagated in documentNodeByKeyFieldSet, at least one subgraph defines a resolvable key with this field set.
   documentNodeByKeyFieldSet: Map<string, DocumentNode>;
-  fieldNames: Set<string>;
   keyFieldSets: Set<string>;
   keyFieldSetDatasBySubgraphName: Map<string, Map<string, KeyFieldSetData>>;
   subgraphNames: Set<string>;

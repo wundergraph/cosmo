@@ -307,18 +307,6 @@ export function invalidArgumentValueErrorMessage(
   return ` The value "${value}" provided to argument "${hostName}(${argumentName}: ...)" is not a valid "${expectedTypeString}" type.`;
 }
 
-export function invalidDirectiveArgumentTypeErrorMessage(
-  required: boolean,
-  argumentName: string,
-  expectedKind: Kind,
-  actualKind: Kind,
-): string {
-  return (
-    ` The ${required ? 'required ' : ''}argument "${argumentName} must be type` +
-    ` "${expectedKind}" and not type "${actualKind}".`
-  );
-}
-
 export function invalidKeyDirectivesError(parentTypeName: string, errorMessages: string[]): Error {
   return new Error(
     `The entity "${parentTypeName}" defines the following invalid "key" directive` +
@@ -371,10 +359,6 @@ export function fieldTypeMergeFatalError(fieldName: string) {
   );
 }
 
-export function unexpectedDirectiveLocationError(locationName: string): Error {
-  return new Error(`Fatal: Unknown directive location "${locationName}".`);
-}
-
 export function unexpectedTypeNodeKindFatalError(typePath: string): Error {
   return new Error(
     `Fatal: Expected all constituent types at path "${typePath}" to be one of the following: ` +
@@ -386,16 +370,8 @@ export function invalidKeyFatalError<K>(key: K, mapName: string): Error {
   return new Error(`Fatal: Expected key "${key}" to exist in the map "${mapName}".`);
 }
 
-export function invalidConfigurationResultFatalError(fieldPath: string): Error {
-  return new Error(`Fatal: Expected either errors or configurations for the path ${fieldPath}" but received neither".`);
-}
-
 export const subgraphValidationFailureError: Error = new Error(
   ` Fatal: Subgraph validation did not return a valid AST.`,
-);
-
-export const federationFactoryInitializationFatalError = new Error(
-  'Fatal: FederationFactory was unsuccessfully initialized.',
 );
 
 export function unexpectedParentKindForChildError(
@@ -1078,8 +1054,8 @@ export function nonExternalKeyFieldNamesEventDrivenErrorMessage(
 ): string {
   let message =
     ` The following field` +
-    (nonExternalKeyFieldNameByFieldPath.size > 1 ? 's compose' : ' coposes') +
-    ` part of an entity's primary key but are not declared "@external":\n`;
+    (nonExternalKeyFieldNameByFieldPath.size > 1 ? 's are referenced' : ' is referenced') +
+    ` within an entity "@key" field without an "@external" declaration:\n`;
   for (const [fieldPath, fieldName] of nonExternalKeyFieldNameByFieldPath) {
     message += `  field "${fieldName}" defined on path "${fieldPath}"\n`;
   }

@@ -1,7 +1,7 @@
 export const AS = 'as';
 export const AND_UPPER = 'AND';
 export const ANY_SCALAR = '_Any';
-export const ARGUMENT = 'Argument';
+export const ARGUMENT = 'argument';
 export const AUTHENTICATED = 'authenticated';
 export const ARGUMENT_DEFINITION_UPPER = 'ARGUMENT_DEFINITION';
 export const BOOLEAN = 'boolean';
@@ -57,7 +57,7 @@ export const IN_UPPER = 'IN';
 export const INACCESSIBLE = 'inaccessible';
 export const INLINE_FRAGMENT = 'inlineFragment';
 export const INLINE_FRAGMENT_UPPER = 'INLINE_FRAGMENT';
-export const INPUT_FIELD = 'Input Field';
+export const INPUT_FIELD = 'Input field';
 export const INPUT_FIELD_DEFINITION_UPPER = 'INPUT_FIELD_DEFINITION';
 export const INPUT_OBJECT = 'Input Object';
 export const INPUT_OBJECT_UPPER = 'INPUT_OBJECT';

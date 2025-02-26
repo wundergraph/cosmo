@@ -406,13 +406,12 @@ export class FederationFactory {
     // Any errors in the field sets would be caught when evaluating the explicit entities, so they are ignored here
     validateImplicitFieldSets({
       conditionalFieldDataByCoords: internalSubgraph.conditionalFieldDataByCoordinates,
-      configurationData,
       currentSubgraphName: this.currentSubgraphName,
       entityData,
-      graphNode,
       implicitKeys,
       objectData,
       parentDefinitionDataByTypeName,
+      graphNode,
     });
     for (const [typeName, entityInterfaceFederationData] of this.entityInterfaceFederationDataByTypeName) {
       if (!entityInterfaceFederationData.concreteTypeNames?.has(entityData.typeName)) {
@@ -424,7 +423,6 @@ export class FederationFactory {
       }
       validateImplicitFieldSets({
         conditionalFieldDataByCoords: internalSubgraph.conditionalFieldDataByCoordinates,
-        configurationData,
         currentSubgraphName: this.currentSubgraphName,
         entityData: interfaceObjectEntityData,
         implicitKeys,
@@ -475,7 +473,6 @@ export class FederationFactory {
     // Any errors in the field sets would be caught when evaluating the explicit entities, so they are ignored here
     validateImplicitFieldSets({
       conditionalFieldDataByCoords: internalSubgraph.conditionalFieldDataByCoordinates,
-      configurationData,
       currentSubgraphName: internalSubgraph.name,
       entityData,
       implicitKeys,

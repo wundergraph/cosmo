@@ -3,7 +3,6 @@ import {
   EntityInterfaceFederationData,
   EntityInterfaceSubgraphData,
   federateSubgraphs,
-  FederationResultFailure,
   FederationResultSuccess,
   InvalidEntityInterface,
   ROUTER_COMPATIBILITY_VERSION_ONE,

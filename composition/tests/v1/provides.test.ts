@@ -483,7 +483,7 @@ describe('@provides directive tests', () => {
       expect(result.warnings).toHaveLength(0);
     });
 
-    test.skip('that a warning is returned if a non-external V1 field is part of both a @provides and @key field set', () => {
+    test('that a warning is returned if a non-external V1 field is part of both a @provides and @key field set', () => {
       const result = normalizeSubgraphSuccess(o, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.configurationDataByTypeName).toStrictEqual(
@@ -528,7 +528,7 @@ describe('@provides directive tests', () => {
       expect(result.warnings).toHaveLength(0);
     });
 
-    test.skip('that a warning is returned if a nested non-external V1 field is part of both a @provides and @key field set', () => {
+    test('that a warning is returned if a nested non-external V1 field is part of both a @provides and @key field set', () => {
       const result = normalizeSubgraphSuccess(t, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.configurationDataByTypeName).toStrictEqual(
@@ -796,7 +796,7 @@ describe('@provides directive tests', () => {
   });
 
   describe('Federation tests', () => {
-    test.skip('that non-external v1 fields that form part of a @provides field set are treated as non-conditional but return a warning', () => {
+    test('that non-external v1 fields that form part of a @provides field set are treated as non-conditional but return a warning', () => {
       const result = federateSubgraphsSuccess([u, v], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(1);
@@ -1137,7 +1137,7 @@ describe('@provides directive tests', () => {
       );
     });
 
-    test.skip('that a warning is returned if an external V1 extension entity key field is provided', () => {
+    test('that a warning is returned if an external V1 extension entity key field is provided', () => {
       const result = federateSubgraphsSuccess([ad, ae], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       const adConfig = result.subgraphConfigBySubgraphName.get(ad.name);
@@ -1239,6 +1239,7 @@ const b: Subgraph = {
     type Object {
       entity: Entity! @provides(fields: "... on Entity { name }")
     }
+    
     type Entity @key(fields: "id") {
       id: ID!
       name: String! @external
@@ -1254,10 +1255,12 @@ const c: Subgraph = {
       id: ID!
       entity: Entity! @provides(fields: "... on Interface { name }")
     }
+    
     type Entity @key(fields: "id") {
       id: ID!
       name: String!
     }
+    
     interface Interface {
       name: String!
     }
@@ -1271,13 +1274,16 @@ const d: Subgraph = {
     type Object {
       entity: Entity! @provides(fields: "interface { ... on Interface { ... on Interface { name } } }")
     }
+    
     type Entity @key(fields: "id") {
       id: ID!
       interface: Interface! @external
     }
+    
     interface Interface {
       name: String!
     }
+    
     type Implementation implements Interface {
       name: String!
     }
@@ -1291,13 +1297,16 @@ const e: Subgraph = {
     type Object {
       entity: Entity! @provides(fields: "interface { ... on AnotherObject { name } }")
     }
+    
     type Entity @key(fields: "id") {
       id: ID!
       interface: Interface! @external
     }
+    
     interface Interface {
       name: String!
     }
+    
     type AnotherObject implements Interface {
       name: String!
     }
@@ -1311,16 +1320,20 @@ const f: Subgraph = {
     type Object {
       entity: Entity! @provides(fields: "interface { ... on AnotherObject { name } }")
     }
+    
     type Entity @key(fields: "id") {
       id: ID!
       interface: Interface! @external
     }
+    
     interface Interface {
       name: String!
     }
+    
     type AnotherObject {
       name: String!
     }
+    
     type Implementation implements Interface {
       name: String!
     }
@@ -1334,11 +1347,14 @@ const g: Subgraph = {
     type Object {
       entity: Entity! @provides(fields: "union { ... on AnotherObject { name } }")
     }
+    
     type Entity @key(fields: "id") {
       id: ID!
       union: Union! @external
     }
+    
     union Union = AnotherObject
+    
     type AnotherObject {
       name: String!
     }
@@ -1352,11 +1368,14 @@ const h: Subgraph = {
     type Object {
       entity: Entity! @provides(fields: "union { name }")
     }
+    
     type Entity @key(fields: "id") {
       id: ID!
       union: Union! @external
     }
+    
     union Union = AnotherObject
+    
     type AnotherObject {
       name: String!
     }
@@ -1370,14 +1389,18 @@ const i: Subgraph = {
     type Object {
       entity: Entity! @provides(fields: "union { ... on YetAnotherObject { name } }")
     }
+    
     type Entity @key(fields: "id") {
       id: ID!
       union: Union! @external
     }
+    
     union Union = AnotherObject
+    
     type AnotherObject {
       name: String!
     }
+    
     type YetAnotherObject {
       name: String!
     }
@@ -1391,10 +1414,12 @@ const j: Subgraph = {
     type Object {
       entity: Entity! @provides(fields: "anotherObject { name }")
     }
+    
     type Entity @key(fields: "id") {
       id: ID!
       anotherObject(arg: String): AnotherObject! @external
     }
+    
     type AnotherObject {
       name: String!
     }
@@ -1408,10 +1433,12 @@ const k: Subgraph = {
     type Object {
       entity: Entity! @provides(fields: "anotherObject(arg: \\"string\\") { name }")
     }
+    
     type Entity @key(fields: "id") {
       id: ID!
       anotherObject(arg: String): AnotherObject! @external
     }
+    
     type AnotherObject {
       name: String!
     }
@@ -1426,13 +1453,16 @@ const l: Subgraph = {
       entity: Entity! @provides(fields: "object { nestedObject { age name } }")
       entities: [Entity!]! @provides(fields: "object { nestedObject { age name } }")
     }
+    
     type Entity @key(fields: "id") {
       id: ID!
       object: Object!
     }
+    
     type Object {
       nestedObject: NestedObject!
     }
+    
     type NestedObject {
       age: Int! @external
       name: String! @external
@@ -1447,17 +1477,21 @@ const m: Subgraph = {
     schema {
       query: Queries
     }
+    
     type Queries @shareable {
       entity: Entity! @provides(fields: "object { nestedObject { age name } }")
       entities: [Entity!]! @provides(fields: "object { nestedObject { age name } }")
     }
+    
     type Entity @key(fields: "id") {
       id: ID!
       object: Object!
     }
+    
     type Object {
       nestedObject: NestedObject!
     }
+    
     type NestedObject {
       age: Int! @external
       name: String! @external
@@ -1472,17 +1506,21 @@ const n: Subgraph = {
     schema {
       query: Queries
     }
+    
     type Queries @shareable {
       entity: Entity! @provides(fields: "object { nestedObject { age name } }")
       entities: [Entity!]! @provides(fields: "object { nestedObject { age name } }")
     }
+    
     type Entity @key(fields: "id") {
       id: ID!
       object: Object!
     }
+    
     type Object {
       nestedObject: NestedObject!
     }
+    
     type NestedObject {
       age: Int!
       name: String!
@@ -1527,24 +1565,30 @@ const q: Subgraph = {
       url: "https://specs.apollo.dev/federation/v2.3"
       import: ["@key", "@shareable", "@external", "@provides"]
     )
+    
     type Query {
       media: Media @shareable
       book: Book @provides(fields: "animals { ... on Dog { name } }")
     }
+    
     interface Media {
       id: ID!
     }
+    
     interface Animal {
       id: ID!
     }
+    
     type Book implements Media @key(fields: "id") {
       id: ID!
       animals: [Animal] @shareable
     }
+    
     type Dog implements Animal @key(fields: "id") {
       id: ID! @external
       name: String @external
     }
+    
     type Cat implements Animal @key(fields: "id") {
       id: ID! @external
     }
@@ -1560,25 +1604,31 @@ const r: Subgraph = {
       url: "https://specs.apollo.dev/federation/v2.3"
       import: ["@key", "@shareable", "@provides", "@external"]
     )
+    
     type Query {
       media: Media @shareable @provides(fields: "animals { id name }")
     }
+    
     interface Media {
       id: ID!
       animals: [Animal]
     }
+    
     interface Animal {
       id: ID!
       name: String
     }
+    
     type Book implements Media {
       id: ID! @shareable
       animals: [Animal] @external
     }
+    
     type Dog implements Animal {
       id: ID! @external
       name: String @external
     }
+    
     type Cat implements Animal {
       id: ID! @external
       name: String @external
@@ -1595,23 +1645,28 @@ const s: Subgraph = {
       url: "https://specs.apollo.dev/federation/v2.3"
       import: ["@key", "@shareable"]
     )
+    
     interface Media {
       id: ID!
       animals: [Animal]
     }
+    
     interface Animal {
       id: ID!
       name: String
     }
+    
     type Book implements Media @key(fields: "id") {
       id: ID!
       animals: [Animal] @shareable
     }
+    
     type Dog implements Animal @key(fields: "id") {
       id: ID!
       name: String @shareable
       age: Int
     }
+    
     type Cat implements Animal @key(fields: "id") {
       id: ID!
       name: String @shareable
@@ -1632,6 +1687,7 @@ const t: Subgraph = {
       id: ID!
       object: Object!
     }
+    
     type Object {
       id: ID!
     }
@@ -1647,9 +1703,11 @@ const u: Subgraph = {
       object: Object!
       age: Int!
     }
+    
     type Object {
       nestedObject: NestedObject!
     }
+    
     type NestedObject {
       id: ID!
       name: String!
@@ -1664,17 +1722,21 @@ const v: Subgraph = {
     schema {
       query: Queries
     }
+    
     type Queries {
       entity: Entity! @provides(fields: "object { nestedObject { name } }")
     }
+    
     type Entity @key(fields: "id") {
       id: ID!
       name: String!
       object: Object!
     }
+    
     type Object {
       nestedObject: NestedObject!
     }
+    
     type NestedObject {
       id: ID!
       name: String!
@@ -1700,6 +1762,7 @@ const x: Subgraph = {
     type Query {
       entity: Entity! @provides(fields: "id")
     }
+    
     type Entity {
       id: ID! @external
       isEntity: Boolean!
@@ -1714,6 +1777,7 @@ const y: Subgraph = {
     type Query {
       entity: Entity! @provides(fields: "id")
     }
+    
     type Entity @key(fields: "id") {
       id: ID! @external
       isEntity: Boolean!
@@ -1728,10 +1792,12 @@ const z: Subgraph = {
     type Query {
       entity: Entity! @provides(fields: "id")
     }
+    
     type Entity @key(fields: "id") {
       id: ID! @external
       object: Object!
     }
+    
     type Object {
       id: ID!
       object: Object! @provides(fields: "name")
@@ -1749,6 +1815,7 @@ const aa: Subgraph = {
       object: Object!
       name: String!
     }
+    
     type Object {
       id: ID!
       object: Object!
@@ -1767,10 +1834,12 @@ const ab: Subgraph = {
       entityTwo: Entity! @provides(fields: "id object { name }")
       entityThree: Entity! @provides(fields: "id object { name }")
     }
+    
     type Entity @key(fields: "id") {
       id: ID! @external
       object: Object!
     }
+    
     type Object {
       id: ID!
       object: Object!
@@ -1788,6 +1857,7 @@ const ac: Subgraph = {
       object: Object!
       name: String!
     }
+    
     type Object {
       id: ID!
       object: Object!
@@ -1804,10 +1874,12 @@ const ad: Subgraph = {
     type Query {
       entity: Entity!
     }
+    
     extend type Entity @key(fields: "id") {
       id: ID! @external
       object: Object! @provides(fields: "id")
     }
+    
     extend type Object @key(fields: "id") {
       id: ID! @external
     }
@@ -1822,6 +1894,7 @@ const ae: Subgraph = {
       id: ID!
       object: Object!
     }
+    
     type Object @key(fields: "id") {
       id: ID!
     }
@@ -1835,10 +1908,12 @@ const af: Subgraph = {
     type Query {
       entity: Entity! @shareable
     }
+    
     extend type Entity @key(fields: "id") {
       id: ID! @external
       object: Object! @provides(fields: "id")
     }
+    
     extend type Object @key(fields: "id") {
       id: ID! @external
     }
@@ -1852,10 +1927,12 @@ const ag: Subgraph = {
     type Query {
       entities: [Entity!]! @provides(fields: "object { id name }") @shareable
     }
+    
     type Entity @key(fields: "id object { id name }") {
       id: ID!
       object: Object!
     }
+    
     type Object {
       id: ID! @external
       name: String! @external
@@ -1870,10 +1947,12 @@ const ah: Subgraph = {
     type Query {
       entities: [Entity!]! @provides(fields: "object { id name }") @shareable
     }
+    
     type Entity @key(fields: "id object { id name }") {
       id: ID!
       object: Object! @external
     }
+    
     type Object {
       id: ID!
       name: String!
@@ -1888,10 +1967,12 @@ const ai: Subgraph = {
     type Query {
       entities: [Entity!]! @provides(fields: "object { id name }") @shareable
     }
+    
     type Entity @key(fields: "id object { id name }") {
       id: ID!
       object: Object! @external
     }
+    
     type Object {
       id: ID! @external
       name: String!
@@ -1906,10 +1987,12 @@ const aj: Subgraph = {
     type Query {
       entities: [Entity!]! @provides(fields: "object { id nestedObject { id } }") @shareable
     }
+    
     type Entity @key(fields: "id object { id nestedObject { id } }") {
       id: ID!
       object: Object! @external
     }
+    
     type NestedObject {
       id: ID! @external
     }

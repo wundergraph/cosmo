@@ -169,37 +169,6 @@ export function upsertEntityInterfaceFederationData(
   }
 }
 
-export type EntityDataParamsDep = {
-  typeName: string;
-  fieldNames?: Iterable<string>;
-  keyFieldSets?: Iterable<string>;
-  subgraphNames?: Iterable<string>;
-};
-
-export function newEntityDataDep(params: EntityDataParamsDep): EntityData {
-  return {
-    documentNodeByKeyFieldSet: new Map<string, DocumentNode>(),
-    keyFieldSetDatasBySubgraphName: new Map<string, Map<string, KeyFieldSetData>>(),
-    fieldNames: new Set<string>(params.fieldNames),
-    keyFieldSets: new Set<string>(params.keyFieldSets),
-    subgraphNames: new Set<string>(params.subgraphNames),
-    typeName: params.typeName,
-  };
-}
-
-function addEntityDataProperties(source: EntityData | EntityDataParamsDep, target: EntityData) {
-  addIterableValuesToSet(source.fieldNames || [], target.fieldNames);
-  addIterableValuesToSet(source.keyFieldSets || [], target.keyFieldSets);
-  addIterableValuesToSet(source.subgraphNames || [], target.subgraphNames);
-}
-
-export function upsertEntityDataProperties(entityDataByTypeName: Map<string, EntityData>, params: EntityDataParamsDep) {
-  const existingData = entityDataByTypeName.get(params.typeName);
-  existingData
-    ? addEntityDataProperties(params, existingData)
-    : entityDataByTypeName.set(params.typeName, newEntityDataDep(params));
-}
-
 type NewEntityDataParams = {
   keyFieldSetDataByFieldSet: Map<string, KeyFieldSetData>;
   subgraphName: string;
@@ -221,7 +190,6 @@ function newEntityData({ keyFieldSetDataByFieldSet, subgraphName, typeName }: Ne
   return {
     keyFieldSetDatasBySubgraphName,
     documentNodeByKeyFieldSet,
-    fieldNames: new Set<string>(),
     keyFieldSets: new Set<string>(),
     subgraphNames: new Set<string>([subgraphName]),
     typeName,
@@ -279,13 +247,6 @@ export function updateEntityData({ entityData, keyFieldSetDataByFieldSet, subgra
     }
     existingKeyFieldSetDataByFieldSet.set(keyFieldSet, keyFieldSetData);
   }
-}
-
-export function upsertEntityDataDeprecated(entityDataByTypeName: Map<string, EntityData>, incomingData: EntityData) {
-  const existingData = entityDataByTypeName.get(incomingData.typeName);
-  existingData
-    ? addEntityDataProperties(incomingData, existingData)
-    : entityDataByTypeName.set(incomingData.typeName, incomingData);
 }
 
 export function newFieldAuthorizationData(fieldName: string): FieldAuthorizationData {

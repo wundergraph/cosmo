@@ -430,7 +430,7 @@ describe('Router Configuration tests', () => {
             'Entity',
             {
               externalFieldNames: new Set<string>(['id', 'name']),
-              fieldNames: new Set<string>(['id']),
+              fieldNames: new Set<string>(),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id' }],
               typeName: 'Entity',
@@ -535,7 +535,7 @@ describe('Router Configuration tests', () => {
             'Entity',
             {
               externalFieldNames: new Set<string>(['id', 'object']),
-              fieldNames: new Set<string>(['id', 'object']),
+              fieldNames: new Set<string>(),
               isRootNode: true,
               keys: [{ fieldName: '', selectionSet: 'id object { id }' }],
               typeName: 'Entity',
@@ -545,7 +545,7 @@ describe('Router Configuration tests', () => {
             'Object',
             {
               externalFieldNames: new Set<string>(['id']),
-              fieldNames: new Set<string>(['id']),
+              fieldNames: new Set<string>(),
               isRootNode: false,
               typeName: 'Object',
             },
@@ -853,22 +853,26 @@ const subgraphA: Subgraph = {
       id: ID! @external
       name: String! @external
     }
+    
     type Object {
       age: Int!
       entity: AnotherEntity @provides(fields: "field")
       name: String!
     }
+    
     type AnotherEntity @key(fields: "id") {
       id: ID!
       field: String! @external
       anotherField: OtherObject! @external
       myField: Boolean @requires(fields: "anotherField { nested { name } name, age }")
     }
+    
     type OtherObject {
       age: Int!
       name: String!
       nested: NestedObject!
     }
+    
     type NestedObject {
       name: String!
     }

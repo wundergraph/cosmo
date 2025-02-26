@@ -1314,7 +1314,7 @@ describe('Field resolvability tests', () => {
     );
   });
 
-  test.skip('that an unconditionally external field cannot be used as an implicit key #1.1', () => {
+  test('that an unconditionally external field cannot be used as an implicit key #1.1', () => {
     const fieldPath = 'query.entity';
     const entityAncestorData: EntityAncestorData = {
       fieldSetsByTargetSubgraphName: new Map<string, Set<string>>([[subgraphBN.name, new Set<string>(['id'])]]),
@@ -1342,7 +1342,7 @@ describe('Field resolvability tests', () => {
     );
   });
 
-  test.skip('that an unconditionally external field cannot be used as an implicit key #1.2', () => {
+  test('that an unconditionally external field cannot be used as an implicit key #1.2', () => {
     const fieldPath = 'query.entity';
     const entityAncestorData: EntityAncestorData = {
       fieldSetsByTargetSubgraphName: new Map<string, Set<string>>([[subgraphBN.name, new Set<string>(['id'])]]),

@@ -350,7 +350,7 @@ describe('@shareable directive tests', () => {
     });
   });
 
-  test('that error is returned if a V2 implicit key field is not declared @shareable #1.1', () => {
+  test('that an error is returned if a V2 implicit key field is not declared @shareable #1.1', () => {
     const result = federateSubgraphsFailure([subgraphF, subgraphG], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
@@ -375,7 +375,7 @@ describe('@shareable directive tests', () => {
     );
   });
 
-  test('that error is returned if a V2 implicit key field is not declared @shareable #1.2', () => {
+  test('that an error is returned if a V2 implicit key field is not declared @shareable #1.2', () => {
     const result = federateSubgraphsFailure([subgraphG, subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);

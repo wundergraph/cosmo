@@ -1,27 +1,24 @@
 import { BREAK, ConstDirectiveNode, DocumentNode, Kind, OperationTypeNode, print, visit } from 'graphql';
-import { isKindAbstract, lexicographicallySortDocumentNode, safeParse } from '../../ast/utils';
+import { isKindAbstract, lexicographicallySortDocumentNode } from '../../ast/utils';
 import { NormalizationFactory } from './normalization-factory';
 import {
   abstractTypeInKeyFieldSetErrorMessage,
   argumentsInKeyFieldSetErrorMessage,
   duplicateFieldInFieldSetErrorMessage,
   inlineFragmentInFieldSetErrorMessage,
-  invalidConfigurationDataErrorMessage,
   invalidDirectiveError,
   invalidEventSubjectsArgumentErrorMessage,
-  invalidKeyDirectivesError,
   invalidSelectionSetDefinitionErrorMessage,
   invalidSelectionSetErrorMessage,
   undefinedEventSubjectsArgumentErrorMessage,
   undefinedFieldInFieldSetErrorMessage,
   unexpectedArgumentErrorMessage,
   unknownTypeInFieldSetErrorMessage,
-  unparsableFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
 } from '../../errors/errors';
 import { BASE_SCALARS, EDFS_ARGS_REGEXP } from '../utils/constants';
-import { ConfigurationData, RequiredFieldConfiguration } from '../../router-configuration/types';
-import { CompositeOutputData, DirectiveDefinitionData, FieldData, InputValueData } from '../../schema-building/types';
+import { RequiredFieldConfiguration } from '../../router-configuration/types';
+import { CompositeOutputData, DirectiveDefinitionData, InputValueData } from '../../schema-building/types';
 import { getTypeNodeNamedTypeName } from '../../schema-building/ast';
 import {
   AUTHENTICATED_DEFINITION_DATA,
@@ -195,8 +192,6 @@ export function validateKeyFieldSets(
           const fieldName = node.name.value;
           const fieldCoords = `${parentTypeName}.${fieldName}`;
           lastFieldName = fieldName;
-          // @TODO removed
-          // nf.unvalidatedExternalFieldCoords.delete(fieldCoords);
           const fieldData = parentData.fieldDataByFieldName.get(fieldName);
           // undefined if the field does not exist on the parent
           if (!fieldData) {
@@ -216,21 +211,6 @@ export function validateKeyFieldSets(
           // Fields that form part of an entity key are intrinsically shareable
           fieldData.isShareableBySubgraphName.set(nf.subgraphName, true);
           definedFields[currentDepth].add(fieldName);
-          /* Depth 0 is the original parent type
-           * If a field is external, but it's part of a key FieldSet, it should be included in its respective
-           * root or child node */
-          if (currentDepth === 0) {
-            // @TODO removed
-            // fieldNames.add(fieldName);
-          } else {
-            const nestedConfigurationData = nf.configurationDataByTypeName.get(parentTypeName);
-            if (!nestedConfigurationData) {
-              errorMessages.push(invalidConfigurationDataErrorMessage(parentTypeName, fieldName, rawFieldSet));
-              return BREAK;
-            }
-            // @TODO removed
-            // nestedConfigurationData.fieldNames.add(fieldName);
-          }
           getValueOrDefault(nf.keyFieldNamesByParentTypeName, parentTypeName, () => new Set<string>()).add(fieldName);
           const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
           // The base scalars are not in the parents map
