@@ -1,4 +1,6 @@
 dist
+wgc
+out
 node_modules
 .env
 .eslintcache
