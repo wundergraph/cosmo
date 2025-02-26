@@ -1,9 +1,9 @@
+import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { ROUTER_COMPATIBILITY_VERSIONS } from '@wundergraph/composition';
-import { SetupTest } from '../../test-util.js';
-import { afterAllSetup, beforeAllSetup } from '../../../src/core/test-util.js';
-import { ClickHouseClient } from '../../../src/core/clickhouse/index.js';
+import { SetupTest } from '../test-util.js';
+import { afterAllSetup, beforeAllSetup } from '../../src/core/test-util.js';
+import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
 
 describe('router compatibility-version list tests', () => {
   let chClient: ClickHouseClient;
@@ -32,12 +32,20 @@ describe('router compatibility-version list tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that a list of supported router compatibility versions is returned', async () => {
-    const { client, server, } = await SetupTest({ dbname, chClient });
-    const response = await client.listRouterCompatibilityVersions({});
+  test('that an organization can be fetched by slug', async () => {
+    const organizationId = randomUUID();
+    const organizationSlug = `slug-${organizationId}`;
+    const organizationName = 'company-a';
+    const { client, server, } = await SetupTest({ dbname, chClient, organizationId, });
+    const response = await client.getOrganizationBySlug({
+      slug: organizationSlug,
+    });
     expect(response.response).toBeDefined();
     expect(response.response!.code).toBe(EnumStatusCode.OK);
-    expect(response.versions).toStrictEqual([...ROUTER_COMPATIBILITY_VERSIONS]);
+    const organization = response.organization;
+    expect(organization).toBeDefined();
+    expect(organization!.slug).toBe(organizationSlug);
+    expect(organization!.name).toBe(organizationName);
 
     await server.close();
   });
