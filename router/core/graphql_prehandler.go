@@ -735,7 +735,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	requestContext.operation.internalHash = operationKit.parsedOperation.InternalID
 	requestContext.operation.remapVariables = operationKit.parsedOperation.RemapVariables
 
-	if !h.disableVariablesRemapping {
+	if !h.disableVariablesRemapping && len(uploadsMapping) > 0 {
 		// after variables remapping we need to update the file uploads path because variables relative path has changed
 		// but files still references the old uploads locations
 		// key `to` is a new variable name
