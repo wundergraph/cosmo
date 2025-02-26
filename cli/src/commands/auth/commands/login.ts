@@ -6,6 +6,8 @@ import inquirer from 'inquirer';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { DecodedAccessToken, performDeviceAuth, startPollingForAccessToken } from '../utils.js';
 import { updateConfigFile } from '../../../utils.js';
+import { getBaseHeaders } from '../../../core/config';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 
 export default (opts: BaseCommandOptions) => {
   const loginCommand = new Command('login');
@@ -45,16 +47,42 @@ export default (opts: BaseCommandOptions) => {
       program.error('Could not perform authentication. Please try again');
     }
 
-    const organizations = new Set(decoded.groups.map((group) => group.split('/')[1]));
+    const organizationSlugs = new Set(decoded.groups.map((group) => group.split('/')[1]));
 
+    const organizationSlugByDisplayKey = new Map<string, string>();
+    for (const organizationSlug of organizationSlugs) {
+      const headers = getBaseHeaders();
+      const response = await opts.client.platform.getOrganizationBySlug({
+          slug: organizationSlug
+        },
+        {
+          headers: {
+            ...headers,
+            authorization: `Bearer ${accessTokenResp.response.accessToken}`,
+            'cosmo-org-slug': organizationSlug,
+          }
+        }
+      );
+      if (!response.response || response.response.code !== EnumStatusCode.OK || !response.organization) {
+        organizationSlugByDisplayKey.set(organizationSlug, organizationSlug);
+        continue;
+      }
+      organizationSlugByDisplayKey.set(`${response.organization.name} (${organizationSlug})`, organizationSlug);
+    }
     const selectedOrganization = await inquirer.prompt({
-      name: 'organizationSlug',
+      name: 'organizationKey',
       type: 'list',
       message: 'Select Organization:',
-      choices: [...organizations],
+      choices: [...organizationSlugByDisplayKey.keys()],
     });
 
-    updateConfigFile({ ...accessTokenResp.response, organizationSlug: selectedOrganization.organizationSlug });
+    const organizationSlug = organizationSlugByDisplayKey.get(selectedOrganization.organizationKey);
+
+    if (!organizationSlug) {
+      program.error('Unable to login.');
+    }
+
+    updateConfigFile({ ...accessTokenResp.response, organizationSlug, });
 
     console.log(pc.green('Logged in Successfully!'));
   });
