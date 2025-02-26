@@ -13,46 +13,24 @@ import (
 	"sync"
 	"time"
 
-	"github.com/caarlos0/env/v11"
-	"github.com/joho/godotenv"
 	"github.com/wundergraph/cosmo/router/core"
 )
 
 const ResultsFileName = "results.jsonl"
 
 type QueryPlanConfig struct {
-	ExecutionConfig string `env:"QUERY_PLAN_EXECUTION_CONFIG"`
-	SourceDir       string `env:"QUERY_PLAN_SOURCE_DIR"`
-	OutDir          string `env:"QUERY_PLAN_OUT_DIR"`
-	Concurrency     int    `env:"QUERY_PLAN_CONCURRENCY" envDefault:"0" `
-	Filter          string `env:"QUERY_PLAN_FILTER"`
-	Timeout         string `env:"QUERY_PLAN_TIMEOUT" envDefault:"30s"`
+	ExecutionConfig string
+	SourceDir       string
+	OutDir          string
+	Concurrency     int
+	Filter          string
+	Timeout         string
 }
 
 type QueryPlanResult struct {
 	FileName string `json:"file_name"`
 	Plan     string `json:"plan,omitempty"`
 	Error    string `json:"error,omitempty"`
-}
-
-func getParseGeneratorConfig() (QueryPlanConfig, error) {
-	cfg := QueryPlanConfig{}
-	_ = godotenv.Load(".env.local")
-	_ = godotenv.Load()
-	err := env.Parse(&cfg)
-	if err != nil {
-		return cfg, err
-	}
-	return cfg, nil
-}
-
-func PlanGeneratorCmd() error {
-	cfg, err := getParseGeneratorConfig()
-	if err != nil {
-		return err
-	}
-
-	return PlanGenerator(cfg)
 }
 
 func PlanGenerator(cfg QueryPlanConfig) error {
