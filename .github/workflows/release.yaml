@@ -46,8 +46,16 @@ jobs:
       - name: Check if git is not dirty after generating files
         run: git diff --no-ext-diff --exit-code
 
+      - name: Generate next release (dry-run)
+        run: pnpm run release-preview --yes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build
         run: pnpm run --filter='!./studio' build
+
+      - name: Revert changes
+        run: git reset --hard
 
       - name: Publish packages & Create Github Releases
         run: |
