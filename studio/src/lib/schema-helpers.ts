@@ -1,4 +1,7 @@
-import { normalizeSubgraphFromString } from "@wundergraph/composition";
+import {
+  buildASTSchema,
+  normalizeSubgraphFromString,
+} from "@wundergraph/composition";
 import { noCase } from "change-case";
 import {
   GraphQLArgument,
@@ -445,15 +448,17 @@ export const parseSchema = (schema?: string) => {
   if (!schema) return null;
 
   try {
-    const res = normalizeSubgraphFromString(schema, true);
-    if (res.success) {
-      return res.schema;
-    }
+    const doc = parse(schema);
 
-    console.error(res.errors);
-    return null;
+    const ast = buildASTSchema(doc, {
+      assumeValid: true,
+      assumeValidSDL: true,
+      addInvalidExtensionOrphans: true,
+    });
+
+    return ast;
   } catch (e) {
-    console.error(e);
+    console.log(e);
     return null;
   }
 };

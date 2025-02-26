@@ -1,9 +1,9 @@
-import { buildASTSchema, parse } from "graphql";
 import { expect, test } from "vitest";
 import {
   extractVariablesFromGraphQL,
   getDeprecatedTypes,
   getTypeCounts,
+  parseSchema,
 } from "../lib/schema-helpers";
 
 const schema = `
@@ -36,16 +36,6 @@ type Employee {
   fullName: String! @deprecated(reason: "Please use first and last name instead")
 }
 `;
-
-const parseSchema = (schema: string) => {
-  const doc = parse(schema);
-  const ast = buildASTSchema(doc, {
-    assumeValid: true,
-    assumeValidSDL: true,
-  });
-
-  return ast;
-};
 
 test("return the correct types with deprecated fields or args", () => {
   const ast = parseSchema(schema);
