@@ -87,70 +87,74 @@ const CacheWarmerPage: NextPageWithLayout = () => {
   }
 
   return (
-    <div className="space-y-6 rounded-lg border p-6">
-      <div className="flex w-full items-center justify-between">
-        <div className="flex flex-col gap-y-1">
-          <h3 className="font-semibold tracking-tight">Enable Cache Warmer</h3>
-          <p className="text-sm text-muted-foreground">
-            {!!cacheWarmerFeature?.enabled
-              ? "Enable cache warmer to warm the router with your top opeartions."
-              : "Upgrade your billing plan to use this cacheWarmer."}{" "}
-            <Link
-              href={docsBaseURL + "/concepts/cache-warmer"}
-              className="text-primary"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Learn more
-            </Link>
-          </p>
-        </div>
-        <Switch
-          checked={cacheWarmerEnabled}
-          disabled={
-            !cacheWarmerFeature?.enabled ||
-            !checkUserAccess({
-              rolesToBe: ["admin", "developer"],
-              userRoles: user?.currentOrganization.roles || [],
-            })
-          }
-          onCheckedChange={(checked) => {
-            setCacheWarmerEnabled(checked);
-            mutate(
-              {
-                enableCacheWarmer: checked,
-                namespace: namespace || "default",
-                maxOperationsCount: checked ? 100 : undefined,
-              },
-              {
-                onSuccess: (d) => {
-                  if (d.response?.code === EnumStatusCode.OK) {
+    <div className="flex flex-col gap-y-6">
+      <div className="space-y-6 rounded-lg border p-6">
+        <div className="flex w-full items-center justify-between">
+          <div className="flex flex-col gap-y-1">
+            <h3 className="font-semibold tracking-tight">
+              Enable Cache Warmer
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {!!cacheWarmerFeature?.enabled
+                ? "Enable cache warmer to warm the router with your top opeartions."
+                : "Upgrade your billing plan to use this cacheWarmer."}{" "}
+              <Link
+                href={docsBaseURL + "/concepts/cache-warmer"}
+                className="text-primary"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Learn more
+              </Link>
+            </p>
+          </div>
+          <Switch
+            checked={cacheWarmerEnabled}
+            disabled={
+              !cacheWarmerFeature?.enabled ||
+              !checkUserAccess({
+                rolesToBe: ["admin", "developer"],
+                userRoles: user?.currentOrganization.roles || [],
+              })
+            }
+            onCheckedChange={(checked) => {
+              setCacheWarmerEnabled(checked);
+              mutate(
+                {
+                  enableCacheWarmer: checked,
+                  namespace: namespace || "default",
+                  maxOperationsCount: checked ? 100 : undefined,
+                },
+                {
+                  onSuccess: (d) => {
+                    if (d.response?.code === EnumStatusCode.OK) {
+                      toast({
+                        description: checked
+                          ? "Cache Warmer enabled successfully."
+                          : "Cache Warmer disabled successfully",
+                        duration: 3000,
+                      });
+                    } else if (d.response?.details) {
+                      toast({
+                        description: d.response.details,
+                        duration: 3000,
+                      });
+                    }
+                    refetch();
+                  },
+                  onError: (error) => {
                     toast({
                       description: checked
-                        ? "Cache Warmer enabled successfully."
-                        : "Cache Warmer disabled successfully",
+                        ? "Could not enable the cache warmer. Please try again."
+                        : "Could not disable the cache warmer. Please try again.",
                       duration: 3000,
                     });
-                  } else if (d.response?.details) {
-                    toast({
-                      description: d.response.details,
-                      duration: 3000,
-                    });
-                  }
-                  refetch();
+                  },
                 },
-                onError: (error) => {
-                  toast({
-                    description: checked
-                      ? "Could not enable the cache warmer. Please try again."
-                      : "Could not disable the cache warmer. Please try again.",
-                    duration: 3000,
-                  });
-                },
-              },
-            );
-          }}
-        />
+              );
+            }}
+          />
+        </div>
       </div>
       <CacheWarmerConfig
         key={currentOperationsCount}
