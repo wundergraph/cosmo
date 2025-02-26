@@ -9494,6 +9494,86 @@ export class Organization extends Message<Organization> {
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationBySlugRequest
+ */
+export class GetOrganizationBySlugRequest extends Message<GetOrganizationBySlugRequest> {
+  /**
+   * @generated from field: string slug = 1;
+   */
+  slug = "";
+
+  constructor(data?: PartialMessage<GetOrganizationBySlugRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationBySlugRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "slug", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationBySlugRequest {
+    return new GetOrganizationBySlugRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationBySlugRequest {
+    return new GetOrganizationBySlugRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationBySlugRequest {
+    return new GetOrganizationBySlugRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOrganizationBySlugRequest | PlainMessage<GetOrganizationBySlugRequest> | undefined, b: GetOrganizationBySlugRequest | PlainMessage<GetOrganizationBySlugRequest> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationBySlugRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationBySlugResponse
+ */
+export class GetOrganizationBySlugResponse extends Message<GetOrganizationBySlugResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: optional wg.cosmo.platform.v1.Organization organization = 2;
+   */
+  organization?: Organization;
+
+  constructor(data?: PartialMessage<GetOrganizationBySlugResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationBySlugResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "organization", kind: "message", T: Organization, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationBySlugResponse {
+    return new GetOrganizationBySlugResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationBySlugResponse {
+    return new GetOrganizationBySlugResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationBySlugResponse {
+    return new GetOrganizationBySlugResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOrganizationBySlugResponse | PlainMessage<GetOrganizationBySlugResponse> | undefined, b: GetOrganizationBySlugResponse | PlainMessage<GetOrganizationBySlugResponse> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationBySlugResponse, a, b);
+  }
+}
+
+/**
  * *
  * Billing
  *

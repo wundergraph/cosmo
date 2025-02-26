@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.94.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.94.0...@wundergraph/cosmo-connect@0.94.1) (2025-02-26)
+
+### Bug Fixes
+
+* improve wgc auth login and router compatibility-version ([#1636](https://github.com/wundergraph/cosmo/issues/1636)) ([6946363](https://github.com/wundergraph/cosmo/commit/6946363024e49b6170a9553728ac3ecc973ce394)) (@Aenimus)
+
 # [0.94.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.93.0...@wundergraph/cosmo-connect@0.94.0) (2025-02-17)
 
 ### Features
