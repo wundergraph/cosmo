@@ -2,9 +2,11 @@ name: Studio CI
 on:
   pull_request:
     paths:
-      - "studio/**/*"
-      - "connect/**/*"
-      - ".github/workflows/studio-ci.yaml"
+      - 'studio/**/*'
+      - 'connect/**/*'
+      - 'shared/**/*'
+      - 'composition/**/*'
+      - '.github/workflows/studio-ci.yaml'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -69,4 +71,4 @@ jobs:
           dockerfile: studio/Dockerfile
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: studio
-          image_description: "Cosmo Studio"
+          image_description: 'Cosmo Studio'
