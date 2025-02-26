@@ -668,6 +668,12 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	* Normalize the variables
 	 */
 
+	// Normalize the variables returns list of uploads mapping if there are any of them present in a query
+	// type UploadPathMapping struct {
+	// 	VariableName       string - is a variable name holding the direct or nested value of type Upload, example "f"
+	// 	OriginalUploadPath string - is a path relative to variables which have an Upload type, example "variables.f"
+	// 	NewUploadPath      string - if variable was used in the inline object like this `arg: {f: $f}` this field will hold the new extracted path, example "variables.a.f", if it is an empty, there was no change in the path
+	// }
 	uploadsMapping, err := operationKit.NormalizeVariables()
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
@@ -683,16 +689,32 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		return err
 	}
 
-	for file := range slices.Values(requestContext.operation.files) {
-		idx := slices.IndexFunc(uploadsMapping, func(value uploads.UploadPathMapping) bool {
-			return file.VariablePath() == value.OriginalUploadPath
+	// update file uploads path if they were used in nested field in the extracted variables
+	for mapping := range slices.Values(uploadsMapping) {
+		// if the NewUploadPath is empty it means that there was no change in the path - e.g. upload was directly passed to the argument
+		// e.g. field(fileArgument: $file) will result in []UploadPathMapping{ {VariableName: "file", OriginalUploadPath: "variables.file", NewUploadPath: ""} }
+		if mapping.NewUploadPath == "" {
+			continue
+		}
+
+		// look for the corresponding file which was used in the nested argument
+		// we are matching original upload path passed via uploads map with the mapping items
+		idx := slices.IndexFunc(requestContext.operation.files, func(file *httpclient.FileUpload) bool {
+			return file.VariablePath() == mapping.OriginalUploadPath
 		})
 
-		if idx != -1 && uploadsMapping[idx].NewUploadPath != "" {
-			file.SetVariablePath(uploadsMapping[idx].NewUploadPath)
+		if idx == -1 {
+			continue
 		}
+
+		// if NewUploadPath is not empty the file argument was used in the nested object, and we need to update the path
+		// e.g. field(arg: {file: $file}) normalized to field(arg: $a) will result in []UploadPathMapping{ {VariableName: "file", OriginalUploadPath: "variables.file", NewUploadPath: "variables.a.file"} }
+		requestContext.operation.files[idx].SetVariablePath(uploadsMapping[idx].NewUploadPath)
 	}
 
+	// RemapVariables is updating and sort variables name to be able to have them in a predictable order
+	// after remapping requestContext.operation.remapVariables map will contain new names as a keys and old names as a values - to be able to extract the old values
+	// because it does not rename variables in a variables json
 	err = operationKit.RemapVariables(h.disableVariablesRemapping)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
@@ -712,20 +734,31 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	requestContext.operation.internalHash = operationKit.parsedOperation.InternalID
 	requestContext.operation.remapVariables = operationKit.parsedOperation.RemapVariables
 
-	for to, from := range maps.All(requestContext.operation.remapVariables) {
-		idx := slices.IndexFunc(uploadsMapping, func(value uploads.UploadPathMapping) bool {
-			return value.VariableName == from
-		})
+	if !h.disableVariablesRemapping {
+		// after variables remapping we need to update the file uploads path because variables relative path has changed
+		// but files still references the old uploads locations
+		// key `to` is a new variable name
+		// value `from` is an old variable name
+		for to, from := range maps.All(requestContext.operation.remapVariables) {
+			// we look into uploads mapping to find a mach between old variable name before remapping and variable which was holding an upload
+			idx := slices.IndexFunc(uploadsMapping, func(value uploads.UploadPathMapping) bool {
+				return value.VariableName == from
+			})
 
-		if idx == -1 {
-			continue
-		}
+			if idx == -1 {
+				continue
+			}
 
-		for file := range slices.Values(requestContext.operation.files) {
-			if file.VariablePath() == uploadsMapping[idx].OriginalUploadPath {
-				updatedPath := fmt.Sprintf("variables.%s.%s", to, strings.TrimPrefix(uploadsMapping[idx].OriginalUploadPath, fmt.Sprintf("variables.%s.", from)))
+			// next step is to compare file upload path with the original upload path from the upload mappings
+			for file := range slices.Values(requestContext.operation.files) {
+				if file.VariablePath() == uploadsMapping[idx].OriginalUploadPath {
+					oldUploadPathPrefix := fmt.Sprintf("variables.%s.", from)
+					relativeUploadPath := strings.TrimPrefix(uploadsMapping[idx].OriginalUploadPath, oldUploadPathPrefix)
 
-				file.SetVariablePath(updatedPath)
+					updatedPath := fmt.Sprintf("variables.%s.%s", to, relativeUploadPath)
+
+					file.SetVariablePath(updatedPath)
+				}
 			}
 		}
 	}
