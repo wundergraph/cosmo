@@ -24,10 +24,10 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/apollocompatibility"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization/uploads"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/middleware/operation_complexity"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
@@ -57,8 +57,6 @@ type ParsedOperation struct {
 	Type           string
 	Variables      *fastjson.Object
 	RemapVariables map[string]string
-	// Files is a list of files, an interface representing the file data needed to be passed forward.
-	Files []httpclient.File
 	// NormalizedRepresentation is the normalized representation of the operation
 	// as a string. This is provided for modules to be able to access the
 	// operation. Only available after the operation has been normalized.
@@ -750,13 +748,13 @@ func (o *OperationKit) setAndParseOperationDoc() error {
 	return nil
 }
 
-func (o *OperationKit) NormalizeVariables() error {
+func (o *OperationKit) NormalizeVariables() ([]uploads.UploadPathMapping, error) {
 	before := len(o.kit.doc.Input.Variables) + len(o.kit.doc.Input.RawBytes)
 
 	report := &operationreport.Report{}
-	o.kit.variablesNormalizer.NormalizeOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
+	uploadsMapping := o.kit.variablesNormalizer.NormalizeOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
 	if report.HasErrors() {
-		return &reportError{
+		return nil, &reportError{
 			report: report,
 		}
 	}
@@ -780,7 +778,7 @@ func (o *OperationKit) NormalizeVariables() error {
 
 	err := o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// Reset the doc with the original name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = nameRef
@@ -788,7 +786,7 @@ func (o *OperationKit) NormalizeVariables() error {
 	o.kit.keyGen.Reset()
 	_, err = o.kit.keyGen.Write(o.kit.normalizedOperation.Bytes())
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	o.parsedOperation.ID = o.kit.keyGen.Sum64()
@@ -796,20 +794,20 @@ func (o *OperationKit) NormalizeVariables() error {
 	// If the normalized form of the operation didn't change, we don't need to print it again
 	after := len(o.kit.doc.Input.Variables) + len(o.kit.doc.Input.RawBytes)
 	if after == before {
-		return nil
+		return uploadsMapping, nil
 	}
 
 	o.kit.normalizedOperation.Reset()
 
 	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
 
-	return nil
+	return uploadsMapping, nil
 }
 
 func (o *OperationKit) RemapVariables(disabled bool) error {

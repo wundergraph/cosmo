@@ -603,6 +603,6 @@ func (f *FakeDataSource) Load(ctx context.Context, input []byte, out *bytes.Buff
 	return
 }
 
-func (f *FakeDataSource) LoadWithFiles(ctx context.Context, input []byte, files []httpclient.File, out *bytes.Buffer) (err error) {
+func (f *FakeDataSource) LoadWithFiles(ctx context.Context, input []byte, files []*httpclient.FileUpload, out *bytes.Buffer) (err error) {
 	return
 }

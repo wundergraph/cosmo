@@ -26,6 +26,7 @@ import (
 	"golang.org/x/sync/semaphore"
 
 	"github.com/wundergraph/astjson"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
@@ -837,7 +838,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 	opContext.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
-	if err := operationKit.NormalizeVariables(); err != nil {
+	if _, err := operationKit.NormalizeVariables(); err != nil {
 		opContext.normalizationTime = time.Since(startNormalization)
 		return nil, nil, err
 	}
