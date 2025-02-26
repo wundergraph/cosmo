@@ -450,10 +450,10 @@ export const parseSchema = (schema?: string) => {
       return res.schema;
     }
 
-    console.log(res.errors);
+    console.error(res.errors);
     return null;
   } catch (e) {
-    console.log(e);
+    console.error(e);
     return null;
   }
 };
@@ -471,7 +471,7 @@ export const formatAndParseSchema = async (schema?: string) => {
 
     return parseSchema(res);
   } catch (e) {
-    console.log(e);
+    console.error(e);
     return null;
   }
 };
