@@ -458,7 +458,7 @@ export const parseSchema = (schema?: string) => {
 
     return ast;
   } catch (e) {
-    console.log(e);
+    console.error(e);
     return null;
   }
 };
