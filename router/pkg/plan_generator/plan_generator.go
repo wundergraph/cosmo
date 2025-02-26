@@ -82,8 +82,8 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 	}
 	close(queriesQueue)
 
-	resultsCh := make(chan QueryPlanResult, len(queries))
 	var results []QueryPlanResult
+	var resultsMux sync.Mutex
 
 	duration, parseErr := time.ParseDuration(cfg.Timeout)
 	if parseErr != nil {
@@ -94,30 +94,12 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 	ctxError, cancelError := context.WithCancelCause(ctx)
 	defer cancelError(nil)
 
-	wgWriter := sync.WaitGroup{}
-	wgWriter.Add(1)
-	go func() {
-		defer wgWriter.Done()
-
-		for {
-			select {
-			case <-ctxError.Done():
-				return
-			case res, ok := <-resultsCh:
-				if !ok {
-					return
-				}
-				results = append(results, res)
-			}
-		}
-	}()
-
 	var planError atomic.Bool
-	wgWorker := sync.WaitGroup{}
-	wgWorker.Add(cfg.Concurrency)
+	wg := sync.WaitGroup{}
+	wg.Add(cfg.Concurrency)
 	for i := 0; i < cfg.Concurrency; i++ {
 		go func(i int) {
-			defer wgWorker.Done()
+			defer wg.Done()
 			pg, err := core.NewPlanGenerator(executionConfigPath)
 			if err != nil {
 				cancelError(fmt.Errorf("failed to create plan generator: %v", err))
@@ -163,14 +145,14 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 							log.Printf("failed to write file: %v", err)
 						}
 					}
-					resultsCh <- res
+					resultsMux.Lock()
+					results = append(results, res)
+					resultsMux.Unlock()
 				}
 			}
 		}(i)
 	}
-	wgWorker.Wait()
-	close(resultsCh)
-	wgWriter.Wait()
+	wg.Wait()
 
 	if cfg.OutputReport && ctxError.Err() == nil {
 		reportFilePath := filepath.Join(outPath, ReportFileName)
