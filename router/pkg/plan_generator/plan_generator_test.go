@@ -37,8 +37,9 @@ func TestPlanGenerator(t *testing.T) {
 
 	t.Run("checks output path exists", func(t *testing.T) {
 		cfg := QueryPlanConfig{
-			SourceDir:       path.Join(getTestFixtureDir(), "queries", "base"),
-			OutDir:          "/notwritable",
+			SourceDir: path.Join(getTestFixtureDir(), "queries", "base"),
+			OutDir: "/notwri ` " +
+				"table",
 			ExecutionConfig: path.Join(getTestFixtureDir(), "execution_config", "base.json"),
 			Timeout:         "30s",
 			OutputFiles:     true,
