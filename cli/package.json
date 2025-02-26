@@ -22,10 +22,11 @@
     "build": "del dist && tsc",
     "build:bun": "bun build --compile src/index.ts --outfile wgc",
     "wgc": "tsx --env-file .env src/index.ts",
-    "test": "pnpm lint && vitest run",
+    "test": "pnpm lint && vitest run test/",
     "coverage": "vitest run --coverage",
     "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
-    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && prettier --write -c src"
+    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && prettier --write -c src",
+    "e2e": "bun test e2e/"
   },
   "keywords": [
     "wundergraph",
@@ -67,6 +68,7 @@
     "undici": "^6.19.8"
   },
   "devDependencies": {
+    "@types/bun": "^1.2.3",
     "@types/cli-progress": "^3.11.5",
     "@types/cli-table": "^0.3.1",
     "@types/decompress": "^4.2.7",

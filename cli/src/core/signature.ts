@@ -4,6 +4,7 @@ const algorithm = { name: 'HMAC', hash: 'SHA-256' };
 
 const getCryptoKey = async (secret: string | BufferSource): Promise<CryptoKey> => {
   const secretBuf = typeof secret === 'string' ? new TextEncoder().encode(secret) : secret;
+  // @ts-ignore
   return await crypto.subtle.importKey('raw', secretBuf, algorithm, false, ['sign', 'verify']);
 };
 
