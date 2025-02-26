@@ -110,7 +110,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: wgc-experimental-${{ github.sha }}-${{ matrix.target }}
-          path: cli/out/wgc-${{ github.sha }}-${{ matrix.target }}*
+          path: cli/out/wgc-experimental-${{ github.sha }}-${{ matrix.target }}*
+          if-no-files-round: error
 
   build_test:
     runs-on: ubuntu-latest
