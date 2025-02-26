@@ -14,23 +14,24 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/versioninfo"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
+	"github.com/wundergraph/cosmo/router/pkg/plan_generator"
 	"github.com/wundergraph/cosmo/router/pkg/profile"
 
 	"go.uber.org/zap"
 )
 
-func Main() {
-	var (
-		overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
-		configPathFlag  = flag.String("config", os.Getenv("CONFIG_PATH"), "Path to the router config file e.g. config.yaml")
-		routerVersion   = flag.Bool("version", false, "Prints the version and dependency information")
-		pprofListenAddr = flag.String("pprof-addr", os.Getenv("PPROF_ADDR"), "Address to listen for pprof requests. e.g. :6060 for localhost:6060")
-		memProfilePath  = flag.String("memprofile", "", "Path to write memory profile. Memory is a snapshot taken at the time the program exits")
-		cpuProfilePath  = flag.String("cpuprofile", "", "Path to write cpu profile. CPU is measured from when the program starts until the program exits")
-		help            = flag.Bool("help", false, "Prints the help message")
-		queryPlanFlag   = flag.Bool("query-plan", false, "Generate query plans for all operations specified in the operations folder")
-	)
+var (
+	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
+	configPathFlag  = flag.String("config", os.Getenv("CONFIG_PATH"), "Path to the router config file e.g. config.yaml")
+	routerVersion   = flag.Bool("version", false, "Prints the version and dependency information")
+	pprofListenAddr = flag.String("pprof-addr", os.Getenv("PPROF_ADDR"), "Address to listen for pprof requests. e.g. :6060 for localhost:6060")
+	memProfilePath  = flag.String("memprofile", "", "Path to write memory profile. Memory is a snapshot taken at the time the program exits")
+	cpuProfilePath  = flag.String("cpuprofile", "", "Path to write cpu profile. CPU is measured from when the program starts until the program exits")
+	help            = flag.Bool("help", false, "Prints the help message")
+	queryPlanFlag   = flag.Bool("query-plan", false, "Generate query plans for all operations specified in the operations folder")
+)
 
+func Main() {
 	// Parse flags before calling profile.Start(), since it may add flags
 	flag.Parse()
 
@@ -42,7 +43,7 @@ func Main() {
 		fmt.Println(bi.String())
 		os.Exit(0)
 	} else if queryPlanFlag != nil && *queryPlanFlag {
-		planErr := planGeneratorCmd()
+		planErr := plan_generator.PlanGeneratorCmd()
 		if planErr != nil {
 			log.Fatalf("Failed to generate query plans: %s", planErr.Error())
 		}

@@ -1,4 +1,4 @@
-package cmd
+package plan_generator
 
 import (
 	"context"
@@ -37,7 +37,7 @@ func getParseGeneratorConfig() (QueryPlanConfig, error) {
 	return cfg, nil
 }
 
-func planGeneratorCmd() error {
+func PlanGeneratorCmd() error {
 	cfg, err := getParseGeneratorConfig()
 	if err != nil {
 		return err
