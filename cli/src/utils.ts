@@ -230,7 +230,7 @@ export const checkForUpdates = async () => {
 Changelog: https://github.com/wundergraph/cosmo/releases/tag/wgc@${latestVersion}
 Run npm i -g wgc@latest`;
 
-    console.log(
+    console.warn(
       boxen(message, {
         padding: 1,
         margin: 1,

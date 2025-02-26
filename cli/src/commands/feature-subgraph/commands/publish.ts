@@ -236,7 +236,9 @@ export default (opts: BaseCommandOptions) => {
             program.error(pc.red(pc.bold(resp.response?.details)));
           }
         }
-        process.exit(1);
+        process.exitCode = 1;
+        // eslint-disable-next-line no-useless-return
+        return;
       }
     }
   });

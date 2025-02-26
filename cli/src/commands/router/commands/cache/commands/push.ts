@@ -77,7 +77,9 @@ export default (opts: BaseCommandOptions) => {
       if (result.response?.details) {
         console.error(pc.red(pc.bold(result.response?.details)));
       }
-      process.exit(1);
+      process.exitCode = 1;
+      // eslint-disable-next-line no-useless-return
+      return;
     }
   });
   return command;

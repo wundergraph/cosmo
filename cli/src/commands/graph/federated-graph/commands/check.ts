@@ -110,7 +110,9 @@ export default (opts: BaseCommandOptions) => {
     }
 
     if (!success) {
-      process.exit(1);
+      process.exitCode = 1;
+      // eslint-disable-next-line no-useless-return
+      return;
     }
   });
 

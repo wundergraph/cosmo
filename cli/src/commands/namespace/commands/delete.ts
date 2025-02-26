@@ -18,7 +18,8 @@ export default (opts: BaseCommandOptions) => {
         message: 'All resources within the namespace will be deleted. Are you sure you want to proceed?',
       });
       if (!deletionConfirmed.confirmDeletion) {
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
     }
 

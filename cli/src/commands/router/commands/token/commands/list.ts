@@ -31,7 +31,7 @@ export default (opts: BaseCommandOptions) => {
 
     if (resp.tokens.length === 0) {
       console.log('No router tokens for the given graph found');
-      process.exit(0);
+      return;
     }
 
     const tokensTable = new Table({

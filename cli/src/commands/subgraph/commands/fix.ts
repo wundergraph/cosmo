@@ -55,7 +55,8 @@ export default (opts: BaseCommandOptions) => {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }
       console.log(logSymbols.error + pc.red(' Schema fix failed.'));
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     if (!resp.modified) {

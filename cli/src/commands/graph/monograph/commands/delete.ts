@@ -20,7 +20,8 @@ export default (opts: BaseCommandOptions) => {
         message: 'Are you sure you want to delete this monograph?',
       });
       if (!deletionConfirmed.confirmDeletion) {
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
     }
 

@@ -64,7 +64,7 @@ export default (opts: BaseCommandOptions) => {
       } else {
         console.log('No federated graphs found');
       }
-      process.exit(0);
+      return;
     }
 
     if (options.out) {
@@ -81,16 +81,16 @@ export default (opts: BaseCommandOptions) => {
           }) satisfies OutputFile[number],
       );
       await writeFile(resolve(options.out), JSON.stringify(output));
-      process.exit(0);
+      return;
     }
 
     if (options.raw) {
-      console.log(pc.yellow('Please use the --json option. The --raw option is deprecated.'));
+      console.warn(pc.yellow('Please use the --json option. The --raw option is deprecated.'));
     }
 
     if (options.raw || options.json) {
       console.log(JSON.stringify(filteredGraphs));
-      process.exit(0);
+      return;
     }
 
     const graphsTable = new Table({
