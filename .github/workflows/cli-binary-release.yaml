@@ -21,9 +21,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - uses: oven-sh/setup-bun@v2
-    
+
       - uses: ./.github/actions/node
 
       - name: Install dependencies
@@ -35,21 +35,23 @@ jobs:
       - uses: winterjung/split@v2
         id: split
         with:
-          separator: "@"
-          msg: "${{ github.event.release.tag_name }}"
+          separator: '@'
+          msg: '${{ github.event.release.tag_name }}'
 
-      - name: "Build wgc binary"
+      - name: 'Build wgc binary'
         working-directory: cli
         run: bun build --compile --minify --sourcemap --target ${{ matrix.target }} src/index.ts --outfile out/wgc-experimental-${{ steps.split.outputs._1 }}-${{ matrix.target }}
 
-      - name: "Gzip wgc binary"
+      - name: 'Gzip wgc binary'
         working-directory: cli
         shell: bash
+        # the '*' here is needed to catch `.exe` files for Windows builds, if we ever add them
         run: gzip -9 -v out/wgc-experimental-${{ steps.split.outputs._1 }}-${{ matrix.target }}*
 
-      - name: "Upload build to release"
+      - name: 'Upload build to release'
         working-directory: cli
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
+        # the '*' here is needed to catch `.exe` files for Windows builds, if we ever add them
         run: gh release upload ${{ github.event.release.tag_name }} out/wgc-experimental-${{ steps.split.outputs._1 }}-${{ matrix.target }}*.gz --clobber
