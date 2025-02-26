@@ -366,6 +366,16 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.EnableKafka {
 		if os.Getenv("CI") == "true" {
 			cfg.KafkaSeeds = []string{"localhost:9092"}
+
+			client, err := kgo.NewClient(
+				kgo.SeedBrokers(cfg.KafkaSeeds...),
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			kafkaClient = client
+			kafkaAdminClient = kadm.NewClient(kafkaClient)
 		} else {
 			kafkaStarted.Add(1)
 			go func() {
