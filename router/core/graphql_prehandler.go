@@ -709,6 +709,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 		// if NewUploadPath is not empty the file argument was used in the nested object, and we need to update the path
 		// e.g. field(arg: {file: $file}) normalized to field(arg: $a) will result in []UploadPathMapping{ {VariableName: "file", OriginalUploadPath: "variables.file", NewUploadPath: "variables.a.file"} }
+		// so "variables.file" should be updated to "variables.a.file"
 		requestContext.operation.files[idx].SetVariablePath(uploadsMapping[idx].NewUploadPath)
 	}
 
@@ -751,14 +752,23 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 			// next step is to compare file upload path with the original upload path from the upload mappings
 			for file := range slices.Values(requestContext.operation.files) {
-				if file.VariablePath() == uploadsMapping[idx].OriginalUploadPath {
-					oldUploadPathPrefix := fmt.Sprintf("variables.%s.", from)
-					relativeUploadPath := strings.TrimPrefix(uploadsMapping[idx].OriginalUploadPath, oldUploadPathPrefix)
-
-					updatedPath := fmt.Sprintf("variables.%s.%s", to, relativeUploadPath)
-
-					file.SetVariablePath(updatedPath)
+				uploadPath := uploadsMapping[idx].NewUploadPath
+				// if NewUploadPath is empty it means that there was no change in the path - e.g. upload was directly passed to the argument
+				if uploadPath == "" {
+					uploadPath = uploadsMapping[idx].OriginalUploadPath
 				}
+
+				if file.VariablePath() != uploadPath {
+					continue
+				}
+
+				// trim old variable name prefix
+				oldUploadPathPrefix := fmt.Sprintf("variables.%s.", from)
+				relativeUploadPath := strings.TrimPrefix(uploadPath, oldUploadPathPrefix)
+
+				// set new variable name prefix
+				updatedPath := fmt.Sprintf("variables.%s.%s", to, relativeUploadPath)
+				file.SetVariablePath(updatedPath)
 			}
 		}
 	}
