@@ -13,9 +13,9 @@ func PlanGenerator(args []string) {
 	cfg := plan_generator.QueryPlanConfig{}
 	f := flag.NewFlagSet("router "+args[0], flag.ExitOnError)
 	f.BoolVar(&planHelp, "help", false, "Prints the help message")
-	f.StringVar(&cfg.ExecutionConfig, "execution-config", "config.json", "execution config file location")
-	f.StringVar(&cfg.SourceDir, "operations", "operations", "source operations folder location")
-	f.StringVar(&cfg.OutDir, "plans", "plans", "output plans folder location")
+	f.StringVar(&cfg.ExecutionConfig, "execution-config", "", "required, execution config file location")
+	f.StringVar(&cfg.SourceDir, "operations", "", "required, source operations folder location")
+	f.StringVar(&cfg.OutDir, "plans", "", "required, output plans folder location")
 	f.StringVar(&cfg.Filter, "filter", "", "operation filter file location which should contain file names of operations to include")
 	f.StringVar(&cfg.Timeout, "timeout", "30s", "timeout")
 	f.IntVar(&cfg.Concurrency, "concurrency", 0, "how many query plan run concurrently")
@@ -25,12 +25,17 @@ func PlanGenerator(args []string) {
 	f.BoolVar(&cfg.FailFast, "fail-fast", false, "stop as soon as possible if a plan fails")
 
 	if err := f.Parse(args[1:]); err != nil {
+		f.PrintDefaults()
 		log.Fatalf("Failed to parse flags: %v", err)
 	}
 
 	if planHelp {
 		f.PrintDefaults()
 		return
+	}
+	if cfg.ExecutionConfig == "" || cfg.SourceDir == "" || cfg.OutDir == "" {
+		f.PrintDefaults()
+		log.Fatalf("missing required flags")
 	}
 
 	err := plan_generator.PlanGenerator(cfg)
