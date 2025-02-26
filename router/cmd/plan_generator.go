@@ -20,7 +20,7 @@ func PlanGenerator(args []string) {
 	f.StringVar(&cfg.Timeout, "timeout", "30s", "timeout")
 	f.IntVar(&cfg.Concurrency, "concurrency", 0, "how many query plan run concurrently")
 	f.BoolVar(&cfg.OutputFiles, "print-per-file", true, "write a file for each query, with inside the plan or the query plan error")
-	f.BoolVar(&cfg.OutputResult, "print-result", false, "write a result.json file, with all the query plans and errors sorted by file name")
+	f.BoolVar(&cfg.OutputReport, "print-report", false, "write a report.json file, with all the query plans and errors sorted by file name")
 	f.BoolVar(&cfg.FailOnPlanError, "fail-on-error", false, "if at least one plan fails, the command exit code will be 1")
 	f.BoolVar(&cfg.FailFast, "fail-fast", false, "stop as soon as possible if a plan fails")
 

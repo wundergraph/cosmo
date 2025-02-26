@@ -17,7 +17,7 @@ import (
 	"github.com/wundergraph/cosmo/router/core"
 )
 
-const ResultsFileName = "results.json"
+const ReportFileName = "report.json"
 
 type QueryPlanConfig struct {
 	ExecutionConfig string
@@ -27,7 +27,7 @@ type QueryPlanConfig struct {
 	Filter          string
 	Timeout         string
 	OutputFiles     bool
-	OutputResult    bool
+	OutputReport    bool
 	FailOnPlanError bool
 	FailFast        bool
 }
@@ -53,7 +53,7 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 		return fmt.Errorf("failed to get absolute path for output: %v", err)
 	}
 	if err := os.MkdirAll(outPath, 0755); err != nil {
-		log.Fatalf("failed to create output directory: %v", err)
+		return fmt.Errorf("failed to create output directory: %v", err)
 	}
 
 	executionConfigPath, err := filepath.Abs(cfg.ExecutionConfig)
@@ -91,11 +91,13 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), duration)
 	defer cancel()
+	ctxError, cancelError := context.WithCancelCause(ctx)
+	defer cancelError(nil)
 
 	go func() {
 		for {
 			select {
-			case <-ctx.Done():
+			case <-ctxError.Done():
 				return
 			case res := <-resultsCh:
 				results = append(results, res)
@@ -111,11 +113,12 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 			defer wg.Done()
 			pg, err := core.NewPlanGenerator(executionConfigPath)
 			if err != nil {
-				log.Fatalf("failed to create plan generator: %v", err)
+				cancelError(fmt.Errorf("failed to create plan generator: %v", err))
+				return
 			}
 			for {
 				select {
-				case <-ctx.Done():
+				case <-ctxError.Done():
 					return
 				case queryFile, ok := <-queriesQueue:
 					if !ok {
@@ -160,9 +163,9 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 	}
 	wg.Wait()
 
-	if cfg.OutputResult && ctx.Err() == nil {
-		resultsFilePath := filepath.Join(outPath, ResultsFileName)
-		resultsFile, err := os.Create(resultsFilePath)
+	if cfg.OutputReport && ctxError.Err() == nil {
+		reportFilePath := filepath.Join(outPath, ReportFileName)
+		resultsFile, err := os.Create(reportFilePath)
 		if err != nil {
 			cancel()
 			log.Printf("failed to create results file: %v", err)
@@ -185,5 +188,5 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 		return fmt.Errorf("some queries failed to generate plan")
 	}
 
-	return ctx.Err()
+	return context.Cause(ctxError)
 }
