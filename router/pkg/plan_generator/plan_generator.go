@@ -29,6 +29,7 @@ type QueryPlanConfig struct {
 	OutputFiles     bool
 	OutputResult    bool
 	FailOnPlanError bool
+	FailFast        bool
 }
 
 type QueryPlanResult struct {
@@ -140,6 +141,9 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 						res.Error = err.Error()
 						outContent = fmt.Sprintf("Error: %v", err)
 						planError.Store(true)
+						if cfg.FailFast {
+							cancel()
+						}
 					}
 
 					if cfg.OutputFiles {
@@ -159,11 +163,11 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 	if cfg.OutputResult && ctx.Err() == nil {
 		resultsFilePath := filepath.Join(outPath, ResultsFileName)
 		resultsFile, err := os.Create(resultsFilePath)
-		defer resultsFile.Close()
 		if err != nil {
 			cancel()
 			log.Printf("failed to create results file: %v", err)
 		}
+		defer resultsFile.Close()
 		slices.SortFunc(results, func(a, b QueryPlanResult) int {
 			return strings.Compare(a.FileName, b.FileName)
 		})

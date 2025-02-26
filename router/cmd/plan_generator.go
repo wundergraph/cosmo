@@ -22,6 +22,7 @@ func PlanGenerator(args []string) {
 	f.BoolVar(&cfg.OutputFiles, "print-per-file", true, "write a file for each query, with inside the plan or the query plan error")
 	f.BoolVar(&cfg.OutputResult, "print-result", false, "write a result.json file, with all the query plans and errors sorted by file name")
 	f.BoolVar(&cfg.FailOnPlanError, "fail-on-error", false, "if at least one plan fails, the command exit code will be 1")
+	f.BoolVar(&cfg.FailFast, "fail-fast", false, "stop as soon as possible if a plan fails")
 
 	if err := f.Parse(args[1:]); err != nil {
 		log.Fatalf("Failed to parse flags: %v", err)
