@@ -1,0 +1,36 @@
+package cmd
+
+import (
+	"flag"
+	"log"
+
+	"github.com/wundergraph/cosmo/router/pkg/plan_generator"
+)
+
+func PlanGenerator(args []string) {
+	var planHelp bool
+
+	cfg := plan_generator.QueryPlanConfig{}
+	f := flag.NewFlagSet("router "+args[0], flag.ExitOnError)
+	f.BoolVar(&planHelp, "help", false, "Prints the help message")
+	f.StringVar(&cfg.ExecutionConfig, "execution-config", "config.json", "execution config file location")
+	f.StringVar(&cfg.SourceDir, "operations", "operations", "source operations folder location")
+	f.StringVar(&cfg.OutDir, "plans", "plans", "output plans folder location")
+	f.StringVar(&cfg.Filter, "filter", "", "operation filter file location which should contain file names of operations to include")
+	f.StringVar(&cfg.Timeout, "timeout", "30s", "timeout")
+	f.IntVar(&cfg.Concurrency, "concurrency", 0, "how many query plan run concurrently")
+
+	if err := f.Parse(args[1:]); err != nil {
+		log.Fatalf("Failed to parse flags: %v", err)
+	}
+
+	if planHelp {
+		f.PrintDefaults()
+		return
+	}
+
+	err := plan_generator.PlanGenerator(cfg)
+	if err != nil {
+		log.Fatalf("Error during command plan-generator: %s", err)
+	}
+}

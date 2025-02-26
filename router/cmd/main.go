@@ -14,7 +14,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/versioninfo"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
-	"github.com/wundergraph/cosmo/router/pkg/plan_generator"
 	"github.com/wundergraph/cosmo/router/pkg/profile"
 
 	"go.uber.org/zap"
@@ -28,7 +27,6 @@ var (
 	memProfilePath  = flag.String("memprofile", "", "Path to write memory profile. Memory is a snapshot taken at the time the program exits")
 	cpuProfilePath  = flag.String("cpuprofile", "", "Path to write cpu profile. CPU is measured from when the program starts until the program exits")
 	help            = flag.Bool("help", false, "Prints the help message")
-	queryPlanFlag   = flag.Bool("query-plan", false, "Generate query plans for all operations specified in the operations folder")
 )
 
 func Main() {
@@ -41,12 +39,6 @@ func Main() {
 	} else if *routerVersion {
 		bi := versioninfo.New(core.Version, core.Commit, core.Date)
 		fmt.Println(bi.String())
-		os.Exit(0)
-	} else if queryPlanFlag != nil && *queryPlanFlag {
-		planErr := plan_generator.PlanGeneratorCmd()
-		if planErr != nil {
-			log.Fatalf("Failed to generate query plans: %s", planErr.Error())
-		}
 		os.Exit(0)
 	}
 
