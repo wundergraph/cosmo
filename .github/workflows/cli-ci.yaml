@@ -97,7 +97,7 @@ jobs:
 
       - name: 'Build wgc binary'
         working-directory: cli
-        run: bun build --compile --minify --sourcemap --target ${{ matrix.target }} src/index.ts --outfile out/wgc-experimental-${{ matrix.target }}
+        run: bun build --compile --minify --sourcemap --target ${{ matrix.target }} src/index.ts --outfile out/wgc-experimental-${{ github.sha }}-${{ matrix.target }}
 
       - name: 'Upload builds as artifacts'
         uses: actions/upload-artifact@v4
