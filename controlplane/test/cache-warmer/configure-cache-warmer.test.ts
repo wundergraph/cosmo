@@ -136,7 +136,7 @@ describe('DeleteCacheOperation', (ctx) => {
     let configureCacheWarmerResp = await client.configureCacheWarmer({
       namespace: 'default',
       enableCacheWarmer: true,
-      maxOperationsCount: 1000,
+      maxOperationsCount: 500,
     });
     expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -145,7 +145,7 @@ describe('DeleteCacheOperation', (ctx) => {
     });
     expect(cacheWarmerConfigResp.response?.code).toBe(EnumStatusCode.OK);
     expect(cacheWarmerConfigResp.isCacheWarmerEnabled).toBe(true);
-    expect(cacheWarmerConfigResp.maxOperationsCount).toBe(1000);
+    expect(cacheWarmerConfigResp.maxOperationsCount).toBe(500);
 
     configureCacheWarmerResp = await client.configureCacheWarmer({
       namespace: 'default',
@@ -162,10 +162,10 @@ describe('DeleteCacheOperation', (ctx) => {
     configureCacheWarmerResp = await client.configureCacheWarmer({
       namespace: 'default',
       enableCacheWarmer: true,
-      maxOperationsCount: 1001,
+      maxOperationsCount: 501,
     });
     expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.ERR);
-    expect(configureCacheWarmerResp.response?.details).toBe('Max operations count should be less than 1000');
+    expect(configureCacheWarmerResp.response?.details).toBe('Max operations count should be less than 500');
 
     cacheWarmerConfigResp = await client.getCacheWarmerConfig({
       namespace: 'default',

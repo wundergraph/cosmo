@@ -87,7 +87,6 @@ const CacheWarmerPage: NextPageWithLayout = () => {
   }
 
   return (
-    <div className="flex flex-col gap-y-6">
       <div className="space-y-6 rounded-lg border p-6">
         <div className="flex w-full items-center justify-between">
           <div className="flex flex-col gap-y-1">
@@ -155,7 +154,6 @@ const CacheWarmerPage: NextPageWithLayout = () => {
             }}
           />
         </div>
-      </div>
       <CacheWarmerConfig
         key={currentOperationsCount}
         cacheWarmerEnabled={cacheWarmerEnabled}

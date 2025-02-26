@@ -65,11 +65,11 @@ export function configureCacheWarmer(
       };
     }
 
-    if (req.maxOperationsCount > 1000) {
+    if (req.maxOperationsCount > 500) {
       return {
         response: {
           code: EnumStatusCode.ERR,
-          details: `Max operations count should be less than 1000`,
+          details: `Max operations count should be less than 500`,
         },
       };
     }

@@ -1,6 +1,19 @@
 import { useRouter } from "next/router";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { useUser } from "@/hooks/use-user";
 import { checkUserAccess } from "@/lib/utils";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -35,7 +48,6 @@ export const CacheWarmerConfig = ({
     { value: "300", label: "300" },
     { value: "400", label: "400" },
     { value: "500", label: "500" },
-    { value: "1000", label: "1000" },
   ];
 
   return (
@@ -99,8 +111,8 @@ export const CacheWarmerConfig = ({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex w-full flex-col gap-y-3">
-          <div className="flex w-full flex-col justify-between gap-y-4 rounded-md border p-4 md:flex-row md:items-center">
+        <div className="flex w-full flex-col gap-y-3 divide-y divide-solid divide-secondary">
+          <div className="flex w-full flex-col justify-between gap-y-4 pt-3 md:flex-row md:items-center">
             <div className="flex flex-col gap-y-1">
               <label
                 htmlFor="OperationsCount"
