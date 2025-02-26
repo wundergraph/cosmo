@@ -364,22 +364,26 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	if cfg.EnableKafka {
-		kafkaStarted.Add(1)
-		go func() {
-			defer kafkaStarted.Done()
+		if os.Getenv("CI") == "true" {
+			cfg.KafkaSeeds = []string{"localhost:9092"}
+		} else {
+			kafkaStarted.Add(1)
+			go func() {
+				defer kafkaStarted.Done()
 
-			var kafkaSetupErr error
-			kafkaSetup, kafkaSetupErr = setupKafkaServer(t)
-			if kafkaSetupErr != nil || kafkaSetup == nil {
-				t.Fatalf("could not setup kafka: %s", kafkaSetupErr.Error())
-				return
-			}
+				var kafkaSetupErr error
+				kafkaSetup, kafkaSetupErr = setupKafkaServer(t)
+				if kafkaSetupErr != nil || kafkaSetup == nil {
+					t.Fatalf("could not setup kafka: %s", kafkaSetupErr.Error())
+					return
+				}
 
-			kafkaClient = kafkaSetup.Client
-			kafkaAdminClient = kadm.NewClient(kafkaClient)
+				kafkaClient = kafkaSetup.Client
+				kafkaAdminClient = kadm.NewClient(kafkaClient)
 
-			cfg.KafkaSeeds = kafkaSetup.Brokers
-		}()
+				cfg.KafkaSeeds = kafkaSetup.Brokers
+			}()
+		}
 	}
 
 	if cfg.EnableNats {
