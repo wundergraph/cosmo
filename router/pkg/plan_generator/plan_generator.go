@@ -94,23 +94,30 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 	ctxError, cancelError := context.WithCancelCause(ctx)
 	defer cancelError(nil)
 
+	wgWriter := sync.WaitGroup{}
+	wgWriter.Add(1)
 	go func() {
+		defer wgWriter.Done()
+
 		for {
 			select {
 			case <-ctxError.Done():
 				return
-			case res := <-resultsCh:
+			case res, ok := <-resultsCh:
+				if !ok {
+					return
+				}
 				results = append(results, res)
 			}
 		}
 	}()
 
 	var planError atomic.Bool
-	wg := sync.WaitGroup{}
-	wg.Add(cfg.Concurrency)
+	wgWorker := sync.WaitGroup{}
+	wgWorker.Add(cfg.Concurrency)
 	for i := 0; i < cfg.Concurrency; i++ {
 		go func(i int) {
-			defer wg.Done()
+			defer wgWorker.Done()
 			pg, err := core.NewPlanGenerator(executionConfigPath)
 			if err != nil {
 				cancelError(fmt.Errorf("failed to create plan generator: %v", err))
@@ -161,7 +168,9 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 			}
 		}(i)
 	}
-	wg.Wait()
+	wgWorker.Wait()
+	close(resultsCh)
+	wgWriter.Wait()
 
 	if cfg.OutputReport && ctxError.Err() == nil {
 		reportFilePath := filepath.Join(outPath, ReportFileName)
