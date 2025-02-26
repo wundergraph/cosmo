@@ -30,5 +30,6 @@ Please try the below steps to solve the issue
       borderStyle: 'round',
     }),
   );
-  process.exit(1);
+
+  process.exitCode = 1;
 }

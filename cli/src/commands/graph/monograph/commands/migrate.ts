@@ -18,7 +18,8 @@ export default (opts: BaseCommandOptions) => {
       message: 'This action is irreversible. Are you sure you want to migrate this monograph?',
     });
     if (!inquiry.confirmMigration) {
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     const spinner = ora('Monograph is being migrated...').start();
