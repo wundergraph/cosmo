@@ -1,6 +1,7 @@
 import { parse, OperationDefinitionNode, Kind } from "graphql";
 import {
   getDeprecatedTypes,
+  getAuthenticatedTypes,
   getTypeCounts,
   formatAndParseSchema,
   extractVariablesFromGraphQL,
@@ -33,9 +34,20 @@ enum Department {
 
 type Employee {
   id: Int!
-  firstName: String!
+  firstName: String! @authenticated
   lastName: String!
   fullName: String! @deprecated(reason: "Please use first and last name instead")
+}
+
+enum Role {
+  DEFAULT
+}
+
+type Staff {
+  id: Int!
+  firstName: String!
+  role: Role! @authenticated
+  email: String! @requiresScopes(scopes: [["read:profile", "read:email"], ["read:all"]])
 }
 `;
 
@@ -53,6 +65,21 @@ test("return the correct types with deprecated fields or args", async () => {
   expect(deprecated[1].fields?.[0]?.name).toEqual("fullName");
 });
 
+test("return the correct types with authenticated fields", async () => {
+  const ast = await formatAndParseSchema(schema);
+
+  expect(ast).not.toBeNull();
+
+  const authenticated = getAuthenticatedTypes(ast!);
+  expect(authenticated.length).toEqual(2);
+  expect(authenticated[0].fields?.length).toEqual(1);
+  expect(authenticated[0].fields?.[0]?.name).toEqual("firstName");
+  expect(authenticated[1].fields?.length).toEqual(2);
+  expect(authenticated[1].fields?.[0]?.name).toEqual("role");
+  expect(authenticated[1].fields?.[1]?.name).toEqual("email");
+  expect(authenticated[1].fields?.[1]?.requiresScopes).toStrictEqual([["read:profile", "read:email"], ["read:all"]]);
+});
+
 test("returns correct type counts", () => {
   const ast = parseSchema(schema);
 
@@ -61,8 +88,8 @@ test("returns correct type counts", () => {
   const counts = getTypeCounts(ast!);
 
   expect(counts["query"]).toEqual(3);
-  expect(counts["objects"]).toEqual(1);
-  expect(counts["enums"]).toEqual(1);
+  expect(counts["objects"]).toEqual(2);
+  expect(counts["enums"]).toEqual(2);
 });
 
 test("returns empty if no variables are present", () => {
