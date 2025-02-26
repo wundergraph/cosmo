@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/wundergraph/cosmo/router/core"
@@ -27,6 +28,7 @@ type QueryPlanConfig struct {
 	Timeout         string
 	OutputFiles     bool
 	OutputResult    bool
+	FailOnPlanError bool
 }
 
 type QueryPlanResult struct {
@@ -100,6 +102,7 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 		}
 	}()
 
+	var planError atomic.Bool
 	wg := sync.WaitGroup{}
 	wg.Add(cfg.Concurrency)
 	for i := 0; i < cfg.Concurrency; i++ {
@@ -136,6 +139,7 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 					if err != nil {
 						res.Error = err.Error()
 						outContent = fmt.Sprintf("Error: %v", err)
+						planError.Store(true)
 					}
 
 					if cfg.OutputFiles {
@@ -171,6 +175,10 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 		if writeErr != nil {
 			log.Printf("failed to write result: %v", writeErr)
 		}
+	}
+
+	if cfg.FailOnPlanError && planError.Load() {
+		return fmt.Errorf("some queries failed to generate plan")
 	}
 
 	return ctx.Err()
