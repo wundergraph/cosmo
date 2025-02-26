@@ -165,12 +165,12 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 
 	if cfg.OutputReport && ctxError.Err() == nil {
 		reportFilePath := filepath.Join(outPath, ReportFileName)
-		resultsFile, err := os.Create(reportFilePath)
+		reportFile, err := os.Create(reportFilePath)
 		if err != nil {
 			cancel()
 			log.Printf("failed to create results file: %v", err)
 		}
-		defer resultsFile.Close()
+		defer reportFile.Close()
 		slices.SortFunc(results, func(a, b QueryPlanResult) int {
 			return strings.Compare(a.FileName, b.FileName)
 		})
@@ -178,7 +178,7 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 		if jsonErr != nil {
 			log.Printf("failed to marshal result: %v", jsonErr)
 		}
-		_, writeErr := resultsFile.WriteString(fmt.Sprintf("%s\n", data))
+		_, writeErr := reportFile.WriteString(fmt.Sprintf("%s\n", data))
 		if writeErr != nil {
 			log.Printf("failed to write result: %v", writeErr)
 		}
