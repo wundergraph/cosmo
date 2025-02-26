@@ -178,7 +178,9 @@ rover supergraph compose --config '${join(basePath, `rover-composition.yaml`)}' 
       if (e.message) {
         console.error(pc.red(e.message));
       }
-      process.exit(1);
+      process.exitCode = 1;
+      // eslint-disable-next-line no-useless-return
+      return;
     }
   });
 

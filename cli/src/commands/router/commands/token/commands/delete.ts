@@ -23,7 +23,8 @@ export default (opts: BaseCommandOptions) => {
         message: 'Are you sure you want to delete this router token?',
       });
       if (!deletionConfirmed.confirmDeletion) {
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
     }
     const resp = await opts.client.platform.deleteRouterToken(
@@ -44,7 +45,9 @@ export default (opts: BaseCommandOptions) => {
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }
-      process.exit(1);
+      process.exitCode = 1;
+      // eslint-disable-next-line no-useless-return
+      return;
     }
   });
 

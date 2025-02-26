@@ -20,7 +20,8 @@ export default (opts: BaseCommandOptions) => {
         message: 'Are you sure you want to delete this federated graph?',
       });
       if (!deletionConfirmed.confirmDeletion) {
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
     }
 
@@ -42,7 +43,9 @@ export default (opts: BaseCommandOptions) => {
       if (resp.response?.details) {
         console.log(pc.red(pc.bold(resp.response?.details)));
       }
-      process.exit(1);
+      process.exitCode = 1;
+      // eslint-disable-next-line no-useless-return
+      return;
     }
   });
 
