@@ -154,6 +154,7 @@ import { removeOrganizationMember } from './user/removeOrganizationMember.js';
 import { updateOrgMemberRole } from './user/updateOrgMemberRole.js';
 import { deleteCacheWarmerOperation } from './cache-warmer/deleteCacheWarmerOperation.js';
 import { setGraphRouterCompatibilityVersion } from './graph/setGraphRouterCompatibilityVersion.js';
+import { getOrganizationBySlug } from './organization/getOrganizationBySlug.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -514,6 +515,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     isMemberLimitReached: (req, ctx) => {
       return isMemberLimitReached(opts, req, ctx);
+    },
+
+    getOrganizationBySlug(req, ctx) {
+      return getOrganizationBySlug(opts, req, ctx);
     },
 
     getOrganizationMembers: (req, ctx) => {
