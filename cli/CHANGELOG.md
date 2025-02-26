@@ -4,6 +4,19 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.75.1](https://github.com/wundergraph/cosmo/compare/wgc@0.75.0...wgc@0.75.1) (2025-02-25)
+
+### Bug Fixes
+
+* correct and deterministic dist folder structure ([#1628](https://github.com/wundergraph/cosmo/issues/1628)) ([f9600d4](https://github.com/wundergraph/cosmo/commit/f9600d4fd8f090968f38b9628034cdd97156e42a)) (@endigma)
+
+# [0.75.0](https://github.com/wundergraph/cosmo/compare/wgc@0.74.0...wgc@0.75.0) (2025-02-25)
+
+### Features
+
+* include client schema in the output of federated-graph fetch command ([#1619](https://github.com/wundergraph/cosmo/issues/1619)) ([5c87126](https://github.com/wundergraph/cosmo/commit/5c8712621ae7651317f85b2d12d1c128b54a5f75)) (@JivusAyrus)
+* release bun based single file executables ([#1620](https://github.com/wundergraph/cosmo/issues/1620)) ([7cda142](https://github.com/wundergraph/cosmo/commit/7cda1423b711224de2e8d0a4ce514340a2d4757f)) (@endigma)
+
 # [0.74.0](https://github.com/wundergraph/cosmo/compare/wgc@0.73.0...wgc@0.74.0) (2025-02-17)
 
 ### Features

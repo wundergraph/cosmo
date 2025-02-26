@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.183.2](https://github.com/wundergraph/cosmo/compare/router@0.183.1...router@0.183.2) (2025-02-24)
+
+### Bug Fixes
+
+* fix node selections do not select external parents of unique node ([#1622](https://github.com/wundergraph/cosmo/issues/1622)) ([902bda8](https://github.com/wundergraph/cosmo/commit/902bda8bda6473b896c6f0945dd6ea17490a2cf2)) (@devsergiy)
+
+## [0.183.1](https://github.com/wundergraph/cosmo/compare/router@0.183.0...router@0.183.1) (2025-02-21)
+
+### Bug Fixes
+
+* set responseWriter in requestContext to the wrapped one ([#1609](https://github.com/wundergraph/cosmo/issues/1609)) ([e96525e](https://github.com/wundergraph/cosmo/commit/e96525e6fea14a5250fb2c56d05ec6be805dec62)) (@endigma)
+
+# [0.183.0](https://github.com/wundergraph/cosmo/compare/router@0.182.0...router@0.183.0) (2025-02-21)
+
+### Features
+
+* add expressions to metrics ([#1556](https://github.com/wundergraph/cosmo/issues/1556)) ([a7f643a](https://github.com/wundergraph/cosmo/commit/a7f643aaa65c0a6d7882b17bd9bb3f3249f6b88e)) (@alepane21)
+
 # [0.182.0](https://github.com/wundergraph/cosmo/compare/router@0.181.1...router@0.182.0) (2025-02-20)
 
 ### Bug Fixes

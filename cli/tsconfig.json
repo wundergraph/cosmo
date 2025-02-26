@@ -6,7 +6,8 @@
     "moduleResolution": "node",
     "declarationDir": "./dist",
     "outDir": "./dist",
-    "typeRoots": ["./node_modules/@types", "./src/typedefinitions"]
+    "typeRoots": ["./node_modules/@types", "./src/typedefinitions"],
+    "rootDir": "."
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
