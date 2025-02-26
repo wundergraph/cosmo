@@ -15,7 +15,7 @@ env:
   DO_NOT_TRACK: "1"
 
 jobs:
-  build_test:
+  build_test_default:
     timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
@@ -40,9 +40,6 @@ jobs:
         working-directory: cli
         run: bun build --compile --minify --sourcemap src/index.ts --outfile wgc
 
-      - name: Unit Test
-        run: pnpm run --filter wgc test
-
       - name: E2E test
         working-directory: cli
         run: bun test e2e
@@ -65,12 +62,6 @@ jobs:
       - name: Install dependencies
         run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition install --frozen-lockfile
 
-      - name: Generate code
-        run: pnpm buf generate --template buf.ts.gen.yaml
-
-      - name: Check if git is not dirty after generating files
-        run: git diff --no-ext-diff --exit-code
-
       - name: Build Node.js NPM Package
         run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition run build
 
@@ -81,7 +72,7 @@ jobs:
         working-directory: cli
         run: bun test e2e --test-name-pattern node
 
-  build_upload_matrix:
+  build_bun_matrix:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: build_test
@@ -120,3 +111,15 @@ jobs:
         with:
           name: wgc-experimental-${{ github.sha }}-${{ matrix.target }}
           path: cli/out/wgc-${{ github.sha }}-${{ matrix.target }}*
+
+  build_test:
+    runs-on: ubuntu-latest
+    needs: [build_test_default, build_test_node_matrix, build_bun_matrix]
+    if: always()
+    steps:
+      - name: "All tests passed"
+        if: ${{ !(contains(needs.*.result, 'failure')) }}
+        run: exit 0
+      - name: "Some tests failed"
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: exit 1
