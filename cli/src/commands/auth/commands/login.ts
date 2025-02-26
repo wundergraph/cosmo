@@ -52,16 +52,17 @@ export default (opts: BaseCommandOptions) => {
     const organizationSlugByDisplayKey = new Map<string, string>();
     for (const organizationSlug of organizationSlugs) {
       const headers = getBaseHeaders();
-      const response = await opts.client.platform.getOrganizationBySlug({
-          slug: organizationSlug
+      const response = await opts.client.platform.getOrganizationBySlug(
+        {
+          slug: organizationSlug,
         },
         {
           headers: {
             ...headers,
             authorization: `Bearer ${accessTokenResp.response.accessToken}`,
             'cosmo-org-slug': organizationSlug,
-          }
-        }
+          },
+        },
       );
       if (!response.response || response.response.code !== EnumStatusCode.OK || !response.organization) {
         organizationSlugByDisplayKey.set(organizationSlug, organizationSlug);
@@ -82,7 +83,7 @@ export default (opts: BaseCommandOptions) => {
       program.error('Unable to login.');
     }
 
-    updateConfigFile({ ...accessTokenResp.response, organizationSlug, });
+    updateConfigFile({ ...accessTokenResp.response, organizationSlug });
 
     console.log(pc.green('Logged in Successfully!'));
   });
