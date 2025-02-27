@@ -53,6 +53,9 @@ access_logs:
       - key: "hello"
         value_from:
           context_field: "operation_name"
+      - key: "request_information"
+        value_from:
+          expression: "request.error ?? 'success'"
   subgraphs:
     enabled: true
     fields:

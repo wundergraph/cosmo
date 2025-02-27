@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.uber.org/zap"
@@ -31,6 +32,24 @@ const (
 )
 
 // Helper functions to create zap fields for custom attributes.
+
+func NewExpressionLogField(val any, key string, defaultValue any) zap.Field {
+	// Depending on the condition exprlang will dereference a pointer or a non pointer type
+	// of the error (if an error is existing), thus if the method receiver is of the pointer
+	// type, the Error() wont be printed to the output
+	// By wrapping all errors in a common type we can always unwrap it (some types wont be exported
+	// like errors.joinErrors for example), and ensure its Error() function is then called
+	if assertVal, ok := val.(ExprWrapError); ok {
+		val = &assertVal
+	}
+
+	if v := val; v != "" {
+		return zap.Any(key, v)
+	} else if defaultValue != "" {
+		return zap.Any(key, defaultValue)
+	}
+	return zap.Skip()
+}
 
 func NewStringLogField(val string, attribute config.CustomAttribute) zap.Field {
 	if v := val; v != "" {
@@ -68,29 +87,89 @@ func NewDurationLogField(val time.Duration, attribute config.CustomAttribute) za
 	return zap.Skip()
 }
 
-func AccessLogsFieldHandler(attributes []config.CustomAttribute, err any, request *http.Request, responseHeader *http.Header) []zapcore.Field {
+func RouterAccessLogsFieldHandler(
+	logger *zap.Logger,
+	attributes []config.CustomAttribute,
+	exprAttributes []requestlogger.ExpressionAttribute,
+	passedErr any,
+	request *http.Request,
+	responseHeader *http.Header,
+) []zapcore.Field {
 	resFields := make([]zapcore.Field, 0, len(attributes))
 
+	reqContext, resFields := processRequestIDField(request, resFields)
+	resFields = processCustomAttributes(attributes, responseHeader, resFields, request, reqContext, passedErr)
+	resFields = processExpressionAttributes(logger, exprAttributes, reqContext, resFields)
+
+	return resFields
+}
+
+func SubgraphAccessLogsFieldHandler(
+	_ *zap.Logger,
+	attributes []config.CustomAttribute,
+	_ []requestlogger.ExpressionAttribute,
+	passedErr any,
+	request *http.Request,
+	responseHeader *http.Header,
+) []zapcore.Field {
+	resFields := make([]zapcore.Field, 0, len(attributes))
+
+	reqContext, resFields := processRequestIDField(request, resFields)
+	resFields = processCustomAttributes(attributes, responseHeader, resFields, request, reqContext, passedErr)
+
+	return resFields
+}
+
+func processRequestIDField(request *http.Request, resFields []zapcore.Field) (*requestContext, []zapcore.Field) {
 	var reqContext *requestContext
-	if request != nil {
-		reqContext = getRequestContext(request.Context())
-		resFields = append(resFields, logging.WithRequestID(middleware.GetReqID(request.Context())))
+	if request == nil {
+		return reqContext, resFields
 	}
 
+	reqContext = getRequestContext(request.Context())
+	resFields = append(resFields, logging.WithRequestID(middleware.GetReqID(request.Context())))
+	return reqContext, resFields
+}
+
+func processExpressionAttributes(logger *zap.Logger, exprAttributes []requestlogger.ExpressionAttribute, reqContext *requestContext, resFields []zapcore.Field) []zapcore.Field {
+	// If the request context was processed as nil (e.g. :- request was nil in the caller)
+	// do not proceed to process exprAttributes
+	if reqContext == nil {
+		return resFields
+	}
+
+	for _, exprField := range exprAttributes {
+		result, err := reqContext.ResolveAnyExpressionWithWrappedError(exprField.Expr)
+		if err != nil {
+			logger.Error("unable to process expression for access logs", zap.String("fieldKey", exprField.Key), zap.Error(err))
+			continue
+		}
+		resFields = append(resFields, NewExpressionLogField(result, exprField.Key, exprField.Default))
+	}
+	return resFields
+}
+
+func processCustomAttributes(
+	attributes []config.CustomAttribute,
+	responseHeader *http.Header,
+	resFields []zapcore.Field,
+	request *http.Request,
+	reqContext *requestContext,
+	passedErr any,
+) []zapcore.Field {
 	for _, field := range attributes {
 		if field.ValueFrom != nil && field.ValueFrom.ResponseHeader != "" && responseHeader != nil {
 			resFields = append(resFields, NewStringLogField(responseHeader.Get(field.ValueFrom.ResponseHeader), field))
 		} else if field.ValueFrom != nil && field.ValueFrom.RequestHeader != "" && request != nil {
 			resFields = append(resFields, NewStringLogField(request.Header.Get(field.ValueFrom.RequestHeader), field))
 		} else if field.ValueFrom != nil && field.ValueFrom.ContextField != "" {
-			if v := GetLogFieldFromCustomAttribute(field, reqContext, err); v != zap.Skip() {
+			if v := GetLogFieldFromCustomAttribute(field, reqContext, passedErr); v != zap.Skip() {
 				resFields = append(resFields, v)
 			}
 		} else if field.Default != "" {
 			resFields = append(resFields, NewStringLogField(field.Default, field))
 		}
 	}
-
 	return resFields
 }
 
@@ -110,7 +189,11 @@ func GetLogFieldFromCustomAttribute(field config.CustomAttribute, req *requestCo
 	return zap.Skip()
 }
 
-func getCustomDynamicAttributeValue(attribute *config.CustomDynamicAttribute, reqContext *requestContext, err any) interface{} {
+func getCustomDynamicAttributeValue(
+	attribute *config.CustomDynamicAttribute,
+	reqContext *requestContext,
+	err any,
+) interface{} {
 	if attribute == nil || attribute.ContextField == "" {
 		return ""
 	}
