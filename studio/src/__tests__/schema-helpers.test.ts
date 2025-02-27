@@ -64,7 +64,7 @@ test("return the correct types with deprecated fields or args", () => {
 });
 
 test("that authentication types are read correctly", async () => {
-  const ast = await formatAndParseSchema(schema);
+  const ast = await parseSchema(schema);
 
   expect(ast).not.toBeNull();
 
