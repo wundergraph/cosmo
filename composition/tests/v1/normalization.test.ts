@@ -1658,7 +1658,7 @@ describe('Normalization tests', () => {
     );
   });
 
-  test.skip('that an error is returned if a composite type selection does not define a selection set of its own  #1.2', () => {
+  test('that an error is returned if a composite type selection does not define a selection set of its own  #1.2', () => {
     const result = normalizeSubgraphFromString(
       `
        type Entity @key(fields: "id email") @key(fields: "id organization { details id }") {
@@ -1683,7 +1683,7 @@ describe('Normalization tests', () => {
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
     expect(result.errors[0]).toStrictEqual(
-      invalidKeyDirectivesError('Entity', [
+      invalidDirectiveError(KEY,'Entity', '2nd', [
         invalidSelectionSetErrorMessage('id organization { details id }', ['Organization.details'], 'Details', OBJECT),
       ]),
     );
@@ -1725,7 +1725,7 @@ describe('Normalization tests', () => {
     );
   });
 
-  test.skip('that an error is returned if a composite type selection does not define a selection set of its own  #2.2', () => {
+  test('that an error is returned if a composite type selection does not define a selection set of its own  #2.2', () => {
     const result = normalizeSubgraphFromString(
       `
        type Entity @key(fields: "id email") @key(fields: "id organization { details uuid }") {
@@ -1750,7 +1750,7 @@ describe('Normalization tests', () => {
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
     expect(result.errors[0]).toStrictEqual(
-      invalidKeyDirectivesError('Entity', [
+      invalidDirectiveError(KEY,'Entity', '2nd', [
         invalidSelectionSetErrorMessage(
           'id organization { details uuid }',
           ['Organization.details'],
