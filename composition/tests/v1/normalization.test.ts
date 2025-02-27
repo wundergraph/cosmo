@@ -1683,7 +1683,7 @@ describe('Normalization tests', () => {
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
     expect(result.errors[0]).toStrictEqual(
-      invalidDirectiveError(KEY,'Entity', '2nd', [
+      invalidDirectiveError(KEY, 'Entity', '2nd', [
         invalidSelectionSetErrorMessage('id organization { details id }', ['Organization.details'], 'Details', OBJECT),
       ]),
     );
@@ -1750,7 +1750,7 @@ describe('Normalization tests', () => {
     expect(result.success).toBe(false);
     expect(result.errors).toBeDefined();
     expect(result.errors[0]).toStrictEqual(
-      invalidDirectiveError(KEY,'Entity', '2nd', [
+      invalidDirectiveError(KEY, 'Entity', '2nd', [
         invalidSelectionSetErrorMessage(
           'id organization { details uuid }',
           ['Organization.details'],
