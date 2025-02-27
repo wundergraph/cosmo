@@ -37,7 +37,7 @@ type QueryPlanResult struct {
 	Error    string `json:"error,omitempty"`
 }
 
-func PlanGenerator(cfg QueryPlanConfig) error {
+func PlanGenerator(cfg QueryPlanConfig, ctx context.Context) error {
 	if cfg.Concurrency == 0 {
 		cfg.Concurrency = runtime.GOMAXPROCS(0)
 	}
@@ -88,7 +88,7 @@ func PlanGenerator(cfg QueryPlanConfig) error {
 	if parseErr != nil {
 		return fmt.Errorf("failed to parse timeout: %v", parseErr)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), duration)
+	ctx, cancel := context.WithTimeout(ctx, duration)
 	defer cancel()
 	ctxError, cancelError := context.WithCancelCause(ctx)
 	defer cancelError(nil)

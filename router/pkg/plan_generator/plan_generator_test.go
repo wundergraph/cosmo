@@ -31,7 +31,7 @@ func TestPlanGenerator(t *testing.T) {
 			OutputFiles:     true,
 		}
 
-		err = PlanGenerator(cfg)
+		err = PlanGenerator(cfg, context.Background())
 		assert.ErrorContains(t, err, "failed to read queries directory:")
 	})
 
@@ -45,7 +45,7 @@ func TestPlanGenerator(t *testing.T) {
 			OutputFiles:     true,
 		}
 
-		err := PlanGenerator(cfg)
+		err := PlanGenerator(cfg, context.Background())
 		assert.ErrorContains(t, err, "failed to create output directory:")
 	})
 
@@ -63,7 +63,7 @@ func TestPlanGenerator(t *testing.T) {
 			OutputFiles:     true,
 		}
 
-		err = PlanGenerator(cfg)
+		err = PlanGenerator(cfg, context.Background())
 		assert.ErrorContains(t, err, "failed to read filter file:")
 	})
 
@@ -80,7 +80,7 @@ func TestPlanGenerator(t *testing.T) {
 			OutputFiles:     true,
 		}
 
-		err = PlanGenerator(cfg)
+		err = PlanGenerator(cfg, context.Background())
 		assert.ErrorContains(t, err, "failed to create plan generator:")
 	})
 
@@ -97,7 +97,7 @@ func TestPlanGenerator(t *testing.T) {
 			OutputFiles:     true,
 		}
 
-		err = PlanGenerator(cfg)
+		err = PlanGenerator(cfg, context.Background())
 		assert.ErrorContains(t, err, "unexpected EOF")
 	})
 
@@ -114,7 +114,7 @@ func TestPlanGenerator(t *testing.T) {
 			OutputFiles:     true,
 		}
 
-		err = PlanGenerator(cfg)
+		err = PlanGenerator(cfg, context.Background())
 		assert.ErrorContains(t, err, "failed to parse timeout:")
 	})
 
@@ -131,7 +131,7 @@ func TestPlanGenerator(t *testing.T) {
 			OutputFiles:     true,
 		}
 
-		err = PlanGenerator(cfg)
+		err = PlanGenerator(cfg, context.Background())
 		assert.NoError(t, err)
 
 		queries, err := os.ReadDir(tempDir)
@@ -165,7 +165,7 @@ func TestPlanGenerator(t *testing.T) {
 			OutputFiles:     true,
 		}
 
-		err = PlanGenerator(cfg)
+		err = PlanGenerator(cfg, context.Background())
 		assert.NoError(t, err)
 
 		queries, err := os.ReadDir(tempDir)
@@ -192,7 +192,7 @@ func TestPlanGenerator(t *testing.T) {
 			OutputReport:    true,
 		}
 
-		err = PlanGenerator(cfg)
+		err = PlanGenerator(cfg, context.Background())
 		assert.NoError(t, err)
 
 		queries, err := os.ReadDir(tempDir)
@@ -226,7 +226,7 @@ func TestPlanGenerator(t *testing.T) {
 			OutputReport:    true,
 		}
 
-		err = PlanGenerator(cfg)
+		err = PlanGenerator(cfg, context.Background())
 		assert.ErrorContains(t, err, "some queries failed to generate plan")
 
 		queries, err := os.ReadDir(tempDir)
@@ -260,7 +260,7 @@ func TestPlanGenerator(t *testing.T) {
 			OutputFiles:     true,
 		}
 
-		err = PlanGenerator(cfg)
+		err = PlanGenerator(cfg, context.Background())
 		assert.ErrorContains(t, err, "some queries failed to generate plan")
 
 		queries, err := os.ReadDir(tempDir)
@@ -293,7 +293,7 @@ func TestPlanGenerator(t *testing.T) {
 			OutputFiles:     true,
 		}
 
-		err = PlanGenerator(cfg)
+		err = PlanGenerator(cfg, context.Background())
 		assert.ErrorIs(t, err, context.DeadlineExceeded)
 	})
 }

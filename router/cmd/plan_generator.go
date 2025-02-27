@@ -1,8 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"flag"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/wundergraph/cosmo/router/pkg/plan_generator"
 )
@@ -38,7 +42,16 @@ func PlanGenerator(args []string) {
 		log.Fatalf("missing required flags")
 	}
 
-	err := plan_generator.PlanGenerator(cfg)
+	ctxNotify, stop := signal.NotifyContext(context.Background(), os.Interrupt,
+		syscall.SIGHUP,  // process is detached from terminal
+		syscall.SIGTERM, // default for kill
+		syscall.SIGKILL,
+		syscall.SIGQUIT, // ctrl + \
+		syscall.SIGINT,  // ctrl+c
+	)
+	defer stop()
+
+	err := plan_generator.PlanGenerator(cfg, ctxNotify)
 	if err != nil {
 		log.Fatalf("Error during command plan-generator: %s", err)
 	}
