@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/astjson"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
@@ -498,7 +499,7 @@ type operationContext struct {
 	// Content is the normalized content of the operation
 	content    string
 	variables  *astjson.Value
-	files      []httpclient.File
+	files      []*httpclient.FileUpload
 	clientInfo *ClientInfo
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan     *planWithMetaData
@@ -529,7 +530,7 @@ func (o *operationContext) Variables() *astjson.Value {
 	return o.variables
 }
 
-func (o *operationContext) Files() []httpclient.File {
+func (o *operationContext) Files() []*httpclient.FileUpload {
 	return o.files
 }
 

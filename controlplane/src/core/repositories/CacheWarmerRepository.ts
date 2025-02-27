@@ -18,6 +18,7 @@ import { ClickHouseClient } from '../clickhouse/index.js';
 import { S3RouterConfigMetadata } from '../composition/composer.js';
 import { CacheWarmupOperation } from '../../db/models.js';
 import { getDateRange, isoDateRangeToTimestamps } from './analytics/util.js';
+import { OperationsRepository } from './OperationsRepository.js';
 
 interface ComputeCacheWarmerOperationsProps {
   rangeInHours?: number;
@@ -136,6 +137,8 @@ export class CacheWarmerRepository {
   }
 
   public async computeCacheWarmerOperations(props: ComputeCacheWarmerOperationsProps): Promise<CacheWarmerOperations> {
+    const operationsRepo = new OperationsRepository(this.db, props.federatedGraphId);
+
     const computedOperations: Operation[] = [];
     const dbCacheWarmerOperations: CacheWarmupOperation[] = [];
 
@@ -146,21 +149,27 @@ export class CacheWarmerRepository {
     });
 
     for (const operation of manuallyAddedOperations) {
-      let operationRequest: OperationRequest;
       if (operation.operationPersistedID) {
-        operationRequest = new OperationRequest({
-          operationName: operation.operationName || undefined,
-          extensions: new Extension({
-            persistedQuery: new PersistedQuery({
-              version: 1,
-              sha256Hash: operation.operationPersistedID,
-            }),
-          }),
+        const persistedOperation = await operationsRepo.getPersistedOperation({
+          operationId: operation.operationPersistedID,
         });
+
+        if (!persistedOperation || !persistedOperation.contents) {
+          continue;
+        }
 
         computedOperations.push(
           new Operation({
-            request: operationRequest,
+            request: new OperationRequest({
+              operationName: operation.operationName || undefined,
+              query: persistedOperation.contents,
+              extensions: new Extension({
+                persistedQuery: new PersistedQuery({
+                  version: 1,
+                  sha256Hash: operation.operationPersistedID,
+                }),
+              }),
+            }),
             client: operation.clientName
               ? new ClientInfo({
                   name: operation.clientName,
@@ -207,22 +216,27 @@ export class CacheWarmerRepository {
     });
 
     for (const operation of topOperationsByPlanningTime) {
-      let operationRequest: OperationRequest;
-
       if (operation.operationPersistedID) {
-        operationRequest = new OperationRequest({
-          operationName: operation.operationName,
-          extensions: new Extension({
-            persistedQuery: new PersistedQuery({
-              version: 1,
-              sha256Hash: operation.operationPersistedID,
-            }),
-          }),
+        const persistedOperation = await operationsRepo.getPersistedOperation({
+          operationId: operation.operationPersistedID,
         });
+
+        if (!persistedOperation || !persistedOperation.contents) {
+          continue;
+        }
 
         computedOperations.push(
           new Operation({
-            request: operationRequest,
+            request: new OperationRequest({
+              operationName: operation.operationName,
+              query: persistedOperation.contents,
+              extensions: new Extension({
+                persistedQuery: new PersistedQuery({
+                  version: 1,
+                  sha256Hash: operation.operationPersistedID,
+                }),
+              }),
+            }),
             client: operation.clientName
               ? new ClientInfo({
                   name: operation.clientName,
@@ -235,6 +249,7 @@ export class CacheWarmerRepository {
         dbCacheWarmerOperations.push({
           operationName: operation.operationName,
           operationHash: operation.operationHash,
+          operationContent: persistedOperation.contents,
           operationPersistedID: operation.operationPersistedID,
           clientName: operation.clientName,
           clientVersion: operation.clientVersion,

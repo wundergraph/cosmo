@@ -1244,6 +1244,15 @@ message Organization {
   string createdAt = 5;
 }
 
+message GetOrganizationBySlugRequest {
+  string slug = 1;
+}
+
+message GetOrganizationBySlugResponse {
+  Response response = 1;
+  optional Organization organization = 2;
+}
+
 /**
  * Billing
  */
@@ -2640,6 +2649,9 @@ service PlatformService {
   rpc GetFederatedGraphChangelog(GetFederatedGraphChangelogRequest) returns (GetFederatedGraphChangelogResponse) {}
   // CreateFederatedGraphToken creates a federated graph token that is consumed by the router to authenticate requests.
   rpc CreateFederatedGraphToken(CreateFederatedGraphTokenRequest) returns (CreateFederatedGraphTokenResponse) {}
+
+  // GetOrganizationBySlug returns a specific organization by its slug
+  rpc GetOrganizationBySlug(GetOrganizationBySlugRequest) returns (GetOrganizationBySlugResponse){}
   // GetOrganizationMembers returns the list of organization members
   rpc GetOrganizationMembers(GetOrganizationMembersRequest) returns (GetOrganizationMembersResponse){}
   // GetOrganizationMembers returns the list of pending organization invites

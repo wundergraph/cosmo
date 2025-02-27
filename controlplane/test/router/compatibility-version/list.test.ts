@@ -16,7 +16,6 @@ describe('router compatibility-version list tests', () => {
     return { ClickHouseClient };
   });
 
-
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });

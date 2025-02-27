@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.75.3](https://github.com/wundergraph/cosmo/compare/wgc@0.75.2...wgc@0.75.3) (2025-02-26)
+
+### Bug Fixes
+
+* improve wgc auth login and router compatibility-version ([#1636](https://github.com/wundergraph/cosmo/issues/1636)) ([6946363](https://github.com/wundergraph/cosmo/commit/6946363024e49b6170a9553728ac3ecc973ce394)) (@Aenimus)
+
+## [0.75.2](https://github.com/wundergraph/cosmo/compare/wgc@0.75.1...wgc@0.75.2) (2025-02-26)
+
+### Bug Fixes
+
+* **cli:** resolve broken console outputs ([#1623](https://github.com/wundergraph/cosmo/issues/1623)) ([6aa67af](https://github.com/wundergraph/cosmo/commit/6aa67aff01f83de5f4a195de32e5674f337ec325)) (@SkArchon)
+
 ## [0.75.1](https://github.com/wundergraph/cosmo/compare/wgc@0.75.0...wgc@0.75.1) (2025-02-25)
 
 ### Bug Fixes
