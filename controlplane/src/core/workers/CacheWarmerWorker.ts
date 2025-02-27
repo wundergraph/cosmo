@@ -95,6 +95,8 @@ class CacheWarmerWorker implements IWorker {
         federatedGraphId,
         organizationId,
         rangeInHours,
+        // TODO have to fetch the number of operations from the cache configuration of the namespace
+        maxOperationsCount: 100,
       });
 
       const cacheWarmerOperationsBytes = Buffer.from(cacheWarmerOperations.toJsonString(), 'utf8');
