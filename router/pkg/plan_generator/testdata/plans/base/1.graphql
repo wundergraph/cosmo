@@ -1,0 +1,32 @@
+QueryPlan {
+  Sequence {
+    Fetch(service: "employees") {
+      {
+          employees {
+              tag
+              __typename
+              id
+          }
+          products {
+              __typename
+          }
+      }
+    }
+    Fetch(service: "products") {
+      {
+        fragment Key on Employee {
+            __typename
+            id
+        }
+      } =>
+      {
+          _entities(representations: $representations){
+              ... on Employee {
+                  __typename
+                  notes
+              }
+          }
+      }
+    }
+  }
+}
