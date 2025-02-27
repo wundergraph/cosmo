@@ -270,16 +270,10 @@ func (c *requestContext) SetError(err error) {
 func (c *requestContext) ResolveAnyExpressionWithWrappedError(expression *vm.Program) (any, error) {
 	// If an error exists already, wrap it and resolve the expression with the copied context
 	if c.expressionContext.Request.Error != nil {
-		return expr.ResolveAnyExpression(expression, expr.Context{
-			// Note that req.Auth, req.URL, req.Header are all complex structs, we are using the existing values
-			// as we only care about modifying the req.Error type
-			Request: expr.Request{
-				Auth:   c.expressionContext.Request.Auth,
-				URL:    c.expressionContext.Request.URL,
-				Header: c.expressionContext.Request.Header,
-				Error:  &ExprWrapError{c.expressionContext.Request.Error},
-			},
-		})
+		// This will create a copy of the base expressionContext which we can modify
+		copyContext := c.expressionContext
+		copyContext.Request.Error = &ExprWrapError{c.expressionContext.Request.Error}
+		return expr.ResolveAnyExpression(expression, copyContext)
 	}
 	return expr.ResolveAnyExpression(expression, c.expressionContext)
 }
