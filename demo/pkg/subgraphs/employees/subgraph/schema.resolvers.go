@@ -11,6 +11,7 @@ import (
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/vektah/gqlparser/v2/gqlerror"
+
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model"
 )
@@ -83,6 +84,19 @@ func (r *mutationResolver) UpdateEmployeeTag(ctx context.Context, id int, tag st
 // SingleUpload is the resolver for the singleUpload field.
 func (r *mutationResolver) SingleUpload(ctx context.Context, file graphql.Upload) (bool, error) {
 	fmt.Printf("uploading file %s with size %d\n", file.Filename, file.Size)
+	return true, nil
+}
+
+// SingleUploadWithInput is the resolver for the singleUploadWithInput field.
+func (r *mutationResolver) SingleUploadWithInput(ctx context.Context, arg model.FileUpload) (bool, error) {
+	if arg.Nested != nil {
+		fmt.Printf("uploading file %s with size %d\n", arg.Nested.File.Filename, arg.Nested.File.Size)
+	}
+	if arg.NestedList != nil {
+		for _, file := range arg.NestedList {
+			fmt.Printf("uploading file %s with size %d\n", file.Filename, file.Size)
+		}
+	}
 	return true, nil
 }
 

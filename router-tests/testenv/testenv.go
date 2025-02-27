@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -50,6 +51,8 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 	"google.golang.org/protobuf/encoding/protojson"
 
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
+
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -58,9 +61,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
-
-	_ "embed"
 )
 
 var ErrEnvironmentClosed = errors.New("test environment closed")
@@ -364,22 +364,40 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	if cfg.EnableKafka {
-		kafkaStarted.Add(1)
-		go func() {
-			defer kafkaStarted.Done()
+		// Depending on whether or not we are in CI e.g. Github Actions, we
+		// either start a kafka container or use the one provided by the CI
+		// This is faster in GHA due to pitiful DIND speed, and helps prevent timeout
+		// related errors (for now)
+		if os.Getenv("CI") == "true" {
+			cfg.KafkaSeeds = []string{"localhost:9092"}
 
-			var kafkaSetupErr error
-			kafkaSetup, kafkaSetupErr = setupKafkaServer(t)
-			if kafkaSetupErr != nil || kafkaSetup == nil {
-				t.Fatalf("could not setup kafka: %s", kafkaSetupErr.Error())
-				return
+			client, err := kgo.NewClient(
+				kgo.SeedBrokers(cfg.KafkaSeeds...),
+			)
+			if err != nil {
+				return nil, err
 			}
 
-			kafkaClient = kafkaSetup.Client
+			kafkaClient = client
 			kafkaAdminClient = kadm.NewClient(kafkaClient)
+		} else {
+			kafkaStarted.Add(1)
+			go func() {
+				defer kafkaStarted.Done()
 
-			cfg.KafkaSeeds = kafkaSetup.Brokers
-		}()
+				var kafkaSetupErr error
+				kafkaSetup, kafkaSetupErr = setupKafkaServer(t)
+				if kafkaSetupErr != nil || kafkaSetup == nil {
+					t.Fatalf("could not setup kafka: %s", kafkaSetupErr.Error())
+					return
+				}
+
+				kafkaClient = kafkaSetup.Client
+				kafkaAdminClient = kadm.NewClient(kafkaClient)
+
+				cfg.KafkaSeeds = kafkaSetup.Brokers
+			}()
+		}
 	}
 
 	if cfg.EnableNats {
@@ -1240,8 +1258,13 @@ type GraphQLRequest struct {
 	Extensions    json.RawMessage `json:"extensions,omitempty"`
 	OperationName json.RawMessage `json:"operationName,omitempty"`
 	Header        http.Header     `json:"-"`
-	Files         [][]byte        `json:"-"`
+	Files         []FileUpload    `json:"-"`
 	Cookies       []*http.Cookie  `json:"-"`
+}
+
+type FileUpload struct {
+	VariablesPath string
+	FileContent   []byte
 }
 
 type TestResponse struct {
@@ -1396,21 +1419,18 @@ func (e *Environment) MakeGraphQLRequestAsMultipartForm(request GraphQLRequest) 
 	formValues := make(map[string]io.Reader)
 	formValues["operations"] = bytes.NewReader(data)
 
-	if len(request.Files) == 1 {
-		formValues["map"] = strings.NewReader(`{ "0": ["variables.file"] }`)
-		formValues["0"] = bytes.NewReader(request.Files[0])
-	} else {
+	if len(request.Files) > 0 {
 		mapStr := `{`
 		for i := 0; i < len(request.Files); i++ {
 			if i > 0 {
 				mapStr += ", "
 			}
-			mapStr += fmt.Sprintf(`"%d": ["variables.files.%d"]`, i, i)
+			mapStr += fmt.Sprintf(`"%d": ["%s"]`, i, request.Files[i].VariablesPath)
 		}
 		mapStr += `}`
 		formValues["map"] = strings.NewReader(mapStr)
 		for i := 0; i < len(request.Files); i++ {
-			formValues[fmt.Sprintf("%d", i)] = bytes.NewReader(request.Files[i])
+			formValues[fmt.Sprintf("%d", i)] = bytes.NewReader(request.Files[i].FileContent)
 		}
 	}
 
