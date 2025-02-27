@@ -1778,7 +1778,7 @@ export class NormalizationFactory {
               }
               return;
             }
-            // @TODO re-assess in v2 because this is breaking for provides in v1
+            // @TODO re-assess in v2 because this would be breaking for @provides in v1
             if (!isFieldConditional && !isProvides) {
               // Do not add unnecessary @requires configurations
               return;
@@ -1804,13 +1804,12 @@ export class NormalizationFactory {
           }
           // TODO isFieldConditional
           if (isDefinedExternal) {
-            const conditionalFieldData = getValueOrDefault(
-              nf.conditionalFieldDataByCoords,
-              currentFieldCoords,
-              newConditionalFieldData,
-            );
             if (isProvides) {
-              conditionalFieldData.providedBy.push(
+              getValueOrDefault(
+                nf.conditionalFieldDataByCoords,
+                currentFieldCoords,
+                newConditionalFieldData,
+              ).providedBy.push(
                 newFieldSetConditionData({
                   fieldCoordinatesPath: [...fieldCoordsPath],
                   fieldPath: [...fieldPath],
