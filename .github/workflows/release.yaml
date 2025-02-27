@@ -50,7 +50,7 @@ jobs:
         # commits and bumps CHANGELOG.md and package.json files, but does not
         # publish anything.
       - name: Generate next version (dry-run)
-        run: pnpm lerna version --ignore-scripts --dry-run -y
+        run: pnpm lerna version --ignore-scripts --dry-run --yes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
