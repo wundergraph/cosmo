@@ -51,7 +51,7 @@ func PlanGenerator(args []string) {
 	)
 	defer stop()
 
-	err := plan_generator.PlanGenerator(cfg, ctxNotify)
+	err := plan_generator.PlanGenerator(ctxNotify, cfg)
 	if err != nil {
 		log.Fatalf("Error during command plan-generator: %s", err)
 	}

@@ -37,7 +37,7 @@ type QueryPlanResult struct {
 	Error    string `json:"error,omitempty"`
 }
 
-func PlanGenerator(cfg QueryPlanConfig, ctx context.Context) error {
+func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 	if cfg.Concurrency == 0 {
 		cfg.Concurrency = runtime.GOMAXPROCS(0)
 	}
