@@ -46,14 +46,19 @@ jobs:
       - name: Check if git is not dirty after generating files
         run: git diff --no-ext-diff --exit-code
 
+        # This will generate the next release in dry run mode, which still reads
+        # commits and bumps CHANGELOG.md and package.json files, but does not
+        # publish anything.
       - name: Generate next release (dry-run)
-        run: pnpm run release-preview --yes
+        run: pnpm lerna publish --ignore-scripts --dry-run
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+        # Build with the versions from the dry-run
       - name: Build
         run: pnpm run --filter='!./studio' build
 
+        # Reset dry-run changes to let publish do the real thing for the release
       - name: Revert changes
         run: git reset --hard
 
