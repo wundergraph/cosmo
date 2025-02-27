@@ -12,9 +12,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func getTestFixtureDir() string {
+func getTestDataDir() string {
 	_, filename, _, _ := runtime.Caller(0)
-	return path.Join(filepath.Dir(filename), "fixtures")
+	return path.Join(filepath.Dir(filename), "testdata")
 }
 
 func TestPlanGenerator(t *testing.T) {
@@ -24,9 +24,9 @@ func TestPlanGenerator(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		cfg := QueryPlanConfig{
-			SourceDir:       path.Join(getTestFixtureDir(), "queries", "notexistant"),
+			SourceDir:       path.Join(getTestDataDir(), "queries", "notexistant"),
 			OutDir:          tempDir,
-			ExecutionConfig: path.Join(getTestFixtureDir(), "execution_config", "base.json"),
+			ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
 			Timeout:         "30s",
 			OutputFiles:     true,
 		}
@@ -38,9 +38,9 @@ func TestPlanGenerator(t *testing.T) {
 	t.Run("checks output path exists", func(t *testing.T) {
 		t.Skip("This test is skipped because in github actions every output directory is writable")
 		cfg := QueryPlanConfig{
-			SourceDir:       path.Join(getTestFixtureDir(), "queries", "base"),
+			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
 			OutDir:          "/notwritable",
-			ExecutionConfig: path.Join(getTestFixtureDir(), "execution_config", "base.json"),
+			ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
 			Timeout:         "30s",
 			OutputFiles:     true,
 		}
@@ -55,10 +55,10 @@ func TestPlanGenerator(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		cfg := QueryPlanConfig{
-			SourceDir:       path.Join(getTestFixtureDir(), "queries", "base"),
+			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
 			OutDir:          tempDir,
-			ExecutionConfig: path.Join(getTestFixtureDir(), "execution_config", "base.json"),
-			Filter:          path.Join(getTestFixtureDir(), "not_existant", "filter.txt"),
+			ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
+			Filter:          path.Join(getTestDataDir(), "not_existant", "filter.txt"),
 			Timeout:         "30s",
 			OutputFiles:     true,
 		}
@@ -73,9 +73,9 @@ func TestPlanGenerator(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		cfg := QueryPlanConfig{
-			SourceDir:       path.Join(getTestFixtureDir(), "queries", "base"),
+			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
 			OutDir:          tempDir,
-			ExecutionConfig: path.Join(getTestFixtureDir(), "not_existant", "base.json"),
+			ExecutionConfig: path.Join(getTestDataDir(), "not_existant", "base.json"),
 			Timeout:         "30s",
 			OutputFiles:     true,
 		}
@@ -90,9 +90,9 @@ func TestPlanGenerator(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		cfg := QueryPlanConfig{
-			SourceDir:       path.Join(getTestFixtureDir(), "queries", "base"),
+			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
 			OutDir:          tempDir,
-			ExecutionConfig: path.Join(getTestFixtureDir(), "execution_config", "wrong.json"),
+			ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "wrong.json"),
 			Timeout:         "30s",
 			OutputFiles:     true,
 		}
@@ -107,9 +107,9 @@ func TestPlanGenerator(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		cfg := QueryPlanConfig{
-			SourceDir:       path.Join(getTestFixtureDir(), "queries", "base"),
+			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
 			OutDir:          tempDir,
-			ExecutionConfig: path.Join(getTestFixtureDir(), "execution_config", "base.json"),
+			ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
 			Timeout:         "30as",
 			OutputFiles:     true,
 		}
@@ -124,9 +124,9 @@ func TestPlanGenerator(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		cfg := QueryPlanConfig{
-			SourceDir:       path.Join(getTestFixtureDir(), "queries", "base"),
+			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
 			OutDir:          tempDir,
-			ExecutionConfig: path.Join(getTestFixtureDir(), "execution_config", "base.json"),
+			ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
 			Timeout:         "30s",
 			OutputFiles:     true,
 		}
@@ -140,13 +140,13 @@ func TestPlanGenerator(t *testing.T) {
 
 		queryPlan1, err := os.ReadFile(path.Join(tempDir, "1.graphql"))
 		assert.NoError(t, err)
-		queryPlan1Expected, err := os.ReadFile(path.Join(getTestFixtureDir(), "plans", "base", "1.graphql"))
+		queryPlan1Expected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", "1.graphql"))
 		assert.NoError(t, err)
 		assert.Equal(t, string(queryPlan1Expected), string(queryPlan1))
 
 		queryPlan2, err := os.ReadFile(path.Join(tempDir, "2.graphql"))
 		assert.NoError(t, err)
-		queryPlan2Expected, err := os.ReadFile(path.Join(getTestFixtureDir(), "plans", "base", "2.graphql"))
+		queryPlan2Expected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", "2.graphql"))
 		assert.NoError(t, err)
 		assert.Equal(t, string(queryPlan2Expected), string(queryPlan2))
 	})
@@ -157,10 +157,10 @@ func TestPlanGenerator(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		cfg := QueryPlanConfig{
-			SourceDir:       path.Join(getTestFixtureDir(), "queries", "base"),
+			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
 			OutDir:          tempDir,
-			ExecutionConfig: path.Join(getTestFixtureDir(), "execution_config", "base.json"),
-			Filter:          path.Join(getTestFixtureDir(), "plans", "base", "filter.txt"),
+			ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
+			Filter:          path.Join(getTestDataDir(), "plans", "base", "filter.txt"),
 			Timeout:         "30s",
 			OutputFiles:     true,
 		}
@@ -174,7 +174,7 @@ func TestPlanGenerator(t *testing.T) {
 
 		queryPlan1, err := os.ReadFile(path.Join(tempDir, "1.graphql"))
 		assert.NoError(t, err)
-		queryPlan1Expected, err := os.ReadFile(path.Join(getTestFixtureDir(), "plans", "base", "1.graphql"))
+		queryPlan1Expected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", "1.graphql"))
 		assert.NoError(t, err)
 		assert.Equal(t, string(queryPlan1Expected), string(queryPlan1))
 	})
@@ -185,9 +185,9 @@ func TestPlanGenerator(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		cfg := QueryPlanConfig{
-			SourceDir:       path.Join(getTestFixtureDir(), "queries", "base"),
+			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
 			OutDir:          tempDir,
-			ExecutionConfig: path.Join(getTestFixtureDir(), "execution_config", "base.json"),
+			ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
 			Timeout:         "30s",
 			OutputReport:    true,
 		}
@@ -207,7 +207,7 @@ func TestPlanGenerator(t *testing.T) {
 
 		results, err := os.ReadFile(path.Join(tempDir, ReportFileName))
 		assert.NoError(t, err)
-		resultsExpected, err := os.ReadFile(path.Join(getTestFixtureDir(), "plans", "base", ReportFileName))
+		resultsExpected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", ReportFileName))
 		assert.NoError(t, err)
 		assert.Equal(t, string(resultsExpected), string(results))
 	})
@@ -218,9 +218,9 @@ func TestPlanGenerator(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		cfg := QueryPlanConfig{
-			SourceDir:       path.Join(getTestFixtureDir(), "queries", "base"),
+			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
 			OutDir:          tempDir,
-			ExecutionConfig: path.Join(getTestFixtureDir(), "execution_config", "base.json"),
+			ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
 			Timeout:         "30s",
 			FailOnPlanError: true,
 			OutputReport:    true,
@@ -241,7 +241,7 @@ func TestPlanGenerator(t *testing.T) {
 
 		results, err := os.ReadFile(path.Join(tempDir, ReportFileName))
 		assert.NoError(t, err)
-		resultsExpected, err := os.ReadFile(path.Join(getTestFixtureDir(), "plans", "base", ReportFileName))
+		resultsExpected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", ReportFileName))
 		assert.NoError(t, err)
 		assert.Equal(t, string(resultsExpected), string(results))
 	})
@@ -252,9 +252,9 @@ func TestPlanGenerator(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		cfg := QueryPlanConfig{
-			SourceDir:       path.Join(getTestFixtureDir(), "queries", "base"),
+			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
 			OutDir:          tempDir,
-			ExecutionConfig: path.Join(getTestFixtureDir(), "execution_config", "base.json"),
+			ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
 			Timeout:         "30s",
 			FailOnPlanError: true,
 			OutputFiles:     true,
@@ -269,13 +269,13 @@ func TestPlanGenerator(t *testing.T) {
 
 		queryPlan1, err := os.ReadFile(path.Join(tempDir, "1.graphql"))
 		assert.NoError(t, err)
-		queryPlan1Expected, err := os.ReadFile(path.Join(getTestFixtureDir(), "plans", "base", "1.graphql"))
+		queryPlan1Expected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", "1.graphql"))
 		assert.NoError(t, err)
 		assert.Equal(t, string(queryPlan1Expected), string(queryPlan1))
 
 		queryPlan2, err := os.ReadFile(path.Join(tempDir, "2.graphql"))
 		assert.NoError(t, err)
-		queryPlan2Expected, err := os.ReadFile(path.Join(getTestFixtureDir(), "plans", "base", "2.graphql"))
+		queryPlan2Expected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", "2.graphql"))
 		assert.NoError(t, err)
 		assert.Equal(t, string(queryPlan2Expected), string(queryPlan2))
 	})
@@ -286,9 +286,9 @@ func TestPlanGenerator(t *testing.T) {
 		defer os.RemoveAll(tempDir)
 
 		cfg := QueryPlanConfig{
-			SourceDir:       path.Join(getTestFixtureDir(), "queries", "base"),
+			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
 			OutDir:          tempDir,
-			ExecutionConfig: path.Join(getTestFixtureDir(), "execution_config", "base.json"),
+			ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
 			Timeout:         "1ns",
 			OutputFiles:     true,
 		}
