@@ -364,36 +364,22 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	if cfg.EnableKafka {
-		if os.Getenv("CI") == "true" {
-			cfg.KafkaSeeds = []string{"localhost:9092"}
+		kafkaStarted.Add(1)
+		go func() {
+			defer kafkaStarted.Done()
 
-			client, err := kgo.NewClient(
-				kgo.SeedBrokers(cfg.KafkaSeeds...),
-			)
-			if err != nil {
-				return nil, err
+			var kafkaSetupErr error
+			kafkaSetup, kafkaSetupErr = setupKafkaServer(t)
+			if kafkaSetupErr != nil || kafkaSetup == nil {
+				t.Fatalf("could not setup kafka: %s", kafkaSetupErr.Error())
+				return
 			}
 
-			kafkaClient = client
+			kafkaClient = kafkaSetup.Client
 			kafkaAdminClient = kadm.NewClient(kafkaClient)
-		} else {
-			kafkaStarted.Add(1)
-			go func() {
-				defer kafkaStarted.Done()
 
-				var kafkaSetupErr error
-				kafkaSetup, kafkaSetupErr = setupKafkaServer(t)
-				if kafkaSetupErr != nil || kafkaSetup == nil {
-					t.Fatalf("could not setup kafka: %s", kafkaSetupErr.Error())
-					return
-				}
-
-				kafkaClient = kafkaSetup.Client
-				kafkaAdminClient = kadm.NewClient(kafkaClient)
-
-				cfg.KafkaSeeds = kafkaSetup.Brokers
-			}()
-		}
+			cfg.KafkaSeeds = kafkaSetup.Brokers
+		}()
 	}
 
 	if cfg.EnableNats {
