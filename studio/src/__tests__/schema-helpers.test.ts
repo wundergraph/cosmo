@@ -1,13 +1,11 @@
-import { parse, OperationDefinitionNode, Kind } from "graphql";
+import { expect, test } from "vitest";
 import {
+  extractVariablesFromGraphQL,
   getDeprecatedTypes,
   getAuthenticatedTypes,
   getTypeCounts,
-  formatAndParseSchema,
-  extractVariablesFromGraphQL,
   parseSchema,
 } from "../lib/schema-helpers";
-import { expect, test } from "vitest";
 
 const schema = `
 type Query {
@@ -51,8 +49,8 @@ type Staff {
 }
 `;
 
-test("return the correct types with deprecated fields or args", async () => {
-  const ast = await formatAndParseSchema(schema);
+test("return the correct types with deprecated fields or args", () => {
+  const ast = parseSchema(schema);
 
   expect(ast).not.toBeNull();
 

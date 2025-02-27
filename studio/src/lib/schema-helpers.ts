@@ -1,3 +1,7 @@
+import {
+  buildASTSchema,
+  normalizeSubgraphFromString,
+} from "@wundergraph/composition";
 import { noCase } from "change-case";
 import {
   GraphQLArgument,
@@ -18,7 +22,6 @@ import {
   StringValueNode,
   FieldDefinitionNode,
   TypeDefinitionNode,
-  buildASTSchema,
   isInputObjectType,
   isInterfaceType,
   isObjectType,
@@ -214,7 +217,7 @@ function parseDefaultValue(defaultValue: any, allTypes: any[]): any {
       return defaultValue.value;
     case Kind.LIST:
       return defaultValue.values.map((val: any) =>
-          parseDefaultValue(val, allTypes),
+        parseDefaultValue(val, allTypes),
       );
     case Kind.OBJECT:
       const objValue: Record<string, any> = {};
@@ -443,10 +446,12 @@ export const parseSchema = (schema?: string) => {
     const ast = buildASTSchema(doc, {
       assumeValid: true,
       assumeValidSDL: true,
+      addInvalidExtensionOrphans: true,
     });
 
     return ast;
-  } catch {
+  } catch (e) {
+    console.error(e);
     return null;
   }
 };
@@ -463,7 +468,8 @@ export const formatAndParseSchema = async (schema?: string) => {
     });
 
     return parseSchema(res);
-  } catch {
+  } catch (e) {
+    console.error(e);
     return null;
   }
 };
@@ -652,7 +658,7 @@ export const getDeprecatedTypes = (
   };
 
   const allTypes = Object.values(astSchema.getTypeMap()).filter(
-      (type) => !type.name.startsWith("__"),
+    (type) => !type.name.startsWith("__"),
   );
 
   for (const type of allTypes) {

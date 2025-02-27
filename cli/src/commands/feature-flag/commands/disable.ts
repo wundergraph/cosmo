@@ -53,7 +53,9 @@ export default (opts: BaseCommandOptions) => {
         suppressWarnings: options.suppressWarnings,
       });
     } catch {
-      process.exit(1);
+      process.exitCode = 1;
+      // eslint-disable-next-line no-useless-return
+      return;
     }
   });
 
