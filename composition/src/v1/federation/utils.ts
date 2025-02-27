@@ -1,14 +1,11 @@
 import { ConstDirectiveNode, StringValueNode } from 'graphql';
-import {
-  ConfigurationData,
-  FieldSetCondition,
-  RequiredFieldConfiguration,
-} from '../../router-configuration/router-configuration';
+import { ConfigurationData, FieldSetConditionData, RequiredFieldConfiguration } from '../../router-configuration/types';
 import {
   AuthorizationData,
   CompositeOutputData,
   ConditionalFieldData,
   EntityData,
+  EntityInterfaceFederationData,
   FieldData,
   InterfaceDefinitionData,
   ObjectDefinitionData,
@@ -18,14 +15,14 @@ import { Graph } from '../../resolvability-graph/graph';
 import { getTypeNodeNamedTypeName, MutableFieldNode } from '../../schema-building/ast';
 import { BREAK, Kind, visit } from 'graphql/index';
 import { BASE_SCALARS } from '../utils/constants';
-import { isKindAbstract, safeParse } from '../../ast/utils';
-import { getNormalizedFieldSet } from '../normalization/utils';
+import { isKindAbstract } from '../../ast/utils';
 import { GraphNode } from '../../resolvability-graph/graph-nodes';
 
-import { Warning } from '../../warnings/warnings';
+import { Warning } from '../../warnings/types';
 import { InternalSubgraph } from '../../subgraph/types';
 import { ContractTagOptions } from '../../federation/types';
-import { addIterableValuesToSet, EntityInterfaceFederationData } from '../../utils/utils';
+import { getOrThrowError, getValueOrDefault } from '../../utils/utils';
+import { KeyFieldSetData } from '../normalization/types';
 
 export type FederationFactoryParams = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -86,9 +83,9 @@ export type InterfaceObjectForInternalGraphOptions = {
 };
 
 export type VisitFieldSetOptions = {
-  conditionalFieldDataByCoordinates: Map<string, ConditionalFieldData>;
-  configurationData: ConfigurationData;
-  fieldSets: Set<string>;
+  conditionalFieldDataByCoords: Map<string, ConditionalFieldData>;
+  currentSubgraphName: string;
+  entityData: EntityData;
   implicitKeys: Array<RequiredFieldConfiguration>;
   objectData: ObjectDefinitionData | InterfaceDefinitionData;
   parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
@@ -96,25 +93,27 @@ export type VisitFieldSetOptions = {
 };
 
 export function validateImplicitFieldSets({
-  conditionalFieldDataByCoordinates,
-  configurationData,
-  fieldSets,
+  conditionalFieldDataByCoords,
+  currentSubgraphName,
+  entityData,
   implicitKeys,
   objectData,
   parentDefinitionDataByTypeName,
   graphNode,
 }: VisitFieldSetOptions) {
-  for (const fieldSet of fieldSets) {
-    // Create a new selection set so that the value can be parsed as a new DocumentNode
-    const { error, documentNode } = safeParse('{' + fieldSet + '}');
-    if (error || !documentNode) {
-      // This would be caught as an error elsewhere
+  const keyFieldSetDataByFieldSet = getValueOrDefault(
+    entityData.keyFieldSetDatasBySubgraphName,
+    currentSubgraphName,
+    () => new Map<string, KeyFieldSetData>(),
+  );
+  // Only key field sets that are resolvable in at least one subgraph are included here
+  for (const [keyFieldSet, documentNode] of entityData.documentNodeByKeyFieldSet) {
+    if (keyFieldSetDataByFieldSet.has(keyFieldSet)) {
       continue;
     }
-    const parentDatas: CompositeOutputData[] = [objectData];
-    const definedFields: Set<string>[] = [];
-    const keyFieldNames = new Set<string>();
-    const fieldSetConditions: Array<FieldSetCondition> = [];
+    const parentDatas: Array<CompositeOutputData> = [objectData];
+    const definedFields: Array<Set<string>> = [];
+    const fieldSetConditions: Array<FieldSetConditionData> = [];
     let currentDepth = -1;
     let shouldDefineSelectionSet = true;
     let shouldAddKeyFieldSet = true;
@@ -142,9 +141,12 @@ export function validateImplicitFieldSets({
             shouldAddKeyFieldSet = false;
             return BREAK;
           }
-          const conditionalData = conditionalFieldDataByCoordinates.get(
-            `${fieldData.renamedParentTypeName}.${fieldName}`,
+          const { isUnconditionallyProvided } = getOrThrowError(
+            fieldData.externalFieldDataBySubgraphName,
+            currentSubgraphName,
+            `${fieldData.originalParentTypeName}.${fieldName}.externalFieldDataBySubgraphName`,
           );
+          const conditionalData = conditionalFieldDataByCoords.get(`${fieldData.renamedParentTypeName}.${fieldName}`);
           if (conditionalData) {
             if (conditionalData.providedBy.length > 0) {
               fieldSetConditions.push(...conditionalData.providedBy);
@@ -152,13 +154,19 @@ export function validateImplicitFieldSets({
               shouldAddKeyFieldSet = false;
               return BREAK;
             }
+          } else if (!isUnconditionallyProvided) {
+            shouldAddKeyFieldSet = false;
+            return BREAK;
           }
+          // @TODO breaking in V1
+          // if (!isUnconditionallyProvided) {
+          //   if (!conditionalData || conditionalData.providedBy.length < 1) {
+          //     shouldAddKeyFieldSet = false;
+          //     return BREAK;
+          //   }
+          //   fieldSetConditions.push(...conditionalData.providedBy);
+          // }
           definedFields[currentDepth].add(fieldName);
-          // Depth 0 is the original parent type
-          // If a field is external, but it's part of a key FieldSet, it will be included in the root configuration
-          if (currentDepth === 0) {
-            keyFieldNames.add(fieldName);
-          }
           const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
           // The base scalars are not in the parents map
           if (BASE_SCALARS.has(namedTypeName)) {
@@ -217,17 +225,14 @@ export function validateImplicitFieldSets({
     if (!shouldAddKeyFieldSet) {
       continue;
     }
-    // Add any top-level fields that compose the key in case they are external
-    addIterableValuesToSet(keyFieldNames, configurationData.fieldNames);
-    const normalizedFieldSet = getNormalizedFieldSet(documentNode);
     implicitKeys.push({
       fieldName: '',
-      selectionSet: normalizedFieldSet,
+      selectionSet: keyFieldSet,
       ...(fieldSetConditions.length > 0 ? { conditions: fieldSetConditions } : {}),
       disableEntityResolver: true,
     });
     if (graphNode) {
-      graphNode.satisfiedFieldSets.add(normalizedFieldSet);
+      graphNode.satisfiedFieldSets.add(keyFieldSet);
     }
   }
 }

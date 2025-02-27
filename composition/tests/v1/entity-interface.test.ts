@@ -1,8 +1,8 @@
 import {
   ConfigurationData,
   EntityInterfaceFederationData,
+  EntityInterfaceSubgraphData,
   federateSubgraphs,
-  FederationResultFailure,
   FederationResultSuccess,
   InvalidEntityInterface,
   ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -11,10 +11,15 @@ import {
   undefinedEntityInterfaceImplementationsError,
 } from '../../src';
 import { describe, expect, test } from 'vitest';
-import { versionTwoRouterDefinitions } from './utils/utils';
+import { versionOneRouterDefinitions, versionTwoRouterDefinitions } from './utils/utils';
 
 import { parse } from 'graphql';
-import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+import {
+  federateSubgraphsFailure,
+  federateSubgraphsSuccess,
+  normalizeString,
+  schemaToSortedNormalizedString,
+} from '../utils/utils';
 
 describe('Entity Interface Tests', () => {
   test('that an @interfaceObject does not need to contribute new fields', () => {
@@ -148,10 +153,7 @@ describe('Entity Interface Tests', () => {
   });
 
   test('that an error is returned if a subgraph does not define all implementations of an entity interface', () => {
-    const result = federateSubgraphs(
-      [subgraphE, subgraphF],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphE, subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -175,15 +177,46 @@ describe('Entity Interface Tests', () => {
           [
             'Interface',
             {
+              concreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo', 'EntityThree']),
               fieldDatasBySubgraphName: new Map<string, Array<SimpleFieldData>>(),
               interfaceFieldNames: new Set<string>(['id', 'name', 'age', 'isEntity']),
               interfaceObjectFieldNames: new Set<string>(),
               interfaceObjectSubgraphs: new Set<string>(),
+              subgraphDataByTypeName: new Map<string, EntityInterfaceSubgraphData>(),
               typeName: 'Interface',
-              concreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo', 'EntityThree']),
             },
           ],
         ]),
+      ),
+    );
+  });
+
+  test('that an entity Interface with a @key defining resolvable: false does not need to define all implementations', () => {
+    const result = federateSubgraphsSuccess([subgraphG, subgraphH], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(result.success).toBe(true);
+    expect(result.warnings).toHaveLength(0);
+    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionOneRouterDefinitions +
+          `
+      type EntityOne implements Interface {
+        id: ID!
+        name: String!
+      }
+      type EntityTwo implements Interface {
+        id: ID!
+        name: String!
+      }
+      
+      interface Interface {
+        id: ID!
+        name: String!
+      }
+      
+      type Query {
+        entities: [Interface!]!
+      }
+    `,
       ),
     );
   });
@@ -193,8 +226,6 @@ describe('Entity Interface Tests', () => {
   test.skip('that an error is returned if a type declared with @interfaceObject is not an entity', () => {});
 
   test.skip('that an error is returned if an interface object does not include the same primary keys as its interface definition', () => {});
-
-  test.skip('that an error is returned if the concerete types that implement the entity interface are present in the same graph as the interface object', () => {});
 });
 
 const subgraphA: Subgraph = {
@@ -307,5 +338,43 @@ const subgraphF: Subgraph = {
       id: ID!
       isEntity: Boolean!
     }  
+  `),
+};
+
+const subgraphG: Subgraph = {
+  name: 'subgraph-g',
+  url: '',
+  definitions: parse(`
+    interface Interface @key(fields: "id", resolvable: false) {
+      id: ID!
+    }
+    
+    type EntityOne implements Interface @key(fields: "id") {
+      id: ID!
+    }
+  `),
+};
+
+const subgraphH: Subgraph = {
+  name: 'subgraph-h',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entities: [Interface!]!
+    }
+    
+    interface Interface @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    type EntityOne implements Interface @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    type EntityTwo implements Interface @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
   `),
 };

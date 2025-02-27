@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.95.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.94.1...@wundergraph/cosmo-connect@0.95.0) (2025-02-27)
+
+### Features
+
+* add option to set the number of operations for cache warming and implement FILO policy ([#1607](https://github.com/wundergraph/cosmo/issues/1607)) ([6867225](https://github.com/wundergraph/cosmo/commit/6867225dfcacf5e11b01394224dd9df5e9168dc8)) (@JivusAyrus)
+
 ## [0.94.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.94.0...@wundergraph/cosmo-connect@0.94.1) (2025-02-26)
 
 ### Bug Fixes

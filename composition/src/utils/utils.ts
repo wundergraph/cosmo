@@ -18,7 +18,6 @@ import {
   UNION,
 } from './string-constants';
 import { invalidKeyFatalError } from '../errors/errors';
-import { SimpleFieldData } from '../schema-building/types';
 import { stringToNameNode } from '../ast/utils';
 
 export function areSetsEqual<T>(set: Set<T>, other: Set<T>): boolean {
@@ -31,16 +30,6 @@ export function areSetsEqual<T>(set: Set<T>, other: Set<T>): boolean {
     }
   }
   return true;
-}
-
-export function getAllMutualEntries<T>(set: Set<T>, other: Set<T>): Set<T> {
-  const mutualEntries: Set<T> = new Set<T>();
-  for (const entry of set) {
-    if (other.has(entry)) {
-      mutualEntries.add(entry);
-    }
-  }
-  return mutualEntries;
 }
 
 export function getOrThrowError<K, V>(map: Map<K, V>, key: K, mapName: string): V {
@@ -167,25 +156,6 @@ export function kindToTypeString(kind: Kind): string {
   }
 }
 
-export type InvalidArgumentImplementation = {
-  actualType: string;
-  argumentName: string;
-  expectedType: string;
-};
-export type InvalidFieldImplementation = {
-  implementedResponseType?: string;
-  invalidAdditionalArguments: Set<string>;
-  invalidImplementedArguments: InvalidArgumentImplementation[];
-  isInaccessible: boolean;
-  originalResponseType: string;
-  unimplementedArguments: Set<string>;
-};
-
-export type ImplementationErrors = {
-  invalidFieldImplementations: Map<string, InvalidFieldImplementation>;
-  unimplementedFields: string[];
-};
-
 export function getValueOrDefault<K, V>(map: Map<K, V>, key: K, constructor: () => V): V {
   const existingValue = map.get(key);
   if (existingValue) {
@@ -196,13 +166,6 @@ export function getValueOrDefault<K, V>(map: Map<K, V>, key: K, constructor: () 
   return value;
 }
 
-export type GraphFieldData = {
-  name: string;
-  namedTypeName: string;
-  isLeaf: boolean;
-  subgraphNames: Set<string>;
-};
-
 export function add<T>(set: Set<T>, key: T): boolean {
   if (set.has(key)) {
     return false;
@@ -210,34 +173,6 @@ export function add<T>(set: Set<T>, key: T): boolean {
   set.add(key);
   return true;
 }
-
-// The accumulation of all EntityInterfaceSubgraphData for the type name
-export type InvalidRequiredInputValueData = {
-  inputValueName: string;
-  missingSubgraphs: string[];
-  requiredSubgraphs: string[];
-};
-
-export type InvalidArgument = {
-  argumentName: string;
-  namedType: string;
-  typeName: string;
-  typeString: string;
-};
-
-export type EntityInterfaceFederationData = {
-  fieldDatasBySubgraphName: Map<string, Array<SimpleFieldData>>;
-  interfaceFieldNames: Set<string>;
-  interfaceObjectFieldNames: Set<string>;
-  interfaceObjectSubgraphs: Set<string>;
-  typeName: string;
-  concreteTypeNames?: Set<string>;
-};
-
-export type InvalidEntityInterface = {
-  subgraphName: string;
-  concreteTypeNames: Set<string>;
-};
 
 export function generateSimpleDirective(name: string): ConstDirectiveNode {
   return {

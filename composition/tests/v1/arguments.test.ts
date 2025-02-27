@@ -25,7 +25,7 @@ import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils'
 
 describe('Argument federation tests', () => {
   const argumentName = 'input';
-  const prefix = 'Argument "input"';
+  const prefix = 'argument "input"';
   const argumentPath = 'Object.field(input: ...)';
 
   test('that equal arguments merge', () => {
@@ -331,7 +331,7 @@ describe('Argument federation tests', () => {
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       subgraphValidationError('subgraph', [
-        incompatibleInputValueDefaultValueTypeError('Argument "input"', 'Object.field(input: ...)', 'String!', 'null'),
+        incompatibleInputValueDefaultValueTypeError('argument "input"', 'Object.field(input: ...)', 'String!', 'null'),
       ]),
     );
   });
@@ -345,7 +345,7 @@ describe('Argument federation tests', () => {
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       subgraphValidationError('subgraph', [
-        incompatibleInputValueDefaultValueTypeError('Argument "input"', 'Object.field(input: ...)', 'String', '1'),
+        incompatibleInputValueDefaultValueTypeError('argument "input"', 'Object.field(input: ...)', 'String', '1'),
       ]),
     );
   });
