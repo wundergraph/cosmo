@@ -702,7 +702,7 @@ export const getAuthenticatedTypes = (
 ): GraphQLTypeDefinition[] => {
   const authenticatedTypes: GraphQLTypeDefinition[] = [];
 
-  const checkType = (type: any) => {
+  const checkType = (type: GraphQLNamedType) => {
     const common = {
       name: type.name,
       description: type.description || "",
