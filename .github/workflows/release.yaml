@@ -49,8 +49,8 @@ jobs:
         # This will generate the next release in dry run mode, which still reads
         # commits and bumps CHANGELOG.md and package.json files, but does not
         # publish anything.
-      - name: Generate next release (dry-run)
-        run: pnpm lerna publish --ignore-scripts --dry-run
+      - name: Generate next version (dry-run)
+        run: pnpm lerna version --ignore-scripts --dry-run -y
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
