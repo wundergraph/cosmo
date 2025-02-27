@@ -103,6 +103,11 @@ type RouterMiddlewareHandler interface {
 	Middleware(ctx RequestContext, next http.Handler)
 }
 
+type PreHandleRequestMiddleware interface {
+	// Middleware is the middleware handler
+	PreHandleRequestMiddleware(ctx RequestContext, next http.Handler)
+}
+
 // EnginePreOriginHandler allows you to add a handler to the router engine origin requests.
 // The handler is called before the request is sent to the origin. All origin handlers are called sequentially.
 // It allows you to modify the request before it is sent or return a custom response. The same semantics of http.RoundTripper apply here.

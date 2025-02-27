@@ -739,6 +739,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	httpRouter.Use(recoveryHandler)
 
+	httpRouter.Use(s.preHandleRequestMiddlewares...)
+
 	/**
 	* Initialize base attributes from headers and other sources
 	 */
