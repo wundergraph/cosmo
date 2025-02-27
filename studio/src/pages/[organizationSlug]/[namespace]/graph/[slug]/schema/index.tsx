@@ -87,7 +87,6 @@ import {
   PopoverTrigger,
   PopoverContent
 } from "@/components/ui/popover";
-import { PopoverPortal } from "@radix-ui/react-popover";
 import {
   FieldMatch,
   GraphQLTypeCategory,
@@ -946,9 +945,7 @@ const AuthenticatedBadge = ({ field }: { field: ParsedGraphQLField }) => {
               View scopes
             </Button>
           </PopoverTrigger>
-          <PopoverPortal container={document.body}>
-            <AuthenticatedScopes scopes={field.requiresScopes} />
-          </PopoverPortal>
+          <AuthenticatedScopes scopes={field.requiresScopes} />
         </Popover>
       )}
     </p>
