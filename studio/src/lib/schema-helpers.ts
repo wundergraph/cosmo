@@ -701,7 +701,6 @@ export const getAuthenticatedTypes = (
     astSchema: GraphQLSchema,
 ): GraphQLTypeDefinition[] => {
   const authenticatedTypes: GraphQLTypeDefinition[] = [];
-  console.log('getAuthenticatedTypes')
 
   const checkType = (type: any) => {
     const common = {
