@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/astjson"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
@@ -261,6 +262,22 @@ type requestContext struct {
 	expressionContext expr.Context
 }
 
+func (c *requestContext) SetError(err error) {
+	c.error = err
+	c.expressionContext.Request.Error = err
+}
+
+func (c *requestContext) ResolveAnyExpressionWithWrappedError(expression *vm.Program) (any, error) {
+	// If an error exists already, wrap it and resolve the expression with the copied context
+	if c.expressionContext.Request.Error != nil {
+		// This will create a copy of the base expressionContext which we can modify
+		copyContext := c.expressionContext
+		copyContext.Request.Error = &ExprWrapError{c.expressionContext.Request.Error}
+		return expr.ResolveAnyExpression(expression, copyContext)
+	}
+	return expr.ResolveAnyExpression(expression, c.expressionContext)
+}
+
 func (c *requestContext) ResolveStringExpression(expression *vm.Program) (string, error) {
 	return expr.ResolveStringExpression(expression, c.expressionContext)
 }
@@ -498,7 +515,7 @@ type operationContext struct {
 	// Content is the normalized content of the operation
 	content    string
 	variables  *astjson.Value
-	files      []httpclient.File
+	files      []*httpclient.FileUpload
 	clientInfo *ClientInfo
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan     *planWithMetaData
@@ -529,7 +546,7 @@ func (o *operationContext) Variables() *astjson.Value {
 	return o.variables
 }
 
-func (o *operationContext) Files() []httpclient.File {
+func (o *operationContext) Files() []*httpclient.FileUpload {
 	return o.files
 }
 

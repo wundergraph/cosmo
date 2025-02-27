@@ -121,7 +121,8 @@ export default (opts: BaseCommandOptions) => {
         compositionErrorsTable.push([compositionError.message]);
       }
       console.log(compositionErrorsTable.toString());
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     if (!options.suppressWarnings && result.warnings.length > 0) {

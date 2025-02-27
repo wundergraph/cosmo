@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomUUID, UUID } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import fs from 'node:fs';
 import { createPromiseClient, PromiseClient } from '@connectrpc/connect';
@@ -57,6 +57,7 @@ export const SetupTest = async function ({
   enableMultiUsers,
   createScimKey,
   setupBilling,
+  organizationId,
 }: {
   dbname: string;
   chClient?: ClickHouseClient;
@@ -66,6 +67,7 @@ export const SetupTest = async function ({
   setupBilling?: {
     plan: 'developer@1' | 'launch@1' | 'scale@1' | 'enterprise';
   };
+  organizationId?: UUID;
 }) {
   const log = pino();
   const databaseConnectionUrl = `postgresql://postgres:changeme@localhost:5432/${dbname}`;
@@ -79,7 +81,7 @@ export const SetupTest = async function ({
     runMigration: true,
   });
 
-  const companyAOrganizationId = randomUUID();
+  const companyAOrganizationId = organizationId || randomUUID();
   const aliceContext = createTestContext('company-a', companyAOrganizationId);
 
   const users: TestAuthenticatorOptions = {

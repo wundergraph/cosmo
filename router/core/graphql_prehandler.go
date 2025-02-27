@@ -7,7 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -24,6 +26,8 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/astjson"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization/uploads"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -101,7 +105,7 @@ type PreHandler struct {
 type httpOperation struct {
 	requestContext   *requestContext
 	body             []byte
-	files            []httpclient.File
+	files            []*httpclient.FileUpload
 	requestLogger    *zap.Logger
 	routerSpan       trace.Span
 	operationMetrics *OperationMetrics
@@ -244,7 +248,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		executionOptions, traceOptions, err := h.parseRequestOptions(r, clientInfo, requestLogger)
 		if err != nil {
-			requestContext.error = err
+			requestContext.SetError(err)
 			writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(err), requestLogger)
 			return
 		}
@@ -259,14 +263,14 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		var body []byte
-		var files []httpclient.File
+		var files []*httpclient.FileUpload
 
 		if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
 			if !h.fileUploadEnabled {
-				requestContext.error = &httpGraphqlError{
+				requestContext.SetError(&httpGraphqlError{
 					message:    "file upload disabled",
 					statusCode: http.StatusOK,
-				}
+				})
 				writeOperationError(r, w, requestLogger, requestContext.error)
 				return
 			}
@@ -281,7 +285,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			var err error
 			body, files, err = multipartParser.Parse(r, h.getBodyReadBuffer(r.ContentLength))
 			if err != nil {
-				requestContext.error = err
+				requestContext.SetError(err)
 				writeOperationError(r, w, requestLogger, requestContext.error)
 				readMultiPartSpan.End()
 				return
@@ -309,7 +313,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			var err error
 			body, err = h.operationProcessor.ReadBody(r.Body, h.getBodyReadBuffer(r.ContentLength))
 			if err != nil {
-				requestContext.error = err
+				requestContext.SetError(err)
 
 				// Don't produce errors logs here because it can only be client side errors
 				// e.g. too large body, slow client, aborted connection etc.
@@ -335,7 +339,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			validatedReq, err := h.accessController.Access(w, r)
 			if err != nil {
-				requestContext.error = err
+				requestContext.SetError(err)
 				requestLogger.Error("Failed to authenticate request", zap.Error(err))
 
 				// Mark the root span of the router as failed, so we can easily identify failed requests
@@ -389,7 +393,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			body:             body,
 		})
 		if err != nil {
-			requestContext.error = err
+			requestContext.SetError(err)
 			// Mark the root span of the router as failed, so we can easily identify failed requests
 			rtrace.AttachErrToSpan(routerSpan, err)
 
@@ -486,7 +490,6 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 		// If we have files, we need to set them on the parsed operation
 		if len(httpOperation.files) > 0 {
-			operationKit.parsedOperation.Files = httpOperation.files
 			requestContext.operation.files = httpOperation.files
 		}
 	}
@@ -665,7 +668,13 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	* Normalize the variables
 	 */
 
-	err = operationKit.NormalizeVariables()
+	// Normalize the variables returns list of uploads mapping if there are any of them present in a query
+	// type UploadPathMapping struct {
+	// 	VariableName       string - is a variable name holding the direct or nested value of type Upload, example "f"
+	// 	OriginalUploadPath string - is a path relative to variables which have an Upload type, example "variables.f"
+	// 	NewUploadPath      string - if variable was used in the inline object like this `arg: {f: $f}` this field will hold the new extracted path, example "variables.a.f", if it is an empty, there was no change in the path
+	// }
+	uploadsMapping, err := operationKit.NormalizeVariables()
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 
@@ -680,6 +689,33 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		return err
 	}
 
+	// update file uploads path if they were used in nested field in the extracted variables
+	for mapping := range slices.Values(uploadsMapping) {
+		// if the NewUploadPath is empty it means that there was no change in the path - e.g. upload was directly passed to the argument
+		// e.g. field(fileArgument: $file) will result in []UploadPathMapping{ {VariableName: "file", OriginalUploadPath: "variables.file", NewUploadPath: ""} }
+		if mapping.NewUploadPath == "" {
+			continue
+		}
+
+		// look for the corresponding file which was used in the nested argument
+		// we are matching original upload path passed via uploads map with the mapping items
+		idx := slices.IndexFunc(requestContext.operation.files, func(file *httpclient.FileUpload) bool {
+			return file.VariablePath() == mapping.OriginalUploadPath
+		})
+
+		if idx == -1 {
+			continue
+		}
+
+		// if NewUploadPath is not empty the file argument was used in the nested object, and we need to update the path
+		// e.g. field(arg: {file: $file}) normalized to field(arg: $a) will result in []UploadPathMapping{ {VariableName: "file", OriginalUploadPath: "variables.file", NewUploadPath: "variables.a.file"} }
+		// so "variables.file" should be updated to "variables.a.file"
+		requestContext.operation.files[idx].SetVariablePath(uploadsMapping[idx].NewUploadPath)
+	}
+
+	// RemapVariables is updating and sort variables name to be able to have them in a predictable order
+	// after remapping requestContext.operation.remapVariables map will contain new names as a keys and old names as a values - to be able to extract the old values
+	// because it does not rename variables in a variables json
 	err = operationKit.RemapVariables(h.disableVariablesRemapping)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
@@ -698,6 +734,44 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	requestContext.operation.hash = operationKit.parsedOperation.ID
 	requestContext.operation.internalHash = operationKit.parsedOperation.InternalID
 	requestContext.operation.remapVariables = operationKit.parsedOperation.RemapVariables
+
+	if !h.disableVariablesRemapping && len(uploadsMapping) > 0 {
+		// after variables remapping we need to update the file uploads path because variables relative path has changed
+		// but files still references the old uploads locations
+		// key `to` is a new variable name
+		// value `from` is an old variable name
+		for to, from := range maps.All(requestContext.operation.remapVariables) {
+			// we look into uploads mapping to find a mach between old variable name before remapping and variable which was holding an upload
+			idx := slices.IndexFunc(uploadsMapping, func(value uploads.UploadPathMapping) bool {
+				return value.VariableName == from
+			})
+
+			if idx == -1 {
+				continue
+			}
+
+			// next step is to compare file upload path with the original upload path from the upload mappings
+			for file := range slices.Values(requestContext.operation.files) {
+				uploadPath := uploadsMapping[idx].NewUploadPath
+				// if NewUploadPath is empty it means that there was no change in the path - e.g. upload was directly passed to the argument
+				if uploadPath == "" {
+					uploadPath = uploadsMapping[idx].OriginalUploadPath
+				}
+
+				if file.VariablePath() != uploadPath {
+					continue
+				}
+
+				// trim old variable name prefix
+				oldUploadPathPrefix := fmt.Sprintf("variables.%s.", from)
+				relativeUploadPath := strings.TrimPrefix(uploadPath, oldUploadPathPrefix)
+
+				// set new variable name prefix
+				updatedPath := fmt.Sprintf("variables.%s.%s", to, relativeUploadPath)
+				file.SetVariablePath(updatedPath)
+			}
+		}
+	}
 
 	operationHashString := strconv.FormatUint(operationKit.parsedOperation.ID, 10)
 

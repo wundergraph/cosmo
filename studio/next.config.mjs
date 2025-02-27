@@ -105,6 +105,11 @@ const config = {
       }),
     );
 
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      graphql$: "graphql/index.js",
+    };
+
     return config;
   },
   pageExtensions: ["md", "mdoc", "js", "jsx", "ts", "tsx"],

@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.124.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.124.2...controlplane@0.124.3) (2025-02-26)
+
+### Bug Fixes
+
+* improve wgc auth login and router compatibility-version ([#1636](https://github.com/wundergraph/cosmo/issues/1636)) ([6946363](https://github.com/wundergraph/cosmo/commit/6946363024e49b6170a9553728ac3ecc973ce394)) (@Aenimus)
+
 ## [0.124.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.124.1...controlplane@0.124.2) (2025-02-19)
 
 ### Bug Fixes

@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.185.0](https://github.com/wundergraph/cosmo/compare/router@0.184.0...router@0.185.0) (2025-02-27)
+
+### Features
+
+* add query plan generator to router ([#1627](https://github.com/wundergraph/cosmo/issues/1627)) ([846d069](https://github.com/wundergraph/cosmo/commit/846d0696b945c3b464e5f3d99a2e4c7a4e64c393)) (@alepane21)
+
+# [0.184.0](https://github.com/wundergraph/cosmo/compare/router@0.183.2...router@0.184.0) (2025-02-26)
+
+### Features
+
+* support nested file uploads, support any name for the file upload ([#1631](https://github.com/wundergraph/cosmo/issues/1631)) ([669afce](https://github.com/wundergraph/cosmo/commit/669afce4a8504dccb27c1fa9be4631a3d300a735)) (@devsergiy)
+
 ## [0.183.2](https://github.com/wundergraph/cosmo/compare/router@0.183.1...router@0.183.2) (2025-02-24)
 
 ### Bug Fixes

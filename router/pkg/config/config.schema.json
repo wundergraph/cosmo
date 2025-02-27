@@ -2709,6 +2709,10 @@
                 "type": "string",
                 "description": "The name of the response header from which to extract the value. The value is only extracted for subgraph access logs"
               },
+              "expression": {
+                "type": "string",
+                "description": "The expression used to evaluate to extract a value for logging. The expression is specified as a string. Please see https://expr-lang.org/ for more information on constructing expressions."
+              },
               "context_field": {
                 "type": "string",
                 "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
