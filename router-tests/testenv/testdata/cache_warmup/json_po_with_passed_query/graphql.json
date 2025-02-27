@@ -1,0 +1,19 @@
+{
+  "operations": [
+    {
+      "request": {
+        "query": "query AB {\n  employees {\n    tag\n    id\n    derivedMood\n    products\n  }\n}",
+        "extensions": {
+          "persistedQuery": {
+            "version": 1,
+            "sha256Hash": "21abb40a2be3f4eb457bc77446f9a103c547fa35cb55695eed1cc5c6b4c86c70"
+          }
+        }
+      },
+      "client": {
+        "name": "my-client",
+        "version": "missing"
+      }
+    }
+  ]
+}
