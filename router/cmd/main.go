@@ -5,15 +5,16 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/internal/versioninfo"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/profile"
-	"log"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"go.uber.org/zap"
 )
@@ -29,7 +30,6 @@ var (
 )
 
 func Main() {
-
 	// Parse flags before calling profile.Start(), since it may add flags
 	flag.Parse()
 
