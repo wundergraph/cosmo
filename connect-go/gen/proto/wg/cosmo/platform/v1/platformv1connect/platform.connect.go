@@ -211,6 +211,9 @@ const (
 	// PlatformServiceCreateFederatedGraphTokenProcedure is the fully-qualified name of the
 	// PlatformService's CreateFederatedGraphToken RPC.
 	PlatformServiceCreateFederatedGraphTokenProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateFederatedGraphToken"
+	// PlatformServiceGetOrganizationBySlugProcedure is the fully-qualified name of the
+	// PlatformService's GetOrganizationBySlug RPC.
+	PlatformServiceGetOrganizationBySlugProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOrganizationBySlug"
 	// PlatformServiceGetOrganizationMembersProcedure is the fully-qualified name of the
 	// PlatformService's GetOrganizationMembers RPC.
 	PlatformServiceGetOrganizationMembersProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOrganizationMembers"
@@ -557,6 +560,7 @@ var (
 	platformServiceGetOperationContentMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("GetOperationContent")
 	platformServiceGetFederatedGraphChangelogMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphChangelog")
 	platformServiceCreateFederatedGraphTokenMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("CreateFederatedGraphToken")
+	platformServiceGetOrganizationBySlugMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationBySlug")
 	platformServiceGetOrganizationMembersMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationMembers")
 	platformServiceGetPendingOrganizationMembersMethodDescriptor         = platformServiceServiceDescriptor.Methods().ByName("GetPendingOrganizationMembers")
 	platformServiceIsMemberLimitReachedMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("IsMemberLimitReached")
@@ -761,6 +765,8 @@ type PlatformServiceClient interface {
 	GetFederatedGraphChangelog(context.Context, *connect.Request[v1.GetFederatedGraphChangelogRequest]) (*connect.Response[v1.GetFederatedGraphChangelogResponse], error)
 	// CreateFederatedGraphToken creates a federated graph token that is consumed by the router to authenticate requests.
 	CreateFederatedGraphToken(context.Context, *connect.Request[v1.CreateFederatedGraphTokenRequest]) (*connect.Response[v1.CreateFederatedGraphTokenResponse], error)
+	// GetOrganizationBySlug returns a specific organization by its slug
+	GetOrganizationBySlug(context.Context, *connect.Request[v1.GetOrganizationBySlugRequest]) (*connect.Response[v1.GetOrganizationBySlugResponse], error)
 	// GetOrganizationMembers returns the list of organization members
 	GetOrganizationMembers(context.Context, *connect.Request[v1.GetOrganizationMembersRequest]) (*connect.Response[v1.GetOrganizationMembersResponse], error)
 	// GetOrganizationMembers returns the list of pending organization invites
@@ -1306,6 +1312,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceCreateFederatedGraphTokenProcedure,
 			connect.WithSchema(platformServiceCreateFederatedGraphTokenMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getOrganizationBySlug: connect.NewClient[v1.GetOrganizationBySlugRequest, v1.GetOrganizationBySlugResponse](
+			httpClient,
+			baseURL+PlatformServiceGetOrganizationBySlugProcedure,
+			connect.WithSchema(platformServiceGetOrganizationBySlugMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		getOrganizationMembers: connect.NewClient[v1.GetOrganizationMembersRequest, v1.GetOrganizationMembersResponse](
@@ -1943,6 +1955,7 @@ type platformServiceClient struct {
 	getOperationContent                   *connect.Client[v1.GetOperationContentRequest, v1.GetOperationContentResponse]
 	getFederatedGraphChangelog            *connect.Client[v1.GetFederatedGraphChangelogRequest, v1.GetFederatedGraphChangelogResponse]
 	createFederatedGraphToken             *connect.Client[v1.CreateFederatedGraphTokenRequest, v1.CreateFederatedGraphTokenResponse]
+	getOrganizationBySlug                 *connect.Client[v1.GetOrganizationBySlugRequest, v1.GetOrganizationBySlugResponse]
 	getOrganizationMembers                *connect.Client[v1.GetOrganizationMembersRequest, v1.GetOrganizationMembersResponse]
 	getPendingOrganizationMembers         *connect.Client[v1.GetPendingOrganizationMembersRequest, v1.GetPendingOrganizationMembersResponse]
 	isMemberLimitReached                  *connect.Client[v1.IsMemberLimitReachedRequest, v1.IsMemberLimitReachedResponse]
@@ -2339,6 +2352,11 @@ func (c *platformServiceClient) GetFederatedGraphChangelog(ctx context.Context, 
 // CreateFederatedGraphToken calls wg.cosmo.platform.v1.PlatformService.CreateFederatedGraphToken.
 func (c *platformServiceClient) CreateFederatedGraphToken(ctx context.Context, req *connect.Request[v1.CreateFederatedGraphTokenRequest]) (*connect.Response[v1.CreateFederatedGraphTokenResponse], error) {
 	return c.createFederatedGraphToken.CallUnary(ctx, req)
+}
+
+// GetOrganizationBySlug calls wg.cosmo.platform.v1.PlatformService.GetOrganizationBySlug.
+func (c *platformServiceClient) GetOrganizationBySlug(ctx context.Context, req *connect.Request[v1.GetOrganizationBySlugRequest]) (*connect.Response[v1.GetOrganizationBySlugResponse], error) {
+	return c.getOrganizationBySlug.CallUnary(ctx, req)
 }
 
 // GetOrganizationMembers calls wg.cosmo.platform.v1.PlatformService.GetOrganizationMembers.
@@ -2939,6 +2957,8 @@ type PlatformServiceHandler interface {
 	GetFederatedGraphChangelog(context.Context, *connect.Request[v1.GetFederatedGraphChangelogRequest]) (*connect.Response[v1.GetFederatedGraphChangelogResponse], error)
 	// CreateFederatedGraphToken creates a federated graph token that is consumed by the router to authenticate requests.
 	CreateFederatedGraphToken(context.Context, *connect.Request[v1.CreateFederatedGraphTokenRequest]) (*connect.Response[v1.CreateFederatedGraphTokenResponse], error)
+	// GetOrganizationBySlug returns a specific organization by its slug
+	GetOrganizationBySlug(context.Context, *connect.Request[v1.GetOrganizationBySlugRequest]) (*connect.Response[v1.GetOrganizationBySlugResponse], error)
 	// GetOrganizationMembers returns the list of organization members
 	GetOrganizationMembers(context.Context, *connect.Request[v1.GetOrganizationMembersRequest]) (*connect.Response[v1.GetOrganizationMembersResponse], error)
 	// GetOrganizationMembers returns the list of pending organization invites
@@ -3480,6 +3500,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceCreateFederatedGraphTokenProcedure,
 		svc.CreateFederatedGraphToken,
 		connect.WithSchema(platformServiceCreateFederatedGraphTokenMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetOrganizationBySlugHandler := connect.NewUnaryHandler(
+		PlatformServiceGetOrganizationBySlugProcedure,
+		svc.GetOrganizationBySlug,
+		connect.WithSchema(platformServiceGetOrganizationBySlugMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetOrganizationMembersHandler := connect.NewUnaryHandler(
@@ -4173,6 +4199,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetFederatedGraphChangelogHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateFederatedGraphTokenProcedure:
 			platformServiceCreateFederatedGraphTokenHandler.ServeHTTP(w, r)
+		case PlatformServiceGetOrganizationBySlugProcedure:
+			platformServiceGetOrganizationBySlugHandler.ServeHTTP(w, r)
 		case PlatformServiceGetOrganizationMembersProcedure:
 			platformServiceGetOrganizationMembersHandler.ServeHTTP(w, r)
 		case PlatformServiceGetPendingOrganizationMembersProcedure:
@@ -4604,6 +4632,10 @@ func (UnimplementedPlatformServiceHandler) GetFederatedGraphChangelog(context.Co
 
 func (UnimplementedPlatformServiceHandler) CreateFederatedGraphToken(context.Context, *connect.Request[v1.CreateFederatedGraphTokenRequest]) (*connect.Response[v1.CreateFederatedGraphTokenResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateFederatedGraphToken is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetOrganizationBySlug(context.Context, *connect.Request[v1.GetOrganizationBySlugRequest]) (*connect.Response[v1.GetOrganizationBySlugResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOrganizationBySlug is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetOrganizationMembers(context.Context, *connect.Request[v1.GetOrganizationMembersRequest]) (*connect.Response[v1.GetOrganizationMembersResponse], error) {
