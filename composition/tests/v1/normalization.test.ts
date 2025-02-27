@@ -20,6 +20,7 @@ import {
   NormalizationResultFailure,
   NormalizationResultSuccess,
   normalizeSubgraphFromString,
+  numberToOrdinal,
   OBJECT,
   OBJECT_UPPER,
   PROVIDES,
@@ -209,7 +210,9 @@ describe('Normalization tests', () => {
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
-      invalidKeyDirectivesError('Entity', [undefinedFieldInFieldSetErrorMessage('unknown', 'Entity', 'unknown')]),
+      invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
+        undefinedFieldInFieldSetErrorMessage('unknown', 'Entity', 'unknown'),
+      ]),
     );
   });
 
@@ -230,7 +233,9 @@ describe('Normalization tests', () => {
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
-      invalidKeyDirectivesError('Entity', [undefinedFieldInFieldSetErrorMessage('unknown', 'Entity', 'unknown')]),
+      invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
+        undefinedFieldInFieldSetErrorMessage('unknown', 'Entity', 'unknown'),
+      ]),
     );
   });
 
@@ -247,7 +252,9 @@ describe('Normalization tests', () => {
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
-      invalidKeyDirectivesError('Entity', [undefinedFieldInFieldSetErrorMessage('unknown', 'Entity', 'unknown')]),
+      invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
+        undefinedFieldInFieldSetErrorMessage('unknown', 'Entity', 'unknown'),
+      ]),
     );
   });
 
@@ -920,7 +927,7 @@ describe('Normalization tests', () => {
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
-      invalidKeyDirectivesError('User', [undefinedFieldInFieldSetErrorMessage('id', 'User', 'id')]),
+      invalidDirectiveError(KEY, 'User', FIRST_ORDINAL, [undefinedFieldInFieldSetErrorMessage('id', 'User', 'id')]),
     );
   });
 
@@ -1117,7 +1124,7 @@ describe('Normalization tests', () => {
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0].message).toStrictEqual(
-      `The following "provides" directive is invalid:\n On "Review.user" —` +
+      `The following "provides" directive is invalid:\n On field "Review.user":\n -` +
         undefinedFieldInFieldSetErrorMessage('age', 'User', 'age'),
     );
   });
@@ -1254,7 +1261,7 @@ describe('Normalization tests', () => {
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
       invalidProvidesOrRequiresDirectivesError(REQUIRES, [
-        ` On "Product.shippingCost" —` + undefinedFieldInFieldSetErrorMessage('age', 'Product', 'age'),
+        ` On field "Product.shippingCost":\n -` + undefinedFieldInFieldSetErrorMessage('age', 'Product', 'age'),
       ]),
     );
   });
@@ -1580,7 +1587,7 @@ describe('Normalization tests', () => {
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
-      invalidKeyDirectivesError('Entity', [
+      invalidDirectiveError(KEY, 'Entity', numberToOrdinal(2), [
         undefinedFieldInFieldSetErrorMessage('id organization { id details { id age } }', 'Details', 'age'),
       ]),
     );
@@ -1611,7 +1618,7 @@ describe('Normalization tests', () => {
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
-      invalidKeyDirectivesError('Entity', [
+      invalidDirectiveError(KEY, 'Entity', numberToOrdinal(2), [
         unparsableFieldSetErrorMessage(
           'id organization { id details { } }',
           new Error('Syntax Error: Expected Name, found "}".'),
@@ -1620,7 +1627,7 @@ describe('Normalization tests', () => {
     );
   });
 
-  test('that if an object without its fields are passed in composite keys gives an error', () => {
+  test('that an error is returned if a composite type selection does not define a selection set of its own  #1.1', () => {
     const result = normalizeSubgraphFromString(
       `
        type Entity @key(fields: "id email") @key(fields: "id organization { id details }") {
@@ -1645,8 +1652,111 @@ describe('Normalization tests', () => {
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
-      invalidKeyDirectivesError('Entity', [
+      invalidDirectiveError(KEY, 'Entity', numberToOrdinal(2), [
         invalidSelectionSetErrorMessage('id organization { id details }', ['Organization.details'], 'Details', OBJECT),
+      ]),
+    );
+  });
+
+  test('that an error is returned if a composite type selection does not define a selection set of its own  #1.2', () => {
+    const result = normalizeSubgraphFromString(
+      `
+       type Entity @key(fields: "id email") @key(fields: "id organization { details id }") {
+         id: ID!
+         email: ID!
+         organization: Organization!
+        }
+        
+        type Organization {
+         id: String!
+         details: Details
+        }
+        
+        type Details {
+         id: ID!
+         name: String!
+        }
+    `,
+      true,
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    ) as NormalizationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors).toBeDefined();
+    expect(result.errors[0]).toStrictEqual(
+      invalidDirectiveError(KEY, 'Entity', '2nd', [
+        invalidSelectionSetErrorMessage('id organization { details id }', ['Organization.details'], 'Details', OBJECT),
+      ]),
+    );
+  });
+
+  test('that an error is returned if a composite type selection does not define a selection set of its own #2.1', () => {
+    const result = normalizeSubgraphFromString(
+      `
+       type Entity @key(fields: "id email") @key(fields: "id organization { uuid details }") {
+         id: ID!
+         email: ID!
+         organization: Organization!
+        }
+        
+        type Organization {
+         uuid: String!
+         details: Details
+        }
+        
+        type Details {
+         id: ID!
+         name: String!
+        }
+    `,
+      true,
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    ) as NormalizationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toStrictEqual(
+      invalidDirectiveError(KEY, 'Entity', numberToOrdinal(2), [
+        invalidSelectionSetErrorMessage(
+          'id organization { uuid details }',
+          ['Organization.details'],
+          'Details',
+          OBJECT,
+        ),
+      ]),
+    );
+  });
+
+  test('that an error is returned if a composite type selection does not define a selection set of its own  #2.2', () => {
+    const result = normalizeSubgraphFromString(
+      `
+       type Entity @key(fields: "id email") @key(fields: "id organization { details uuid }") {
+         id: ID!
+         email: ID!
+         organization: Organization!
+        }
+        
+        type Organization {
+         uuid: String!
+         details: Details
+        }
+        
+        type Details {
+         id: ID!
+         name: String!
+        }
+    `,
+      true,
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    ) as NormalizationResultFailure;
+    expect(result.success).toBe(false);
+    expect(result.errors).toBeDefined();
+    expect(result.errors[0]).toStrictEqual(
+      invalidDirectiveError(KEY, 'Entity', '2nd', [
+        invalidSelectionSetErrorMessage(
+          'id organization { details uuid }',
+          ['Organization.details'],
+          'Details',
+          OBJECT,
+        ),
       ]),
     );
   });
@@ -1708,7 +1818,7 @@ describe('Normalization tests', () => {
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
-      invalidKeyDirectivesError('Entity', [
+      invalidDirectiveError(KEY, 'Entity', numberToOrdinal(2), [
         undefinedFieldInFieldSetErrorMessage(
           'id organization { details { id } somethingElse { id } }',
           'SomethingElse',

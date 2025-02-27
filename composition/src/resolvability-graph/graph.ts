@@ -8,8 +8,8 @@ import {
   RootFieldData,
 } from './utils';
 import { NOT_APPLICABLE, ROOT_TYPE_NAMES } from '../utils/string-constants';
-import { RootTypeName } from '../utils/types';
-import { add, getOrThrowError, getValueOrDefault, GraphFieldData } from '../utils/utils';
+import { GraphFieldData, RootTypeName } from '../utils/types';
+import { add, getOrThrowError, getValueOrDefault } from '../utils/utils';
 
 export class Graph {
   edgeId = -1;
