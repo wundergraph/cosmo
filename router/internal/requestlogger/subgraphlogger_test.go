@@ -148,7 +148,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		l := logging.NewZapLoggerWithCore(zCore, true)
 
 		subgraphLogger := requestlogger.NewSubgraphAccessLogger(l, requestlogger.SubgraphOptions{
-			FieldsHandler: core.AccessLogsFieldHandler,
+			FieldsHandler: core.SubgraphAccessLogsFieldHandler,
 			Attributes: []config.CustomAttribute{
 				{
 					Key: "test",
@@ -198,7 +198,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 		l := logging.NewZapLoggerWithCore(zCore, true)
 
 		subgraphLogger := requestlogger.NewSubgraphAccessLogger(l, requestlogger.SubgraphOptions{
-			FieldsHandler: core.AccessLogsFieldHandler,
+			FieldsHandler: core.SubgraphAccessLogsFieldHandler,
 			Attributes: []config.CustomAttribute{
 				{
 					Key: "test",
