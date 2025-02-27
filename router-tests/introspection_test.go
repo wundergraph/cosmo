@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/sebdah/goldie/v2"
+
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 )
 
