@@ -117,6 +117,7 @@ export function deleteCacheWarmerOperation(
       blobStorage: opts.blobStorage,
       federatedGraphId: federatedGraph.id,
       organizationId: authContext.organizationId,
+      namespaceId: federatedGraph.namespaceId,
       logger,
     });
 

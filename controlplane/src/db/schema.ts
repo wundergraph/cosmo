@@ -2058,3 +2058,28 @@ export const cacheWarmerOperations = pgTable(
     };
   },
 );
+
+export const namespaceCacheWarmerConfig = pgTable(
+  'namespace_cache_warmer_config', // nscwc
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    namespaceId: uuid('namespace_id')
+      .notNull()
+      .unique()
+      .references(() => namespaces.id, {
+        onDelete: 'cascade',
+      }),
+    maxOperationsCount: integer('max_operations_count').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+  },
+  (t) => {
+    return {
+      namespaceIdIndex: index('nscwc_namespace_id_idx').on(t.namespaceId),
+    };
+  },
+);
+
+export const namespaceCacheWarmerConfigRelations = relations(namespaceCacheWarmerConfig, ({ one }) => ({
+  namespace: one(namespaces),
+}));

@@ -34,7 +34,7 @@ const createFederatedAndSubgraph = async (client: any, federatedGraphName: strin
     schema: 'type Query { hello: Hello! } type Hello { message: String! }',
   });
   expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
-}
+};
 
 vi.mock('../../src/core/clickhouse/index.js', () => {
   const ClickHouseClient = vi.fn();
@@ -77,6 +77,7 @@ describe('DeleteCacheOperation', (ctx) => {
     const configureCacheWarmerResp = await client.configureCacheWarmer({
       namespace: 'default',
       enableCacheWarmer: true,
+      maxOperationsCount: 100,
     });
     expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.OK);
 
@@ -131,16 +132,19 @@ describe('DeleteCacheOperation', (ctx) => {
     const configureCacheWarmerResp = await client.configureCacheWarmer({
       namespace: 'default',
       enableCacheWarmer: true,
+      maxOperationsCount: 100,
     });
     expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.OK);
 
-    (chClient.queryPromise as Mock).mockResolvedValue([{
-      operationHash: '123',
-      operationName: 'Hello',
-      operationContent: 'query Hello { hello { message } }',
-      clientName: 'default',
-      planningTime: 20,
-    }]);
+    (chClient.queryPromise as Mock).mockResolvedValue([
+      {
+        operationHash: '123',
+        operationName: 'Hello',
+        operationContent: 'query Hello { hello { message } }',
+        clientName: 'default',
+        planningTime: 20,
+      },
+    ]);
 
     const computeCacheWarmerOperationsResp = await client.computeCacheWarmerOperations({
       federatedGraphName,
@@ -161,7 +165,9 @@ describe('DeleteCacheOperation', (ctx) => {
       namespace: 'default',
     });
     expect(deleteCacheOperationResp.response?.code).toBe(EnumStatusCode.ERR);
-    expect(deleteCacheOperationResp.response?.details).toBe(`The operation is not manually added and cannot be deleted.`);
+    expect(deleteCacheOperationResp.response?.details).toBe(
+      `The operation is not manually added and cannot be deleted.`,
+    );
 
     getCacheOperationsResp = await client.getCacheWarmerOperations({
       federatedGraphName,
@@ -189,16 +195,19 @@ describe('DeleteCacheOperation', (ctx) => {
     const configureCacheWarmerResp = await client.configureCacheWarmer({
       namespace: 'default',
       enableCacheWarmer: true,
+      maxOperationsCount: 100,
     });
     expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.OK);
 
-    (chClient.queryPromise as Mock).mockResolvedValue([{
-      operationHash: '123',
-      operationName: 'Hello',
-      operationContent: 'query Hello { hello { message } }',
-      clientName: 'default',
-      planningTime: 20,
-    }]);
+    (chClient.queryPromise as Mock).mockResolvedValue([
+      {
+        operationHash: '123',
+        operationName: 'Hello',
+        operationContent: 'query Hello { hello { message } }',
+        clientName: 'default',
+        planningTime: 20,
+      },
+    ]);
 
     const computeCacheWarmerOperationsResp = await client.computeCacheWarmerOperations({
       federatedGraphName,
