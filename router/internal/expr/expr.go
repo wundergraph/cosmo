@@ -163,6 +163,9 @@ func CompileStringExpressionWithPatch(s string, visitor ast.Visitor) (*vm.Progra
 	return v, nil
 }
 
+// ValidateAnyExpression compiles the expression to ensure that the expression itself is valid but more
+// importantly it checks if the return type is not nil and is an allowed return type
+// this allows us to ensure that nil and return types such as func or channels are not returned
 func ValidateAnyExpression(s string) error {
 	tree, err := parser.Parse(s)
 	if err != nil {
