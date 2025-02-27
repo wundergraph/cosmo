@@ -146,14 +146,26 @@ export function validateImplicitFieldSets({
             currentSubgraphName,
             `${fieldData.originalParentTypeName}.${fieldName}.externalFieldDataBySubgraphName`,
           );
-          if (!isUnconditionallyProvided) {
-            const conditionalData = conditionalFieldDataByCoords.get(`${fieldData.renamedParentTypeName}.${fieldName}`);
-            if (!conditionalData || conditionalData.providedBy.length < 1) {
+          const conditionalData = conditionalFieldDataByCoords.get(`${fieldData.renamedParentTypeName}.${fieldName}`);
+          if (conditionalData) {
+            if (conditionalData.providedBy.length > 0) {
+              fieldSetConditions.push(...conditionalData.providedBy);
+            } else if (conditionalData.requiredBy.length > 0) {
               shouldAddKeyFieldSet = false;
               return BREAK;
             }
-            fieldSetConditions.push(...conditionalData.providedBy);
+          } else if (!isUnconditionallyProvided) {
+            shouldAddKeyFieldSet = false;
+            return BREAK;
           }
+          // @TODO breaking in V1
+          // if (!isUnconditionallyProvided) {
+          //   if (!conditionalData || conditionalData.providedBy.length < 1) {
+          //     shouldAddKeyFieldSet = false;
+          //     return BREAK;
+          //   }
+          //   fieldSetConditions.push(...conditionalData.providedBy);
+          // }
           definedFields[currentDepth].add(fieldName);
           const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
           // The base scalars are not in the parents map
