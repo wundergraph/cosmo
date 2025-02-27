@@ -428,7 +428,7 @@ describe('Input tests', () => {
       );
     });
 
-    test('that @deprecated is persisted on an Input Field', () => {
+    test('that @deprecated is persisted on an Input field', () => {
       const result = federateSubgraphs([subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -448,7 +448,7 @@ describe('Input tests', () => {
       );
     });
 
-    test('that Float Input Field accept integer default values', () => {
+    test('that Float Input field accept integer default values', () => {
       const result = federateSubgraphs(
         [subgraphWithInputField('subgraph', 'Float = 1')],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -470,7 +470,7 @@ describe('Input tests', () => {
       );
     });
 
-    test('that an error is returned if a required Input Values uses a null default value', () => {
+    test('that an error is returned if a required Input field uses a null default value', () => {
       const result = federateSubgraphs(
         [subgraphWithInputField('subgraph', 'String! = null')],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -479,12 +479,12 @@ describe('Input tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         subgraphValidationError('subgraph', [
-          incompatibleInputValueDefaultValueTypeError('Input Field "field"', 'Input.field', 'String!', 'null'),
+          incompatibleInputValueDefaultValueTypeError('Input field "field"', 'Input.field', 'String!', 'null'),
         ]),
       );
     });
 
-    test.skip('that an error is returned if a required input field uses an object default value', () => {
+    test.skip('that an error is returned if a required Input field uses an object default value', () => {
       const result = federateSubgraphs(
         [subgraphWithInputField('subgraph', 'String! = { field: "value" }')],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -493,12 +493,13 @@ describe('Input tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         subgraphValidationError('subgraph', [
-          incompatibleInputValueDefaultValueTypeError('Input Field "name"', 'Input.name', 'String!', 'null'),
+          incompatibleInputValueDefaultValueTypeError('Input field "name"', 'Input.name', 'String!', 'null'),
         ]),
       );
     });
 
-    test.skip('that an error is returned if a required input field uses an enum default value', () => {
+    // @TODO a String input should coerce a default value string without quotations into a string
+    test.skip('that an error is returned if a required Input field uses an enum default value', () => {
       const result = federateSubgraphs(
         [subgraphWithInputField('subgraph', 'String! = VALUE')],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -507,7 +508,7 @@ describe('Input tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         subgraphValidationError('subgraph', [
-          incompatibleInputValueDefaultValueTypeError('Input Field "field"', 'Input.field', 'String!', 'VALUE'),
+          incompatibleInputValueDefaultValueTypeError('Input field "field"', 'Input.field', 'String!', 'VALUE'),
         ]),
       );
     });
@@ -521,7 +522,7 @@ describe('Input tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         subgraphValidationError('subgraph', [
-          incompatibleInputValueDefaultValueTypeError('Input Field "field"', 'Input.field', 'Boolean!', 'null'),
+          incompatibleInputValueDefaultValueTypeError('Input field "field"', 'Input.field', 'Boolean!', 'null'),
         ]),
       );
     });
@@ -535,7 +536,7 @@ describe('Input tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         subgraphValidationError('subgraph', [
-          incompatibleInputValueDefaultValueTypeError('Input Field "field"', 'Input.field', 'Int', '"test"'),
+          incompatibleInputValueDefaultValueTypeError('Input field "field"', 'Input.field', 'Int', '"test"'),
         ]),
       );
     });
@@ -549,7 +550,7 @@ describe('Input tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         subgraphValidationError('subgraph', [
-          incompatibleInputValueDefaultValueTypeError('Input Field "field"', 'Input.field', 'Int', '1.0'),
+          incompatibleInputValueDefaultValueTypeError('Input field "field"', 'Input.field', 'Int', '1.0'),
         ]),
       );
     });

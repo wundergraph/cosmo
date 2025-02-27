@@ -21,7 +21,13 @@ import {
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
 } from './utils/utils';
-import { documentNodeToNormalizedString, normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+import {
+  documentNodeToNormalizedString,
+  federateSubgraphsFailure,
+  federateSubgraphsSuccess,
+  normalizeString,
+  schemaToSortedNormalizedString,
+} from '../utils/utils';
 
 describe('Field resolvability tests', () => {
   test('that shared queries that return a nested type that is only resolvable over multiple subgraphs are valid', () => {
@@ -1241,23 +1247,20 @@ describe('Field resolvability tests', () => {
     const fieldPath = 'query.entity';
     const entityAncestorData: EntityAncestorData = {
       fieldSetsByTargetSubgraphName: new Map<string, Set<string>>(),
-      subgraphName: 'subgraph-bh',
+      subgraphName: subgraphBH.name,
       typeName: 'Entity',
     };
-    const rootFieldData = newRootFieldData('Query', 'entity', new Set<string>(['subgraph-bh']));
+    const rootFieldData = newRootFieldData('Query', 'entity', new Set<string>([subgraphBH.name]));
     const unresolvableFieldData: UnresolvableFieldData = {
       fieldName: 'isNew',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
         name: 'isNew',
       } as GraphFieldData),
-      subgraphNames: new Set<string>(['subgraph-bi']),
+      subgraphNames: new Set<string>([subgraphBJ.name]),
       typeName: 'Entity',
     };
-    const result = federateSubgraphs(
-      [subgraphBH, subgraphBJ],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
+    const result = federateSubgraphsFailure([subgraphBH, subgraphBJ], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -1307,6 +1310,84 @@ describe('Field resolvability tests', () => {
       
           scalar openfed__Scope
     `,
+      ),
+    );
+  });
+
+  test('that an unconditionally external field cannot be used as an implicit key #1.1', () => {
+    const fieldPath = 'query.entity';
+    const entityAncestorData: EntityAncestorData = {
+      fieldSetsByTargetSubgraphName: new Map<string, Set<string>>([[subgraphBN.name, new Set<string>(['id'])]]),
+      subgraphName: subgraphBM.name,
+      typeName: 'Entity',
+    };
+    const rootFieldData = newRootFieldData('Query', 'entity', new Set<string>([subgraphBM.name]));
+    const unresolvableFieldData: UnresolvableFieldData = {
+      fieldName: 'age',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
+        isLeaf: true,
+        name: 'age',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>([subgraphBN.name]),
+      typeName: 'Entity',
+    };
+    const result = federateSubgraphsFailure([subgraphBM, subgraphBN], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toStrictEqual(
+      unresolvablePathError(
+        unresolvableFieldData,
+        generateResolvabilityErrorReasons({ entityAncestorData, rootFieldData, unresolvableFieldData }),
+      ),
+    );
+  });
+
+  test('that an unconditionally external field cannot be used as an implicit key #1.2', () => {
+    const fieldPath = 'query.entity';
+    const entityAncestorData: EntityAncestorData = {
+      fieldSetsByTargetSubgraphName: new Map<string, Set<string>>([[subgraphBN.name, new Set<string>(['id'])]]),
+      subgraphName: subgraphBM.name,
+      typeName: 'Entity',
+    };
+    const rootFieldData = newRootFieldData('Query', 'entity', new Set<string>([subgraphBM.name]));
+    const unresolvableFieldData: UnresolvableFieldData = {
+      fieldName: 'age',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
+        isLeaf: true,
+        name: 'age',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>([subgraphBN.name]),
+      typeName: 'Entity',
+    };
+    const result = federateSubgraphsFailure([subgraphBN, subgraphBM], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(result.success).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toStrictEqual(
+      unresolvablePathError(
+        unresolvableFieldData,
+        generateResolvabilityErrorReasons({ entityAncestorData, rootFieldData, unresolvableFieldData }),
+      ),
+    );
+  });
+
+  // @TODO
+  test('that an entity can be a key target without ever being a key source', () => {
+    const result = federateSubgraphsSuccess([subgraphBO, subgraphBP], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(result.success).toBe(true);
+    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionOneRouterDefinitions +
+          `
+          type Entity {
+            age: Int!
+            id: ID!
+            name: String!
+          }
+          
+          type Query {
+            entities: [Entity!]!
+          }
+        `,
       ),
     );
   });
@@ -2419,7 +2500,7 @@ const subgraphBI: Subgraph = {
 };
 
 const subgraphBJ: Subgraph = {
-  name: 'subgraph-bi',
+  name: 'subgraph-bj',
   url: '',
   definitions: parse(`
     type Interface @key(fields: "id", resolvable: false) @interfaceObject {
@@ -2477,6 +2558,58 @@ const subgraphBL: Subgraph = {
       idTwo: ID!
       age: Int!
       entityTwo: EntityTwo! @shareable
+    }
+  `),
+};
+
+const subgraphBM: Subgraph = {
+  name: 'subgraph-bm',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity!
+    }
+    
+    type Entity {
+      id: ID! @external
+      name: String!
+    }
+  `),
+};
+
+const subgraphBN: Subgraph = {
+  name: 'subgraph-bn',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      age: Int!
+    }
+  `),
+};
+
+const subgraphBO: Subgraph = {
+  name: 'subgraph-bo',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID! @external
+      name: String!
+    }
+  `),
+};
+
+const subgraphBP: Subgraph = {
+  name: 'subgraph-bp',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entities: [Entity!]!
+    }
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+      age: Int!
     }
   `),
 };

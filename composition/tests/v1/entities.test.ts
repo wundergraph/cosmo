@@ -337,10 +337,10 @@ describe('Entity tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       ) as FederationResultSuccess;
       expect(result.success).toBe(true);
-      const subgraphConfigBySubgraphName = result.subgraphConfigBySubgraphName;
-      const i = subgraphConfigBySubgraphName?.get('subgraph-i');
+
+      const i = result.subgraphConfigBySubgraphName.get('subgraph-i');
       expect(i).toBeDefined();
-      const j = subgraphConfigBySubgraphName?.get('subgraph-j');
+      const j = result.subgraphConfigBySubgraphName.get('subgraph-j');
       expect(j).toBeDefined();
       expect(i!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -384,10 +384,10 @@ describe('Entity tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       ) as FederationResultSuccess;
       expect(result.success).toBe(true);
-      const subgraphConfigBySubgraphName = result.subgraphConfigBySubgraphName;
-      const j = subgraphConfigBySubgraphName?.get('subgraph-j');
+
+      const j = result.subgraphConfigBySubgraphName.get('subgraph-j');
       expect(j).toBeDefined();
-      const k = subgraphConfigBySubgraphName?.get('subgraph-k');
+      const k = result.subgraphConfigBySubgraphName.get('subgraph-k');
       expect(k).toBeDefined();
       expect(j!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -431,10 +431,10 @@ describe('Entity tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       ) as FederationResultSuccess;
       expect(result.success).toBe(true);
-      const subgraphConfigBySubgraphName = result.subgraphConfigBySubgraphName;
-      const k = subgraphConfigBySubgraphName?.get('subgraph-k');
+
+      const k = result.subgraphConfigBySubgraphName.get('subgraph-k');
       expect(k).toBeDefined();
-      const l = subgraphConfigBySubgraphName?.get('subgraph-l');
+      const l = result.subgraphConfigBySubgraphName.get('subgraph-l');
       expect(l).toBeDefined();
       expect(k!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -489,14 +489,14 @@ describe('Entity tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       ) as FederationResultSuccess;
       expect(result.success).toBe(true);
-      const subgraphConfigBySubgraphName = result.subgraphConfigBySubgraphName;
-      const o = subgraphConfigBySubgraphName?.get('subgraph-o');
+
+      const o = result.subgraphConfigBySubgraphName.get('subgraph-o');
       expect(o).toBeDefined();
-      const p = subgraphConfigBySubgraphName?.get('subgraph-p');
+      const p = result.subgraphConfigBySubgraphName.get('subgraph-p');
       expect(p).toBeDefined();
-      const q = subgraphConfigBySubgraphName?.get('subgraph-q');
+      const q = result.subgraphConfigBySubgraphName.get('subgraph-q');
       expect(q).toBeDefined();
-      const r = subgraphConfigBySubgraphName?.get('subgraph-r');
+      const r = result.subgraphConfigBySubgraphName.get('subgraph-r');
       expect(r).toBeDefined();
       expect(o!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -601,59 +601,10 @@ describe('Entity tests', () => {
       );
     });
 
-    test('that external fields that compose an adopted implicit entity key are included in the router configuration', () => {
-      const result = federateSubgraphs(
-        [subgraphJ, subgraphN],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
-      const subgraphConfigBySubgraphName = result.subgraphConfigBySubgraphName;
-      const j = subgraphConfigBySubgraphName?.get('subgraph-j');
-      expect(j).toBeDefined();
-      const n = subgraphConfigBySubgraphName?.get('subgraph-n');
-      expect(n).toBeDefined();
-      expect(j!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
-          [
-            'Entity',
-            {
-              fieldNames: new Set<string>(['id', 'age']),
-              isRootNode: true,
-              keys: [{ fieldName: '', selectionSet: 'id' }],
-              typeName: 'Entity',
-            },
-          ],
-        ]),
-      );
-      expect(n!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
-          [
-            'Query',
-            {
-              fieldNames: new Set<string>(['entity']),
-              isRootNode: true,
-              typeName: 'Query',
-            },
-          ],
-          [
-            'Entity',
-            {
-              externalFieldNames: new Set<string>(['id']),
-              fieldNames: new Set<string>(['name', 'id']),
-              isRootNode: true,
-              keys: [{ disableEntityResolver: true, fieldName: '', selectionSet: 'id' }],
-              typeName: 'Entity',
-            },
-          ],
-        ]),
-      );
-    });
-
     test('that resolvable false is correctly propagated in the ConfigurationData', () => {
       const result = federateSubgraphs([subgraphS], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultSuccess;
       expect(result.success).toBe(true);
-      const subgraphConfigBySubgraphName = result.subgraphConfigBySubgraphName;
-      const s = subgraphConfigBySubgraphName?.get('subgraph-s');
+      const s = result.subgraphConfigBySubgraphName.get('subgraph-s');
       expect(s).toBeDefined();
       expect(s!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -1847,21 +1798,6 @@ const subgraphM: Subgraph = {
     
     type Object {
       id: ID!
-      name: String!
-    }
-  `),
-};
-
-const subgraphN: Subgraph = {
-  name: 'subgraph-n',
-  url: '',
-  definitions: parse(`
-    type Query {
-      entity: [Entity!]!
-    }
-    
-    type Entity {
-      id: ID! @external
       name: String!
     }
   `),

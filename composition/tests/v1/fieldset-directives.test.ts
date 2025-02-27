@@ -2,21 +2,20 @@ import { describe, expect, test } from 'vitest';
 import {
   abstractTypeInKeyFieldSetErrorMessage,
   argumentsInKeyFieldSetErrorMessage,
-  ConditionalFieldData,
   ConfigurationData,
   duplicateFieldInFieldSetErrorMessage,
   federateSubgraphs,
   FederationResultSuccess,
-  FieldSetDirective,
+  FIRST_ORDINAL,
   INTERFACE,
+  invalidDirectiveError,
   invalidInlineFragmentTypeConditionErrorMessage,
   invalidInlineFragmentTypeErrorMessage,
-  invalidKeyDirectivesError,
   invalidProvidesOrRequiresDirectivesError,
   invalidSelectionOnUnionErrorMessage,
   invalidSelectionSetDefinitionErrorMessage,
   invalidSelectionSetErrorMessage,
-  nonExternalConditionalFieldError,
+  KEY,
   nonExternalConditionalFieldWarning,
   NormalizationResultFailure,
   NormalizationResultSuccess,
@@ -37,7 +36,7 @@ import {
   unparsableFieldSetErrorMessage,
 } from '../../src';
 import { schemaQueryDefinition, versionTwoDirectiveDefinitions } from './utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+import { normalizeString, normalizeSubgraphSuccess, schemaToSortedNormalizedString } from '../utils/utils';
 
 describe('openfed_FieldSet tests', () => {
   describe('@key FieldSets', () => {
@@ -106,7 +105,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           unexpectedArgumentErrorMessage(`id(undefinedArg: "hi")`, 'Entity.id', 'undefinedArg'),
         ]),
       );
@@ -125,7 +124,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           argumentsInKeyFieldSetErrorMessage(`id(undefinedArg: "hi")`, 'Entity.id'),
         ]),
       );
@@ -144,7 +143,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [argumentsInKeyFieldSetErrorMessage(`id`, 'Entity.id')]),
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [argumentsInKeyFieldSetErrorMessage(`id`, 'Entity.id')]),
       );
     });
 
@@ -161,7 +160,9 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [undefinedFieldInFieldSetErrorMessage(`name`, 'Entity', 'name')]),
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
+          undefinedFieldInFieldSetErrorMessage(`name`, 'Entity', 'name'),
+        ]),
       );
     });
 
@@ -175,13 +176,13 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           abstractTypeInKeyFieldSetErrorMessage(`id`, 'Entity.id', INTERFACE, INTERFACE),
         ]),
       );
     });
 
-    test('that including a union in the FieldSet returns an error', () => {
+    test('that including a Union in the FieldSet returns an error', () => {
       const result = normalizeSubgraphFromString(
         `
       type Entity @key(fields: "id") {
@@ -204,7 +205,9 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [abstractTypeInKeyFieldSetErrorMessage(`id`, 'Entity.id', UNION, UNION)]),
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
+          abstractTypeInKeyFieldSetErrorMessage(`id`, 'Entity.id', UNION, UNION),
+        ]),
       );
     });
 
@@ -221,7 +224,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           unparsableFieldSetErrorMessage('', new Error(`Syntax Error: Expected Name, found "}".`)),
         ]),
       );
@@ -244,7 +247,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           unparsableFieldSetErrorMessage('id { }', new Error(`Syntax Error: Expected Name, found "}".`)),
         ]),
       );
@@ -267,7 +270,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           unparsableFieldSetErrorMessage('id { { name } }', new Error(`Syntax Error: Expected Name, found "{".`)),
         ]),
       );
@@ -286,7 +289,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           invalidSelectionSetDefinitionErrorMessage('id { something }', ['Entity.id'], 'ID', SCALAR),
         ]),
       );
@@ -309,7 +312,9 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [invalidSelectionSetErrorMessage('id', ['Entity.id'], OBJECT, OBJECT)]),
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
+          invalidSelectionSetErrorMessage('id', ['Entity.id'], OBJECT, OBJECT),
+        ]),
       );
     });
 
@@ -338,7 +343,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           invalidSelectionSetErrorMessage(
             'id { object { object } }',
             ['AnotherObject.object'],
@@ -365,7 +370,9 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [duplicateFieldInFieldSetErrorMessage('id name age size id', 'Entity.id')]),
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
+          duplicateFieldInFieldSetErrorMessage('id name age size id', 'Entity.id'),
+        ]),
       );
     });
 
@@ -394,7 +401,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
-        invalidKeyDirectivesError('Entity', [
+        invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           duplicateFieldInFieldSetErrorMessage(
             'id { object { object { name } object { name } } }',
             'AnotherObject.object',
@@ -404,625 +411,30 @@ describe('openfed_FieldSet tests', () => {
     });
   });
 
-  describe('@provides FieldSets', () => {
-    // TODO will be addressed with external validation changes
-    test.skip('that a @provides directive is ignored when declared on a non-entity response type', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Object {
-          id: ID! @provides(fields: "name")
-        }
-      `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(result.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
-          [
-            'Object',
-            {
-              fieldNames: new Set<string>(['id']),
-              isRootNode: false,
-              typeName: 'Object',
-            },
-          ],
-        ]),
-      );
-    });
-
-    test('that a @provides FieldSet supports an immediate inline fragment', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Object {
-          entity: Entity! @provides(fields: "... on Entity { name }")
-        }
-        
-        type Entity @key(fields: "id") {
-          id: ID!
-          name: String! @external
-        }
-      `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(result.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
-          [
-            'Object',
-            {
-              fieldNames: new Set<string>(['entity']),
-              isRootNode: false,
-              provides: [{ fieldName: 'entity', selectionSet: '... on Entity { name }' }],
-              typeName: 'Object',
-            },
-          ],
-          [
-            'Entity',
-            {
-              externalFieldNames: new Set<string>(['name']),
-              fieldNames: new Set<string>(['id']),
-              isRootNode: true,
-              keys: [{ fieldName: '', selectionSet: 'id' }],
-              typeName: 'Entity',
-            },
-          ],
-        ]),
-      );
-    });
-
-    test('that a @provides FieldSet returns an error for an invalid inline fragment', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Object {
-          id: ID!
-          entity: Entity! @provides(fields: "... on I { name }")
-        }
-        
-        type Entity @key(fields: "id") {
-          id: ID!
-          name: String!
-        }
-
-        interface I {
-          name: String!
-        }
-      `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
-        invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-          ` On "Object.entity" —` +
-            invalidInlineFragmentTypeErrorMessage('... on I { name }', ['Object.entity'], 'I', 'Entity'),
-        ]),
-      );
-    });
-
-    test('that a @provides FieldSet supports multiple inline fragments', () => {
-      const result = normalizeSubgraph(
-        subgraphM.definitions,
-        subgraphM.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(result.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
-          [
-            'Object',
-            {
-              fieldNames: new Set<string>(['entity']),
-              isRootNode: false,
-              provides: [{ fieldName: 'entity', selectionSet: 'interface { ... on I { ... on I { name } } }' }],
-              typeName: 'Object',
-            },
-          ],
-          [
-            'Entity',
-            {
-              externalFieldNames: new Set<string>(['interface']),
-              fieldNames: new Set<string>(['id']),
-              isRootNode: true,
-              keys: [{ fieldName: '', selectionSet: 'id' }],
-              typeName: 'Entity',
-            },
-          ],
-          [
-            'I',
-            {
-              fieldNames: new Set<string>(['name']),
-              isRootNode: false,
-              typeName: 'I',
-            },
-          ],
-          [
-            'Implementation',
-            {
-              fieldNames: new Set<string>(['name']),
-              isRootNode: false,
-              typeName: 'Implementation',
-            },
-          ],
-        ]),
-      );
-    });
-
-    test('that a @provides FieldSet supports an inline fragment with a valid type condition', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Object {
-          entity: Entity! @provides(fields: "interface { ... on AnotherObject { name } }")
-        }
-        
-        type Entity @key(fields: "id") {
-          id: ID!
-          interface: I! @external
-        }
-        
-        interface I {
-          name: String!
-        }
-        
-        type AnotherObject implements I {
-          name: String!
-        }
-      `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(result.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
-          [
-            'Object',
-            {
-              fieldNames: new Set<string>(['entity']),
-              isRootNode: false,
-              provides: [{ fieldName: 'entity', selectionSet: 'interface { ... on AnotherObject { name } }' }],
-              typeName: 'Object',
-            },
-          ],
-          [
-            'Entity',
-            {
-              externalFieldNames: new Set<string>(['interface']),
-              fieldNames: new Set<string>(['id']),
-              isRootNode: true,
-              keys: [{ fieldName: '', selectionSet: 'id' }],
-              typeName: 'Entity',
-            },
-          ],
-          [
-            'I',
-            {
-              fieldNames: new Set<string>(['name']),
-              isRootNode: false,
-              typeName: 'I',
-            },
-          ],
-          [
-            'AnotherObject',
-            {
-              fieldNames: new Set<string>(['name']),
-              isRootNode: false,
-              typeName: 'AnotherObject',
-            },
-          ],
-        ]),
-      );
-    });
-
-    test('that a @provides FieldSet returns an error for an inline fragment with an invalid type condition on an interface', () => {
-      const result = normalizeSubgraph(
-        subgraphN.definitions,
-        subgraphN.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
-        invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-          ` On "Object.entity" —` +
-            invalidInlineFragmentTypeConditionErrorMessage(
-              'interface { ... on AnotherObject { name } }',
-              ['Entity.interface'],
-              'AnotherObject',
-              INTERFACE,
-              'I',
-            ),
-        ]),
-      );
-    });
-
-    test('that a @provides FieldSet supports an inline fragment with a valid type condition on a union', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Object {
-          entity: Entity! @provides(fields: "union { ... on AnotherObject { name } }")
-        }
-
-        type Entity @key(fields: "id") {
-          id: ID!
-          union: U! @external
-        }
-        
-        union U = AnotherObject
-        
-        type AnotherObject {
-          name: String!
-        }
-      `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
-
-      expect(result.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
-          [
-            'Object',
-            {
-              fieldNames: new Set<string>(['entity']),
-              isRootNode: false,
-              provides: [{ fieldName: 'entity', selectionSet: 'union { ... on AnotherObject { name } }' }],
-              typeName: 'Object',
-            },
-          ],
-          [
-            'Entity',
-            {
-              externalFieldNames: new Set<string>(['union']),
-              fieldNames: new Set<string>(['id']),
-              isRootNode: true,
-              keys: [{ fieldName: '', selectionSet: 'id' }],
-              typeName: 'Entity',
-            },
-          ],
-          [
-            'AnotherObject',
-            {
-              fieldNames: new Set<string>(['name']),
-              isRootNode: false,
-              typeName: 'AnotherObject',
-            },
-          ],
-        ]),
-      );
-    });
-
-    test('that a @provides FieldSet returns an error if a union does not define a fragment', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Object {
-          entity: Entity! @provides(fields: "union { name }")
-        }
-
-        type Entity @key(fields: "id") {
-          id: ID!
-          union: U! @external
-        }
-        
-        union U = AnotherObject
-        
-        type AnotherObject {
-          name: String!
-        }
-      `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
-        invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-          ` On "Object.entity" —` + invalidSelectionOnUnionErrorMessage('union { name }', ['Entity.union'], 'U'),
-        ]),
-      );
-    });
-
-    test('that a @provides FieldSet returns an error for an inline fragment with an invalid type condition on a union', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Object {
-          entity: Entity! @provides(fields: "union { ... on YetAnotherObject { name } }")
-        }
-
-        type Entity @key(fields: "id") {
-          id: ID!
-          union: U! @external
-        }
-        
-        union U = AnotherObject
-        
-        type AnotherObject {
-          name: String!
-        }
-        
-        type YetAnotherObject {
-          name: String!
-        }
-      `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
-        invalidProvidesOrRequiresDirectivesError(PROVIDES, [
-          ` On "Object.entity" —` +
-            invalidInlineFragmentTypeConditionErrorMessage(
-              'union { ... on YetAnotherObject { name } }',
-              ['Entity.union'],
-              'YetAnotherObject',
-              UNION,
-              'U',
-            ),
-        ]),
-      );
-    });
-
-    test('that a @provides FieldSet allows undefined optional arguments', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Object {
-          entity: Entity! @provides(fields: "anotherObject { name }")
-        }
-        type Entity @key(fields: "id") {
-          id: ID!
-          anotherObject(arg: String): AnotherObject! @external
-        }
- 
-        type AnotherObject {
-          name: String!
-        }
-      `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(result.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
-          [
-            'Object',
-            {
-              fieldNames: new Set<string>(['entity']),
-              isRootNode: false,
-              provides: [{ fieldName: 'entity', selectionSet: 'anotherObject { name }' }],
-              typeName: 'Object',
-            },
-          ],
-          [
-            'Entity',
-            {
-              externalFieldNames: new Set<string>(['anotherObject']),
-              fieldNames: new Set<string>(['id']),
-              isRootNode: true,
-              keys: [{ fieldName: '', selectionSet: 'id' }],
-              typeName: 'Entity',
-            },
-          ],
-          [
-            'AnotherObject',
-            {
-              fieldNames: new Set<string>(['name']),
-              isRootNode: false,
-              typeName: 'AnotherObject',
-            },
-          ],
-        ]),
-      );
-    });
-
-    test('that a @provides FieldSet allows defined optional arguments', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Object {
-          entity: Entity! @provides(fields: "anotherObject(arg: \\"string\\") { name }")
-        }
-        type Entity @key(fields: "id") {
-          id: ID!
-          anotherObject(arg: String): AnotherObject! @external
-        }
- 
-        type AnotherObject {
-          name: String!
-        }
-      `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(result.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
-          [
-            'Object',
-            {
-              fieldNames: new Set<string>(['entity']),
-              isRootNode: false,
-              provides: [{ fieldName: 'entity', selectionSet: 'anotherObject(arg: "string") { name }' }],
-              typeName: 'Object',
-            },
-          ],
-          [
-            'Entity',
-            {
-              externalFieldNames: new Set<string>(['anotherObject']),
-              fieldNames: new Set<string>(['id']),
-              isRootNode: true,
-              keys: [{ fieldName: '', selectionSet: 'id' }],
-              typeName: 'Entity',
-            },
-          ],
-          [
-            'AnotherObject',
-            {
-              fieldNames: new Set<string>(['name']),
-              isRootNode: false,
-              typeName: 'AnotherObject',
-            },
-          ],
-        ]),
-      );
-    });
-
-    test('that a @provides directive produces the correct conditional field datas', () => {
-      const result = normalizeSubgraph(
-        subgraphA.definitions,
-        subgraphA.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(result.conditionalFieldDataByCoordinates).toStrictEqual(
-        new Map<string, ConditionalFieldData>([
-          [
-            'NestedObject.age',
-            {
-              providedBy: [
-                {
-                  fieldCoordinatesPath: ['Query.entity', 'Entity.object', 'Object.nestedObject', 'NestedObject.age'],
-                  fieldPath: ['entity', 'object', 'nestedObject', 'age'],
-                },
-                {
-                  fieldCoordinatesPath: ['Query.entities', 'Entity.object', 'Object.nestedObject', 'NestedObject.age'],
-                  fieldPath: ['entities', 'object', 'nestedObject', 'age'],
-                },
-              ],
-              requiredBy: [],
-            },
-          ],
-          [
-            'NestedObject.name',
-            {
-              providedBy: [
-                {
-                  fieldCoordinatesPath: ['Query.entity', 'Entity.object', 'Object.nestedObject', 'NestedObject.name'],
-                  fieldPath: ['entity', 'object', 'nestedObject', 'name'],
-                },
-                {
-                  fieldCoordinatesPath: ['Query.entities', 'Entity.object', 'Object.nestedObject', 'NestedObject.name'],
-                  fieldPath: ['entities', 'object', 'nestedObject', 'name'],
-                },
-              ],
-              requiredBy: [],
-            },
-          ],
-        ]),
-      );
-    });
-
-    test('that a @provides directive on a renamed root type produces the correct conditional field datas', () => {
-      const result = normalizeSubgraph(
-        subgraphB.definitions,
-        subgraphB.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(result.conditionalFieldDataByCoordinates).toStrictEqual(
-        new Map<string, ConditionalFieldData>([
-          [
-            'NestedObject.age',
-            {
-              providedBy: [
-                {
-                  fieldCoordinatesPath: ['Query.entity', 'Entity.object', 'Object.nestedObject', 'NestedObject.age'],
-                  fieldPath: ['entity', 'object', 'nestedObject', 'age'],
-                },
-                {
-                  fieldCoordinatesPath: ['Query.entities', 'Entity.object', 'Object.nestedObject', 'NestedObject.age'],
-                  fieldPath: ['entities', 'object', 'nestedObject', 'age'],
-                },
-              ],
-              requiredBy: [],
-            },
-          ],
-          [
-            'NestedObject.name',
-            {
-              providedBy: [
-                {
-                  fieldCoordinatesPath: ['Query.entity', 'Entity.object', 'Object.nestedObject', 'NestedObject.name'],
-                  fieldPath: ['entity', 'object', 'nestedObject', 'name'],
-                },
-                {
-                  fieldCoordinatesPath: ['Query.entities', 'Entity.object', 'Object.nestedObject', 'NestedObject.name'],
-                  fieldPath: ['entities', 'object', 'nestedObject', 'name'],
-                },
-              ],
-              requiredBy: [],
-            },
-          ],
-        ]),
-      );
-    });
-
-    test('that an error is returned if provided field in a v2 subgraph is not @external and has no @external ancestor', () => {
-      const result = normalizeSubgraph(
-        subgraphC.definitions,
-        subgraphC.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(4);
-      expect(result.errors[0]).toStrictEqual(
-        nonExternalConditionalFieldError(
-          `Query.entity`,
-          `subgraph-c`,
-          `NestedObject.age`,
-          `object { nestedObject { age name } }`,
-          FieldSetDirective.PROVIDES,
-        ),
-      );
-      expect(result.errors[1]).toStrictEqual(
-        nonExternalConditionalFieldError(
-          `Query.entity`,
-          `subgraph-c`,
-          `NestedObject.name`,
-          `object { nestedObject { age name } }`,
-          FieldSetDirective.PROVIDES,
-        ),
-      );
-      expect(result.errors[2]).toStrictEqual(
-        nonExternalConditionalFieldError(
-          `Query.entities`,
-          `subgraph-c`,
-          `NestedObject.age`,
-          `object { nestedObject { age name } }`,
-          FieldSetDirective.PROVIDES,
-        ),
-      );
-      expect(result.errors[3]).toStrictEqual(
-        nonExternalConditionalFieldError(
-          `Query.entities`,
-          `subgraph-c`,
-          `NestedObject.name`,
-          `object { nestedObject { age name } }`,
-          FieldSetDirective.PROVIDES,
-        ),
-      );
-    });
-
-    // TODO
-    test.skip('that provides on interface is valid', () => {
-      const result = federateSubgraphs(
-        [subgraphI, subgraphJ, subgraphK],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
-    });
-
-    // TODO
-    test.skip('that an error is returned if a field is part of both a @provides and @key FieldSet', () => {});
-  });
-
   describe('@requires FieldSets', () => {
+    test('that a warning is returned for an unconditionally provided @external field that is also required', () => {
+      const result = normalizeSubgraphSuccess(subgraphA, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(result.success).toBe(true);
+      expect(result.configurationDataByTypeName).toStrictEqual(
+        new Map<string, ConfigurationData>([
+          [
+            'Entity',
+            {
+              isRootNode: true,
+              fieldNames: new Set<string>(['id', 'name']),
+              keys: [
+                {
+                  fieldName: '',
+                  selectionSet: 'id',
+                },
+              ],
+              typeName: 'Entity',
+            },
+          ],
+        ]),
+      );
+    });
+
     test('that a @requires directive is ignored when declared on a non-entity parent', () => {
       const result = normalizeSubgraphFromString(
         `
@@ -1038,13 +450,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.warnings).toHaveLength(2);
       expect(result.warnings[0]).toStrictEqual(requiresDefinedOnNonEntityFieldWarning(`Object.name`, NOT_APPLICABLE));
       expect(result.warnings[1]).toStrictEqual(
-        nonExternalConditionalFieldWarning(
-          'Object.name',
-          NOT_APPLICABLE,
-          'Object.id',
-          'id',
-          FieldSetDirective.REQUIRES,
-        ),
+        nonExternalConditionalFieldWarning('Object.name', NOT_APPLICABLE, 'Object.id', 'id', REQUIRES),
       );
       expect(result.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -1052,12 +458,6 @@ describe('openfed_FieldSet tests', () => {
             'Object',
             {
               fieldNames: new Set<string>(['id', 'name']),
-              requires: [
-                {
-                  fieldName: 'name',
-                  selectionSet: 'id',
-                },
-              ],
               isRootNode: false,
               typeName: 'Object',
             },
@@ -1107,7 +507,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
-          ` On "Entity.age" —` + invalidInlineFragmentTypeErrorMessage('... on I { name }', [], 'I', 'Entity'),
+          ` On field "Entity.age":\n -` + invalidInlineFragmentTypeErrorMessage('... on I { name }', [], 'I', 'Entity'),
         ]),
       );
     });
@@ -1219,7 +619,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
-          ` On "Entity.age" —` +
+          ` On field "Entity.age":\n -` +
             invalidInlineFragmentTypeConditionErrorMessage(
               'interface { ... on Object { age } }',
               ['Entity.interface'],
@@ -1298,7 +698,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
-          ` On "Entity.name" —` + invalidSelectionOnUnionErrorMessage('union { name }', ['Entity.union'], 'U'),
+          ` On field "Entity.name":\n -` + invalidSelectionOnUnionErrorMessage('union { name }', ['Entity.union'], 'U'),
         ]),
       );
     });
@@ -1330,7 +730,7 @@ describe('openfed_FieldSet tests', () => {
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
-          ` On "Entity.age" —` +
+          ` On field "Entity.age":\n -` +
             invalidInlineFragmentTypeConditionErrorMessage(
               'union { ... on AnotherObject { age } }',
               ['Entity.union'],
@@ -1688,13 +1088,13 @@ describe('openfed_FieldSet tests', () => {
           'subgraph-f',
           'NestedObject.name',
           'object { nestedObject { name } }',
-          FieldSetDirective.REQUIRES,
+          REQUIRES,
         ),
       );
       expect(result.warnings[0].subgraph.name).toBe('subgraph-f');
-      const e = result.subgraphConfigBySubgraphName.get(subgraphE.name);
-      expect(e).toBeDefined();
-      expect(e!.configurationDataByTypeName).toStrictEqual(
+      const eConfig = result.subgraphConfigBySubgraphName.get(subgraphE.name);
+      expect(eConfig).toBeDefined();
+      expect(eConfig!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
             'Entity',
@@ -1770,12 +1170,6 @@ describe('openfed_FieldSet tests', () => {
                   selectionSet: 'id object { nestedObject { name } }',
                 },
               ],
-              requires: [
-                {
-                  fieldName: 'name',
-                  selectionSet: 'object { nestedObject { name } }',
-                },
-              ],
               typeName: 'Entity',
             },
           ],
@@ -1812,7 +1206,7 @@ describe('openfed_FieldSet tests', () => {
           'subgraph-g',
           'NestedObject.name',
           'object { nestedObject { name } }',
-          FieldSetDirective.PROVIDES,
+          PROVIDES,
         ),
       );
       expect(result.warnings[0].subgraph.name).toBe('subgraph-g');
@@ -1870,12 +1264,6 @@ describe('openfed_FieldSet tests', () => {
             {
               fieldNames: new Set<string>(['entity']),
               isRootNode: true,
-              provides: [
-                {
-                  fieldName: 'entity',
-                  selectionSet: 'object { nestedObject { name } }',
-                },
-              ],
               typeName: 'Query',
             },
           ],
@@ -1929,81 +1317,9 @@ const subgraphA: Subgraph = {
   name: 'subgraph-a',
   url: '',
   definitions: parse(`
-    type Query @shareable {
-      entity: Entity! @provides(fields: "object { nestedObject { age name } }")
-      entities: [Entity!]! @provides(fields: "object { nestedObject { age name } }")
-    }
-    
-    type Entity @key(fields: "id") {
-      id: ID!
-      object: Object!
-    }
-    
-    type Object {
-      nestedObject: NestedObject!
-    }
-    
-    type NestedObject {
-      age: Int! @external
-      name: String! @external
-    }
-  `),
-};
-
-const subgraphB: Subgraph = {
-  name: 'subgraph-b',
-  url: '',
-  definitions: parse(`
-    schema {
-      query: Queries
-    }
-    
-    type Queries @shareable {
-      entity: Entity! @provides(fields: "object { nestedObject { age name } }")
-      entities: [Entity!]! @provides(fields: "object { nestedObject { age name } }")
-    }
-    
-    type Entity @key(fields: "id") {
-      id: ID!
-      object: Object!
-    }
-    
-    type Object {
-      nestedObject: NestedObject!
-    }
-    
-    type NestedObject {
-      age: Int! @external
-      name: String! @external
-    }
-  `),
-};
-
-const subgraphC: Subgraph = {
-  name: 'subgraph-c',
-  url: '',
-  definitions: parse(`
-    schema {
-      query: Queries
-    }
-    
-    type Queries @shareable {
-      entity: Entity! @provides(fields: "object { nestedObject { age name } }")
-      entities: [Entity!]! @provides(fields: "object { nestedObject { age name } }")
-    }
-    
-    type Entity @key(fields: "id") {
-      id: ID!
-      object: Object!
-    }
-    
-    type Object {
-      nestedObject: NestedObject!
-    }
-    
-    type NestedObject {
-      age: Int!
-      name: String!
+    extend type Entity @key(fields: "id") {
+      id: ID! @external
+      name: String! @requires(fields: "id")
     }
   `),
 };
@@ -2175,125 +1491,6 @@ const subgraphH: Subgraph = {
   `),
 };
 
-const subgraphI: Subgraph = {
-  name: 'subgraph-i',
-  url: '',
-  definitions: parse(`
-    extend schema
-    @link(
-      url: "https://specs.apollo.dev/federation/v2.3"
-      import: ["@key", "@shareable", "@external", "@provides"]
-    )
-
-    type Query {
-      media: Media @shareable
-      book: Book @provides(fields: "animals { ... on Dog { name } }")
-    }
-
-    interface Media {
-      id: ID!
-    }
-
-    interface Animal {
-      id: ID!
-    }
-
-    type Book implements Media @key(fields: "id") {
-      id: ID!
-      animals: [Animal] @shareable
-    }
-
-    type Dog implements Animal @key(fields: "id") {
-      id: ID! @external
-      name: String @external
-    }
-
-    type Cat implements Animal @key(fields: "id") {
-      id: ID! @external
-    }
-  `),
-};
-
-const subgraphJ: Subgraph = {
-  name: 'subgraph-j',
-  url: '',
-  definitions: parse(`
-    extend schema
-    @link(
-      url: "https://specs.apollo.dev/federation/v2.3"
-      import: ["@key", "@shareable", "@provides", "@external"]
-    )
-
-    type Query {
-      media: Media @shareable @provides(fields: "animals { id name }")
-    }
-
-    interface Media {
-      id: ID!
-      animals: [Animal]
-    }
-
-    interface Animal {
-      id: ID!
-      name: String
-    }
-
-    type Book implements Media {
-      id: ID! @shareable
-      animals: [Animal] @external
-    }
-
-    type Dog implements Animal {
-      id: ID! @external
-      name: String @external
-    }
-
-    type Cat implements Animal {
-      id: ID! @external
-      name: String @external
-    }
-  `),
-};
-
-const subgraphK: Subgraph = {
-  name: 'subgraph-k',
-  url: '',
-  definitions: parse(`
-    extend schema
-    @link(
-      url: "https://specs.apollo.dev/federation/v2.3"
-      import: ["@key", "@shareable"]
-    )
-
-    interface Media {
-      id: ID!
-      animals: [Animal]
-    }
-
-    interface Animal {
-      id: ID!
-      name: String
-    }
-
-    type Book implements Media @key(fields: "id") {
-      id: ID!
-      animals: [Animal] @shareable
-    }
-
-    type Dog implements Animal @key(fields: "id") {
-      id: ID!
-      name: String @shareable
-      age: Int
-    }
-
-    type Cat implements Animal @key(fields: "id") {
-      id: ID!
-      name: String @shareable
-      age: Int
-    }
-  `),
-};
-
 const subgraphL: Subgraph = {
   name: 'subgraph-l',
   url: '',
@@ -2307,56 +1504,6 @@ const subgraphL: Subgraph = {
     }
     
     type Object implements Interface {
-      name: String!
-    }
-  `),
-};
-
-const subgraphM: Subgraph = {
-  name: 'subgraph-m',
-  url: '',
-  definitions: parse(`
-    type Object {
-      entity: Entity! @provides(fields: "interface { ... on I { ... on I { name } } }")
-    }
-
-    type Entity @key(fields: "id") {
-      id: ID!
-      interface: I! @external
-    }
-
-    interface I {
-      name: String!
-    }
-    
-    type Implementation implements I {
-      name: String!
-    }
-  `),
-};
-
-const subgraphN: Subgraph = {
-  name: 'subgraph-n',
-  url: '',
-  definitions: parse(`
-    type Object {
-      entity: Entity! @provides(fields: "interface { ... on AnotherObject { name } }")
-    }
-
-    type Entity @key(fields: "id") {
-      id: ID!
-      interface: I! @external
-    }
-
-    interface I {
-      name: String!
-    }
-
-    type AnotherObject {
-      name: String!
-    }
-    
-    type Implementation implements I {
       name: String!
     }
   `),
