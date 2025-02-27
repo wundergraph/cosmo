@@ -438,6 +438,7 @@ export class Composer {
         blobStorage,
         federatedGraphId,
         organizationId,
+        namespaceId: namespace.id,
         logger: this.logger,
       });
     }

@@ -85,6 +85,7 @@ export function pushCacheWarmerOperation(
     }
 
     let clientName = '';
+    let operationContent = '';
 
     if (req.operationPersistedId) {
       const operationsRepository = new OperationsRepository(opts.db, federatedGraph.id);
@@ -92,16 +93,17 @@ export function pushCacheWarmerOperation(
         operationId: req.operationPersistedId,
       });
 
-      if (!existingPersistedOperation) {
+      if (!existingPersistedOperation || !existingPersistedOperation.contents) {
         return {
           response: {
-            code: EnumStatusCode.ERR,
+            code: EnumStatusCode.ERR_NOT_FOUND,
             details: `Persisted Operation with ID ${req.operationPersistedId} does not exist`,
           },
         };
       }
 
       clientName = existingPersistedOperation.clientName;
+      operationContent = existingPersistedOperation.contents;
     }
 
     if (req.operationContent) {
@@ -151,25 +153,37 @@ export function pushCacheWarmerOperation(
       federatedGraphId: federatedGraph.id,
       organizationId: authContext.organizationId,
       persistedId: req.operationPersistedId,
-      operationContent: req.operationContent,
+      // persisted operation has more precedence than operation content
+      operationContent: operationContent || req.operationContent,
       clientName,
     });
 
     if (exists) {
       return {
         response: {
-          code: EnumStatusCode.ERR,
+          code: EnumStatusCode.ERR_ALREADY_EXISTS,
           details: `Operation already exists`,
         },
       };
     }
+
+    const cacheWarmerConfig = await cacheWarmerRepo.getCacheWarmerConfig({
+      namespaceId: namespace.id,
+    });
+
+    const manuallyAddedOperationsCount = await cacheWarmerRepo.getCacheWarmerOperationsCount({
+      federatedGraphId: federatedGraph.id,
+      organizationId: authContext.organizationId,
+      isManuallyAdded: true,
+    });
 
     await cacheWarmerRepo.addCacheWarmerOperations({
       operations: [
         {
           operationName: req.operationName,
           operationPersistedID: req.operationPersistedId,
-          operationContent: req.operationContent,
+          // persisted operation has more precedence than operation content
+          operationContent: operationContent || req.operationContent,
           federatedGraphId: federatedGraph.id,
           organizationId: authContext.organizationId,
           createdById: authContext.userId,
@@ -179,10 +193,20 @@ export function pushCacheWarmerOperation(
       ],
     });
 
+    if (cacheWarmerConfig && manuallyAddedOperationsCount >= cacheWarmerConfig.maxOperationsCount) {
+      const difference = manuallyAddedOperationsCount - cacheWarmerConfig.maxOperationsCount + 1;
+      await cacheWarmerRepo.deleteExcessManuallyAddedOperations({
+        federatedGraphId: federatedGraph.id,
+        organizationId: authContext.organizationId,
+        noOfExcessOperations: difference,
+      });
+    }
+
     await cacheWarmerRepo.fetchAndUploadCacheWarmerOperations({
       blobStorage: opts.blobStorage,
       federatedGraphId: federatedGraph.id,
       organizationId: authContext.organizationId,
+      namespaceId: namespace.id,
       logger,
     });
 

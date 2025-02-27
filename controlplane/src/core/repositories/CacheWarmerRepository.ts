@@ -6,24 +6,26 @@ import {
   OperationRequest,
   PersistedQuery,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { and, count, desc, eq } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { CacheWarmerOperation as ProtoCacheWarmerOperation } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import * as schema from '../../db/schema.js';
-import { cacheWarmerOperations, users } from '../../db/schema.js';
+import { cacheWarmerOperations, namespaceCacheWarmerConfig, users } from '../../db/schema.js';
 import { DateRange } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { S3RouterConfigMetadata } from '../composition/composer.js';
 import { CacheWarmupOperation } from '../../db/models.js';
 import { getDateRange, isoDateRangeToTimestamps } from './analytics/util.js';
+import { OperationsRepository } from './OperationsRepository.js';
 
 interface ComputeCacheWarmerOperationsProps {
   rangeInHours?: number;
   dateRange?: DateRange;
   organizationId: string;
   federatedGraphId: string;
+  maxOperationsCount: number;
 }
 
 export class CacheWarmerRepository {
@@ -37,6 +39,7 @@ export class CacheWarmerRepository {
     dateRange,
     organizationId,
     federatedGraphId,
+    maxOperationsCount,
   }: ComputeCacheWarmerOperationsProps) {
     const parsedDateRange = isoDateRangeToTimestamps(dateRange, rangeInHours);
     const [start, end] = getDateRange(parsedDateRange);
@@ -70,7 +73,7 @@ export class CacheWarmerRepository {
       AND OperationName != 'IntrospectionQuery'
       GROUP BY OperationHash, OperationName, OperationPersistedID, ClientName, ClientVersion
       HAVING maxDuration >= ${minPlanningTimeInMs}
-      ORDER BY planningTime DESC LIMIT 100
+      ORDER BY planningTime DESC LIMIT ${maxOperationsCount}
     `;
 
     const res: {
@@ -134,7 +137,7 @@ export class CacheWarmerRepository {
   }
 
   public async computeCacheWarmerOperations(props: ComputeCacheWarmerOperationsProps): Promise<CacheWarmerOperations> {
-    const topOperationsByPlanningTime = await this.getTopOperationsByPlanningTime(props);
+    const operationsRepo = new OperationsRepository(this.db, props.federatedGraphId);
 
     const computedOperations: Operation[] = [];
     const dbCacheWarmerOperations: CacheWarmupOperation[] = [];
@@ -146,21 +149,27 @@ export class CacheWarmerRepository {
     });
 
     for (const operation of manuallyAddedOperations) {
-      let operationRequest: OperationRequest;
       if (operation.operationPersistedID) {
-        operationRequest = new OperationRequest({
-          operationName: operation.operationName || undefined,
-          extensions: new Extension({
-            persistedQuery: new PersistedQuery({
-              version: 1,
-              sha256Hash: operation.operationPersistedID,
-            }),
-          }),
+        const persistedOperation = await operationsRepo.getPersistedOperation({
+          operationId: operation.operationPersistedID,
         });
+
+        if (!persistedOperation || !persistedOperation.contents) {
+          continue;
+        }
 
         computedOperations.push(
           new Operation({
-            request: operationRequest,
+            request: new OperationRequest({
+              operationName: operation.operationName || undefined,
+              query: persistedOperation.contents,
+              extensions: new Extension({
+                persistedQuery: new PersistedQuery({
+                  version: 1,
+                  sha256Hash: operation.operationPersistedID,
+                }),
+              }),
+            }),
             client: operation.clientName
               ? new ClientInfo({
                   name: operation.clientName,
@@ -187,6 +196,11 @@ export class CacheWarmerRepository {
       }
     }
 
+    const topOperationsByPlanningTime = await this.getTopOperationsByPlanningTime({
+      ...props,
+      maxOperationsCount: props.maxOperationsCount - manuallyAddedOperations.length,
+    });
+
     if (topOperationsByPlanningTime.length === 0) {
       return new CacheWarmerOperations({
         operations: computedOperations,
@@ -202,22 +216,27 @@ export class CacheWarmerRepository {
     });
 
     for (const operation of topOperationsByPlanningTime) {
-      let operationRequest: OperationRequest;
-
       if (operation.operationPersistedID) {
-        operationRequest = new OperationRequest({
-          operationName: operation.operationName,
-          extensions: new Extension({
-            persistedQuery: new PersistedQuery({
-              version: 1,
-              sha256Hash: operation.operationPersistedID,
-            }),
-          }),
+        const persistedOperation = await operationsRepo.getPersistedOperation({
+          operationId: operation.operationPersistedID,
         });
+
+        if (!persistedOperation || !persistedOperation.contents) {
+          continue;
+        }
 
         computedOperations.push(
           new Operation({
-            request: operationRequest,
+            request: new OperationRequest({
+              operationName: operation.operationName,
+              query: persistedOperation.contents,
+              extensions: new Extension({
+                persistedQuery: new PersistedQuery({
+                  version: 1,
+                  sha256Hash: operation.operationPersistedID,
+                }),
+              }),
+            }),
             client: operation.clientName
               ? new ClientInfo({
                   name: operation.clientName,
@@ -230,6 +249,7 @@ export class CacheWarmerRepository {
         dbCacheWarmerOperations.push({
           operationName: operation.operationName,
           operationHash: operation.operationHash,
+          operationContent: persistedOperation.contents,
           operationPersistedID: operation.operationPersistedID,
           clientName: operation.clientName,
           clientVersion: operation.clientVersion,
@@ -383,9 +403,11 @@ export class CacheWarmerRepository {
   public async getCacheWarmerOperationsCount({
     organizationId,
     federatedGraphId,
+    isManuallyAdded,
   }: {
     organizationId: string;
     federatedGraphId: string;
+    isManuallyAdded?: boolean;
   }) {
     const operationsCount = await this.db
       .select({
@@ -396,6 +418,7 @@ export class CacheWarmerRepository {
         and(
           eq(cacheWarmerOperations.organizationId, organizationId),
           eq(cacheWarmerOperations.federatedGraphId, federatedGraphId),
+          isManuallyAdded === undefined ? undefined : eq(cacheWarmerOperations.isManuallyAdded, isManuallyAdded),
         ),
       )
       .execute();
@@ -431,18 +454,21 @@ export class CacheWarmerRepository {
     blobStorage,
     federatedGraphId,
     organizationId,
+    namespaceId,
     logger,
   }: {
     blobStorage: BlobStorage;
     federatedGraphId: string;
     organizationId: string;
+    namespaceId: string;
     logger: FastifyBaseLogger;
   }) {
-    const cacheWarmerRepo = new CacheWarmerRepository(this.client, this.db);
-    const cacheWarmerOperations = await cacheWarmerRepo.computeCacheWarmerOperations({
+    const cacheWarmerConfig = await this.getCacheWarmerConfig({ namespaceId });
+    const cacheWarmerOperations = await this.computeCacheWarmerOperations({
       federatedGraphId,
       organizationId,
       rangeInHours: 24 * 7,
+      maxOperationsCount: cacheWarmerConfig?.maxOperationsCount || 100,
     });
 
     const cacheWarmerOperationsBytes = Buffer.from(cacheWarmerOperations.toJsonString(), 'utf8');
@@ -528,5 +554,94 @@ export class CacheWarmerRepository {
           eq(cacheWarmerOperations.id, id),
         ),
       );
+  }
+
+  public async deleteExcessManuallyAddedOperations({
+    organizationId,
+    federatedGraphId,
+    noOfExcessOperations,
+  }: {
+    organizationId: string;
+    federatedGraphId: string;
+    noOfExcessOperations: number;
+  }) {
+    const operationsIdsToDelete = await this.db
+      .select({
+        id: cacheWarmerOperations.id,
+      })
+      .from(cacheWarmerOperations)
+      .where(
+        and(
+          eq(cacheWarmerOperations.organizationId, organizationId),
+          eq(cacheWarmerOperations.federatedGraphId, federatedGraphId),
+          eq(cacheWarmerOperations.isManuallyAdded, true),
+        ),
+      )
+      .orderBy(asc(cacheWarmerOperations.createdAt))
+      .limit(noOfExcessOperations)
+      .execute();
+
+    if (operationsIdsToDelete.length === 0) {
+      return;
+    }
+
+    const ids = operationsIdsToDelete.map((op) => op.id);
+
+    await this.db
+      .delete(cacheWarmerOperations)
+      .where(
+        and(
+          eq(cacheWarmerOperations.organizationId, organizationId),
+          eq(cacheWarmerOperations.federatedGraphId, federatedGraphId),
+          inArray(cacheWarmerOperations.id, ids),
+        ),
+      )
+      .execute();
+  }
+
+  public configureCacheWarmerConfig({
+    namespaceId,
+    maxOperationsCount,
+  }: {
+    namespaceId: string;
+    maxOperationsCount: number;
+  }) {
+    return this.db
+      .insert(namespaceCacheWarmerConfig)
+      .values([
+        {
+          namespaceId,
+          maxOperationsCount,
+        },
+      ])
+      .onConflictDoUpdate({
+        target: namespaceCacheWarmerConfig.namespaceId,
+        set: {
+          maxOperationsCount,
+        },
+      })
+      .execute();
+  }
+
+  public async getCacheWarmerConfig({ namespaceId }: { namespaceId: string }) {
+    const config = await this.db
+      .select({ maxOperationsCount: namespaceCacheWarmerConfig.maxOperationsCount })
+      .from(namespaceCacheWarmerConfig)
+      .where(eq(namespaceCacheWarmerConfig.namespaceId, namespaceId))
+      .execute();
+
+    if (config.length === 0) {
+      return undefined;
+    }
+    return {
+      maxOperationsCount: config[0].maxOperationsCount,
+    };
+  }
+
+  public deleteCacheWarmerConfig({ namespaceId }: { namespaceId: string }) {
+    return this.db
+      .delete(namespaceCacheWarmerConfig)
+      .where(eq(namespaceCacheWarmerConfig.namespaceId, namespaceId))
+      .execute();
   }
 }

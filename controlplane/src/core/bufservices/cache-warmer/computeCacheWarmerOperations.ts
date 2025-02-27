@@ -87,6 +87,7 @@ export function computeCacheWarmerOperations(
       blobStorage: opts.blobStorage,
       federatedGraphId: federatedGraph.id,
       organizationId: authContext.organizationId,
+      namespaceId: namespace.id,
       logger,
     });
 
