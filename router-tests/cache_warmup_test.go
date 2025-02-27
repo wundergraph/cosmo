@@ -314,6 +314,41 @@ func TestCacheWarmup(t *testing.T) {
 				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res2.Body)
 			})
 		})
+		t.Run("cache warmup persisted operation with and without queries passed", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+						Enabled: true,
+						Source: config.CacheWarmupSource{
+							Filesystem: &config.CacheWarmupFileSystemSource{
+								Path: "testenv/testdata/cache_warmup/json_po_with_passed_query",
+							},
+						},
+					}),
+				},
+				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
+					BaseGraphAssertions: testenv.CacheMetricsAssertion{
+						PersistedQueryNormalizationHits:   1,
+						PersistedQueryNormalizationMisses: 0,
+						ValidationHits:                    1,
+						ValidationMisses:                  1,
+						PlanHits:                          1,
+						PlanMisses:                        1,
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				header := make(http.Header)
+				header.Add("graphql-client-name", "my-client")
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					OperationName: []byte(`"AB"`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "21abb40a2be3f4eb457bc77446f9a103c547fa35cb55695eed1cc5c6b4c86c70"}}`),
+					Header:        header,
+				})
+				require.NoError(t, err)
+				require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
+			})
+		})
 		t.Run("cache warmup persisted operation client mismatch", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
@@ -545,6 +580,7 @@ func TestCacheWarmup(t *testing.T) {
 		// keep in sync with testenv/testdata/cache_warmup/cdn/operation.json
 		cdnOperationCount := int64(5)
 		cdnPOCount := int64(1)
+		cdnPOCountWithQuery := int64(1)
 		featureOperationCount := int64(1)
 		invalidOperationCount := int64(1)
 
@@ -591,9 +627,9 @@ func TestCacheWarmup(t *testing.T) {
 						QueryNormalizationHits:            3,
 						PersistedQueryNormalizationMisses: cdnPOCount,
 						PersistedQueryNormalizationHits:   0,
-						ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
+						ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
 						ValidationHits:                    3 + employeeQueryCount,
-						PlanMisses:                        cdnOperationCount + cdnPOCount,
+						PlanMisses:                        cdnOperationCount + cdnPOCount + cdnPOCountWithQuery,
 						PlanHits:                          3 + employeeQueryCount,
 					},
 				},
@@ -647,10 +683,10 @@ func TestCacheWarmup(t *testing.T) {
 						QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount,
 						QueryNormalizationHits:            0,
 						PersistedQueryNormalizationMisses: cdnPOCount + 2,
-						PersistedQueryNormalizationHits:   1,
-						ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
+						PersistedQueryNormalizationHits:   1, // its 1 because the second query is normalization miss
+						ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
 						ValidationHits:                    2,
-						PlanMisses:                        cdnOperationCount + cdnPOCount,
+						PlanMisses:                        cdnOperationCount + cdnPOCount + cdnPOCountWithQuery,
 						PlanHits:                          2,
 					},
 				},
@@ -662,7 +698,6 @@ func TestCacheWarmup(t *testing.T) {
 					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "1167510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
 					Header:        header,
 				})
-
 				require.NoError(t, err)
 				require.Equal(t, expected, res.Body)
 
@@ -674,6 +709,41 @@ func TestCacheWarmup(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
 				require.Equal(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+			})
+		})
+
+		t.Run("should correctly warm the cache with data from the operation.json and should be a hit when the persisted operation with query passed is queried", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+						Enabled: true,
+					}),
+				},
+				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
+					BaseGraphAssertions: testenv.CacheMetricsAssertion{
+						QueryNormalizationMisses:          cdnOperationCount + featureOperationCount + invalidOperationCount,
+						QueryNormalizationHits:            0,
+						PersistedQueryNormalizationMisses: cdnPOCount,
+						PersistedQueryNormalizationHits:   1,
+						ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
+						ValidationHits:                    1,
+						PlanMisses:                        cdnOperationCount + cdnPOCount + cdnPOCountWithQuery,
+						PlanHits:                          1,
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				header := make(http.Header)
+				header.Add("graphql-client-name", "my-client")
+
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					OperationName: []byte(`"AB"`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "21abb40a2be3f4eb457bc77446f9a103c547fa35cb55695eed1cc5c6b4c86c70"}}`),
+					Header:        header,
+				})
+				require.NoError(t, err)
+				require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
 			})
 		})
 
@@ -690,9 +760,9 @@ func TestCacheWarmup(t *testing.T) {
 						QueryNormalizationHits:            0,
 						PersistedQueryNormalizationMisses: cdnPOCount,
 						PersistedQueryNormalizationHits:   0,
-						ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
+						ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
 						ValidationHits:                    0,
-						PlanMisses:                        cdnOperationCount + cdnPOCount,
+						PlanMisses:                        cdnOperationCount + cdnPOCount + cdnPOCountWithQuery,
 						PlanHits:                          0,
 					},
 					FeatureFlagAssertions: map[string]testenv.CacheMetricsAssertion{
@@ -701,9 +771,9 @@ func TestCacheWarmup(t *testing.T) {
 							QueryNormalizationHits:            1,
 							PersistedQueryNormalizationMisses: cdnPOCount,
 							PersistedQueryNormalizationHits:   0,
-							ValidationMisses:                  cdnOperationCount + cdnPOCount + featureOperationCount + invalidOperationCount,
+							ValidationMisses:                  cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount + invalidOperationCount,
 							ValidationHits:                    1,
-							PlanMisses:                        cdnOperationCount + featureOperationCount + featureOperationCount,
+							PlanMisses:                        cdnOperationCount + cdnPOCount + cdnPOCountWithQuery + featureOperationCount,
 							PlanHits:                          1,
 						},
 					},
