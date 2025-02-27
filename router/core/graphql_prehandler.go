@@ -391,7 +391,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			traceTimings:     traceTimings,
 			files:            files,
 			body:             body,
-		})
+		}, requestLogger)
 		if err != nil {
 			requestContext.error = err
 			// Mark the root span of the router as failed, so we can easily identify failed requests
@@ -454,7 +454,7 @@ func (h *PreHandler) shouldFetchPersistedOperation(operationKit *OperationKit) b
 	return operationKit.parsedOperation.IsPersistedOperation || h.operationBlocker.SafelistEnabled || h.operationBlocker.LogUnknownOperationsEnabled
 }
 
-func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson.Parser, httpOperation *httpOperation) error {
+func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson.Parser, httpOperation *httpOperation, logger *zap.Logger) error {
 	operationKit, err := h.operationProcessor.NewKit()
 	if err != nil {
 		return err
@@ -483,8 +483,9 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 	} else if req.Method == http.MethodPost {
 		if err := operationKit.UnmarshalOperationFromBody(httpOperation.body); err != nil {
+			logger.Error("failed to parse request body", zap.Error(err), zap.Any("body", httpOperation.body))
 			return &httpGraphqlError{
-				message:    "error parsing request body",
+				message:    fmt.Sprintf("error parsing request body: %s", err),
 				statusCode: http.StatusBadRequest,
 			}
 		}
@@ -570,6 +571,8 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 		err = operationKit.Parse()
 		if err != nil {
+			logger.Error("failed to parse operation from operationKit", zap.Error(err))
+
 			rtrace.AttachErrToSpan(engineParseSpan, err)
 
 			requestContext.operation.parsingTime = time.Since(startParsing)
