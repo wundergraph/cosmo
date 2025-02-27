@@ -364,22 +364,40 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	if cfg.EnableKafka {
-		kafkaStarted.Add(1)
-		go func() {
-			defer kafkaStarted.Done()
+		// Depending on whether or not we are in CI e.g. Github Actions, we
+		// either start a kafka container or use the one provided by the CI
+		// This is faster in GHA due to pitiful DIND speed, and helps prevent timeout
+		// related errors (for now)
+		if os.Getenv("CI") == "true" {
+			cfg.KafkaSeeds = []string{"localhost:9092"}
 
-			var kafkaSetupErr error
-			kafkaSetup, kafkaSetupErr = setupKafkaServer(t)
-			if kafkaSetupErr != nil || kafkaSetup == nil {
-				t.Fatalf("could not setup kafka: %s", kafkaSetupErr.Error())
-				return
+			client, err := kgo.NewClient(
+				kgo.SeedBrokers(cfg.KafkaSeeds...),
+			)
+			if err != nil {
+				return nil, err
 			}
 
-			kafkaClient = kafkaSetup.Client
+			kafkaClient = client
 			kafkaAdminClient = kadm.NewClient(kafkaClient)
+		} else {
+			kafkaStarted.Add(1)
+			go func() {
+				defer kafkaStarted.Done()
 
-			cfg.KafkaSeeds = kafkaSetup.Brokers
-		}()
+				var kafkaSetupErr error
+				kafkaSetup, kafkaSetupErr = setupKafkaServer(t)
+				if kafkaSetupErr != nil || kafkaSetup == nil {
+					t.Fatalf("could not setup kafka: %s", kafkaSetupErr.Error())
+					return
+				}
+
+				kafkaClient = kafkaSetup.Client
+				kafkaAdminClient = kadm.NewClient(kafkaClient)
+
+				cfg.KafkaSeeds = kafkaSetup.Brokers
+			}()
+		}
 	}
 
 	if cfg.EnableNats {
