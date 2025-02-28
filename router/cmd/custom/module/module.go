@@ -72,8 +72,6 @@ func (m *MyModule) OnOriginRequest(request *http.Request, ctx core.RequestContex
 }
 
 func (m *MyModule) PreHandleRequestMiddleware(ctx core.RequestContext, next http.Handler) {
-	req := ctx.Request()
-
 	// Call the next handler in the chain or return early by calling w.Write()
 	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 }
