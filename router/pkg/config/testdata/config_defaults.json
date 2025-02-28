@@ -51,7 +51,7 @@
         },
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
-        "IncludeScopeInfo": true
+        "ExcludeScopeInfo": false
       }
     }
   },
