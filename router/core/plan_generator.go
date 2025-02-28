@@ -8,15 +8,20 @@ import (
 	"os"
 
 	log "github.com/jensneuse/abstractlogger"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/introspection_datasource"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
+
+	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 )
@@ -109,6 +114,27 @@ func (pg *PlanGenerator) loadConfiguration(configFilePath string) error {
 		return err
 	}
 
+	natSources := map[string]pubsub_datasource.NatsPubSub{}
+	kafkaSources := map[string]pubsub_datasource.KafkaPubSub{}
+	for _, ds := range routerConfig.GetEngineConfig().GetDatasourceConfigurations() {
+		if ds.GetKind() != nodev1.DataSourceKind_PUBSUB || ds.GetCustomEvents() == nil {
+			continue
+		}
+		for _, natConfig := range ds.GetCustomEvents().GetNats() {
+			providerId := natConfig.GetEngineEventConfiguration().GetProviderId()
+			if _, ok := natSources[providerId]; !ok {
+				natSources[providerId] = nil
+			}
+		}
+		for _, kafkaConfig := range ds.GetCustomEvents().GetKafka() {
+			providerId := kafkaConfig.GetEngineEventConfiguration().GetProviderId()
+			if _, ok := kafkaSources[providerId]; !ok {
+				kafkaSources[providerId] = nil
+			}
+		}
+	}
+	pubSubFactory := pubsub_datasource.NewFactory(context.Background(), natSources, kafkaSources)
+
 	var netPollConfig graphql_datasource.NetPollConfiguration
 	netPollConfig.ApplyDefaults()
 
@@ -125,6 +151,8 @@ func (pg *PlanGenerator) loadConfiguration(configFilePath string) error {
 		httpClient:         http.DefaultClient,
 		streamingClient:    http.DefaultClient,
 		subscriptionClient: subscriptionClient,
+		transportOptions:   &TransportOptions{SubgraphTransportOptions: NewSubgraphTransportOptions(config.TrafficShapingRules{})},
+		pubsub:             pubSubFactory,
 	})
 
 	// this generates the plan configuration using the data source factories from the config package
@@ -157,6 +185,23 @@ func (pg *PlanGenerator) loadConfiguration(configFilePath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to merge graphql schema with base schema: %w", err)
 	}
+
+	// by default, the engine doesn't understand how to resolve the __schema and __type queries
+	// we need to add a special datasource for that
+	// it takes the definition as the input and generates introspection data
+	// datasource is attached to Query.__schema, Query.__type, __Type.fields and __Type.enumValues fields
+	introspectionFactory, err := introspection_datasource.NewIntrospectionConfigFactory(&definition)
+	if err != nil {
+		return fmt.Errorf("failed to create introspection config factory: %w", err)
+	}
+	dataSources := introspectionFactory.BuildDataSourceConfigurations()
+
+	fieldConfigs := introspectionFactory.BuildFieldConfigurations()
+	// we need to add these fields to the config
+	// otherwise the engine wouldn't know how to resolve them
+	planConfig.Fields = append(planConfig.Fields, fieldConfigs...)
+	// finally, we add our data source for introspection to the existing data sources
+	planConfig.DataSources = append(planConfig.DataSources, dataSources...)
 
 	pg.planConfiguration = planConfig
 	pg.definition = &definition

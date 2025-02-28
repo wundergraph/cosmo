@@ -127,7 +127,6 @@ describe('CheckFederatedGraph', (ctx) => {
       allExternalFieldInstancesError(
         'User',
         new Map<string, Array<string>>([
-          ['email', ['products']],
           ['totalProductsCreated', ['products']],
         ]),
       ).message,

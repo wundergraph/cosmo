@@ -101,7 +101,7 @@ type (
 	}
 
 	SubgraphTransportOptions struct {
-		TransportRequestOptions
+		*TransportRequestOptions
 		SubgraphMap map[string]*TransportRequestOptions
 	}
 
@@ -186,6 +186,7 @@ type (
 		persistedOperationsConfig       config.PersistedOperationsConfig
 		automaticPersistedQueriesConfig config.AutomaticPersistedQueriesConfig
 		apolloCompatibilityFlags        config.ApolloCompatibilityFlags
+		apolloRouterCompatibilityFlags  config.ApolloRouterCompatibilityFlags
 		storageProviders                config.StorageProviders
 		eventsConfig                    config.EventsConfiguration
 		prometheusServer                *http.Server
@@ -516,6 +517,10 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.logger.Warn("No graph token provided. The following Cosmo Cloud features are disabled. Not recommended for Production.",
 			zap.Strings("features", disabledFeatures),
 		)
+	}
+
+	if r.persistedOperationsConfig.Safelist.Enabled && r.automaticPersistedQueriesConfig.Enabled {
+		return nil, errors.New("automatic persisted queries and safelist cannot be enabled at the same time (as APQ would permit queries that are not in the safelist)")
 	}
 
 	if r.securityConfiguration.DepthLimit != nil {
@@ -1664,19 +1669,36 @@ func DefaultFileUploadConfig() *config.FileUpload {
 	}
 }
 
-func NewTransportRequestOptions(cfg config.GlobalSubgraphRequestRule) TransportRequestOptions {
-	return TransportRequestOptions{
-		RequestTimeout:         cfg.RequestTimeout,
-		ResponseHeaderTimeout:  cfg.ResponseHeaderTimeout,
-		ExpectContinueTimeout:  cfg.ExpectContinueTimeout,
-		KeepAliveIdleTimeout:   cfg.KeepAliveIdleTimeout,
-		DialTimeout:            cfg.DialTimeout,
-		TLSHandshakeTimeout:    cfg.TLSHandshakeTimeout,
-		KeepAliveProbeInterval: cfg.KeepAliveProbeInterval,
+func NewTransportRequestOptions(cfg config.GlobalSubgraphRequestRule) *TransportRequestOptions {
+	defaults := DefaultTransportRequestOptions()
 
-		MaxConnsPerHost:     cfg.MaxConnsPerHost,
-		MaxIdleConns:        cfg.MaxIdleConns,
-		MaxIdleConnsPerHost: cfg.MaxIdleConnsPerHost,
+	return &TransportRequestOptions{
+		RequestTimeout:         or(cfg.RequestTimeout, defaults.RequestTimeout),
+		TLSHandshakeTimeout:    or(cfg.TLSHandshakeTimeout, defaults.TLSHandshakeTimeout),
+		ResponseHeaderTimeout:  or(cfg.ResponseHeaderTimeout, defaults.ResponseHeaderTimeout),
+		ExpectContinueTimeout:  or(cfg.ExpectContinueTimeout, defaults.ExpectContinueTimeout),
+		KeepAliveProbeInterval: or(cfg.KeepAliveProbeInterval, defaults.KeepAliveProbeInterval),
+		KeepAliveIdleTimeout:   or(cfg.KeepAliveIdleTimeout, defaults.KeepAliveIdleTimeout),
+		DialTimeout:            or(cfg.DialTimeout, defaults.DialTimeout),
+		MaxConnsPerHost:        or(cfg.MaxConnsPerHost, defaults.MaxConnsPerHost),
+		MaxIdleConns:           or(cfg.MaxIdleConns, defaults.MaxIdleConns),
+		MaxIdleConnsPerHost:    or(cfg.MaxIdleConnsPerHost, defaults.MaxIdleConnsPerHost),
+	}
+}
+
+func DefaultTransportRequestOptions() *TransportRequestOptions {
+	return &TransportRequestOptions{
+		RequestTimeout:         60 * time.Second,
+		TLSHandshakeTimeout:    10 * time.Second,
+		ResponseHeaderTimeout:  0 * time.Second,
+		ExpectContinueTimeout:  0 * time.Second,
+		KeepAliveProbeInterval: 30 * time.Second,
+		KeepAliveIdleTimeout:   0 * time.Second,
+		DialTimeout:            30 * time.Second,
+
+		MaxConnsPerHost:     100,
+		MaxIdleConns:        1024,
+		MaxIdleConnsPerHost: 20,
 	}
 }
 
@@ -1687,8 +1709,7 @@ func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransp
 	}
 
 	for k, v := range cfg.Subgraphs {
-		opts := NewTransportRequestOptions(*v)
-		base.SubgraphMap[k] = &opts
+		base.SubgraphMap[k] = NewTransportRequestOptions(*v)
 	}
 
 	return base
@@ -1696,20 +1717,8 @@ func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransp
 
 func DefaultSubgraphTransportOptions() *SubgraphTransportOptions {
 	return &SubgraphTransportOptions{
-		TransportRequestOptions: TransportRequestOptions{
-			RequestTimeout:         60 * time.Second,
-			TLSHandshakeTimeout:    10 * time.Second,
-			ResponseHeaderTimeout:  0 * time.Second,
-			ExpectContinueTimeout:  0 * time.Second,
-			KeepAliveProbeInterval: 30 * time.Second,
-			KeepAliveIdleTimeout:   0 * time.Second,
-			DialTimeout:            30 * time.Second,
-
-			MaxConnsPerHost:     100,
-			MaxIdleConns:        1024,
-			MaxIdleConnsPerHost: 20,
-		},
-		SubgraphMap: map[string]*TransportRequestOptions{},
+		TransportRequestOptions: DefaultTransportRequestOptions(),
+		SubgraphMap:             map[string]*TransportRequestOptions{},
 	}
 }
 
@@ -1814,8 +1823,16 @@ func WithApolloCompatibilityFlagsConfig(cfg config.ApolloCompatibilityFlags) Opt
 			cfg.SuppressFetchErrors.Enabled = true
 			cfg.ReplaceUndefinedOpFieldErrors.Enabled = true
 			cfg.ReplaceInvalidVarErrors.Enabled = true
+			cfg.ReplaceValidationErrorStatus.Enabled = true
+			cfg.SubscriptionMultipartPrintBoundary.Enabled = true
 		}
 		r.apolloCompatibilityFlags = cfg
+	}
+}
+
+func WithApolloRouterCompatibilityFlags(cfg config.ApolloRouterCompatibilityFlags) Option {
+	return func(r *Router) {
+		r.apolloRouterCompatibilityFlags = cfg
 	}
 }
 
@@ -1839,7 +1856,7 @@ func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 
 type ProxyFunc func(req *http.Request) (*url.URL, error)
 
-func newHTTPTransport(opts TransportRequestOptions, proxy ProxyFunc) *http.Transport {
+func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc) *http.Transport {
 	dialer := &net.Dialer{
 		Timeout:   opts.DialTimeout,
 		KeepAlive: opts.KeepAliveProbeInterval,
@@ -2012,4 +2029,11 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
 		},
 	}
+}
+
+func or[T any](maybe *T, or T) T {
+	if maybe != nil {
+		return *maybe
+	}
+	return or
 }

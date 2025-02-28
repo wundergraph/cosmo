@@ -82,6 +82,7 @@ export interface FederatedGraphDTO {
   namespaceId: string;
   supportsFederation: boolean;
   contract?: ContractDTO;
+  routerCompatibilityVersion: string;
 }
 
 export interface FederatedGraphChangelogDTO {
@@ -381,6 +382,8 @@ export type CustomAccessTokenClaims = {
   email: string;
   preferred_username: string;
   groups?: string[];
+  given_name?: string;
+  family_name?: string;
 };
 
 export type UserInfoEndpointResponse = {
@@ -494,6 +497,7 @@ export interface GraphCompositionDTO {
   isLatestValid: boolean;
   admissionError?: string;
   deploymentError?: string;
+  routerCompatibilityVersion: string;
 }
 
 export interface FeatureFlagCompositionDTO {

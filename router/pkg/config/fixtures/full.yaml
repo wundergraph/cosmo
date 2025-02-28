@@ -53,6 +53,9 @@ access_logs:
       - key: "hello"
         value_from:
           context_field: "operation_name"
+      - key: "request_information"
+        value_from:
+          expression: "request.error ?? 'success'"
   subgraphs:
     enabled: true
     fields:
@@ -211,6 +214,9 @@ headers:
         - op: "set"
           name: "X-Subgraph-Key"
           value: "some-subgraph-secret"
+  cookie_whitelist:
+    - "cookie1"
+    - "cookie2"
 
 # Authentication and Authorization
 # See https://cosmo-docs.wundergraph.com/router/authentication-and-authorization for more information
@@ -366,6 +372,9 @@ security:
       limit: 4
       ignore_persisted_operations: true
 persisted_operations:
+  safelist:
+    enabled: true
+  log_unknown: true
   cache:
     size: 100MB
   storage:

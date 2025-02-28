@@ -13,6 +13,7 @@ import {
   FeatureFlagRouterExecutionConfigs,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import Table from 'cli-table3';
+import { ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
 
@@ -106,7 +107,7 @@ export default (opts: BaseCommandOptions) => {
       })),
     );
 
-    if (result.errors && result.errors.length > 0) {
+    if (!result.success) {
       const compositionErrorsTable = new Table({
         head: [pc.bold(pc.white('ERROR_MESSAGE'))],
         colWidths: [120],
@@ -120,11 +121,8 @@ export default (opts: BaseCommandOptions) => {
         compositionErrorsTable.push([compositionError.message]);
       }
       console.log(compositionErrorsTable.toString());
-      process.exit(1);
-    }
-
-    if (!result.federationResult) {
-      program.error('Failed to compose given subgraphs');
+      process.exitCode = 1;
+      return;
     }
 
     if (!options.suppressWarnings && result.warnings.length > 0) {
@@ -141,16 +139,16 @@ export default (opts: BaseCommandOptions) => {
       console.log(compositionWarningsTable.toString());
     }
 
-    const federatedClientSDL = result.federationResult.shouldIncludeClientSchema
-      ? printSchema(result.federationResult.federatedGraphClientSchema)
-      : '';
+    const federatedClientSDL = result.shouldIncludeClientSchema ? printSchema(result.federatedGraphClientSchema) : '';
     const routerConfig = buildRouterConfig({
       federatedClientSDL,
-      federatedSDL: printSchemaWithDirectives(result.federationResult.federatedGraphSchema),
-      fieldConfigurations: result.federationResult.fieldConfigurations,
+      federatedSDL: printSchemaWithDirectives(result.federatedGraphSchema),
+      fieldConfigurations: result.fieldConfigurations,
+      // @TODO get router compatibility version programmatically
+      routerCompatibilityVersion: ROUTER_COMPATIBILITY_VERSION_ONE,
       schemaVersionId: 'static',
       subgraphs: config.subgraphs.map((s, index) => {
-        const subgraphConfig = result.federationResult!.subgraphConfigBySubgraphName.get(s.name);
+        const subgraphConfig = result.subgraphConfigBySubgraphName.get(s.name);
         const schema = subgraphConfig?.schema;
         const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
         return {
@@ -239,7 +237,7 @@ export default (opts: BaseCommandOptions) => {
           })),
         );
 
-        if (result.errors && result.errors.length > 0) {
+        if (!result.success) {
           const compositionErrorsTable = new Table({
             head: [pc.bold(pc.white('ERROR_MESSAGE'))],
             colWidths: [120],
@@ -260,10 +258,6 @@ export default (opts: BaseCommandOptions) => {
           continue;
         }
 
-        if (!result.federationResult) {
-          program.error('Failed to compose given subgraphs for feature flags');
-        }
-
         if (!options.suppressWarnings && result.warnings.length > 0) {
           const compositionWarningsTable = new Table({
             head: [pc.bold(pc.white('WARNING_MESSAGE'))],
@@ -280,16 +274,18 @@ export default (opts: BaseCommandOptions) => {
           console.log(compositionWarningsTable.toString());
         }
 
-        const federatedClientSDL = result.federationResult.shouldIncludeClientSchema
-          ? printSchema(result.federationResult.federatedGraphClientSchema)
+        const federatedClientSDL = result.shouldIncludeClientSchema
+          ? printSchema(result.federatedGraphClientSchema)
           : '';
         const routerConfig = buildRouterConfig({
           federatedClientSDL,
-          federatedSDL: printSchemaWithDirectives(result.federationResult.federatedGraphSchema),
-          fieldConfigurations: result.federationResult.fieldConfigurations,
+          federatedSDL: printSchemaWithDirectives(result.federatedGraphSchema),
+          fieldConfigurations: result.fieldConfigurations,
+          // @TODO get router compatibility version programmatically
+          routerCompatibilityVersion: ROUTER_COMPATIBILITY_VERSION_ONE,
           schemaVersionId: `static`,
           subgraphs: subgraphs.map((s, index) => {
-            const subgraphConfig = result.federationResult!.subgraphConfigBySubgraphName.get(s.name);
+            const subgraphConfig = result.subgraphConfigBySubgraphName.get(s.name);
             const schema = subgraphConfig?.schema;
             const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
             return {

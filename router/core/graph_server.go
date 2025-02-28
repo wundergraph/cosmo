@@ -235,6 +235,10 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			return wrapper(h)
 		})
 
+		if s.headerRules != nil {
+			cr.Use(rmiddleware.CookieWhitelist(s.headerRules.CookieWhitelist, []string{featureFlagCookie}))
+		}
+
 		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
 		cr.Handle(r.graphqlPath, multiGraphHandler)
 
@@ -453,6 +457,10 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 				break
 			}
 		}
+	} else if srv.persistedOperationsConfig.Safelist.Enabled || srv.persistedOperationsConfig.LogUnknown {
+		// In these case, we'll want to compute the sha256 for every operation, in order to check that the operation
+		// is present in the Persisted Operation cache
+		computeSha256 = true
 	}
 
 	if computeSha256 {
@@ -613,7 +621,20 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	// We might want to remap or exclude known attributes based on the configuration for metrics
 	mapper := newAttributeMapper(enableAttributeMapper, s.metricConfig.Attributes)
+	attExpressions, attErr := newAttributeExpressions(s.metricConfig.Attributes)
+	if attErr != nil {
+		return nil, attErr
+	}
 	baseMetricAttributes := mapper.mapAttributes(baseOtelAttributes)
+	var telemetryAttExpressions *attributeExpressions
+	if len(s.telemetryAttributes) > 0 {
+		var telemetryAttErr error
+		telemetryAttExpressions, telemetryAttErr = newAttributeExpressions(s.telemetryAttributes)
+		if telemetryAttErr != nil {
+			return nil, telemetryAttErr
+		}
+	}
+
 	// Prometheus metricStore rely on OTLP metricStore
 	if metricsEnabled {
 		m, err := rmetric.NewStore(
@@ -677,14 +698,16 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
 
 			reqContext := buildRequestContext(requestContextOptions{
-				operationContext:    nil,
-				requestLogger:       requestLogger,
-				metricSetAttributes: b,
-				metricsEnabled:      metricsEnabled,
-				traceEnabled:        s.traceConfig.Enabled,
-				mapper:              mapper,
-				w:                   w,
-				r:                   r,
+				operationContext:              nil,
+				requestLogger:                 requestLogger,
+				metricSetAttributes:           b,
+				metricsEnabled:                metricsEnabled,
+				traceEnabled:                  s.traceConfig.Enabled,
+				mapper:                        mapper,
+				metricAttributeExpressions:    attExpressions,
+				telemetryAttributeExpressions: telemetryAttExpressions,
+				w:                             w,
+				r:                             r,
 			})
 
 			r = r.WithContext(withRequestContext(r.Context(), reqContext))
@@ -805,12 +828,20 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	var subgraphAccessLogger *requestlogger.SubgraphAccessLogger
 	if s.accessLogsConfig != nil && s.accessLogsConfig.Logger != nil {
+		exprAttributes, err := requestlogger.GetAccessLogConfigExpressions(s.accessLogsConfig.Attributes)
+		if err != nil {
+			return nil, fmt.Errorf("failed building router access log expressions: %w", err)
+		}
+
+		s.accessLogsConfig.Attributes = requestlogger.CleanupExpressionAttributes(s.accessLogsConfig.Attributes)
+
 		requestLoggerOpts := []requestlogger.Option{
 			requestlogger.WithDefaultOptions(),
 			requestlogger.WithNoTimeField(),
 			requestlogger.WithFields(baseLogFields...),
 			requestlogger.WithAttributes(s.accessLogsConfig.Attributes),
-			requestlogger.WithFieldsHandler(AccessLogsFieldHandler),
+			requestlogger.WithExprAttributes(exprAttributes),
+			requestlogger.WithFieldsHandler(RouterAccessLogsFieldHandler),
 		}
 
 		var ipAnonConfig *requestlogger.IPAnonymizationConfig
@@ -829,11 +860,13 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		httpRouter.Use(requestLogger)
 
 		if s.accessLogsConfig.SubgraphEnabled {
+			s.accessLogsConfig.SubgraphAttributes = requestlogger.CleanupExpressionAttributes(s.accessLogsConfig.SubgraphAttributes)
+
 			subgraphAccessLogger = requestlogger.NewSubgraphAccessLogger(
 				s.accessLogsConfig.Logger,
 				requestlogger.SubgraphOptions{
 					IPAnonymizationConfig: ipAnonConfig,
-					FieldsHandler:         AccessLogsFieldHandler,
+					FieldsHandler:         SubgraphAccessLogsFieldHandler,
 					Fields:                baseLogFields,
 					Attributes:            s.accessLogsConfig.SubgraphAttributes,
 				})
@@ -883,13 +916,14 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	executor, err := ecb.Build(
 		ctx,
 		&ExecutorBuildOptions{
-			EngineConfig:             engineConfig,
-			Subgraphs:                configSubgraphs,
-			RouterEngineConfig:       routerEngineConfig,
-			PubSubProviders:          s.pubSubProviders,
-			Reporter:                 s.engineStats,
-			ApolloCompatibilityFlags: s.apolloCompatibilityFlags,
-			HeartbeatInterval:        s.multipartHeartbeatInterval,
+			EngineConfig:                   engineConfig,
+			Subgraphs:                      configSubgraphs,
+			RouterEngineConfig:             routerEngineConfig,
+			PubSubProviders:                s.pubSubProviders,
+			Reporter:                       s.engineStats,
+			ApolloCompatibilityFlags:       s.apolloCompatibilityFlags,
+			ApolloRouterCompatibilityFlags: s.apolloRouterCompatibilityFlags,
+			HeartbeatInterval:              s.multipartHeartbeatInterval,
 		},
 	)
 	if err != nil {
@@ -910,6 +944,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		ParseKitPoolSize:                    s.engineExecutionConfiguration.ParseKitPoolSize,
 		IntrospectionEnabled:                s.Config.introspection,
 		ApolloCompatibilityFlags:            s.apolloCompatibilityFlags,
+		ApolloRouterCompatibilityFlags:      s.apolloRouterCompatibilityFlags,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
@@ -1009,6 +1044,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 	}
 
+	if s.apolloCompatibilityFlags.SubscriptionMultipartPrintBoundary.Enabled {
+		handlerOpts.ApolloSubscriptionMultipartPrintBoundary = s.apolloCompatibilityFlags.SubscriptionMultipartPrintBoundary.Enabled
+	}
+
 	graphqlHandler := NewGraphQLHandler(handlerOpts)
 	executor.Resolver.SetAsyncErrorWriter(graphqlHandler)
 
@@ -1025,6 +1064,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			Enabled:   s.securityConfiguration.BlockNonPersistedOperations.Enabled,
 			Condition: s.securityConfiguration.BlockNonPersistedOperations.Condition,
 		},
+		SafelistEnabled:             s.persistedOperationsConfig.Safelist.Enabled,
+		LogUnknownOperationsEnabled: s.persistedOperationsConfig.LogUnknown,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create operation blocker: %w", err)
@@ -1078,6 +1119,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			ClientHeader:              s.clientHeader,
 			Attributes:                baseOtelAttributes,
 			DisableVariablesRemapping: s.engineExecutionConfiguration.DisableVariablesRemapping,
+			ApolloCompatibilityFlags:  s.apolloCompatibilityFlags,
 		})
 
 		// When the playground path is equal to the graphql path, we need to handle

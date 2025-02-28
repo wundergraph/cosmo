@@ -1,6 +1,11 @@
 /* eslint-disable import/named */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { FederationResultContainer, Subgraph, federateSubgraphs } from '@wundergraph/composition';
+import {
+  Subgraph,
+  federateSubgraphs,
+  FederationResult,
+  ROUTER_COMPATIBILITY_VERSION_ONE,
+} from '@wundergraph/composition';
 import boxen from 'boxen';
 import { buildClientSchema, printSchema } from 'graphql';
 import yaml from 'js-yaml';
@@ -174,8 +179,9 @@ export const introspectSubgraph = async ({
 /**
  * Composes a list of subgraphs into a single schema.
  */
-export function composeSubgraphs(subgraphs: Subgraph[]): FederationResultContainer {
-  return federateSubgraphs(subgraphs);
+export function composeSubgraphs(subgraphs: Subgraph[]): FederationResult {
+  // @TODO get router compatibility version programmatically
+  return federateSubgraphs(subgraphs, ROUTER_COMPATIBILITY_VERSION_ONE);
 }
 
 export type ConfigData = Partial<KeycloakToken & { organizationSlug: string; lastUpdateCheck: number }>;
@@ -224,7 +230,7 @@ export const checkForUpdates = async () => {
 Changelog: https://github.com/wundergraph/cosmo/releases/tag/wgc@${latestVersion}
 Run npm i -g wgc@latest`;
 
-    console.log(
+    console.warn(
       boxen(message, {
         padding: 1,
         margin: 1,

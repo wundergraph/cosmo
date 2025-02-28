@@ -71,7 +71,9 @@ export default (opts: BaseCommandOptions) => {
     const success = handleCheckResult(resp);
 
     if (!success && !ignoreErrorsDueToGitHubIntegration) {
-      process.exit(1);
+      process.exitCode = 1;
+      // eslint-disable-next-line no-useless-return
+      return;
     }
   });
 

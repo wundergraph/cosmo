@@ -2,10 +2,8 @@ import {
   ConstDirectiveNode,
   ConstValueNode,
   DirectiveDefinitionNode,
-  EnumTypeDefinitionNode,
   EnumValueDefinitionNode,
   FieldDefinitionNode,
-  InputObjectTypeDefinitionNode,
   InputValueDefinitionNode,
   InterfaceTypeDefinitionNode,
   InterfaceTypeExtensionNode,
@@ -14,10 +12,8 @@ import {
   NameNode,
   ObjectTypeDefinitionNode,
   ObjectTypeExtensionNode,
-  ScalarTypeDefinitionNode,
   StringValueNode,
   TypeNode,
-  UnionTypeDefinitionNode,
 } from 'graphql';
 import { formatDescription, stringToNameNode } from '../ast/utils';
 import { maximumTypeNestingExceededError, unexpectedTypeNodeKindFatalError } from '../errors/errors';

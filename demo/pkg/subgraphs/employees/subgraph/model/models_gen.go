@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+
+	"github.com/99designs/gqlgen/graphql"
 )
 
 type IProduct interface {
@@ -79,6 +81,10 @@ type CountryKey struct {
 	Name string `json:"name"`
 }
 
+type DeeplyNestedFileUpload struct {
+	File graphql.Upload `json:"file"`
+}
+
 type Details struct {
 	Forename      string   `json:"forename"`
 	Location      *Country `json:"location"`
@@ -148,6 +154,11 @@ func (this Engineer) GetEmployees() []*Employee {
 type ErrorWrapper struct {
 	OkField    *string `json:"okField,omitempty"`
 	ErrorField *string `json:"errorField,omitempty"`
+}
+
+type FileUpload struct {
+	Nested     *DeeplyNestedFileUpload `json:"nested,omitempty"`
+	NestedList []*graphql.Upload       `json:"nestedList,omitempty"`
 }
 
 type Marketer struct {

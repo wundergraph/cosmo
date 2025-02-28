@@ -33,6 +33,7 @@ type CustomDynamicAttribute struct {
 	RequestHeader  string `yaml:"request_header,omitempty"`
 	ContextField   string `yaml:"context_field,omitempty"`
 	ResponseHeader string `yaml:"response_header,omitempty"`
+	Expression     string `yaml:"expression,omitempty"` // only implemented by CustomAttribute in Metrics and Telemetry and Router Access Logs
 }
 
 type CustomAttribute struct {
@@ -167,18 +168,18 @@ type RouterTrafficConfiguration struct {
 type GlobalSubgraphRequestRule struct {
 	BackoffJitterRetry BackoffJitterRetry `yaml:"retry"`
 	// See https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
-	RequestTimeout         time.Duration `yaml:"request_timeout,omitempty" envDefault:"60s"`
-	DialTimeout            time.Duration `yaml:"dial_timeout,omitempty" envDefault:"30s"`
-	ResponseHeaderTimeout  time.Duration `yaml:"response_header_timeout,omitempty" envDefault:"0s"`
-	ExpectContinueTimeout  time.Duration `yaml:"expect_continue_timeout,omitempty" envDefault:"0s"`
-	TLSHandshakeTimeout    time.Duration `yaml:"tls_handshake_timeout,omitempty" envDefault:"10s"`
-	KeepAliveIdleTimeout   time.Duration `yaml:"keep_alive_idle_timeout,omitempty" envDefault:"0s"`
-	KeepAliveProbeInterval time.Duration `yaml:"keep_alive_probe_interval,omitempty" envDefault:"30s"`
+	RequestTimeout         *time.Duration `yaml:"request_timeout,omitempty" envDefault:"60s"`
+	DialTimeout            *time.Duration `yaml:"dial_timeout,omitempty" envDefault:"30s"`
+	ResponseHeaderTimeout  *time.Duration `yaml:"response_header_timeout,omitempty" envDefault:"0s"`
+	ExpectContinueTimeout  *time.Duration `yaml:"expect_continue_timeout,omitempty" envDefault:"0s"`
+	TLSHandshakeTimeout    *time.Duration `yaml:"tls_handshake_timeout,omitempty" envDefault:"10s"`
+	KeepAliveIdleTimeout   *time.Duration `yaml:"keep_alive_idle_timeout,omitempty" envDefault:"0s"`
+	KeepAliveProbeInterval *time.Duration `yaml:"keep_alive_probe_interval,omitempty" envDefault:"30s"`
 
 	// Connection configuration
-	MaxConnsPerHost     int `yaml:"max_conns_per_host,omitempty" envDefault:"100"`
-	MaxIdleConns        int `yaml:"max_idle_conns,omitempty" envDefault:"1024"`
-	MaxIdleConnsPerHost int `yaml:"max_idle_conns_per_host,omitempty" envDefault:"20"`
+	MaxConnsPerHost     *int `yaml:"max_conns_per_host,omitempty" envDefault:"100"`
+	MaxIdleConns        *int `yaml:"max_idle_conns,omitempty" envDefault:"1024"`
+	MaxIdleConnsPerHost *int `yaml:"max_idle_conns_per_host,omitempty" envDefault:"20"`
 }
 
 type SubgraphTrafficRequestRule struct {
@@ -211,8 +212,9 @@ type CacheControlPolicy struct {
 
 type HeaderRules struct {
 	// All is a set of rules that apply to all requests
-	All       *GlobalHeaderRule            `yaml:"all,omitempty"`
-	Subgraphs map[string]*GlobalHeaderRule `yaml:"subgraphs,omitempty"`
+	All             *GlobalHeaderRule            `yaml:"all,omitempty"`
+	Subgraphs       map[string]*GlobalHeaderRule `yaml:"subgraphs,omitempty"`
+	CookieWhitelist []string                     `yaml:"cookie_whitelist,omitempty"`
 }
 
 type GlobalHeaderRule struct {
@@ -346,6 +348,7 @@ type EngineExecutionConfiguration struct {
 	ResolverMaxRecyclableParserSize        int                      `envDefault:"32768" env:"ENGINE_RESOLVER_MAX_RECYCLABLE_PARSER_SIZE" yaml:"resolver_max_recyclable_parser_size,omitempty"`
 	EnableSubgraphFetchOperationName       bool                     `envDefault:"false" env:"ENGINE_ENABLE_SUBGRAPH_FETCH_OPERATION_NAME" yaml:"enable_subgraph_fetch_operation_name"`
 	DisableVariablesRemapping              bool                     `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping"`
+	SubscriptionFetchTimeout               time.Duration            `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
 }
 
 type BlockOperationConfiguration struct {
@@ -700,8 +703,14 @@ type AutomaticPersistedQueriesCacheConfig struct {
 }
 
 type PersistedOperationsConfig struct {
-	Cache   PersistedOperationsCacheConfig   `yaml:"cache"`
-	Storage PersistedOperationsStorageConfig `yaml:"storage"`
+	LogUnknown bool                             `yaml:"log_unknown" env:"PERSISTED_OPERATIONS_LOG_UNKNOWN" envDefault:"false"`
+	Safelist   SafelistConfiguration            `yaml:"safelist" envPrefix:"PERSISTED_OPERATIONS_SAFELIST_"`
+	Cache      PersistedOperationsCacheConfig   `yaml:"cache"`
+	Storage    PersistedOperationsStorageConfig `yaml:"storage"`
+}
+
+type SafelistConfiguration struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 }
 
 type AutomaticPersistedQueriesConfig struct {
@@ -750,12 +759,14 @@ type AccessLogsSubgraphsConfig struct {
 }
 
 type ApolloCompatibilityFlags struct {
-	EnableAll                     bool                                             `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
-	ValueCompletion               ApolloCompatibilityValueCompletion               `yaml:"value_completion"`
-	TruncateFloats                ApolloCompatibilityTruncateFloats                `yaml:"truncate_floats"`
-	SuppressFetchErrors           ApolloCompatibilitySuppressFetchErrors           `yaml:"suppress_fetch_errors"`
-	ReplaceUndefinedOpFieldErrors ApolloCompatibilityReplaceUndefinedOpFieldErrors `yaml:"replace_undefined_op_field_errors"`
-	ReplaceInvalidVarErrors       ApolloCompatibilityReplaceInvalidVarErrors       `yaml:"replace_invalid_var_errors"`
+	EnableAll                          bool                                                  `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
+	ValueCompletion                    ApolloCompatibilityValueCompletion                    `yaml:"value_completion"`
+	TruncateFloats                     ApolloCompatibilityTruncateFloats                     `yaml:"truncate_floats"`
+	SuppressFetchErrors                ApolloCompatibilitySuppressFetchErrors                `yaml:"suppress_fetch_errors"`
+	ReplaceUndefinedOpFieldErrors      ApolloCompatibilityReplaceUndefinedOpFieldErrors      `yaml:"replace_undefined_op_field_errors"`
+	ReplaceInvalidVarErrors            ApolloCompatibilityReplaceInvalidVarErrors            `yaml:"replace_invalid_var_errors"`
+	ReplaceValidationErrorStatus       ApolloCompatibilityReplaceValidationErrorStatus       `yaml:"replace_validation_error_status"`
+	SubscriptionMultipartPrintBoundary ApolloCompatibilitySubscriptionMultipartPrintBoundary `yaml:"subscription_multipart_print_boundary"`
 }
 
 type ApolloCompatibilityValueCompletion struct {
@@ -781,6 +792,27 @@ type ApolloCompatibilityReplaceUndefinedOpFieldErrors struct {
 
 type ApolloCompatibilityReplaceInvalidVarErrors struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_ENABLED"`
+}
+
+type ApolloCompatibilityReplaceValidationErrorStatus struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_REPLACE_VALIDATION_ERROR_STATUS_ENABLED"`
+}
+
+type ApolloCompatibilitySubscriptionMultipartPrintBoundary struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_SUBSCRIPTION_MULTIPART_PRINT_BOUNDARY_ENABLED"`
+}
+
+type ApolloRouterCompatibilityFlags struct {
+	ReplaceInvalidVarErrors ApolloRouterCompatibilityReplaceInvalidVarErrors `yaml:"replace_invalid_var_errors"`
+	SubrequestHTTPError     ApolloRouterCompatibilitySubrequestHTTPError     `yaml:"subrequest_http_error"`
+}
+
+type ApolloRouterCompatibilityReplaceInvalidVarErrors struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_ENABLED"`
+}
+
+type ApolloRouterCompatibilitySubrequestHTTPError struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_ROUTER_COMPATIBILITY_SUBREQUEST_HTTP_ERROR_ENABLED"`
 }
 
 type CacheWarmupSource struct {
@@ -861,12 +893,13 @@ type Config struct {
 
 	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation"`
 
-	StorageProviders          StorageProviders                `yaml:"storage_providers"`
-	ExecutionConfig           ExecutionConfig                 `yaml:"execution_config"`
-	PersistedOperationsConfig PersistedOperationsConfig       `yaml:"persisted_operations"`
-	AutomaticPersistedQueries AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
-	ApolloCompatibilityFlags  ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
-	ClientHeader              ClientHeader                    `yaml:"client_header"`
+	StorageProviders               StorageProviders                `yaml:"storage_providers"`
+	ExecutionConfig                ExecutionConfig                 `yaml:"execution_config"`
+	PersistedOperationsConfig      PersistedOperationsConfig       `yaml:"persisted_operations"`
+	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
+	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
+	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
+	ClientHeader                   ClientHeader                    `yaml:"client_header"`
 }
 
 type PlaygroundConfig struct {

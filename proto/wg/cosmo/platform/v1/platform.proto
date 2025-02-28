@@ -318,6 +318,7 @@ message FederatedGraph {
   bool supports_federation = 14;
   optional Contract contract = 15;
   optional string admission_webhook_url = 16;
+  string router_compatibility_version = 17;
 }
 
 message GetFederatedGraphsResponse {
@@ -381,7 +382,7 @@ message GetFederatedGraphByNameResponse {
   repeated Subgraph subgraphs = 3;
   string graphRequestToken = 4;
   repeated FeatureFlag featureFlagsInLatestValidComposition = 5;
-  // includes all the feature subgraphs that are part of the federated graph, 
+  // includes all the feature subgraphs that are part of the federated graph;
   // even the ones that are not part of the latest composition
   repeated Subgraph featureSubgraphs = 6;
 }
@@ -1243,6 +1244,15 @@ message Organization {
   string createdAt = 5;
 }
 
+message GetOrganizationBySlugRequest {
+  string slug = 1;
+}
+
+message GetOrganizationBySlugResponse {
+  Response response = 1;
+  optional Organization organization = 2;
+}
+
 /**
  * Billing
  */
@@ -1632,6 +1642,7 @@ message GraphComposition {
   optional bool hasMultipleChangedSubgraphs = 11;
   optional string triggeredBySubgraphName = 12;
   optional string compositionWarnings = 13;
+  string router_compatibility_version = 14;
 }
 
 message GraphCompositionSubgraph {
@@ -1650,7 +1661,7 @@ message GetCompositionsRequest {
   string startDate = 4;
   string endDate = 5;
   string namespace = 6;
-  bool excludeFeatureFlagCompositions = 7; 
+  bool excludeFeatureFlagCompositions = 7;
 }
 
 message GetCompositionsResponse {
@@ -2337,7 +2348,7 @@ message GetWebhookDeliveryDetailsResponse {
   WebhookDelivery delivery = 2;
 }
 
-message CreatePlaygroundScriptRequest { 
+message CreatePlaygroundScriptRequest {
   string title = 1;
   string type = 2;
   string content = 3;
@@ -2392,7 +2403,7 @@ message GetFederatedGraphByIdResponse {
   repeated Subgraph subgraphs = 3;
   string graphRequestToken = 4;
   repeated FeatureFlag featureFlagsInLatestValidComposition = 5;
-  // includes all the feature subgraphs that are part of the federated graph, 
+  // includes all the feature subgraphs that are part of the federated graph;
   // even the ones that are not part of the latest composition
   repeated Subgraph featureSubgraphs = 6;
 }
@@ -2469,6 +2480,7 @@ message ComputeCacheWarmerOperationsResponse {
 message ConfigureCacheWarmerRequest {
   string namespace = 1;
   bool enableCacheWarmer = 2;
+  int32 maxOperationsCount = 3;
 }
 
 message ConfigureCacheWarmerResponse {
@@ -2482,6 +2494,40 @@ message GetCacheWarmerConfigRequest {
 message GetCacheWarmerConfigResponse {
   Response response = 1;
   bool isCacheWarmerEnabled = 2;
+  int32 maxOperationsCount = 3;
+}
+
+message DeleteCacheWarmerOperationRequest {
+  string id = 1;
+  string federatedGraphName = 2;
+  string namespace = 3;
+}
+
+message DeleteCacheWarmerOperationResponse {
+  Response response = 1;
+}
+
+message ListRouterCompatibilityVersionsRequest {
+}
+
+message ListRouterCompatibilityVersionsResponse {
+  Response response = 1;
+  repeated string versions = 2;
+}
+
+message SetGraphRouterCompatibilityVersionRequest {
+  string name = 1;
+  string namespace = 2;
+  string version = 3;
+}
+
+message SetGraphRouterCompatibilityVersionResponse {
+  Response response = 1;
+  string previous_version = 2;
+  string new_version = 3;
+  repeated CompositionError compositionErrors = 4;
+  repeated DeploymentError deploymentErrors = 5;
+  repeated CompositionWarning compositionWarnings = 6;
 }
 
 service PlatformService {
@@ -2603,6 +2649,9 @@ service PlatformService {
   rpc GetFederatedGraphChangelog(GetFederatedGraphChangelogRequest) returns (GetFederatedGraphChangelogResponse) {}
   // CreateFederatedGraphToken creates a federated graph token that is consumed by the router to authenticate requests.
   rpc CreateFederatedGraphToken(CreateFederatedGraphTokenRequest) returns (CreateFederatedGraphTokenResponse) {}
+
+  // GetOrganizationBySlug returns a specific organization by its slug
+  rpc GetOrganizationBySlug(GetOrganizationBySlugRequest) returns (GetOrganizationBySlugResponse){}
   // GetOrganizationMembers returns the list of organization members
   rpc GetOrganizationMembers(GetOrganizationMembersRequest) returns (GetOrganizationMembersResponse){}
   // GetOrganizationMembers returns the list of pending organization invites
@@ -2801,6 +2850,8 @@ service PlatformService {
   rpc ConfigureCacheWarmer(ConfigureCacheWarmerRequest) returns (ConfigureCacheWarmerResponse) {}
   // GetCacheWarmerConfig gets the config of cache warming for that namespace.
   rpc GetCacheWarmerConfig(GetCacheWarmerConfigRequest) returns (GetCacheWarmerConfigResponse) {}
+  // DeleteCacheWarmerOperation deletes a cache warmer operation.
+  rpc DeleteCacheWarmerOperation(DeleteCacheWarmerOperationRequest) returns (DeleteCacheWarmerOperationResponse) {}
 
   //
   // Billing
@@ -2813,4 +2864,10 @@ service PlatformService {
   rpc CreateBillingPortalSession(CreateBillingPortalSessionRequest) returns (CreateBillingPortalSessionResponse) { }
   // Upgrade the current plan
   rpc UpgradePlan(UpgradePlanRequest) returns (UpgradePlanResponse) { }
+
+  // Router Compatibility Versions
+  rpc ListRouterCompatibilityVersions(ListRouterCompatibilityVersionsRequest) returns (ListRouterCompatibilityVersionsResponse) { }
+
+  // Graph
+  rpc SetGraphRouterCompatibilityVersion(SetGraphRouterCompatibilityVersionRequest) returns (SetGraphRouterCompatibilityVersionResponse) { }
 }

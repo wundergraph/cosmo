@@ -126,6 +126,22 @@
       "additionalProperties": false,
       "description": "The configuration for the persisted operations.",
       "properties": {
+        "safelist": {
+          "type": "object",
+          "description": "The configuration for safelisting persisted operations.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Only allows persisted operations (sent with operation body). If the value is true, all operations not explicitly added to the safelist are blocked."
+            }
+          }
+        },
+        "log_unknown": {
+          "type": "boolean",
+          "description": "Log operations (sent with the operation body) which haven't yet been persisted. If the value is true, all operations not yet persisted are logged to the router logs.",
+          "additionalProperties": false
+        },
         "cache": {
           "type": "object",
           "additionalProperties": false,
@@ -666,8 +682,16 @@
                   "request_header": {
                     "type": "string",
                     "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                  },
+                  "expression": {
+                    "type": "string",
+                    "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
                   }
-                }
+                },
+                "oneOf": [
+                  {"required": ["request_header"]},
+                  {"required": ["expression"]}
+                ]
               }
             }
           }
@@ -1335,6 +1359,14 @@
               }
             }
           }
+        },
+        "cookie_whitelist": {
+          "type": "array",
+          "description": "A list of Cookie keys allowed to be forwarded to the subgraph. If the list is empty or unspecified, all cookies are forwarded. This option will do nothing if the 'Cookie' header is not propagated.",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -1904,7 +1936,7 @@
           "properties": {
             "enabled": {
               "type": "boolean",
-              "description": "Block non-persisted operations. If the value is true, all Operations are blocked. You can also specify a condition that is evaluated to determine if the non-persisted operation should be blocked."
+              "description": "Block non-persisted operations (sent with operation ID). If the value is true, all Operations are blocked. You can also specify a condition that is evaluated to determine if the non-persisted operation should be blocked."
             },
             "condition": {
               "type": "string",
@@ -2233,6 +2265,12 @@
           "type": "boolean",
           "default": false,
           "description": "Disables variables renaming during normalization. This option could have a negative impact on planner cache hits."
+        },
+        "subscription_fetch_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "default": "30s",
+          "description": "The maximum time a subscription fetch can take before it is considered timed out. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         }
       }
     },
@@ -2358,7 +2396,58 @@
         },
         "replace_invalid_var_errors": {
           "type": "object",
-          "description": "Produces the same error (message, extension code, status code) as Apollo when an invalid variable is supplied.",
+          "description": "Produces the same error (message, extension code but not status code) as Apollo when an invalid variable is supplied.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "replace_validation_error_status": {
+          "type": "object",
+          "description": "Produces the same error status code (400) as Apollo when validation fails.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "subscription_multipart_print_boundary": {
+          "type": "object",
+          "description": "Prints the multipart boundary right after the message in multipart subscriptions. Without this flag, the Apollo client wouldn’t parse a message until the next one is pushed.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      }
+    },
+    "apollo_router_compatibility_flags": {
+      "type": "object",
+      "description": "To enable full compatibility with Apollo Router you can enable certain compatibility flags, allowing you to use Cosmo Router as a drop-in replacement for Apollo Router",
+      "additionalProperties": false,
+      "properties": {
+        "replace_invalid_var_errors": {
+          "type": "object",
+          "description": "Produces the same error (message, extension code but not status code) as Apollo Router when an invalid variable is supplied.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "subrequest_http_error": {
+          "type": "object",
+          "description": "Prepends an additional error when subgraph HTTP response code is non-2XX, similar to Apollo Router.",
           "additionalProperties": false,
           "properties": {
             "enabled": {
@@ -2619,6 +2708,10 @@
               "response_header": {
                 "type": "string",
                 "description": "The name of the response header from which to extract the value. The value is only extracted for subgraph access logs"
+              },
+              "expression": {
+                "type": "string",
+                "description": "The expression used to evaluate to extract a value for logging. The expression is specified as a string. Please see https://expr-lang.org/ for more information on constructing expressions."
               },
               "context_field": {
                 "type": "string",

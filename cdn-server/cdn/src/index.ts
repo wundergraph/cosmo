@@ -4,6 +4,8 @@ import { stream } from 'hono/streaming';
 
 export const signatureSha256Header = 'X-Signature-SHA256';
 
+const routerCompatibilityVersionPattern = /^1$/;
+
 export interface BlobObject {
   metadata?: Partial<Record<'version' | 'signature-sha256', string>>;
   stream: ReadableStream;
@@ -141,8 +143,16 @@ const latestValidRouterConfig = (storage: BlobStorage) => {
     if (organizationId !== c.req.param('organization_id') || federatedGraphId !== c.req.param('federated_graph_id')) {
       return c.text('Bad Request', 400);
     }
+    const compatibilityVersion = c.req.param('compatibility_version');
+    let key = `${organizationId}/${federatedGraphId}/routerconfigs/latest.json`;
+    // An empty string means v1, which takes the original un-versioned path.
+    if (compatibilityVersion) {
+      if (!routerCompatibilityVersionPattern.test(compatibilityVersion)) {
+        return c.text(`Invalid router compatibility version "${compatibilityVersion}".`, 400);
+      }
+      key = `${organizationId}/${federatedGraphId}/routerconfigs/v${compatibilityVersion}/latest.json`;
+    }
 
-    const key = `${organizationId}/${federatedGraphId}/routerconfigs/latest.json`;
     const body = await c.req.json();
 
     let isModified = true;
@@ -265,6 +275,12 @@ export const cdn = <E extends Env, S extends Schema = {}, BasePath extends strin
   hono
     .use(draftRouterConfigs, jwtMiddleware(opts.authAdmissionJwtSecret))
     .get(draftRouterConfigs, draftRouterConfig(opts.blobStorage));
+
+  const latestValidVersionedRouterConfigs =
+    '/:organization_id/:federated_graph_id/routerconfigs/:compatibility_version/latest.json';
+  hono
+    .use(latestValidVersionedRouterConfigs, jwtMiddleware(opts.authJwtSecret))
+    .post(latestValidVersionedRouterConfigs, latestValidRouterConfig(opts.blobStorage));
 
   const cacheOperationsPath = '/:organization_id/:federated_graph_id/cache_warmup/operations.json';
   hono

@@ -4,11 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/expr-lang/expr/checker"
+	"github.com/expr-lang/expr/conf"
+	"github.com/expr-lang/expr/parser"
 	"net/http"
 	"net/url"
 	"reflect"
 
 	"github.com/expr-lang/expr"
+	"github.com/expr-lang/expr/ast"
 	"github.com/expr-lang/expr/file"
 	"github.com/expr-lang/expr/vm"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -30,17 +34,21 @@ import (
 * See https://github.com/expr-lang/expr/issues/734
  */
 
+const ExprRequestKey = "request"
+const ExprRequestAuthKey = "auth"
+
 // Context is the context for expressions parser when evaluating dynamic expressions
 type Context struct {
-	Request Request `expr:"request"`
+	Request Request `expr:"request"` // if changing the expr tag, the ExprRequestKey should be updated
 }
 
 // Request is the context for the request object in expressions. Be aware, that only value receiver methods
 // are exported in the expr environment. This is because the expressions are evaluated in a read-only context.
 type Request struct {
-	Auth   RequestAuth    `expr:"auth"`
+	Auth   RequestAuth    `expr:"auth"` // if changing the expr tag, the ExprRequestAuthKey should be updated
 	URL    RequestURL     `expr:"url"`
 	Header RequestHeaders `expr:"header"`
+	Error  error          `expr:"error"`
 }
 
 // RequestURL is the context for the URL object in expressions
@@ -145,12 +153,65 @@ func CompileStringExpression(s string) (*vm.Program, error) {
 	return v, nil
 }
 
+// CompileStringExpression compiles an expression and returns the program. It is used for expressions that return strings
+// The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
+func CompileStringExpressionWithPatch(s string, visitor ast.Visitor) (*vm.Program, error) {
+	v, err := expr.Compile(s, compileOptions(expr.AsKind(reflect.String), expr.Patch(visitor))...)
+	if err != nil {
+		return nil, handleExpressionError(err)
+	}
+	return v, nil
+}
+
+// ValidateAnyExpression compiles the expression to ensure that the expression itself is valid but more
+// importantly it checks if the return type is not nil and is an allowed return type
+// this allows us to ensure that nil and return types such as func or channels are not returned
+func ValidateAnyExpression(s string) error {
+	tree, err := parser.Parse(s)
+	if err != nil {
+		return handleExpressionError(err)
+	}
+
+	config := conf.CreateNew()
+	for _, op := range compileOptions() {
+		op(config)
+	}
+
+	expectedType, err := checker.Check(tree, config)
+	if err != nil {
+		return handleExpressionError(err)
+	}
+
+	if expectedType == nil {
+		return handleExpressionError(errors.New("disallowed nil"))
+	}
+
+	// Disallowed types
+	switch expectedType.Kind() {
+	case reflect.Invalid, reflect.Chan, reflect.Func:
+		return handleExpressionError(fmt.Errorf("disallowed type: %s", expectedType.String()))
+	}
+
+	return nil
+}
+
 func CompileAnyExpression(s string) (*vm.Program, error) {
 	v, err := expr.Compile(s, compileOptions()...)
 	if err != nil {
 		return nil, handleExpressionError(err)
 	}
 	return v, nil
+}
+
+// ResolveAnyExpression evaluates the expression and returns the result as a any. The exprContext is used to
+// provide the context for the expression evaluation. Not safe for concurrent use.
+func ResolveAnyExpression(vm *vm.Program, ctx Context) (any, error) {
+	r, err := expr.Run(vm, ctx)
+	if err != nil {
+		return "", handleExpressionError(err)
+	}
+
+	return r, nil
 }
 
 // ResolveStringExpression evaluates the expression and returns the result as a string. The exprContext is used to

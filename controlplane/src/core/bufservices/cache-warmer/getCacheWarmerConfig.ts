@@ -9,6 +9,7 @@ import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationRepository } from '../../../core/repositories/OrganizationRepository.js';
+import { CacheWarmerRepository } from '../../../core/repositories/CacheWarmerRepository.js';
 
 export function getCacheWarmerConfig(
   opts: RouterOptions,
@@ -34,6 +35,7 @@ export function getCacheWarmerConfig(
           details: `Upgrade to a enterprise plan to enable cache warmer`,
         },
         isCacheWarmerEnabled: false,
+        maxOperationsCount: 0,
       };
     }
 
@@ -45,14 +47,40 @@ export function getCacheWarmerConfig(
           details: `Namespace '${req.namespace}' not found`,
         },
         isCacheWarmerEnabled: false,
+        maxOperationsCount: 0,
       };
     }
+
+    if (!namespace.enableCacheWarmer) {
+      return {
+        response: {
+          code: EnumStatusCode.OK,
+        },
+        isCacheWarmerEnabled: false,
+        maxOperationsCount: 0,
+      };
+    }
+
+    if (!opts.chClient) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `ClickHouse client is not available`,
+        },
+        isCacheWarmerEnabled: false,
+        maxOperationsCount: 0,
+      };
+    }
+
+    const cacheWarmerRepo = new CacheWarmerRepository(opts.chClient, opts.db);
+    const cacheWarmerConfig = await cacheWarmerRepo.getCacheWarmerConfig({ namespaceId: namespace.id });
 
     return {
       response: {
         code: EnumStatusCode.OK,
       },
       isCacheWarmerEnabled: namespace.enableCacheWarmer,
+      maxOperationsCount: cacheWarmerConfig?.maxOperationsCount || 100,
     };
   });
 }

@@ -1,6 +1,13 @@
 import crypto from 'node:crypto';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
-import { COMPOSITION_VERSION, ConfigurationData, FieldConfiguration, ROOT_TYPE_NAMES } from '@wundergraph/composition';
+import {
+  COMPOSITION_VERSION,
+  ConfigurationData,
+  FieldConfiguration,
+  ROOT_TYPE_NAMES,
+  ROUTER_COMPATIBILITY_VERSIONS,
+  SupportedRouterCompatibilityVersion,
+} from '@wundergraph/composition';
 import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
 import {
   GraphQLSubscriptionProtocol,
@@ -21,12 +28,13 @@ import {
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { configurationDatasToDataSourceConfiguration, generateFieldConfigurations } from './graphql-configuration.js';
-import { normalizationFailureError } from './errors.js';
+import { invalidRouterCompatibilityVersion, normalizationFailureError } from './errors.js';
 
 export interface Input {
   federatedClientSDL: string;
   federatedSDL: string;
   fieldConfigurations: FieldConfiguration[];
+  routerCompatibilityVersion: string;
   schemaVersionId: string;
   subgraphs: ComposedSubgraph[];
 }
@@ -95,6 +103,9 @@ export const parseGraphQLWebsocketSubprotocol = (protocolName: WebsocketSubproto
 };
 
 export const buildRouterConfig = function (input: Input): RouterConfig {
+  if (!ROUTER_COMPATIBILITY_VERSIONS.has(input.routerCompatibilityVersion as SupportedRouterCompatibilityVersion)) {
+    throw invalidRouterCompatibilityVersion(input.routerCompatibilityVersion);
+  }
   const engineConfig = new EngineConfiguration({
     defaultFlushInterval: BigInt(500),
     datasourceConfigurations: [],
@@ -215,6 +226,6 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       name: s.name,
       routingUrl: s.url,
     })),
-    compatibilityVersion: `1:${COMPOSITION_VERSION}`,
+    compatibilityVersion: `${input.routerCompatibilityVersion}:${COMPOSITION_VERSION}`,
   });
 };

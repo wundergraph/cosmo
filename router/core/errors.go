@@ -117,7 +117,7 @@ func trackFinalResponseError(ctx context.Context, err error) {
 		return
 	}
 
-	requestContext.error = err
+	requestContext.SetError(err)
 	requestContext.graphQLErrorServices = getAggregatedSubgraphServiceNames(requestContext.error)
 	requestContext.graphQLErrorCodes = getAggregatedSubgraphErrorCodes(requestContext.error)
 
@@ -242,7 +242,7 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 // writeMultipartError writes the error response in a multipart format with proper boundaries and headers.
 func writeMultipartError(w http.ResponseWriter, requestErrors graphqlerrors.RequestErrors, requestLogger *zap.Logger) error {
 	// Start with the multipart boundary
-	prefix := GetWriterPrefix(false, true)
+	prefix := GetWriterPrefix(false, true, true)
 	if _, err := w.Write([]byte(prefix)); err != nil {
 		return err
 	}
@@ -315,4 +315,15 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 	default:
 		writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errInternalServer), requestLogger)
 	}
+}
+
+type ExprWrapError struct {
+	Err error
+}
+
+func (e *ExprWrapError) Error() string {
+	if e.Err == nil {
+		return ""
+	}
+	return e.Err.Error()
 }

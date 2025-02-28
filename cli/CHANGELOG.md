@@ -4,6 +4,51 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.75.4](https://github.com/wundergraph/cosmo/compare/wgc@0.75.3...wgc@0.75.4) (2025-02-27)
+
+**Note:** Version bump only for package wgc
+
+## [0.75.3](https://github.com/wundergraph/cosmo/compare/wgc@0.75.2...wgc@0.75.3) (2025-02-26)
+
+### Bug Fixes
+
+* improve wgc auth login and router compatibility-version ([#1636](https://github.com/wundergraph/cosmo/issues/1636)) ([6946363](https://github.com/wundergraph/cosmo/commit/6946363024e49b6170a9553728ac3ecc973ce394)) (@Aenimus)
+
+## [0.75.2](https://github.com/wundergraph/cosmo/compare/wgc@0.75.1...wgc@0.75.2) (2025-02-26)
+
+### Bug Fixes
+
+* **cli:** resolve broken console outputs ([#1623](https://github.com/wundergraph/cosmo/issues/1623)) ([6aa67af](https://github.com/wundergraph/cosmo/commit/6aa67aff01f83de5f4a195de32e5674f337ec325)) (@SkArchon)
+
+## [0.75.1](https://github.com/wundergraph/cosmo/compare/wgc@0.75.0...wgc@0.75.1) (2025-02-25)
+
+### Bug Fixes
+
+* correct and deterministic dist folder structure ([#1628](https://github.com/wundergraph/cosmo/issues/1628)) ([f9600d4](https://github.com/wundergraph/cosmo/commit/f9600d4fd8f090968f38b9628034cdd97156e42a)) (@endigma)
+
+# [0.75.0](https://github.com/wundergraph/cosmo/compare/wgc@0.74.0...wgc@0.75.0) (2025-02-25)
+
+### Features
+
+* include client schema in the output of federated-graph fetch command ([#1619](https://github.com/wundergraph/cosmo/issues/1619)) ([5c87126](https://github.com/wundergraph/cosmo/commit/5c8712621ae7651317f85b2d12d1c128b54a5f75)) (@JivusAyrus)
+* release bun based single file executables ([#1620](https://github.com/wundergraph/cosmo/issues/1620)) ([7cda142](https://github.com/wundergraph/cosmo/commit/7cda1423b711224de2e8d0a4ce514340a2d4757f)) (@endigma)
+
+# [0.74.0](https://github.com/wundergraph/cosmo/compare/wgc@0.73.0...wgc@0.74.0) (2025-02-17)
+
+### Features
+
+* add composition versioning ([#1575](https://github.com/wundergraph/cosmo/issues/1575)) ([ee32cbb](https://github.com/wundergraph/cosmo/commit/ee32cbb3dbe7c46fa984920bbd95e4a00d01c9c3)) (@Aenimus)
+
+# [0.73.0](https://github.com/wundergraph/cosmo/compare/wgc@0.72.5...wgc@0.73.0) (2025-02-13)
+
+### Features
+
+* **router:** enable safelist for persisted operations ([#1561](https://github.com/wundergraph/cosmo/issues/1561)) ([b81b828](https://github.com/wundergraph/cosmo/commit/b81b8287c6f223ea6c7e9be4111f132c55128043)) (@df-wg)
+
+## [0.72.5](https://github.com/wundergraph/cosmo/compare/wgc@0.72.4...wgc@0.72.5) (2025-02-12)
+
+**Note:** Version bump only for package wgc
+
 ## [0.72.4](https://github.com/wundergraph/cosmo/compare/wgc@0.72.3...wgc@0.72.4) (2025-02-06)
 
 **Note:** Version bump only for package wgc

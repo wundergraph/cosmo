@@ -1,7 +1,7 @@
 export const AS = 'as';
 export const AND_UPPER = 'AND';
 export const ANY_SCALAR = '_Any';
-export const ARGUMENT = 'Argument';
+export const ARGUMENT = 'argument';
 export const AUTHENTICATED = 'authenticated';
 export const ARGUMENT_DEFINITION_UPPER = 'ARGUMENT_DEFINITION';
 export const BOOLEAN = 'boolean';
@@ -50,13 +50,14 @@ export const FOR = 'for';
 export const FRAGMENT_DEFINITION_UPPER = 'FRAGMENT_DEFINITION';
 export const FRAGMENT_SPREAD_UPPER = 'FRAGMENT_SPREAD';
 export const FROM = 'from';
+export const HYPHEN_JOIN = `\n -`;
 export const ID_SCALAR = 'ID';
 export const IMPORT = 'import';
 export const IN_UPPER = 'IN';
 export const INACCESSIBLE = 'inaccessible';
 export const INLINE_FRAGMENT = 'inlineFragment';
 export const INLINE_FRAGMENT_UPPER = 'INLINE_FRAGMENT';
-export const INPUT_FIELD = 'Input Field';
+export const INPUT_FIELD = 'Input field';
 export const INPUT_FIELD_DEFINITION_UPPER = 'INPUT_FIELD_DEFINITION';
 export const INPUT_OBJECT = 'Input Object';
 export const INPUT_OBJECT_UPPER = 'INPUT_OBJECT';
@@ -143,20 +144,6 @@ export const URL_LOWER = 'url';
 export const VALUES = 'values';
 export const VARIABLE_DEFINITION_UPPER = 'VARIABLE_DEFINITION';
 
-export const TYPE_SYSTEM_DIRECTIVE_LOCATIONS = new Set<string>([
-  ARGUMENT_DEFINITION_UPPER,
-  ENUM_UPPER,
-  ENUM_VALUE_UPPER,
-  FIELD_DEFINITION_UPPER,
-  INPUT_FIELD_DEFINITION_UPPER,
-  INPUT_OBJECT_UPPER,
-  INTERFACE_UPPER,
-  OBJECT_UPPER,
-  SCALAR_UPPER,
-  SCHEMA_UPPER,
-  UNION_UPPER,
-]);
-
 export const EXECUTABLE_DIRECTIVE_LOCATIONS = new Set<string>([
   FIELD_UPPER,
   FRAGMENT_DEFINITION_UPPER,
@@ -166,21 +153,8 @@ export const EXECUTABLE_DIRECTIVE_LOCATIONS = new Set<string>([
   QUERY_UPPER,
   SUBSCRIPTION_UPPER,
 ]);
-export const IGNORED_PARENT_DIRECTIVES = new Set<string>([AUTHENTICATED, REQUIRES_SCOPES]);
+
 export const ROOT_TYPE_NAMES = new Set<string>([MUTATION, QUERY, SUBSCRIPTION]);
-export const EVENT_DIRECTIVE_NAMES = new Set<string>([
-  EDFS_KAFKA_PUBLISH,
-  EDFS_KAFKA_SUBSCRIBE,
-  EDFS_NATS_PUBLISH,
-  EDFS_NATS_REQUEST,
-  EDFS_NATS_SUBSCRIBE,
-]);
-export const STREAM_CONFIGURATION_FIELD_NAMES = new Set<string>([
-  CONSUMER_INACTIVE_THRESHOLD,
-  CONSUMER_NAME,
-  STREAM_NAME,
-]);
+export const IGNORED_PARENT_DIRECTIVES = new Set<string>([AUTHENTICATED, REQUIRES_SCOPES]);
 export const PERSISTED_CLIENT_DIRECTIVES = new Set<string>([AUTHENTICATED, DEPRECATED, REQUIRES_SCOPES]);
-export const SUBSCRIPTION_FILTER_INPUT_NAMES = new Set<string>([AND_UPPER, IN_UPPER, NOT_UPPER, OR_UPPER]);
-export const SUBSCRIPTION_FILTER_LIST_INPUT_NAMES = new Set<string>([AND_UPPER, OR_UPPER]);
-export type RootTypeName = 'Mutation' | 'Query' | 'Subscription';
+export const INHERITABLE_DIRECTIVE_NAMES = [EXTERNAL, SHAREABLE];

@@ -17,12 +17,15 @@ import {
   TypeNode,
 } from 'graphql';
 import {
+  AuthorizationData,
   ChildData,
   CompositeOutputData,
+  ConditionalFieldData,
   DefinitionData,
   EnumDefinitionData,
   EnumValueData,
   ExtensionType,
+  ExternalFieldData,
   FieldData,
   InputValueData,
   NodeData,
@@ -30,7 +33,7 @@ import {
   PersistedDirectiveDefinitionData,
   PersistedDirectivesData,
   ScalarDefinitionData,
-} from './type-definition-data';
+} from './types';
 import { MutableFieldNode, MutableInputValueNode, MutableTypeDefinitionNode } from './ast';
 import { ObjectTypeNode, setToNameNodeArray, stringToNameNode } from '../ast/utils';
 import {
@@ -38,6 +41,7 @@ import {
   invalidRepeatedFederatedDirectiveErrorMessage,
   invalidRequiredInputValueError,
 } from '../errors/errors';
+import { FieldConfiguration, SubscriptionFilterValue } from '../router-configuration/types';
 import {
   ARGUMENT,
   AUTHENTICATED,
@@ -50,6 +54,7 @@ import {
   FLOAT_SCALAR,
   IGNORED_PARENT_DIRECTIVES,
   INACCESSIBLE,
+  INHERITABLE_DIRECTIVE_NAMES,
   INPUT_FIELD,
   INT_SCALAR,
   MUTATION,
@@ -64,19 +69,12 @@ import {
   TAG,
 } from '../utils/string-constants';
 import {
-  AuthorizationData,
   generateRequiresScopesDirective,
   generateSimpleDirective,
   getEntriesNotInHashSet,
   getValueOrDefault,
-  InvalidRequiredInputValueData,
 } from '../utils/utils';
-import { INHERITABLE_DIRECTIVE_NAMES } from '../utils/constants';
-import {
-  FieldConfiguration,
-  FieldSetCondition,
-  SubscriptionFilterValue,
-} from '../router-configuration/router-configuration';
+import { InvalidRequiredInputValueData } from '../utils/types';
 
 export function newPersistedDirectivesData(): PersistedDirectivesData {
   return {
@@ -645,7 +643,8 @@ export function validateExternalAndShareable(fieldData: FieldData, invalidFieldN
      * 1. the field is external
      * 2. the field is overridden by another subgraph (in which case it has not been upserted)
      */
-    if (fieldData.isExternalBySubgraphName.get(subgraphName)) {
+    const externalFieldData = fieldData.externalFieldDataBySubgraphName.get(subgraphName);
+    if (externalFieldData && !externalFieldData.isUnconditionallyProvided) {
       externalFieldSubgraphNames.push(subgraphName);
       continue;
     }
@@ -760,20 +759,10 @@ export function getSubscriptionFilterValue(
 
 export function getParentTypeName(parentData: CompositeOutputData): string {
   if (parentData.kind === Kind.OBJECT_TYPE_DEFINITION) {
-    return parentData.renamedTypeName;
+    return parentData.renamedTypeName || parentData.name;
   }
   return parentData.name;
 }
-
-export enum FieldSetDirective {
-  PROVIDES = 'provides',
-  REQUIRES = 'requires',
-}
-
-export type ConditionalFieldData = {
-  providedBy: Array<FieldSetCondition>;
-  requiredBy: Array<FieldSetCondition>;
-};
 
 export function newConditionalFieldData(): ConditionalFieldData {
   return {
@@ -801,4 +790,11 @@ export function getDefinitionDataCoords(data: NodeData, useRenamedPath: boolean)
     default:
       return data.name;
   }
+}
+
+export function newExternalFieldData(isDefinedExternal: boolean): ExternalFieldData {
+  return {
+    isDefinedExternal,
+    isUnconditionallyProvided: !isDefinedExternal,
+  };
 }

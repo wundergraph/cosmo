@@ -39,6 +39,10 @@ export const federatedGraphs = pgTable(
     admissionWebhookURL: text('admission_webhook_url'),
     admissionWebhookSecret: text('admission_webhook_secret'),
     supportsFederation: boolean('supports_federation').default(true).notNull(),
+    /* The version that composition returns to determine whether the router execution configuration is compatible
+     * with a specific router version.
+     */
+    routerCompatibilityVersion: text('router_compatibility_version').notNull().default('1'),
   },
   (t) => ({
     targetIdIndex: index('fgs_target_id_idx').on(t.targetId),
@@ -1594,6 +1598,7 @@ export const graphCompositions = pgTable(
     }),
     createdByEmail: text('created_by_email'),
     isFeatureFlagComposition: boolean('is_feature_flag_composition').default(false).notNull(),
+    routerCompatibilityVersion: text('router_compatibility_version').notNull().default('1'),
   },
   (t) => {
     return {
@@ -2053,3 +2058,28 @@ export const cacheWarmerOperations = pgTable(
     };
   },
 );
+
+export const namespaceCacheWarmerConfig = pgTable(
+  'namespace_cache_warmer_config', // nscwc
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    namespaceId: uuid('namespace_id')
+      .notNull()
+      .unique()
+      .references(() => namespaces.id, {
+        onDelete: 'cascade',
+      }),
+    maxOperationsCount: integer('max_operations_count').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+  },
+  (t) => {
+    return {
+      namespaceIdIndex: index('nscwc_namespace_id_idx').on(t.namespaceId),
+    };
+  },
+);
+
+export const namespaceCacheWarmerConfigRelations = relations(namespaceCacheWarmerConfig, ({ one }) => ({
+  namespace: one(namespaces),
+}));

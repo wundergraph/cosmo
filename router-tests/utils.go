@@ -2,6 +2,9 @@ package integration
 
 import (
 	"context"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -10,12 +13,10 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	tracetest2 "go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.uber.org/zap"
-	"testing"
-	"time"
 )
 
 const (
-	jwksName = "my-jwks-server"
+	JwksName = "my-jwks-server"
 )
 
 // NewContextWithCancel creates a new context with a cancel function that is called when the test is done.
@@ -41,7 +42,7 @@ func RequireSpanWithName(t *testing.T, exporter *tracetest2.InMemoryExporter, na
 	return testSpan
 }
 
-func configureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) {
+func ConfigureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) {
 	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
@@ -53,7 +54,7 @@ func configureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) 
 	})
 
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{
-		Name:         jwksName,
+		Name:         JwksName,
 		TokenDecoder: tokenDecoder,
 	}
 	authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -84,4 +85,8 @@ func GetMetricScopeByName(metrics []metricdata.ScopeMetrics, name string) *metri
 		}
 	}
 	return nil
+}
+
+func ToPtr[T any](v T) *T {
+	return &v
 }

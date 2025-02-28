@@ -3,36 +3,72 @@ package testenv
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strconv"
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/hashicorp/consul/sdk/freeport"
 	natsserver "github.com/nats-io/nats-server/v2/server"
 	natstest "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
-	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/kafka"
-	"github.com/testcontainers/testcontainers-go/wait"
+	"github.com/ory/dockertest/v3"
+	"github.com/ory/dockertest/v3/docker"
+	"github.com/twmb/franz-go/pkg/kgo"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"os"
-	"path/filepath"
-	"sync"
-	"testing"
-	"time"
-)
-
-var (
-	kafkaMux  sync.Mutex
-	kafkaData *KafkaData
 )
 
 type KafkaData struct {
-	Brokers   []string
-	Container *kafka.KafkaContainer
+	Client   *kgo.Client
+	Brokers  []string
+	Resource *dockertest.Resource
 }
 
-func setupKafkaServers(t testing.TB) (*KafkaData, error) {
+var (
+	kafkaMux       sync.Mutex
+	kafkaRefs      int32
+	kafkaData      *KafkaData
+	kafkaContainer *dockertest.Resource
+)
+
+func getHostPort(resource *dockertest.Resource, id string) string {
+	dockerURL := os.Getenv("DOCKER_HOST")
+	if dockerURL == "" {
+		return resource.GetHostPort(id)
+	}
+	u, err := url.Parse(dockerURL)
+	if err != nil {
+		panic(err)
+	}
+	return u.Hostname() + ":" + resource.GetPort(id)
+}
+
+func setupKafkaServer(t testing.TB) (*KafkaData, error) {
 	kafkaMux.Lock()
 	defer kafkaMux.Unlock()
+
+	kafkaRefs += 1
+
+	t.Cleanup(func() {
+		kafkaMux.Lock()
+		defer kafkaMux.Unlock()
+
+		if kafkaRefs > 1 {
+			kafkaRefs -= 1
+		} else {
+			if err := kafkaContainer.Close(); err != nil {
+				t.Fatalf("could not purge kafka container: %s", err.Error())
+			}
+			// This shouldn't be needed, but just in case
+			kafkaData = nil
+			kafkaContainer = nil
+			kafkaRefs = 0
+		}
+	})
 
 	if kafkaData != nil {
 		return kafkaData, nil
@@ -40,37 +76,58 @@ func setupKafkaServers(t testing.TB) (*KafkaData, error) {
 
 	kafkaData = &KafkaData{}
 
-	var err error
-
-	ctx := context.Background()
-	require.Eventually(t, func() bool {
-		// when using Docker Desktop on Mac, it's possible that it takes 2 attempts to get the network port of the container
-		// I've debugged this extensively and the issue is not with the testcontainers-go library, but with the Docker Desktop
-		// Error message: container logs (port not found)
-		// This is an internal issue coming from the Docker pkg
-		// It seems like Docker Desktop on Mac is not always capable of providing a port mapping
-		// The solution is to retry the container creation until we get the network port
-		// Please don't try to improve this code as this workaround allows running the tests without any issues
-		kafkaData.Container, err = kafka.RunContainer(ctx,
-			testcontainers.WithImage("confluentinc/confluent-local:7.6.1"),
-			testcontainers.WithWaitStrategyAndDeadline(time.Second*10, wait.ForListeningPort("9093/tcp")),
-		)
-		return err == nil && kafkaData.Container != nil
-	}, time.Second*60, time.Second)
-
-	require.NoError(t, err)
+	pool, err := dockertest.NewPool("")
 	if err != nil {
 		return nil, err
 	}
 
-	require.NotNil(t, kafkaData.Container)
-	require.NoError(t, kafkaData.Container.Start(ctx))
+	if err := pool.Client.Ping(); err != nil {
+		return nil, err
+	}
 
-	kafkaData.Brokers, err = kafkaData.Container.Brokers(ctx)
-	require.NoError(t, err)
+	port := freeport.GetOne(t)
+
+	container, err := pool.RunWithOptions(&dockertest.RunOptions{
+		Repository: "bitnami/kafka",
+		Tag:        "3.7.0",
+		PortBindings: map[docker.Port][]docker.PortBinding{
+			"9092/tcp": {docker.PortBinding{HostIP: "localhost", HostPort: strconv.Itoa(port)}},
+		},
+		Env: []string{
+			"KAFKA_ENABLE_KRAFT=yes",
+			"KAFKA_CFG_PROCESS_ROLES=controller,broker",
+			"KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER",
+			"KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093",
+			"KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT",
+			"KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@localhost:9093",
+			"KAFKA_CFG_TRANSACTION_PARTITION_VERIFICATION_ENABLE=false",
+			fmt.Sprintf("KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:%d", port),
+			"KAFKA_CFG_NODE_ID=1",
+			"ALLOW_PLAINTEXT_LISTENER=yes",
+			"KAFKA_KRAFT_CLUSTER_ID=XkpGZQ27R3eTl3OdTm2LYA",
+		},
+	})
 	if err != nil {
 		return nil, err
 	}
+
+	client, err := kgo.NewClient(
+		kgo.SeedBrokers(getHostPort(container, "9092/tcp")),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	err = pool.Retry(func() error {
+		return client.Ping(context.Background())
+	})
+	if err != nil {
+		t.Fatalf("could not ping kafka: %s", err.Error())
+	}
+
+	kafkaData.Client = client
+	kafkaData.Brokers = []string{getHostPort(container, "9092/tcp")}
+	kafkaContainer = container
 
 	return kafkaData, nil
 }
@@ -96,6 +153,9 @@ func setupNatsData(t testing.TB) (*NatsData, error) {
 			nats.MaxReconnects(10),
 			nats.ReconnectWait(1*time.Second),
 			nats.Timeout(5*time.Second),
+			nats.ErrorHandler(func(conn *nats.Conn, subscription *nats.Subscription, err error) {
+				t.Log(err)
+			}),
 		)
 		if err != nil {
 			return nil, err

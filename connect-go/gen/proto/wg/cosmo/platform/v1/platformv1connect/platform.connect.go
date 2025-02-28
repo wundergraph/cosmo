@@ -211,6 +211,9 @@ const (
 	// PlatformServiceCreateFederatedGraphTokenProcedure is the fully-qualified name of the
 	// PlatformService's CreateFederatedGraphToken RPC.
 	PlatformServiceCreateFederatedGraphTokenProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateFederatedGraphToken"
+	// PlatformServiceGetOrganizationBySlugProcedure is the fully-qualified name of the
+	// PlatformService's GetOrganizationBySlug RPC.
+	PlatformServiceGetOrganizationBySlugProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOrganizationBySlug"
 	// PlatformServiceGetOrganizationMembersProcedure is the fully-qualified name of the
 	// PlatformService's GetOrganizationMembers RPC.
 	PlatformServiceGetOrganizationMembersProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOrganizationMembers"
@@ -472,6 +475,9 @@ const (
 	// PlatformServiceGetCacheWarmerConfigProcedure is the fully-qualified name of the PlatformService's
 	// GetCacheWarmerConfig RPC.
 	PlatformServiceGetCacheWarmerConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/GetCacheWarmerConfig"
+	// PlatformServiceDeleteCacheWarmerOperationProcedure is the fully-qualified name of the
+	// PlatformService's DeleteCacheWarmerOperation RPC.
+	PlatformServiceDeleteCacheWarmerOperationProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteCacheWarmerOperation"
 	// PlatformServiceGetBillingPlansProcedure is the fully-qualified name of the PlatformService's
 	// GetBillingPlans RPC.
 	PlatformServiceGetBillingPlansProcedure = "/wg.cosmo.platform.v1.PlatformService/GetBillingPlans"
@@ -484,6 +490,12 @@ const (
 	// PlatformServiceUpgradePlanProcedure is the fully-qualified name of the PlatformService's
 	// UpgradePlan RPC.
 	PlatformServiceUpgradePlanProcedure = "/wg.cosmo.platform.v1.PlatformService/UpgradePlan"
+	// PlatformServiceListRouterCompatibilityVersionsProcedure is the fully-qualified name of the
+	// PlatformService's ListRouterCompatibilityVersions RPC.
+	PlatformServiceListRouterCompatibilityVersionsProcedure = "/wg.cosmo.platform.v1.PlatformService/ListRouterCompatibilityVersions"
+	// PlatformServiceSetGraphRouterCompatibilityVersionProcedure is the fully-qualified name of the
+	// PlatformService's SetGraphRouterCompatibilityVersion RPC.
+	PlatformServiceSetGraphRouterCompatibilityVersionProcedure = "/wg.cosmo.platform.v1.PlatformService/SetGraphRouterCompatibilityVersion"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -548,6 +560,7 @@ var (
 	platformServiceGetOperationContentMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("GetOperationContent")
 	platformServiceGetFederatedGraphChangelogMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphChangelog")
 	platformServiceCreateFederatedGraphTokenMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("CreateFederatedGraphToken")
+	platformServiceGetOrganizationBySlugMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationBySlug")
 	platformServiceGetOrganizationMembersMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationMembers")
 	platformServiceGetPendingOrganizationMembersMethodDescriptor         = platformServiceServiceDescriptor.Methods().ByName("GetPendingOrganizationMembers")
 	platformServiceIsMemberLimitReachedMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("IsMemberLimitReached")
@@ -635,10 +648,13 @@ var (
 	platformServiceComputeCacheWarmerOperationsMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("ComputeCacheWarmerOperations")
 	platformServiceConfigureCacheWarmerMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("ConfigureCacheWarmer")
 	platformServiceGetCacheWarmerConfigMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("GetCacheWarmerConfig")
+	platformServiceDeleteCacheWarmerOperationMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("DeleteCacheWarmerOperation")
 	platformServiceGetBillingPlansMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetBillingPlans")
 	platformServiceCreateCheckoutSessionMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("CreateCheckoutSession")
 	platformServiceCreateBillingPortalSessionMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("CreateBillingPortalSession")
 	platformServiceUpgradePlanMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("UpgradePlan")
+	platformServiceListRouterCompatibilityVersionsMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("ListRouterCompatibilityVersions")
+	platformServiceSetGraphRouterCompatibilityVersionMethodDescriptor    = platformServiceServiceDescriptor.Methods().ByName("SetGraphRouterCompatibilityVersion")
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -749,6 +765,8 @@ type PlatformServiceClient interface {
 	GetFederatedGraphChangelog(context.Context, *connect.Request[v1.GetFederatedGraphChangelogRequest]) (*connect.Response[v1.GetFederatedGraphChangelogResponse], error)
 	// CreateFederatedGraphToken creates a federated graph token that is consumed by the router to authenticate requests.
 	CreateFederatedGraphToken(context.Context, *connect.Request[v1.CreateFederatedGraphTokenRequest]) (*connect.Response[v1.CreateFederatedGraphTokenResponse], error)
+	// GetOrganizationBySlug returns a specific organization by its slug
+	GetOrganizationBySlug(context.Context, *connect.Request[v1.GetOrganizationBySlugRequest]) (*connect.Response[v1.GetOrganizationBySlugResponse], error)
 	// GetOrganizationMembers returns the list of organization members
 	GetOrganizationMembers(context.Context, *connect.Request[v1.GetOrganizationMembersRequest]) (*connect.Response[v1.GetOrganizationMembersResponse], error)
 	// GetOrganizationMembers returns the list of pending organization invites
@@ -914,6 +932,8 @@ type PlatformServiceClient interface {
 	ConfigureCacheWarmer(context.Context, *connect.Request[v1.ConfigureCacheWarmerRequest]) (*connect.Response[v1.ConfigureCacheWarmerResponse], error)
 	// GetCacheWarmerConfig gets the config of cache warming for that namespace.
 	GetCacheWarmerConfig(context.Context, *connect.Request[v1.GetCacheWarmerConfigRequest]) (*connect.Response[v1.GetCacheWarmerConfigResponse], error)
+	// DeleteCacheWarmerOperation deletes a cache warmer operation.
+	DeleteCacheWarmerOperation(context.Context, *connect.Request[v1.DeleteCacheWarmerOperationRequest]) (*connect.Response[v1.DeleteCacheWarmerOperationResponse], error)
 	// Billing
 	// -----------------------------------------------------------------------------------------------------------------------------
 	// Return the available billing plans
@@ -924,6 +944,10 @@ type PlatformServiceClient interface {
 	CreateBillingPortalSession(context.Context, *connect.Request[v1.CreateBillingPortalSessionRequest]) (*connect.Response[v1.CreateBillingPortalSessionResponse], error)
 	// Upgrade the current plan
 	UpgradePlan(context.Context, *connect.Request[v1.UpgradePlanRequest]) (*connect.Response[v1.UpgradePlanResponse], error)
+	// Router Compatibility Versions
+	ListRouterCompatibilityVersions(context.Context, *connect.Request[v1.ListRouterCompatibilityVersionsRequest]) (*connect.Response[v1.ListRouterCompatibilityVersionsResponse], error)
+	// Graph
+	SetGraphRouterCompatibilityVersion(context.Context, *connect.Request[v1.SetGraphRouterCompatibilityVersionRequest]) (*connect.Response[v1.SetGraphRouterCompatibilityVersionResponse], error)
 }
 
 // NewPlatformServiceClient constructs a client for the wg.cosmo.platform.v1.PlatformService
@@ -1288,6 +1312,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceCreateFederatedGraphTokenProcedure,
 			connect.WithSchema(platformServiceCreateFederatedGraphTokenMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getOrganizationBySlug: connect.NewClient[v1.GetOrganizationBySlugRequest, v1.GetOrganizationBySlugResponse](
+			httpClient,
+			baseURL+PlatformServiceGetOrganizationBySlugProcedure,
+			connect.WithSchema(platformServiceGetOrganizationBySlugMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		getOrganizationMembers: connect.NewClient[v1.GetOrganizationMembersRequest, v1.GetOrganizationMembersResponse](
@@ -1819,6 +1849,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceGetCacheWarmerConfigMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		deleteCacheWarmerOperation: connect.NewClient[v1.DeleteCacheWarmerOperationRequest, v1.DeleteCacheWarmerOperationResponse](
+			httpClient,
+			baseURL+PlatformServiceDeleteCacheWarmerOperationProcedure,
+			connect.WithSchema(platformServiceDeleteCacheWarmerOperationMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		getBillingPlans: connect.NewClient[v1.GetBillingPlansRequest, v1.GetBillingPlansResponse](
 			httpClient,
 			baseURL+PlatformServiceGetBillingPlansProcedure,
@@ -1841,6 +1877,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceUpgradePlanProcedure,
 			connect.WithSchema(platformServiceUpgradePlanMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		listRouterCompatibilityVersions: connect.NewClient[v1.ListRouterCompatibilityVersionsRequest, v1.ListRouterCompatibilityVersionsResponse](
+			httpClient,
+			baseURL+PlatformServiceListRouterCompatibilityVersionsProcedure,
+			connect.WithSchema(platformServiceListRouterCompatibilityVersionsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		setGraphRouterCompatibilityVersion: connect.NewClient[v1.SetGraphRouterCompatibilityVersionRequest, v1.SetGraphRouterCompatibilityVersionResponse](
+			httpClient,
+			baseURL+PlatformServiceSetGraphRouterCompatibilityVersionProcedure,
+			connect.WithSchema(platformServiceSetGraphRouterCompatibilityVersionMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -1907,6 +1955,7 @@ type platformServiceClient struct {
 	getOperationContent                   *connect.Client[v1.GetOperationContentRequest, v1.GetOperationContentResponse]
 	getFederatedGraphChangelog            *connect.Client[v1.GetFederatedGraphChangelogRequest, v1.GetFederatedGraphChangelogResponse]
 	createFederatedGraphToken             *connect.Client[v1.CreateFederatedGraphTokenRequest, v1.CreateFederatedGraphTokenResponse]
+	getOrganizationBySlug                 *connect.Client[v1.GetOrganizationBySlugRequest, v1.GetOrganizationBySlugResponse]
 	getOrganizationMembers                *connect.Client[v1.GetOrganizationMembersRequest, v1.GetOrganizationMembersResponse]
 	getPendingOrganizationMembers         *connect.Client[v1.GetPendingOrganizationMembersRequest, v1.GetPendingOrganizationMembersResponse]
 	isMemberLimitReached                  *connect.Client[v1.IsMemberLimitReachedRequest, v1.IsMemberLimitReachedResponse]
@@ -1994,10 +2043,13 @@ type platformServiceClient struct {
 	computeCacheWarmerOperations          *connect.Client[v1.ComputeCacheWarmerOperationsRequest, v1.ComputeCacheWarmerOperationsResponse]
 	configureCacheWarmer                  *connect.Client[v1.ConfigureCacheWarmerRequest, v1.ConfigureCacheWarmerResponse]
 	getCacheWarmerConfig                  *connect.Client[v1.GetCacheWarmerConfigRequest, v1.GetCacheWarmerConfigResponse]
+	deleteCacheWarmerOperation            *connect.Client[v1.DeleteCacheWarmerOperationRequest, v1.DeleteCacheWarmerOperationResponse]
 	getBillingPlans                       *connect.Client[v1.GetBillingPlansRequest, v1.GetBillingPlansResponse]
 	createCheckoutSession                 *connect.Client[v1.CreateCheckoutSessionRequest, v1.CreateCheckoutSessionResponse]
 	createBillingPortalSession            *connect.Client[v1.CreateBillingPortalSessionRequest, v1.CreateBillingPortalSessionResponse]
 	upgradePlan                           *connect.Client[v1.UpgradePlanRequest, v1.UpgradePlanResponse]
+	listRouterCompatibilityVersions       *connect.Client[v1.ListRouterCompatibilityVersionsRequest, v1.ListRouterCompatibilityVersionsResponse]
+	setGraphRouterCompatibilityVersion    *connect.Client[v1.SetGraphRouterCompatibilityVersionRequest, v1.SetGraphRouterCompatibilityVersionResponse]
 }
 
 // CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
@@ -2300,6 +2352,11 @@ func (c *platformServiceClient) GetFederatedGraphChangelog(ctx context.Context, 
 // CreateFederatedGraphToken calls wg.cosmo.platform.v1.PlatformService.CreateFederatedGraphToken.
 func (c *platformServiceClient) CreateFederatedGraphToken(ctx context.Context, req *connect.Request[v1.CreateFederatedGraphTokenRequest]) (*connect.Response[v1.CreateFederatedGraphTokenResponse], error) {
 	return c.createFederatedGraphToken.CallUnary(ctx, req)
+}
+
+// GetOrganizationBySlug calls wg.cosmo.platform.v1.PlatformService.GetOrganizationBySlug.
+func (c *platformServiceClient) GetOrganizationBySlug(ctx context.Context, req *connect.Request[v1.GetOrganizationBySlugRequest]) (*connect.Response[v1.GetOrganizationBySlugResponse], error) {
+	return c.getOrganizationBySlug.CallUnary(ctx, req)
 }
 
 // GetOrganizationMembers calls wg.cosmo.platform.v1.PlatformService.GetOrganizationMembers.
@@ -2755,6 +2812,11 @@ func (c *platformServiceClient) GetCacheWarmerConfig(ctx context.Context, req *c
 	return c.getCacheWarmerConfig.CallUnary(ctx, req)
 }
 
+// DeleteCacheWarmerOperation calls wg.cosmo.platform.v1.PlatformService.DeleteCacheWarmerOperation.
+func (c *platformServiceClient) DeleteCacheWarmerOperation(ctx context.Context, req *connect.Request[v1.DeleteCacheWarmerOperationRequest]) (*connect.Response[v1.DeleteCacheWarmerOperationResponse], error) {
+	return c.deleteCacheWarmerOperation.CallUnary(ctx, req)
+}
+
 // GetBillingPlans calls wg.cosmo.platform.v1.PlatformService.GetBillingPlans.
 func (c *platformServiceClient) GetBillingPlans(ctx context.Context, req *connect.Request[v1.GetBillingPlansRequest]) (*connect.Response[v1.GetBillingPlansResponse], error) {
 	return c.getBillingPlans.CallUnary(ctx, req)
@@ -2773,6 +2835,18 @@ func (c *platformServiceClient) CreateBillingPortalSession(ctx context.Context, 
 // UpgradePlan calls wg.cosmo.platform.v1.PlatformService.UpgradePlan.
 func (c *platformServiceClient) UpgradePlan(ctx context.Context, req *connect.Request[v1.UpgradePlanRequest]) (*connect.Response[v1.UpgradePlanResponse], error) {
 	return c.upgradePlan.CallUnary(ctx, req)
+}
+
+// ListRouterCompatibilityVersions calls
+// wg.cosmo.platform.v1.PlatformService.ListRouterCompatibilityVersions.
+func (c *platformServiceClient) ListRouterCompatibilityVersions(ctx context.Context, req *connect.Request[v1.ListRouterCompatibilityVersionsRequest]) (*connect.Response[v1.ListRouterCompatibilityVersionsResponse], error) {
+	return c.listRouterCompatibilityVersions.CallUnary(ctx, req)
+}
+
+// SetGraphRouterCompatibilityVersion calls
+// wg.cosmo.platform.v1.PlatformService.SetGraphRouterCompatibilityVersion.
+func (c *platformServiceClient) SetGraphRouterCompatibilityVersion(ctx context.Context, req *connect.Request[v1.SetGraphRouterCompatibilityVersionRequest]) (*connect.Response[v1.SetGraphRouterCompatibilityVersionResponse], error) {
+	return c.setGraphRouterCompatibilityVersion.CallUnary(ctx, req)
 }
 
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
@@ -2883,6 +2957,8 @@ type PlatformServiceHandler interface {
 	GetFederatedGraphChangelog(context.Context, *connect.Request[v1.GetFederatedGraphChangelogRequest]) (*connect.Response[v1.GetFederatedGraphChangelogResponse], error)
 	// CreateFederatedGraphToken creates a federated graph token that is consumed by the router to authenticate requests.
 	CreateFederatedGraphToken(context.Context, *connect.Request[v1.CreateFederatedGraphTokenRequest]) (*connect.Response[v1.CreateFederatedGraphTokenResponse], error)
+	// GetOrganizationBySlug returns a specific organization by its slug
+	GetOrganizationBySlug(context.Context, *connect.Request[v1.GetOrganizationBySlugRequest]) (*connect.Response[v1.GetOrganizationBySlugResponse], error)
 	// GetOrganizationMembers returns the list of organization members
 	GetOrganizationMembers(context.Context, *connect.Request[v1.GetOrganizationMembersRequest]) (*connect.Response[v1.GetOrganizationMembersResponse], error)
 	// GetOrganizationMembers returns the list of pending organization invites
@@ -3048,6 +3124,8 @@ type PlatformServiceHandler interface {
 	ConfigureCacheWarmer(context.Context, *connect.Request[v1.ConfigureCacheWarmerRequest]) (*connect.Response[v1.ConfigureCacheWarmerResponse], error)
 	// GetCacheWarmerConfig gets the config of cache warming for that namespace.
 	GetCacheWarmerConfig(context.Context, *connect.Request[v1.GetCacheWarmerConfigRequest]) (*connect.Response[v1.GetCacheWarmerConfigResponse], error)
+	// DeleteCacheWarmerOperation deletes a cache warmer operation.
+	DeleteCacheWarmerOperation(context.Context, *connect.Request[v1.DeleteCacheWarmerOperationRequest]) (*connect.Response[v1.DeleteCacheWarmerOperationResponse], error)
 	// Billing
 	// -----------------------------------------------------------------------------------------------------------------------------
 	// Return the available billing plans
@@ -3058,6 +3136,10 @@ type PlatformServiceHandler interface {
 	CreateBillingPortalSession(context.Context, *connect.Request[v1.CreateBillingPortalSessionRequest]) (*connect.Response[v1.CreateBillingPortalSessionResponse], error)
 	// Upgrade the current plan
 	UpgradePlan(context.Context, *connect.Request[v1.UpgradePlanRequest]) (*connect.Response[v1.UpgradePlanResponse], error)
+	// Router Compatibility Versions
+	ListRouterCompatibilityVersions(context.Context, *connect.Request[v1.ListRouterCompatibilityVersionsRequest]) (*connect.Response[v1.ListRouterCompatibilityVersionsResponse], error)
+	// Graph
+	SetGraphRouterCompatibilityVersion(context.Context, *connect.Request[v1.SetGraphRouterCompatibilityVersionRequest]) (*connect.Response[v1.SetGraphRouterCompatibilityVersionResponse], error)
 }
 
 // NewPlatformServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -3418,6 +3500,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceCreateFederatedGraphTokenProcedure,
 		svc.CreateFederatedGraphToken,
 		connect.WithSchema(platformServiceCreateFederatedGraphTokenMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetOrganizationBySlugHandler := connect.NewUnaryHandler(
+		PlatformServiceGetOrganizationBySlugProcedure,
+		svc.GetOrganizationBySlug,
+		connect.WithSchema(platformServiceGetOrganizationBySlugMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetOrganizationMembersHandler := connect.NewUnaryHandler(
@@ -3949,6 +4037,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceGetCacheWarmerConfigMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceDeleteCacheWarmerOperationHandler := connect.NewUnaryHandler(
+		PlatformServiceDeleteCacheWarmerOperationProcedure,
+		svc.DeleteCacheWarmerOperation,
+		connect.WithSchema(platformServiceDeleteCacheWarmerOperationMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceGetBillingPlansHandler := connect.NewUnaryHandler(
 		PlatformServiceGetBillingPlansProcedure,
 		svc.GetBillingPlans,
@@ -3971,6 +4065,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceUpgradePlanProcedure,
 		svc.UpgradePlan,
 		connect.WithSchema(platformServiceUpgradePlanMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceListRouterCompatibilityVersionsHandler := connect.NewUnaryHandler(
+		PlatformServiceListRouterCompatibilityVersionsProcedure,
+		svc.ListRouterCompatibilityVersions,
+		connect.WithSchema(platformServiceListRouterCompatibilityVersionsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceSetGraphRouterCompatibilityVersionHandler := connect.NewUnaryHandler(
+		PlatformServiceSetGraphRouterCompatibilityVersionProcedure,
+		svc.SetGraphRouterCompatibilityVersion,
+		connect.WithSchema(platformServiceSetGraphRouterCompatibilityVersionMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -4093,6 +4199,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetFederatedGraphChangelogHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateFederatedGraphTokenProcedure:
 			platformServiceCreateFederatedGraphTokenHandler.ServeHTTP(w, r)
+		case PlatformServiceGetOrganizationBySlugProcedure:
+			platformServiceGetOrganizationBySlugHandler.ServeHTTP(w, r)
 		case PlatformServiceGetOrganizationMembersProcedure:
 			platformServiceGetOrganizationMembersHandler.ServeHTTP(w, r)
 		case PlatformServiceGetPendingOrganizationMembersProcedure:
@@ -4267,6 +4375,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceConfigureCacheWarmerHandler.ServeHTTP(w, r)
 		case PlatformServiceGetCacheWarmerConfigProcedure:
 			platformServiceGetCacheWarmerConfigHandler.ServeHTTP(w, r)
+		case PlatformServiceDeleteCacheWarmerOperationProcedure:
+			platformServiceDeleteCacheWarmerOperationHandler.ServeHTTP(w, r)
 		case PlatformServiceGetBillingPlansProcedure:
 			platformServiceGetBillingPlansHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateCheckoutSessionProcedure:
@@ -4275,6 +4385,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceCreateBillingPortalSessionHandler.ServeHTTP(w, r)
 		case PlatformServiceUpgradePlanProcedure:
 			platformServiceUpgradePlanHandler.ServeHTTP(w, r)
+		case PlatformServiceListRouterCompatibilityVersionsProcedure:
+			platformServiceListRouterCompatibilityVersionsHandler.ServeHTTP(w, r)
+		case PlatformServiceSetGraphRouterCompatibilityVersionProcedure:
+			platformServiceSetGraphRouterCompatibilityVersionHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -4518,6 +4632,10 @@ func (UnimplementedPlatformServiceHandler) GetFederatedGraphChangelog(context.Co
 
 func (UnimplementedPlatformServiceHandler) CreateFederatedGraphToken(context.Context, *connect.Request[v1.CreateFederatedGraphTokenRequest]) (*connect.Response[v1.CreateFederatedGraphTokenResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateFederatedGraphToken is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetOrganizationBySlug(context.Context, *connect.Request[v1.GetOrganizationBySlugRequest]) (*connect.Response[v1.GetOrganizationBySlugResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOrganizationBySlug is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetOrganizationMembers(context.Context, *connect.Request[v1.GetOrganizationMembersRequest]) (*connect.Response[v1.GetOrganizationMembersResponse], error) {
@@ -4868,6 +4986,10 @@ func (UnimplementedPlatformServiceHandler) GetCacheWarmerConfig(context.Context,
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetCacheWarmerConfig is not implemented"))
 }
 
+func (UnimplementedPlatformServiceHandler) DeleteCacheWarmerOperation(context.Context, *connect.Request[v1.DeleteCacheWarmerOperationRequest]) (*connect.Response[v1.DeleteCacheWarmerOperationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteCacheWarmerOperation is not implemented"))
+}
+
 func (UnimplementedPlatformServiceHandler) GetBillingPlans(context.Context, *connect.Request[v1.GetBillingPlansRequest]) (*connect.Response[v1.GetBillingPlansResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetBillingPlans is not implemented"))
 }
@@ -4882,4 +5004,12 @@ func (UnimplementedPlatformServiceHandler) CreateBillingPortalSession(context.Co
 
 func (UnimplementedPlatformServiceHandler) UpgradePlan(context.Context, *connect.Request[v1.UpgradePlanRequest]) (*connect.Response[v1.UpgradePlanResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpgradePlan is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) ListRouterCompatibilityVersions(context.Context, *connect.Request[v1.ListRouterCompatibilityVersionsRequest]) (*connect.Response[v1.ListRouterCompatibilityVersionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ListRouterCompatibilityVersions is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) SetGraphRouterCompatibilityVersion(context.Context, *connect.Request[v1.SetGraphRouterCompatibilityVersionRequest]) (*connect.Response[v1.SetGraphRouterCompatibilityVersionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.SetGraphRouterCompatibilityVersion is not implemented"))
 }

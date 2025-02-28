@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"encoding/json"
 	"net/http"
 	"regexp"
 	"strings"
@@ -10,8 +11,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	io_prometheus_client "github.com/prometheus/client_model/go"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/cmd/custom/module"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
@@ -580,6 +583,12 @@ func TestPrometheus(t *testing.T) {
 						RequestHeader: "x-custom-header",
 					},
 				},
+				{
+					Key: "custom2",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "request.header.Get('x-custom-header')",
+					},
+				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -604,12 +613,16 @@ func TestPrometheus(t *testing.T) {
 			requestTotalMetrics := requestTotal.GetMetric()
 
 			require.Len(t, requestTotalMetrics, 2)
-			require.Len(t, requestTotalMetrics[0].Label, 13)
-			require.Len(t, requestTotalMetrics[1].Label, 15)
+			require.Len(t, requestTotalMetrics[0].Label, 14)
+			require.Len(t, requestTotalMetrics[1].Label, 16)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
 					Name:  PointerOf("custom"),
+					Value: PointerOf("value"),
+				},
+				{
+					Name:  PointerOf("custom2"),
 					Value: PointerOf("value"),
 				},
 				{
@@ -665,6 +678,10 @@ func TestPrometheus(t *testing.T) {
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
 					Name:  PointerOf("custom"),
+					Value: PointerOf("value"),
+				},
+				{
+					Name:  PointerOf("custom2"),
 					Value: PointerOf("value"),
 				},
 				{
@@ -730,7 +747,7 @@ func TestPrometheus(t *testing.T) {
 
 			require.Len(t, requestsInFlightMetrics, 2)
 			require.Len(t, requestsInFlightMetrics[0].Label, 10)
-			require.Len(t, requestsInFlightMetrics[1].Label, 14)
+			require.Len(t, requestsInFlightMetrics[1].Label, 15)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -778,6 +795,10 @@ func TestPrometheus(t *testing.T) {
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
 					Name:  PointerOf("custom"),
+					Value: PointerOf("value"),
+				},
+				{
+					Name:  PointerOf("custom2"),
 					Value: PointerOf("value"),
 				},
 				{
@@ -838,12 +859,16 @@ func TestPrometheus(t *testing.T) {
 			requestDurationMetrics := requestDuration.GetMetric()
 
 			require.Len(t, requestDurationMetrics, 2)
-			require.Len(t, requestDurationMetrics[0].Label, 13)
-			require.Len(t, requestDurationMetrics[1].Label, 15)
+			require.Len(t, requestDurationMetrics[0].Label, 14)
+			require.Len(t, requestDurationMetrics[1].Label, 16)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
 					Name:  PointerOf("custom"),
+					Value: PointerOf("value"),
+				},
+				{
+					Name:  PointerOf("custom2"),
 					Value: PointerOf("value"),
 				},
 				{
@@ -899,6 +924,10 @@ func TestPrometheus(t *testing.T) {
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
 					Name:  PointerOf("custom"),
+					Value: PointerOf("value"),
+				},
+				{
+					Name:  PointerOf("custom2"),
 					Value: PointerOf("value"),
 				},
 				{
@@ -963,12 +992,16 @@ func TestPrometheus(t *testing.T) {
 			responseContentLengthMetrics := responseContentLength.GetMetric()
 
 			require.Len(t, responseContentLengthMetrics, 2)
-			require.Len(t, responseContentLengthMetrics[0].Label, 13)
-			require.Len(t, responseContentLengthMetrics[1].Label, 15)
+			require.Len(t, responseContentLengthMetrics[0].Label, 14)
+			require.Len(t, responseContentLengthMetrics[1].Label, 16)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
 					Name:  PointerOf("custom"),
+					Value: PointerOf("value"),
+				},
+				{
+					Name:  PointerOf("custom2"),
 					Value: PointerOf("value"),
 				},
 				{
@@ -1024,6 +1057,10 @@ func TestPrometheus(t *testing.T) {
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
 					Name:  PointerOf("custom"),
+					Value: PointerOf("value"),
+				},
+				{
+					Name:  PointerOf("custom2"),
 					Value: PointerOf("value"),
 				},
 				{
@@ -4070,6 +4107,280 @@ func TestPrometheus(t *testing.T) {
 
 		})
 
+	})
+
+	t.Run("Collect and export OTEL metrics in respect to custom attributes / from JWT claim", func(t *testing.T) {
+		t.Parallel()
+
+		const claimKey = "customKey"
+		const claimVal = "customClaimValue"
+
+		authenticators, authServer := ConfigureAuth(t)
+		exporter := tracetest.NewInMemoryExporter(t)
+		metricReader := metric.NewManualReader()
+		promRegistry := prometheus.NewRegistry()
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter:      exporter,
+			MetricReader:       metricReader,
+			PrometheusRegistry: promRegistry,
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+			CustomMetricAttributes: []config.CustomAttribute{
+				{
+					Key: claimKey,
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "request.auth.claims.custom_value." + claimKey,
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(map[string]any{
+				"scope": "read:employee read:private",
+				"custom_value": map[string]string{
+					claimKey: claimVal,
+				},
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Header: header,
+				Query:  `query myQuery { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			mf, err := promRegistry.Gather()
+			require.NoError(t, err)
+
+			requestTotal := findMetricFamilyByName(mf, "router_http_requests_total")
+			requestTotalMetrics := requestTotal.GetMetric()
+
+			require.Len(t, requestTotalMetrics, 2)
+			require.Len(t, requestTotalMetrics[0].Label, 13)
+			require.Len(t, requestTotalMetrics[1].Label, 15)
+
+			require.Contains(t, requestTotalMetrics[0].Label, &io_prometheus_client.LabelPair{
+				Name:  PointerOf(claimKey),
+				Value: PointerOf(claimVal),
+			})
+
+			require.Contains(t, requestTotalMetrics[1].Label, &io_prometheus_client.LabelPair{
+				Name:  PointerOf(claimKey),
+				Value: PointerOf(claimVal),
+			})
+
+			requestsInFlight := findMetricFamilyByName(mf, "router_http_requests_in_flight")
+			requestsInFlightMetrics := requestsInFlight.GetMetric()
+
+			require.Len(t, requestsInFlightMetrics, 2)
+			require.Len(t, requestsInFlightMetrics[0].Label, 9)
+			require.Len(t, requestsInFlightMetrics[1].Label, 14)
+
+			// the request toward the subgraph has no authorization header
+			require.NotContains(t, requestsInFlightMetrics[0].Label, &io_prometheus_client.LabelPair{
+				Name:  PointerOf(claimKey),
+				Value: PointerOf(claimVal),
+			})
+
+			require.Contains(t, requestsInFlightMetrics[1].Label, &io_prometheus_client.LabelPair{
+				Name:  PointerOf(claimKey),
+				Value: PointerOf(claimVal),
+			})
+
+			requestDuration := findMetricFamilyByName(mf, "router_http_request_duration_milliseconds")
+			requestDurationMetrics := requestDuration.GetMetric()
+
+			require.Len(t, requestDurationMetrics, 2)
+			require.Len(t, requestDurationMetrics[0].Label, 13)
+			require.Len(t, requestDurationMetrics[1].Label, 15)
+
+			require.Contains(t, requestDurationMetrics[0].Label, &io_prometheus_client.LabelPair{
+				Name:  PointerOf(claimKey),
+				Value: PointerOf(claimVal),
+			})
+
+			require.Contains(t, requestDurationMetrics[1].Label, &io_prometheus_client.LabelPair{
+				Name:  PointerOf(claimKey),
+				Value: PointerOf(claimVal),
+			})
+
+			responseContentLength := findMetricFamilyByName(mf, "router_http_response_content_length_total")
+			responseContentLengthMetrics := responseContentLength.GetMetric()
+
+			require.Len(t, responseContentLengthMetrics, 2)
+			require.Len(t, responseContentLengthMetrics[0].Label, 13)
+			require.Len(t, responseContentLengthMetrics[1].Label, 15)
+
+			require.Contains(t, responseContentLengthMetrics[0].Label, &io_prometheus_client.LabelPair{
+				Name:  PointerOf(claimKey),
+				Value: PointerOf(claimVal),
+			})
+
+			require.Contains(t, responseContentLengthMetrics[1].Label, &io_prometheus_client.LabelPair{
+				Name:  PointerOf(claimKey),
+				Value: PointerOf(claimVal),
+			})
+
+		})
+	})
+
+}
+
+func TestPrometheusWithModule(t *testing.T) {
+	t.Parallel()
+
+	metricReader := metric.NewManualReader()
+	promRegistry := prometheus.NewRegistry()
+
+	cfg := config.Config{
+		Graph: config.Graph{},
+		Modules: map[string]interface{}{
+			"myModule": module.MyModule{
+				Value: 1,
+			},
+		},
+	}
+
+	testenv.Run(t, &testenv.Config{
+		MetricReader:       metricReader,
+		PrometheusRegistry: promRegistry,
+		RouterOptions: []core.Option{
+			core.WithModulesConfig(cfg.Modules),
+			core.WithCustomModules(&module.MyModule{}),
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		t.Helper()
+
+		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+			Query:         `query MyQuery { employees { id } }`,
+			OperationName: json.RawMessage(`"MyQuery"`),
+		})
+		require.NoError(t, err)
+		assert.Equal(t, 200, res.Response.StatusCode)
+		assert.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+
+		mf, err := promRegistry.Gather()
+		require.NoError(t, err)
+
+		requestDuration := findMetricFamilyByName(mf, "router_http_request_duration_milliseconds")
+		requestDurationMetrics := requestDuration.GetMetric()
+
+		require.Len(t, requestDurationMetrics, 2)
+		require.Len(t, requestDurationMetrics[0].Label, 12)
+		require.Len(t, requestDurationMetrics[1].Label, 14)
+
+		require.Equal(t, []*io_prometheus_client.LabelPair{
+			{
+				Name:  PointerOf("http_status_code"),
+				Value: PointerOf("200"),
+			},
+			{
+				Name:  PointerOf("otel_scope_name"),
+				Value: PointerOf("cosmo.router.prometheus"),
+			},
+			{
+				Name:  PointerOf("otel_scope_version"),
+				Value: PointerOf("0.0.1"),
+			},
+			{
+				Name:  PointerOf("wg_client_name"),
+				Value: PointerOf("unknown"),
+			},
+			{
+				Name:  PointerOf("wg_client_version"),
+				Value: PointerOf("missing"),
+			},
+			{
+				Name:  PointerOf("wg_federated_graph_id"),
+				Value: PointerOf("graph"),
+			},
+			{
+				Name:  PointerOf("wg_operation_name"),
+				Value: PointerOf("MyQuery"),
+			},
+			{
+				Name:  PointerOf("wg_operation_protocol"),
+				Value: PointerOf("http"),
+			},
+			{
+				Name:  PointerOf("wg_operation_type"),
+				Value: PointerOf("query"),
+			},
+			{
+				Name:  PointerOf("wg_router_cluster_name"),
+				Value: PointerOf(""),
+			},
+			{
+				Name:  PointerOf("wg_router_config_version"),
+				Value: PointerOf(xEnv.RouterConfigVersionMain()),
+			},
+			{
+				Name:  PointerOf("wg_router_version"),
+				Value: PointerOf("dev"),
+			},
+		}, requestDurationMetrics[0].Label)
+
+		require.Equal(t, []*io_prometheus_client.LabelPair{
+			{
+				Name:  PointerOf("http_status_code"),
+				Value: PointerOf("200"),
+			},
+			{
+				Name:  PointerOf("otel_scope_name"),
+				Value: PointerOf("cosmo.router.prometheus"),
+			},
+			{
+				Name:  PointerOf("otel_scope_version"),
+				Value: PointerOf("0.0.1"),
+			},
+			{
+				Name:  PointerOf("wg_client_name"),
+				Value: PointerOf("unknown"),
+			},
+			{
+				Name:  PointerOf("wg_client_version"),
+				Value: PointerOf("missing"),
+			},
+			{
+				Name:  PointerOf("wg_federated_graph_id"),
+				Value: PointerOf("graph"),
+			},
+			{
+				Name:  PointerOf("wg_operation_name"),
+				Value: PointerOf("MyQuery"),
+			},
+			{
+				Name:  PointerOf("wg_operation_protocol"),
+				Value: PointerOf("http"),
+			},
+			{
+				Name:  PointerOf("wg_operation_type"),
+				Value: PointerOf("query"),
+			},
+			{
+				Name:  PointerOf("wg_router_cluster_name"),
+				Value: PointerOf(""),
+			},
+			{
+				Name:  PointerOf("wg_router_config_version"),
+				Value: PointerOf(xEnv.RouterConfigVersionMain()),
+			},
+			{
+				Name:  PointerOf("wg_router_version"),
+				Value: PointerOf("dev"),
+			},
+			{
+				Name:  PointerOf("wg_subgraph_id"),
+				Value: PointerOf("0"),
+			},
+			{
+				Name:  PointerOf("wg_subgraph_name"),
+				Value: PointerOf("employees"),
+			},
+		}, requestDurationMetrics[1].Label)
 	})
 }
 

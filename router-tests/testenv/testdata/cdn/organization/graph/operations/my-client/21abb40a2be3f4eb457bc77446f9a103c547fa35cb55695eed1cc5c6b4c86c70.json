@@ -1,0 +1,4 @@
+{
+  "version": 1,
+  "body": "query AB {\n  employees {\n    tag\n    id\n    derivedMood\n    products\n  }\n}"
+}

@@ -11,6 +11,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/wundergraph/astjson"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
@@ -261,7 +262,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 			Extensions:    s,
 		},
 		Client: &ClientInfo{
-			Name:    operation.GetClient().GetName(),
+			Name: operation.GetClient().GetName(),
 			Version: operation.GetClient().GetVersion(),
 		},
 	}
@@ -278,7 +279,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return nil, err
 	}
 
-	if k.parsedOperation.IsPersistedOperation {
+	if k.parsedOperation.IsPersistedOperation && k.parsedOperation.Request.Query == "" {
 		_, isAPQ, err = k.FetchPersistedOperation(ctx, item.Client)
 		if err != nil {
 			return nil, err
@@ -295,7 +296,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return nil, err
 	}
 
-	err = k.NormalizeVariables()
+	_, err = k.NormalizeVariables()
 	if err != nil {
 		return nil, err
 	}
@@ -305,7 +306,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return nil, err
 	}
 
-	_, err = k.Validate(true, k.parsedOperation.RemapVariables)
+	_, err = k.Validate(true, k.parsedOperation.RemapVariables, nil)
 	if err != nil {
 		return nil, err
 	}

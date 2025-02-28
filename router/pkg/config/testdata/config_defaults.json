@@ -104,7 +104,8 @@
   "Modules": null,
   "Headers": {
     "All": null,
-    "Subgraphs": null
+    "Subgraphs": null,
+    "CookieWhitelist": null
   },
   "TrafficShaping": {
     "All": {
@@ -302,7 +303,8 @@
     "ValidationCacheSize": 1024,
     "ResolverMaxRecyclableParserSize": 32768,
     "EnableSubgraphFetchOperationName": false,
-    "DisableVariablesRemapping": false
+    "DisableVariablesRemapping": false,
+    "SubscriptionFetchTimeout": 30000000000
   },
   "WebSocket": {
     "Enabled": true,
@@ -369,6 +371,10 @@
     }
   },
   "PersistedOperationsConfig": {
+    "LogUnknown": false,
+    "Safelist": {
+      "Enabled": false
+    },
     "Cache": {
       "Size": 100000000
     },
@@ -403,6 +409,20 @@
       "Enabled": false
     },
     "ReplaceInvalidVarErrors": {
+      "Enabled": false
+    },
+    "ReplaceValidationErrorStatus": {
+      "Enabled": false
+    },
+    "SubscriptionMultipartPrintBoundary": {
+      "Enabled": false
+    }
+  },
+  "ApolloRouterCompatibilityFlags": {
+    "ReplaceInvalidVarErrors": {
+      "Enabled": false
+    },
+    "SubrequestHTTPError": {
       "Enabled": false
     }
   },

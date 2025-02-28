@@ -4,7 +4,7 @@ import ora from 'ora';
 import pc from 'picocolors';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { handleFeatureFlagResult } from '../../../handle-feature-flag-result.js';
+import { handleCompositionResult } from '../../../handle-composition-result.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('create');
@@ -49,7 +49,7 @@ export default (opts: BaseCommandOptions) => {
     );
 
     try {
-      handleFeatureFlagResult({
+      handleCompositionResult({
         responseCode: resp.response?.code,
         responseDetails: resp.response?.details,
         compositionErrors: resp.compositionErrors,
@@ -76,7 +76,9 @@ export default (opts: BaseCommandOptions) => {
         suppressWarnings: options.suppressWarnings,
       });
     } catch {
-      process.exit(1);
+      process.exitCode = 1;
+      // eslint-disable-next-line no-useless-return
+      return;
     }
   });
 

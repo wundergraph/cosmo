@@ -30,7 +30,7 @@ func GetDefaultConfig() *nodev1.RouterConfig {
 		EngineConfig: &nodev1.EngineConfiguration{
 			DefaultFlushInterval: 500,
 			DatasourceConfigurations: []*nodev1.DataSourceConfiguration{
-				&nodev1.DataSourceConfiguration{
+				{
 					Kind: nodev1.DataSourceKind_STATIC,
 					RootNodes: []*nodev1.TypeField{
 						{

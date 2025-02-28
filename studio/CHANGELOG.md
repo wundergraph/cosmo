@@ -4,6 +4,37 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.101.0](https://github.com/wundergraph/cosmo/compare/studio@0.100.4...studio@0.101.0) (2025-02-27)
+
+### Features
+
+* add option to set the number of operations for cache warming and implement FILO policy ([#1607](https://github.com/wundergraph/cosmo/issues/1607)) ([6867225](https://github.com/wundergraph/cosmo/commit/6867225dfcacf5e11b01394224dd9df5e9168dc8)) (@JivusAyrus)
+* improve the cache warmer operations manifest for persisted operations ([#1599](https://github.com/wundergraph/cosmo/issues/1599)) ([2579a1c](https://github.com/wundergraph/cosmo/commit/2579a1c7d9c4618efba37e340d27dff9edd6136d)) (@JivusAyrus)
+
+## [0.100.4](https://github.com/wundergraph/cosmo/compare/studio@0.100.3...studio@0.100.4) (2025-02-26)
+
+### Bug Fixes
+
+* schema parsing ([#1638](https://github.com/wundergraph/cosmo/issues/1638)) ([a2f8b65](https://github.com/wundergraph/cosmo/commit/a2f8b659f87551a2f48df9eb498633252caf56d1)) (@thisisnithin)
+
+## [0.100.3](https://github.com/wundergraph/cosmo/compare/studio@0.100.2...studio@0.100.3) (2025-02-26)
+
+**Note:** Version bump only for package studio
+
+## [0.100.2](https://github.com/wundergraph/cosmo/compare/studio@0.100.1...studio@0.100.2) (2025-02-21)
+
+**Note:** Version bump only for package studio
+
+## [0.100.1](https://github.com/wundergraph/cosmo/compare/studio@0.100.0...studio@0.100.1) (2025-02-17)
+
+**Note:** Version bump only for package studio
+
+# [0.100.0](https://github.com/wundergraph/cosmo/compare/studio@0.99.5...studio@0.100.0) (2025-02-12)
+
+### Features
+
+* add option to delete cache operation ([#1586](https://github.com/wundergraph/cosmo/issues/1586)) ([2946139](https://github.com/wundergraph/cosmo/commit/29461397e784eec0880546807df51dbfd8f2918c)) (@JivusAyrus)
+
 ## [0.99.5](https://github.com/wundergraph/cosmo/compare/studio@0.99.4...studio@0.99.5) (2025-02-05)
 
 **Note:** Version bump only for package studio

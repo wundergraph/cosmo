@@ -184,7 +184,8 @@
           "ValueFrom": {
             "RequestHeader": "",
             "ContextField": "operation_name",
-            "ResponseHeader": ""
+            "ResponseHeader": "",
+            "Expression": ""
           }
         }
       ],
@@ -228,7 +229,11 @@
           }
         ]
       }
-    }
+    },
+    "CookieWhitelist": [
+      "cookie1",
+      "cookie2"
+    ]
   },
   "TrafficShaping": {
     "All": {
@@ -265,15 +270,15 @@
           "Interval": 0
         },
         "RequestTimeout": 120000000000,
-        "DialTimeout": 0,
-        "ResponseHeaderTimeout": 0,
-        "ExpectContinueTimeout": 0,
-        "TLSHandshakeTimeout": 0,
-        "KeepAliveIdleTimeout": 0,
-        "KeepAliveProbeInterval": 0,
-        "MaxConnsPerHost": 0,
-        "MaxIdleConns": 0,
-        "MaxIdleConnsPerHost": 0
+        "DialTimeout": null,
+        "ResponseHeaderTimeout": null,
+        "ExpectContinueTimeout": null,
+        "TLSHandshakeTimeout": null,
+        "KeepAliveIdleTimeout": null,
+        "KeepAliveProbeInterval": null,
+        "MaxConnsPerHost": null,
+        "MaxIdleConns": null,
+        "MaxIdleConnsPerHost": null
       }
     }
   },
@@ -306,7 +311,18 @@
           "ValueFrom": {
             "RequestHeader": "",
             "ContextField": "operation_name",
-            "ResponseHeader": ""
+            "ResponseHeader": "",
+            "Expression": ""
+          }
+        },
+        {
+          "Key": "request_information",
+          "Default": "",
+          "ValueFrom": {
+            "RequestHeader": "",
+            "ContextField": "",
+            "ResponseHeader": "",
+            "Expression": "request.error ?? 'success'"
           }
         }
       ]
@@ -320,7 +336,8 @@
           "ValueFrom": {
             "RequestHeader": "",
             "ContextField": "",
-            "ResponseHeader": "X-Response-Field"
+            "ResponseHeader": "X-Response-Field",
+            "Expression": ""
           }
         }
       ]
@@ -570,7 +587,8 @@
     "ValidationCacheSize": 1024,
     "ResolverMaxRecyclableParserSize": 4096,
     "EnableSubgraphFetchOperationName": true,
-    "DisableVariablesRemapping": false
+    "DisableVariablesRemapping": false,
+    "SubscriptionFetchTimeout": 30000000000
   },
   "WebSocket": {
     "Enabled": true,
@@ -656,6 +674,10 @@
     }
   },
   "PersistedOperationsConfig": {
+    "LogUnknown": true,
+    "Safelist": {
+      "Enabled": true
+    },
     "Cache": {
       "Size": 100000000
     },
@@ -690,6 +712,20 @@
       "Enabled": false
     },
     "ReplaceInvalidVarErrors": {
+      "Enabled": false
+    },
+    "ReplaceValidationErrorStatus": {
+      "Enabled": false
+    },
+    "SubscriptionMultipartPrintBoundary": {
+      "Enabled": false
+    }
+  },
+  "ApolloRouterCompatibilityFlags": {
+    "ReplaceInvalidVarErrors": {
+      "Enabled": false
+    },
+    "SubrequestHTTPError": {
       "Enabled": false
     }
   },
