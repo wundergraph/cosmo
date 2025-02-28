@@ -1,7 +1,6 @@
 package config
 
 import (
-	"os"
 	"regexp"
 	"testing"
 	"time"
@@ -250,10 +249,8 @@ func TestLoadFullConfig(t *testing.T) {
 }
 
 func TestDefaults(t *testing.T) {
-	t.Parallel()
-
 	// Set in the CI to false. We need to unset it to test the default values
-	_ = os.Unsetenv("ROUTER_REGISTRATION")
+	t.Setenv("ROUTER_REGISTRATION", "")
 
 	f := createTempFileFromFixture(t, `
 version: "1"
