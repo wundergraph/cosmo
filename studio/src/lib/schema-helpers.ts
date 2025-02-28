@@ -717,6 +717,8 @@ const extractDirectives = (
             .flatMap((arg: ConstArgumentNode) => (arg.value as ListValueNode).values)
             .map((value) => (value as ListValueNode).values.map((sv) => (sv as StringValueNode).value));
       }
+      
+      return false;
     },
   });
 
