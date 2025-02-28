@@ -1,7 +1,6 @@
 package config
 
 import (
-	"os"
 	"regexp"
 	"testing"
 	"time"
@@ -13,6 +12,8 @@ import (
 )
 
 func TestTokenNotRequiredWhenPassingStaticConfig(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -24,6 +25,8 @@ router_config_path: "config.json"
 }
 
 func TestCustomBytesExtension(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 # yaml-language-server: $schema=../config.schema.json
 
@@ -41,16 +44,12 @@ traffic_shaping:
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
 
-	require.Equal(t, js.Causes[0].InstanceLocation, []string{"traffic_shaping", "router", "max_request_body_size"})
-	require.Equal(t, js.Causes[0].Error(), "at '/traffic_shaping/router/max_request_body_size': bytes must be greater or equal than 1.0 MB")
+	require.Equal(t, []string{"traffic_shaping", "router", "max_request_body_size"}, js.Causes[0].InstanceLocation)
+	require.Equal(t, "at '/traffic_shaping/router/max_request_body_size': bytes must be greater or equal than 1.0 MB", js.Causes[0].Error())
 }
 
 func TestVariableExpansion(t *testing.T) {
-	require.NoError(t, os.Setenv("TEST_POLL_INTERVAL", "20s"))
-
-	t.Cleanup(func() {
-		require.NoError(t, os.Unsetenv("TEST_POLL_INTERVAL"))
-	})
+	t.Setenv("TEST_POLL_INTERVAL", "20s")
 
 	f := createTempFileFromFixture(t, `
 version: "1"
@@ -65,15 +64,11 @@ poll_interval: "${TEST_POLL_INTERVAL}"
 
 	require.NoError(t, err)
 
-	require.Equal(t, cfg.Config.PollInterval, time.Second*20)
+	require.Equal(t, time.Second*20, cfg.Config.PollInterval)
 }
 
 func TestConfigHasPrecedence(t *testing.T) {
-	require.NoError(t, os.Setenv("POLL_INTERVAL", "22s"))
-
-	t.Cleanup(func() {
-		require.NoError(t, os.Unsetenv("POLL_INTERVAL"))
-	})
+	t.Setenv("POLL_INTERVAL", "22s")
 
 	f := createTempFileFromFixture(t, `
 version: "1"
@@ -88,11 +83,13 @@ poll_interval: 11s
 
 	require.NoError(t, err)
 
-	require.Equal(t, cfg.Config.PollInterval, time.Second*11)
+	require.Equal(t, time.Second*11, cfg.Config.PollInterval)
 }
 
 // Confirms https://github.com/caarlos0/env/issues/354 is fixed
 func TestConfigSlicesHaveDefaults(t *testing.T) {
+	t.Parallel()
+
 	type TestMetricsOTLPExporter struct {
 		Value       string
 		Exporter    string `envDefault:"http"`
@@ -118,6 +115,8 @@ func TestConfigSlicesHaveDefaults(t *testing.T) {
 }
 
 func TestErrorWhenConfigNotExists(t *testing.T) {
+	t.Parallel()
+
 	_, err := LoadConfig("./fixtures/not_exists.yaml", "")
 
 	require.Error(t, err)
@@ -125,6 +124,8 @@ func TestErrorWhenConfigNotExists(t *testing.T) {
 }
 
 func TestRegexDecoding(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 version: '1'
 
@@ -142,8 +143,8 @@ telemetry:
 	cfg, err := LoadConfig(f, "")
 
 	require.NoError(t, err)
-	require.Len(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetrics, 0)
-	require.Len(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels, 0)
+	require.Empty(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetrics)
+	require.Empty(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels)
 
 	f = createTempFileFromFixture(t, `
 version: '1'
@@ -164,16 +165,12 @@ telemetry:
 	require.NoError(t, err)
 	require.Len(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetrics, 2)
 	require.Len(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels, 1)
-	require.Equal(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetrics, RegExArray{regexp.MustCompile("^go_.*"), regexp.MustCompile("^process_.*")})
-	require.Equal(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels, RegExArray{regexp.MustCompile("^instance")})
+	require.Equal(t, RegExArray{regexp.MustCompile("^go_.*"), regexp.MustCompile("^process_.*")}, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetrics)
+	require.Equal(t, RegExArray{regexp.MustCompile("^instance")}, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels)
 }
 
 func TestErrorWhenEnvVariableConfigNotExists(t *testing.T) {
-	require.NoError(t, os.Setenv("CONFIG_PATH", "not_exists.yaml"))
-
-	t.Cleanup(func() {
-		require.NoError(t, os.Unsetenv("CONFIG_PATH"))
-	})
+	t.Setenv("CONFIG_PATH", "not_exists.yaml")
 
 	_, err := LoadConfig("", "")
 
@@ -182,11 +179,7 @@ func TestErrorWhenEnvVariableConfigNotExists(t *testing.T) {
 }
 
 func TestConfigIsOptional(t *testing.T) {
-	require.NoError(t, os.Setenv("GRAPH_API_TOKEN", "XXX"))
-
-	t.Cleanup(func() {
-		require.NoError(t, os.Unsetenv("GRAPH_API_TOKEN"))
-	})
+	t.Setenv("GRAPH_API_TOKEN", "XXX")
 
 	result, err := LoadConfig("", "")
 
@@ -195,6 +188,8 @@ func TestConfigIsOptional(t *testing.T) {
 }
 
 func TestCustomGoDurationExtension(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -213,8 +208,8 @@ telemetry:
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
 
-	require.Equal(t, js.Causes[0].InstanceLocation, []string{"telemetry", "tracing", "exporters", "0", "export_timeout"})
-	require.Equal(t, js.Causes[0].Error(), "at '/telemetry/tracing/exporters/0/export_timeout': duration must be greater or equal than 5s")
+	require.Equal(t, []string{"telemetry", "tracing", "exporters", "0", "export_timeout"}, js.Causes[0].InstanceLocation)
+	require.Equal(t, "at '/telemetry/tracing/exporters/0/export_timeout': duration must be greater or equal than 5s", js.Causes[0].Error())
 
 	f = createTempFileFromFixture(t, `
 version: "1"
@@ -233,11 +228,13 @@ telemetry:
 
 	require.ErrorAs(t, err, &js)
 
-	require.Equal(t, js.Causes[0].InstanceLocation, []string{"telemetry", "tracing", "exporters", "0", "export_timeout"})
-	require.Equal(t, js.Causes[0].Error(), "at '/telemetry/tracing/exporters/0/export_timeout': duration must be less or equal than 2m0s")
+	require.Equal(t, []string{"telemetry", "tracing", "exporters", "0", "export_timeout"}, js.Causes[0].InstanceLocation)
+	require.Equal(t, "at '/telemetry/tracing/exporters/0/export_timeout': duration must be less or equal than 2m0s", js.Causes[0].Error())
 }
 
 func TestLoadFullConfig(t *testing.T) {
+	t.Parallel()
+
 	cfg, err := LoadConfig("./fixtures/full.yaml", "")
 	require.NoError(t, err)
 
@@ -253,7 +250,7 @@ func TestLoadFullConfig(t *testing.T) {
 
 func TestDefaults(t *testing.T) {
 	// Set in the CI to false. We need to unset it to test the default values
-	_ = os.Unsetenv("ROUTER_REGISTRATION")
+	t.Setenv("ROUTER_REGISTRATION", "")
 
 	f := createTempFileFromFixture(t, `
 version: "1"
@@ -276,6 +273,8 @@ graph:
 }
 
 func TestOverrides(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -295,6 +294,8 @@ overrides:
 }
 
 func TestOverridesWithWrongValue(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -312,10 +313,12 @@ overrides:
 	_, err := LoadConfig(f, "")
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
-	require.Equal(t, js.Causes[0].Error(), "at '/overrides/subgraphs/some-subgraph/routing_url': 'a' is not valid http-url: invalid URL")
+	require.Equal(t, "at '/overrides/subgraphs/some-subgraph/routing_url': 'a' is not valid http-url: invalid URL", js.Causes[0].Error())
 }
 
 func TestValidPersistedOperations(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -360,6 +363,8 @@ persisted_operations:
 }
 
 func TestInvalidPersistedOperations(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -382,10 +387,12 @@ persisted_operations:
 	_, err := LoadConfig(f, "")
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
-	require.Equal(t, js.Causes[0].Error(), "at '/persisted_operations/storage': missing property 'object_prefix'")
+	require.Equal(t, "at '/persisted_operations/storage': missing property 'object_prefix'", js.Causes[0].Error())
 }
 
 func TestValidExecutionConfig(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -426,6 +433,8 @@ execution_config:
 }
 
 func TestInvalidExecutionConfig(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -446,10 +455,12 @@ execution_config:
 	_, err := LoadConfig(f, "")
 	var js *jsonschema.ValidationError
 	require.ErrorAs(t, err, &js)
-	require.Equal(t, js.Causes[0].Error(), "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config/storage': missing property 'object_path'\n- at '/execution_config': additional properties 'storage' not allowed")
+	require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config/storage': missing property 'object_path'\n- at '/execution_config': additional properties 'storage' not allowed", js.Causes[0].Error())
 }
 
 func TestValidLocalExecutionConfig(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -462,6 +473,8 @@ execution_config:
 }
 
 func TestInvalidFileExecutionConfig(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -490,6 +503,8 @@ execution_config:
 }
 
 func TestClientHeaderConfig(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -502,11 +517,6 @@ client_header:
 }
 
 func TestPrefixedMetricEngineConfig(t *testing.T) {
-	t.Cleanup(func() {
-		_ = os.Unsetenv("PROMETHEUS_ENGINE_STATS_SUBSCRIPTIONS")
-		_ = os.Unsetenv("METRICS_OTLP_ENGINE_STATS_SUBSCRIPTIONS")
-	})
-
 	f := createTempFileFromFixture(t, `
 version: "1"
 `)
@@ -516,8 +526,8 @@ version: "1"
 	require.False(t, c.Config.Telemetry.Metrics.Prometheus.EngineStats.Subscriptions)
 	require.False(t, c.Config.Telemetry.Metrics.OTLP.EngineStats.Subscriptions)
 
-	require.NoError(t, os.Setenv("PROMETHEUS_ENGINE_STATS_SUBSCRIPTIONS", "true"))
-	require.NoError(t, os.Setenv("METRICS_OTLP_ENGINE_STATS_SUBSCRIPTIONS", "true"))
+	t.Setenv("PROMETHEUS_ENGINE_STATS_SUBSCRIPTIONS", "true")
+	t.Setenv("METRICS_OTLP_ENGINE_STATS_SUBSCRIPTIONS", "true")
 
 	c, err = LoadConfig(f, "")
 	require.NoError(t, err)

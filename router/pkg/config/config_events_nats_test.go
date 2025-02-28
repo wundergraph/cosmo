@@ -1,11 +1,14 @@
 package config
 
 import (
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestInvalidAuthenticatedNatsProviderNoUsername(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -28,6 +31,8 @@ events:
 }
 
 func TestInvalidAuthenticatedNatsProviderNoPassword(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 version: "1"
 
@@ -49,6 +54,8 @@ events:
 }
 
 func TestValidAuthenticatedNatsProviderWithToken(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 version: '1'
 
@@ -69,6 +76,8 @@ events:
 }
 
 func TestValidAuthenticatedNatsProviderWithUserInfo(t *testing.T) {
+	t.Parallel()
+
 	f := createTempFileFromFixture(t, `
 version: "1"
 

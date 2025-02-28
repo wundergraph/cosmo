@@ -240,6 +240,7 @@ type MetricExclusions struct {
 	ExcludedPrometheusMetricLabels []*regexp.Regexp
 	ExcludedOTLPMetrics            []*regexp.Regexp
 	ExcludedOTLPMetricLabels       []*regexp.Regexp
+	ExcludeScopeInfo               bool
 }
 
 type EngineStatOptions struct {
@@ -949,6 +950,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			},
 			ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetrics,
 			ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetricLabels,
+			ExcludeScopeInfo:    testConfig.MetricOptions.MetricExclusions.ExcludeScopeInfo,
 		}
 	}
 
@@ -960,7 +962,8 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			Metrics: config.Metrics{
 				Attributes: testConfig.CustomMetricAttributes,
 				Prometheus: config.Prometheus{
-					Enabled: true,
+					Enabled:          true,
+					ExcludeScopeInfo: true,
 				},
 				OTLP: config.MetricsOTLP{
 					Enabled:       true,
@@ -980,7 +983,6 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		c.IsUsingCloudExporter = !testConfig.DisableSimulateCloudExporter
 
 		routerOpts = append(routerOpts, core.WithMetrics(c))
-
 	}
 
 	if testConfig.OverrideGraphQLPath != "" {
