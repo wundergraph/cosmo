@@ -480,16 +480,14 @@ export const formatAndParseSchema = async (schema?: string) => {
 
 export const useParseSchema = (schema?: string) => {
   const [isParsing, setIsParsing] = useState(true);
-  const [astAndDoc, setAstAndDoc] = useState<{ ast: GraphQLSchema, doc: DocumentNode } | null>(null);
+  const [astAndDoc, setAstAndDoc] = useState<{ ast: GraphQLSchema | null, doc: DocumentNode | null }>({ ast: null, doc: null });
 
   useEffect(() => {
     let t: NodeJS.Timeout;
     setIsParsing(true);
 
     formatAndParseSchema(schema).then((res) => {
-      if (res) {
-        setAstAndDoc(res);
-      }
+      setAstAndDoc(res || { ast: null, doc: null });
 
       t = setTimeout(() => {
         setIsParsing(false);
