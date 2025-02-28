@@ -27,7 +27,7 @@ type PrometheusConfig struct {
 	// TestRegistry is used for testing purposes. If set, the registry will be used instead of the default one.
 	TestRegistry *prometheus.Registry
 	// Whether or not to include scope info
-	IncludeScopeInfo bool
+	ExcludeScopeInfo bool
 }
 
 type OpenTelemetryExporter struct {
@@ -139,7 +139,7 @@ func DefaultConfig(serviceVersion string) *Config {
 			Enabled:          false,
 			ListenAddr:       "0.0.0.0:8088",
 			Path:             "/metrics",
-			IncludeScopeInfo: true,
+			ExcludeScopeInfo: true,
 		},
 	}
 }

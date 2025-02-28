@@ -1079,10 +1079,10 @@
                     "type": "string"
                   }
                 },
-                "include_scope_info": {
+                "exclude_scope_info": {
                   "type": "boolean",
                   "default": true,
-                  "description": "Include scope info in Prometheus metrics. The default value is true."
+                  "description": "Exclude scope info from Prometheus metrics. The default value is true."
                 }
               }
             }

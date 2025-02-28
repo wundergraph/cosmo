@@ -133,7 +133,7 @@ func NewPrometheusMeterProvider(ctx context.Context, c *Config, serviceInstanceI
 		otelprom.WithRegisterer(registry),
 	}
 
-	if !c.Prometheus.IncludeScopeInfo {
+	if c.Prometheus.ExcludeScopeInfo {
 		otelPromOpts = append(otelPromOpts, otelprom.WithoutScopeInfo())
 	}
 

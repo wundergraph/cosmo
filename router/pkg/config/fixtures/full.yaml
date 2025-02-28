@@ -132,7 +132,7 @@ telemetry:
         subscriptions: true
       exclude_metrics: []
       exclude_metric_labels: []
-      include_scope_info: true
+      exclude_scope_info: true
 
 cache_control_policy:
   enabled: true

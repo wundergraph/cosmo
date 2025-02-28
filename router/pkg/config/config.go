@@ -97,7 +97,7 @@ type Prometheus struct {
 	EngineStats         EngineStats `yaml:"engine_stats" envPrefix:"PROMETHEUS_"`
 	ExcludeMetrics      RegExArray  `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray  `yaml:"exclude_metric_labels,omitempty" env:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
-	IncludeScopeInfo    bool        `yaml:"include_scope_info" envDefault:"true" env:"PROMETHEUS_INCLUDE_SCOPE_INFO"`
+	ExcludeScopeInfo    bool        `yaml:"exclude_scope_info" envDefault:"false" env:"PROMETHEUS_EXCLUDE_SCOPE_INFO"`
 }
 
 type MetricsOTLPExporter struct {

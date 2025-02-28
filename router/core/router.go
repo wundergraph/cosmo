@@ -2027,7 +2027,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			},
 			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
-			IncludeScopeInfo:    cfg.Metrics.Prometheus.IncludeScopeInfo,
+			ExcludeScopeInfo:    cfg.Metrics.Prometheus.ExcludeScopeInfo,
 		},
 	}
 }
