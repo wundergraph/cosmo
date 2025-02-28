@@ -863,7 +863,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const isLoading = isLoadingGraphSchema || isLoadingSubgraphSchema;
 
   const schema = useMemo(() => {
-    return parseSchema(subgraphData?.sdl || data?.clientSchema);
+    return parseSchema(subgraphData?.sdl || data?.clientSchema)?.ast ?? null;
   }, [data?.clientSchema, subgraphData?.sdl]);
 
   const [query, setQuery] = useState<string | undefined>(
