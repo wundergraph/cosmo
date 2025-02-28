@@ -27,7 +27,8 @@ import {
   isObjectType,
   isScalarType,
   parse,
-} from "graphql";
+  visit,
+} from 'graphql';
 import babelPlugin from "prettier/plugins/babel";
 import estreePlugin from "prettier/plugins/estree";
 import graphQLPlugin from "prettier/plugins/graphql";
@@ -677,28 +678,22 @@ const extractAuthenticationDirectives = (
     astNode: FieldDefinitionNode | TypeDefinitionNode | undefined | null
 ) => {
   const result: ExtractedAuthenticationDirectives = { authenticated: false, requiresScopes: null };
-  if (
-      !Array.isArray(astNode?.directives) ||
-      astNode.directives.length === 0
-  ) {
+  if (!astNode) {
     return result;
   }
 
-  result.authenticated = astNode.directives.some((d) => d.name.value === "authenticated");
-
-  const requiresScopesDirectives = astNode.directives.filter((d) => d.name.value === "requiresScopes");
-  if (requiresScopesDirectives.length === 0) {
-    return result;
-  }
-
-  result.requiresScopes = requiresScopesDirectives
-      .filter(d => Array.isArray(d.arguments) && d.arguments.length > 0)
-      .flatMap(d =>
-          d.arguments!
+  visit(astNode, {
+    Directive(node) {
+      if (node.name.value === "authenticated") {
+        result.authenticated = true;
+      } else if (node.name.value === "requiresScopes" && Array.isArray(node.arguments)) {
+        result.requiresScopes = node.arguments
             .filter((arg: ConstArgumentNode) => arg.name.value === "scopes" && arg.value.kind === Kind.LIST)
             .flatMap((arg: ConstArgumentNode) => (arg.value as ListValueNode).values)
-            .map((list: ListValueNode) => list.values.map((sv) => (sv as StringValueNode).value))
-      );
+            .map((value) => (value as ListValueNode).values.map((sv) => (sv as StringValueNode).value));
+      }
+    },
+  });
 
   return result;
 }
