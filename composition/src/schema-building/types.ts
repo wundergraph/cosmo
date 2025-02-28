@@ -2,6 +2,7 @@ import {
   ConstDirectiveNode,
   ConstValueNode,
   DirectiveDefinitionNode,
+  DocumentNode,
   Kind,
   NamedTypeNode,
   OperationTypeDefinitionNode,
@@ -21,7 +22,8 @@ import {
   MutableTypeNode,
   MutableUnionNode,
 } from './ast';
-import { FieldSetCondition } from '../router-configuration/router-configuration';
+import { FieldSetConditionData } from '../router-configuration/types';
+import { KeyFieldSetData } from '../v1/normalization/types';
 
 export type ArgumentData = {
   name: string;
@@ -78,11 +80,21 @@ export type EnumValueData = {
   description?: StringValueNode;
 };
 
+export type ExternalFieldData = {
+  // Indiscriminate representation of whether  @external is defined on the field.
+  isDefinedExternal: boolean;
+  /*
+   * A field with an @external directive definition may still be unconditionally provided.
+   * For example, entity extension key fields are determined to be unconditionally resolvable.
+   * */
+  isUnconditionallyProvided: boolean;
+};
+
 export type FieldData = {
   argumentDataByArgumentName: Map<string, InputValueData>;
   configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
-  isExternalBySubgraphName: Map<string, boolean>;
+  externalFieldDataBySubgraphName: Map<string, ExternalFieldData>;
   isInaccessible: boolean;
   isShareableBySubgraphName: Map<string, boolean>;
   kind: Kind.FIELD_DEFINITION;
@@ -237,8 +249,10 @@ export type DefinitionData =
 export type NodeData = ParentDefinitionData | ChildData;
 
 export type EntityData = {
-  fieldNames: Set<string>;
+  // If propagated in documentNodeByKeyFieldSet, at least one subgraph defines a resolvable key with this field set.
+  documentNodeByKeyFieldSet: Map<string, DocumentNode>;
   keyFieldSets: Set<string>;
+  keyFieldSetDatasBySubgraphName: Map<string, Map<string, KeyFieldSetData>>;
   subgraphNames: Set<string>;
   typeName: string;
 };
@@ -249,18 +263,21 @@ export type SimpleFieldData = {
 };
 
 export type EntityInterfaceSubgraphData = {
+  concreteTypeNames: Set<string>;
   fieldDatas: Array<SimpleFieldData>;
   interfaceFieldNames: Set<string>;
   interfaceObjectFieldNames: Set<string>;
   isInterfaceObject: boolean;
+  resolvable: boolean;
   typeName: string;
-  concreteTypeNames?: Set<string>;
 };
+
 export type FieldAuthorizationData = {
   fieldName: string;
   requiresAuthentication: boolean;
   requiredScopes: Set<string>[];
 };
+
 export type AuthorizationData = {
   fieldAuthorizationDataByFieldName: Map<string, FieldAuthorizationData>;
   hasParentLevelAuthorization: boolean;
@@ -268,7 +285,18 @@ export type AuthorizationData = {
   requiredScopes: Set<string>[];
   typeName: string;
 };
+
 export type ConditionalFieldData = {
-  providedBy: Array<FieldSetCondition>;
-  requiredBy: Array<FieldSetCondition>;
+  providedBy: Array<FieldSetConditionData>;
+  requiredBy: Array<FieldSetConditionData>;
+};
+
+export type EntityInterfaceFederationData = {
+  concreteTypeNames: Set<string>;
+  fieldDatasBySubgraphName: Map<string, Array<SimpleFieldData>>;
+  interfaceFieldNames: Set<string>;
+  interfaceObjectFieldNames: Set<string>;
+  interfaceObjectSubgraphs: Set<string>;
+  subgraphDataByTypeName: Map<string, EntityInterfaceSubgraphData>;
+  typeName: string;
 };

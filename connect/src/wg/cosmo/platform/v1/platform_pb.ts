@@ -19588,6 +19588,11 @@ export class ConfigureCacheWarmerRequest extends Message<ConfigureCacheWarmerReq
    */
   enableCacheWarmer = false;
 
+  /**
+   * @generated from field: int32 maxOperationsCount = 3;
+   */
+  maxOperationsCount = 0;
+
   constructor(data?: PartialMessage<ConfigureCacheWarmerRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -19598,6 +19603,7 @@ export class ConfigureCacheWarmerRequest extends Message<ConfigureCacheWarmerReq
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "enableCacheWarmer", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "maxOperationsCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ConfigureCacheWarmerRequest {
@@ -19705,6 +19711,11 @@ export class GetCacheWarmerConfigResponse extends Message<GetCacheWarmerConfigRe
    */
   isCacheWarmerEnabled = false;
 
+  /**
+   * @generated from field: int32 maxOperationsCount = 3;
+   */
+  maxOperationsCount = 0;
+
   constructor(data?: PartialMessage<GetCacheWarmerConfigResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -19715,6 +19726,7 @@ export class GetCacheWarmerConfigResponse extends Message<GetCacheWarmerConfigRe
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "isCacheWarmerEnabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "maxOperationsCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCacheWarmerConfigResponse {

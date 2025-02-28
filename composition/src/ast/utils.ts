@@ -275,8 +275,8 @@ export function parse(source: string, noLocation = true): DocumentNode {
 
 export function safeParse(value: string, noLocation = true): ParseResult {
   try {
-    const parsedValue = parse(value, noLocation);
-    return { documentNode: parsedValue };
+    const documentNode = parse(value, noLocation);
+    return { documentNode };
   } catch (e) {
     return { error: e as Error };
   }
