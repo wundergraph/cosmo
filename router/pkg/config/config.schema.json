@@ -1081,8 +1081,8 @@
                 },
                 "exclude_scope_info": {
                   "type": "boolean",
-                  "default": true,
-                  "description": "Exclude scope info from Prometheus metrics. The default value is true."
+                  "default": false,
+                  "description": "Exclude scope info from Prometheus metrics. The default value is false."
                 }
               }
             }
