@@ -136,10 +136,9 @@ func DefaultConfig(serviceVersion string) *Config {
 			},
 		},
 		Prometheus: PrometheusConfig{
-			Enabled:          false,
-			ListenAddr:       "0.0.0.0:8088",
-			Path:             "/metrics",
-			ExcludeScopeInfo: true,
+			Enabled:    false,
+			ListenAddr: "0.0.0.0:8088",
+			Path:       "/metrics",
 		},
 	}
 }
