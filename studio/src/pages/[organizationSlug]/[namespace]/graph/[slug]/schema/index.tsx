@@ -1549,10 +1549,10 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
       ? data?.sdl
       : data?.clientSchema || data?.sdl;
 
-  const { ast, isParsing } = useParseSchema(schema);
+  const { ast, doc, isParsing } = useParseSchema(schema);
   const typeCounts = useMemo(() => ast ? getTypeCounts(ast) : undefined, [ast]);
   const deprecatedTypes = useMemo(() => ast ? getDeprecatedTypes(ast) : [], [ast]);
-  const authenticatedTypes = useMemo(() => ast ? getAuthenticatedTypes(ast) : [], [ast]);
+  const authenticatedTypes = useMemo(() => doc ? getAuthenticatedTypes(doc) : [], [doc]);
 
   const isLoadingAST = isLoading || isParsing;
 
