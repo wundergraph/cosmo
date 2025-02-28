@@ -116,10 +116,6 @@ func createTempFileFromFixture(t *testing.T, fixture string) string {
 	f, err := os.CreateTemp(t.TempDir(), "config_test")
 	require.NoError(t, err)
 
-	t.Cleanup(func() {
-		require.NoError(t, os.Remove(f.Name()))
-	})
-
 	_, err = f.WriteString(fixture)
 	require.NoError(t, err)
 
