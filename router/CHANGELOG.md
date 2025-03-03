@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.187.0](https://github.com/wundergraph/cosmo/compare/router@0.186.0...router@0.187.0) (2025-03-03)
+
+### Bug Fixes
+
+* **subscriptions:** skip event after worker shutdown ([#1630](https://github.com/wundergraph/cosmo/issues/1630)) ([eb2ba77](https://github.com/wundergraph/cosmo/commit/eb2ba7733ae5430fc64335033043a9b4cac37c27)) (@StarpTech)
+
+### Features
+
+* option to remove scopeinfo from prometheus metrics ([#1639](https://github.com/wundergraph/cosmo/issues/1639)) ([c6be7b4](https://github.com/wundergraph/cosmo/commit/c6be7b4eefee0e7f0e721bc5ef809a1d6877ff11)) (@endigma)
+
 # [0.186.0](https://github.com/wundergraph/cosmo/compare/router@0.185.0...router@0.186.0) (2025-02-27)
 
 ### Features
