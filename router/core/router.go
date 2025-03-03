@@ -192,7 +192,7 @@ type (
 		prometheusServer                *http.Server
 		modulesConfig                   map[string]interface{}
 		executionConfig                 *ExecutionConfig
-		preRequestMiddlewares           []func(http.Handler) http.Handler
+		routerOnRequestHandlers         []func(http.Handler) http.Handler
 		routerMiddlewares               []func(http.Handler) http.Handler
 		preOriginHandlers               []TransportPreHandler
 		postOriginHandlers              []TransportPostHandler
@@ -672,13 +672,13 @@ func (r *Router) initModules(ctx context.Context) error {
 			})
 		}
 
-		if fn, ok := moduleInstance.(PreRequestMiddleware); ok {
-			r.preRequestMiddlewares = append(r.preRequestMiddlewares, func(handler http.Handler) http.Handler {
+		if fn, ok := moduleInstance.(RouterOnRequestHandler); ok {
+			r.routerOnRequestHandlers = append(r.routerOnRequestHandlers, func(handler http.Handler) http.Handler {
 				return http.HandlerFunc(func(_ http.ResponseWriter, request *http.Request) {
 					reqContext := getRequestContext(request.Context())
 					// Ensure we work with latest request in the chain to work with the right context
 					reqContext.request = request
-					fn.PreRequestMiddleware(reqContext, handler)
+					fn.RouterOnRequest(reqContext, handler)
 				})
 			})
 		}

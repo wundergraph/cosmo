@@ -1,4 +1,4 @@
-package pre_request_module
+package router_on_request
 
 import (
 	"go.uber.org/zap"
@@ -7,9 +7,9 @@ import (
 	"github.com/wundergraph/cosmo/router/core"
 )
 
-const myModuleID = "preRequestModule"
+const myModuleID = "routerOnRequestModule"
 
-type PreRequestModule struct {
+type RouterOnRequestModule struct {
 	Logger *zap.Logger
 	// Since the module struct seems to be getting copied during config setup
 	// we use a pointer to this inner struct so the pointer address gets
@@ -21,7 +21,7 @@ type TokenContainer struct {
 	Token string
 }
 
-func (m *PreRequestModule) Provision(ctx *core.ModuleContext) error {
+func (m *RouterOnRequestModule) Provision(ctx *core.ModuleContext) error {
 	// Assign the logger to the module for non-request related logging
 	m.Logger = ctx.Logger
 
@@ -34,35 +34,35 @@ func (m *PreRequestModule) Provision(ctx *core.ModuleContext) error {
 	return nil
 }
 
-func (m *PreRequestModule) SetToken(token string) {
+func (m *RouterOnRequestModule) SetToken(token string) {
 	m.TokenContainer.Token = token
 }
 
-func (m *PreRequestModule) PreRequestMiddleware(ctx core.RequestContext, next http.Handler) {
+func (m *RouterOnRequestModule) RouterOnRequest(ctx core.RequestContext, next http.Handler) {
 	if m.TokenContainer.Token != "" {
 		req := ctx.Request()
 		tokenString := "Bearer " + m.TokenContainer.Token
 		req.Header.Set("Authorization", tokenString)
 	}
 
-	m.Logger.Info("PreRequest Hook has been run")
+	m.Logger.Info("RouterOnRequest Hook has been run")
 
 	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 }
 
-func (m *PreRequestModule) Module() core.ModuleInfo {
+func (m *RouterOnRequestModule) Module() core.ModuleInfo {
 	return core.ModuleInfo{
 		// This is the ID of your module, it must be unique
 		ID: myModuleID,
 		// The priority of your module, lower numbers are executed first
 		Priority: 1,
 		New: func() core.Module {
-			return &PreRequestModule{}
+			return &RouterOnRequestModule{}
 		},
 	}
 }
 
 // Interface guard
 var (
-	_ core.PreRequestMiddleware = (*PreRequestModule)(nil)
+	_ core.RouterOnRequestHandler = (*RouterOnRequestModule)(nil)
 )
