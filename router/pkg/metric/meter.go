@@ -128,11 +128,16 @@ func NewPrometheusMeterProvider(ctx context.Context, c *Config, serviceInstanceI
 	// Only available on Linux and Windows systems
 	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
-	promExporter, err := otelprom.New(
+	otelPromOpts := []otelprom.Option{
 		otelprom.WithoutUnits(),
 		otelprom.WithRegisterer(registry),
-	)
+	}
 
+	if c.Prometheus.ExcludeScopeInfo {
+		otelPromOpts = append(otelPromOpts, otelprom.WithoutScopeInfo())
+	}
+
+	promExporter, err := otelprom.New(otelPromOpts...)
 	if err != nil {
 		return nil, nil, err
 	}
