@@ -69,7 +69,8 @@
           "Subscriptions": true
         },
         "ExcludeMetrics": null,
-        "ExcludeMetricLabels": null
+        "ExcludeMetricLabels": null,
+        "ExcludeScopeInfo": true
       }
     }
   },
