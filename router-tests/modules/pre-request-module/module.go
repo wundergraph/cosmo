@@ -1,7 +1,6 @@
 package pre_request_module
 
 import (
-	"fmt"
 	"go.uber.org/zap"
 	"net/http"
 
@@ -42,7 +41,8 @@ func (m *PreRequestModule) SetToken(token string) {
 func (m *PreRequestModule) PreRequestMiddleware(ctx core.RequestContext, next http.Handler) {
 	if m.TokenContainer.Token != "" {
 		req := ctx.Request()
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", m.TokenContainer.Token))
+		tokenString := "Bearer " + m.TokenContainer.Token
+		req.Header.Set("Authorization", tokenString)
 	}
 
 	m.Logger.Info("PreRequest Hook has been run")

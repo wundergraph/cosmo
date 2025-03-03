@@ -674,7 +674,7 @@ func (r *Router) initModules(ctx context.Context) error {
 
 		if fn, ok := moduleInstance.(PreRequestMiddleware); ok {
 			r.preRequestMiddlewares = append(r.preRequestMiddlewares, func(handler http.Handler) http.Handler {
-				return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+				return http.HandlerFunc(func(_ http.ResponseWriter, request *http.Request) {
 					reqContext := getRequestContext(request.Context())
 					// Ensure we work with latest request in the chain to work with the right context
 					reqContext.request = request
