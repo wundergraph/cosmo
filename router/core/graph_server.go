@@ -739,7 +739,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	httpRouter.Use(recoveryHandler)
 
-	httpRouter.Use(s.preHandleRequestMiddlewares...)
+	// Setup any pre request middlewares so that they can be used to manipulate
+	// other downstream internal middlewares such as tracing or authentication
+	httpRouter.Use(s.preRequestMiddlewares...)
 
 	/**
 	* Initialize base attributes from headers and other sources
@@ -770,7 +772,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				reqContext.telemetry.addCommonAttribute(commonAttrRequestMapper(r)...)
 			}
 			if metricAttrRequestMapper != nil {
-				reqContext.telemetry.addMetricAttribute(metricAttrRequestMapper(r)...)
+				requestMapper := metricAttrRequestMapper(r)
+				reqContext.telemetry.addMetricAttribute(requestMapper...)
 			}
 
 			h.ServeHTTP(w, r)

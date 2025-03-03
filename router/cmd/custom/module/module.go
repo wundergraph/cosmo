@@ -71,8 +71,11 @@ func (m *MyModule) OnOriginRequest(request *http.Request, ctx core.RequestContex
 	return request, nil
 }
 
-func (m *MyModule) PreHandleRequestMiddleware(ctx core.RequestContext, next http.Handler) {
+func (m *MyModule) PreRequestMiddleware(ctx core.RequestContext, next http.Handler) {
 	// Call the next handler in the chain or return early by calling w.Write()
+
+	ctx.Request().Header.Set("X-My-Header", "there")
+
 	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 }
 
@@ -108,10 +111,10 @@ func (m *MyModule) Module() core.ModuleInfo {
 
 // Interface guard
 var (
-	_ core.RouterMiddlewareHandler    = (*MyModule)(nil)
-	_ core.PreHandleRequestMiddleware = (*MyModule)(nil)
-	_ core.EnginePreOriginHandler     = (*MyModule)(nil)
-	_ core.EnginePostOriginHandler    = (*MyModule)(nil)
-	_ core.Provisioner                = (*MyModule)(nil)
-	_ core.Cleaner                    = (*MyModule)(nil)
+	_ core.RouterMiddlewareHandler = (*MyModule)(nil)
+	_ core.PreRequestMiddleware    = (*MyModule)(nil)
+	_ core.EnginePreOriginHandler  = (*MyModule)(nil)
+	_ core.EnginePostOriginHandler = (*MyModule)(nil)
+	_ core.Provisioner             = (*MyModule)(nil)
+	_ core.Cleaner                 = (*MyModule)(nil)
 )
