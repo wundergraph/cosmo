@@ -729,7 +729,7 @@ export const getAuthenticatedTypes = (
     document: DocumentNode,
 ): GraphQLTypeDefinition[] => {
   const authenticatedTypes: Record<string, GraphQLTypeDefinition> = {};
-  console.log(visit(document, {
+  visit(document, {
     FieldDefinition(node, key, parent, path, ancestors) {
       if (node.name.value.startsWith("__")) {
         return false;
@@ -754,7 +754,7 @@ export const getAuthenticatedTypes = (
       
       authenticatedTypes[typeName].fields!.push(parseField(node, directives));
     }
-  }));
+  });
   
   return Object.values(authenticatedTypes);
 };
