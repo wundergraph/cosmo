@@ -962,8 +962,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			Metrics: config.Metrics{
 				Attributes: testConfig.CustomMetricAttributes,
 				Prometheus: config.Prometheus{
-					Enabled:          true,
-					ExcludeScopeInfo: true,
+					Enabled: true,
 				},
 				OTLP: config.MetricsOTLP{
 					Enabled:       true,
