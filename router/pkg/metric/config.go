@@ -26,7 +26,7 @@ type PrometheusConfig struct {
 	ExcludeMetricLabels []*regexp.Regexp
 	// TestRegistry is used for testing purposes. If set, the registry will be used instead of the default one.
 	TestRegistry *prometheus.Registry
-	// Whether or not to include scope info
+	// Whether or not to exclude scope info
 	ExcludeScopeInfo bool
 }
 
