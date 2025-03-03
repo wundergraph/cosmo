@@ -5,7 +5,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
-	"github.com/golang-jwt/jwt/v5"
 	"io"
 	"net/http"
 	"strings"
@@ -13,13 +12,15 @@ import (
 	"time"
 
 	"github.com/MicahParks/jwkset"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"go.uber.org/zap"
 )
 
 const (
@@ -938,6 +939,85 @@ func TestAlgorithmMismatch(t *testing.T) {
 			require.NoError(t, err)
 			defer res.Body.Close()
 			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+		})
+	})
+}
+
+func TestOidcDiscovery(t *testing.T) {
+	t.Parallel()
+
+	testAuthentication := func(t *testing.T, xEnv *testenv.Environment, token string) {
+		t.Helper()
+
+		// Operations with a token should succeed
+		header := http.Header{
+			"Authorization": []string{"Bearer " + token},
+		}
+		res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+		require.NoError(t, err)
+		defer res.Body.Close()
+		require.Equal(t, http.StatusOK, res.StatusCode)
+		require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+		data, err := io.ReadAll(res.Body)
+		require.NoError(t, err)
+		require.Equal(t, employeesExpectedData, string(data))
+
+		// Operation without a token should fail
+		res, err = xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(employeesQuery))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+	}
+
+	testSetup := func(t *testing.T, crypto ...jwks.Crypto) (map[string]string, []authentication.Authenticator) {
+		t.Helper()
+
+		authServer, err := jwks.NewServerWithCrypto(t, crypto...)
+		require.NoError(t, err)
+
+		t.Cleanup(authServer.Close)
+
+		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(),
+			[]authentication.JWKSConfig{
+				toJWKSConfig(authServer.OIDCURL(), time.Second*5)})
+		require.NoError(t, err)
+
+		authOptions := authentication.HttpHeaderAuthenticatorOptions{
+			Name:         JwksName,
+			TokenDecoder: tokenDecoder,
+		}
+		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
+		require.NoError(t, err)
+
+		authenticators := []authentication.Authenticator{authenticator}
+
+		tokens := make(map[string]string)
+
+		for _, c := range crypto {
+			token, err := authServer.TokenForKID(c.KID(), nil)
+			require.NoError(t, err)
+
+			tokens[c.KID()] = token
+		}
+
+		return tokens, authenticators
+	}
+
+	t.Run("Should discover JWKs from OIDC discovery endpoint", func(t *testing.T) {
+		t.Parallel()
+
+		rsa, err := jwks.NewRSACrypto("", jwkset.AlgRS256, 2048)
+		require.NoError(t, err)
+
+		tokens, authenticators := testSetup(t, rsa)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			for _, token := range tokens {
+				testAuthentication(t, xEnv, token)
+			}
 		})
 	})
 }
