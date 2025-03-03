@@ -731,9 +731,8 @@ export const getAuthenticatedTypes = (
   const authenticatedTypes: Record<string, GraphQLTypeDefinition> = {};
   visit(document, {
     FieldDefinition(node, key, parent, path, ancestors) {
-      const type = ancestors[ancestors.length - 1] as TypeDefinitionNode;
-      if (type.name.value.startsWith("__")) {
-        return undefined;
+      if (node.name.value.startsWith("__")) {
+        return false;
       }
       
       const directives = extractDirectives(node);
@@ -741,6 +740,7 @@ export const getAuthenticatedTypes = (
         return undefined;
       }
       
+      const type = ancestors[ancestors.length - 1] as TypeDefinitionNode;
       const typeName = type.name.value;
       if (!(typeName in authenticatedTypes)) {
         authenticatedTypes[typeName] = {
