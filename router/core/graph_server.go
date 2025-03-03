@@ -772,8 +772,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				reqContext.telemetry.addCommonAttribute(commonAttrRequestMapper(r)...)
 			}
 			if metricAttrRequestMapper != nil {
-				requestMapper := metricAttrRequestMapper(r)
-				reqContext.telemetry.addMetricAttribute(requestMapper...)
+				reqContext.telemetry.addMetricAttribute(metricAttrRequestMapper(r)...)
 			}
 
 			h.ServeHTTP(w, r)

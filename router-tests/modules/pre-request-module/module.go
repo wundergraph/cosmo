@@ -47,7 +47,6 @@ func (m *PreRequestModule) PreRequestMiddleware(ctx core.RequestContext, next ht
 
 	m.Logger.Info("PreRequest Hook has been run")
 
-	// Call the next handler in the chain or return early by calling w.Write()
 	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 }
 

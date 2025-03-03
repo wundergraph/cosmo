@@ -72,9 +72,8 @@ func (m *MyModule) OnOriginRequest(request *http.Request, ctx core.RequestContex
 }
 
 func (m *MyModule) PreRequestMiddleware(ctx core.RequestContext, next http.Handler) {
-	// Call the next handler in the chain or return early by calling w.Write()
-
-	ctx.Request().Header.Set("X-My-Header", "there")
+	logger := ctx.Logger()
+	logger.Info("Test pre request custom module logs")
 
 	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 }
