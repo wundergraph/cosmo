@@ -95,6 +95,7 @@ func TestPreRequestHook(t *testing.T) {
 				Query:         `query MyQuery { employees { id } }`,
 				OperationName: json.RawMessage(`"MyQuery"`),
 			})
+			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, retryRes.Response.StatusCode)
 			retryRequestLog := xEnv.Observer().FilterMessage("PreRequest Hook has been run")
 			assert.Len(t, retryRequestLog.All(), 2)
