@@ -50,8 +50,6 @@ func TestPrometheus(t *testing.T) {
 			requestTotalMetrics := requestTotal.GetMetric()
 
 			require.Len(t, requestTotalMetrics, 2)
-			require.Len(t, requestTotalMetrics[0].Label, 12)
-			require.Len(t, requestTotalMetrics[1].Label, 14)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -167,8 +165,6 @@ func TestPrometheus(t *testing.T) {
 			requestsInFlightMetrics := requestsInFlight.GetMetric()
 
 			require.Len(t, requestsInFlightMetrics, 2)
-			require.Len(t, requestsInFlightMetrics[0].Label, 9)
-			require.Len(t, requestsInFlightMetrics[1].Label, 13)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -268,8 +264,6 @@ func TestPrometheus(t *testing.T) {
 			requestDurationMetrics := requestDuration.GetMetric()
 
 			require.Len(t, requestDurationMetrics, 2)
-			require.Len(t, requestDurationMetrics[0].Label, 12)
-			require.Len(t, requestDurationMetrics[1].Label, 14)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -385,8 +379,6 @@ func TestPrometheus(t *testing.T) {
 			responseContentLengthMetrics := responseContentLength.GetMetric()
 
 			require.Len(t, responseContentLengthMetrics, 2)
-			require.Len(t, responseContentLengthMetrics[0].Label, 12)
-			require.Len(t, responseContentLengthMetrics[1].Label, 14)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -502,7 +494,6 @@ func TestPrometheus(t *testing.T) {
 			planningTimeMetrics := planningTime.GetMetric()
 
 			require.Len(t, planningTimeMetrics, 1)
-			require.Len(t, planningTimeMetrics[0].Label, 12)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -613,8 +604,6 @@ func TestPrometheus(t *testing.T) {
 			requestTotalMetrics := requestTotal.GetMetric()
 
 			require.Len(t, requestTotalMetrics, 2)
-			require.Len(t, requestTotalMetrics[0].Label, 14)
-			require.Len(t, requestTotalMetrics[1].Label, 16)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -746,8 +735,6 @@ func TestPrometheus(t *testing.T) {
 			requestsInFlightMetrics := requestsInFlight.GetMetric()
 
 			require.Len(t, requestsInFlightMetrics, 2)
-			require.Len(t, requestsInFlightMetrics[0].Label, 10)
-			require.Len(t, requestsInFlightMetrics[1].Label, 15)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -859,8 +846,6 @@ func TestPrometheus(t *testing.T) {
 			requestDurationMetrics := requestDuration.GetMetric()
 
 			require.Len(t, requestDurationMetrics, 2)
-			require.Len(t, requestDurationMetrics[0].Label, 14)
-			require.Len(t, requestDurationMetrics[1].Label, 16)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -992,8 +977,6 @@ func TestPrometheus(t *testing.T) {
 			responseContentLengthMetrics := responseContentLength.GetMetric()
 
 			require.Len(t, responseContentLengthMetrics, 2)
-			require.Len(t, responseContentLengthMetrics[0].Label, 14)
-			require.Len(t, responseContentLengthMetrics[1].Label, 16)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -1170,8 +1153,6 @@ func TestPrometheus(t *testing.T) {
 			requestTotalMetrics := requestTotal.GetMetric()
 
 			require.Len(t, requestTotalMetrics, 2)
-			require.Len(t, requestTotalMetrics[0].Label, 13)
-			require.Len(t, requestTotalMetrics[1].Label, 15)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -1295,8 +1276,6 @@ func TestPrometheus(t *testing.T) {
 			requestsInFlightMetrics := requestsInFlight.GetMetric()
 
 			require.Len(t, requestsInFlightMetrics, 2)
-			require.Len(t, requestsInFlightMetrics[0].Label, 10)
-			require.Len(t, requestsInFlightMetrics[1].Label, 14)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -1404,8 +1383,6 @@ func TestPrometheus(t *testing.T) {
 			requestDurationMetrics := requestDuration.GetMetric()
 
 			require.Len(t, requestDurationMetrics, 2)
-			require.Len(t, requestDurationMetrics[0].Label, 13)
-			require.Len(t, requestDurationMetrics[1].Label, 15)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -1529,8 +1506,6 @@ func TestPrometheus(t *testing.T) {
 			responseContentLengthMetrics := responseContentLength.GetMetric()
 
 			require.Len(t, responseContentLengthMetrics, 2)
-			require.Len(t, responseContentLengthMetrics[0].Label, 13)
-			require.Len(t, responseContentLengthMetrics[1].Label, 15)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -1688,8 +1663,6 @@ func TestPrometheus(t *testing.T) {
 			totalRequestErrorsMetric := totalRequestsErrors.GetMetric()
 
 			require.Len(t, totalRequestErrorsMetric, 2)
-			require.Len(t, totalRequestErrorsMetric[0].Label, 12)
-			require.Len(t, totalRequestErrorsMetric[1].Label, 14)
 
 			// Error metric for the subgraph error
 			require.Equal(t, []*io_prometheus_client.LabelPair{
@@ -1873,10 +1846,6 @@ func TestPrometheus(t *testing.T) {
 			*/
 
 			require.Len(t, totalRequestErrorsMetric, 4)
-			require.Len(t, totalRequestErrorsMetric[0].Label, 13)
-			require.Len(t, totalRequestErrorsMetric[1].Label, 13)
-			require.Len(t, totalRequestErrorsMetric[2].Label, 15)
-			require.Len(t, totalRequestErrorsMetric[3].Label, 15)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -2145,8 +2114,6 @@ func TestPrometheus(t *testing.T) {
 			requestTotalMetrics := requestTotal.GetMetric()
 
 			require.Len(t, requestTotalMetrics, 2)
-			require.Len(t, requestTotalMetrics[0].Label, 13)
-			require.Len(t, requestTotalMetrics[1].Label, 15)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -2270,8 +2237,6 @@ func TestPrometheus(t *testing.T) {
 			requestsInFlightMetrics := requestsInFlight.GetMetric()
 
 			require.Len(t, requestsInFlightMetrics, 2)
-			require.Len(t, requestsInFlightMetrics[0].Label, 10)
-			require.Len(t, requestsInFlightMetrics[1].Label, 14)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -2379,8 +2344,6 @@ func TestPrometheus(t *testing.T) {
 			requestDurationMetrics := requestDuration.GetMetric()
 
 			require.Len(t, requestDurationMetrics, 2)
-			require.Len(t, requestDurationMetrics[0].Label, 13)
-			require.Len(t, requestDurationMetrics[1].Label, 15)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -2504,8 +2467,6 @@ func TestPrometheus(t *testing.T) {
 			responseContentLengthMetrics := responseContentLength.GetMetric()
 
 			require.Len(t, responseContentLengthMetrics, 2)
-			require.Len(t, responseContentLengthMetrics[0].Label, 13)
-			require.Len(t, responseContentLengthMetrics[1].Label, 15)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -2656,8 +2617,6 @@ func TestPrometheus(t *testing.T) {
 			requestTotalMetrics := requestTotal.GetMetric()
 
 			require.Len(t, requestTotalMetrics, 2)
-			require.Len(t, requestTotalMetrics[0].Label, 12)
-			require.Len(t, requestTotalMetrics[1].Label, 14)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -2773,8 +2732,6 @@ func TestPrometheus(t *testing.T) {
 			requestsInFlightMetrics := requestsInFlight.GetMetric()
 
 			require.Len(t, requestsInFlightMetrics, 2)
-			require.Len(t, requestsInFlightMetrics[0].Label, 9)
-			require.Len(t, requestsInFlightMetrics[1].Label, 13)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -2869,7 +2826,6 @@ func TestPrometheus(t *testing.T) {
 					Value: PointerOf("employees"),
 				},
 			}, requestsInFlightMetrics[1].Label)
-
 		})
 
 		metricReaderFiltered := metric.NewManualReader()
@@ -2910,8 +2866,6 @@ func TestPrometheus(t *testing.T) {
 			requestsInFlightMetricsFiltered := requestsInFlightFiltered.GetMetric()
 
 			require.Len(t, requestsInFlightMetricsFiltered, 2)
-			require.Len(t, requestsInFlightMetricsFiltered[0].Label, 7)
-			require.Len(t, requestsInFlightMetricsFiltered[1].Label, 11)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
@@ -2995,6 +2949,49 @@ func TestPrometheus(t *testing.T) {
 			require.Greater(t, len(mfFull), len(mfFiltered), "full metrics should have more metrics than filtered")
 			require.Greater(t, len(requestsInFlightMetricsFull[0].Label), len(requestsInFlightMetricsFiltered[0].Label))
 			require.Greater(t, len(requestsInFlightMetricsFull[1].Label), len(requestsInFlightMetricsFiltered[1].Label))
+		})
+	})
+
+	t.Run("Collect and export OTEL metrics to Prometheus with exclude scope info", func(t *testing.T) {
+		t.Parallel()
+
+		var (
+			err        error
+			mfFiltered []*io_prometheus_client.MetricFamily
+		)
+
+		metricReaderFiltered := metric.NewManualReader()
+		promRegistryFiltered := prometheus.NewRegistry()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:       metricReaderFiltered,
+			PrometheusRegistry: promRegistryFiltered,
+			MetricOptions: testenv.MetricOptions{
+				MetricExclusions: testenv.MetricExclusions{
+					ExcludeScopeInfo: true,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employees { id } }`,
+			})
+
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			mfFiltered, err = promRegistryFiltered.Gather()
+			require.NoError(t, err)
+
+			requestsInFlightFiltered := findMetricFamilyByName(mfFiltered, "router_http_requests_in_flight")
+			requestsInFlightMetricsFiltered := requestsInFlightFiltered.GetMetric()
+
+			require.Len(t, requestsInFlightMetricsFiltered, 2)
+
+			for _, metric := range requestsInFlightMetricsFiltered {
+				for _, label := range metric.Label {
+					require.NotEqual(t, PointerOf("otel_scope_name"), label.Name, "otel_scope_name should not be present")
+					require.NotEqual(t, PointerOf("otel_scope_version"), label.Name, "otel_scope_version should not be present")
+				}
+			}
 		})
 	})
 
@@ -4269,8 +4266,6 @@ func TestPrometheusWithModule(t *testing.T) {
 		requestDurationMetrics := requestDuration.GetMetric()
 
 		require.Len(t, requestDurationMetrics, 2)
-		require.Len(t, requestDurationMetrics[0].Label, 12)
-		require.Len(t, requestDurationMetrics[1].Label, 14)
 
 		require.Equal(t, []*io_prometheus_client.LabelPair{
 			{
