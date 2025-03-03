@@ -703,19 +703,27 @@ const extractDirectives = (
   }
 
   visit(astNode, {
-    Directive(node) {
-      if (node.name.value === "deprecated") {
-        const arg = node.arguments?.[0]?.value;
-        if (arg?.kind === Kind.STRING) {
-          result.deprecationReason = arg.value;
-        }
-      } else if (node.name.value === "authenticated") {
-        result.authenticated = true;
-      } else if (node.name.value === "requiresScopes" && Array.isArray(node.arguments)) {
-        result.requiresScopes = node.arguments
-            .filter((arg: ConstArgumentNode) => arg.name.value === "scopes" && arg.value.kind === Kind.LIST)
-            .flatMap((arg: ConstArgumentNode) => (arg.value as ListValueNode).values)
-            .map((value) => (value as ListValueNode).values.map((sv) => (sv as StringValueNode).value));
+    Directive(node, key, parent, path, ancestors) {
+      switch (node.name.value) {
+        case "deprecated":
+          const reasonArg = node.arguments?.[0];
+          if (reasonArg && reasonArg?.name.value === "reason" && reasonArg?.value.kind === Kind.STRING) {
+            result.deprecationReason = reasonArg.value.value;
+          }
+          break;
+        case "authenticated":
+          result.authenticated = true;
+          break;
+        case "requiresScopes":
+          const scopesArg = node.arguments?.[0];
+          if (scopesArg?.name.value === "scopes" && scopesArg?.value.kind === Kind.LIST) {
+            result.requiresScopes = scopesArg.value.values
+                .filter((value) => value.kind === Kind.LIST)
+                .map((value) => value.values)
+                .map((value) => value.filter((sv) => sv.kind === Kind.STRING).map((sv) => sv.value));
+          }
+          
+          break;
       }
       
       return false;
