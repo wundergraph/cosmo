@@ -51,7 +51,6 @@ type ExecutorBuildOptions struct {
 	EngineConfig                   *nodev1.EngineConfiguration
 	Subgraphs                      []*nodev1.Subgraph
 	RouterEngineConfig             *RouterEngineConfiguration
-	PubSubProviders                *EnginePubSubProviders
 	Reporter                       resolve.Reporter
 	ApolloCompatibilityFlags       config.ApolloCompatibilityFlags
 	ApolloRouterCompatibilityFlags config.ApolloRouterCompatibilityFlags
@@ -59,7 +58,7 @@ type ExecutorBuildOptions struct {
 }
 
 func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *ExecutorBuildOptions) (*Executor, error) {
-	planConfig, err := b.buildPlannerConfiguration(ctx, opts.EngineConfig, opts.Subgraphs, opts.RouterEngineConfig, opts.PubSubProviders)
+	planConfig, err := b.buildPlannerConfiguration(ctx, opts.EngineConfig, opts.Subgraphs, opts.RouterEngineConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build planner configuration: %w", err)
 	}
@@ -268,7 +267,7 @@ func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
 	return opts, nil
 }
 
-func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineCfg *RouterEngineConfiguration, pubSubProviders *EnginePubSubProviders) (*plan.Configuration, error) {
+func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineCfg *RouterEngineConfiguration) (*plan.Configuration, error) {
 	// this loader is used to take the engine config and create a plan config
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
@@ -280,8 +279,6 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		b.logger,
 		routerEngineCfg.Execution.EnableSingleFlight,
 		routerEngineCfg.Execution.EnableNetPoll,
-		pubSubProviders.nats,
-		pubSubProviders.kafka,
 	))
 
 	// this generates the plan config using the data source factories from the config package
