@@ -2986,25 +2986,12 @@ func TestPrometheus(t *testing.T) {
 
 			require.Len(t, requestsInFlightMetricsFiltered, 2)
 
-			require.NotContains(t, requestsInFlightMetricsFiltered[0].Label, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("otel_scope_name"),
-				Value: PointerOf("cosmo.router.prometheus"),
-			})
-
-			require.NotContains(t, requestsInFlightMetricsFiltered[0].Label, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("otel_scope_version"),
-				Value: PointerOf("0.0.1"),
-			})
-
-			require.NotContains(t, requestsInFlightMetricsFiltered[1].Label, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("otel_scope_name"),
-				Value: PointerOf("cosmo.router.prometheus"),
-			})
-
-			require.NotContains(t, requestsInFlightMetricsFiltered[1].Label, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("otel_scope_version"),
-				Value: PointerOf("0.0.1"),
-			})
+			for _, metric := range requestsInFlightMetricsFiltered {
+				for _, label := range metric.Label {
+					require.NotEqual(t, PointerOf("otel_scope_name"), label.Name, "otel_scope_name should not be present")
+					require.NotEqual(t, PointerOf("otel_scope_version"), label.Name, "otel_scope_version should not be present")
+				}
+			}
 		})
 	})
 
