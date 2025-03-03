@@ -312,62 +312,130 @@ func TestFileUpload_FilesExceedsLimit(t *testing.T) {
 func TestMultipleFilesUpload(t *testing.T) {
 	t.Parallel()
 
-	t.Run("variable name files", func(t *testing.T) {
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			files := []testenv.FileUpload{
-				{VariablesPath: "variables.files.0", FileContent: []byte("Contents of first file")},
-				{VariablesPath: "variables.files.1", FileContent: []byte("Contents of second file")},
-			}
+	t.Run("variables remapping enabled", func(t *testing.T) {
+		t.Run("variable name files", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+				files := []testenv.FileUpload{
+					{VariablesPath: "variables.files.0", FileContent: []byte("Contents of first file")},
+					{VariablesPath: "variables.files.1", FileContent: []byte("Contents of second file")},
+				}
 
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query:     "mutation($files: [Upload!]!) { multipleUpload(files: $files)}",
-				Variables: []byte(`{"files":[null, null]}`),
-				Files:     files,
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     "mutation($files: [Upload!]!) { multipleUpload(files: $files)}",
+					Variables: []byte(`{"files":[null, null]}`),
+					Files:     files,
+				})
+				require.JSONEq(t, `{"data":{"multipleUpload": true}}`, res.Body)
 			})
-			require.JSONEq(t, `{"data":{"multipleUpload": true}}`, res.Body)
+		})
+
+		t.Run("list of files", func(t *testing.T) {
+			t.Run("nested on a second level - with remap", func(t *testing.T) {
+				testenv.Run(t, &testenv.Config{
+					ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+						engineExecutionConfiguration.DisableVariablesRemapping = false
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					fileContent := bytes.Repeat([]byte("a"), 1024)
+
+					files := []testenv.FileUpload{
+						{VariablesPath: "variables.whatever1", FileContent: fileContent},
+						{VariablesPath: "variables.whatever2", FileContent: fileContent},
+					}
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query:     "mutation ($whatever1: Upload!, $whatever2: Upload!){singleUploadWithInput(arg: {nestedList: [$whatever1,$whatever2]})}",
+						Variables: []byte(`{"whatever1":null,"whatever2":null}`),
+						Files:     files,
+					})
+					require.Equal(t, `{"data":{"singleUploadWithInput":true}}`, res.Body)
+				})
+			})
+
+			t.Run("in a variables no remap", func(t *testing.T) {
+				testenv.Run(t, &testenv.Config{
+					ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+						engineExecutionConfiguration.DisableVariablesRemapping = false
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					fileContent := bytes.Repeat([]byte("a"), 1024)
+
+					files := []testenv.FileUpload{
+						{VariablesPath: "variables.whatever.nestedList.0", FileContent: fileContent},
+						{VariablesPath: "variables.whatever.nestedList.1", FileContent: fileContent},
+					}
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query:     "mutation ($whatever: FileUpload!){singleUploadWithInput(arg: $whatever)}",
+						Variables: []byte(`{"whatever":{"nestedList":[null,null]}}`),
+						Files:     files,
+					})
+					require.Equal(t, `{"data":{"singleUploadWithInput":true}}`, res.Body)
+				})
+			})
 		})
 	})
 
-	t.Run("list of files", func(t *testing.T) {
-		t.Run("nested on a second level - with remap", func(t *testing.T) {
-			testenv.Run(t, &testenv.Config{
-				ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-					engineExecutionConfiguration.DisableVariablesRemapping = false
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				fileContent := bytes.Repeat([]byte("a"), 1024)
-
-				files := []testenv.FileUpload{
-					{VariablesPath: "variables.whatever1", FileContent: fileContent},
-					{VariablesPath: "variables.whatever2", FileContent: fileContent},
-				}
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query:     "mutation ($whatever1: Upload!, $whatever2: Upload!){singleUploadWithInput(arg: {nestedList: [$whatever1,$whatever2]})}",
-					Variables: []byte(`{"whatever1":null,"whatever2":null}`),
-					Files:     files,
-				})
-				require.Equal(t, `{"data":{"singleUploadWithInput":true}}`, res.Body)
-			})
-		})
-
-		t.Run("in a variables no remap", func(t *testing.T) {
+	t.Run("variables remapping disabled", func(t *testing.T) {
+		t.Run("variable name files", func(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 					engineExecutionConfiguration.DisableVariablesRemapping = true
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				fileContent := bytes.Repeat([]byte("a"), 1024)
-
 				files := []testenv.FileUpload{
-					{VariablesPath: "variables.whatever.nestedList.0", FileContent: fileContent},
-					{VariablesPath: "variables.whatever.nestedList.1", FileContent: fileContent},
+					{VariablesPath: "variables.files.0", FileContent: []byte("Contents of first file")},
+					{VariablesPath: "variables.files.1", FileContent: []byte("Contents of second file")},
 				}
+
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query:     "mutation ($whatever: FileUpload!){singleUploadWithInput(arg: $whatever)}",
-					Variables: []byte(`{"whatever":{"nestedList":[null,null]}}`),
+					Query:     "mutation($files: [Upload!]!) { multipleUpload(files: $files)}",
+					Variables: []byte(`{"files":[null, null]}`),
 					Files:     files,
 				})
-				require.Equal(t, `{"data":{"singleUploadWithInput":true}}`, res.Body)
+				require.JSONEq(t, `{"data":{"multipleUpload": true}}`, res.Body)
+			})
+		})
+
+		t.Run("list of files", func(t *testing.T) {
+			t.Run("nested on a second level - with remap", func(t *testing.T) {
+				testenv.Run(t, &testenv.Config{
+					ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+						engineExecutionConfiguration.DisableVariablesRemapping = true
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					fileContent := bytes.Repeat([]byte("a"), 1024)
+
+					files := []testenv.FileUpload{
+						{VariablesPath: "variables.whatever1", FileContent: fileContent},
+						{VariablesPath: "variables.whatever2", FileContent: fileContent},
+					}
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query:     "mutation ($whatever1: Upload!, $whatever2: Upload!){singleUploadWithInput(arg: {nestedList: [$whatever1,$whatever2]})}",
+						Variables: []byte(`{"whatever1":null,"whatever2":null}`),
+						Files:     files,
+					})
+					require.Equal(t, `{"data":{"singleUploadWithInput":true}}`, res.Body)
+				})
+			})
+
+			t.Run("in a variables no remap", func(t *testing.T) {
+				testenv.Run(t, &testenv.Config{
+					ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+						engineExecutionConfiguration.DisableVariablesRemapping = true
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					fileContent := bytes.Repeat([]byte("a"), 1024)
+
+					files := []testenv.FileUpload{
+						{VariablesPath: "variables.whatever.nestedList.0", FileContent: fileContent},
+						{VariablesPath: "variables.whatever.nestedList.1", FileContent: fileContent},
+					}
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query:     "mutation ($whatever: FileUpload!){singleUploadWithInput(arg: $whatever)}",
+						Variables: []byte(`{"whatever":{"nestedList":[null,null]}}`),
+						Files:     files,
+					})
+					require.Equal(t, `{"data":{"singleUploadWithInput":true}}`, res.Body)
+				})
 			})
 		})
 	})
