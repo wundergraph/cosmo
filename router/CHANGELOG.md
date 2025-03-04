@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.188.1](https://github.com/wundergraph/cosmo/compare/router@0.188.0...router@0.188.1) (2025-03-04)
+
+### Bug Fixes
+
+* reading file uploads map by ignoring actual indices in map ([#1653](https://github.com/wundergraph/cosmo/issues/1653)) ([a262784](https://github.com/wundergraph/cosmo/commit/a26278475dfb1b426c6e4e66cb3f34ad09a9c90d)) (@devsergiy)
+
 # [0.188.0](https://github.com/wundergraph/cosmo/compare/router@0.187.1...router@0.188.0) (2025-03-04)
 
 ### Bug Fixes
