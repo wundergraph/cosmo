@@ -1002,6 +1002,43 @@ func TestOidcDiscovery(t *testing.T) {
 		return tokens, authenticators
 	}
 
+	t.Run("Should fail to create token decoder when server is not running", func(t *testing.T) {
+		t.Parallel()
+
+		rsa, err := jwks.NewRSACrypto("", jwkset.AlgRS256, 2048)
+		require.NoError(t, err)
+
+		authServer, err := jwks.NewServerWithCrypto(t, rsa)
+		require.NoError(t, err)
+
+		authServer.Close()
+
+		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(),
+			[]authentication.JWKSConfig{
+				toJWKSConfig(authServer.OIDCURL(), time.Second*5)})
+		require.Error(t, err)
+		require.Nil(t, tokenDecoder)
+	})
+
+	t.Run("Should fail to create token decoder when server is slow", func(t *testing.T) {
+		t.Parallel()
+
+		rsa, err := jwks.NewRSACrypto("", jwkset.AlgRS256, 2048)
+		require.NoError(t, err)
+
+		authServer, err := jwks.NewServerWithCrypto(t, rsa)
+		require.NoError(t, err)
+
+		// Simulate long-running operation
+		authServer.SetRespondTime(time.Minute)
+
+		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(),
+			[]authentication.JWKSConfig{
+				toJWKSConfig(authServer.OIDCURL(), time.Second*5)})
+		require.Error(t, err)
+		require.Nil(t, tokenDecoder)
+	})
+
 	t.Run("Should discover JWKs from OIDC discovery endpoint", func(t *testing.T) {
 		t.Parallel()
 

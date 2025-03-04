@@ -22,9 +22,10 @@ const (
 )
 
 type Server struct {
-	providers  map[string]Crypto
-	httpServer *httptest.Server
-	storage    jwkset.Storage
+	providers   map[string]Crypto
+	httpServer  *httptest.Server
+	storage     jwkset.Storage
+	respondTime time.Duration
 }
 
 type oidcConfiguration struct {
@@ -86,6 +87,8 @@ func (s *Server) TokenForKID(kid string, claims map[string]any) (string, error) 
 }
 
 func (s *Server) jwksJSON(w http.ResponseWriter, r *http.Request) {
+	time.Sleep(s.respondTime)
+
 	ctx := context.Background()
 
 	rawJWKS, err := s.storage.JSON(ctx)
@@ -96,6 +99,7 @@ func (s *Server) jwksJSON(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) oidcJSON(w http.ResponseWriter, r *http.Request) {
+	time.Sleep(s.respondTime)
 	oidc := oidcConfiguration{
 		Issuer:                            s.httpServer.URL,
 		AuthorizationEndpoint:             s.httpServer.URL + "/auth",
@@ -156,6 +160,10 @@ func (s *Server) waitForServer(ctx context.Context) error {
 		}
 		time.Sleep(time.Millisecond * 100)
 	}
+}
+
+func (s *Server) SetRespondTime(d time.Duration) {
+	s.respondTime = d
 }
 
 func NewServerWithCrypto(t *testing.T, providers ...Crypto) (*Server, error) {
