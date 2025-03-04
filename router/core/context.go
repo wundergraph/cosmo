@@ -32,6 +32,18 @@ const (
 	engineLoaderHooksContextKey
 )
 
+type requestPhase string
+
+const (
+	requestPhaseStart         requestPhase = "start"
+	requestPhaseReadBody      requestPhase = "read_body"
+	requestPhaseAuthenticate  requestPhase = "authenticate"
+	requestPhaseParseVariable requestPhase = "parse_variable"
+	requestPhaseValidation    requestPhase = "validation"
+	requestPhasePlan          requestPhase = "plan"
+	requestPhaseExecute       requestPhase = "execute"
+)
+
 var _ RequestContext = (*requestContext)(nil)
 
 type Subgraph struct {
@@ -241,6 +253,8 @@ type requestContext struct {
 	keys map[string]any
 	// responseWriter is the original response writer received by the router.
 	responseWriter http.ResponseWriter
+	// phase is used to identify the current phase of the request.
+	phase requestPhase
 	// error indicates if the request / response has an error. Due to the nature of GraphQL
 	// Error can be set even if the response status code is 200.
 	error error
@@ -265,6 +279,11 @@ type requestContext struct {
 func (c *requestContext) SetError(err error) {
 	c.error = err
 	c.expressionContext.Request.Error = err
+}
+
+// SetPhase sets the current phase of the request, and we could use this to track and group metrics.
+func (c *requestContext) SetPhase(phase requestPhase) {
+	c.phase = phase
 }
 
 func (c *requestContext) ResolveAnyExpressionWithWrappedError(expression *vm.Program) (any, error) {
