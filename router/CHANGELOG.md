@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.188.2](https://github.com/wundergraph/cosmo/compare/router@0.188.1...router@0.188.2) (2025-03-04)
+
+### Bug Fixes
+
+* value completion propagation for invalid enum values ([#1654](https://github.com/wundergraph/cosmo/issues/1654)) ([da7615d](https://github.com/wundergraph/cosmo/commit/da7615d42e0f8d9617b81b124508c0c826bc7651)) (@Aenimus)
+
 ## [0.188.1](https://github.com/wundergraph/cosmo/compare/router@0.188.0...router@0.188.1) (2025-03-04)
 
 ### Bug Fixes
