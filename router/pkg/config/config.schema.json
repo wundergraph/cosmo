@@ -1253,6 +1253,11 @@
       "description": "Enable the JSON log format. The JSON log format is used to log the logs in JSON format. The default value is true. If the value is false, the logs are logged a human friendly text format.",
       "default": true
     },
+    "force_json_log": {
+      "type": "boolean",
+      "description": "Forces JSON log output when router was started in development mode. This flag is only taken into account when 'dev_mode' is set to 'true'. The default value is false.",
+      "default": false
+    },
     "shutdown_delay": {
       "type": "string",
       "duration": {

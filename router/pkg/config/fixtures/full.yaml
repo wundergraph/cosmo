@@ -17,6 +17,7 @@ playground:
   concurrency_limit: 1500
 introspection_enabled: true
 json_log: true
+force_json_log: true
 shutdown_delay: 15s
 grace_period: 20s
 poll_interval: 10s

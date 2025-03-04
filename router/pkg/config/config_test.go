@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
 	"time"
@@ -534,4 +535,74 @@ version: "1"
 
 	require.True(t, c.Config.Telemetry.Metrics.Prometheus.EngineStats.Subscriptions)
 	require.True(t, c.Config.Telemetry.Metrics.OTLP.EngineStats.Subscriptions)
+}
+
+func TestJSONLog(t *testing.T) {
+	type input struct {
+		jsonLog      bool
+		forceJSONLog bool
+		devMode      bool
+	}
+
+	tests := []struct {
+		name             string
+		input            input
+		isJSONLogEnabled bool
+	}{
+		{
+			name: "Should enable json log without dev mode",
+			input: input{
+				jsonLog:      true,
+				forceJSONLog: false,
+				devMode:      false,
+			},
+			isJSONLogEnabled: true,
+		},
+		{
+			name: "Should enable json log with force json log and dev mode",
+			input: input{
+				jsonLog:      false,
+				forceJSONLog: true,
+				devMode:      true,
+			},
+			isJSONLogEnabled: true,
+		},
+		{
+			name: "Should not enable json log when in dev mode",
+			input: input{
+				jsonLog:      true,
+				forceJSONLog: false,
+				devMode:      true,
+			},
+			isJSONLogEnabled: false,
+		},
+		{
+			name: "Should not take force json log into account when not in dev mode",
+			input: input{
+				jsonLog:      false,
+				forceJSONLog: true,
+				devMode:      false,
+			},
+			isJSONLogEnabled: false,
+		},
+	}
+
+	t.Parallel()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			f := createTempFileFromFixture(t,
+				fmt.Sprintf(`
+version: "1"
+
+json_log: %t
+force_json_log: %t
+dev_mode: %t`, tt.input.jsonLog, tt.input.forceJSONLog, tt.input.devMode))
+			c, err := LoadConfig(f, "")
+			require.NoError(t, err)
+			require.Equal(t, tt.isJSONLogEnabled, c.Config.JSONLog)
+		})
+	}
 }

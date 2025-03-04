@@ -861,6 +861,7 @@ type Config struct {
 	QueryPlansEnabled             bool                        `yaml:"query_plans_enabled" envDefault:"true" env:"QUERY_PLANS_ENABLED"`
 	LogLevel                      string                      `yaml:"log_level" envDefault:"info" env:"LOG_LEVEL"`
 	JSONLog                       bool                        `yaml:"json_log" envDefault:"true" env:"JSON_LOG"`
+	ForceJSONLog                  bool                        `yaml:"force_json_log" envDefault:"false" env:"FORCE_JSON_LOG"`
 	ShutdownDelay                 time.Duration               `yaml:"shutdown_delay" envDefault:"60s" env:"SHUTDOWN_DELAY"`
 	GracePeriod                   time.Duration               `yaml:"grace_period" envDefault:"30s" env:"GRACE_PERIOD"`
 	PollInterval                  time.Duration               `yaml:"poll_interval" envDefault:"10s" env:"POLL_INTERVAL"`
@@ -983,7 +984,7 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 	// Post-process the config
 
 	if cfg.Config.DevelopmentMode {
-		cfg.Config.JSONLog = false
+		cfg.Config.JSONLog = cfg.Config.ForceJSONLog
 		cfg.Config.SubgraphErrorPropagation.Enabled = true
 		cfg.Config.SubgraphErrorPropagation.PropagateStatusCodes = true
 		cfg.Config.SubgraphErrorPropagation.OmitLocations = false
