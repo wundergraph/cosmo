@@ -24,6 +24,9 @@ import { ComponentType, useEffect, useState } from "react";
 import { Input } from "../ui/input";
 import { Slider } from "../ui/slider";
 import { AnalyticsFilter } from "./filters";
+import { CiFilter } from "react-icons/ci";
+import { PopoverPortal } from "@radix-ui/react-popover";
+import { Checkbox } from "../ui/checkbox";
 
 interface DataTableFacetedFilter<TData, TValue> {
   column?: Column<TData, TValue>;
@@ -159,6 +162,20 @@ const SliderWithOptions = ({
   );
 };
 
+const prefixFilter = (value: string, search: string) => {
+  if (value.toLowerCase().startsWith(search.toLowerCase())) {
+    return 1;
+  }
+  return 0;
+};
+
+const regularFilter = (value: string, search: string) => {
+  if (value.toLowerCase().includes(search.toLowerCase())) {
+    return 1;
+  }
+  return 0;
+};
+
 export function DataTableFilterCommands<TData, TValue>({
   onSelect,
   selectedOptions,
@@ -174,10 +191,14 @@ export function DataTableFilterCommands<TData, TValue>({
   });
   let content: React.ReactNode;
 
+  // the options are filtered based on the search input
+  const [filteredOptions, setFilteredOptions] = useState(options);
+  const [shouldPrefixSearch, setShouldPrefixSearch] = useState(false);
+
   useEffect(() => {
     if (
       !selectedOptions ||
-      selectedOptions.length === 0 || 
+      selectedOptions.length === 0 ||
       customOptions !== CustomOptions.Range
     )
       return;
@@ -335,10 +356,54 @@ export function DataTableFilterCommands<TData, TValue>({
   }
 
   return (
-    <Command className="w-64">
+    <Command
+      className="w-64"
+      filter={shouldPrefixSearch ? prefixFilter : regularFilter}
+    >
       {customOptions === undefined && (
         <>
-          <CommandInput placeholder={title} disabled={options.length === 0} />
+          <div className="relative">
+            <CommandInput
+              placeholder={title}
+              disabled={options.length === 0}
+              onValueChange={(value) => {
+                const filtered = options.filter((option) =>
+                  shouldPrefixSearch
+                    ? option.label.toLowerCase().startsWith(value.toLowerCase())
+                    : option.label.toLowerCase().includes(value.toLowerCase()),
+                );
+                setFilteredOptions(filtered);
+              }}
+            />
+            <Popover>
+              <PopoverTrigger
+                asChild
+                className="absolute right-2 top-3 h-4 w-4 text-muted-foreground"
+              >
+                <Button variant="link" size="icon">
+                  <CiFilter />
+                </Button>
+              </PopoverTrigger>
+              <PopoverPortal>
+                <PopoverContent
+                  align="center"
+                  className="flex w-48 p-0"
+                  sideOffset={20}
+                  side="right"
+                >
+                  <div className="flex items-center gap-x-2 p-2">
+                    <Checkbox
+                      checked={shouldPrefixSearch}
+                      onCheckedChange={(state) => {
+                        setShouldPrefixSearch(!!state);
+                      }}
+                    />
+                    <span className="text-sm">Prefix Search</span>
+                  </div>
+                </PopoverContent>
+              </PopoverPortal>
+            </Popover>
+          </div>
           <CommandList>
             <CommandEmpty>No results found.</CommandEmpty>
             {options.length > 0 ? (
@@ -373,7 +438,6 @@ export function DataTableFilterCommands<TData, TValue>({
                       {option.icon && (
                         <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />
                       )}
-                      <span className="hidden">{index}</span>
                       <span className="truncate">{option.label}</span>
                     </CommandItem>
                   );
@@ -384,20 +448,46 @@ export function DataTableFilterCommands<TData, TValue>({
                 No filters.
               </div>
             )}
-            {selectedValues.size > 0 && (
-              <>
-                <CommandSeparator />
-                <CommandGroup>
-                  <CommandItem
-                    onSelect={() => onSelect?.(undefined)}
-                    className="justify-center text-center"
-                  >
-                    Clear filters
-                  </CommandItem>
-                </CommandGroup>
-              </>
-            )}
           </CommandList>
+          <>
+            <Separator orientation="horizontal" />
+            <div className="flex justify-center gap-x-2 pt-2">
+              {selectedValues.size < options.length && (
+                <Button
+                  variant="ghost"
+                  className="justify-center text-center"
+                  onClick={() => {
+                    const filterValues = Array.from(selectedValues);
+                    onSelect?.(
+                      filterValues.length
+                        ? [
+                            ...filterValues,
+                            ...filteredOptions.map((option) => option.value),
+                          ]
+                        : filteredOptions.map((option) => option.value),
+                    );
+                  }}
+                >
+                  Select All
+                </Button>
+              )}
+              {selectedValues.size > 0 &&
+                selectedValues.size < options.length && (
+                  <Separator orientation="vertical" className="my-1 h-8" />
+                )}
+              {selectedValues.size > 0 && (
+                <Button
+                  variant="ghost"
+                  className="justify-center text-center"
+                  onClick={() => {
+                    onSelect?.(undefined);
+                  }}
+                >
+                  Clear filters
+                </Button>
+              )}
+            </div>
+          </>
         </>
       )}
       {customOptions !== undefined && <>{content}</>}
