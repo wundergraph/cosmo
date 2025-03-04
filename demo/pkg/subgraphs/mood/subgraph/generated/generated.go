@@ -272,6 +272,7 @@ type Mutation {
 }
 
 enum Mood {
+    APATHETIC @inaccessible
     HAPPY
     SAD
 }
