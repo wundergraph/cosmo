@@ -8,6 +8,7 @@ import { getBaseHeaders, config } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { GraphToken } from '../../auth/utils.js';
 import { makeSignature, safeCompare } from '../../../core/signature.js';
+import { customRpcHeadersOption } from '../../shared-options.js';
 
 export const handleOutput = async (out: string | undefined, config: string) => {
   if (out) {
@@ -29,6 +30,7 @@ export default (opts: BaseCommandOptions) => {
     '--graph-sign-key [string]',
     'The signature key to verify the downloaded router config. If not provided, the router config will not be verified.',
   );
+  command.option.apply(command, customRpcHeadersOption);
   command.action(async (name, options) => {
     const resp = await opts.client.platform.generateRouterToken(
       {
@@ -36,7 +38,7 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 
