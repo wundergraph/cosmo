@@ -922,7 +922,8 @@
                           "operation_sha256",
                           "operation_name",
                           "operation_hash",
-                          "router_config_version"
+                          "router_config_version",
+                          "request_phase"
                         ]
                       }
                     }

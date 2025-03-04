@@ -709,6 +709,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				w:                             w,
 				r:                             r,
 			})
+			reqContext.SetPhase(requestPhaseStart)
 
 			r = r.WithContext(withRequestContext(r.Context(), reqContext))
 

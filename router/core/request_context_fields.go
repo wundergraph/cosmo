@@ -2,15 +2,16 @@ package core
 
 import (
 	"fmt"
+	"net/http"
+	"strconv"
+	"time"
+
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"net/http"
-	"strconv"
-	"time"
 )
 
 // Context field names used to expose information about the operation being executed.
@@ -29,6 +30,7 @@ const (
 	ContextFieldOperationSha256            = "operation_sha256"
 	ContextFieldResponseErrorMessage       = "response_error_message"
 	ContextFieldRequestError               = "request_error"
+	ContextFieldRequestPhase               = "request_phase"
 )
 
 // Helper functions to create zap fields for custom attributes.
@@ -245,6 +247,8 @@ func getCustomDynamicAttributeValue(
 		return reqContext.graphQLErrorServices
 	case ContextFieldGraphQLErrorCodes:
 		return reqContext.graphQLErrorCodes
+	case ContextFieldRequestPhase:
+		return reqContext.phase
 	}
 
 	return ""

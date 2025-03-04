@@ -232,6 +232,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldGraphQLErrorServices, requestContext.graphQLErrorServices)
 			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldOperationServices, requestContext.dataSourceNames)
 			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldGraphQLErrorCodes, requestContext.graphQLErrorCodes)
+			requestContext.telemetry.addCustomMetricStringAttr(ContextFieldRequestPhase, string(requestContext.phase))
 
 			metrics.Finish(
 				requestContext,
@@ -264,6 +265,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		var body []byte
 		var files []*httpclient.FileUpload
 
+		requestContext.SetPhase(requestPhaseReadBody)
 		if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
 			if !h.fileUploadEnabled {
 				requestContext.SetError(&httpGraphqlError{
@@ -331,6 +333,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		// If we have authenticators, we try to authenticate the request
 		if h.accessController != nil {
+			requestContext.SetPhase(requestPhaseAuthenticate)
 			_, authenticateSpan := h.tracer.Start(r.Context(), "Authenticate",
 				trace.WithSpanKind(trace.SpanKindServer),
 				trace.WithAttributes(requestContext.telemetry.traceAttrs...),
@@ -559,6 +562,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	// because the operation was already parsed. This is a performance optimization, and we
 	// can do it because we know that the persisted operation is immutable (identified by the hash)
 	if !skipParse {
+		requestContext.SetPhase(requestPhaseParseVariable)
 		_, engineParseSpan := h.tracer.Start(req.Context(), "Operation - Parse",
 			trace.WithSpanKind(trace.SpanKindInternal),
 			trace.WithAttributes(requestContext.telemetry.traceAttrs...),
@@ -824,6 +828,8 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 	)
+	requestContext.SetPhase(requestPhaseValidation)
+
 	validationCached, err := operationKit.Validate(requestContext.operation.executionOptions.SkipLoader, requestContext.operation.remapVariables, h.apolloCompatibilityFlags)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineValidateSpan, err)
@@ -898,6 +904,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		TrackSchemaUsageInfo: h.trackSchemaUsageInfo,
 	}
 
+	requestContext.SetPhase(requestPhasePlan)
 	err = h.planner.plan(requestContext.operation, planOptions)
 	if err != nil {
 
