@@ -673,6 +673,7 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 			metricAttributeExpressions: opts.metricAttributeExpressions,
 		},
 		expressionContext: rootCtx,
-		subgraphResolver:  subgraphResolverFromContext(opts.r.Context()),
+
+		subgraphResolver: subgraphResolverFromContext(opts.r.Context()),
 	}
 }

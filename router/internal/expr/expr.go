@@ -49,6 +49,7 @@ type Request struct {
 	URL    RequestURL     `expr:"url"`
 	Header RequestHeaders `expr:"header"`
 	Error  error          `expr:"error"`
+	Body   []byte         `expr:"body"`
 }
 
 // RequestURL is the context for the URL object in expressions

@@ -1998,6 +1998,11 @@
       "default": true,
       "description": "Enable the router registration. The router registration is used to register the router on the control-plane. The default value is true. This should not be modified unless you know what you are doing."
     },
+    "enable_body_in_expression_context": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable the body to be copied to the expression context."
+    },
     "override_routing_url": {
       "type": "object",
       "description": "The configuration for the override routing URL. The override routing URL is used to override the routing URL for subgraphs.",

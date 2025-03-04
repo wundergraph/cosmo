@@ -54,51 +54,53 @@ type PreHandlerOptions struct {
 	MaxUploadFiles     int
 	MaxUploadFileSize  int
 
-	FlushTelemetryAfterResponse bool
-	FileUploadEnabled           bool
-	TraceExportVariables        bool
-	DevelopmentMode             bool
-	EnableRequestTracing        bool
-	AlwaysIncludeQueryPlan      bool
-	AlwaysSkipLoader            bool
-	QueryPlansEnabled           bool
-	QueryPlansLoggingEnabled    bool
-	TrackSchemaUsageInfo        bool
-	ClientHeader                config.ClientHeader
-	ComputeOperationSha256      bool
-	ApolloCompatibilityFlags    *config.ApolloCompatibilityFlags
-	DisableVariablesRemapping   bool
+	FlushTelemetryAfterResponse   bool
+	FileUploadEnabled             bool
+	TraceExportVariables          bool
+	DevelopmentMode               bool
+	EnableRequestTracing          bool
+	AlwaysIncludeQueryPlan        bool
+	AlwaysSkipLoader              bool
+	QueryPlansEnabled             bool
+	QueryPlansLoggingEnabled      bool
+	TrackSchemaUsageInfo          bool
+	ClientHeader                  config.ClientHeader
+	ComputeOperationSha256        bool
+	ApolloCompatibilityFlags      *config.ApolloCompatibilityFlags
+	DisableVariablesRemapping     bool
+	EnableBodyInExpressionContext bool
 }
 
 type PreHandler struct {
-	log                         *zap.Logger
-	executor                    *Executor
-	metrics                     RouterMetrics
-	operationProcessor          *OperationProcessor
-	planner                     *OperationPlanner
-	accessController            *AccessController
-	operationBlocker            *OperationBlocker
-	developmentMode             bool
-	alwaysIncludeQueryPlan      bool
-	alwaysSkipLoader            bool
-	queryPlansEnabled           bool // queryPlansEnabled is a flag to enable query plans output in the extensions
-	queryPlansLoggingEnabled    bool // queryPlansLoggingEnabled is a flag to enable logging of query plans
-	routerPublicKey             *ecdsa.PublicKey
-	enableRequestTracing        bool
-	tracerProvider              *sdktrace.TracerProvider
-	flushTelemetryAfterResponse bool
-	tracer                      trace.Tracer
-	traceExportVariables        bool
-	fileUploadEnabled           bool
-	maxUploadFiles              int
-	maxUploadFileSize           int
-	complexityLimits            *config.ComplexityLimits
-	trackSchemaUsageInfo        bool
-	clientHeader                config.ClientHeader
-	computeOperationSha256      bool
-	apolloCompatibilityFlags    *config.ApolloCompatibilityFlags
-	variableParsePool           astjson.ParserPool
-	disableVariablesRemapping   bool
+	log                           *zap.Logger
+	executor                      *Executor
+	metrics                       RouterMetrics
+	operationProcessor            *OperationProcessor
+	planner                       *OperationPlanner
+	accessController              *AccessController
+	operationBlocker              *OperationBlocker
+	developmentMode               bool
+	alwaysIncludeQueryPlan        bool
+	alwaysSkipLoader              bool
+	queryPlansEnabled             bool // queryPlansEnabled is a flag to enable query plans output in the extensions
+	queryPlansLoggingEnabled      bool // queryPlansLoggingEnabled is a flag to enable logging of query plans
+	routerPublicKey               *ecdsa.PublicKey
+	enableRequestTracing          bool
+	tracerProvider                *sdktrace.TracerProvider
+	flushTelemetryAfterResponse   bool
+	tracer                        trace.Tracer
+	traceExportVariables          bool
+	fileUploadEnabled             bool
+	maxUploadFiles                int
+	maxUploadFileSize             int
+	complexityLimits              *config.ComplexityLimits
+	trackSchemaUsageInfo          bool
+	clientHeader                  config.ClientHeader
+	computeOperationSha256        bool
+	apolloCompatibilityFlags      *config.ApolloCompatibilityFlags
+	variableParsePool             astjson.ParserPool
+	disableVariablesRemapping     bool
+	enableBodyInExpressionContext bool
 }
 
 type httpOperation struct {
@@ -130,19 +132,20 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
-		fileUploadEnabled:         opts.FileUploadEnabled,
-		maxUploadFiles:            opts.MaxUploadFiles,
-		maxUploadFileSize:         opts.MaxUploadFileSize,
-		complexityLimits:          opts.ComplexityLimits,
-		alwaysIncludeQueryPlan:    opts.AlwaysIncludeQueryPlan,
-		alwaysSkipLoader:          opts.AlwaysSkipLoader,
-		queryPlansEnabled:         opts.QueryPlansEnabled,
-		queryPlansLoggingEnabled:  opts.QueryPlansLoggingEnabled,
-		trackSchemaUsageInfo:      opts.TrackSchemaUsageInfo,
-		clientHeader:              opts.ClientHeader,
-		computeOperationSha256:    opts.ComputeOperationSha256,
-		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
-		disableVariablesRemapping: opts.DisableVariablesRemapping,
+		fileUploadEnabled:             opts.FileUploadEnabled,
+		maxUploadFiles:                opts.MaxUploadFiles,
+		maxUploadFileSize:             opts.MaxUploadFileSize,
+		complexityLimits:              opts.ComplexityLimits,
+		alwaysIncludeQueryPlan:        opts.AlwaysIncludeQueryPlan,
+		alwaysSkipLoader:              opts.AlwaysSkipLoader,
+		queryPlansEnabled:             opts.QueryPlansEnabled,
+		queryPlansLoggingEnabled:      opts.QueryPlansLoggingEnabled,
+		trackSchemaUsageInfo:          opts.TrackSchemaUsageInfo,
+		clientHeader:                  opts.ClientHeader,
+		computeOperationSha256:        opts.ComputeOperationSha256,
+		apolloCompatibilityFlags:      opts.ApolloCompatibilityFlags,
+		disableVariablesRemapping:     opts.DisableVariablesRemapping,
+		enableBodyInExpressionContext: opts.EnableBodyInExpressionContext,
 	}
 }
 
@@ -321,6 +324,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				writeOperationError(r, w, requestLogger, err)
 				readOperationBodySpan.End()
 				return
+			}
+
+			if h.enableBodyInExpressionContext {
+				requestContext.expressionContext.Request.Body = body
 			}
 
 			readOperationBodySpan.End()

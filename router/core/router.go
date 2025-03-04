@@ -225,15 +225,16 @@ type (
 		// should be removed once the users have migrated to the new overrides config
 		overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
 		// the new overrides config
-		overrides                  config.OverridesConfiguration
-		authorization              *config.AuthorizationConfiguration
-		rateLimit                  *config.RateLimitConfiguration
-		webSocketConfiguration     *config.WebSocketConfiguration
-		subgraphErrorPropagation   config.SubgraphErrorPropagationConfiguration
-		clientHeader               config.ClientHeader
-		cacheWarmup                *config.CacheWarmupConfiguration
-		multipartHeartbeatInterval time.Duration
-		hostName                   string
+		overrides                     config.OverridesConfiguration
+		authorization                 *config.AuthorizationConfiguration
+		rateLimit                     *config.RateLimitConfiguration
+		webSocketConfiguration        *config.WebSocketConfiguration
+		subgraphErrorPropagation      config.SubgraphErrorPropagationConfiguration
+		clientHeader                  config.ClientHeader
+		cacheWarmup                   *config.CacheWarmupConfiguration
+		multipartHeartbeatInterval    time.Duration
+		hostName                      string
+		enableBodyInExpressionContext bool
 	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
@@ -1863,6 +1864,12 @@ func WithClientHeader(cfg config.ClientHeader) Option {
 func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 	return func(r *Router) {
 		r.cacheWarmup = cfg
+	}
+}
+
+func WithEnableBodyInExpressionContext(enableBodyInExpressionContext bool) Option {
+	return func(r *Router) {
+		r.enableBodyInExpressionContext = enableBodyInExpressionContext
 	}
 }
 
