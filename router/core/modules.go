@@ -103,6 +103,16 @@ type RouterMiddlewareHandler interface {
 	Middleware(ctx RequestContext, next http.Handler)
 }
 
+// RouterOnRequestMiddlewareHandler allows youu to add middleware that runs before most internal router logic.
+// This runs after the creation of the request context and the creatio of the recovery handler.
+// This hook is useful if you want to do some custom logic before tracing or authentication, for example
+// if you want to manipulate the bearer auth headers or add a header on a condition that can be logged by tracing.
+// The same semantics of http.Handler apply here. Don't manipulate / consume the body of the request unless
+// you know what you are doing. If you consume the body of the request it will not be available for the next handler.
+type RouterOnRequestHandler interface {
+	RouterOnRequest(ctx RequestContext, next http.Handler)
+}
+
 // EnginePreOriginHandler allows you to add a handler to the router engine origin requests.
 // The handler is called before the request is sent to the origin. All origin handlers are called sequentially.
 // It allows you to modify the request before it is sent or return a custom response. The same semantics of http.RoundTripper apply here.
