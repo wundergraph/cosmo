@@ -194,10 +194,7 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 	requestContext := getRequestContext(r.Context())
 
 	// Is subscription
-	isSubscription := (wgRequestParams.UseSse || wgRequestParams.UseMultipart) && requestContext.operation.opType == "subscription"
-
-	// Is subscription
-	if isSubscription {
+	if isSubscription(wgRequestParams, requestContext) {
 		setSubscriptionHeaders(wgRequestParams, r, w)
 
 		if statusCode != 0 {
@@ -242,6 +239,15 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 			requestLogger.Error("Error writing response", zap.Error(err))
 		}
 	}
+}
+
+func isSubscription(wgRequestParams SubscriptionParams, requestContext *requestContext) bool {
+	isSseOrMultipart := wgRequestParams.UseSse || wgRequestParams.UseMultipart
+	// TODO: Commenting this out to validate tests
+	//if requestContext.apolloCompatibilityFlags.defaultToJsonForNonSubscriptionMultipartSseErrors {
+	//return isSseOrMultipart && requestContext.operation.opType == "subscription"
+	//}
+	return isSseOrMultipart
 }
 
 // writeMultipartError writes the error response in a multipart format with proper boundaries and headers.
