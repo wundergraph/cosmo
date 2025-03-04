@@ -191,8 +191,13 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 	}
 	wgRequestParams := NegotiateSubscriptionParams(r)
 
+	requestContext := getRequestContext(r.Context())
+
 	// Is subscription
-	if wgRequestParams.UseSse || wgRequestParams.UseMultipart {
+	isSubscription := (wgRequestParams.UseSse || wgRequestParams.UseMultipart) && requestContext.operation.opType == "subscription"
+
+	// Is subscription
+	if isSubscription {
 		setSubscriptionHeaders(wgRequestParams, r, w)
 
 		if statusCode != 0 {
