@@ -260,6 +260,8 @@ type requestContext struct {
 	telemetry *requestTelemetryAttributes
 	// expressionContext is the context that will be provided to a compiled expression in order to retrieve data via dynamic expressions
 	expressionContext expr.Context
+	// apolloCompatibilityFlags contains flags that should be accessed throughout the request
+	apolloCompatibilityFlags apolloCompatibilityFlags
 }
 
 func (c *requestContext) SetError(err error) {
@@ -639,6 +641,10 @@ func subgraphResolverFromContext(ctx context.Context) *SubgraphResolver {
 	return resolver
 }
 
+type apolloCompatibilityFlags struct {
+	defaultToJsonForNonSubscriptionMultipartSseErrors bool
+}
+
 type requestContextOptions struct {
 	operationContext              *operationContext
 	requestLogger                 *zap.Logger
@@ -650,6 +656,7 @@ type requestContextOptions struct {
 	telemetryAttributeExpressions *attributeExpressions
 	w                             http.ResponseWriter
 	r                             *http.Request
+	apolloCompatibilityFlags      apolloCompatibilityFlags
 }
 
 func buildRequestContext(opts requestContextOptions) *requestContext {
@@ -672,7 +679,8 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 			traceAttributeExpressions:  opts.telemetryAttributeExpressions,
 			metricAttributeExpressions: opts.metricAttributeExpressions,
 		},
-		expressionContext: rootCtx,
-		subgraphResolver:  subgraphResolverFromContext(opts.r.Context()),
+		expressionContext:        rootCtx,
+		subgraphResolver:         subgraphResolverFromContext(opts.r.Context()),
+		apolloCompatibilityFlags: opts.apolloCompatibilityFlags,
 	}
 }

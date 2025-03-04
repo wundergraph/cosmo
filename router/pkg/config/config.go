@@ -760,14 +760,15 @@ type AccessLogsSubgraphsConfig struct {
 }
 
 type ApolloCompatibilityFlags struct {
-	EnableAll                          bool                                                  `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
-	ValueCompletion                    ApolloCompatibilityValueCompletion                    `yaml:"value_completion"`
-	TruncateFloats                     ApolloCompatibilityTruncateFloats                     `yaml:"truncate_floats"`
-	SuppressFetchErrors                ApolloCompatibilitySuppressFetchErrors                `yaml:"suppress_fetch_errors"`
-	ReplaceUndefinedOpFieldErrors      ApolloCompatibilityReplaceUndefinedOpFieldErrors      `yaml:"replace_undefined_op_field_errors"`
-	ReplaceInvalidVarErrors            ApolloCompatibilityReplaceInvalidVarErrors            `yaml:"replace_invalid_var_errors"`
-	ReplaceValidationErrorStatus       ApolloCompatibilityReplaceValidationErrorStatus       `yaml:"replace_validation_error_status"`
-	SubscriptionMultipartPrintBoundary ApolloCompatibilitySubscriptionMultipartPrintBoundary `yaml:"subscription_multipart_print_boundary"`
+	EnableAll                                         bool                                                    `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
+	ValueCompletion                                   ApolloCompatibilityValueCompletion                      `yaml:"value_completion"`
+	TruncateFloats                                    ApolloCompatibilityTruncateFloats                       `yaml:"truncate_floats"`
+	SuppressFetchErrors                               ApolloCompatibilitySuppressFetchErrors                  `yaml:"suppress_fetch_errors"`
+	ReplaceUndefinedOpFieldErrors                     ApolloCompatibilityReplaceUndefinedOpFieldErrors        `yaml:"replace_undefined_op_field_errors"`
+	ReplaceInvalidVarErrors                           ApolloCompatibilityReplaceInvalidVarErrors              `yaml:"replace_invalid_var_errors"`
+	ReplaceValidationErrorStatus                      ApolloCompatibilityReplaceValidationErrorStatus         `yaml:"replace_validation_error_status"`
+	SubscriptionMultipartPrintBoundary                ApolloCompatibilitySubscriptionMultipartPrintBoundary   `yaml:"subscription_multipart_print_boundary"`
+	DefaultToJsonForNonSubscriptionMultipartSseErrors ApolloDefaultToJsonForNonSubscriptionMultipartSseErrors `yaml:"default_to_json_on_non_subscriptions"`
 }
 
 type ApolloCompatibilityValueCompletion struct {
@@ -801,6 +802,10 @@ type ApolloCompatibilityReplaceValidationErrorStatus struct {
 
 type ApolloCompatibilitySubscriptionMultipartPrintBoundary struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_SUBSCRIPTION_MULTIPART_PRINT_BOUNDARY_ENABLED"`
+}
+
+type ApolloDefaultToJsonForNonSubscriptionMultipartSseErrors struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_DEFAULT_TO_JSON_FOR_NON_SUBSCRIPTION_MULTIPART_SSE_ERRORS_ENABLED"`
 }
 
 type ApolloRouterCompatibilityFlags struct {

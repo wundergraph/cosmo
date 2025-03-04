@@ -708,6 +708,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				telemetryAttributeExpressions: telemetryAttExpressions,
 				w:                             w,
 				r:                             r,
+				apolloCompatibilityFlags: apolloCompatibilityFlags{
+					defaultToJsonForNonSubscriptionMultipartSseErrors: s.apolloCompatibilityFlags.DefaultToJsonForNonSubscriptionMultipartSseErrors.Enabled,
+				},
 			})
 
 			r = r.WithContext(withRequestContext(r.Context(), reqContext))
