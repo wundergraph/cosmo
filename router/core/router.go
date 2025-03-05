@@ -1216,6 +1216,7 @@ func (r *Router) Start(ctx context.Context) error {
 			zap.Int("burst", r.rateLimit.SimpleStrategy.Burst),
 			zap.Duration("duration", r.Config.rateLimit.SimpleStrategy.Period),
 			zap.Bool("rejectExceeding", r.Config.rateLimit.SimpleStrategy.RejectExceedingRequests),
+			zap.Bool("failOpen", r.Config.rateLimit.FailOpen),
 		)
 	}
 
