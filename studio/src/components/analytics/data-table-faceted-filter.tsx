@@ -452,39 +452,40 @@ export function DataTableFilterCommands<TData, TValue>({
           <>
             <Separator orientation="horizontal" />
             <div className="flex justify-center gap-x-2 pt-2">
-              {selectedValues.size < options.length && (
-                <Button
-                  variant="ghost"
-                  className="justify-center text-center"
-                  onClick={() => {
-                    const filterValues = Array.from(selectedValues);
-                    onSelect?.(
-                      filterValues.length
-                        ? [
-                            ...filterValues,
-                            ...filteredOptions.map((option) => option.value),
-                          ]
-                        : filteredOptions.map((option) => option.value),
-                    );
-                  }}
-                >
-                  Select All
-                </Button>
-              )}
-              {selectedValues.size > 0 &&
-                selectedValues.size < options.length && (
-                  <Separator orientation="vertical" className="my-1 h-8" />
-                )}
+              <Button
+                variant="ghost"
+                className="justify-center text-center"
+                onClick={() => {
+                  const filterValues = Array.from(selectedValues);
+                  onSelect?.(
+                    filterValues.length
+                      ? [
+                          ...filterValues,
+                          ...filteredOptions.map((option) => option.value),
+                        ]
+                      : filteredOptions.map((option) => option.value),
+                  );
+                }}
+                disabled={selectedValues.size === filteredOptions.length}
+              >
+                {selectedValues.size < options.length
+                  ? "Select All"
+                  : "Selected All"}
+              </Button>
+
               {selectedValues.size > 0 && (
-                <Button
-                  variant="ghost"
-                  className="justify-center text-center"
-                  onClick={() => {
-                    onSelect?.(undefined);
-                  }}
-                >
-                  Clear filters
-                </Button>
+                <>
+                  <Separator orientation="vertical" className="my-1 h-8" />
+                  <Button
+                    variant="ghost"
+                    className="justify-center text-center"
+                    onClick={() => {
+                      onSelect?.(undefined);
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                </>
               )}
             </div>
           </>
