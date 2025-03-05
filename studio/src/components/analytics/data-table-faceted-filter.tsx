@@ -474,9 +474,9 @@ export function DataTableFilterCommands<TData, TValue>({
                       : filteredOptions.map((option) => option.value),
                   );
                 }}
-                disabled={selectedValues.size === filteredOptions.length}
+                disabled={selectedValues.size >= filteredOptions.length}
               >
-                {selectedValues.size < options.length
+                {selectedValues.size < filteredOptions.length
                   ? "Select All"
                   : "Selected All"}
               </Button>
