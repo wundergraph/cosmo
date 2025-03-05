@@ -1438,7 +1438,7 @@ const Toolbar = ({ typeCounts, deprecatedTypesCount, authenticatedTypesCount, }:
               )}
             </SelectItem>
             <SelectItem value="authenticated">
-              <span>Authenticated</span>
+              <span>Authentication</span>
               {typeCounts && ast && (
                 <Badge variant="secondary" className="ml-2">
                   {authenticatedTypesCount}
@@ -1553,6 +1553,9 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
   const typeCounts = useMemo(() => ast ? getTypeCounts(ast) : undefined, [ast]);
   const deprecatedTypes = useMemo(() => ast ? getDeprecatedTypes(ast) : [], [ast]);
   const authenticatedTypes = useMemo(() => doc ? getAuthenticatedTypes(doc) : [], [doc]);
+  
+  const deprecatedTypesCount = deprecatedTypes.reduce((accu, type) => accu + (type.fields?.length ?? 0), 0);
+  const authenticatedTypesCount = authenticatedTypes.reduce((accu, type) => accu + (type.fields?.length ?? 0), 0);
 
   const isLoadingAST = isLoading || isParsing;
 
@@ -1600,8 +1603,8 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
         toolbar={(
           <Toolbar
             typeCounts={typeCounts}
-            deprecatedTypesCount={deprecatedTypes.length}
-            authenticatedTypesCount={authenticatedTypes.length} />
+            deprecatedTypesCount={deprecatedTypesCount}
+            authenticatedTypesCount={authenticatedTypesCount} />
         )}
         noPadding
       >
@@ -1705,7 +1708,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                       variant="secondary"
                       className="ml-auto bg-accent/50 px-1.5"
                     >
-                      {deprecatedTypes.length}
+                      {deprecatedTypesCount}
                     </Badge>
                   )}
                 </Link>
@@ -1729,13 +1732,13 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                     },
                   }}
                 >
-                  <span>Authenticated</span>
+                  <span>Authentication</span>
                   {typeCounts && ast && (
                     <Badge
                       variant="secondary"
                       className="ml-auto bg-accent/50 px-1.5"
                     >
-                      {authenticatedTypes.length}
+                      {authenticatedTypesCount}
                     </Badge>
                   )}
                 </Link>
