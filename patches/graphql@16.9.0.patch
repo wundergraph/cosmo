@@ -1,13 +1,14 @@
 diff --git a/package.json b/package.json
-index 435fa393ece50f437a7e8fa6c3ea5b0a6c4792a2..556a1d8a07eb29d01e8e4d3fc35fe7a9e3b86f79 100644
+index 435fa393ece50f437a7e8fa6c3ea5b0a6c4792a2..9d84f359987c25d62309c8003c44c94d786e3cb2 100644
 --- a/package.json
 +++ b/package.json
-@@ -3,7 +3,7 @@
+@@ -3,8 +3,7 @@
    "version": "16.9.0",
    "description": "A Query Language and Runtime which can target any service.",
    "license": "MIT",
 -  "main": "index",
+-  "module": "index.mjs",
 +  "main": "index.js",
-   "module": "index.mjs",
    "typesVersions": {
      ">=4.1.0": {
+       "*": [
