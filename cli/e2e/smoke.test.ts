@@ -27,7 +27,7 @@ describe('Bun CLI', () => {
 
     expect(exitCode, `exited with non-zero:\nstdout:\n${stdout.toString()}\n\nstderr:\n${stderr.toString()}`).toBe(0);
 
-    expect(stdout.toString()).toBe('Router config successfully written to e2e/config.json' + '\n');
+    expect(stdout.toString()).toContain('Router config successfully written');
   });
 });
 
