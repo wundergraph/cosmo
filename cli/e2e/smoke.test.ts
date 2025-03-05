@@ -46,7 +46,7 @@ describe('Node CLI', () => {
     expect(stdout.toString()).toBe(packageJSON.version + '\n');
   });
 
-  test('bun cli should compose a router execution config', async () => {
+  test('node cli should compose a router execution config', async () => {
     const { stdout, stderr, exitCode } =
       await $`node ${binPath} router compose -i ../demo/graph-no-edg.yaml -o e2e/config.json`.quiet();
 
