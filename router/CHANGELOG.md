@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.188.2](https://github.com/wundergraph/cosmo/compare/router@0.188.1...router@0.188.2) (2025-03-04)
+
+### Bug Fixes
+
+* value completion propagation for invalid enum values ([#1654](https://github.com/wundergraph/cosmo/issues/1654)) ([da7615d](https://github.com/wundergraph/cosmo/commit/da7615d42e0f8d9617b81b124508c0c826bc7651)) (@Aenimus)
+
+## [0.188.1](https://github.com/wundergraph/cosmo/compare/router@0.188.0...router@0.188.1) (2025-03-04)
+
+### Bug Fixes
+
+* reading file uploads map by ignoring actual indices in map ([#1653](https://github.com/wundergraph/cosmo/issues/1653)) ([a262784](https://github.com/wundergraph/cosmo/commit/a26278475dfb1b426c6e4e66cb3f34ad09a9c90d)) (@devsergiy)
+
+# [0.188.0](https://github.com/wundergraph/cosmo/compare/router@0.187.1...router@0.188.0) (2025-03-04)
+
+### Bug Fixes
+
+* **subscription:** never try to send on blocked channel when subscription was completed ([#1641](https://github.com/wundergraph/cosmo/issues/1641)) ([87cff19](https://github.com/wundergraph/cosmo/commit/87cff194832aa9b9326e2abfba01d69a0dd72d6d)) (@StarpTech)
+
+### Features
+
+* **router:** add RouterOnRequest hook ([#1642](https://github.com/wundergraph/cosmo/issues/1642)) ([22ecac7](https://github.com/wundergraph/cosmo/commit/22ecac7f6cf39cad586b62f03a542aef500c7cf7)) (@SkArchon)
+
 ## [0.187.1](https://github.com/wundergraph/cosmo/compare/router@0.187.0...router@0.187.1) (2025-03-03)
 
 ### Bug Fixes
