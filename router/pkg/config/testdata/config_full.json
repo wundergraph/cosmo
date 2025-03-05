@@ -436,7 +436,8 @@
     "ErrorExtensionCode": {
       "Enabled": true,
       "Code": "RATE_LIMIT_EXCEEDED"
-    }
+    },
+    "FailOpen": false
   },
   "LocalhostFallbackInsideDocker": true,
   "CDN": {

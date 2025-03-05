@@ -449,6 +449,7 @@ type RateLimitConfiguration struct {
 	Debug               bool                        `yaml:"debug" envDefault:"false" env:"RATE_LIMIT_DEBUG"`
 	KeySuffixExpression string                      `yaml:"key_suffix_expression,omitempty" env:"RATE_LIMIT_KEY_SUFFIX_EXPRESSION"`
 	ErrorExtensionCode  RateLimitErrorExtensionCode `yaml:"error_extension_code"`
+	FailOpen            bool                        `yaml:"fail_open" env:"RATE_LIMIT_FAIL_OPEN"`
 }
 
 type RateLimitErrorExtensionCode struct {
