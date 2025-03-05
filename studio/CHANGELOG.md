@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.102.0](https://github.com/wundergraph/cosmo/compare/studio@0.101.0...studio@0.102.0) (2025-03-05)
+
+### Features
+
+* **studio:** implement authenticated field visual indicator ([#1633](https://github.com/wundergraph/cosmo/issues/1633)) ([e219e92](https://github.com/wundergraph/cosmo/commit/e219e92e1fd15774f4560da901400a19cb03c5f9)) (@wilsonrivera)
+
 # [0.101.0](https://github.com/wundergraph/cosmo/compare/studio@0.100.4...studio@0.101.0) (2025-02-27)
 
 ### Features
