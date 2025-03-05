@@ -6,8 +6,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
-  CommandList,
-  CommandSeparator,
+  CommandList
 } from "@/components/ui/command";
 import {
   Popover,
@@ -21,12 +20,12 @@ import { CheckIcon, PlusCircledIcon } from "@radix-ui/react-icons";
 import { Column } from "@tanstack/react-table";
 import { CustomOptions } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { ComponentType, useEffect, useState } from "react";
+import { MdTextRotationNone } from "react-icons/md";
 import { Input } from "../ui/input";
 import { Slider } from "../ui/slider";
+import { Toggle } from "../ui/toggle";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { AnalyticsFilter } from "./filters";
-import { CiFilter } from "react-icons/ci";
-import { PopoverPortal } from "@radix-ui/react-popover";
-import { Checkbox } from "../ui/checkbox";
 
 interface DataTableFacetedFilter<TData, TValue> {
   column?: Column<TData, TValue>;
@@ -357,7 +356,10 @@ export function DataTableFilterCommands<TData, TValue>({
   }
 
   useEffect(() => {
-    if (!searchValue) return;
+    if (!searchValue) {
+      setFilteredOptions(options);
+      return;
+    }
     const filtered = options.filter((option) =>
       shouldPrefixSearch
         ? option.label.toLowerCase().startsWith(searchValue.toLowerCase())
@@ -368,7 +370,7 @@ export function DataTableFilterCommands<TData, TValue>({
 
   return (
     <Command
-      className="w-64"
+      className="w-72"
       filter={shouldPrefixSearch ? prefixFilter : regularFilter}
       key={shouldPrefixSearch ? "prefix" : "regular"}
     >
@@ -383,34 +385,22 @@ export function DataTableFilterCommands<TData, TValue>({
                 setSearchValue(value);
               }}
             />
-            <Popover>
-              <PopoverTrigger
-                asChild
-                className="absolute right-2 top-3 h-4 w-4 text-muted-foreground"
-              >
-                <Button variant="link" size="icon">
-                  <CiFilter />
-                </Button>
-              </PopoverTrigger>
-              <PopoverPortal>
-                <PopoverContent
-                  align="center"
-                  className="flex w-48 p-0"
-                  sideOffset={20}
-                  side="right"
-                >
-                  <div className="flex items-center gap-x-2 p-2">
-                    <Checkbox
-                      checked={shouldPrefixSearch}
-                      onCheckedChange={(state) => {
-                        setShouldPrefixSearch(!!state);
-                      }}
-                    />
-                    <span className="text-sm">Prefix Search</span>
-                  </div>
-                </PopoverContent>
-              </PopoverPortal>
-            </Popover>
+            <div className="absolute right-[2px] top-[2px]">
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger>
+                  <Toggle
+                    size="sm"
+                    pressed={shouldPrefixSearch}
+                    onPressedChange={(pressed) =>
+                      setShouldPrefixSearch(pressed)
+                    }
+                  >
+                    <MdTextRotationNone className="h-4 w-4" />
+                  </Toggle>
+                </TooltipTrigger>
+                <TooltipContent>Prefix Search</TooltipContent>
+              </Tooltip>
+            </div>
           </div>
           <CommandList>
             <CommandEmpty>No results found.</CommandEmpty>
@@ -459,10 +449,10 @@ export function DataTableFilterCommands<TData, TValue>({
           </CommandList>
           <>
             <Separator orientation="horizontal" />
-            <div className="flex justify-center gap-x-2 pt-2">
+            <div className="flex justify-center gap-x-2 pt-1">
               <Button
                 variant="ghost"
-                className="justify-center text-center"
+                className="w-full justify-center text-center"
                 onClick={() => {
                   const filterValues = Array.from(selectedValues);
                   onSelect?.(
@@ -483,15 +473,15 @@ export function DataTableFilterCommands<TData, TValue>({
 
               {selectedValues.size > 0 && (
                 <>
-                  <Separator orientation="vertical" className="my-1 h-8" />
+                  <Separator orientation="vertical" className="h-8" />
                   <Button
                     variant="ghost"
-                    className="justify-center text-center"
+                    className="w-full justify-center text-center"
                     onClick={() => {
                       onSelect?.(undefined);
                     }}
                   >
-                    Clear filters
+                    Clear Selection
                   </Button>
                 </>
               )}
