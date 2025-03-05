@@ -9,11 +9,10 @@ import (
 	"io"
 	"sync"
 
-	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
-
 	"github.com/expr-lang/expr/vm"
 	"github.com/go-redis/redis_rate/v10"
 	"github.com/wundergraph/cosmo/router/internal/expr"
+	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
