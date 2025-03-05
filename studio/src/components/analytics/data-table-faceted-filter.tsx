@@ -194,6 +194,7 @@ export function DataTableFilterCommands<TData, TValue>({
   // the options are filtered based on the search input
   const [filteredOptions, setFilteredOptions] = useState(options);
   const [shouldPrefixSearch, setShouldPrefixSearch] = useState(false);
+  const [searchValue, setSearchValue] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (
@@ -355,10 +356,21 @@ export function DataTableFilterCommands<TData, TValue>({
       break;
   }
 
+  useEffect(() => {
+    if (!searchValue) return;
+    const filtered = options.filter((option) =>
+      shouldPrefixSearch
+        ? option.label.toLowerCase().startsWith(searchValue.toLowerCase())
+        : option.label.toLowerCase().includes(searchValue.toLowerCase()),
+    );
+    setFilteredOptions(filtered);
+  }, [options, searchValue, shouldPrefixSearch]);
+
   return (
     <Command
       className="w-64"
       filter={shouldPrefixSearch ? prefixFilter : regularFilter}
+      key={shouldPrefixSearch ? "prefix" : "regular"}
     >
       {customOptions === undefined && (
         <>
@@ -366,13 +378,9 @@ export function DataTableFilterCommands<TData, TValue>({
             <CommandInput
               placeholder={title}
               disabled={options.length === 0}
+              value={searchValue}
               onValueChange={(value) => {
-                const filtered = options.filter((option) =>
-                  shouldPrefixSearch
-                    ? option.label.toLowerCase().startsWith(value.toLowerCase())
-                    : option.label.toLowerCase().includes(value.toLowerCase()),
-                );
-                setFilteredOptions(filtered);
+                setSearchValue(value);
               }}
             />
             <Popover>
