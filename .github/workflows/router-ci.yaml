@@ -250,3 +250,23 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: router
           image_description: 'Cosmo Router'
+
+  check_query_planner:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    needs: [ build_push_image ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: convictional/trigger-workflow-and-wait@v1.6.5
+        name: Trigger Query Planner CI
+        with:
+          owner: wundergraph
+          repo: cosmo-celestial
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          propagate_failure: true
+          workflow_file_name: 'query-planner-tester.yaml'
+          client_payload:
+            {
+              router: 'ghcr.io/wundergraph/cosmo/router:sha-${{ github.sha }}',
+              wgc: 'latest',
+              token: ${{secrets.GITHUB_TOKEN}}
+            }
