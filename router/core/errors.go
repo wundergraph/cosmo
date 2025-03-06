@@ -272,7 +272,7 @@ func writeMultipartError(
 	if isSubscription {
 		resp = append(resp, '\r', '\n')
 	} else {
-		resp = append(resp, []byte("\r\n--graphql--\r\n")...)
+		resp = append(resp, []byte("\r\n--graphql--")...)
 	}
 
 	if _, err := w.Write([]byte(resp)); err != nil {
