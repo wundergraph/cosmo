@@ -31,6 +31,11 @@ type QueryPlanConfig struct {
 	FailFast        bool
 }
 
+type QueryPlanResults struct {
+	Plans []QueryPlanResult `json:"plans,omitempty"`
+	Error string            `json:"error,omitempty"`
+}
+
 type QueryPlanResult struct {
 	FileName string `json:"file_name,omitempty"`
 	Plan     string `json:"plan,omitempty"`
@@ -161,16 +166,16 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 			return fmt.Errorf("failed to create results file: %v", err)
 		}
 		defer reportFile.Close()
-		if ctxError.Err() == nil {
-			slices.SortFunc(results, func(a, b QueryPlanResult) int {
-				return strings.Compare(a.FileName, b.FileName)
-			})
-		} else {
-			results = append(results, QueryPlanResult{
-				Error: context.Cause(ctxError).Error(),
-			})
+		slices.SortFunc(results, func(a, b QueryPlanResult) int {
+			return strings.Compare(a.FileName, b.FileName)
+		})
+		resultData := QueryPlanResults{
+			Plans: results,
 		}
-		data, jsonErr := json.Marshal(results)
+		if ctxError.Err() != nil {
+			resultData.Error = context.Cause(ctxError).Error()
+		}
+		data, jsonErr := json.Marshal(resultData)
 		if jsonErr != nil {
 			return fmt.Errorf("failed to marshal result: %v", jsonErr)
 		}

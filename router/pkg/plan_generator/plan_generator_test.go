@@ -317,12 +317,9 @@ func TestPlanGenerator(t *testing.T) {
 		results, err := os.ReadFile(path.Join(tempDir, ReportFileName))
 		assert.NoError(t, err)
 		errMsg := context.DeadlineExceeded.Error()
-		errorResult := QueryPlanResult{
-			Error: errMsg,
-		}
-		var writtenResults []QueryPlanResult
+		var writtenResults QueryPlanResults
 		err = json.Unmarshal(results, &writtenResults)
 		assert.NoError(t, err)
-		assert.Contains(t, writtenResults, errorResult)
+		assert.Equal(t, errMsg, writtenResults.Error)
 	})
 }
