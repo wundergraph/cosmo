@@ -262,7 +262,7 @@ func writeMultipartError(w http.ResponseWriter, requestErrors graphqlerrors.Requ
 		return err
 	}
 
-	resp = append(resp, '\n')
+	resp = append(resp, []byte("\r\n--graphql--\r\n")...)
 	if _, err := w.Write([]byte(resp)); err != nil {
 		return err
 	}

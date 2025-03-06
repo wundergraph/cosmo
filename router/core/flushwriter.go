@@ -259,7 +259,7 @@ func GetWriterPrefix(sse bool, multipart bool, firstMessage bool) string {
 		if firstMessage {
 			messageStart = multipartStart
 		}
-		flushBreak = messageStart + "\nContent-Type: " + jsonContent + "\r\n\r\n"
+		flushBreak = messageStart + "\r\nContent-Type: " + jsonContent + "\r\n\r\n"
 	}
 
 	return flushBreak
