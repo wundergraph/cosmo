@@ -712,6 +712,7 @@ type WebSocketConnectionHandler struct {
 	disableVariablesRemapping bool
 
 	apolloCompatibilityFlags config.ApolloCompatibilityFlags
+	initializedWithoutError  bool
 }
 
 type forwardConfig struct {
@@ -1104,6 +1105,7 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 			return err
 		}
 	}
+	h.initializedWithoutError = true
 	return nil
 }
 
@@ -1149,12 +1151,15 @@ func (h *WebSocketConnectionHandler) Complete(rw *websocketResponseWriter) {
 }
 
 func (h *WebSocketConnectionHandler) Close() {
-	// Remove any pending IDs associated with this connection
-	err := h.graphqlHandler.executor.Resolver.AsyncUnsubscribeClient(h.connectionID)
-	if err != nil {
-		h.logger.Debug("Unsubscribing client", zap.Error(err))
+	if h.initializedWithoutError {
+		// Remove any pending IDs associated with this connection
+		// but only if the initialization was successful
+		err := h.graphqlHandler.executor.Resolver.AsyncUnsubscribeClient(h.connectionID)
+		if err != nil {
+			h.logger.Debug("Unsubscribing client", zap.Error(err))
+		}
 	}
-	err = h.conn.Close()
+	err := h.conn.Close()
 	if err != nil {
 		h.logger.Debug("Closing websocket connection", zap.Error(err))
 	}
