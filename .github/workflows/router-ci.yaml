@@ -264,7 +264,7 @@ jobs:
           github_token: ${{ secrets.GH_TOKEN_WORKFLOW_PUBLISH }}
           propagate_failure: true
           workflow_file_name: 'query-planner-tester.yaml'
-          client_payload: |
+          client_payload: >-
             {
               router: 'ghcr.io/wundergraph/cosmo/router:sha-${{ github.sha }}',
               wgc: 'latest',
