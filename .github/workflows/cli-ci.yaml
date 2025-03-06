@@ -76,6 +76,8 @@ jobs:
   build_bun_matrix:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      artifact-url-bun-linux-x64: ${{ steps.artifact-upload-url.outputs.artifact-url-bun-linux-x64 }}
 
     strategy:
       matrix:
@@ -100,11 +102,16 @@ jobs:
         run: bun build --compile --minify --sourcemap --target ${{ matrix.target }} src/index.ts --outfile out/wgc-experimental-${{ github.sha }}-${{ matrix.target }}
 
       - name: 'Upload builds as artifacts'
+        id: upload
         uses: actions/upload-artifact@v4
         with:
           name: wgc-experimental-${{ github.sha }}-${{ matrix.target }}
           path: cli/out/wgc-experimental-${{ github.sha }}-${{ matrix.target }}*
           if-no-files-found: error
+
+      - name: Output artifact URL
+        id: artifact-upload-url
+        run: echo "artifact-url-${{ matrix.target }}=${{ steps.upload.outputs.artifact-url }}" >> $GITHUB_OUTPUT
 
   build_test:
     runs-on: ubuntu-latest
@@ -117,3 +124,24 @@ jobs:
       - name: 'Some tests failed'
         if: ${{ contains(needs.*.result, 'failure') }}
         run: exit 1
+
+  check_query_planner:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    needs: [ build_bun_matrix ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: convictional/trigger-workflow-and-wait@v1.6.5
+        name: Trigger Query Planner CI
+        with:
+          owner: wundergraph
+          repo: cosmo-celestial
+          ref: master
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          propagate_failure: true
+          workflow_file_name: 'query-planner-tester.yaml'
+          client_payload: >-
+            {
+              "router": "ghcr.io/wundergraph/cosmo/router:latest",
+              "wgc": "${{ needs.build_bun_matrix.outputs.artifact-url-bun-linux-x64 }}",
+              "token": "${{secrets.GITHUB_TOKEN}}"
+            }
