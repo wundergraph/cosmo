@@ -261,12 +261,13 @@ jobs:
         with:
           owner: wundergraph
           repo: cosmo-celestial
+          ref: master
           github_token: ${{ secrets.GH_TOKEN_WORKFLOW_PUBLISH }}
           propagate_failure: true
           workflow_file_name: 'query-planner-tester.yaml'
           client_payload: >-
             {
-              router: 'ghcr.io/wundergraph/cosmo/router:sha-${{ github.sha }}',
-              wgc: 'latest',
-              token: ${{secrets.GITHUB_TOKEN}}
+              "router": "ghcr.io/wundergraph/cosmo/router:sha-${{ github.sha }}",
+              "wgc": "latest",
+              "token": "${{secrets.GITHUB_TOKEN}}"
             }
