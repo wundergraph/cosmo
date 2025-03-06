@@ -2,6 +2,7 @@ package plan_generator
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path"
 	"path/filepath"
@@ -295,5 +296,33 @@ func TestPlanGenerator(t *testing.T) {
 
 		err = PlanGenerator(context.Background(), cfg)
 		assert.ErrorIs(t, err, context.DeadlineExceeded)
+	})
+
+	t.Run("when reaching timeout the report should contains the error", func(t *testing.T) {
+		tempDir, err := os.MkdirTemp("", "plans-")
+		require.NoError(t, err)
+		defer os.RemoveAll(tempDir)
+
+		cfg := QueryPlanConfig{
+			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
+			OutDir:          tempDir,
+			ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
+			Timeout:         "1ns",
+			OutputReport:    true,
+		}
+
+		err = PlanGenerator(context.Background(), cfg)
+		assert.ErrorIs(t, err, context.DeadlineExceeded)
+
+		results, err := os.ReadFile(path.Join(tempDir, ReportFileName))
+		assert.NoError(t, err)
+		errMsg := context.DeadlineExceeded.Error()
+		errorResult := QueryPlanResult{
+			Error: errMsg,
+		}
+		var writtenResults []QueryPlanResult
+		err = json.Unmarshal(results, &writtenResults)
+		assert.NoError(t, err)
+		assert.Contains(t, writtenResults, errorResult)
 	})
 }

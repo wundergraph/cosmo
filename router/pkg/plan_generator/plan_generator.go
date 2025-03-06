@@ -32,7 +32,7 @@ type QueryPlanConfig struct {
 }
 
 type QueryPlanResult struct {
-	FileName string `json:"file_name"`
+	FileName string `json:"file_name,omitempty"`
 	Plan     string `json:"plan,omitempty"`
 	Error    string `json:"error,omitempty"`
 }
@@ -153,7 +153,7 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 	}
 	wg.Wait()
 
-	if cfg.OutputReport && ctxError.Err() == nil {
+	if cfg.OutputReport {
 		reportFilePath := filepath.Join(outPath, ReportFileName)
 		reportFile, err := os.Create(reportFilePath)
 		if err != nil {
@@ -161,9 +161,17 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 			return fmt.Errorf("failed to create results file: %v", err)
 		}
 		defer reportFile.Close()
-		slices.SortFunc(results, func(a, b QueryPlanResult) int {
-			return strings.Compare(a.FileName, b.FileName)
-		})
+		if ctxError.Err() == nil {
+			slices.SortFunc(results, func(a, b QueryPlanResult) int {
+				return strings.Compare(a.FileName, b.FileName)
+			})
+		} else {
+			resultsMux.Lock()
+			results = append(results, QueryPlanResult{
+				Error: context.Cause(ctxError).Error(),
+			})
+			resultsMux.Unlock()
+		}
 		data, jsonErr := json.Marshal(results)
 		if jsonErr != nil {
 			return fmt.Errorf("failed to marshal result: %v", jsonErr)
@@ -172,6 +180,10 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 		if writeErr != nil {
 			return fmt.Errorf("failed to write result: %v", writeErr)
 		}
+	}
+
+	if cfg.OutputReport && ctxError.Err() != nil {
+
 	}
 
 	if cfg.FailOnPlanError && planError.Load() {
