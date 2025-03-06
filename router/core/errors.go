@@ -263,13 +263,18 @@ func writeMultipartError(
 		return err
 	}
 
-	wrapPayload := operationType == "subscription"
-	resp, err := wrapMultipartMessage(responseBytes, wrapPayload)
+	isSubscription := operationType == "subscription"
+	resp, err := wrapMultipartMessage(responseBytes, isSubscription)
 	if err != nil {
 		return err
 	}
 
-	resp = append(resp, []byte("\r\n--graphql--\r\n")...)
+	if isSubscription {
+		resp = append(resp, '\r', '\n')
+	} else {
+		resp = append(resp, []byte("\r\n--graphql--\r\n")...)
+	}
+
 	if _, err := w.Write([]byte(resp)); err != nil {
 		return err
 	}
