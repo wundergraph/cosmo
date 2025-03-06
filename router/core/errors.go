@@ -269,6 +269,9 @@ func writeMultipartError(
 		return err
 	}
 
+	// The multipart spec requires us to use both CRLF (\r and \n) characters together
+	// since we didn't do this, some clients that rely on both CRLF to parse blocks
+	// are broken and not parsing our multipart chunks correctly
 	if isSubscription {
 		resp = append(resp, '\r', '\n')
 	} else {
