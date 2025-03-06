@@ -166,11 +166,9 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 				return strings.Compare(a.FileName, b.FileName)
 			})
 		} else {
-			resultsMux.Lock()
 			results = append(results, QueryPlanResult{
 				Error: context.Cause(ctxError).Error(),
 			})
-			resultsMux.Unlock()
 		}
 		data, jsonErr := json.Marshal(results)
 		if jsonErr != nil {
@@ -180,10 +178,6 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 		if writeErr != nil {
 			return fmt.Errorf("failed to write result: %v", writeErr)
 		}
-	}
-
-	if cfg.OutputReport && ctxError.Err() != nil {
-
 	}
 
 	if cfg.FailOnPlanError && planError.Load() {
