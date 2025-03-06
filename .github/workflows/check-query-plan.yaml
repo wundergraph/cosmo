@@ -1,0 +1,42 @@
+#name: Check Query Plan
+#on:
+#  pull_request:
+#    paths:
+#      # This workflow should run every time router-ci and cli-ci runs
+#      - 'cli/**/*'
+#      - 'connect/**/*'
+#      - '.github/workflows/cli-ci.yaml'
+#      - 'composition-go/**/*'
+#      - 'demo/**/*'
+#      - 'router/**/*'
+#      - 'router-tests/**/*'
+#      - 'connect/**/*'
+#      - '.github/workflows/router-ci.yaml'
+#  workflow_run:
+#    workflows: [ "wgc CI", "Router CI" ]
+#    types: [ completed ]
+#
+#jobs:
+#  check_query_plan:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Wait Router CI
+#        uses: NathanFirmo/wait-for-other-action@v1.0.4
+#        continue-on-error: true
+#        with:
+#          token: ${{ secrets.GITHUB_TOKEN }}
+#          workflow: 'router-ci.yml'
+#      - name: Wait Cli CI
+#        uses: NathanFirmo/wait-for-other-action@v1.0.4
+#        continue-on-error: true
+#        with:
+#          token: ${{ secrets.GITHUB_TOKEN }}
+#          workflow: 'cli-ci.yml'
+#      - name: Get Cli bun artifact URL
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: wgc-experimental-${{ github.sha }}-linux-amd64
+#      - name: Get Router image or use the default
+#        run:
+#          jobId=`gh run list -e pull_request -w "router-ci.yaml" -b ale/eng-6601-regression-tester -c ${{ github.sha }} --json databaseId,createdAt --status completed | jq "sort_by(.createdAt) | .[0].databaseId"`
+#          echo "router=ghcr.io/wundergraph/cosmo/router:sha-${{ github.sha }}" >> $GITHUB_OUTPUT
