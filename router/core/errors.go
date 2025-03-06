@@ -212,8 +212,10 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 				return
 			}
 		} else if wgRequestParams.UseMultipart {
+			requestContext := getRequestContext(r.Context())
+
 			// Handle multipart error response
-			if err := writeMultipartError(w, requestErrors, requestLogger); err != nil {
+			if err := writeMultipartError(w, requestErrors, requestContext.operation.opType); err != nil {
 				if requestLogger != nil {
 					requestLogger.Error("error writing multipart response", zap.Error(err))
 				}
@@ -240,7 +242,11 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 }
 
 // writeMultipartError writes the error response in a multipart format with proper boundaries and headers.
-func writeMultipartError(w http.ResponseWriter, requestErrors graphqlerrors.RequestErrors, requestLogger *zap.Logger) error {
+func writeMultipartError(
+	w http.ResponseWriter,
+	requestErrors graphqlerrors.RequestErrors,
+	operationType OperationType,
+) error {
 	// Start with the multipart boundary
 	prefix := GetWriterPrefix(false, true, true)
 	if _, err := w.Write([]byte(prefix)); err != nil {
@@ -257,7 +263,8 @@ func writeMultipartError(w http.ResponseWriter, requestErrors graphqlerrors.Requ
 		return err
 	}
 
-	resp, err := wrapMultipartMessage(responseBytes)
+	wrapPayload := operationType == "subscription"
+	resp, err := wrapMultipartMessage(responseBytes, wrapPayload)
 	if err != nil {
 		return err
 	}

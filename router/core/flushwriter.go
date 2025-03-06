@@ -88,7 +88,7 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	}
 	if f.multipart && len(resp) > 0 {
 		var err error
-		resp, err = wrapMultipartMessage(resp)
+		resp, err = wrapMultipartMessage(resp, true)
 		if err != nil {
 			return err
 		}
@@ -156,23 +156,27 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 	return ctx, flushWriter, true
 }
 
-func wrapMultipartMessage(resp []byte) ([]byte, error) {
+func wrapMultipartMessage(resp []byte, wrapPayload bool) ([]byte, error) {
 	if string(resp) == heartbeat {
 		return resp, nil
 	}
 
-	// Per the Apollo docs, multipart messages are supposed to be json, wrapped in ` "payload"`
-	a, err := astjson.Parse(`{"payload": {}}`)
+	respValuePreMerge, err := astjson.ParseBytes(resp)
 	if err != nil {
 		return nil, err
 	}
 
-	b, err := astjson.ParseBytes(resp)
+	if !wrapPayload {
+		return respValuePreMerge.MarshalTo(nil), nil
+	}
+
+	// Per the Apollo docs, multipart messages are supposed to be json, wrapped in `"payload"`
+	// for subscriptions
+	payloadWrapper, err := astjson.Parse(`{"payload": {}}`)
 	if err != nil {
 		return nil, err
 	}
-
-	respValue, _, err := astjson.MergeValuesWithPath(a, b, "payload")
+	respValue, _, err := astjson.MergeValuesWithPath(payloadWrapper, respValuePreMerge, "payload")
 	if err != nil {
 		return nil, err
 	}
