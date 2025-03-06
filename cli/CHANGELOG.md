@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.75.5](https://github.com/wundergraph/cosmo/compare/wgc@0.75.4...wgc@0.75.5) (2025-03-06)
+
+### Bug Fixes
+
+* **cli:** bun bundle issue with graphql dual-package hazard issue ([#1660](https://github.com/wundergraph/cosmo/issues/1660)) ([a8415be](https://github.com/wundergraph/cosmo/commit/a8415be47f7432ba20a1b1150fa865187cf5f1ae)) (@StarpTech)
+
 ## [0.75.4](https://github.com/wundergraph/cosmo/compare/wgc@0.75.3...wgc@0.75.4) (2025-02-27)
 
 **Note:** Version bump only for package wgc
