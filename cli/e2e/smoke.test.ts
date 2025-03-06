@@ -20,6 +20,15 @@ describe('Bun CLI', () => {
 
     expect(stdout.toString()).toBe(packageJSON.version + '\n');
   });
+
+  test('bun cli should compose a router execution config', async () => {
+    const { stdout, stderr, exitCode } =
+      await $`${binPath} router compose -i ../demo/graph-no-edg.yaml -o e2e/config.json`.quiet();
+
+    expect(exitCode, `exited with non-zero:\nstdout:\n${stdout.toString()}\n\nstderr:\n${stderr.toString()}`).toBe(0);
+
+    expect(stdout.toString()).toContain('Router config successfully written');
+  });
 });
 
 describe('Node CLI', () => {
@@ -35,5 +44,14 @@ describe('Node CLI', () => {
     expect(exitCode, `exited with non-zero:\nstdout:\n${stdout.toString()}\n\nstderr:\n${stderr.toString()}`).toBe(0);
 
     expect(stdout.toString()).toBe(packageJSON.version + '\n');
+  });
+
+  test('node cli should compose a router execution config', async () => {
+    const { stdout, stderr, exitCode } =
+      await $`node ${binPath} router compose -i ../demo/graph-no-edg.yaml -o e2e/config.json`.quiet();
+
+    expect(exitCode, `exited with non-zero:\nstdout:\n${stdout.toString()}\n\nstderr:\n${stderr.toString()}`).toBe(0);
+
+    expect(stdout.toString()).toContain('Router config successfully written');
   });
 });
