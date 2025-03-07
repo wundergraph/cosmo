@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/expr-lang/expr/vm"
 	"maps"
 	"net/http"
 	"slices"
@@ -68,7 +69,8 @@ type PreHandlerOptions struct {
 	ComputeOperationSha256      bool
 	ApolloCompatibilityFlags    *config.ApolloCompatibilityFlags
 	DisableVariablesRemapping   bool
-	EnableBodyInExprContext     bool
+	EnableBodyInExpr            bool
+	EnableBodyInExprCondition   *vm.Program
 }
 
 type PreHandler struct {
@@ -100,7 +102,8 @@ type PreHandler struct {
 	apolloCompatibilityFlags    *config.ApolloCompatibilityFlags
 	variableParsePool           astjson.ParserPool
 	disableVariablesRemapping   bool
-	enableBodyInExprContext     bool
+	enableBodyInExpr            bool
+	enableBodyInExprCondition   *vm.Program
 }
 
 type httpOperation struct {
@@ -145,7 +148,8 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		computeOperationSha256:    opts.ComputeOperationSha256,
 		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
 		disableVariablesRemapping: opts.DisableVariablesRemapping,
-		enableBodyInExprContext:   opts.EnableBodyInExprContext,
+		enableBodyInExpr:          opts.EnableBodyInExpr,
+		enableBodyInExprCondition: opts.EnableBodyInExprCondition,
 	}
 }
 
@@ -498,11 +502,21 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 	// There is potential for the body to be quite large, for example because the query string has a few
 	// thousand lines, thus we allow users to enable this if they want to actually log the body
-	if h.enableBodyInExprContext {
-		requestContext.expressionContext.Request.Body.Query = operationKit.parsedOperation.Request.Query
-		requestContext.expressionContext.Request.Body.OperationName = operationKit.parsedOperation.Request.OperationName
-		requestContext.expressionContext.Request.Body.Variables = string(operationKit.parsedOperation.Request.Variables)
-		requestContext.expressionContext.Request.Body.Extensions = string(operationKit.parsedOperation.Request.Extensions)
+	if h.enableBodyInExpr {
+		var shouldSetBody = true
+		if h.enableBodyInExprCondition != nil {
+			shouldSetBody, err = expr.ResolveBoolExpression(h.enableBodyInExprCondition, requestContext.expressionContext)
+			if err != nil {
+				return err
+			}
+		}
+
+		if shouldSetBody {
+			requestContext.expressionContext.Request.Body.Query = operationKit.parsedOperation.Request.Query
+			requestContext.expressionContext.Request.Body.OperationName = operationKit.parsedOperation.Request.OperationName
+			requestContext.expressionContext.Request.Body.Variables = string(operationKit.parsedOperation.Request.Variables)
+			requestContext.expressionContext.Request.Body.Extensions = string(operationKit.parsedOperation.Request.Extensions)
+		}
 	}
 
 	// Compute the operation sha256 hash as soon as possible for observability reasons

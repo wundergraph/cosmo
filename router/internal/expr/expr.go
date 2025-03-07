@@ -151,6 +151,16 @@ func CompileBoolExpression(s string) (*vm.Program, error) {
 	return v, nil
 }
 
+// CompileBoolExpressionWithPatch compiles an expression and returns the program. It is used for expressions that return bool.
+// The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
+func CompileBoolExpressionWithPatch(s string, visitor ast.Visitor) (*vm.Program, error) {
+	v, err := expr.Compile(s, compileOptions(expr.AsBool(), expr.Patch(visitor))...)
+	if err != nil {
+		return nil, handleExpressionError(err)
+	}
+	return v, nil
+}
+
 // CompileStringExpression compiles an expression and returns the program. It is used for expressions that return strings
 // The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
 func CompileStringExpression(s string) (*vm.Program, error) {
@@ -205,6 +215,14 @@ func ValidateAnyExpression(s string) error {
 
 func CompileAnyExpression(s string) (*vm.Program, error) {
 	v, err := expr.Compile(s, compileOptions()...)
+	if err != nil {
+		return nil, handleExpressionError(err)
+	}
+	return v, nil
+}
+
+func CompileAnyExpressionWithPatch(s string, visitor ast.Visitor) (*vm.Program, error) {
+	v, err := expr.Compile(s, compileOptions(expr.AsAny(), expr.Patch(visitor))...)
 	if err != nil {
 		return nil, handleExpressionError(err)
 	}

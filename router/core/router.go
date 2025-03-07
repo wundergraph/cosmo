@@ -234,7 +234,7 @@ type (
 		cacheWarmup                *config.CacheWarmupConfiguration
 		multipartHeartbeatInterval time.Duration
 		hostName                   string
-		enableBodyInExprContext    bool
+		expressionConfiguration    *config.ExpressionConfiguration
 	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
@@ -1867,9 +1867,9 @@ func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 	}
 }
 
-func WithEnableBodyInExprContext(enableBodyInExprContext bool) Option {
+func WithExpressionConfiguration(expressionConfiguration *config.ExpressionConfiguration) Option {
 	return func(r *Router) {
-		r.enableBodyInExprContext = enableBodyInExprContext
+		r.expressionConfiguration = expressionConfiguration
 	}
 }
 

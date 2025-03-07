@@ -834,6 +834,15 @@ type CacheWarmupConfiguration struct {
 	Timeout        time.Duration     `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
 }
 
+type ExpressionConfiguration struct {
+	IncludeRequestBodyInContext IncludeRequestBodyInExpressionContext `yaml:"include_request_body_in_context"`
+}
+
+type IncludeRequestBodyInExpressionContext struct {
+	Enabled    bool   `yaml:"enabled" envDefault:"false" env:"INCLUDE_REQUEST_BODY_IN_EXPRESSION_CONTEXT_ENABLED"`
+	Expression string `yaml:"expression" envDefault:"" env:"INCLUDE_REQUEST_BODY_IN_EXPRESSION_CONTEXT_ENABLE_EXPRESSION"`
+}
+
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
@@ -878,7 +887,7 @@ type Config struct {
 	DevelopmentMode               bool                        `yaml:"dev_mode" envDefault:"false" env:"DEV_MODE"`
 	Events                        EventsConfiguration         `yaml:"events,omitempty"`
 	CacheWarmup                   CacheWarmupConfiguration    `yaml:"cache_warmup,omitempty"`
-	EnableBodyInExprContext       bool                        `yaml:"enable_body_in_expression_context"`
+	Expression                    ExpressionConfiguration     `yaml:"expression"`
 
 	RouterConfigPath   string `yaml:"router_config_path,omitempty" env:"ROUTER_CONFIG_PATH"`
 	RouterRegistration bool   `yaml:"router_registration" env:"ROUTER_REGISTRATION" envDefault:"true"`

@@ -1998,10 +1998,28 @@
       "default": true,
       "description": "Enable the router registration. The router registration is used to register the router on the control-plane. The default value is true. This should not be modified unless you know what you are doing."
     },
-    "enable_body_in_expression_context": {
-      "type": "boolean",
-      "default": false,
-      "description": "Enable the body to be copied to the expression context."
+    "expression": {
+      "type": "object",
+      "description": "The configurations related to expressions.",
+      "properties": {
+        "include_request_body_in_expression_context": {
+          "type": "object",
+          "description": "Including the request body in the expression context can be useful, e.g. for logging or debugging purposes. However, as this can have a negative impact on performance and memory usage, it's disabled by default and can be enabled on a per-request basis using an expression.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Whether or not the request body should be included in the expression context."
+            },
+            "expression": {
+              "type": "string",
+              "default": "",
+              "description": "An expression that will be evaluated to determine if the request body should be included in the expression context. If the expression is not provided, the request body will always be included if enabled is true."
+            }
+          }
+        }
+      }
     },
     "override_routing_url": {
       "type": "object",

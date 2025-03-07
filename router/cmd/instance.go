@@ -135,7 +135,7 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 		core.WithRateLimitConfig(&cfg.RateLimit),
 		core.WithClientHeader(cfg.ClientHeader),
 		core.WithCacheWarmupConfig(&cfg.CacheWarmup),
-		core.WithEnableBodyInExprContext(cfg.EnableBodyInExprContext),
+		core.WithExpressionConfiguration(&cfg.Expression),
 	}
 
 	// HTTP_PROXY, HTTPS_PROXY and NO_PROXY
