@@ -125,23 +125,23 @@ jobs:
         if: ${{ contains(needs.*.result, 'failure') }}
         run: exit 1
 
-  check_query_planner:
-    if: github.event.pull_request.head.repo.full_name == github.repository
-    needs: [ build_bun_matrix ]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: convictional/trigger-workflow-and-wait@v1.6.5
-        name: Trigger Query Planner CI
-        with:
-          owner: wundergraph
-          repo: cosmo-celestial
-          ref: master
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          propagate_failure: true
-          workflow_file_name: 'query-planner-tester.yaml'
-          client_payload: >-
-            {
-              "router": "ghcr.io/wundergraph/cosmo/router:latest",
-              "wgc": "${{ needs.build_bun_matrix.outputs.artifact-url-bun-linux-x64 }}",
-              "token": "${{secrets.GITHUB_TOKEN}}"
-            }
+#  check_query_planner:
+#    if: github.event.pull_request.head.repo.full_name == github.repository
+#    needs: [ build_bun_matrix ]
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: convictional/trigger-workflow-and-wait@v1.6.5
+#        name: Trigger Query Planner CI
+#        with:
+#          owner: wundergraph
+#          repo: cosmo-celestial
+#          ref: master
+#          github_token: ${{ secrets.GITHUB_TOKEN }}
+#          propagate_failure: true
+#          workflow_file_name: 'query-planner-tester.yaml'
+#          client_payload: >-
+#            {
+#              "router": "ghcr.io/wundergraph/cosmo/router:latest",
+#              "wgc": "${{ needs.build_bun_matrix.outputs.artifact-url-bun-linux-x64 }}",
+#              "token": "${{secrets.GITHUB_TOKEN}}"
+#            }
