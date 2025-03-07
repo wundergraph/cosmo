@@ -22,7 +22,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          runId=`gh run list -R wundergraph/cosmo -e pull_request -w "router-ci.yaml" -c ${{ github.event.pull_request.head.sha }} --json databaseId,createdAt | jq "sort_by(.createdAt) | reverse | .[0].databaseId // \"\""`
+          runId=`gh run list -R wundergraph/cosmo -e pull_request -w "router-ci.yaml" -c ${{ github.event.pull_request.head.sha }} --json databaseId,createdAt | jq 'sort_by(.createdAt) | reverse | .[0].databaseId // ""'`
           if [ $? -ne 0 ]; then
             echo "Failed to get router-ci run ID"
             exit 1
@@ -42,7 +42,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          runId=`gh run list -R wundergraph/cosmo -e pull_request -w "cli-ci.yaml" -c ${{ github.event.pull_request.head.sha }} --json databaseId,createdAt | jq "sort_by(.createdAt) | .[0].databaseId // \"\""`
+          runId=`gh run list -R wundergraph/cosmo -e pull_request -w "cli-ci.yaml" -c ${{ github.event.pull_request.head.sha }} --json databaseId,createdAt | jq 'sort_by(.createdAt) | .[0].databaseId // ""'`
           if [ $? -ne 0 ]; then
             echo "Failed to get cli-ci run ID"
             exit 1
