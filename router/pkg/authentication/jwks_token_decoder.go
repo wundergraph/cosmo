@@ -10,9 +10,10 @@ import (
 	"github.com/MicahParks/jwkset"
 	"github.com/MicahParks/keyfunc/v3"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
+
+	"github.com/wundergraph/cosmo/router/internal/httpclient"
 )
 
 type TokenDecoder interface {
@@ -56,7 +57,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 		}
 
 		jwksetHTTPStorageOptions := jwkset.HTTPClientStorageOptions{
-			Client:             httpclient.NewRetryableHTTPClient(l),
+			Client:             newOIDCDiscoveryClient(httpclient.NewRetryableHTTPClient(l)),
 			Ctx:                ctx, // Used to end background refresh goroutine.
 			HTTPExpectedStatus: http.StatusOK,
 			HTTPMethod:         http.MethodGet,
