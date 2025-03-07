@@ -496,6 +496,8 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 	}
 
+	// There is potential for the body to be quite large, for example because the query string has a few
+	// thousand lines, thus we allow users to enable this if they want to actually log the body
 	if h.enableBodyInExprContext {
 		requestContext.expressionContext.Request.Body.Query = operationKit.parsedOperation.Request.Query
 		requestContext.expressionContext.Request.Body.OperationName = operationKit.parsedOperation.Request.OperationName

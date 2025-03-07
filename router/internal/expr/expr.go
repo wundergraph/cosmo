@@ -48,8 +48,8 @@ type Request struct {
 	Auth   RequestAuth    `expr:"auth"` // if changing the expr tag, the ExprRequestAuthKey should be updated
 	URL    RequestURL     `expr:"url"`
 	Header RequestHeaders `expr:"header"`
-	Error  error          `expr:"error"`
 	Body   RequestBody    `expr:"body"`
+	Error  error          `expr:"error"`
 }
 
 // RequestURL is the context for the URL object in expressions
@@ -71,7 +71,7 @@ type RequestHeaders struct {
 }
 
 type RequestBody struct {
-	Query         string `expr:"query"` // Do not expose the full header
+	Query         string `expr:"query"`
 	OperationName string `expr:"operationName"`
 	Variables     string `expr:"variables"`
 	Extensions    string `expr:"extensions"`
