@@ -49,7 +49,7 @@ type Request struct {
 	URL    RequestURL     `expr:"url"`
 	Header RequestHeaders `expr:"header"`
 	Error  error          `expr:"error"`
-	Body   []byte         `expr:"body"`
+	Body   RequestBody    `expr:"body"`
 }
 
 // RequestURL is the context for the URL object in expressions
@@ -68,6 +68,13 @@ type RequestURL struct {
 
 type RequestHeaders struct {
 	Header http.Header `expr:"-"` // Do not expose the full header
+}
+
+type RequestBody struct {
+	Query         string `expr:"query"` // Do not expose the full header
+	OperationName string `expr:"operationName"`
+	Variables     string `expr:"variables"`
+	Extensions    string `expr:"extensions"`
 }
 
 // Get returns the value of the header with the given key. If the header is not present, an empty string is returned.

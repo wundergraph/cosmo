@@ -326,10 +326,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				return
 			}
 
-			if h.enableBodyInExpressionContext {
-				requestContext.expressionContext.Request.Body = body
-			}
-
 			readOperationBodySpan.End()
 		}
 
@@ -498,6 +494,13 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		if len(httpOperation.files) > 0 {
 			requestContext.operation.files = httpOperation.files
 		}
+	}
+
+	if h.enableBodyInExpressionContext {
+		requestContext.expressionContext.Request.Body.Query = operationKit.parsedOperation.Request.Query
+		requestContext.expressionContext.Request.Body.OperationName = operationKit.parsedOperation.Request.OperationName
+		requestContext.expressionContext.Request.Body.Variables = string(operationKit.parsedOperation.Request.Variables)
+		requestContext.expressionContext.Request.Body.Extensions = string(operationKit.parsedOperation.Request.Extensions)
 	}
 
 	// Compute the operation sha256 hash as soon as possible for observability reasons
