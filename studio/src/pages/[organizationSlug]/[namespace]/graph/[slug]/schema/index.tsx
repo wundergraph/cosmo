@@ -83,13 +83,20 @@ import useWindowSize from "@/hooks/use-window-size";
 import { useChartData } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent
+} from "@/components/ui/popover";
+import {
   FieldMatch,
   GraphQLTypeCategory,
   ParsedGraphQLField,
   TypeMatch,
+  GraphQLTypeDefinition,
   getCategoryDescription,
   getCategoryForType,
   getDeprecatedTypes,
+  getAuthenticatedTypes,
   getRootDescription,
   getTypeCounts,
   getTypesByCategory,
@@ -106,6 +113,7 @@ import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
   XMarkIcon,
+  LockClosedIcon,
 } from "@heroicons/react/24/outline";
 import {
   ArrowRightIcon,
@@ -282,7 +290,7 @@ const Fields = (props: {
 
   const hasArgs = filteredFields.some((f) => !!f.args);
   const hasDetails = filteredFields.some(
-    (f) => !!f.description || !!f.deprecationReason,
+    (f) => !!f.description || !!f.deprecationReason || f.authenticated || !f.requiresScopes,
   );
   const hasUsage = !(["scalars", "enums"] as GraphQLTypeCategory[]).includes(
     props.category,
@@ -340,6 +348,8 @@ const Fields = (props: {
         >
           {items.map((virtualRow) => {
             const field = filteredFields[virtualRow.index];
+            const fieldHasArgs = !!field.args;
+            const fieldHasDetails = !!field.description || !!field.deprecationReason || field.authenticated || !!field.requiresScopes;
             return (
               <TableRow
                 className="group absolute flex w-full py-1 even:bg-secondary/20 hover:bg-secondary/40"
@@ -371,7 +381,7 @@ const Fields = (props: {
                     {field.type && <TypeLink name={`: ${field.type}`} />}
                   </p>
                 </TableCell>
-                {(hasDetails || hasArgs) && (
+                {(fieldHasDetails || fieldHasArgs) && (
                   <TableCell
                     className={cn(
                       "my-1.5 w-5/12",
@@ -381,27 +391,20 @@ const Fields = (props: {
                     <div
                       className={cn("flex flex-col", {
                         "gap-y-4":
-                          hasDetails && field.args && field.args.length > 0,
+                          fieldHasDetails && field.args && field.args.length > 0,
                       })}
                     >
                       {(!field.args || field.args?.length === 0) &&
-                        !hasDetails && <span>-</span>}
-                      {hasDetails && (
+                        !fieldHasDetails && <span>-</span>}
+                      {fieldHasDetails && (
                         <div className="flex flex-col gap-y-4">
                           {field.description && (
                             <p className="text-muted-foreground group-hover:text-current">
                               {field.description}
                             </p>
                           )}
-                          {field.deprecationReason && (
-                            <p className="flex flex-col items-start gap-x-1">
-                              <span className="flex items-center gap-x-1 font-semibold">
-                                <ExclamationTriangleIcon className="h-3 w-3 flex-shrink-0" />
-                                Deprecated
-                              </span>{" "}
-                              {field.deprecationReason}
-                            </p>
-                          )}
+                          <DeprecatedBadge reason={field.deprecationReason} />
+                          <AuthenticatedBadge field={field} />
                         </div>
                       )}
                       {field.args && (
@@ -433,15 +436,7 @@ const Fields = (props: {
                                       {arg.description && (
                                         <p>{arg.description}</p>
                                       )}
-                                      {arg.deprecationReason && (
-                                        <p className="flex flex-col items-start gap-x-1">
-                                          <span className="flex items-center gap-x-1 font-semibold">
-                                            <ExclamationTriangleIcon className="h-3 w-3 flex-shrink-0" />
-                                            Deprecated
-                                          </span>{" "}
-                                          {arg.deprecationReason}
-                                        </p>
-                                      )}
+                                      <DeprecatedBadge reason={arg.deprecationReason} />
                                     </div>
                                   </TooltipContent>
                                 </Tooltip>
@@ -498,7 +493,6 @@ const TypeDiscussions = ({
   startLineNo: number;
   endLineNo: number;
 }) => {
-  const router = useRouter();
   const graphData = useContext(GraphContext);
   const { schemaVersionId } = useContext(ExplorerContext);
 
@@ -917,6 +911,80 @@ const TypeWrapper = ({
   );
 };
 
+const DeprecatedBadge = ({ reason }: { reason: string | undefined | null }) => {
+  if (!reason) {
+    return null;
+  }
+  
+  return (
+    <p className="flex flex-col items-start gap-x-1">
+      <span className="flex items-center gap-x-1 font-semibold">
+        <ExclamationTriangleIcon className="h-3 w-3 flex-shrink-0" />
+        Deprecated
+      </span>{" "}
+      {reason}
+    </p>
+  );
+}
+
+const AuthenticatedBadge = ({ field }: { field: ParsedGraphQLField }) => {
+  if (!field.authenticated && !field.requiresScopes) {
+    return null;
+  }
+  
+  return (
+    <p className="flex flex-col items-start gap-x-1">
+      <span className="flex items-center gap-1 font-semibold">
+        <LockClosedIcon className="h-3 w-3 flex-shrink-0" />
+        Authenticated
+      </span>
+      {field.requiresScopes && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="link" size="sm" className="p-0 h-auto">
+              View scopes
+            </Button>
+          </PopoverTrigger>
+          <AuthenticatedScopes scopes={field.requiresScopes} />
+        </Popover>
+      )}
+    </p>
+  );
+}
+
+const AuthenticatedScopes = ({ scopes }: { scopes: string[][] }) => {
+  return (
+    <PopoverContent className="px-0">
+      <div className="mb-3 pb-3 border-border border-b px-4">
+        The following scope(s) are required to access this field:
+      </div>
+      
+      {scopes
+        .filter((s) => s.length > 0)
+        .map((s, i) => (
+          <div key={`scope-list-${i}`}>
+            {i > 0 && (
+              <div className="relative flex items-center py-2 text-xs">
+                <div className="flex-grow border-t border-border"></div>
+                <span className="mx-4 flex-shrink text-muted-foreground">OR</span>
+                <div className="flex-grow border-t border-border"></div>
+              </div>
+            )}
+            <div className="px-4 text-sm">
+              {s.length === 1
+                ? s[0]
+                : (
+                  <>
+                    {s.slice(0, -1).join(", ")} <span className="font-semibold">AND</span> {s[s.length - 1]}
+                  </>
+                  )}
+            </div>
+          </div>
+        ))}
+    </PopoverContent>
+  );
+}
+
 const SearchDescription = ({
   results,
 }: {
@@ -935,6 +1003,7 @@ const SearchDescription = ({
 
   const [fieldIndex] = activeValue?.split(".")?.map((v) => v.trim());
   const field = results.fields[Number(fieldIndex)]?.field;
+  const parsedField = results.fields[Number(fieldIndex)]?.parsed;
 
   return (
     <div className="hidden w-64 flex-shrink-0 flex-col p-4 md:flex">
@@ -955,15 +1024,8 @@ const SearchDescription = ({
                 <span className="italic">No description provided</span>
               )}
             </p>
-            {field.deprecationReason && (
-              <p className="flex flex-col items-start gap-x-1">
-                <span className="flex items-center gap-x-1 font-semibold">
-                  <ExclamationTriangleIcon className="h-3 w-3 flex-shrink-0" />
-                  Deprecated
-                </span>{" "}
-                {field.deprecationReason}
-              </p>
-            )}
+            <DeprecatedBadge reason={field.deprecationReason} />
+            {parsedField && <AuthenticatedBadge field={parsedField} />}
           </div>
         </div>
       ) : (
@@ -1262,13 +1324,16 @@ export const GraphSelector = () => {
   }
 };
 
-const Toolbar = () => {
+const Toolbar = ({ typeCounts, deprecatedTypesCount, authenticatedTypesCount, }: {
+  typeCounts: Record<string, number> | undefined;
+  deprecatedTypesCount: number;
+  authenticatedTypesCount: number;
+}) => {
   const router = useRouter();
   const selectedCategory = (router.query.category as string) ?? "query";
   const [open, setOpen] = useState(false);
 
   const { ast } = useContext(ExplorerContext);
-  const typeCounts = getTypeCounts(ast);
 
   const analyticsRetention = useFeatureLimit("analytics-retention", 7);
 
@@ -1368,7 +1433,15 @@ const Toolbar = () => {
               <span>Deprecated</span>
               {typeCounts && ast && (
                 <Badge variant="secondary" className="ml-2">
-                  {getDeprecatedTypes(ast).length}
+                  {deprecatedTypesCount}
+                </Badge>
+              )}
+            </SelectItem>
+            <SelectItem value="authenticated">
+              <span>Authentication</span>
+              {typeCounts && ast && (
+                <Badge variant="secondary" className="ml-2">
+                  {authenticatedTypesCount}
                 </Badge>
               )}
             </SelectItem>
@@ -1388,17 +1461,17 @@ const Toolbar = () => {
   );
 };
 
-const DeprecatedTypes = () => {
-  const { ast } = useContext(ExplorerContext);
-
-  const types = getDeprecatedTypes(ast);
-
+const TypesList = ({ types, emptyTitle, emptyDescription }: {
+  types: GraphQLTypeDefinition[];
+  emptyTitle: string;
+  emptyDescription: string;
+}) => {
   if (types.length === 0) {
     return (
       <EmptyState
         icon={<InformationCircleIcon />}
-        title="No deprecated fields found"
-        description="You can view all deprecated fields or fields with deprecated arguments here"
+        title={emptyTitle}
+        description={emptyDescription}
       />
     );
   }
@@ -1421,6 +1494,31 @@ const DeprecatedTypes = () => {
         );
       })}
     </div>
+  );
+}
+
+const DeprecatedTypes = ({ types }: { types: GraphQLTypeDefinition[] }) => {
+  return (
+    <TypesList
+      types={types}
+      emptyTitle="No deprecated fields found"
+      emptyDescription="You can view all deprecated fields or fields with deprecated arguments here"
+    />
+  );
+};
+
+const AuthenticatedTypes = ({ types, isRouterSchema }: {
+  types: GraphQLTypeDefinition[];
+  isRouterSchema: boolean
+}) => {
+  return (
+    <TypesList
+      types={types}
+      emptyTitle="No authenticated fields found"
+      emptyDescription={isRouterSchema
+        ? 'You can view all authenticated fields here'
+        : 'To view authenticated fields, switch to the router schema'}
+    />
   );
 };
 
@@ -1445,16 +1543,21 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     },
   );
 
+  const schemaType = router.query.schemaType as string;
   const schema =
-    (router.query.schemaType as string) === "router"
+    schemaType === "router"
       ? data?.sdl
       : data?.clientSchema || data?.sdl;
 
-  const { ast, isParsing } = useParseSchema(schema);
+  const { ast, doc, isParsing } = useParseSchema(schema);
+  const typeCounts = useMemo(() => ast ? getTypeCounts(ast) : undefined, [ast]);
+  const deprecatedTypes = useMemo(() => ast ? getDeprecatedTypes(ast) : [], [ast]);
+  const authenticatedTypes = useMemo(() => doc ? getAuthenticatedTypes(doc) : [], [doc]);
+  
+  const deprecatedTypesCount = deprecatedTypes.reduce((accu, type) => accu + (type.fields?.length ?? 0), 0);
+  const authenticatedTypesCount = authenticatedTypes.reduce((accu, type) => accu + (type.fields?.length ?? 0), 0);
 
   const isLoadingAST = isLoading || isParsing;
-
-  const typeCounts = ast ? getTypeCounts(ast) : undefined;
 
   let title = "Schema";
   let breadcrumbs = [];
@@ -1497,7 +1600,12 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
         title={title}
         breadcrumbs={breadcrumbs}
         subtitle="Explore schema and field level metrics of your federated graph"
-        toolbar={<Toolbar />}
+        toolbar={(
+          <Toolbar
+            typeCounts={typeCounts}
+            deprecatedTypesCount={deprecatedTypesCount}
+            authenticatedTypesCount={authenticatedTypesCount} />
+        )}
         noPadding
       >
         <div className="flex h-full flex-row">
@@ -1600,7 +1708,37 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                       variant="secondary"
                       className="ml-auto bg-accent/50 px-1.5"
                     >
-                      {getDeprecatedTypes(ast).length}
+                      {deprecatedTypesCount}
+                    </Badge>
+                  )}
+                </Link>
+              </Button>
+
+              <Button
+                asChild
+                variant="ghost"
+                className={cn("justify-start px-3", {
+                  "bg-accent text-accent-foreground":
+                    selectedCategory === "authenticated",
+                })}
+              >
+                <Link
+                  href={{
+                    pathname: `${router.pathname}`,
+                    query: {
+                      ...router.query,
+                      category: "authenticated",
+                      typename: undefined,
+                    },
+                  }}
+                >
+                  <span>Authentication</span>
+                  {typeCounts && ast && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-auto bg-accent/50 px-1.5"
+                    >
+                      {authenticatedTypesCount}
                     </Badge>
                   )}
                 </Link>
@@ -1620,8 +1758,13 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                 actions={<Button onClick={() => refetch()}>Retry</Button>}
               />
             )}
-            {ast && selectedCategory === "deprecated" && <DeprecatedTypes />}
-            {ast && selectedCategory !== "deprecated" && (
+            {ast && selectedCategory === "deprecated" && <DeprecatedTypes types={deprecatedTypes} />}
+            {ast && selectedCategory === "authenticated" && (
+              <AuthenticatedTypes
+                types={authenticatedTypes}
+                isRouterSchema={schemaType === "router"} />
+            )}
+            {ast && !["deprecated", "authenticated"].includes(selectedCategory) && (
               <TypeWrapper typename={typename} category={category} />
             )}
             <FieldUsageSheet />
