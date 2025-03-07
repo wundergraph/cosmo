@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/expr-lang/expr/vm"
 	exprlocal "github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/internal/expr/visitors"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
@@ -25,7 +26,8 @@ func GetAccessLogConfigExpressions(attributes []config.CustomAttribute) ([]Expre
 			return nil, fmt.Errorf("failed when validating log expressions: %w", err)
 		}
 
-		expression, err := exprlocal.CompileAnyExpression(sAttribute.ValueFrom.Expression)
+		usesBody := visitors.UsesBody{}
+		expression, err := exprlocal.CompileBoolExpressionWithPatch(sAttribute.ValueFrom.Expression, &usesBody)
 		if err != nil {
 			return nil, fmt.Errorf("failed when compiling log expressions: %w", err)
 		}

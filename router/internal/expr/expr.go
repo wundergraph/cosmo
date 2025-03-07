@@ -48,6 +48,7 @@ type Request struct {
 	Auth   RequestAuth    `expr:"auth"` // if changing the expr tag, the ExprRequestAuthKey should be updated
 	URL    RequestURL     `expr:"url"`
 	Header RequestHeaders `expr:"header"`
+	Body   RequestBody    `expr:"body"`
 	Error  error          `expr:"error"`
 }
 
@@ -67,6 +68,13 @@ type RequestURL struct {
 
 type RequestHeaders struct {
 	Header http.Header `expr:"-"` // Do not expose the full header
+}
+
+type RequestBody struct {
+	Query         string `expr:"query"`
+	OperationName string `expr:"operationName"`
+	Variables     string `expr:"variables"`
+	Extensions    string `expr:"extensions"`
 }
 
 // Get returns the value of the header with the given key. If the header is not present, an empty string is returned.
@@ -143,6 +151,16 @@ func CompileBoolExpression(s string) (*vm.Program, error) {
 	return v, nil
 }
 
+// CompileBoolExpressionWithPatch compiles an expression and returns the program. It is used for expressions that return bool.
+// The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
+func CompileBoolExpressionWithPatch(s string, visitor ast.Visitor) (*vm.Program, error) {
+	v, err := expr.Compile(s, compileOptions(expr.AsBool(), expr.Patch(visitor))...)
+	if err != nil {
+		return nil, handleExpressionError(err)
+	}
+	return v, nil
+}
+
 // CompileStringExpression compiles an expression and returns the program. It is used for expressions that return strings
 // The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
 func CompileStringExpression(s string) (*vm.Program, error) {
@@ -197,6 +215,14 @@ func ValidateAnyExpression(s string) error {
 
 func CompileAnyExpression(s string) (*vm.Program, error) {
 	v, err := expr.Compile(s, compileOptions()...)
+	if err != nil {
+		return nil, handleExpressionError(err)
+	}
+	return v, nil
+}
+
+func CompileAnyExpressionWithPatch(s string, visitor ast.Visitor) (*vm.Program, error) {
+	v, err := expr.Compile(s, compileOptions(expr.AsAny(), expr.Patch(visitor))...)
 	if err != nil {
 		return nil, handleExpressionError(err)
 	}

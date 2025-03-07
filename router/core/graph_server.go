@@ -5,6 +5,9 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/expr-lang/expr/vm"
+	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/internal/expr/visitors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -1075,6 +1078,20 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return nil, fmt.Errorf("failed to create operation blocker: %w", err)
 	}
 
+	includeBodyExpr := s.expressionConfiguration.IncludeRequestBodyInContext
+	var enableExpr *vm.Program
+	if includeBodyExpr.Enabled && includeBodyExpr.Expression != "" {
+		usesBody := visitors.UsesBody{}
+		enableExpr, err = expr.CompileBoolExpressionWithPatch(s.expressionConfiguration.IncludeRequestBodyInContext.Expression, &usesBody)
+		if err != nil {
+			return nil, err
+		}
+
+		if usesBody.UsesBody {
+			return nil, errors.New("request body set condition expression relies on using body, will always be empty")
+		}
+	}
+
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
 		Logger:                      s.logger,
 		Executor:                    executor,
@@ -1102,6 +1119,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		ComputeOperationSha256:      computeSha256,
 		ApolloCompatibilityFlags:    &s.apolloCompatibilityFlags,
 		DisableVariablesRemapping:   s.engineExecutionConfiguration.DisableVariablesRemapping,
+		EnableBodyInExpr:            includeBodyExpr.Enabled,
+		EnableBodyInExprCondition:   enableExpr,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {

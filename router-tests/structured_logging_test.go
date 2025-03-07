@@ -2237,6 +2237,189 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 		})
 
+		t.Run("validate body is empty when enableBodyInExprContext is not set", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "service_name",
+							ValueFrom: &config.CustomDynamicAttribute{
+								RequestHeader: "service-name",
+							},
+						},
+						{
+							Key: "operation_hash",
+							ValueFrom: &config.CustomDynamicAttribute{
+								ContextField: core.ContextFieldOperationHash,
+							},
+						},
+						{
+							Key:     "request_query",
+							Default: "empty",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.body.query",
+							},
+						},
+						{
+							Key:     "request_operation_name",
+							Default: "empty",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.body.operationName",
+							},
+						},
+						{
+							Key:     "request_variables",
+							Default: "empty",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.body.variables",
+							},
+						},
+						{
+							Key:     "request_extensions",
+							Default: "empty",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.body.extensions",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query:  `query employees { employees { id } }`,
+						Header: map[string][]string{"service-name": {"service-name"}},
+					})
+					require.JSONEq(t, employeesIDData, res.Body)
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestLogAll := requestLog.All()
+					requestContext := requestLogAll[0].ContextMap()
+
+					expectedValues := map[string]interface{}{
+						"log_type":               "request",
+						"status":                 int64(200),
+						"method":                 "POST",
+						"path":                   "/graphql",
+						"query":                  "",
+						"ip":                     "[REDACTED]",
+						"service_name":           "service-name",        // From request header
+						"operation_hash":         "1163600561566987607", // From context
+						"request_query":          "empty",
+						"request_operation_name": "empty",
+						"request_variables":      "empty",
+						"request_extensions":     "empty",
+					}
+					additionalExpectedKeys := []string{
+						"user_agent",
+						"latency",
+						"config_version",
+						"request_id",
+						"pid",
+						"hostname",
+					}
+					checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+				},
+			)
+		})
+
+		t.Run("validate body is empty when enableBodyInExprContext is set", func(t *testing.T) {
+			t.Parallel()
+
+			enableBodyInExprContext := true
+
+			testenv.Run(t,
+				&testenv.Config{
+					RouterOptions: []core.Option{
+						core.WithEnableBodyInExprContext(enableBodyInExprContext),
+					},
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "service_name",
+							ValueFrom: &config.CustomDynamicAttribute{
+								RequestHeader: "service-name",
+							},
+						},
+						{
+							Key: "operation_hash",
+							ValueFrom: &config.CustomDynamicAttribute{
+								ContextField: core.ContextFieldOperationHash,
+							},
+						},
+						{
+							Key:     "request_query",
+							Default: "empty",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.body.query",
+							},
+						},
+						{
+							Key:     "request_operation_name",
+							Default: "empty",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.body.operationName",
+							},
+						},
+						{
+							Key:     "request_variables",
+							Default: "empty",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.body.variables",
+							},
+						},
+						{
+							Key:     "request_extensions",
+							Default: "empty",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.body.extensions",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query:  `query employees { employees { id } }`,
+						Header: map[string][]string{"service-name": {"service-name"}},
+					})
+					require.JSONEq(t, employeesIDData, res.Body)
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestLogAll := requestLog.All()
+					requestContext := requestLogAll[0].ContextMap()
+
+					expectedValues := map[string]interface{}{
+						"log_type":               "request",
+						"status":                 int64(200),
+						"method":                 "POST",
+						"path":                   "/graphql",
+						"query":                  "",
+						"ip":                     "[REDACTED]",
+						"service_name":           "service-name",        // From request header
+						"operation_hash":         "1163600561566987607", // From context
+						"request_query":          "query employees { employees { id } }",
+						"request_operation_name": "empty",
+						"request_variables":      "{}",
+						"request_extensions":     "empty",
+					}
+					additionalExpectedKeys := []string{
+						"user_agent",
+						"latency",
+						"config_version",
+						"request_id",
+						"pid",
+						"hostname",
+					}
+					checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+				},
+			)
+		})
+
 	})
 
 }
