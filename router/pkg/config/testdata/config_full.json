@@ -492,6 +492,7 @@
     "ItemsPerSecond": 50,
     "Timeout": 30000000000
   },
+  "EnableBodyInExprContext": false,
   "RouterConfigPath": "latest.json",
   "RouterRegistration": true,
   "OverrideRoutingURL": {
