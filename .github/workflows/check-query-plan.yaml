@@ -23,9 +23,17 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           runId=`gh run list -e pull_request -w "router-ci.yaml" -c ${{ github.sha }} --json databaseId,createdAt | jq "sort_by(.createdAt) | reverse | .[0].databaseId"`
+          if [ $? -ne 0 ]; then
+            echo "Failed to get router-ci run ID"
+            exit 1
+          fi
           router="ghcr.io/wundergraph/cosmo/router:latest"
           if [ ! -z "$runId" ]; then
             gh run watch $runId
+            if [ $? -ne 0 ]; then
+              echo "Failed to watch router-ci run ID"
+              exit 1
+            fi
             router="ghcr.io/wundergraph/cosmo/router:sha-${{ github.sha }}"
           fi
           echo "router=$router" >> $GITHUB_OUTPUT
@@ -35,9 +43,17 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           runId=`gh run list -e pull_request -w "cli-ci.yaml" -c ${{ github.sha }} --json databaseId,createdAt | jq "sort_by(.createdAt) | .[0].databaseId"`
+          if [ $? -ne 0 ]; then
+            echo "Failed to get cli-ci run ID"
+            exit 1
+          fi
           wgc="latest"
           if [ ! -z "$runId" ]; then
             gh run watch $runId
+            if [ $? -ne 0 ]; then
+              echo "Failed to watch cli-ci run ID"
+              exit 1
+            fi
             artifact_url=`gh api \
               -H "Accept: application/vnd.github+json" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
