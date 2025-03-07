@@ -57,7 +57,7 @@ jobs:
             artifact_url=`gh api \
               -H "Accept: application/vnd.github+json" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
-              /repos/wundergraph/cosmo/actions/runs/$runId/artifacts -q '.artifacts[] | select(.name == "wgc-experimental-${{ github.event.pull_request.head.sha }}-bun-linux-x64") | .["archive_download_url"]'`
+              /repos/wundergraph/cosmo/actions/runs/$runId/artifacts -q '.artifacts[] | select(.name | endswith("-bun-linux-x64")) | .["archive_download_url"]'`
             if [ -z "$artifact_url" ]; then
               echo "Failed to get artifact URL"
               exit 1
