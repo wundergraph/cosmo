@@ -534,7 +534,7 @@ func TestNatsEvents(t *testing.T) {
 
 					// Read the first part
 
-					expected := "\r\n--graphql\nContent-Type: application/json\r\n\r\n{\"payload\":{\"data\":{\"countFor\":0}}}\n"
+					expected := "\r\n--graphql\r\nContent-Type: application/json\r\n\r\n{\"payload\":{\"data\":{\"countFor\":0}}}\n"
 					read := make([]byte, len(expected))
 					_, err = reader.Read(read)
 					assert.NoError(t, err)
@@ -583,7 +583,7 @@ func TestNatsEvents(t *testing.T) {
 
 					// Read the first part
 
-					expected := "\r\n--graphql\nContent-Type: application/json\r\n\r\n{\"payload\":{\"data\":{\"countFor\":0}}}\n\r\n--graphql"
+					expected := "\r\n--graphql\r\nContent-Type: application/json\r\n\r\n{\"payload\":{\"data\":{\"countFor\":0}}}\n\r\n--graphql"
 					read := make([]byte, len(expected))
 					_, err = reader.Read(read)
 					assert.NoError(t, err)
