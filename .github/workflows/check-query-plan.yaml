@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Wait Router CI and get image URL
         id: wait-router-ci
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           runId=`gh run list -e pull_request -w "router-ci.yaml" -c ${{ github.sha }} --json databaseId,createdAt | jq "sort_by(.createdAt) | reverse | .[0].databaseId"`
           router="ghcr.io/wundergraph/cosmo/router:latest"
@@ -29,6 +31,8 @@ jobs:
           echo "router=$router" >> $GITHUB_OUTPUT
       - name: Wait CLI CI and get wgc artifact URL or name
         id: wait-cli-ci
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           runId=`gh run list -e pull_request -w "cli-ci.yaml" -c ${{ github.sha }} --json databaseId,createdAt | jq "sort_by(.createdAt) | .[0].databaseId"`
           wgc="latest"
