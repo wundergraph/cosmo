@@ -145,9 +145,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-        credentials:
-          username: ${{secrets.DOCKER_USERNAME}}
-          password: ${{secrets.DOCKER_PASSWORD}}
         ports:
           - 6379:6379
       kafka:
