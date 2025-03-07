@@ -54,15 +54,15 @@ jobs:
               echo "Failed to watch cli-ci run ID"
               exit 1
             fi
-            artifact_url=`gh api \
+            artifact_id=`gh api \
               -H "Accept: application/vnd.github+json" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
-              /repos/wundergraph/cosmo/actions/runs/$runId/artifacts -q '.artifacts[] | select(.name | endswith("-bun-linux-x64")) | .["archive_download_url"]'`
-            if [ -z "$artifact_url" ]; then
-              echo "Failed to get artifact URL"
+              /repos/wundergraph/cosmo/actions/runs/$runId/artifacts -q '.artifacts[] | select(.name | endswith("-bun-linux-x64")) | .["id"]'`
+            if [ -z "$artifact_id" ]; then
+              echo "Failed to get artifact ID"
               exit 1
             fi
-            wgc=$artifact_url
+            wgc="https://github.com/wundergraph/cosmo/actions/runs/$runId/artifacts/$artifact_id"
           fi
           echo "wgc=$wgc" >> $GITHUB_OUTPUT
       - uses: convictional/trigger-workflow-and-wait@v1.6.5
