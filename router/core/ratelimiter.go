@@ -9,10 +9,11 @@ import (
 	"io"
 	"sync"
 
+	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
+
 	"github.com/expr-lang/expr/vm"
 	"github.com/go-redis/redis_rate/v10"
 	"github.com/wundergraph/cosmo/router/internal/expr"
-	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
@@ -23,9 +24,12 @@ var (
 type CosmoRateLimiterOptions struct {
 	RedisClient rd.RDCloser
 	Debug       bool
+
 	RejectStatusCode int
+
 	KeySuffixExpression string
-	FailOpen	bool
+
+	FailOpen bool
 }
 
 func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, err error) {
@@ -56,11 +60,10 @@ type CosmoRateLimiter struct {
 	client  rd.RDCloser
 	limiter *redis_rate.Limiter
 	debug   bool
-
 	rejectStatusCode int
 
 	keySuffixProgram *vm.Program
-
+	
 	failOpen bool
 }
 
@@ -75,13 +78,13 @@ func (c *CosmoRateLimiter) RateLimitPreFetch(ctx *resolve.Context, info *resolve
 		Period: ctx.RateLimitOptions.Period,
 	}
 	key, err := c.generateKey(ctx)
-	if err != nil && c.failOpen == true{
+	if err != nil && c.failOpen{
 		return nil, nil
 	} else if err != nil {
 		return nil, err
 	}
 	allow, err := c.limiter.AllowN(ctx.Context(), key, limit, requestRate)
-	if err != nil && c.failOpen == true{
+	if err != nil && c.failOpen{
 		return nil, nil
 	} else if err != nil {
 		return nil, err

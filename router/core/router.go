@@ -867,6 +867,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			URLs:           r.Config.rateLimit.Storage.URLs,
 			ClusterEnabled: r.Config.rateLimit.Storage.ClusterEnabled,
 			Logger:         r.logger,
+			FailOpen:       r.Config.rateLimit.FailOpen,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create redis client: %w", err)

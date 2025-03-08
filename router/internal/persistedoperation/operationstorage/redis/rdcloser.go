@@ -3,10 +3,11 @@ package rd
 import (
 	"context"
 	"fmt"
-	"github.com/redis/go-redis/v9"
-	"go.uber.org/zap"
 	"net/url"
 	"strings"
+
+	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 // RDCloser is an interface that combines the redis.Cmdable and io.Closer interfaces, ensuring that we can close the
@@ -20,6 +21,7 @@ type RedisCloserOptions struct {
 	URLs           []string
 	ClusterEnabled bool
 	Password       string
+	FailOpen       bool
 }
 
 func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
@@ -73,6 +75,10 @@ func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
 	}
 
 	if isFunctioning, err := IsFunctioningClient(rdb); !isFunctioning {
+		if(opts.FailOpen) {
+			opts.Logger.Warn(fmt.Sprintf("Ratelimit Fail Open activated: redis client is currently not responding with provided URLs: %q", err))
+			return rdb, nil
+		}
 		return rdb, fmt.Errorf("failed to create a functioning redis client with the provided URLs: %w", err)
 	}
 
