@@ -41,9 +41,6 @@ func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, e
 		rejectStatusCode: opts.RejectStatusCode,
 		failOpen:         opts.FailOpen,
 	}
-	if err != nil {
-		return nil, err
-	}
 	if rl.rejectStatusCode == 0 {
 		rl.rejectStatusCode = 200
 	}
