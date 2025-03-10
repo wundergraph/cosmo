@@ -49,6 +49,8 @@ export function getSubgraphById(
         namespace: subgraph.namespace,
         websocketSubprotocol: subgraph.websocketSubprotocol || '',
         isFeatureSubgraph: subgraph.isFeatureSubgraph,
+        baseSubgraphId: 'baseSubgraphId' in subgraph ? subgraph.baseSubgraphId : undefined,
+        baseSubgraphName: 'baseSubgraphName' in subgraph ? subgraph.baseSubgraphName : undefined,
       },
       members: await subgraphRepo.getSubgraphMembers(subgraph.id),
       response: {
