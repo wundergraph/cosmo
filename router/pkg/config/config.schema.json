@@ -1751,6 +1751,11 @@
               "default": "RATE_LIMIT_EXCEEDED"
             }
           }
+        },
+        "fail_open": {
+          "type": "boolean",
+          "description": "Enable Rate Limit fail open on redis availability failure. This interacts with Redis timeout configuration parameters, essentially adding to each requests latency in failure.",
+          "default": false
         }
       }
     },
