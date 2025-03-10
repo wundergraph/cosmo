@@ -44,8 +44,13 @@ func TestWatch(t *testing.T) {
 
 		eg, ctx := errgroup.WithContext(ctx)
 		eg.Go(func() error {
-			return watcher.SimpleWatch(ctx, zap.NewNop(), watchInterval, tempFile, func() {
-				wg.Done()
+			return watcher.SimpleWatch(ctx, watcher.SimpleWatcherOptions{
+				Interval: watchInterval,
+				Logger:   zap.NewNop(),
+				Path:     tempFile,
+				Callback: func() {
+					wg.Done()
+				},
 			})
 		})
 
@@ -88,8 +93,13 @@ func TestWatch(t *testing.T) {
 
 		eg, ctx := errgroup.WithContext(ctx)
 		eg.Go(func() error {
-			return watcher.SimpleWatch(ctx, zap.NewNop(), watchInterval, tempFile, func() {
-				wg.Done()
+			return watcher.SimpleWatch(ctx, watcher.SimpleWatcherOptions{
+				Interval: watchInterval,
+				Logger:   zap.NewNop(),
+				Path:     tempFile,
+				Callback: func() {
+					wg.Done()
+				},
 			})
 		})
 
@@ -120,8 +130,13 @@ func TestWatch(t *testing.T) {
 
 		eg, ctx := errgroup.WithContext(ctx)
 		eg.Go(func() error {
-			return watcher.SimpleWatch(ctx, zap.NewNop(), watchInterval, tempFile, func() {
-				wg.Done()
+			return watcher.SimpleWatch(ctx, watcher.SimpleWatcherOptions{
+				Interval: watchInterval,
+				Logger:   zap.NewNop(),
+				Path:     tempFile,
+				Callback: func() {
+					wg.Done()
+				},
 			})
 		})
 
@@ -159,8 +174,13 @@ func TestWatch(t *testing.T) {
 
 		eg, ctx := errgroup.WithContext(ctx)
 		eg.Go(func() error {
-			return watcher.SimpleWatch(ctx, zap.NewNop(), watchInterval, tempFile, func() {
-				wg.Done()
+			return watcher.SimpleWatch(ctx, watcher.SimpleWatcherOptions{
+				Interval: watchInterval,
+				Logger:   zap.NewNop(),
+				Path:     tempFile,
+				Callback: func() {
+					wg.Done()
+				},
 			})
 		})
 
@@ -220,8 +240,13 @@ func TestWatch(t *testing.T) {
 
 		eg, ctx := errgroup.WithContext(ctx)
 		eg.Go(func() error {
-			return watcher.SimpleWatch(ctx, zap.NewNop(), watchInterval, watchedFile, func() {
-				wg.Done()
+			return watcher.SimpleWatch(ctx, watcher.SimpleWatcherOptions{
+				Interval: watchInterval,
+				Logger:   zap.NewNop(),
+				Path:     watchedFile,
+				Callback: func() {
+					wg.Done()
+				},
 			})
 		})
 
@@ -250,7 +275,11 @@ func TestCancel(t *testing.T) {
 
 	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
-		return watcher.SimpleWatch(ctx, zap.NewNop(), watchInterval, tempFile, func() {})
+		return watcher.SimpleWatch(ctx, watcher.SimpleWatcherOptions{
+			Interval: watchInterval,
+			Logger:   zap.NewNop(),
+			Path:     tempFile,
+		})
 	})
 
 	cancel()

@@ -1116,30 +1116,35 @@ func (r *Router) Start(ctx context.Context) error {
 		}()
 
 		if r.executionConfig != nil && r.executionConfig.Watch {
-			go watcher.MustSimpleWatch(ctx, r.logger.With(zap.String("watcher", "execution_config")), time.Second, r.executionConfig.Path, func() {
-				if r.shutdown.Load() {
-					r.logger.Warn("Router is in shutdown state. Skipping config update")
-					return
-				}
+			go watcher.MustSimpleWatch(ctx, watcher.SimpleWatcherOptions{
+				Logger:   r.logger.With(zap.String("watcher", "execution_config")),
+				Path:     r.executionConfig.Path,
+				Interval: time.Second,
+				Callback: func() {
+					if r.shutdown.Load() {
+						r.logger.Warn("Router is in shutdown state. Skipping config update")
+						return
+					}
 
-				data, err := os.ReadFile(r.executionConfig.Path)
-				if err != nil {
-					r.logger.Error("Failed to read config file", zap.Error(err))
-					return
-				}
+					data, err := os.ReadFile(r.executionConfig.Path)
+					if err != nil {
+						r.logger.Error("Failed to read config file", zap.Error(err))
+						return
+					}
 
-				r.logger.Info("Config file changed. Updating server with new config", zap.String("path", r.executionConfig.Path))
+					r.logger.Info("Config file changed. Updating server with new config", zap.String("path", r.executionConfig.Path))
 
-				cfg, err := execution_config.UnmarshalConfig(data)
-				if err != nil {
-					r.logger.Error("Failed to serialize config file", zap.Error(err))
-					return
-				}
+					cfg, err := execution_config.UnmarshalConfig(data)
+					if err != nil {
+						r.logger.Error("Failed to serialize config file", zap.Error(err))
+						return
+					}
 
-				if err := r.newServer(ctx, cfg); err != nil {
-					r.logger.Error("Failed to update server with new config", zap.Error(err))
-					return
-				}
+					if err := r.newServer(ctx, cfg); err != nil {
+						r.logger.Error("Failed to update server with new config", zap.Error(err))
+						return
+					}
+				},
 			})
 
 			r.logger.Info("Watching config file for changes. Router will hot-reload automatically without downtime",

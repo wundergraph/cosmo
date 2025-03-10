@@ -8,21 +8,28 @@ import (
 	"go.uber.org/zap"
 )
 
-func MustSimpleWatch(ctx context.Context, logger *zap.Logger, interval time.Duration, path string, cb func()) {
-	if err := SimpleWatch(ctx, logger, interval, path, cb); err != nil {
-		logger.Fatal("Error watching file", zap.Error(err))
+type SimpleWatcherOptions struct {
+	Interval time.Duration
+	Logger   *zap.Logger
+	Path     string
+	Callback func()
+}
+
+func MustSimpleWatch(ctx context.Context, options SimpleWatcherOptions) {
+	if err := SimpleWatch(ctx, options); err != nil {
+		options.Logger.Fatal("Error watching file", zap.Error(err))
 	}
 }
 
-func SimpleWatch(ctx context.Context, logger *zap.Logger, interval time.Duration, path string, cb func()) error {
-	ticker := time.NewTicker(interval)
+func SimpleWatch(ctx context.Context, options SimpleWatcherOptions) error {
+	ticker := time.NewTicker(options.Interval)
 	defer ticker.Stop()
 
-	ll := logger.With(zap.String("path", path))
+	ll := options.Logger.With(zap.String("path", options.Path))
 
 	var prevModTime time.Time
 
-	stat, err := os.Stat(path)
+	stat, err := os.Stat(options.Path)
 	if err != nil {
 		ll.Debug("Target file cannot be statted", zap.Error(err))
 	} else {
@@ -34,7 +41,7 @@ func SimpleWatch(ctx context.Context, logger *zap.Logger, interval time.Duration
 	for {
 		select {
 		case <-ticker.C:
-			stat, err := os.Stat(path)
+			stat, err := os.Stat(options.Path)
 			if err != nil {
 				ll.Debug("Target file cannot be statted", zap.Error(err))
 
@@ -48,7 +55,7 @@ func SimpleWatch(ctx context.Context, logger *zap.Logger, interval time.Duration
 
 			if stat.ModTime().After(prevModTime) {
 				prevModTime = stat.ModTime()
-				cb()
+				options.Callback()
 			}
 		case <-ctx.Done():
 			return ctx.Err()
