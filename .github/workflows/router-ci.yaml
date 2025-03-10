@@ -243,7 +243,7 @@ jobs:
         with:
           name: 'Router'
           github_token: ${{secrets.GITHUB_TOKEN}}
-          image_ref: steps.build_push_image.outputs.image_ref
+          image_ref: 'ghcr.io/wundergraph/cosmo/router:sha-${{ github.sha }}'
 
   build_push_image:
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
