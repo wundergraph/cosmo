@@ -241,6 +241,12 @@
     "ItemsPerSecond": 50,
     "Timeout": 30000000000
   },
+  "Expression": {
+    "IncludeRequestBodyInContext": {
+      "Enabled": false,
+      "Expression": ""
+    }
+  },,
   "RouterConfigPath": "",
   "RouterRegistration": true,
   "OverrideRoutingURL": {

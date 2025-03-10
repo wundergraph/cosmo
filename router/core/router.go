@@ -234,6 +234,7 @@ type (
 		cacheWarmup                *config.CacheWarmupConfiguration
 		multipartHeartbeatInterval time.Duration
 		hostName                   string
+		expressionConfiguration    *config.ExpressionConfiguration
 	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
@@ -1863,6 +1864,12 @@ func WithClientHeader(cfg config.ClientHeader) Option {
 func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 	return func(r *Router) {
 		r.cacheWarmup = cfg
+	}
+}
+
+func WithExpressionConfiguration(expressionConfiguration *config.ExpressionConfiguration) Option {
+	return func(r *Router) {
+		r.expressionConfiguration = expressionConfiguration
 	}
 }
 
