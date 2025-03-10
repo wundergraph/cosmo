@@ -10,31 +10,25 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
+	"go.uber.org/goleak"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
 
-var (
-	watchInterval = 10 * time.Millisecond
-)
-
-type CallbackSpy struct {
-	calls int
-	mu    sync.Mutex
+func TestMain(m *testing.M) {
+	goleak.VerifyTestMain(m)
 }
 
-func (c *CallbackSpy) Call() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	c.calls++
-}
+var watchInterval = 10 * time.Millisecond
 
 func TestWatch(t *testing.T) {
 	t.Parallel()
 
 	t.Run("create and move", func(t *testing.T) {
 		t.Parallel()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
 		var err error
 
@@ -50,7 +44,7 @@ func TestWatch(t *testing.T) {
 
 		wg := sync.WaitGroup{}
 
-		eg, ctx := errgroup.WithContext(context.Background())
+		eg, ctx := errgroup.WithContext(ctx)
 		eg.Go(func() error {
 			return watcher.SimpleWatch(ctx, zap.NewNop(), watchInterval, tempFile, func() {
 				wg.Done()
@@ -72,7 +66,9 @@ func TestWatch(t *testing.T) {
 
 	t.Run("modify an existing file", func(t *testing.T) {
 		t.Parallel()
-		ctx := context.Background()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
 		dir := t.TempDir()
 		tempFile := filepath.Join(dir, "config.json")
@@ -102,7 +98,9 @@ func TestWatch(t *testing.T) {
 
 	t.Run("delete and replace a file", func(t *testing.T) {
 		t.Parallel()
-		ctx := context.Background()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
 		dir := t.TempDir()
 		tempFile := filepath.Join(dir, "config.json")
@@ -138,7 +136,9 @@ func TestWatch(t *testing.T) {
 
 	t.Run("move and replace a file", func(t *testing.T) {
 		t.Parallel()
-		ctx := context.Background()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
 		dir := t.TempDir()
 		tempFile := filepath.Join(dir, "config.json")
@@ -176,7 +176,10 @@ func TestWatch(t *testing.T) {
 
 	t.Run("kubernetes-like symlinks", func(t *testing.T) {
 		t.Parallel()
-		ctx := context.Background()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
 		dir := t.TempDir()
 
 		/*
@@ -227,7 +230,9 @@ func TestWatch(t *testing.T) {
 
 func TestCancel(t *testing.T) {
 	t.Parallel()
-	ctx := context.Background()
+
+	ctx, testCancel := context.WithCancel(context.Background())
+	defer testCancel()
 
 	dir := t.TempDir()
 	tempFile := filepath.Join(dir, "config.json")
