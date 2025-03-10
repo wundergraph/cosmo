@@ -8,6 +8,12 @@ import (
 	"go.uber.org/zap"
 )
 
+func MustSimpleWatch(ctx context.Context, logger *zap.Logger, interval time.Duration, path string, cb func()) {
+	if err := SimpleWatch(ctx, logger, interval, path, cb); err != nil {
+		logger.Fatal("Error watching file", zap.Error(err))
+	}
+}
+
 func SimpleWatch(ctx context.Context, logger *zap.Logger, interval time.Duration, path string, cb func()) error {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
