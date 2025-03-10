@@ -78,7 +78,7 @@ jobs:
           owner: wundergraph
           repo: cosmo-celestial
           ref: master
-          github_token: ${{ inputs.token }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           propagate_failure: true
           workflow_file_name: 'query-planner-tester.yaml'
           client_payload: >-
