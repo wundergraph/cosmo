@@ -15,7 +15,7 @@ on:
         value: ${{ jobs.build_push_image.outputs.image_ref }}
 
 concurrency:
-  group: ${{github.workflow}}-${{github.head_ref}}
+  group: ${{github.workflow}}-${{github.head_ref}}-router
   cancel-in-progress: true
 
 permissions:

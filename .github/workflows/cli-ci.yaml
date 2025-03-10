@@ -12,7 +12,7 @@ on:
         value: ${{ jobs.build_bun_matrix.outputs.artifact-url-bun-linux-x64 }}
 
 concurrency:
-  group: ${{github.workflow}}-${{github.head_ref}}
+  group: ${{github.workflow}}-${{github.head_ref}}-cli
   cancel-in-progress: true
 
 env:
