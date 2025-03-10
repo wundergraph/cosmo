@@ -61,7 +61,7 @@ func TestWatch(t *testing.T) {
 		require.NoError(t, err)
 
 		// Should get an event for the new file
-		waitTimeout(&wg, waitForEvents)
+		wg.Wait()
 	})
 
 	t.Run("modify an existing file", func(t *testing.T) {
@@ -93,7 +93,7 @@ func TestWatch(t *testing.T) {
 		err = os.WriteFile(tempFile, []byte("b"), 0o600)
 		require.NoError(t, err)
 
-		waitTimeout(&wg, waitForEvents)
+		wg.Wait()
 	})
 
 	t.Run("delete and replace a file", func(t *testing.T) {
@@ -131,7 +131,7 @@ func TestWatch(t *testing.T) {
 		require.NoError(t, err)
 
 		// Should get an event for the new file
-		waitTimeout(&wg, waitForEvents)
+		wg.Wait()
 	})
 
 	t.Run("move and replace a file", func(t *testing.T) {
@@ -171,7 +171,7 @@ func TestWatch(t *testing.T) {
 		require.NoError(t, err)
 
 		// Should get an event for the moved file, even if its identical
-		waitTimeout(&wg, waitForEvents)
+		wg.Wait()
 	})
 
 	t.Run("kubernetes-like symlinks", func(t *testing.T) {
@@ -224,15 +224,13 @@ func TestWatch(t *testing.T) {
 
 		require.NoError(t, os.WriteFile(realFile, []byte("b"), 0o600))
 
-		waitTimeout(&wg, waitForEvents)
+		wg.Wait()
 	})
 }
 
 func TestCancel(t *testing.T) {
 	t.Parallel()
-
-	ctx, testCancel := context.WithCancel(context.Background())
-	defer testCancel()
+	ctx := context.Background()
 
 	dir := t.TempDir()
 	tempFile := filepath.Join(dir, "config.json")
@@ -250,23 +248,4 @@ func TestCancel(t *testing.T) {
 	cancel()
 	err = eg.Wait()
 	require.ErrorIs(t, err, context.Canceled)
-}
-
-// !! THIS FUNCTION LEAKS GOROUTINES !!
-// In a timeout scenario, the "monitor" goroutine will be leaked.
-func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
-	completed := make(chan struct{})
-
-	// Leaks in a fail case
-	go func() {
-		defer close(completed)
-		wg.Wait()
-	}()
-
-	select {
-	case <-completed:
-		return true // completed
-	case <-time.After(timeout):
-		return false // timed out
-	}
 }
