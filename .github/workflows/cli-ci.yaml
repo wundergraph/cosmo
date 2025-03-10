@@ -8,7 +8,7 @@ on:
   workflow_call:
     outputs:
       wgc:
-        wgc: "The WGC artifact"
+        description: "The WGC artifact"
         value: ${{ jobs.build_bun_matrix.outputs.artifact-url-bun-linux-x64 }}
 
 concurrency:

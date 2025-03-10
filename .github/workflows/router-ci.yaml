@@ -9,9 +9,9 @@ on:
 #      - 'connect/**/*'
 #      - '.github/workflows/router-ci.yaml'
   workflow_call:
-    outputs: # Define outputs for the reusable workflow
+    outputs:
       router:
-        router: "The router image"
+        description: "The Router image reference"
         value: ${{ jobs.build_push_image.outputs.image_ref }}
 
 concurrency:
