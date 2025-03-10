@@ -1,82 +1,30 @@
 name: Check Query Plan
 on:
-  pull_request:
-    paths:
-      # This workflow should run every time router-ci and cli-ci runs
-      - 'cli/**/*'
-      - 'connect/**/*'
-      - '.github/workflows/cli-ci.yaml'
-      - 'composition-go/**/*'
-      - 'demo/**/*'
-      - 'router/**/*'
-      - 'router-tests/**/*'
-      - 'connect/**/*'
-      - '.github/workflows/router-ci.yaml'
+  workflow_call:
+    inputs:
+      router:
+        type: string
+      wgc:
+        type: string
+      token:
+        type: string
 
 jobs:
   check_query_plan:
     runs-on: ubuntu-latest
     steps:
-      - name: Wait Router CI and get image URL
-        id: wait-router-ci
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          runId=`gh run list -R wundergraph/cosmo -e pull_request -w "router-ci.yaml" -c ${{ github.event.pull_request.head.sha }} --json databaseId,createdAt | jq 'sort_by(.createdAt) | reverse | .[0].databaseId'`
-          if [ $? -ne 0 ]; then
-            echo "Failed to get router-ci run ID"
-            exit 1
-          fi
-          router="ghcr.io/wundergraph/cosmo/router:latest"
-          if [ "$runId" != "null" ]; then
-            gh run watch -R wundergraph/cosmo $runId
-            if [ $? -ne 0 ]; then
-              echo "Failed to watch router-ci run ID"
-              exit 1
-            fi
-            router="ghcr.io/wundergraph/cosmo/router:sha-${{ github.event.pull_request.head.sha }}"
-          fi
-          echo "router=$router" >> $GITHUB_OUTPUT
-      - name: Wait CLI CI and get wgc artifact URL or name
-        id: wait-cli-ci
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          runId=`gh run list -R wundergraph/cosmo -e pull_request -w "cli-ci.yaml" -c ${{ github.event.pull_request.head.sha }} --json databaseId,createdAt | jq 'sort_by(.createdAt) | reverse | .[0].databaseId'`
-          if [ $? -ne 0 ]; then
-            echo "Failed to get cli-ci run ID"
-            exit 1
-          fi
-          wgc="latest"
-          if [ "$runId" != "null" ]; then
-            gh run watch -R wundergraph/cosmo $runId
-            if [ $? -ne 0 ]; then
-              echo "Failed to watch cli-ci run ID"
-              exit 1
-            fi
-            artifact_id=`gh api \
-              -H "Accept: application/vnd.github+json" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              /repos/wundergraph/cosmo/actions/runs/$runId/artifacts -q '.artifacts[] | select(.name | endswith("-bun-linux-x64")) | .["id"]'`
-            if [ -z "$artifact_id" ]; then
-              echo "Failed to get artifact ID"
-              exit 1
-            fi
-            wgc="https://github.com/wundergraph/cosmo/actions/runs/$runId/artifacts/$artifact_id"
-          fi
-          echo "wgc=$wgc" >> $GITHUB_OUTPUT
       - uses: convictional/trigger-workflow-and-wait@v1.6.5
         name: Trigger Query Planner CI
         with:
           owner: wundergraph
           repo: cosmo-celestial
           ref: master
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ inputs.token }}
           propagate_failure: true
           workflow_file_name: 'query-planner-tester.yaml'
           client_payload: >-
             {
-              "router": "${{ steps.wait-router-ci.outputs.router }}",
-              "wgc": "${{ steps.wait-cli-ci.outputs.wgc }}",
-              "token": "${{secrets.GITHUB_TOKEN}}"
+              "router": "${{ inputs.router }}",
+              "wgc": "${{ inputs.wgc }}",
+              "token": "${{ inputs.token }}"
             }

@@ -1,10 +1,15 @@
 name: wgc CI
 on:
-  pull_request:
-    paths:
-      - 'cli/**/*'
-      - 'connect/**/*'
-      - '.github/workflows/cli-ci.yaml'
+#  pull_request:
+#    paths:
+#      - 'cli/**/*'
+#      - 'connect/**/*'
+#      - '.github/workflows/cli-ci.yaml'
+  workflow_call:
+    outputs:
+      wgc:
+        wgc: "The WGC artifact"
+        value: ${{ jobs.build_bun_matrix.outputs.artifact-url-bun-linux-x64 }}
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
