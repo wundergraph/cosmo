@@ -46,7 +46,7 @@ jobs:
     needs: filter-changes
     runs-on: ubuntu-latest
     steps:
-      - uses: .github/workflows/router-ci.yaml
+      - uses: ./.github/workflows/router-ci.yaml
         id: router-ci
         if: ${{ needs.filter-changes.outputs.router == 'true' }}
       - name: Set Router built image
@@ -59,7 +59,7 @@ jobs:
     needs: filter-changes
     runs-on: ubuntu-latest
     steps:
-      - uses: .github/workflows/cli-ci.yaml
+      - uses: ./.github/workflows/cli-ci.yaml
         id: cli-ci
         if: ${{ needs.filter-changes.outputs.cli == 'true' }}
       - name: Set Cli built artifact
