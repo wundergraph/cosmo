@@ -38,8 +38,6 @@ func TestWatch(t *testing.T) {
 		err = os.WriteFile(tempFile, []byte("a"), 0o600)
 		require.NoError(t, err)
 
-		t.Log("wrote tempFile")
-
 		wg := sync.WaitGroup{}
 
 		eg, ctx := errgroup.WithContext(ctx)
