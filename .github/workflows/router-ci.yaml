@@ -13,6 +13,13 @@ on:
       router:
         description: "The Router image reference"
         value: ${{ jobs.build_push_image.outputs.image_ref }}
+    secrets:
+      DOCKER_USERNAME:
+        description: "Docker Hub username"
+        required: true
+      DOCKER_PASSWORD:
+        description: "Docker Hub password"
+        required: true
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}-router

@@ -48,6 +48,9 @@ jobs:
     needs: filter-changes
     if: ${{ needs.filter-changes.outputs.router_changed == 'true' }}
     uses: ./.github/workflows/router-ci.yaml
+    secrets:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
   call-cli-ci:
     needs: filter-changes
