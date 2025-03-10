@@ -9,6 +9,15 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 import { verifyGitHubIntegration } from '../../../github.js';
 import { handleCheckResult } from '../../../handle-check-result.js';
 
+// Helper function to read from stdin
+async function readStdin(): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
 export default (opts: BaseCommandOptions) => {
   const command = new Command('check');
   command.description('Checks for breaking changes and composition errors with all connected federated graphs.');
@@ -20,23 +29,11 @@ export default (opts: BaseCommandOptions) => {
     '--skip-traffic-check',
     'This will skip checking for client traffic and any breaking change will fail the run.',
   );
-
   command.action(async (name, options) => {
-    let schemaFile;
+    let schema: Buffer;
 
     if (!options.schema && !options.delete) {
       program.error("required option '--schema <path-to-schema>' or '--delete' not specified.");
-    }
-
-    if (options.schema) {
-      schemaFile = resolve(options.schema);
-      if (!existsSync(schemaFile)) {
-        program.error(
-          pc.red(
-            pc.bold(`The readme file '${pc.bold(schemaFile)}' does not exist. Please check the path and try again.`),
-          ),
-        );
-      }
     }
 
     const { gitInfo, ignoreErrorsDueToGitHubIntegration } = await verifyGitHubIntegration(opts.client);
@@ -50,8 +47,27 @@ export default (opts: BaseCommandOptions) => {
       });
     }
 
-    // submit an empty schema in case of a delete check
-    const schema = schemaFile ? await readFile(schemaFile) : Buffer.from('');
+    // Handle schema input
+    if (options.schema) {
+      if (options.schema === '-') {
+        // Read from stdin
+        schema = await readStdin();
+      } else {
+        // Read from file
+        const schemaFile = resolve(process.cwd(), options.schema);
+        if (!existsSync(schemaFile)) {
+          program.error(
+            pc.red(
+              pc.bold(`The schema file '${pc.bold(schemaFile)}' does not exist. Please check the path and try again.`),
+            ),
+          );
+        }
+        schema = await readFile(schemaFile);
+      }
+    } else {
+      // For delete operations
+      schema = Buffer.from('');
+    }
 
     const resp = await opts.client.platform.checkSubgraphSchema(
       {
