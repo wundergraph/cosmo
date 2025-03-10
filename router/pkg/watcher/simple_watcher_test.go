@@ -34,13 +34,11 @@ func TestWatch(t *testing.T) {
 
 		dir := t.TempDir()
 		tempFile := filepath.Join(dir, "config.json")
-		tempFile2 := filepath.Join(dir, "config2.json")
 
 		err = os.WriteFile(tempFile, []byte("a"), 0o600)
 		require.NoError(t, err)
 
-		err = os.WriteFile(tempFile2, []byte("b"), 0o600)
-		require.NoError(t, err)
+		t.Log("wrote tempFile")
 
 		wg := sync.WaitGroup{}
 
@@ -56,7 +54,17 @@ func TestWatch(t *testing.T) {
 
 		wg.Add(1)
 
-		// Move the file away, wait a cycle and then move it back
+		tempFile2 := filepath.Join(dir, "config2.json")
+
+		// Careful, this is subtly timing dependent. If we create
+		// the new file too quickly after the first, some filesystems
+		// will not record a different timestamp between the two files.
+		// The sleep above should be adequate, but if you're not
+		// seeing the event, try increasing it.
+		err = os.WriteFile(tempFile2, []byte("b"), 0o600)
+		require.NoError(t, err)
+
+		// Move new file ontop of the old file
 		err = os.Rename(tempFile2, tempFile)
 		require.NoError(t, err)
 
