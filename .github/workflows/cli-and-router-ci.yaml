@@ -44,29 +44,27 @@ jobs:
               - '.github/workflows/cli-ci.yaml'
   call-router-ci:
     needs: filter-changes
-    runs-on: ubuntu-latest
-    outputs:
-      router: ${{ steps.router-ci.outputs.router || 'ghcr.io/wundergraph/router:latest' }}
-    steps:
-      - uses: ./.github/workflows/router-ci.yaml
-        id: router-ci
-        if: ${{ needs.filter-changes.outputs.router_changed == 'true' }}
+    if: ${{ needs.filter-changes.outputs.router_changed == 'true' }}
+    uses: ./.github/workflows/router-ci.yaml
+
   call-cli-ci:
     needs: filter-changes
+    uses: ./.github/workflows/cli-ci.yaml
+    if: ${{ needs.filter-changes.outputs.cli_changed == 'true' }}
+
+  release-url:
     runs-on: ubuntu-latest
-    outputs:
-      cli: ${{ steps.cli-ci.outputs.wgc || steps.release-url.outputs.wgc }}
+    if: ${{ needs.filter-changes.outputs.cli_changed != 'true' }}
     steps:
-      - uses: ./.github/workflows/cli-ci.yaml
-        id: cli-ci
-        if: ${{ needs.filter-changes.outputs.cli_changed == 'true' }}
       - id: release-url
         run: |
           url=`gh api -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" /repos/wundergraph/cosmo/releases --jq '.[] | select(.name | startswith("wgc@")) | .assets[] | select(.name | endswith("-bun-linux-x64.gz")) | .browser_download_url' | head -n 1`
           echo "wgc=$url" >> $GITHUB_OUTPUT
+    outputs:
+      wgc: ${{ steps.release-url.outputs.wgc }}
   check_query_plan:
     runs-on: ubuntu-latest
-    needs: [ call-router-ci, call-cli-ci ]
+    needs: [ call-router-ci, call-cli-ci, release-url ]
     steps:
       - uses: convictional/trigger-workflow-and-wait@v1.6.5
         name: Trigger Query Planner CI
@@ -79,7 +77,7 @@ jobs:
           workflow_file_name: 'query-planner-tester.yaml'
           client_payload: >-
             {
-              "router": "${{ needs.call-router-ci.outputs.router }}",
-              "wgc": "${{ needs.call-cli-ci.outputs.cli }}",
+              "router": "${{ needs.call-router-ci.outputs.router || 'ghcr.io/wundergraph/router:latest' }}",
+              "wgc": "${{ needs.call-cli-ci.outputs.wgc || needs.release-url.outputs.wgc }}",
               "token": "${{ secrets.GITHUB_TOKEN }}"
             }
