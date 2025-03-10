@@ -13,7 +13,9 @@ on:
       - 'connect/**/*'
       - '.github/workflows/router-ci.yaml'
 permissions:
-  pull-requests: read
+  pull-requests: write
+  contents: read
+  packages: write
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
   cancel-in-progress: true
