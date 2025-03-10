@@ -68,15 +68,22 @@ jobs:
       - name: Set Router default image
         if: ${{ needs.filter-changes.outputs.router != 'true' }}
         run: echo "router=ghcr.io/wundergraph/router:latest" >> $GITHUB_OUTPUT
-  get-router:
+  check_query_plan:
     runs-on: ubuntu-latest
-    needs:
-      - call-cli-ci
-      - call-router-ci
-  call-check-query-plan:
     needs: [ call-router-ci, call-cli-ci ]
-    uses: .github/workflows/check-query-plan.yaml
-    with:
-      router: ${{ needs.call-router-ci.outputs.router }}
-      wgc: ${{ needs.call-cli-ci.outputs.cli }}
-      token: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: convictional/trigger-workflow-and-wait@v1.6.5
+        name: Trigger Query Planner CI
+        with:
+          owner: wundergraph
+          repo: cosmo-celestial
+          ref: master
+          github_token: ${{ inputs.token }}
+          propagate_failure: true
+          workflow_file_name: 'query-planner-tester.yaml'
+          client_payload: >-
+            {
+              "router": "${{ needs.call-router-ci.outputs.router }}",
+              "wgc": "${{ needs.call-cli-ci.outputs.cli }}",
+              "token": "${{ secrets.GITHUB_TOKEN }}"
+            }
