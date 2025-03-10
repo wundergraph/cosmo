@@ -5,6 +5,7 @@ import pc from 'picocolors';
 import ora from 'ora';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
+import { customRpcHeadersOption } from '../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('move');
@@ -13,6 +14,7 @@ export default (opts: BaseCommandOptions) => {
   command.requiredOption('-n, --namespace [string]', 'The namespace of the subgraph');
   command.requiredOption('-t, --to [string]', 'The new namespace of the subgraph.');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option.apply(command, customRpcHeadersOption);
   command.action(async (name, options) => {
     const spinner = ora('Subgraph is being moved...').start();
     const resp = await opts.client.platform.moveSubgraph(
@@ -22,7 +24,7 @@ export default (opts: BaseCommandOptions) => {
         newNamespace: options.to,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

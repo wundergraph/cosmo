@@ -5,15 +5,17 @@ import Table from 'cli-table3';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../../core/config.js';
 import program from '../../../../index.js';
+import { customRpcHeadersOption } from '../../../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('list');
   command.description('Lists all supported router compatibility versions.');
-  command.action(async () => {
+  command.option.apply(command, customRpcHeadersOption);
+  command.action(async (options) => {
     const response = await opts.client.platform.listRouterCompatibilityVersions(
       {},
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 
