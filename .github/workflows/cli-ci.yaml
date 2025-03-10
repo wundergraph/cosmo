@@ -1,10 +1,15 @@
 name: wgc CI
 on:
-  pull_request:
-    paths:
-      - 'cli/**/*'
-      - 'connect/**/*'
-      - '.github/workflows/cli-ci.yaml'
+#  pull_request:
+#    paths:
+#      - 'cli/**/*'
+#      - 'connect/**/*'
+#      - '.github/workflows/cli-ci.yaml'
+  workflow_call:
+    outputs:
+      wgc:
+        wgc: "The WGC artifact"
+        value: ${{ jobs.build_bun_matrix.outputs.artifact-url-bun-linux-x64 }}
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -76,6 +81,8 @@ jobs:
   build_bun_matrix:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      artifact-url-bun-linux-x64: ${{ steps.artifact-upload-url.outputs.artifact-url-bun-linux-x64 }}
 
     strategy:
       matrix:
@@ -100,11 +107,16 @@ jobs:
         run: bun build --compile --minify --sourcemap --target ${{ matrix.target }} src/index.ts --outfile out/wgc-experimental-${{ github.sha }}-${{ matrix.target }}
 
       - name: 'Upload builds as artifacts'
+        id: upload
         uses: actions/upload-artifact@v4
         with:
           name: wgc-experimental-${{ github.sha }}-${{ matrix.target }}
           path: cli/out/wgc-experimental-${{ github.sha }}-${{ matrix.target }}*
           if-no-files-found: error
+
+      - name: Output artifact URL
+        id: artifact-upload-url
+        run: echo "artifact-url-${{ matrix.target }}=${{ steps.upload.outputs.artifact-url }}" >> $GITHUB_OUTPUT
 
   build_test:
     runs-on: ubuntu-latest
@@ -117,3 +129,4 @@ jobs:
       - name: 'Some tests failed'
         if: ${{ contains(needs.*.result, 'failure') }}
         run: exit 1
+
