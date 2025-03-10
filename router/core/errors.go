@@ -212,8 +212,10 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 				return
 			}
 		} else if wgRequestParams.UseMultipart {
+			requestContext := getRequestContext(r.Context())
+
 			// Handle multipart error response
-			if err := writeMultipartError(w, requestErrors, requestLogger); err != nil {
+			if err := writeMultipartError(w, requestErrors, requestContext.operation.opType); err != nil {
 				if requestLogger != nil {
 					requestLogger.Error("error writing multipart response", zap.Error(err))
 				}
@@ -240,7 +242,11 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 }
 
 // writeMultipartError writes the error response in a multipart format with proper boundaries and headers.
-func writeMultipartError(w http.ResponseWriter, requestErrors graphqlerrors.RequestErrors, requestLogger *zap.Logger) error {
+func writeMultipartError(
+	w http.ResponseWriter,
+	requestErrors graphqlerrors.RequestErrors,
+	operationType OperationType,
+) error {
 	// Start with the multipart boundary
 	prefix := GetWriterPrefix(false, true, true)
 	if _, err := w.Write([]byte(prefix)); err != nil {
@@ -257,12 +263,21 @@ func writeMultipartError(w http.ResponseWriter, requestErrors graphqlerrors.Requ
 		return err
 	}
 
-	resp, err := wrapMultipartMessage(responseBytes)
+	isSubscription := operationType == "subscription"
+	resp, err := wrapMultipartMessage(responseBytes, isSubscription)
 	if err != nil {
 		return err
 	}
 
-	resp = append(resp, '\n')
+	// The multipart spec requires us to use both CRLF (\r and \n) characters together. Since we didn't do this
+	// before, some clients that rely on both CR and LF strictly to parse blocks were broken and not parsing our
+	// multipart chunks correctly. With this fix here (and in a few other places) the clients are now working.
+	if isSubscription {
+		resp = append(resp, '\r', '\n')
+	} else {
+		resp = append(resp, []byte("\r\n--graphql--")...)
+	}
+
 	if _, err := w.Write([]byte(resp)); err != nil {
 		return err
 	}
