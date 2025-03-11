@@ -103,7 +103,6 @@ func (s *server) SwapGraphServer(ctx context.Context, svr *graphServer) {
 	// and no other config changes can happen in the meantime.
 	s.mu.Lock()
 	s.handler = svr.mux
-	s.mu.Unlock()
 
 	// If the graph server is nil, we don't need to shutdown anything
 	// This is the case when the router is starting for the first time
@@ -113,7 +112,10 @@ func (s *server) SwapGraphServer(ctx context.Context, svr *graphServer) {
 		}
 	}
 
+	// Swap the graph server
 	s.graphServer = svr
+
+	s.mu.Unlock()
 }
 
 // listenAndServe starts the server and blocks until the server is shutdown.
