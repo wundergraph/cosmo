@@ -55,7 +55,6 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-
       - uses: ./.github/actions/build-push-image
         id: build_push_image
         with:
@@ -73,6 +72,7 @@ jobs:
     outputs:
       artifact-url: ${{ steps.cli-build.outputs.artifact-url }}
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/cli-build
         id: cli-build
         with:
