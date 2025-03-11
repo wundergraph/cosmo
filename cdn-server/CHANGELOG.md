@@ -4,6 +4,10 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.14.2](https://github.com/wundergraph/cosmo/compare/cdn@0.14.1...cdn@0.14.2) (2025-03-11)
+
+**Note:** Version bump only for package cdn
+
 ## [0.14.1](https://github.com/wundergraph/cosmo/compare/cdn@0.14.0...cdn@0.14.1) (2025-02-21)
 
 **Note:** Version bump only for package cdn

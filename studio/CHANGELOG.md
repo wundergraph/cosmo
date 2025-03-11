@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.103.0](https://github.com/wundergraph/cosmo/compare/studio@0.102.0...studio@0.103.0) (2025-03-11)
+
+### Features
+
+* add option to select all and prefix search option ([#1655](https://github.com/wundergraph/cosmo/issues/1655)) ([b8917b6](https://github.com/wundergraph/cosmo/commit/b8917b6219456bcadfab2cd198a2100ed31a30f8)) (@JivusAyrus)
+
 # [0.102.0](https://github.com/wundergraph/cosmo/compare/studio@0.101.0...studio@0.102.0) (2025-03-05)
 
 ### Features
