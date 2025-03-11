@@ -10,6 +10,7 @@ import { OidcRepository } from '../../repositories/OidcRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getHighestPriorityRole, getLogger, handleError } from '../../util.js';
+import type { MemberRole } from '../../../db/models.js';
 
 export function updateOrgMemberRole(
   opts: RouterOptions,
@@ -137,97 +138,40 @@ export function updateOrgMemberRole(
         },
       };
     }
-
-    const adminChildGroup = await opts.keycloakClient.fetchChildGroup({
+    
+    const organizationSubGroups = await opts.keycloakClient.fetchAllSubGroups({
       realm: opts.keycloakRealm,
-      orgSlug: org.slug,
       kcGroupId: organizationGroups[0].id!,
-      childGroupType: 'admin',
     });
-
-    const devChildGroup = await opts.keycloakClient.fetchChildGroup({
-      realm: opts.keycloakRealm,
-      orgSlug: org.slug,
-      kcGroupId: organizationGroups[0].id!,
-      childGroupType: 'developer',
-    });
-
-    const viewerChildGroup = await opts.keycloakClient.fetchChildGroup({
-      realm: opts.keycloakRealm,
-      orgSlug: org.slug,
-      kcGroupId: organizationGroups[0].id!,
-      childGroupType: 'viewer',
-    });
+    
+    const targetGroup = organizationSubGroups.find((group) => group.name === req.role);
+    if (!targetGroup) {
+      throw new Error(`Invalid role ${req.role}`);
+    }
 
     // deleting current roles
     for (const role of userRoles) {
-      switch (role) {
-        case 'admin': {
-          await opts.keycloakClient.client.users.delFromGroup({
-            id: users[0].id!,
-            realm: opts.keycloakRealm,
-            groupId: adminChildGroup.id!,
-          });
-
-          break;
-        }
-        case 'developer': {
-          await opts.keycloakClient.client.users.delFromGroup({
-            id: users[0].id!,
-            realm: opts.keycloakRealm,
-            groupId: devChildGroup.id!,
-          });
-
-          break;
-        }
-        case 'viewer': {
-          await opts.keycloakClient.client.users.delFromGroup({
-            id: users[0].id!,
-            realm: opts.keycloakRealm,
-            groupId: viewerChildGroup.id!,
-          });
-
-          break;
-        }
-        default: {
-          throw new Error(`Invalid role ${role}`);
-        }
+      const childGroup = organizationSubGroups.find((group) => group.name === role);
+      if (!childGroup) {
+        continue;
       }
+      
+      await opts.keycloakClient.client.users.delFromGroup({
+        id: users[0].id!,
+        realm: opts.keycloakRealm,
+        groupId: childGroup.id!,
+      });
     }
-
-    switch (req.role) {
-      case 'admin': {
-        await opts.keycloakClient.client.users.addToGroup({
-          id: users[0].id!,
-          realm: opts.keycloakRealm,
-          groupId: adminChildGroup.id!,
-        });
-        break;
-      }
-      case 'developer': {
-        await opts.keycloakClient.client.users.addToGroup({
-          id: users[0].id!,
-          realm: opts.keycloakRealm,
-          groupId: devChildGroup.id!,
-        });
-        break;
-      }
-      case 'viewer': {
-        await opts.keycloakClient.client.users.addToGroup({
-          id: users[0].id!,
-          realm: opts.keycloakRealm,
-          groupId: viewerChildGroup.id!,
-        });
-        break;
-      }
-      default: {
-        throw new Error(`Invalid role ${req.role}`);
-      }
-    }
+    
+    await opts.keycloakClient.client.users.addToGroup({
+      id: users[0].id!,
+      realm: opts.keycloakRealm,
+      groupId: targetGroup.id!,
+    });
 
     await orgRepo.updateUserRole({
       orgMemberID: orgMember.orgMemberID,
-      role: req.role,
+      role: req.role as MemberRole,
     });
 
     await auditLogRepo.addAuditLog({

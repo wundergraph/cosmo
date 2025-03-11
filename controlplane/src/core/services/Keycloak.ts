@@ -346,6 +346,13 @@ export default class Keycloak {
       groupId: adminGroup.id,
     });
   }
+  
+  public async fetchAllSubGroups({ realm, kcGroupId }: { realm?: string, kcGroupId: string }) {
+    return await this.client.groups.listSubGroups({
+      parentId: kcGroupId,
+      realm: realm || this.realm,
+    });
+  }
 
   public async fetchChildGroup({
     realm,
