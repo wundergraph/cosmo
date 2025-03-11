@@ -6,7 +6,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
-  CommandList
+  CommandList,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -27,17 +27,19 @@ import { Toggle } from "../ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { AnalyticsFilter } from "./filters";
 
+interface Option {
+  label: string;
+  value: string;
+  icon?: ComponentType<{ className?: string }>;
+}
+
 interface DataTableFacetedFilter<TData, TValue> {
   column?: Column<TData, TValue>;
   id: string;
   onSelect?: (value?: any) => void;
   selectedOptions?: string[];
   title?: string;
-  options: {
-    label: string;
-    value: string;
-    icon?: ComponentType<{ className?: string }>;
-  }[];
+  options: Option[];
   customOptions?: CustomOptions;
 }
 
@@ -173,6 +175,24 @@ const regularFilter = (value: string, search: string) => {
     return 1;
   }
   return 0;
+};
+
+const areAllFilteredOptionsSelected = ({
+  selectedValues,
+  filteredOptions,
+  options,
+}: {
+  selectedValues: Set<string>;
+  filteredOptions: Option[];
+  options: Option[];
+}) => {
+  if (
+    filteredOptions.length === options.length &&
+    selectedValues.size === filteredOptions.length
+  ) {
+    return true;
+  }
+  return filteredOptions.every((option) => selectedValues.has(option.value));
 };
 
 export function DataTableFilterCommands<TData, TValue>({
@@ -464,11 +484,19 @@ export function DataTableFilterCommands<TData, TValue>({
                       : filteredOptions.map((option) => option.value),
                   );
                 }}
-                disabled={selectedValues.size >= filteredOptions.length}
+                disabled={areAllFilteredOptionsSelected({
+                  selectedValues,
+                  filteredOptions,
+                  options,
+                })}
               >
-                {selectedValues.size < filteredOptions.length
-                  ? "Select All"
-                  : "Selected All"}
+                {areAllFilteredOptionsSelected({
+                  selectedValues,
+                  filteredOptions,
+                  options,
+                })
+                  ? "Selected All"
+                  : "Select All"}
               </Button>
 
               {selectedValues.size > 0 && (
