@@ -76,23 +76,18 @@ jobs:
   build_bun_matrix:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    outputs:
-      artifact-url-bun-linux-x64: ${{ steps.artifact-upload-url.outputs.artifact-url-bun-linux-x64 }}
 
     strategy:
       matrix:
         target: [bun-linux-x64, bun-linux-arm64, bun-darwin-x64, bun-darwin-arm64, bun-windows-x64]
 
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/cli-build
         id: cli-build
         with:
           target: ${{ matrix.target }}
           github-sha: ${{ github.sha }}
-
-      - name: Output artifact URL
-        id: artifact-upload-url
-        run: echo "artifact-url-${{ matrix.target }}=${{ steps.cli-build.outputs.artifact-url }}" >> $GITHUB_OUTPUT
 
   build_test:
     runs-on: ubuntu-latest
