@@ -92,6 +92,7 @@ jobs:
       wgc: ${{ steps.release-url.outputs.wgc }}
   check_query_plan:
     runs-on: ubuntu-latest
+    if: ${{ always() }}
     needs: [ build-router-ci, build-cli-ci, cli-release-url ]
     steps:
       - uses: convictional/trigger-workflow-and-wait@v1.6.5
