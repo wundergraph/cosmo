@@ -1,10 +1,10 @@
 name: wgc CI
 on:
- pull_request:
-   paths:
-     - 'cli/**/*'
-     - 'connect/**/*'
-     - '.github/workflows/cli-ci.yaml'
+  pull_request:
+    paths:
+      - 'cli/**/*'
+      - 'connect/**/*'
+      - '.github/workflows/cli-ci.yaml'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -77,7 +77,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
-      artifact-url: ${{ steps.artifact-upload-url.outputs.artifact-url }}
+      artifact-url-bun-linux-x64: ${{ steps.artifact-upload-url.outputs.artifact-url-bun-linux-x64 }}
+
+    strategy:
+      matrix:
+        target: [bun-linux-x64, bun-linux-arm64, bun-darwin-x64, bun-darwin-arm64, bun-windows-x64]
 
     steps:
       - uses: ./.github/actions/cli-build
