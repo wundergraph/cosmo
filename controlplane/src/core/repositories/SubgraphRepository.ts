@@ -734,7 +734,7 @@ export class SubgraphRepository {
     return subgraphs;
   }
 
-  private async getSubgraph(conditions: SQL<unknown>[]): Promise<SubgraphDTO | FeatureSubgraphDTO | undefined> {
+  private async getSubgraph(conditions: SQL<unknown>[]): Promise<SubgraphDTO | undefined> {
     // Ensure all queries are scoped to the organization.
     conditions.push(eq(schema.targets.organizationId, this.organizationId));
 
@@ -781,26 +781,6 @@ export class SubgraphRepository {
       isV2Graph = sv?.isV2Graph || undefined;
     }
 
-    let baseSubgraph: { id: string; name: string } | undefined;
-    if (resp[0].isFeatureSubgraph) {
-      const res = await this.db
-        .select({
-          name: targets.name,
-          id: subgraphs.id,
-        })
-        .from(featureSubgraphsToBaseSubgraphs)
-        .innerJoin(subgraphs, eq(subgraphs.id, featureSubgraphsToBaseSubgraphs.baseSubgraphId))
-        .innerJoin(targets, eq(targets.id, subgraphs.targetId))
-        .where(eq(featureSubgraphsToBaseSubgraphs.featureSubgraphId, resp[0].id));
-
-      if (res.length > 0) {
-        baseSubgraph = {
-          id: res[0].id,
-          name: res[0].name,
-        };
-      }
-    }
-
     return {
       id: resp[0].id,
       targetId: resp[0].targetId,
@@ -820,16 +800,14 @@ export class SubgraphRepository {
       isEventDrivenGraph: resp[0].isEventDrivenGraph,
       isV2Graph,
       isFeatureSubgraph: resp[0].isFeatureSubgraph,
-      baseSubgraphId: baseSubgraph?.id,
-      baseSubgraphName: baseSubgraph?.name,
     };
   }
 
-  public byTargetId(targetId: string): Promise<SubgraphDTO | FeatureSubgraphDTO | undefined> {
+  public byTargetId(targetId: string): Promise<SubgraphDTO | undefined> {
     return this.getSubgraph([eq(schema.targets.id, targetId), eq(schema.targets.type, 'subgraph')]);
   }
 
-  public byName(name: string, namespace: string): Promise<SubgraphDTO | FeatureSubgraphDTO | undefined> {
+  public byName(name: string, namespace: string): Promise<SubgraphDTO | undefined> {
     return this.getSubgraph([
       eq(schema.targets.name, name),
       eq(schema.targets.type, 'subgraph'),
@@ -837,7 +815,7 @@ export class SubgraphRepository {
     ]);
   }
 
-  public byId(id: string): Promise<SubgraphDTO | FeatureSubgraphDTO | undefined> {
+  public byId(id: string): Promise<SubgraphDTO | undefined> {
     return this.getSubgraph([eq(schema.subgraphs.id, id)]);
   }
 

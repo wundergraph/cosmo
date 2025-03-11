@@ -8,6 +8,8 @@ import {
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
+import { SubgraphDTO } from '../../../types/index.js';
 
 export function getSubgraphById(
   opts: RouterOptions,
@@ -34,6 +36,16 @@ export function getSubgraphById(
       };
     }
 
+    let baseSubgraph: SubgraphDTO | undefined;
+    if (subgraph.isFeatureSubgraph) {
+      const featureFlagRepository = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
+      const result = await featureFlagRepository.getBaseSubgraphByFeatureSubgraphId({ id: subgraph.id });
+
+      if (result) {
+        baseSubgraph = result;
+      }
+    }
+
     return {
       graph: {
         id: subgraph.id,
@@ -49,8 +61,8 @@ export function getSubgraphById(
         namespace: subgraph.namespace,
         websocketSubprotocol: subgraph.websocketSubprotocol || '',
         isFeatureSubgraph: subgraph.isFeatureSubgraph,
-        baseSubgraphId: 'baseSubgraphId' in subgraph ? subgraph.baseSubgraphId : undefined,
-        baseSubgraphName: 'baseSubgraphName' in subgraph ? subgraph.baseSubgraphName : undefined,
+        baseSubgraphId: baseSubgraph?.id,
+        baseSubgraphName: baseSubgraph?.name,
       },
       members: await subgraphRepo.getSubgraphMembers(subgraph.id),
       response: {
