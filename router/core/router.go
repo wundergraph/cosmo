@@ -136,8 +136,9 @@ type (
 	}
 
 	ExecutionConfig struct {
-		Watch bool
-		Path  string
+		Watch         bool
+		WatchInterval time.Duration
+		Path          string
 	}
 
 	AccessLogsConfig struct {
@@ -1116,10 +1117,10 @@ func (r *Router) Start(ctx context.Context) error {
 		}()
 
 		if r.executionConfig != nil && r.executionConfig.Watch {
-			go watcher.MustSimpleWatch(ctx, watcher.SimpleWatcherOptions{
+			go watcher.LogSimpleWatch(ctx, watcher.SimpleWatcherOptions{
 				Logger:   r.logger.With(zap.String("watcher", "execution_config")),
 				Path:     r.executionConfig.Path,
-				Interval: time.Second,
+				Interval: r.executionConfig.WatchInterval,
 				Callback: func() {
 					if r.shutdown.Load() {
 						r.logger.Warn("Router is in shutdown state. Skipping config update")

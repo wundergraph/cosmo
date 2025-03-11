@@ -264,6 +264,15 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the watch mode. The watch mode is used to watch the execution config file for changes. If the file changes, the router will reload the execution config without downtime."
+                },
+                "watch_interval": {
+                  "type": "string",
+                  "description": "The interval at which the file is checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+                  "default": "1s",
+                  "duration": {
+                    "minimum": "100ms",
+                    "maximum": "1m"
+                  }
                 }
               }
             }

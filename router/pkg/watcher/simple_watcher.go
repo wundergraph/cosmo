@@ -15,9 +15,9 @@ type SimpleWatcherOptions struct {
 	Callback func()
 }
 
-func MustSimpleWatch(ctx context.Context, options SimpleWatcherOptions) {
+func LogSimpleWatch(ctx context.Context, options SimpleWatcherOptions) {
 	if err := SimpleWatch(ctx, options); err != nil {
-		options.Logger.Fatal("Error watching file", zap.Error(err))
+		options.Logger.Error("Error watching file", zap.Error(err))
 	}
 }
 

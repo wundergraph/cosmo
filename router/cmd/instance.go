@@ -211,8 +211,9 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 
 	if executionConfigPath != "" {
 		options = append(options, core.WithExecutionConfig(&core.ExecutionConfig{
-			Watch: cfg.ExecutionConfig.File.Watch,
-			Path:  executionConfigPath,
+			Watch:         cfg.ExecutionConfig.File.Watch,
+			WatchInterval: cfg.ExecutionConfig.File.WatchInterval,
+			Path:          executionConfigPath,
 		}))
 	} else {
 		options = append(options, core.WithConfigPollerConfig(&core.RouterConfigPollerConfig{
