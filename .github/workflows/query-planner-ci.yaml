@@ -124,7 +124,10 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const workflowUrl = '${{ needs.build_test.outputs.workflow_url }}';
-            const message = `❌ Query Planner CI failed in the celestial repository.\nSee the failed run here: ${workflowUrl}`;
+            let message = `❌ Query Planner CI checks failed in the celestial repository.\nSee the failed run here: ${workflowUrl}`;
+            if (workflowUrl === '') {
+              message = `❌ Query Planner CI failed to run.`;
+            }
             
             // Note: GitHub treats PRs as issues in the API, so we use the issue endpoints
             // context.issue.number will contain the PR number when running from a PR
