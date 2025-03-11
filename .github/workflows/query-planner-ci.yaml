@@ -70,7 +70,7 @@ jobs:
     if: ${{ needs.filter-changes.outputs.cli_changed == 'true' }}
     runs-on: ubuntu-latest
     outputs:
-      artifact-url: ${{ steps.cli-build.outputs.artifact-url }}
+      wgc: ${{ steps.cli-build.outputs.artifact-url }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/cli-build
@@ -106,7 +106,7 @@ jobs:
           workflow_file_name: 'query-planner-tester.yaml'
           client_payload: >-
             {
-              "router": "${{ needs.build-router-ci.outputs.router || 'ghcr.io/wundergraph/router:latest' }}",
+              "router": "${{ needs.build-router-ci.outputs.image_ref || 'ghcr.io/wundergraph/router:latest' }}",
               "wgc": "${{ needs.build-cli-ci.outputs.wgc || needs.cli-release-url.outputs.wgc }}",
               "token": "${{ secrets.GITHUB_TOKEN }}"
             }
