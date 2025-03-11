@@ -8,7 +8,6 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { ApiKeyGenerator } from '../../services/ApiGenerator.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import auth from "../../controllers/auth.js";
 
 export function createAPIKey(
   opts: RouterOptions,
