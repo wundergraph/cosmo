@@ -358,18 +358,13 @@ export default class Keycloak {
     kcGroupId: string;
     childGroupType: MemberRole;
   }) {
-    const orgGroups = await this.client.groups.find({
+    const orgGroups = await this.client.groups.listSubGroups({
       search: childGroupType,
+      parentId: kcGroupId,
       realm: realm || this.realm,
     });
 
-    if (orgGroups.length === 0) {
-      throw new Error(`Organization group '${orgSlug}' does not have any child groups`);
-    }
-
-    const orgGroup = orgGroups.find((group) => group.id === kcGroupId);
-    const childGroup = orgGroup?.subGroups?.find((group) => group.path === `/${orgSlug}/${childGroupType}`);
-
+    const childGroup = orgGroups?.find((group) => group.path === `/${orgSlug}/${childGroupType}`);
     if (!childGroup) {
       throw new Error(`Organization child group '/${orgSlug}/${childGroupType}' not found`);
     }
