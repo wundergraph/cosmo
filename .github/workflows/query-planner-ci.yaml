@@ -66,7 +66,7 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: router-qp
           image_description: 'Cosmo Router Query Planner'
-  call-cli-ci:
+  build-cli-ci:
     needs: filter-changes
     if: ${{ needs.filter-changes.outputs.cli_changed == 'true' }}
     runs-on: ubuntu-latest
@@ -78,7 +78,7 @@ jobs:
         with:
           github-sha: ${{ github.sha }}
           target: bun-linux-x64
-  release-url:
+  cli-release-url:
     runs-on: ubuntu-latest
     if: ${{ needs.filter-changes.outputs.cli_changed != 'true' }}
     env:
@@ -92,7 +92,7 @@ jobs:
       wgc: ${{ steps.release-url.outputs.wgc }}
   check_query_plan:
     runs-on: ubuntu-latest
-    needs: [ call-router-ci, call-cli-ci, release-url ]
+    needs: [ build-router-ci, build-cli-ci, cli-release-url ]
     steps:
       - uses: convictional/trigger-workflow-and-wait@v1.6.5
         name: Trigger Query Planner CI
@@ -105,7 +105,7 @@ jobs:
           workflow_file_name: 'query-planner-tester.yaml'
           client_payload: >-
             {
-              "router": "${{ needs.call-router-ci.outputs.router || 'ghcr.io/wundergraph/router:latest' }}",
-              "wgc": "${{ needs.call-cli-ci.outputs.wgc || needs.release-url.outputs.wgc }}",
+              "router": "${{ needs.build-router-ci.outputs.router || 'ghcr.io/wundergraph/router:latest' }}",
+              "wgc": "${{ needs.build-cli-ci.outputs.wgc || needs.cli-release-url.outputs.wgc }}",
               "token": "${{ secrets.GITHUB_TOKEN }}"
             }
