@@ -44,7 +44,7 @@ jobs:
               - 'cli/**/*'
               - 'connect/**/*'
               - '.github/workflows/cli-ci.yaml'
-  build-router-ci:
+  build-router:
     needs: filter-changes
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
     # For now, we will disable the push to the GitHub Container Registry for external contributor
@@ -65,7 +65,7 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: router-qp
           image_description: 'Cosmo Router Query Planner'
-  build-cli-ci:
+  build-cli:
     needs: filter-changes
     if: ${{ needs.filter-changes.outputs.cli_changed == 'true' }}
     runs-on: ubuntu-latest
@@ -90,10 +90,12 @@ jobs:
           echo "wgc=$url" >> $GITHUB_OUTPUT
     outputs:
       wgc: ${{ steps.release-url.outputs.wgc }}
-  check_query_plan:
+  build_test: # This job is use to lock the merge of the PR if anything fails in the query planner
     runs-on: ubuntu-latest
     if: ${{ always() }}
-    needs: [ build-router-ci, build-cli-ci, cli-release-url ]
+    needs: [ build-router, build-cli, cli-release-url ]
+    outputs:
+      workflow_url: ${{ steps.trigger_workflow.outputs.workflow_url }}
     steps:
       - uses: convictional/trigger-workflow-and-wait@v1.6.5
         id: trigger_workflow
@@ -107,18 +109,21 @@ jobs:
           workflow_file_name: 'query-planner-tester.yaml'
           client_payload: >-
             {
-              "router": "${{ needs.build-router-ci.outputs.image_ref || 'ghcr.io/wundergraph/router:latest' }}",
-              "wgc": "${{ needs.build-cli-ci.outputs.wgc || needs.cli-release-url.outputs.wgc }}",
+              "router": "${{ needs.build-router.outputs.image_ref || 'ghcr.io/wundergraph/router:latest' }}",
+              "wgc": "${{ needs.build-cli.outputs.wgc || needs.cli-release-url.outputs.wgc }}",
               "token": "${{ secrets.GITHUB_TOKEN }}"
             }
-
+  comment_on_failure:
+    needs: build_test
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Comment PR on failure
-        if: failure() && steps.trigger_workflow.outputs.workflow_url != ''
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const workflowUrl = '${{ steps.trigger_workflow.outputs.workflow_url }}';
+            const workflowUrl = '${{ needs.build_test.outputs.workflow_url }}';
             const message = `❌ Query Planner CI failed in the celestial repository.\nSee the failed run here: ${workflowUrl}`;
             
             // Note: GitHub treats PRs as issues in the API, so we use the issue endpoints
