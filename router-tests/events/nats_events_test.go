@@ -545,6 +545,60 @@ func TestNatsEvents(t *testing.T) {
 				require.Eventually(t, done.Load, NatsWaitTimeout, time.Millisecond*100)
 			})
 		})
+
+		t.Run("multipart format related new line returns should have a preceding carriage return", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+				EnableNats:               true,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+
+				subscribePayload := []byte(`{"query":"subscription { countFor(count: 3) }"}`)
+
+				var done atomic.Bool
+
+				go func() {
+					defer done.Store(true)
+
+					client := http.Client{}
+					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
+					resp, err := client.Do(req)
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, resp.StatusCode)
+					defer resp.Body.Close()
+
+					reader := bufio.NewReader(resp.Body)
+
+					assert.Eventually(t, func() bool {
+						allData, err := io.ReadAll(reader)
+						if err != nil {
+							assert.Fail(t, fmt.Sprintf("failed to read all data: %v", err))
+						}
+						runes := []rune(string(allData))
+
+						for i := 0; i < len(runes); i++ {
+							if runes[i] == '\r' {
+								// Validate that this is not a stray \r entry
+								if i+1 >= len(runes) || runes[i+1] != '\n' {
+									assert.Fail(t, "Invalid newline detected: '\\r' not followed by '\\n'")
+								}
+								i++
+							} else if runes[i] == '\n' {
+								// Validate that this is not a stray \n entry
+								if i == 0 || runes[i-1] != '\r' {
+									assert.Fail(t, "Invalid newline detected: '\\n' not preceded by '\\r'")
+								}
+							}
+						}
+						return true
+					}, NatsWaitTimeout, time.Millisecond*100)
+				}()
+
+				xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+				require.Eventually(t, done.Load, NatsWaitTimeout, time.Millisecond*100)
+			})
+		})
 	})
 
 	t.Run("multipart with apollo compatibility", func(t *testing.T) {

@@ -94,7 +94,7 @@ func (f *HttpFlushWriter) Flush() (err error) {
 		}
 	}
 
-	separation := "\r\n\r\n"
+	separation := "\n\n"
 	if f.multipart {
 		if !f.apolloSubscriptionMultipartPrintBoundary {
 			separation = "\r\n"
