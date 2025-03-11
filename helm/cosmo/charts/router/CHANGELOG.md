@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.9.0...helm-cosmo-router@0.10.0) (2025-03-11)
+
+
+### Features
+
+* update package versions in helm charts ([#1676](https://github.com/wundergraph/cosmo/issues/1676)) ([95956dd](https://github.com/wundergraph/cosmo/commit/95956dd57ff67d49c26412202b70a4d48d0713e7))
+
 ## [0.9.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.8.1...helm-cosmo-router@0.9.0) (2024-10-11)
 
 
