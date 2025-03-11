@@ -60,6 +60,8 @@ jobs:
   release-url:
     runs-on: ubuntu-latest
     if: ${{ needs.filter-changes.outputs.cli_changed != 'true' }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - id: release-url
         run: |
