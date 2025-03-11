@@ -50,9 +50,9 @@ func (f *HttpFlushWriter) Complete() {
 	} else if f.multipart {
 		// Write the final boundary in the multipart response
 		if f.apolloSubscriptionMultipartPrintBoundary {
-			_, _ = f.writer.Write([]byte("--\n"))
+			_, _ = f.writer.Write([]byte("--\r\n"))
 		} else {
-			_, _ = f.writer.Write([]byte("--" + multipartBoundary + "--\n"))
+			_, _ = f.writer.Write([]byte("--" + multipartBoundary + "--\r\n"))
 		}
 	}
 	f.Close()
@@ -94,12 +94,12 @@ func (f *HttpFlushWriter) Flush() (err error) {
 		}
 	}
 
-	separation := "\n\n"
+	separation := "\r\n\r\n"
 	if f.multipart {
 		if !f.apolloSubscriptionMultipartPrintBoundary {
-			separation = "\n"
+			separation = "\r\n"
 		} else {
-			separation = "\n" + multipartStart
+			separation = "\r\n" + multipartStart
 		}
 	} else if f.subscribeOnce {
 		separation = ""
