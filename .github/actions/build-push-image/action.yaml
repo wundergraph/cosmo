@@ -31,7 +31,7 @@ inputs:
 outputs:
   image_ref:
     description: "The reference of the image that was built"
-    value: "ghcr.io/${{ github.repository }}/${{ inputs.image_name }}:${{ github.sha }}"
+    value: "ghcr.io/${{ github.repository }}/${{ inputs.image_name }}:sha-${{ github.sha }}"
 
 runs:
   using: "composite"
