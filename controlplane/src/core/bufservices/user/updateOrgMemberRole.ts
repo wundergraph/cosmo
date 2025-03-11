@@ -138,12 +138,12 @@ export function updateOrgMemberRole(
         },
       };
     }
-    
+
     const organizationSubGroups = await opts.keycloakClient.fetchAllSubGroups({
       realm: opts.keycloakRealm,
       kcGroupId: organizationGroups[0].id!,
     });
-    
+
     const targetGroup = organizationSubGroups.find((group) => group.name === req.role);
     if (!targetGroup) {
       throw new Error(`Invalid role ${req.role}`);
@@ -155,14 +155,14 @@ export function updateOrgMemberRole(
       if (!childGroup) {
         continue;
       }
-      
+
       await opts.keycloakClient.client.users.delFromGroup({
         id: users[0].id!,
         realm: opts.keycloakRealm,
         groupId: childGroup.id!,
       });
     }
-    
+
     await opts.keycloakClient.client.users.addToGroup({
       id: users[0].id!,
       realm: opts.keycloakRealm,
