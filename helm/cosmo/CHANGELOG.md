@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.12.3...helm-cosmo@0.13.0) (2025-03-11)
+
+
+### Features
+
+* update package versions in helm charts ([#1676](https://github.com/wundergraph/cosmo/issues/1676)) ([95956dd](https://github.com/wundergraph/cosmo/commit/95956dd57ff67d49c26412202b70a4d48d0713e7))
+
 ## [0.12.3](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.12.2...helm-cosmo@0.12.3) (2024-11-22)
 
 
