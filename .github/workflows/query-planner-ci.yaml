@@ -96,6 +96,7 @@ jobs:
     needs: [ build-router-ci, build-cli-ci, cli-release-url ]
     steps:
       - uses: convictional/trigger-workflow-and-wait@v1.6.5
+        id: trigger_workflow
         name: Trigger Query Planner CI
         with:
           owner: wundergraph
@@ -110,3 +111,21 @@ jobs:
               "wgc": "${{ needs.build-cli-ci.outputs.wgc || needs.cli-release-url.outputs.wgc }}",
               "token": "${{ secrets.GITHUB_TOKEN }}"
             }
+
+      - name: Comment PR on failure
+        if: failure() && steps.trigger_workflow.outputs.workflow_url != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const workflowUrl = '${{ steps.trigger_workflow.outputs.workflow_url }}';
+            const message = `❌ Query Planner CI failed in the celestial repository.\nSee the failed run here: ${workflowUrl}`;
+            
+            // Note: GitHub treats PRs as issues in the API, so we use the issue endpoints
+            // context.issue.number will contain the PR number when running from a PR
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,  // Works for both issues and PRs
+              body: message
+            });
