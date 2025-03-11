@@ -15,7 +15,7 @@ This example demonstrates how to run the entire Cosmo platform on Kubernetes wit
 ### 1. Install the helm chart with the following command:
 
 ```shell
-helm install cosmo oci://ghcr.io/wundergraph/cosmo/helm-charts/cosmo --version 0.8.0
+helm install cosmo oci://ghcr.io/wundergraph/cosmo/helm-charts/cosmo --version 0.13.0
 ```
 
 _Check [Releases](https://github.com/wundergraph/cosmo/releases?q=helm-cosmo&expanded=true) for the latest release of the Cosmo Chart._
