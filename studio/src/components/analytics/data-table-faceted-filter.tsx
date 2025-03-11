@@ -7,7 +7,6 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -21,9 +20,18 @@ import { CheckIcon, PlusCircledIcon } from "@radix-ui/react-icons";
 import { Column } from "@tanstack/react-table";
 import { CustomOptions } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { ComponentType, useEffect, useState } from "react";
+import { MdTextRotationNone } from "react-icons/md";
 import { Input } from "../ui/input";
 import { Slider } from "../ui/slider";
+import { Toggle } from "../ui/toggle";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { AnalyticsFilter } from "./filters";
+
+interface Option {
+  label: string;
+  value: string;
+  icon?: ComponentType<{ className?: string }>;
+}
 
 interface DataTableFacetedFilter<TData, TValue> {
   column?: Column<TData, TValue>;
@@ -31,11 +39,7 @@ interface DataTableFacetedFilter<TData, TValue> {
   onSelect?: (value?: any) => void;
   selectedOptions?: string[];
   title?: string;
-  options: {
-    label: string;
-    value: string;
-    icon?: ComponentType<{ className?: string }>;
-  }[];
+  options: Option[];
   customOptions?: CustomOptions;
 }
 
@@ -159,6 +163,38 @@ const SliderWithOptions = ({
   );
 };
 
+const prefixFilter = (value: string, search: string) => {
+  if (value.toLowerCase().startsWith(search.toLowerCase())) {
+    return 1;
+  }
+  return 0;
+};
+
+const regularFilter = (value: string, search: string) => {
+  if (value.toLowerCase().includes(search.toLowerCase())) {
+    return 1;
+  }
+  return 0;
+};
+
+const areAllFilteredOptionsSelected = ({
+  selectedValues,
+  filteredOptions,
+  options,
+}: {
+  selectedValues: Set<string>;
+  filteredOptions: Option[];
+  options: Option[];
+}) => {
+  if (
+    filteredOptions.length === options.length &&
+    selectedValues.size === filteredOptions.length
+  ) {
+    return true;
+  }
+  return filteredOptions.every((option) => selectedValues.has(option.value));
+};
+
 export function DataTableFilterCommands<TData, TValue>({
   onSelect,
   selectedOptions,
@@ -174,10 +210,15 @@ export function DataTableFilterCommands<TData, TValue>({
   });
   let content: React.ReactNode;
 
+  // the options are filtered based on the search input
+  const [filteredOptions, setFilteredOptions] = useState(options);
+  const [shouldPrefixSearch, setShouldPrefixSearch] = useState(false);
+  const [searchValue, setSearchValue] = useState<string | undefined>(undefined);
+
   useEffect(() => {
     if (
       !selectedOptions ||
-      selectedOptions.length === 0 || 
+      selectedOptions.length === 0 ||
       customOptions !== CustomOptions.Range
     )
       return;
@@ -334,11 +375,53 @@ export function DataTableFilterCommands<TData, TValue>({
       break;
   }
 
+  useEffect(() => {
+    if (!searchValue) {
+      setFilteredOptions(options);
+      return;
+    }
+    const filtered = options.filter((option) =>
+      shouldPrefixSearch
+        ? option.label.toLowerCase().startsWith(searchValue.toLowerCase())
+        : option.label.toLowerCase().includes(searchValue.toLowerCase()),
+    );
+    setFilteredOptions(filtered);
+  }, [options, searchValue, shouldPrefixSearch]);
+
   return (
-    <Command className="w-64">
+    <Command
+      className="w-72"
+      filter={shouldPrefixSearch ? prefixFilter : regularFilter}
+      key={shouldPrefixSearch ? "prefix" : "regular"}
+    >
       {customOptions === undefined && (
         <>
-          <CommandInput placeholder={title} disabled={options.length === 0} />
+          <div className="relative">
+            <CommandInput
+              placeholder={title}
+              disabled={options.length === 0}
+              value={searchValue}
+              onValueChange={(value) => {
+                setSearchValue(value);
+              }}
+            />
+            <div className="absolute right-[2px] top-[2px]">
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger>
+                  <Toggle
+                    size="sm"
+                    pressed={shouldPrefixSearch}
+                    onPressedChange={(pressed) =>
+                      setShouldPrefixSearch(pressed)
+                    }
+                  >
+                    <MdTextRotationNone className="h-4 w-4" />
+                  </Toggle>
+                </TooltipTrigger>
+                <TooltipContent>Prefix Search</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
           <CommandList>
             <CommandEmpty>No results found.</CommandEmpty>
             {options.length > 0 ? (
@@ -373,7 +456,6 @@ export function DataTableFilterCommands<TData, TValue>({
                       {option.icon && (
                         <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />
                       )}
-                      <span className="hidden">{index}</span>
                       <span className="truncate">{option.label}</span>
                     </CommandItem>
                   );
@@ -384,20 +466,55 @@ export function DataTableFilterCommands<TData, TValue>({
                 No filters.
               </div>
             )}
-            {selectedValues.size > 0 && (
-              <>
-                <CommandSeparator />
-                <CommandGroup>
-                  <CommandItem
-                    onSelect={() => onSelect?.(undefined)}
-                    className="justify-center text-center"
-                  >
-                    Clear filters
-                  </CommandItem>
-                </CommandGroup>
-              </>
-            )}
           </CommandList>
+          <>
+            <Separator orientation="horizontal" />
+            <div className="flex justify-center gap-x-2 pt-1">
+              <Button
+                variant="ghost"
+                className="w-full justify-center text-center"
+                onClick={() => {
+                  const filterValues = Array.from(selectedValues);
+                  onSelect?.(
+                    filterValues.length
+                      ? [
+                          ...filterValues,
+                          ...filteredOptions.map((option) => option.value),
+                        ]
+                      : filteredOptions.map((option) => option.value),
+                  );
+                }}
+                disabled={areAllFilteredOptionsSelected({
+                  selectedValues,
+                  filteredOptions,
+                  options,
+                })}
+              >
+                {areAllFilteredOptionsSelected({
+                  selectedValues,
+                  filteredOptions,
+                  options,
+                })
+                  ? "Selected All"
+                  : "Select All"}
+              </Button>
+
+              {selectedValues.size > 0 && (
+                <>
+                  <Separator orientation="vertical" className="h-8" />
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-center text-center"
+                    onClick={() => {
+                      onSelect?.(undefined);
+                    }}
+                  >
+                    Clear Selection
+                  </Button>
+                </>
+              )}
+            </div>
+          </>
         </>
       )}
       {customOptions !== undefined && <>{content}</>}
