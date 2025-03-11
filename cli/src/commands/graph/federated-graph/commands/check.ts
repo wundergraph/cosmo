@@ -6,6 +6,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../core/config.js';
+import { customRpcHeadersOption } from '../../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('check');
@@ -20,6 +21,7 @@ export default (opts: BaseCommandOptions) => {
     'The label matchers to the federated graph with which the check is to be performed',
   );
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option.apply(command, customRpcHeadersOption);
 
   command.action(async (name, options) => {
     let success = false;
@@ -30,7 +32,7 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

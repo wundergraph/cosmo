@@ -15,6 +15,7 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
 import { validateSubscriptionProtocols } from '../../../utils.js';
 import { websocketSubprotocolDescription } from '../../../constants.js';
+import { customRpcHeadersOption } from '../../shared-options.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('publish');
@@ -69,6 +70,7 @@ export default (opts: BaseCommandOptions) => {
     false,
   );
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option.apply(command, customRpcHeadersOption);
 
   command.action(async (name, options) => {
     const schemaFile = resolve(options.schema);
@@ -113,7 +115,7 @@ export default (opts: BaseCommandOptions) => {
         labels: options.label.map((label: string) => splitLabel(label)),
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

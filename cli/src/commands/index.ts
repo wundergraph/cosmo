@@ -30,6 +30,7 @@ if (proxyUrl) {
 const client = CreateClient({
   baseUrl: config.baseURL,
   apiKey: config.apiKey,
+  rpcTimeout: config.rpcTimeout,
   proxyUrl,
 });
 

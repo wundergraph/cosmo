@@ -5,6 +5,7 @@ import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { getBaseHeaders } from '../../../core/config.js';
 import { CommonGraphCommandOptions } from '../../../core/types/types.js';
+import { customRpcHeadersOption } from '../../shared-options.js';
 
 export default (opts: CommonGraphCommandOptions) => {
   const graphType = opts.isMonograph ? 'monograph' : 'federated graph';
@@ -14,6 +15,7 @@ export default (opts: CommonGraphCommandOptions) => {
   command.argument('<name>', `The name of the ${graphType} to fetch.`);
   command.option('-n, --namespace [string]', `The namespace of the ${graphType}.`);
   command.option('-o, --out [string]', 'Destination file for the SDL.');
+  command.option.apply(command, customRpcHeadersOption);
   command.action(async (name, options) => {
     const resp = await opts.client.platform.getFederatedGraphSDLByName(
       {
@@ -21,7 +23,7 @@ export default (opts: CommonGraphCommandOptions) => {
         namespace: options.namespace,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 

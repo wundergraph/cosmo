@@ -4,6 +4,7 @@ import pc from 'picocolors';
 import Table from 'cli-table3';
 import { getBaseHeaders } from '../../../../../core/config.js';
 import { CommonGraphCommandOptions } from '../../../../../core/types/types.js';
+import { customRpcHeadersOption } from '../../../../shared-options.js';
 
 export default (opts: CommonGraphCommandOptions) => {
   const graphType = opts.isMonograph ? 'monograph' : 'federated graph';
@@ -12,6 +13,7 @@ export default (opts: CommonGraphCommandOptions) => {
   command.description(`Fetches the router compatibility version currently set for the specified ${graphType}.`);
   command.argument('<name>', `The name of the ${graphType} for which to fetch the router compatibility version.`);
   command.option('-n, --namespace [string]', `The namespace of the ${graphType}.`);
+  command.option.apply(command, customRpcHeadersOption);
   command.action(async (name, options) => {
     const response = await opts.client.platform.getFederatedGraphByName(
       {
@@ -19,7 +21,7 @@ export default (opts: CommonGraphCommandOptions) => {
         namespace: options.namespace,
       },
       {
-        headers: getBaseHeaders(),
+        headers: getBaseHeaders(options.header),
       },
     );
 
