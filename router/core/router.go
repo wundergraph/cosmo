@@ -1137,7 +1137,7 @@ func (r *Router) Start(ctx context.Context) error {
 
 					cfg, err := execution_config.UnmarshalConfig(data)
 					if err != nil {
-						r.logger.Error("Failed to serialize config file", zap.Error(err))
+						r.logger.Error("Failed to unmarshal config file", zap.Error(err))
 						return
 					}
 
