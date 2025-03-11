@@ -1,4 +1,4 @@
-name: WGC and Router CI
+name: Query Planner CI
 on:
   pull_request:
     paths:
@@ -44,19 +44,40 @@ jobs:
               - 'cli/**/*'
               - 'connect/**/*'
               - '.github/workflows/cli-ci.yaml'
-  call-router-ci:
+  build-router-ci:
     needs: filter-changes
-    if: ${{ needs.filter-changes.outputs.router_changed == 'true' }}
-    uses: ./.github/workflows/router-ci.yaml
-    secrets:
-      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+    # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
+    # For now, we will disable the push to the GitHub Container Registry for external contributor
+    if: ${{ needs.filter-changes.outputs.router_changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository}}
+    runs-on: ubuntu-latest
+    outputs:
+      image_ref: ${{ steps.build_push_image.outputs.image_ref }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
 
+      - uses: ./.github/actions/build-push-image
+        id: build_push_image
+        with:
+          docker_username: ${{secrets.DOCKER_USERNAME}}
+          docker_password: ${{secrets.DOCKER_PASSWORD}}
+          docker_context: router
+          dockerfile: router/Dockerfile
+          token: ${{secrets.GITHUB_TOKEN}}
+          image_name: router-qp
+          image_description: 'Cosmo Router Query Planner'
   call-cli-ci:
     needs: filter-changes
-    uses: ./.github/workflows/cli-ci.yaml
     if: ${{ needs.filter-changes.outputs.cli_changed == 'true' }}
-
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-url: ${{ steps.cli-build.outputs.artifact-url }}
+    steps:
+      - uses: ./.github/actions/cli-build
+        id: cli-build
+        with:
+          github-sha: ${{ github.sha }}
+          target: bun-linux-x64
   release-url:
     runs-on: ubuntu-latest
     if: ${{ needs.filter-changes.outputs.cli_changed != 'true' }}

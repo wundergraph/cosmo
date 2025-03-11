@@ -1,18 +1,13 @@
 name: wgc CI
 on:
-#  pull_request:
-#    paths:
-#      - 'cli/**/*'
-#      - 'connect/**/*'
-#      - '.github/workflows/cli-ci.yaml'
-  workflow_call:
-    outputs:
-      wgc:
-        description: "The WGC artifact"
-        value: ${{ jobs.build_bun_matrix.outputs.artifact-url-bun-linux-x64 }}
+ pull_request:
+   paths:
+     - 'cli/**/*'
+     - 'connect/**/*'
+     - '.github/workflows/cli-ci.yaml'
 
 concurrency:
-  group: ${{github.workflow}}-${{github.head_ref}}-cli
+  group: ${{github.workflow}}-${{github.head_ref}}
   cancel-in-progress: true
 
 env:
@@ -82,41 +77,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
-      artifact-url-bun-linux-x64: ${{ steps.artifact-upload-url.outputs.artifact-url-bun-linux-x64 }}
-
-    strategy:
-      matrix:
-        target: [bun-linux-x64, bun-linux-arm64, bun-darwin-x64, bun-darwin-arm64, bun-windows-x64]
+      artifact-url: ${{ steps.artifact-upload-url.outputs.artifact-url }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-
-      - uses: ./.github/actions/node
-
-      - name: Install dependencies
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition install --frozen-lockfile
-
-      - name: Build
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition run build
-
-      - name: 'Build wgc binary'
-        working-directory: cli
-        run: bun build --compile --minify --sourcemap --target ${{ matrix.target }} src/index.ts --outfile out/wgc-experimental-${{ github.sha }}-${{ matrix.target }}
-
-      - name: 'Upload builds as artifacts'
-        id: upload
-        uses: actions/upload-artifact@v4
+      - uses: ./.github/actions/cli-build
+        id: cli-build
         with:
-          name: wgc-experimental-${{ github.sha }}-${{ matrix.target }}
-          path: cli/out/wgc-experimental-${{ github.sha }}-${{ matrix.target }}*
-          if-no-files-found: error
+          target: ${{ matrix.target }}
+          github-sha: ${{ github.sha }}
 
       - name: Output artifact URL
         id: artifact-upload-url
-        run: echo "artifact-url-${{ matrix.target }}=${{ steps.upload.outputs.artifact-url }}" >> $GITHUB_OUTPUT
+        run: echo "artifact-url-${{ matrix.target }}=${{ steps.cli-build.outputs.artifact-url }}" >> $GITHUB_OUTPUT
 
   build_test:
     runs-on: ubuntu-latest

@@ -1,28 +1,16 @@
 name: Router CI
 on:
-#  pull_request:
-#    paths:
-#      - 'composition-go/**/*'
-#      - 'demo/**/*'
-#      - 'router/**/*'
-#      - 'router-tests/**/*'
-#      - 'connect/**/*'
-#      - '.github/workflows/router-ci.yaml'
-  workflow_call:
-    outputs:
-      router:
-        description: "The Router image reference"
-        value: ${{ jobs.build_push_image.outputs.image_ref }}
-    secrets:
-      DOCKER_USERNAME:
-        description: "Docker Hub username"
-        required: true
-      DOCKER_PASSWORD:
-        description: "Docker Hub password"
-        required: true
+ pull_request:
+   paths:
+     - 'composition-go/**/*'
+     - 'demo/**/*'
+     - 'router/**/*'
+     - 'router-tests/**/*'
+     - 'connect/**/*'
+     - '.github/workflows/router-ci.yaml'
 
 concurrency:
-  group: ${{github.workflow}}-${{github.head_ref}}-router
+  group: ${{github.workflow}}-${{github.head_ref}}
   cancel-in-progress: true
 
 permissions:
