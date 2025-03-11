@@ -8,6 +8,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { ApiKeyGenerator } from '../../services/ApiGenerator.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import auth from "../../controllers/auth.js";
 
 export function createAPIKey(
   opts: RouterOptions,
@@ -132,6 +133,7 @@ export function createAPIKey(
       auditableType: 'api_key',
       auditableDisplayName: keyName,
       actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
     });
 

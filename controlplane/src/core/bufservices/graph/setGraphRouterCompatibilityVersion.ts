@@ -133,6 +133,7 @@ export function setGraphRouterCompatibilityVersion(
         auditableType: `${federatedGraph.supportsFederation ? 'federated_graph' : 'monograph'}`,
         auditableDisplayName: federatedGraph.name,
         actorDisplayName: authContext.userDisplayName,
+        apiKeyName: authContext.apiKeyName,
         actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         targetNamespaceId: federatedGraph.namespaceId,
         targetNamespaceDisplayName: federatedGraph.namespace,
