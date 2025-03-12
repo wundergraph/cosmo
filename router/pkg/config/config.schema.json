@@ -254,6 +254,15 @@
               "required": [
                 "path"
               ],
+              "dependentSchemas": {
+                "watch_interval": {
+                  "properties": {
+                    "watch": {
+                      "const": true
+                    }
+                  }
+                }
+              },
               "properties": {
                 "path": {
                   "type": "string",
@@ -270,8 +279,7 @@
                   "description": "The interval at which the file is checked for changes. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
                   "default": "1s",
                   "duration": {
-                    "minimum": "100ms",
-                    "maximum": "1m"
+                    "minimum": "1s"
                   }
                 }
               }

@@ -491,17 +491,17 @@ version: "1"
 execution_config:
   file:
     path: "latest.json"
-    watch: false
-    watch_interval: "50ms"
+    watch: true
+    watch_interval: "500ms"
 `)
 
 		_, err := LoadConfig(f, "")
 		var js *jsonschema.ValidationError
 		require.ErrorAs(t, err, &js)
-		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch_interval': duration must be greater or equal than 100ms\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
+		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch_interval': duration must be greater or equal than 1s\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
 	})
 
-	t.Run("too high watch interval", func(t *testing.T) {
+	t.Run("watch interval with watch disabled", func(t *testing.T) {
 
 		f := createTempFileFromFixture(t, `
 version: "1"
@@ -510,12 +510,12 @@ execution_config:
   file:
     path: "latest.json"
     watch: false
-    watch_interval: "5m"
+    watch_interval: "1s"
 `)
 		_, err := LoadConfig(f, "")
 		var js *jsonschema.ValidationError
 		require.ErrorAs(t, err, &js)
-		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch_interval': duration must be less or equal than 1m0s\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
+		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch': value must be true\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
 	})
 }
 
