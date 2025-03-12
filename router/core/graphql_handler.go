@@ -133,6 +133,10 @@ type GraphQLHandler struct {
 	apolloSubscriptionMultipartPrintBoundary bool
 }
 
+const (
+	defaultMultipartBoundary = "graphql-go-tools" // TODO(cd): make this configurable?
+)
+
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	requestContext := getRequestContext(r.Context())
 
@@ -168,7 +172,18 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch p := requestContext.operation.preparedPlan.preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
-		w.Header().Set("Content-Type", "application/json")
+		ctype := "application/json"
+		iow := HeaderPropagationWriter(w, ctx.Context())
+
+		if len(p.Response.DeferredResponses) > 0 {
+			ctype = "multipart/mixed; boundary=" + defaultMultipartBoundary
+			iow = &resolve.MultipartJSONWriter{
+				Writer:        iow,
+				BoundaryToken: defaultMultipartBoundary,
+			}
+		}
+
+		w.Header().Set("Content-Type", ctype)
 		h.setDebugCacheHeaders(w, requestContext.operation)
 
 		if h.enableResponseHeaderPropagation {
@@ -177,7 +192,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		defer propagateSubgraphErrors(ctx)
 
-		resp, err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, HeaderPropagationWriter(w, ctx.Context()))
+		resp, err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, iow)
 		requestContext.dataSourceNames = getSubgraphNames(p.Response.DataSources)
 
 		if err != nil {
