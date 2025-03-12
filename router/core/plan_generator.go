@@ -29,7 +29,6 @@ import (
 
 type PlanGenerator struct {
 	planConfiguration *plan.Configuration
-	planner           *plan.Planner
 	definition        *ast.Document
 }
 
