@@ -97,7 +97,7 @@ export const SetupTest = async function ({
 
   const authenticator = createTestAuthenticator(users);
 
-  const realm = `test-${randomUUID()}`;
+  const realm = 'test';
   const loginRealm = 'master';
   const apiUrl = 'http://localhost:8080';
   const clientId = 'studio';
