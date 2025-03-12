@@ -45,14 +45,14 @@ func (v *VisitorCheckForRequestAuthAccess) Visit(node *ast.Node) {
 	}
 }
 
-func newAttributeExpressions(attr []config.CustomAttribute, exprCompiler *expr.ExprManager) (*attributeExpressions, error) {
+func newAttributeExpressions(attr []config.CustomAttribute, exprManager *expr.ExprManager) (*attributeExpressions, error) {
 	attrExprMap := make(map[string]*vm.Program)
 	attrExprMapWithAuth := make(map[string]*vm.Program)
 
 	for _, a := range attr {
 		if a.ValueFrom != nil && a.ValueFrom.Expression != "" {
 			usesAuth := VisitorCheckForRequestAuthAccess{}
-			prog, err := exprCompiler.CompileExpression(a.ValueFrom.Expression, reflect.String, &usesAuth)
+			prog, err := exprManager.CompileExpression(a.ValueFrom.Expression, reflect.String, &usesAuth)
 			if err != nil {
 				return nil, fmt.Errorf("custom attribute error, unable to compile '%s' with expression '%s': %s", a.Key, a.ValueFrom.Expression, err)
 			}
