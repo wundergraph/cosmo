@@ -3,7 +3,6 @@ package integration
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"sync/atomic"
 	"testing"
@@ -47,7 +46,7 @@ func (c *ConfigPollerMock) Stop(_ context.Context) error {
 	return nil
 }
 
-func TestConfigHotReload(t *testing.T) {
+func TestConfigHotReloadPoller(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Swap config and be able to make requests successfully", func(t *testing.T) {
@@ -166,113 +165,6 @@ func TestConfigHotReload(t *testing.T) {
 		})
 	})
 
-	t.Run("Shutdown server waits until all requests has been served", func(t *testing.T) {
-		t.Parallel()
-
-		pm := ConfigPollerMock{
-			ready: make(chan struct{}),
-		}
-
-		testenv.Run(t, &testenv.Config{
-			Subgraphs: testenv.SubgraphsConfig{
-				GlobalDelay: time.Millisecond * 1000,
-			},
-			RouterConfig: &testenv.RouterConfig{
-				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
-					pm.initConfig = config
-					return &pm
-				},
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-
-			var requestsStarted atomic.Uint32
-			var requestsDone atomic.Uint32
-
-			for i := 0; i < 10; i++ {
-				requestsStarted.Add(1)
-				func() {
-					defer requestsDone.Add(1)
-
-					// Create a new context for each request to ensure that the request is not cancelled by the shutdown
-					res, err := xEnv.MakeGraphQLRequestWithContext(context.Background(), testenv.GraphQLRequest{
-						Query: `{ employees { id } }`,
-					})
-					require.NoError(t, err)
-					require.Equal(t, res.Response.StatusCode, 200)
-					require.JSONEq(t, employeesIDData, res.Body)
-				}()
-			}
-
-			// Let's wait until all requests are in flight
-			require.Eventually(t, func() bool {
-				return requestsStarted.Load() == 10
-			}, time.Second*5, time.Millisecond*100)
-
-			xEnv.Shutdown()
-
-			// Let's wait until all requests are completed
-			require.Eventually(t, func() bool {
-				return requestsDone.Load() == 10
-			}, time.Second*20, time.Millisecond*100)
-		})
-	})
-
-	t.Run("Router grace period defines how long the shutdown can take until all client connections are closed immediately", func(t *testing.T) {
-		t.Parallel()
-
-		pm := ConfigPollerMock{
-			ready: make(chan struct{}),
-		}
-
-		testenv.Run(t, &testenv.Config{
-			Subgraphs: testenv.SubgraphsConfig{
-				// This is a very high delay to make sure that the shutdown is enforced by the grace period
-				GlobalDelay: time.Hour * 1,
-			},
-			RouterOptions: []core.Option{
-				// This results in a context.DeadlineExceeded error after the grace period
-				core.WithGracePeriod(time.Millisecond * 100),
-			},
-			RouterConfig: &testenv.RouterConfig{
-				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
-					pm.initConfig = config
-					return &pm
-				},
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-
-			var startedReq atomic.Bool
-			go func() {
-				startedReq.Store(true)
-				res, err := xEnv.MakeGraphQLRequestWithContext(context.Background(), testenv.GraphQLRequest{
-					Query: `{ employees { id } }`,
-				})
-				require.NoError(t, err)
-				assert.Equal(t, res.Response.StatusCode, 200)
-				assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'."}],"data":{"employees":null}}`, res.Body)
-			}()
-
-			// Let's wait a bit to make sure all requests are in flight
-			// otherwise the shutdown will be too fast and the wait-group will not be done fully
-			require.Eventually(t, func() bool {
-				return startedReq.Load()
-			}, time.Second*10, time.Millisecond*100)
-			time.Sleep(time.Millisecond * 100)
-
-			var done atomic.Bool
-			go func() {
-				defer done.Store(true)
-
-				err := xEnv.Router.Shutdown(context.Background())
-				assert.ErrorContains(t, err, context.DeadlineExceeded.Error())
-			}()
-
-			require.Eventually(t, func() bool {
-				return done.Load()
-			}, time.Second*20, time.Millisecond*100)
-		})
-	})
-
 	t.Run("Swap config closes websockets connections of old graph instance immediately", func(t *testing.T) {
 		t.Parallel()
 
@@ -357,58 +249,251 @@ func TestConfigHotReload(t *testing.T) {
 			require.NoError(t, conn.Close())
 		})
 	})
-
 }
 
 func TestConfigHotReloadFile(t *testing.T) {
 	t.Parallel()
 
-	// Create a temporary file for the router config
-	configFile := t.TempDir() + "/config.json"
+	t.Run("hot-reload config from file", func(t *testing.T) {
+		t.Parallel()
 
-	// Initial config with just the employees subgraph
-	initialConfig := MakeTestConfig("initial")
+		// Create a temporary file for the router config
+		configFile := t.TempDir() + "/config.json"
 
-	// Write initial config to file
-	initialBytes, err := json.Marshal(initialConfig)
-	require.NoError(t, err)
-	err = os.WriteFile(configFile, initialBytes, 0644)
-	require.NoError(t, err)
+		// Initial config with just the employees subgraph
+		writeTestConfig(t, "initial", configFile)
 
-	testenv.Run(t, &testenv.Config{
-		RouterOptions: []core.Option{
-			core.WithExecutionConfig(&core.ExecutionConfig{
-				Path:          configFile,
-				Watch:         true,
-				WatchInterval: 100 * time.Millisecond,
-			}),
-		},
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Query: `query { hello }`,
-		})
-		require.JSONEq(t, `{"data":{"hello":"initial"}}`, res.Body)
-
-		updatedConfig := MakeTestConfig("updated")
-
-		updatedBytes, err := json.Marshal(updatedConfig)
-		require.NoError(t, err)
-
-		err = os.WriteFile(configFile, updatedBytes, 0644)
-		require.NoError(t, err)
-
-		require.EventuallyWithT(t, func(t *assert.CollectT) {
-			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithConfigVersionHeader(true),
+				core.WithExecutionConfig(&core.ExecutionConfig{
+					Path:          configFile,
+					Watch:         true,
+					WatchInterval: 100 * time.Millisecond,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { hello }`,
 			})
-			require.JSONEq(t, `{"data":{"hello":"updated"}}`, res.Body)
-		}, 2*time.Second, 100*time.Millisecond)
+			require.Equal(t, res.Response.StatusCode, 200)
+			require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+
+			writeTestConfig(t, "updated", configFile)
+
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { hello }`,
+				})
+				require.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
+			}, 2*time.Second, 100*time.Millisecond)
+		})
+	})
+
+	t.Run("does not hot-reload config from file if watch is disabled", func(t *testing.T) {
+		t.Parallel()
+
+		// Create a temporary file for the router config
+		configFile := t.TempDir() + "/config.json"
+
+		// Initial config with just the employees subgraph
+		writeTestConfig(t, "initial", configFile)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithConfigVersionHeader(true),
+				core.WithExecutionConfig(&core.ExecutionConfig{
+					Path:          configFile,
+					Watch:         false,
+					WatchInterval: 100 * time.Millisecond,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { hello }`,
+			})
+			require.Equal(t, res.Response.StatusCode, 200)
+			require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+
+			writeTestConfig(t, "updated", configFile)
+
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { hello }`,
+				})
+				require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+			}, 2*time.Second, 100*time.Millisecond)
+		})
+	})
+
+	t.Run("does not interrupt existing client traffic", func(t *testing.T) {
+		t.Parallel()
+
+		// Create a temporary file for the router config
+		configFile := t.TempDir() + "/config.json"
+
+		// Initial config with just the employees subgraph
+		writeTestConfig(t, "initial", configFile)
+
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 500,
+			},
+			RouterOptions: []core.Option{
+				core.WithConfigVersionHeader(true),
+				core.WithExecutionConfig(&core.ExecutionConfig{
+					Path:          configFile,
+					Watch:         true,
+					WatchInterval: 100 * time.Millisecond,
+				}),
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     false,
+					MaxConcurrentResolvers: 32,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { hello }`,
+			})
+			require.Equal(t, res.Response.StatusCode, 200)
+			require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+
+			var done atomic.Uint32
+
+			go func() {
+				defer done.Add(1)
+
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { hello }`,
+				})
+				require.Equal(t, res.Response.StatusCode, 200)
+				require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+			}()
+
+			go func() {
+				defer done.Add(1)
+
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { hello }`,
+				})
+				require.Equal(t, res.Response.StatusCode, 200)
+				require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+			}()
+
+			time.Sleep(time.Millisecond * 100)
+
+			writeTestConfig(t, "updated", configFile)
+
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { hello }`,
+				})
+				require.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
+			}, 2*time.Second, 100*time.Millisecond)
+
+			// Ensure that all requests are served successfully
+			require.Eventually(t, func() bool {
+				return done.Load() == 2
+			}, time.Second*5, time.Millisecond*100)
+		})
 	})
 }
 
-func MakeTestConfig(msg string) *nodev1.RouterConfig {
-	return &nodev1.RouterConfig{
-		Version: "1a7c0b1a-839c-4b6f-9d05-7cb728168f57",
+func TestSwapConfig(t *testing.T) {
+	t.Parallel()
+
+	t.Run("shutdown server waits until all requests has been served", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 1000,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var requestsStarted atomic.Uint32
+			var requestsDone atomic.Uint32
+
+			for i := 0; i < 10; i++ {
+				requestsStarted.Add(1)
+				func() {
+					defer requestsDone.Add(1)
+
+					// Create a new context for each request to ensure that the request is not cancelled by the shutdown
+					res, err := xEnv.MakeGraphQLRequestWithContext(context.Background(), testenv.GraphQLRequest{
+						Query: `{ employees { id } }`,
+					})
+					require.NoError(t, err)
+					require.Equal(t, res.Response.StatusCode, 200)
+					require.JSONEq(t, employeesIDData, res.Body)
+				}()
+			}
+
+			// Let's wait until all requests are in flight
+			require.Eventually(t, func() bool {
+				return requestsStarted.Load() == 10
+			}, time.Second*5, time.Millisecond*100)
+
+			xEnv.Shutdown()
+
+			// Let's wait until all requests are completed
+			require.Eventually(t, func() bool {
+				return requestsDone.Load() == 10
+			}, time.Second*20, time.Millisecond*100)
+		})
+	})
+
+	t.Run("Router grace period defines how long the shutdown can take until all client connections are closed immediately", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				// This is a very high delay to make sure that the shutdown is enforced by the grace period
+				GlobalDelay: time.Hour * 1,
+			},
+			RouterOptions: []core.Option{
+				// This results in a context.DeadlineExceeded error after the grace period
+				core.WithGracePeriod(time.Millisecond * 100),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			var startedReq atomic.Bool
+			go func() {
+				startedReq.Store(true)
+				res, err := xEnv.MakeGraphQLRequestWithContext(context.Background(), testenv.GraphQLRequest{
+					Query: `{ employees { id } }`,
+				})
+				require.NoError(t, err)
+				assert.Equal(t, res.Response.StatusCode, 200)
+				assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'."}],"data":{"employees":null}}`, res.Body)
+			}()
+
+			// Let's wait a bit to make sure all requests are in flight
+			// otherwise the shutdown will be too fast and the wait-group will not be done fully
+			require.Eventually(t, func() bool {
+				return startedReq.Load()
+			}, time.Second*10, time.Millisecond*100)
+			time.Sleep(time.Millisecond * 100)
+
+			var done atomic.Bool
+			go func() {
+				defer done.Store(true)
+
+				err := xEnv.Router.Shutdown(context.Background())
+				assert.ErrorContains(t, err, context.DeadlineExceeded.Error())
+			}()
+
+			require.Eventually(t, func() bool {
+				return done.Load()
+			}, time.Second*20, time.Millisecond*100)
+		})
+	})
+}
+
+func writeTestConfig(t *testing.T, version string, path string) {
+	t.Helper()
+
+	cfg := &nodev1.RouterConfig{
+		Version: version,
 		EngineConfig: &nodev1.EngineConfiguration{
 			DefaultFlushInterval: 500,
 			DatasourceConfigurations: []*nodev1.DataSourceConfiguration{
@@ -422,7 +507,7 @@ func MakeTestConfig(msg string) *nodev1.RouterConfig {
 					},
 					CustomStatic: &nodev1.DataSourceCustom_Static{
 						Data: &nodev1.ConfigurationVariable{
-							StaticVariableContent: fmt.Sprintf(`{"hello": "%s"}`, msg),
+							StaticVariableContent: `{"hello": "Hello!"}`,
 						},
 					},
 					Id: "0",
@@ -437,6 +522,12 @@ func MakeTestConfig(msg string) *nodev1.RouterConfig {
 			},
 		},
 	}
+
+	bytes, err := json.Marshal(cfg)
+	require.NoError(t, err)
+
+	err = os.WriteFile(path, bytes, 0644)
+	require.NoError(t, err)
 }
 
 func BenchmarkConfigHotReload(b *testing.B) {
