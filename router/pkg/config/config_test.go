@@ -446,7 +446,7 @@ version: "1"
 execution_config:
   file:
     path: "latest.json"
-    watch: false
+    watch: true
     watch_interval: "1s"
 `)
 		_, err := LoadConfig(f, "")
