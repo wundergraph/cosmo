@@ -156,6 +156,7 @@ export function updateFederatedGraph(
       auditableType: 'federated_graph',
       auditableDisplayName: federatedGraph.name,
       actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       targetNamespaceId: federatedGraph.namespaceId,
       targetNamespaceDisplayName: federatedGraph.namespace,

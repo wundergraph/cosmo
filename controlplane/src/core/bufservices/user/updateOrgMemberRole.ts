@@ -182,6 +182,7 @@ export function updateOrgMemberRole(
       auditableDisplayName: req.role,
       auditableType: 'member_role',
       actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
       targetId: orgMember.userID,
       targetType: 'user',
       targetDisplayName: orgMember.email,
