@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.190.0](https://github.com/wundergraph/cosmo/compare/router@0.189.2...router@0.190.0) (2025-03-12)
+
+### Features
+
+* **plan-generator:** improve memory and cpu usage ([#1684](https://github.com/wundergraph/cosmo/issues/1684)) ([74d72d8](https://github.com/wundergraph/cosmo/commit/74d72d8675656474190f8b1556c727406a866464)) (@alepane21)
+
 ## [0.189.2](https://github.com/wundergraph/cosmo/compare/router@0.189.1...router@0.189.2) (2025-03-12)
 
 ### Bug Fixes
