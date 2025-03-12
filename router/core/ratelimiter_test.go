@@ -48,6 +48,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 		t.Parallel()
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
 			KeySuffixExpression: "request.header.Get('Authorization')",
+			ExprManager:         expr.CreateNewExprManager(),
 		})
 		require.NoError(t, err)
 		key, err := rl.generateKey(
@@ -60,6 +61,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 		t.Parallel()
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
 			KeySuffixExpression: "request.header.Get('Authorization')",
+			ExprManager:         expr.CreateNewExprManager(),
 		})
 		assert.NoError(t, err)
 		key, err := rl.generateKey(
@@ -72,6 +74,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 		t.Parallel()
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
 			KeySuffixExpression: "trim(request.header.Get('Authorization'))",
+			ExprManager:         expr.CreateNewExprManager(),
 		})
 		assert.NoError(t, err)
 		key, err := rl.generateKey(
@@ -84,6 +87,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 		t.Parallel()
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
 			KeySuffixExpression: "request.auth.claims.sub",
+			ExprManager:         expr.CreateNewExprManager(),
 		})
 		assert.NoError(t, err)
 		key, err := rl.generateKey(
@@ -96,6 +100,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 		t.Parallel()
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
 			KeySuffixExpression: "request.auth.claims.sub",
+			ExprManager:         expr.CreateNewExprManager(),
 		})
 		assert.NoError(t, err)
 		key, err := rl.generateKey(
@@ -108,6 +113,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 		t.Parallel()
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
 			KeySuffixExpression: "request.auth.claims.sub ?? request.header.Get('X-Forwarded-For')",
+			ExprManager:         expr.CreateNewExprManager(),
 		})
 		assert.NoError(t, err)
 		key, err := rl.generateKey(
@@ -120,6 +126,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 		t.Parallel()
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
 			KeySuffixExpression: "request.auth.claims.sub ?? request.header.Get('X-Forwarded-For')",
+			ExprManager:         expr.CreateNewExprManager(),
 		})
 		assert.NoError(t, err)
 		key, err := rl.generateKey(

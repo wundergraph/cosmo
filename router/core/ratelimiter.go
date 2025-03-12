@@ -28,7 +28,7 @@ type CosmoRateLimiterOptions struct {
 	RejectStatusCode int
 
 	KeySuffixExpression string
-	exprManager         *expr.ExprManager
+	ExprManager         *expr.ExprManager
 }
 
 func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, err error) {
@@ -43,7 +43,7 @@ func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, e
 		rl.rejectStatusCode = 200
 	}
 	if opts.KeySuffixExpression != "" {
-		rl.keySuffixProgram, err = opts.exprManager.CompileExpression(opts.KeySuffixExpression, reflect.String)
+		rl.keySuffixProgram, err = opts.ExprManager.CompileExpression(opts.KeySuffixExpression, reflect.String)
 		if err != nil {
 			return nil, err
 		}
