@@ -393,7 +393,9 @@ persisted_operations:
 func TestValidExecutionConfig(t *testing.T) {
 	t.Parallel()
 
-	f := createTempFileFromFixture(t, `
+	t.Run("s3 storage config", func(t *testing.T) {
+
+		f := createTempFileFromFixture(t, `
 version: "1"
 
 storage_providers:
@@ -410,11 +412,14 @@ execution_config:
     provider_id: s3
     object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
 `)
-	_, err := LoadConfig(f, "")
-	var js *jsonschema.ValidationError
-	require.NoError(t, err, &js)
+		_, err := LoadConfig(f, "")
+		var js *jsonschema.ValidationError
+		require.NoError(t, err, &js)
+	})
 
-	f = createTempFileFromFixture(t, `
+	t.Run("cdn storage config", func(t *testing.T) {
+
+		f := createTempFileFromFixture(t, `
 version: "1"
 
 storage_providers:
@@ -427,15 +432,35 @@ execution_config:
     provider_id: cdn
     object_path: "5ef73d80-cae4-4d0e-98a7-1e9fa922c1a4/92c25b45-a75b-4954-b8f6-6592a9b203eb/routerconfigs/latest.json"
 `)
-	_, err = LoadConfig(f, "")
-	js = &jsonschema.ValidationError{}
-	require.NoError(t, err, &js)
+		_, err := LoadConfig(f, "")
+		js := &jsonschema.ValidationError{}
+		require.NoError(t, err, &js)
+
+	})
+
+	t.Run("file config", func(t *testing.T) {
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+execution_config:
+  file:
+    path: "latest.json"
+    watch: false
+    watch_interval: "1s"
+`)
+		_, err := LoadConfig(f, "")
+		js := &jsonschema.ValidationError{}
+		require.NoError(t, err, &js)
+	})
 }
 
 func TestInvalidExecutionConfig(t *testing.T) {
 	t.Parallel()
 
-	f := createTempFileFromFixture(t, `
+	t.Run("no object_path", func(t *testing.T) {
+
+		f := createTempFileFromFixture(t, `
 version: "1"
 
 storage_providers:
@@ -452,10 +477,46 @@ execution_config:
     provider_id: s3
 	# Missing object_path
 `)
-	_, err := LoadConfig(f, "")
-	var js *jsonschema.ValidationError
-	require.ErrorAs(t, err, &js)
-	require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config/storage': missing property 'object_path'\n- at '/execution_config': additional properties 'storage' not allowed", js.Causes[0].Error())
+		_, err := LoadConfig(f, "")
+		var js *jsonschema.ValidationError
+		require.ErrorAs(t, err, &js)
+		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config': additional properties 'storage' not allowed\n- at '/execution_config/storage': missing property 'object_path'\n- at '/execution_config': additional properties 'storage' not allowed", js.Causes[0].Error())
+	})
+
+	t.Run("too low watch interval", func(t *testing.T) {
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+execution_config:
+  file:
+    path: "latest.json"
+    watch: false
+    watch_interval: "50ms"
+`)
+
+		_, err := LoadConfig(f, "")
+		var js *jsonschema.ValidationError
+		require.ErrorAs(t, err, &js)
+		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch_interval': duration must be greater or equal than 100ms\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
+	})
+
+	t.Run("too high watch interval", func(t *testing.T) {
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+execution_config:
+  file:
+    path: "latest.json"
+    watch: false
+    watch_interval: "5m"
+`)
+		_, err := LoadConfig(f, "")
+		var js *jsonschema.ValidationError
+		require.ErrorAs(t, err, &js)
+		require.Equal(t, "at '/execution_config': oneOf failed, none matched\n- at '/execution_config/file/watch_interval': duration must be less or equal than 1m0s\n- at '/execution_config': additional properties 'file' not allowed\n- at '/execution_config': additional properties 'file' not allowed", js.Causes[0].Error())
+	})
 }
 
 func TestValidLocalExecutionConfig(t *testing.T) {
