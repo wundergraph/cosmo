@@ -11,6 +11,7 @@ import { BaseCommandOptions, SubgraphCommandJsonOutput } from '../../../core/typ
 import { getBaseHeaders } from '../../../core/config.js';
 import { validateSubscriptionProtocols } from '../../../utils.js';
 import { websocketSubprotocolDescription } from '../../../constants.js';
+import { handleCompositionResult } from '../../../handle-composition-result.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('publish');
@@ -60,6 +61,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option('-r, --raw', 'Prints to the console in json format instead of table');
   command.option('-j, --json', 'Prints to the console in json format instead of table');
+  command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
 
   command.action(async (name, options) => {
     const schemaFile = resolve(options.schema);
@@ -114,132 +116,33 @@ export default (opts: BaseCommandOptions) => {
       },
     );
 
-    switch (resp.response?.code) {
-      case EnumStatusCode.OK: {
-        if (shouldOutputJson) {
-          const successMessageJson: SubgraphCommandJsonOutput = {
-            status: 'success',
-            message: 'Feature subgraph published successfully.',
-            compositionErrors: resp.compositionErrors,
-            deploymentErrors: resp.deploymentErrors,
-          };
-          console.log(JSON.stringify(successMessageJson));
-        } else {
-          spinner.succeed(
-            resp?.hasChanged === false ? 'No new changes to publish.' : 'Feature subgraph published successfully.',
-          );
-        }
-
-        break;
-      }
-      case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
-        if (shouldOutputJson) {
-          const compositionFailedMessageJson: SubgraphCommandJsonOutput = {
-            status: 'error',
-            message: 'Feature subgraph published but with composition errors.',
-            compositionErrors: resp.compositionErrors,
-            deploymentErrors: resp.deploymentErrors,
-          };
-          console.log(JSON.stringify(compositionFailedMessageJson));
-        } else {
-          spinner.warn('Feature subgraph published but with composition errors.');
-
-          const compositionErrorsTable = new Table({
-            head: [
-              pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
-              pc.bold(pc.white('NAMESPACE')),
-              pc.bold(pc.white('FEATURE_FLAG')),
-              pc.bold(pc.white('ERROR_MESSAGE')),
-            ],
-            colWidths: [30, 30, 30, 120],
-            wordWrap: true,
-          });
-
-          console.log(
-            pc.red(
-              `We found composition errors, while composing the federated graph.\nThe router will continue to work with the latest valid schema.\n${pc.bold(
-                'Please check the errors below:',
-              )}`,
-            ),
-          );
-          for (const compositionError of resp.compositionErrors) {
-            compositionErrorsTable.push([
-              compositionError.federatedGraphName,
-              compositionError.namespace,
-              compositionError.featureFlag || '-',
-              compositionError.message,
-            ]);
-          }
-          // Don't exit here with 1 because the change was still applied
-          console.log(compositionErrorsTable.toString());
-
-          if (options.failOnCompositionError) {
-            program.error(pc.red(pc.bold('The command failed due to composition errors.')));
-          }
-        }
-        break;
-      }
-      case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
-        if (shouldOutputJson) {
-          const deploymentFailedMessageJson: SubgraphCommandJsonOutput = {
-            status: 'error',
-            message: `Feature subgraph was published, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.`,
-            compositionErrors: resp.compositionErrors,
-            deploymentErrors: resp.deploymentErrors,
-          };
-          console.log(JSON.stringify(deploymentFailedMessageJson));
-        } else {
-          spinner.warn(
-            "Feature subgraph was published, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
-          );
-
-          const deploymentErrorsTable = new Table({
-            head: [
-              pc.bold(pc.white('FEDERATED_GRAPH_NAME')),
-              pc.bold(pc.white('NAMESPACE')),
-              pc.bold(pc.white('ERROR_MESSAGE')),
-            ],
-            colWidths: [30, 30, 120],
-            wordWrap: true,
-          });
-
-          for (const deploymentError of resp.deploymentErrors) {
-            deploymentErrorsTable.push([
-              deploymentError.federatedGraphName,
-              deploymentError.namespace,
-              deploymentError.message,
-            ]);
-          }
-          // Don't exit here with 1 because the change was still applied
-          console.log(deploymentErrorsTable.toString());
-
-          if (options.failOnAdmissionWebhookError) {
-            program.error(pc.red(pc.bold('The command failed due to admission webhook errors.')));
-          }
-        }
-
-        break;
-      }
-      default: {
-        if (shouldOutputJson) {
-          const defaultErrorMessageJson: SubgraphCommandJsonOutput = {
-            status: 'error',
-            message: `Failed to publish feature subgraph "${name}".`,
-            compositionErrors: resp.compositionErrors,
-            deploymentErrors: resp.deploymentErrors,
-            details: resp.response?.details,
-          };
-          console.log(JSON.stringify(defaultErrorMessageJson));
-        } else {
-          spinner.fail(`Failed to publish feature subgraph "${name}".`);
-          if (resp.response?.details) {
-            program.error(pc.red(pc.bold(resp.response?.details)));
-          }
-        }
-        process.exitCode = 1;
-        // eslint-disable-next-line no-useless-return
-        return;
-      }
+    try {
+      handleCompositionResult({
+        responseCode: resp.response?.code,
+        responseDetails: resp.response?.details,
+        compositionErrors: resp.compositionErrors,
+        compositionWarnings: resp.compositionWarnings,
+        deploymentErrors: resp.deploymentErrors,
+        spinner,
+        successMessage:
+          resp?.hasChanged === false ? 'No new changes to publish.' : 'Feature subgraph published successfully.',
+        subgraphCompositionBaseErrorMessage: 'Feature subgraph published but with composition errors.',
+        subgraphCompositionDetailedErrorMessage: `We found composition errors, while composing the federated graph.\nThe router will continue to work with the latest valid schema.\n${pc.bold(
+          'Please check the errors below:',
+        )}`,
+        deploymentErrorMessage: `Feature subgraph was published, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.`,
+        defaultErrorMessage: `Failed to publish feature subgraph "${name}".`,
+        shouldOutputJson: options.json,
+        suppressWarnings: options.suppressWarnings,
+        failOnCompositionError: options.failOnCompositionError,
+        failOnAdmissionWebhookError: options.failOnAdmissionWebhookError,
+        failOnCompositionErrorMessage: `The command failed due to composition errors.`,
+        failOnAdmissionWebhookErrorMessage: `The command failed due to admission webhook errors.`,
+      });
+    } catch {
+      process.exitCode = 1;
+      // eslint-disable-next-line no-useless-return
+      return;
     }
   });
 
