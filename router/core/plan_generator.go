@@ -24,7 +24,6 @@ import (
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
-	"github.com/jensneuse/abstractlogger"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 )
 
@@ -34,32 +33,29 @@ type PlanGenerator struct {
 	definition        *ast.Document
 }
 
-func NewPlanGenerator(configFilePath string, logger *zap.Logger) (*PlanGenerator, error) {
-	pg := &PlanGenerator{}
-	if err := pg.loadConfiguration(configFilePath); err != nil {
-		return nil, err
-	}
+type Planner struct {
+	planner    *plan.Planner
+	definition *ast.Document
+}
 
-	if logger != nil {
-		pg.planConfiguration.Logger = abstractlogger.NewZapLogger(logger, abstractlogger.DebugLevel)
-	}
-
-	planner, err := plan.NewPlanner(*pg.planConfiguration)
+func NewPlanner(planConfiguration *plan.Configuration, definition *ast.Document) (*Planner, error) {
+	planner, err := plan.NewPlanner(*planConfiguration)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create planner: %w", err)
 	}
-	pg.planner = planner
-
-	return pg, nil
+	return &Planner{
+		planner:    planner,
+		definition: definition,
+	}, nil
 }
 
-func (pg *PlanGenerator) PlanOperation(operationFilePath string) (string, error) {
-	operation, err := pg.parseOperation(operationFilePath)
+func (pl *Planner) PlanOperation(operationFilePath string) (string, error) {
+	operation, err := pl.parseOperation(operationFilePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse operation: %w", err)
 	}
 
-	rawPlan, err := pg.planOperation(operation)
+	rawPlan, err := pl.planOperation(operation)
 	if err != nil {
 		return "", fmt.Errorf("failed to plan operation: %w", err)
 	}
@@ -67,7 +63,7 @@ func (pg *PlanGenerator) PlanOperation(operationFilePath string) (string, error)
 	return rawPlan.PrettyPrint(), nil
 }
 
-func (pg *PlanGenerator) planOperation(operation *ast.Document) (*resolve.FetchTreeQueryPlanNode, error) {
+func (pl *Planner) planOperation(operation *ast.Document) (*resolve.FetchTreeQueryPlanNode, error) {
 	report := operationreport.Report{}
 
 	var operationName []byte
@@ -83,10 +79,10 @@ func (pg *PlanGenerator) planOperation(operation *ast.Document) (*resolve.FetchT
 		return nil, errors.New("operation name not found")
 	}
 
-	astnormalization.NormalizeNamedOperation(operation, pg.definition, operationName, &report)
+	astnormalization.NormalizeNamedOperation(operation, pl.definition, operationName, &report)
 
 	// create and postprocess the plan
-	preparedPlan := pg.planner.Plan(operation, pg.definition, string(operationName), &report, plan.IncludeQueryPlanInResponse())
+	preparedPlan := pl.planner.Plan(operation, pl.definition, string(operationName), &report, plan.IncludeQueryPlanInResponse())
 	if report.HasErrors() {
 		return nil, errors.New(report.Error())
 	}
@@ -100,7 +96,7 @@ func (pg *PlanGenerator) planOperation(operation *ast.Document) (*resolve.FetchT
 	return &resolve.FetchTreeQueryPlanNode{}, nil
 }
 
-func (pg *PlanGenerator) parseOperation(operationFilePath string) (*ast.Document, error) {
+func (pl *Planner) parseOperation(operationFilePath string) (*ast.Document, error) {
 	content, err := os.ReadFile(operationFilePath)
 	if err != nil {
 		return nil, err
@@ -112,6 +108,23 @@ func (pg *PlanGenerator) parseOperation(operationFilePath string) (*ast.Document
 	}
 
 	return &doc, nil
+}
+
+func NewPlanGenerator(configFilePath string, logger *zap.Logger) (*PlanGenerator, error) {
+	pg := &PlanGenerator{}
+	if err := pg.loadConfiguration(configFilePath); err != nil {
+		return nil, err
+	}
+
+	if logger != nil {
+		pg.planConfiguration.Logger = log.NewZapLogger(logger, log.DebugLevel)
+	}
+
+	return pg, nil
+}
+
+func (pg *PlanGenerator) GetPlanner() (*Planner, error) {
+	return NewPlanner(pg.planConfiguration, pg.definition)
 }
 
 func (pg *PlanGenerator) loadConfiguration(configFilePath string) error {
