@@ -13,6 +13,7 @@ export type ApiKeyAuthContext = {
   isAdmin: boolean;
   userId: string;
   userDisplayName: string;
+  apiKeyName: string;
 };
 
 export default class ApiKeyAuthenticator {
@@ -64,6 +65,7 @@ export default class ApiKeyAuthenticator {
       auth: 'api_key',
       userId: apiKeyModel.userId,
       userDisplayName: apiKeyModel.user.email,
+      apiKeyName: apiKeyModel.name,
       organizationId: apiKeyModel.organizationId,
       organizationSlug: organization.slug,
       // sending true as the api key has admin permissions

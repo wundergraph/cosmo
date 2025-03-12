@@ -172,6 +172,7 @@ export function moveFederatedGraph(
           auditableType: 'federated_graph',
           auditableDisplayName: movedGraph.name,
           actorDisplayName: authContext.userDisplayName,
+          apiKeyName: authContext.apiKeyName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           targetNamespaceId: newNamespace.id,
           targetNamespaceDisplayName: newNamespace.name,

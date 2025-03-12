@@ -101,6 +101,7 @@ export function toggleChangeOverridesForAllOperations(
           auditableType: 'operation_change_override',
           auditableDisplayName: affectedOperation.hash,
           actorDisplayName: authContext.userDisplayName,
+          apiKeyName: authContext.apiKeyName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           targetNamespaceId: graph.namespaceId,
           targetNamespaceDisplayName: graph.namespace,

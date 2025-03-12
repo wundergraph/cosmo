@@ -173,6 +173,7 @@ export function createContract(
         auditableType: 'federated_graph',
         auditableDisplayName: contractGraph.name,
         actorDisplayName: authContext.userDisplayName,
+        apiKeyName: authContext.apiKeyName,
         actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         targetNamespaceId: contractGraph.namespaceId,
         targetNamespaceDisplayName: contractGraph.namespace,

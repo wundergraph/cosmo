@@ -71,6 +71,7 @@ export function createOperationIgnoreAllOverride(
       auditableType: 'operation_ignore_all_override',
       auditableDisplayName: req.operationHash,
       actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       targetNamespaceId: graph.namespaceId,
       targetNamespaceDisplayName: graph.namespace,

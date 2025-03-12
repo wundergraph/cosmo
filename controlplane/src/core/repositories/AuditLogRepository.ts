@@ -11,6 +11,7 @@ export type AddAuditLogInput = {
   action: AuditLogAction;
   actorDisplayName: 'cosmo-bot' | string;
   actorType: AuditActorType;
+  apiKeyName?: string;
   targetId?: string;
   targetType?: AuditTargetType;
   targetDisplayName?: string;
@@ -46,6 +47,7 @@ export class AuditLogRepository {
           auditAction: input.auditAction,
           actorDisplayName: input.actorDisplayName,
           actorType: input.actorType,
+          apiKeyName: input.apiKeyName,
           targetNamespaceId: input.targetNamespaceId,
           targetNamespaceDisplayName: input.targetNamespaceDisplayName,
         })),
@@ -77,6 +79,8 @@ export class AuditLogRepository {
         actorDisplayName: schema.auditLogs.actorDisplayName,
         actorType: schema.auditLogs.actorType,
         createdAt: schema.auditLogs.createdAt,
+
+        apiKeyName: schema.auditLogs.apiKeyName,
 
         targetNamespaceDisplayName: schema.auditLogs.targetNamespaceDisplayName,
         targetNamespaceId: schema.auditLogs.targetNamespaceId,

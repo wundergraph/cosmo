@@ -64,6 +64,7 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
             ({
               id,
               actorDisplayName,
+              apiKeyName,
               actorType,
               auditAction,
               createdAt,
@@ -156,7 +157,7 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
                         />
                       )}
                       <span className="block font-medium">
-                        {actorDisplayName}
+                        {apiKeyName ? `${apiKeyName} (${actorDisplayName})` : `${actorDisplayName}`}
                       </span>
                     </span>
                   </TableCell>

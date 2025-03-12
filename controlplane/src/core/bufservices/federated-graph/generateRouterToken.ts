@@ -69,6 +69,7 @@ export function generateRouterToken(
       actorId: authContext.userId,
       targetType: 'federated_graph',
       actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       auditableDisplayName: federatedGraph.name,
       auditableType: 'router_config',

@@ -1562,6 +1562,8 @@ export const auditLogs = pgTable(
     actorDisplayName: text('actor_display_name'), // human-readable name of the actor e.g. user name, email
     actorType: text('actor_type').$type<AuditActorType>(), // user, system, api_key
 
+    apiKeyName: text('api_key_name'), // the name of the api key used to perform the operation. Will only have a value when the actor type is api_key
+
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => {
