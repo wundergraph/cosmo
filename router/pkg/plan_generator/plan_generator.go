@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/wundergraph/cosmo/router/core"
+	"go.uber.org/zap"
 )
 
 const ReportFileName = "report.json"
@@ -29,6 +30,8 @@ type QueryPlanConfig struct {
 	OutputReport    bool
 	FailOnPlanError bool
 	FailFast        bool
+	LogLevel        string
+	Logger          *zap.Logger
 }
 
 type QueryPlanResults struct {
@@ -104,7 +107,7 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 	for i := 0; i < cfg.Concurrency; i++ {
 		go func(i int) {
 			defer wg.Done()
-			pg, err := core.NewPlanGenerator(executionConfigPath)
+			pg, err := core.NewPlanGenerator(executionConfigPath, cfg.Logger)
 			if err != nil {
 				cancelError(fmt.Errorf("failed to create plan generator: %v", err))
 				return

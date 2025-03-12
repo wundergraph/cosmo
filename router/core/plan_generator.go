@@ -20,9 +20,11 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
+	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
+	"github.com/jensneuse/abstractlogger"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 )
 
@@ -32,10 +34,14 @@ type PlanGenerator struct {
 	definition        *ast.Document
 }
 
-func NewPlanGenerator(configFilePath string) (*PlanGenerator, error) {
+func NewPlanGenerator(configFilePath string, logger *zap.Logger) (*PlanGenerator, error) {
 	pg := &PlanGenerator{}
 	if err := pg.loadConfiguration(configFilePath); err != nil {
 		return nil, err
+	}
+
+	if logger != nil {
+		pg.planConfiguration.Logger = abstractlogger.NewZapLogger(logger, abstractlogger.DebugLevel)
 	}
 
 	planner, err := plan.NewPlanner(*pg.planConfiguration)

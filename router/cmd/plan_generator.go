@@ -3,12 +3,19 @@ package cmd
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/KimMachineGun/automemlimit/memlimit"
+	"github.com/dustin/go-humanize"
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/plan_generator"
+	"go.uber.org/automaxprocs/maxprocs"
+	"go.uber.org/zap"
 )
 
 func PlanGenerator(args []string) {
@@ -27,6 +34,7 @@ func PlanGenerator(args []string) {
 	f.BoolVar(&cfg.OutputReport, "print-report", false, "write a report.json file, with all the query plans and errors sorted by file name")
 	f.BoolVar(&cfg.FailOnPlanError, "fail-on-error", false, "if at least one plan fails, the command exit code will be 1")
 	f.BoolVar(&cfg.FailFast, "fail-fast", false, "stop as soon as possible if a plan fails")
+	f.StringVar(&cfg.LogLevel, "log-level", "warning", "log level to use (debug, info, warning, error, panic, fatal)")
 
 	if err := f.Parse(args[1:]); err != nil {
 		f.PrintDefaults()
@@ -51,8 +59,46 @@ func PlanGenerator(args []string) {
 	)
 	defer stop()
 
-	err := plan_generator.PlanGenerator(ctxNotify, cfg)
+	logLevel, err := logging.ZapLogLevelFromString(cfg.LogLevel)
 	if err != nil {
-		log.Fatalf("Error during command plan-generator: %s", err)
+		log.Fatalf("Could not parse log level: %s", err)
+	}
+
+	logger := logging.New(false, false, logLevel).
+		With(
+			zap.String("service", "@wundergraph/query-plan"),
+			zap.String("service_version", core.Version),
+		)
+	cfg.Logger = logger
+
+	// Automatically set GOMAXPROCS to avoid CPU throttling on containerized environments
+	_, err = maxprocs.Set(maxprocs.Logger(func(msg string, args ...interface{}) {
+		logger.Info(fmt.Sprintf(msg, args...))
+	}))
+	if err != nil {
+		logger.Fatal(fmt.Sprintf("could not set max GOMAXPROCS: %s", err.Error()))
+	}
+
+	if os.Getenv("GOMEMLIMIT") != "" {
+		logger.Info(fmt.Sprintf("GOMEMLIMIT set by user %s", os.Getenv("GOMEMLIMIT")))
+	} else {
+		// Automatically set GOMEMLIMIT to 90% of the available memory.
+		// This is an effort to prevent the router from being killed by OOM (Out Of Memory)
+		// when the system is under memory pressure e.g. when GC is not able to free memory fast enough.
+		// More details: https://tip.golang.org/doc/gc-guide#Memory_limit
+		mLimit, err := memlimit.SetGoMemLimitWithOpts(
+			memlimit.WithRatio(0.9),
+			memlimit.WithProvider(memlimit.FromCgroupHybrid),
+		)
+		if err == nil {
+			logger.Info(fmt.Sprintf("GOMEMLIMIT set automatically to %s", humanize.Bytes(uint64(mLimit))))
+		} else {
+			logger.Info(fmt.Sprintf("GOMEMLIMIT was not set. Please set it manually to around 90%% of the available memory to prevent OOM kills %s", err.Error()))
+		}
+	}
+
+	err = plan_generator.PlanGenerator(ctxNotify, cfg)
+	if err != nil {
+		logger.Fatal(fmt.Sprintf("Error during command plan-generator: %s", err.Error()))
 	}
 }
