@@ -95,8 +95,8 @@ func PlanGenerator(args []string) {
 			logger.Info("GOMEMLIMIT set automatically", zap.String("size", humanize.Bytes(uint64(mLimit))))
 		} else {
 			logger.Info(
-				"GOMEMLIMIT was not set. Please set it manually to around 90%% of the available memory to prevent"+
-					" OOM kills",
+				"GOMEMLIMIT was not set. Please set it manually to around 90%% of the available memory to "+
+					"prevent OOM kills",
 				zap.Error(err),
 			)
 		}
