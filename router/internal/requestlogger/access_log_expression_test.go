@@ -2,6 +2,7 @@ package requestlogger
 
 import (
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"testing"
 )
@@ -64,7 +65,8 @@ func TestAccessLogExpressionParsing(t *testing.T) {
 			},
 		}
 
-		expressions, err := GetAccessLogConfigExpressions(customAttributes)
+		exprManager := expr.CreateNewExprManager()
+		expressions, err := GetAccessLogConfigExpressions(customAttributes, exprManager)
 		require.NoError(t, err)
 
 		require.Len(t, expressions, 2)
