@@ -347,8 +347,8 @@ export default class Keycloak {
     });
   }
 
-  public async fetchAllSubGroups({ realm, kcGroupId }: { realm?: string; kcGroupId: string }) {
-    return await this.client.groups.listSubGroups({
+  public fetchAllSubGroups({ realm, kcGroupId }: { realm?: string; kcGroupId: string }) {
+    return this.client.groups.listSubGroups({
       parentId: kcGroupId,
       realm: realm || this.realm,
     });
