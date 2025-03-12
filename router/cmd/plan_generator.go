@@ -76,11 +76,11 @@ func PlanGenerator(args []string) {
 		logger.Info(fmt.Sprintf(msg, args...))
 	}))
 	if err != nil {
-		logger.Fatal(fmt.Sprintf("could not set max GOMAXPROCS: %s", err.Error()))
+		logger.Fatal("could not set max GOMAXPROCS", zap.Error(err))
 	}
 
 	if os.Getenv("GOMEMLIMIT") != "" {
-		logger.Info(fmt.Sprintf("GOMEMLIMIT set by user %s", os.Getenv("GOMEMLIMIT")))
+		logger.Info("GOMEMLIMIT set by user", zap.String("gomemlimit", os.Getenv("GOMEMLIMIT")))
 	} else {
 		// Automatically set GOMEMLIMIT to 90% of the available memory.
 		// This is an effort to prevent the router from being killed by OOM (Out Of Memory)
@@ -88,17 +88,22 @@ func PlanGenerator(args []string) {
 		// More details: https://tip.golang.org/doc/gc-guide#Memory_limit
 		mLimit, err := memlimit.SetGoMemLimitWithOpts(
 			memlimit.WithRatio(0.9),
+			// FromCgroupHybrid retrieves the memory limit from the cgroup v2 and v1 controller sequentially
 			memlimit.WithProvider(memlimit.FromCgroupHybrid),
 		)
 		if err == nil {
-			logger.Info(fmt.Sprintf("GOMEMLIMIT set automatically to %s", humanize.Bytes(uint64(mLimit))))
+			logger.Info("GOMEMLIMIT set automatically", zap.String("size", humanize.Bytes(uint64(mLimit))))
 		} else {
-			logger.Info(fmt.Sprintf("GOMEMLIMIT was not set. Please set it manually to around 90%% of the available memory to prevent OOM kills %s", err.Error()))
+			logger.Info(
+				"GOMEMLIMIT was not set. Please set it manually to around 90%% of the available memory to prevent"+
+					" OOM kills",
+				zap.Error(err),
+			)
 		}
 	}
 
 	err = plan_generator.PlanGenerator(ctxNotify, cfg)
 	if err != nil {
-		logger.Fatal(fmt.Sprintf("Error during command plan-generator: %s", err.Error()))
+		logger.Fatal("Error during command plan-generator: %s", zap.Error(err))
 	}
 }
