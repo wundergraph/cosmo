@@ -13,19 +13,19 @@ type ExpressionAttribute struct {
 	Expr    *vm.Program
 }
 
-func GetAccessLogConfigExpressions(attributes []config.CustomAttribute, exprCompiler *exprlocal.ExprManager) ([]ExpressionAttribute, error) {
+func GetAccessLogConfigExpressions(attributes []config.CustomAttribute, exprManager *exprlocal.ExprManager) ([]ExpressionAttribute, error) {
 	exprSlice := make([]ExpressionAttribute, 0, len(attributes))
 	for _, sAttribute := range attributes {
 		if sAttribute.ValueFrom == nil || sAttribute.ValueFrom.Expression == "" {
 			continue
 		}
 
-		err := exprCompiler.ValidateAnyExpression(sAttribute.ValueFrom.Expression)
+		err := exprManager.ValidateAnyExpression(sAttribute.ValueFrom.Expression)
 		if err != nil {
 			return nil, fmt.Errorf("failed when validating log expressions: %w", err)
 		}
 
-		expression, err := exprCompiler.CompileAnyExpression(sAttribute.ValueFrom.Expression)
+		expression, err := exprManager.CompileAnyExpression(sAttribute.ValueFrom.Expression)
 		if err != nil {
 			return nil, fmt.Errorf("failed when compiling log expressions: %w", err)
 		}

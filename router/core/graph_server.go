@@ -1045,7 +1045,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			Debug:               s.rateLimit.Debug,
 			RejectStatusCode:    s.rateLimit.SimpleStrategy.RejectStatusCode,
 			KeySuffixExpression: s.rateLimit.KeySuffixExpression,
-			exprCompiler:        exprManager,
+			exprManager:         exprManager,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create rate limiter: %w", err)
@@ -1074,7 +1074,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		},
 		SafelistEnabled:             s.persistedOperationsConfig.Safelist.Enabled,
 		LogUnknownOperationsEnabled: s.persistedOperationsConfig.LogUnknown,
-		exprCompiler:                exprManager,
+		exprManager:                 exprManager,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create operation blocker: %w", err)
