@@ -8,7 +8,7 @@ import {
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, clamp } from '../../util.js';
-import { OrganizationRepository } from "../../repositories/OrganizationRepository.js";
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 
 export function updateNamespaceChecksConfig(
   opts: RouterOptions,
@@ -42,8 +42,8 @@ export function updateNamespaceChecksConfig(
     const timeframeLimitInDays = changeRetention?.limit ?? 7;
     await namespaceRepo.updateChecksConfiguration({
       id: namespace.id,
-      checksTimeframeInDays: clamp(req.timeframeInDays, 1, timeframeLimitInDays)
-    })
+      checksTimeframeInDays: clamp(req.timeframeInDays, 1, timeframeLimitInDays),
+    });
 
     return {
       response: {

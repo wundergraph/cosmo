@@ -30,7 +30,13 @@ import {
   InspectorSchemaChange,
   SchemaUsageTrafficInspector,
 } from '../../services/SchemaUsageTrafficInspector.js';
-import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError, clamp } from '../../util.js';
+import {
+  enrichLogger,
+  getFederatedGraphRouterCompatibilityVersion,
+  getLogger,
+  handleError,
+  clamp,
+} from '../../util.js';
 
 export function checkSubgraphSchema(
   opts: RouterOptions,
