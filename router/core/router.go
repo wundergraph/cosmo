@@ -1118,7 +1118,7 @@ func (r *Router) Start(ctx context.Context) error {
 
 		if r.executionConfig != nil && r.executionConfig.Watch {
 			w, err := watcher.New(watcher.Options{
-				Logger:   r.logger.With(zap.String("watcher", "execution_config")),
+				Logger:   r.logger.With(zap.String("watcher_label", "execution_config")),
 				Path:     r.executionConfig.Path,
 				Interval: r.executionConfig.WatchInterval,
 				Callback: func() {
@@ -1154,7 +1154,8 @@ func (r *Router) Start(ctx context.Context) error {
 
 			go func() {
 				if err := w(ctx); err != nil {
-					r.logger.Error("Error watching file", zap.Error(err), zap.String("component", "file_watcher"), zap.String("watcher_label", "execution_config"))
+					r.logger.Error("Error watching execution config", zap.Error(err))
+					return
 				}
 			}()
 
