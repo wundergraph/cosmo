@@ -30,7 +30,7 @@ import {
   InspectorSchemaChange,
   SchemaUsageTrafficInspector,
 } from '../../services/SchemaUsageTrafficInspector.js';
-import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError } from '../../util.js';
+import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError, clamp } from '../../util.js';
 
 export function checkSubgraphSchema(
   opts: RouterOptions,
@@ -295,7 +295,8 @@ export function checkSubgraphSchema(
       featureId: 'breaking-change-retention',
     });
 
-    const limit = changeRetention?.limit ?? 7;
+    let limit = changeRetention?.limit ?? 7;
+    limit = clamp(namespace?.checksTimeframeInDays ?? limit, 1, limit);
 
     for (const composition of result.compositions) {
       await schemaCheckRepo.createCheckedFederatedGraph(schemaCheckID, composition.id, limit);

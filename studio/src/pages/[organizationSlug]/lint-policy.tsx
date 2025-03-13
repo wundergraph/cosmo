@@ -43,7 +43,7 @@ const LintPolicyPage: NextPageWithLayout = () => {
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
-        title="Could not retrieve the lint policy of the namesapce"
+        title="Could not retrieve the lint policy of the namespace"
         description={
           data?.response?.details || error?.message || "Please try again"
         }

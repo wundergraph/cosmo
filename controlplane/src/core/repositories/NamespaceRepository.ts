@@ -28,6 +28,7 @@ export class NamespaceRepository {
       organizationId: namespace.organizationId,
       createdBy: namespace.createdBy || undefined,
       enableCacheWarmer: namespace.enableCacheWarming,
+      checksTimeframeInDays: namespace.checksTimeframeInDays || undefined,
     };
   }
 
@@ -48,6 +49,7 @@ export class NamespaceRepository {
       organizationId: namespace.organizationId,
       createdBy: namespace.createdBy || undefined,
       enableCacheWarmer: namespace.enableCacheWarming,
+      checksTimeframeInDays: namespace.checksTimeframeInDays || undefined,
     };
   }
 
@@ -127,6 +129,15 @@ export class NamespaceRepository {
       .update(schema.namespaces)
       .set({
         enableCacheWarming: data.enableCacheWarming,
+      })
+      .where(and(eq(schema.namespaces.id, data.id), eq(schema.namespaces.organizationId, this.organizationId)));
+  }
+
+  public async updateChecksConfiguration(data: { id: string; checksTimeframeInDays: number }) {
+    await this.db
+      .update(schema.namespaces)
+      .set({
+        checksTimeframeInDays: data.checksTimeframeInDays,
       })
       .where(and(eq(schema.namespaces.id, data.id), eq(schema.namespaces.organizationId, this.organizationId)));
   }

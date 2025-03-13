@@ -1,0 +1,1 @@
+ALTER TABLE "namespaces" ADD COLUMN "checks_timeframe_in_days" integer;
