@@ -36,7 +36,7 @@ func SimpleWatch(ctx context.Context, options SimpleWatcherOptions) error {
 		prevModTime = stat.ModTime()
 	}
 
-	ll.Debug("Watching file for changes", zap.Time("initialModTime", prevModTime))
+	ll.Debug("Watching file for changes", zap.Time("initial_mod_time", prevModTime))
 
 	for {
 		select {
@@ -51,7 +51,7 @@ func SimpleWatch(ctx context.Context, options SimpleWatcherOptions) error {
 				continue
 			}
 
-			ll.Debug("Checking file for changes", zap.Time("prev", prevModTime), zap.Time("mod", stat.ModTime()))
+			ll.Debug("Checking file for changes", zap.Time("prev_mod_time", prevModTime), zap.Time("current_mod_time", stat.ModTime()))
 
 			if stat.ModTime().After(prevModTime) {
 				prevModTime = stat.ModTime()
