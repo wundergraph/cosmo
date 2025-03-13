@@ -81,6 +81,7 @@ import {
   MagnifyingGlassIcon,
   PlayIcon,
   PlusIcon,
+  DownloadIcon,
 } from "@radix-ui/react-icons";
 import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -101,6 +102,47 @@ import { BiAnalyse } from "react-icons/bi";
 import { IoBarcodeSharp } from "react-icons/io5";
 import { z } from "zod";
 import { useUser } from "@/hooks/use-user";
+import { GetPersistedOperationsResponse_Operation, PersistedOperation } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+
+interface APICollectionVariable {
+  key: string;
+  value: string;
+}
+
+interface APICollectionRequest {
+  method: string;
+  header: Array<{
+    key: string;
+    value: string;
+    type?: string;
+  }>;
+  body: {
+    mode: 'graphql';
+    graphql: {
+      query: string;
+      variables: string;
+    };
+  };
+  url: {
+    raw: string;
+    host: string[];
+  };
+}
+
+interface APICollectionItem {
+  name: string;
+  request: APICollectionRequest;
+}
+
+interface APICollection {
+  info: {
+    name: string;
+    description: string;
+    schema: string;
+  };
+  item: APICollectionItem[];
+  variable: APICollectionVariable[];
+}
 
 const getSnippets = ({
   clientName,
@@ -216,6 +258,67 @@ const ClientOperations = () => {
       enabled: !!clientId,
     },
   );
+
+  const createAPICollection = (op: GetPersistedOperationsResponse_Operation) => {
+    const variables = extractVariablesFromGraphQL(op.contents, ast);
+    
+    const spec: APICollection = {
+      info: {
+        name: op.operationNames[0] || "WunderGraph GraphQL Cosmo Operation",
+        description: "GraphQL operation exported from WunderGraph Cosmo",
+        schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+      },
+      item: [
+        {
+          name: op.operationNames[0] || "WunderGraph GraphQL Cosmo Operation",
+          request: {
+            method: "POST",
+            header: [
+              {
+                key: "Content-Type",
+                value: "application/json"
+              },
+              {
+                key: "graphql-client-name",
+                value: clientName || "",
+                type: "text"
+              }
+            ],
+            body: {
+              mode: "graphql",
+              graphql: {
+                query: op.contents,
+                variables: JSON.stringify(variables, null, 2)
+              }
+            },
+            url: {
+              raw: "{{baseUrl}}",
+              host: ["{{baseUrl}}"]
+            }
+          }
+        }
+      ],
+      variable: [
+        {
+          key: "baseUrl",
+          value: graphContext?.graph?.routingURL || "/"
+        }
+      ]
+    };
+
+    return JSON.stringify(spec, null, 2);
+  };
+
+  const doExport = (op: GetPersistedOperationsResponse_Operation) => {
+    const collection = createAPICollection(op);
+    const blob = new Blob([collection], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${op.operationNames[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   let content: React.ReactNode;
 
@@ -350,6 +453,14 @@ const ClientOperations = () => {
                         </p>
                       )}
                       <div className="flex items-center gap-x-2">
+                        <Tooltip delayDuration={200}>
+                          <TooltipTrigger>
+                            <Button variant="outline" size="icon" onClick={() => doExport(op)}>
+                              <DownloadIcon />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Download Operation</TooltipContent>
+                        </Tooltip>
                         <Tooltip delayDuration={100}>
                           <TooltipTrigger>
                             <Button variant="outline" size="icon" asChild>
