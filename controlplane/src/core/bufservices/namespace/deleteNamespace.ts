@@ -105,6 +105,7 @@ export function deleteNamespace(
           auditableType: 'federated_graph',
           auditableDisplayName: federatedGraph.name,
           actorDisplayName: authContext.userDisplayName,
+          apiKeyName: authContext.apiKeyName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           targetNamespaceId: federatedGraph.namespaceId,
           targetNamespaceDisplayName: federatedGraph.namespace,
@@ -120,6 +121,7 @@ export function deleteNamespace(
           auditableType: subgraph.isFeatureSubgraph ? 'feature_subgraph' : 'subgraph',
           auditableDisplayName: subgraph.name,
           actorDisplayName: authContext.userDisplayName,
+          apiKeyName: authContext.apiKeyName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           targetNamespaceId: subgraph.namespaceId,
           targetNamespaceDisplayName: subgraph.namespace,
@@ -134,6 +136,7 @@ export function deleteNamespace(
         auditableType: 'namespace',
         auditableDisplayName: ns.name,
         actorDisplayName: authContext.userDisplayName,
+        apiKeyName: authContext.apiKeyName,
         actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       });
     });

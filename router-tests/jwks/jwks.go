@@ -2,9 +2,8 @@ package jwks
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"github.com/MicahParks/jwkset"
-	"github.com/hashicorp/consul/sdk/freeport"
 	"log"
 	"net"
 	"net/http"
@@ -12,17 +11,25 @@ import (
 	"testing"
 	"time"
 
+	"github.com/MicahParks/jwkset"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/hashicorp/consul/sdk/freeport"
 )
 
 const (
 	jwksHTTPPath = "/.well-known/jwks.json"
+	oidcHTTPPath = "/.well-known/openid-configuration"
 )
 
 type Server struct {
-	providers  map[string]Crypto
-	httpServer *httptest.Server
-	storage    jwkset.Storage
+	providers   map[string]Crypto
+	httpServer  *httptest.Server
+	storage     jwkset.Storage
+	respondTime time.Duration
+}
+
+type oidcConfiguration struct {
+	JwksURI string `json:"jwks_uri"`
 }
 
 func (s *Server) Close() {
@@ -54,6 +61,8 @@ func (s *Server) TokenForKID(kid string, claims map[string]any) (string, error) 
 }
 
 func (s *Server) jwksJSON(w http.ResponseWriter, r *http.Request) {
+	time.Sleep(s.respondTime)
+
 	ctx := context.Background()
 
 	rawJWKS, err := s.storage.JSON(ctx)
@@ -63,8 +72,26 @@ func (s *Server) jwksJSON(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(rawJWKS)
 }
 
+func (s *Server) oidcJSON(w http.ResponseWriter, r *http.Request) {
+	time.Sleep(s.respondTime)
+	oidc := oidcConfiguration{
+		JwksURI: s.httpServer.URL + jwksHTTPPath,
+	}
+
+	data, err := json.Marshal(oidc)
+	if err != nil {
+		log.Fatalf("Failed to marshal the OIDC configuration.\nError: %s", err)
+	}
+	_, _ = w.Write(data)
+	w.WriteHeader(http.StatusOK)
+}
+
 func (s *Server) JWKSURL() string {
 	return s.httpServer.URL + jwksHTTPPath
+}
+
+func (s *Server) OIDCURL() string {
+	return s.httpServer.URL + oidcHTTPPath
 }
 
 func (s *Server) waitForServer(ctx context.Context) error {
@@ -81,6 +108,10 @@ func (s *Server) waitForServer(ctx context.Context) error {
 		}
 		time.Sleep(time.Millisecond * 100)
 	}
+}
+
+func (s *Server) SetRespondTime(d time.Duration) {
+	s.respondTime = d
 }
 
 func NewServerWithCrypto(t *testing.T, providers ...Crypto) (*Server, error) {
@@ -113,6 +144,7 @@ func NewServerWithCrypto(t *testing.T, providers ...Crypto) (*Server, error) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc(jwksHTTPPath, s.jwksJSON)
+	mux.HandleFunc(oidcHTTPPath, s.oidcJSON)
 
 	httpServer := httptest.NewUnstartedServer(mux)
 	port := freeport.GetOne(t)

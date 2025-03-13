@@ -25,6 +25,7 @@ import {
   users,
 } from '../../db/schema.js';
 import {
+  FeatureSubgraphDTO,
   FederatedGraphDTO,
   GetChecksResponse,
   Label,
