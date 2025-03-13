@@ -259,45 +259,51 @@ const ClientOperations = () => {
     },
   );
 
-  const createAPICollection = (op: GetPersistedOperationsResponse_Operation) => {
-    const variables = extractVariablesFromGraphQL(op.contents, ast);
-    
-    const spec: APICollection = {
-      info: {
+  const createAPICollection = (operations: GetPersistedOperationsResponse_Operation | GetPersistedOperationsResponse_Operation[]) => {
+    const ops = Array.isArray(operations) ? operations : [operations];
+    const items = ops.map(op => {
+      const variables = extractVariablesFromGraphQL(op.contents, ast);
+      return {
         name: op.operationNames[0] || "WunderGraph GraphQL Cosmo Operation",
-        description: "GraphQL operation exported from WunderGraph Cosmo",
-        schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-      },
-      item: [
-        {
-          name: op.operationNames[0] || "WunderGraph GraphQL Cosmo Operation",
-          request: {
-            method: "POST",
-            header: [
-              {
-                key: "Content-Type",
-                value: "application/json"
-              },
-              {
-                key: "graphql-client-name",
-                value: clientName || "",
-                type: "text"
-              }
-            ],
-            body: {
-              mode: "graphql",
-              graphql: {
-                query: op.contents,
-                variables: JSON.stringify(variables, null, 2)
-              }
+        request: {
+          method: "POST",
+          header: [
+            {
+              key: "Content-Type",
+              value: "application/json"
             },
-            url: {
-              raw: "{{baseUrl}}",
-              host: ["{{baseUrl}}"]
+            {
+              key: "graphql-client-name",
+              value: clientName || "",
+              type: "text"
             }
+          ],
+          body: {
+            mode: "graphql" as const,
+            graphql: {
+              query: op.contents,
+              variables: JSON.stringify(variables, null, 2)
+            }
+          },
+          url: {
+            raw: "{{baseUrl}}",
+            host: ["{{baseUrl}}"]
           }
         }
-      ],
+      };
+    });
+
+    const spec: APICollection = {
+      info: {
+        name: ops.length === 1 
+          ? (ops[0].operationNames[0] || "WunderGraph GraphQL Cosmo Operation")
+          : `${clientName} Operations`,
+        description: ops.length === 1
+          ? "GraphQL operation exported from WunderGraph Cosmo"
+          : `All GraphQL operations for client ${clientName} exported from WunderGraph Cosmo`,
+        schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+      },
+      item: items,
       variable: [
         {
           key: "baseUrl",
@@ -309,15 +315,24 @@ const ClientOperations = () => {
     return JSON.stringify(spec, null, 2);
   };
 
-  const doExport = (op: GetPersistedOperationsResponse_Operation) => {
-    const collection = createAPICollection(op);
-    const blob = new Blob([collection], { type: "application/json" });
+  const downloadJson = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${op.operationNames[0]}.json`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const doExport = (op: GetPersistedOperationsResponse_Operation) => {
+    const collection = createAPICollection(op);
+    downloadJson(collection, `${op.operationNames[0]}.json`);
+  };
+
+  const doExportAll = (operations: GetPersistedOperationsResponse_Operation[]) => {
+    const collection = createAPICollection(operations);
+    downloadJson(collection, `${clientName}-operations.json`);
   };
 
   let content: React.ReactNode;
@@ -376,29 +391,40 @@ const ClientOperations = () => {
 
     content = (
       <div>
-        <div className="relative">
-          <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
-          <Input
-            placeholder="Search by Name or ID"
-            className="pl-8 pr-10"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              applyParams(e.target.value);
-            }}
-          />
-          {search && (
-            <Button
-              variant="ghost"
-              className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
-              onClick={() => {
-                setSearch("");
-                applyParams("");
+        <div className="flex justify-between items-center gap-x-2">
+          <div className="relative grow">
+            <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
+            <Input
+              placeholder="Search by Name or ID"
+              className="pl-8 pr-10"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                applyParams(e.target.value);
               }}
-            >
-              <Cross1Icon />
-            </Button>
-          )}
+            />
+            {search && (
+              <Button
+                variant="ghost"
+                className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
+                onClick={() => {
+                  setSearch("");
+                  applyParams("");
+                }}
+              >
+                <Cross1Icon />
+              </Button>
+            )}
+          </div>
+          <div className="h-8 w-px bg-border" />
+          <Tooltip delayDuration={200}>
+            <TooltipTrigger>
+              <Button variant="outline" onClick={() => doExportAll(filteredOperations)}>
+                <DownloadIcon />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Download All Operations</TooltipContent>
+          </Tooltip>
         </div>
         <Accordion type="single" collapsible className="mt-4 w-full">
           {filteredOperations.map((op) => {
