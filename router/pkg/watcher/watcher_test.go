@@ -4,11 +4,12 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"sync"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/internal/test"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
 	"go.uber.org/goleak"
 	"go.uber.org/zap"
@@ -19,43 +20,41 @@ func TestMain(m *testing.M) {
 	goleak.VerifyTestMain(m)
 }
 
-var watchInterval = 10 * time.Millisecond
+var (
+	watchInterval = 10 * time.Millisecond
+	testTimeout   = 5 * time.Second
+
+	assertTimeout      = 500 * time.Millisecond
+	assertPollInterval = 10 * time.Millisecond
+)
 
 func TestWatch(t *testing.T) {
 	t.Parallel()
 
 	t.Run("create and move", func(t *testing.T) {
 		t.Parallel()
-
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		var err error
-
 		dir := t.TempDir()
 		tempFile := filepath.Join(dir, "config.json")
-
 		err = os.WriteFile(tempFile, []byte("a"), 0o600)
 		require.NoError(t, err)
 
-		wg := sync.WaitGroup{}
-
+		spy := test.NewCallSpy()
 		eg, ctx := errgroup.WithContext(ctx)
 		eg.Go(func() error {
 			return watcher.SimpleWatch(ctx, watcher.SimpleWatcherOptions{
 				Interval: watchInterval,
 				Logger:   zap.NewNop(),
 				Path:     tempFile,
-				Callback: func() {
-					wg.Done()
-				},
+				Callback: spy.Call,
 			})
 		})
 
 		// Wait for the first cycle to complete to set baseline
 		time.Sleep(2 * watchInterval)
-
-		wg.Add(1)
 
 		tempFile2 := filepath.Join(dir, "config2.json")
 
@@ -72,7 +71,9 @@ func TestWatch(t *testing.T) {
 		require.NoError(t, err)
 
 		// Should get an event for the new file
-		wg.Wait()
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			spy.AssertCalled(t, 1)
+		}, assertTimeout, assertPollInterval)
 	})
 
 	t.Run("modify an existing file", func(t *testing.T) {
@@ -87,29 +88,26 @@ func TestWatch(t *testing.T) {
 		err := os.WriteFile(tempFile, []byte("a"), 0o600)
 		require.NoError(t, err)
 
-		wg := sync.WaitGroup{}
-
+		spy := test.NewCallSpy()
 		eg, ctx := errgroup.WithContext(ctx)
 		eg.Go(func() error {
 			return watcher.SimpleWatch(ctx, watcher.SimpleWatcherOptions{
 				Interval: watchInterval,
 				Logger:   zap.NewNop(),
 				Path:     tempFile,
-				Callback: func() {
-					wg.Done()
-				},
+				Callback: spy.Call,
 			})
 		})
 
 		// Wait for the first cycle to complete to set baseline
 		time.Sleep(2 * watchInterval)
 
-		wg.Add(1)
-
 		err = os.WriteFile(tempFile, []byte("b"), 0o600)
 		require.NoError(t, err)
 
-		wg.Wait()
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			spy.AssertCalled(t, 1)
+		}, assertTimeout, assertPollInterval)
 	})
 
 	t.Run("delete and replace a file", func(t *testing.T) {
@@ -124,24 +122,19 @@ func TestWatch(t *testing.T) {
 		err := os.WriteFile(tempFile, []byte("a"), 0o600)
 		require.NoError(t, err)
 
-		wg := sync.WaitGroup{}
-
+		spy := test.NewCallSpy()
 		eg, ctx := errgroup.WithContext(ctx)
 		eg.Go(func() error {
 			return watcher.SimpleWatch(ctx, watcher.SimpleWatcherOptions{
 				Interval: watchInterval,
 				Logger:   zap.NewNop(),
 				Path:     tempFile,
-				Callback: func() {
-					wg.Done()
-				},
+				Callback: spy.Call,
 			})
 		})
 
 		// Wait for the first cycle to complete to set baseline
 		time.Sleep(2 * watchInterval)
-
-		wg.Add(1)
 
 		// Delete the file, wait a cycle and then recreate it
 		os.Remove(tempFile)
@@ -151,8 +144,9 @@ func TestWatch(t *testing.T) {
 		err = os.WriteFile(tempFile, []byte("b"), 0o600)
 		require.NoError(t, err)
 
-		// Should get an event for the new file
-		wg.Wait()
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			spy.AssertCalled(t, 1)
+		}, assertTimeout, assertPollInterval)
 	})
 
 	t.Run("move and replace a file", func(t *testing.T) {
@@ -168,24 +162,19 @@ func TestWatch(t *testing.T) {
 		err := os.WriteFile(tempFile, []byte("a"), 0o600)
 		require.NoError(t, err)
 
-		wg := sync.WaitGroup{}
-
+		spy := test.NewCallSpy()
 		eg, ctx := errgroup.WithContext(ctx)
 		eg.Go(func() error {
 			return watcher.SimpleWatch(ctx, watcher.SimpleWatcherOptions{
 				Interval: watchInterval,
 				Logger:   zap.NewNop(),
 				Path:     tempFile,
-				Callback: func() {
-					wg.Done()
-				},
+				Callback: spy.Call,
 			})
 		})
 
 		// Wait for the first cycle to complete to set baseline
 		time.Sleep(2 * watchInterval)
-
-		wg.Add(1)
 
 		// Move the file away, wait a cycle and then move it back
 		err = os.Rename(tempFile, tempFile2)
@@ -196,8 +185,9 @@ func TestWatch(t *testing.T) {
 		err = os.Rename(tempFile2, tempFile)
 		require.NoError(t, err)
 
-		// Should get an event for the moved file, even if its identical
-		wg.Wait()
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			spy.AssertCalled(t, 1)
+		}, assertTimeout, assertPollInterval)
 	})
 
 	t.Run("kubernetes-like symlinks", func(t *testing.T) {
@@ -234,28 +224,25 @@ func TestWatch(t *testing.T) {
 		require.NoError(t, os.Symlink(realFolder, linkedFolder))
 		require.NoError(t, os.Symlink(linkedFile, watchedFile))
 
-		wg := sync.WaitGroup{}
-
+		spy := test.NewCallSpy()
 		eg, ctx := errgroup.WithContext(ctx)
 		eg.Go(func() error {
 			return watcher.SimpleWatch(ctx, watcher.SimpleWatcherOptions{
 				Interval: watchInterval,
 				Logger:   zap.NewNop(),
 				Path:     watchedFile,
-				Callback: func() {
-					wg.Done()
-				},
+				Callback: spy.Call,
 			})
 		})
 
 		// Wait for the first cycle to complete to set baseline
 		time.Sleep(2 * watchInterval)
 
-		wg.Add(1)
-
 		require.NoError(t, os.WriteFile(realFile, []byte("b"), 0o600))
 
-		wg.Wait()
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			spy.AssertCalled(t, 1)
+		}, assertTimeout, assertPollInterval)
 	})
 }
 
@@ -269,7 +256,7 @@ func TestCancel(t *testing.T) {
 	err := os.WriteFile(tempFile, []byte("a"), 0o600)
 	require.NoError(t, err)
 
-	ctx, cancel := context.WithTimeout(ctx, waitForEvents)
+	ctx, cancel := context.WithTimeout(ctx, testTimeout)
 
 	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
