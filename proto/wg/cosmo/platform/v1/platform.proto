@@ -1604,6 +1604,7 @@ message AuditLog {
    string createdAt = 9;
    string targetNamespaceId = 10;
    string targetNamespaceDisplayName = 11;
+   string apiKeyName = 12;
 }
 
 message GetAuditLogsResponse {

@@ -6,6 +6,7 @@ on:
       - "connect/**/*"
       - "composition/**/*"
       - ".github/workflows/cp-ci.yaml"
+      - ".github/scripts/setup-keycloak.sh"
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
