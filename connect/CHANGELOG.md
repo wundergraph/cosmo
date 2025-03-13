@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.96.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.95.0...@wundergraph/cosmo-connect@0.96.0) (2025-03-12)
+
+### Features
+
+* display used api key name on the audit log table ([#1674](https://github.com/wundergraph/cosmo/issues/1674)) ([55ffbdd](https://github.com/wundergraph/cosmo/commit/55ffbdd7ac0ae10106de4bf3c073d650c0537a52)) (@wilsonrivera)
+
 # [0.95.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.94.1...@wundergraph/cosmo-connect@0.95.0) (2025-02-27)
 
 ### Features

@@ -10,7 +10,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
@@ -61,17 +60,7 @@ func (p *MultipartParser) processInMemoryFile(filePart []*multipart.FileHeader, 
 	return err
 }
 
-func (p *MultipartParser) processFilePart(filePart []*multipart.FileHeader, uploadsMap map[int]string) error {
-	fileIndex := p.nextFileIndex()
-
-	variablePath, ok := uploadsMap[fileIndex]
-	if !ok {
-		return &httpGraphqlError{
-			message:    "no such file in the uploads map",
-			statusCode: http.StatusOK,
-		}
-	}
-
+func (p *MultipartParser) processFilePart(filePart []*multipart.FileHeader, uploadsPath string) error {
 	file, err := filePart[0].Open()
 	if err != nil {
 		return err
@@ -88,10 +77,10 @@ func (p *MultipartParser) processFilePart(filePart []*multipart.FileHeader, uplo
 	// Check if the file was written to the disk
 	if diskFile, ok := file.(*os.File); ok {
 		p.fileHandlers = append(p.fileHandlers, diskFile)
-		p.files = append(p.files, httpclient.NewFileUpload(diskFile.Name(), filePart[0].Filename, variablePath))
+		p.files = append(p.files, httpclient.NewFileUpload(diskFile.Name(), filePart[0].Filename, uploadsPath))
 	} else {
 		// The file is in memory. We write it manually to the disk.
-		err = p.processInMemoryFile(filePart, file, variablePath)
+		err = p.processInMemoryFile(filePart, file, uploadsPath)
 	}
 
 	return err
@@ -132,26 +121,36 @@ func (p *MultipartParser) Parse(r *http.Request, buf *bytes.Buffer) ([]byte, []*
 		return body, p.files, err
 	}
 
-	var uploadsMap map[int]string
+	var uploadsList []string
 	rawUploadsMap, ok := p.form.Value["map"]
 	if ok {
-		uploadsMap, err = p.parseUploadMap(rawUploadsMap[0])
+		uploadsList, err = p.parseUploadMap(rawUploadsMap[0])
 		if err != nil {
 			return body, p.files, err
 		}
 	}
 
+	if len(uploadsList) != len(p.form.File) {
+		return body, p.files, &httpGraphqlError{
+			message:    "number of files does not match the number of entries in the upload map",
+			statusCode: http.StatusOK,
+		}
+	}
+
+	fileIndex := 0
 	for _, filePart := range p.form.File {
-		err = p.processFilePart(filePart, uploadsMap)
+		uploadPath := uploadsList[fileIndex]
+		err = p.processFilePart(filePart, uploadPath)
 		if err != nil {
 			return body, p.files, err
 		}
+		fileIndex++
 	}
 
 	return body, p.files, err
 }
 
-func (p *MultipartParser) parseUploadMap(rawUploadsMap string) (map[int]string, error) {
+func (p *MultipartParser) parseUploadMap(rawUploadsMap string) ([]string, error) {
 	var uploadsMap map[string][]string
 	if err := json.Unmarshal([]byte(rawUploadsMap), &uploadsMap); err != nil {
 		return nil, &httpGraphqlError{
@@ -160,36 +159,24 @@ func (p *MultipartParser) parseUploadMap(rawUploadsMap string) (map[int]string, 
 		}
 	}
 
-	result := make(map[int]string)
-	for index, variableName := range uploadsMap {
-		fileIndex, err := strconv.Atoi(index)
-		if err != nil {
-			return nil, &httpGraphqlError{
-				message:    fmt.Sprintf("invalid upload index %s: %s", index, err.Error()),
-				statusCode: http.StatusOK,
-			}
-		}
-
+	result := make([]string, 0, len(uploadsMap))
+	for fileIndex, variableName := range uploadsMap {
 		if len(variableName) == 0 {
 			return nil, &httpGraphqlError{
-				message:    fmt.Sprintf("empty variable name for upload index %d", fileIndex),
+				message:    fmt.Sprintf("empty variable name for upload index %s", fileIndex),
 				statusCode: http.StatusOK,
 			}
 		}
 
 		if len(variableName) > 1 {
 			return nil, &httpGraphqlError{
-				message:    fmt.Sprintf("multiple variable names for upload index %d", fileIndex),
+				message:    fmt.Sprintf("multiple variable names for upload index %s", fileIndex),
 				statusCode: http.StatusOK,
 			}
 		}
 
-		result[fileIndex] = variableName[0]
+		result = append(result, variableName[0])
 	}
 
 	return result, nil
-}
-
-func (p *MultipartParser) nextFileIndex() int {
-	return len(p.files)
 }

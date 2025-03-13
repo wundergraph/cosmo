@@ -60,13 +60,16 @@
     "husky": "^8.0.3",
     "lint-staged": "^15.2.10",
     "prettier": "^3.0.3",
-    "vitest": "^2.1.8"
+    "vitest": "^2.1.9"
   },
   "pnpm": {
     "overrides": {
       "react": "18.3.1",
       "graphql": "16.9.0",
       "cross-spawn": "7.0.6"
+    },
+    "patchedDependencies": {
+      "graphql@16.9.0": "patches/graphql@16.9.0.patch"
     }
   },
   "packageManager": "pnpm@9.12.3"

@@ -192,6 +192,7 @@ type (
 		prometheusServer                *http.Server
 		modulesConfig                   map[string]interface{}
 		executionConfig                 *ExecutionConfig
+		routerOnRequestHandlers         []func(http.Handler) http.Handler
 		routerMiddlewares               []func(http.Handler) http.Handler
 		preOriginHandlers               []TransportPreHandler
 		postOriginHandlers              []TransportPostHandler
@@ -667,6 +668,17 @@ func (r *Router) initModules(ctx context.Context) error {
 					// Ensure we work with latest request in the chain to work with the right context
 					reqContext.request = request
 					fn.Middleware(reqContext, handler)
+				})
+			})
+		}
+
+		if fn, ok := moduleInstance.(RouterOnRequestHandler); ok {
+			r.routerOnRequestHandlers = append(r.routerOnRequestHandlers, func(handler http.Handler) http.Handler {
+				return http.HandlerFunc(func(_ http.ResponseWriter, request *http.Request) {
+					reqContext := getRequestContext(request.Context())
+					// Ensure we work with latest request in the chain to work with the right context
+					reqContext.request = request
+					fn.RouterOnRequest(reqContext, handler)
 				})
 			})
 		}
@@ -2027,6 +2039,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			},
 			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
+			ExcludeScopeInfo:    cfg.Metrics.Prometheus.ExcludeScopeInfo,
 		},
 	}
 }

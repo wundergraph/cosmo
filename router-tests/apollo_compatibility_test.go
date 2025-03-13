@@ -358,6 +358,64 @@ func TestApolloGatewayCompatibility(t *testing.T) {
 			assert.Equal(t, `{"data":null,"extensions":{"valueCompletion":[{"message":"Invalid __typename found for object at array element of type Employee at index 0.","path":["findEmployees",0],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
 		})
 	})
+	t.Run("enable value completion — invalid enum value", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+					ValueCompletion: config.ApolloCompatibilityValueCompletion{
+						Enabled: true,
+					},
+				}),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalMiddleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.Header().Set("Content-Type", "application/json")
+						w.WriteHeader(http.StatusOK)
+						_, _ = w.Write([]byte(`{"data":{"employee":{"currentMood":"INVALID"}}}`))
+					})
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query ($id: Int!) { employee(id: $id) { currentMood } }`,
+				Variables: json.RawMessage(`{"id":12}`),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.Equal(t, `{"data":{"employee":null},"extensions":{"valueCompletion":[{"message":"Invalid value found for field Employee.currentMood.","path":["employee","currentMood"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+		})
+	})
+	t.Run("enable value completion — inaccessible enum value", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+					ValueCompletion: config.ApolloCompatibilityValueCompletion{
+						Enabled: true,
+					},
+				}),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalMiddleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.Header().Set("Content-Type", "application/json")
+						w.WriteHeader(http.StatusOK)
+						_, _ = w.Write([]byte(`{"data":{"employee":{"currentMood":"APATHETIC"}}}`))
+					})
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     `query ($id: Int!) { employee(id: $id) { currentMood } }`,
+				Variables: json.RawMessage(`{"id":12}`),
+			})
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			assert.Equal(t, `{"data":{"employee":null},"extensions":{"valueCompletion":[{"message":"Invalid value found for field Employee.currentMood.","path":["employee","currentMood"],"extensions":{"code":"INVALID_GRAPHQL"}}]}}`, res.Body)
+		})
+	})
 	t.Run("float compaction off", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
