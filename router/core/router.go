@@ -1117,7 +1117,7 @@ func (r *Router) Start(ctx context.Context) error {
 		}()
 
 		if r.executionConfig != nil && r.executionConfig.Watch {
-			go watcher.LogSimpleWatch(ctx, watcher.SimpleWatcherOptions{
+			w, err := watcher.New(watcher.Options{
 				Logger:   r.logger.With(zap.String("watcher", "execution_config")),
 				Path:     r.executionConfig.Path,
 				Interval: r.executionConfig.WatchInterval,
@@ -1147,6 +1147,16 @@ func (r *Router) Start(ctx context.Context) error {
 					}
 				},
 			})
+
+			if err != nil {
+				return fmt.Errorf("failed to create watcher: %w", err)
+			}
+
+			go func() {
+				if err := w(ctx); err != nil {
+					r.logger.Error("Error watching file", zap.Error(err), zap.String("component", "file_watcher"), zap.String("watcher_label", "execution_config"))
+				}
+			}()
 
 			r.logger.Info("Watching config file for changes. Router will hot-reload automatically without downtime",
 				zap.String("path", r.executionConfig.Path),

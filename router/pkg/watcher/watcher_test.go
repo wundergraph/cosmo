@@ -28,6 +28,60 @@ var (
 	assertPollInterval = 10 * time.Millisecond
 )
 
+func TestOptionsValidation(t *testing.T) {
+	t.Parallel()
+
+	t.Run("interval is zero", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := watcher.New(watcher.Options{
+			Interval: 0,
+		})
+		if assert.Error(t, err) {
+			assert.ErrorContains(t, err, "interval must be greater than zero")
+		}
+	})
+
+	t.Run("logger not provided", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := watcher.New(watcher.Options{
+			Interval: watchInterval,
+			Logger:   nil,
+		})
+		if assert.Error(t, err) {
+			assert.ErrorContains(t, err, "logger must be provided")
+		}
+	})
+
+	t.Run("path not provided", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := watcher.New(watcher.Options{
+			Interval: watchInterval,
+			Logger:   zap.NewNop(),
+			Path:     "",
+		})
+		if assert.Error(t, err) {
+			assert.ErrorContains(t, err, "path must be provided")
+		}
+	})
+
+	t.Run("callback not provided", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := watcher.New(watcher.Options{
+			Interval: watchInterval,
+			Logger:   zap.NewNop(),
+			Path:     "valid_path.txt",
+			Callback: nil,
+		})
+		if assert.Error(t, err) {
+			assert.ErrorContains(t, err, "callback must be provided")
+		}
+	})
+}
+
 func TestWatch(t *testing.T) {
 	t.Parallel()
 
@@ -36,21 +90,23 @@ func TestWatch(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		var err error
 		dir := t.TempDir()
 		tempFile := filepath.Join(dir, "config.json")
-		err = os.WriteFile(tempFile, []byte("a"), 0o600)
-		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(tempFile, []byte("a"), 0o600))
 
 		spy := test.NewCallSpy()
+
+		watchFunc, err := watcher.New(watcher.Options{
+			Interval: watchInterval,
+			Logger:   zap.NewNop(),
+			Path:     tempFile,
+			Callback: spy.Call,
+		})
+		require.NoError(t, err)
+
 		eg, ctx := errgroup.WithContext(ctx)
 		eg.Go(func() error {
-			return watcher.SimpleWatch(ctx, watcher.SimpleWatcherOptions{
-				Interval: watchInterval,
-				Logger:   zap.NewNop(),
-				Path:     tempFile,
-				Callback: spy.Call,
-			})
+			return watchFunc(ctx)
 		})
 
 		// Wait for the first cycle to complete to set baseline
@@ -63,12 +119,10 @@ func TestWatch(t *testing.T) {
 		// will not record a different timestamp between the two files.
 		// The sleep above should be adequate, but if you're not
 		// seeing the event, try increasing it.
-		err = os.WriteFile(tempFile2, []byte("b"), 0o600)
-		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(tempFile2, []byte("b"), 0o600))
 
 		// Move new file ontop of the old file
-		err = os.Rename(tempFile2, tempFile)
-		require.NoError(t, err)
+		require.NoError(t, os.Rename(tempFile2, tempFile))
 
 		// Should get an event for the new file
 		require.EventuallyWithT(t, func(t *assert.CollectT) {
@@ -85,25 +139,27 @@ func TestWatch(t *testing.T) {
 		dir := t.TempDir()
 		tempFile := filepath.Join(dir, "config.json")
 
-		err := os.WriteFile(tempFile, []byte("a"), 0o600)
-		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(tempFile, []byte("a"), 0o600))
 
 		spy := test.NewCallSpy()
+
+		watchFunc, err := watcher.New(watcher.Options{
+			Interval: watchInterval,
+			Logger:   zap.NewNop(),
+			Path:     tempFile,
+			Callback: spy.Call,
+		})
+		require.NoError(t, err)
+
 		eg, ctx := errgroup.WithContext(ctx)
 		eg.Go(func() error {
-			return watcher.SimpleWatch(ctx, watcher.SimpleWatcherOptions{
-				Interval: watchInterval,
-				Logger:   zap.NewNop(),
-				Path:     tempFile,
-				Callback: spy.Call,
-			})
+			return watchFunc(ctx)
 		})
 
 		// Wait for the first cycle to complete to set baseline
 		time.Sleep(2 * watchInterval)
 
-		err = os.WriteFile(tempFile, []byte("b"), 0o600)
-		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(tempFile, []byte("b"), 0o600))
 
 		require.EventuallyWithT(t, func(t *assert.CollectT) {
 			spy.AssertCalled(t, 1)
@@ -119,30 +175,32 @@ func TestWatch(t *testing.T) {
 		dir := t.TempDir()
 		tempFile := filepath.Join(dir, "config.json")
 
-		err := os.WriteFile(tempFile, []byte("a"), 0o600)
-		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(tempFile, []byte("a"), 0o600))
 
 		spy := test.NewCallSpy()
+
+		watchFunc, err := watcher.New(watcher.Options{
+			Interval: watchInterval,
+			Logger:   zap.NewNop(),
+			Path:     tempFile,
+			Callback: spy.Call,
+		})
+		require.NoError(t, err)
+
 		eg, ctx := errgroup.WithContext(ctx)
 		eg.Go(func() error {
-			return watcher.SimpleWatch(ctx, watcher.SimpleWatcherOptions{
-				Interval: watchInterval,
-				Logger:   zap.NewNop(),
-				Path:     tempFile,
-				Callback: spy.Call,
-			})
+			return watchFunc(ctx)
 		})
 
 		// Wait for the first cycle to complete to set baseline
 		time.Sleep(2 * watchInterval)
 
 		// Delete the file, wait a cycle and then recreate it
-		os.Remove(tempFile)
+		require.NoError(t, os.Remove(tempFile))
 
 		time.Sleep(2 * watchInterval)
 
-		err = os.WriteFile(tempFile, []byte("b"), 0o600)
-		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(tempFile, []byte("b"), 0o600))
 
 		require.EventuallyWithT(t, func(t *assert.CollectT) {
 			spy.AssertCalled(t, 1)
@@ -159,31 +217,32 @@ func TestWatch(t *testing.T) {
 		tempFile := filepath.Join(dir, "config.json")
 		tempFile2 := filepath.Join(dir, "config2.json")
 
-		err := os.WriteFile(tempFile, []byte("a"), 0o600)
-		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(tempFile, []byte("a"), 0o600))
 
 		spy := test.NewCallSpy()
+
+		watchFunc, err := watcher.New(watcher.Options{
+			Interval: watchInterval,
+			Logger:   zap.NewNop(),
+			Path:     tempFile,
+			Callback: spy.Call,
+		})
+		require.NoError(t, err)
+
 		eg, ctx := errgroup.WithContext(ctx)
 		eg.Go(func() error {
-			return watcher.SimpleWatch(ctx, watcher.SimpleWatcherOptions{
-				Interval: watchInterval,
-				Logger:   zap.NewNop(),
-				Path:     tempFile,
-				Callback: spy.Call,
-			})
+			return watchFunc(ctx)
 		})
 
 		// Wait for the first cycle to complete to set baseline
 		time.Sleep(2 * watchInterval)
 
 		// Move the file away, wait a cycle and then move it back
-		err = os.Rename(tempFile, tempFile2)
-		require.NoError(t, err)
+		require.NoError(t, os.Rename(tempFile, tempFile2))
 
 		time.Sleep(2 * watchInterval)
 
-		err = os.Rename(tempFile2, tempFile)
-		require.NoError(t, err)
+		require.NoError(t, os.Rename(tempFile2, tempFile))
 
 		require.EventuallyWithT(t, func(t *assert.CollectT) {
 			spy.AssertCalled(t, 1)
@@ -225,14 +284,18 @@ func TestWatch(t *testing.T) {
 		require.NoError(t, os.Symlink(linkedFile, watchedFile))
 
 		spy := test.NewCallSpy()
+
+		watchFunc, err := watcher.New(watcher.Options{
+			Interval: watchInterval,
+			Logger:   zap.NewNop(),
+			Path:     watchedFile,
+			Callback: spy.Call,
+		})
+		require.NoError(t, err)
+
 		eg, ctx := errgroup.WithContext(ctx)
 		eg.Go(func() error {
-			return watcher.SimpleWatch(ctx, watcher.SimpleWatcherOptions{
-				Interval: watchInterval,
-				Logger:   zap.NewNop(),
-				Path:     watchedFile,
-				Callback: spy.Call,
-			})
+			return watchFunc(ctx)
 		})
 
 		// Wait for the first cycle to complete to set baseline
@@ -253,21 +316,24 @@ func TestCancel(t *testing.T) {
 	dir := t.TempDir()
 	tempFile := filepath.Join(dir, "config.json")
 
-	err := os.WriteFile(tempFile, []byte("a"), 0o600)
-	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(tempFile, []byte("a"), 0o600))
 
 	ctx, cancel := context.WithTimeout(ctx, testTimeout)
 
+	watchFunc, err := watcher.New(watcher.Options{
+		Interval: watchInterval,
+		Logger:   zap.NewNop(),
+		Path:     tempFile,
+		Callback: func() {},
+	})
+	require.NoError(t, err)
+
 	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
-		return watcher.SimpleWatch(ctx, watcher.SimpleWatcherOptions{
-			Interval: watchInterval,
-			Logger:   zap.NewNop(),
-			Path:     tempFile,
-		})
+		return watchFunc(ctx)
 	})
 
 	cancel()
-	err = eg.Wait()
-	require.ErrorIs(t, err, context.Canceled)
+
+	require.ErrorIs(t, eg.Wait(), context.Canceled)
 }
