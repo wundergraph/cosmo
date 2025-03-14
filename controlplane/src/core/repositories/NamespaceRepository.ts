@@ -1,4 +1,4 @@
-import { Name, and, eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { NamespaceDTO } from '../../types/index.js';
@@ -16,7 +16,7 @@ export class NamespaceRepository {
       where: and(eq(schema.namespaces.organizationId, this.organizationId), eq(schema.namespaces.name, name)),
       with: {
         namespaceConfig: true,
-      }
+      },
     });
 
     if (!namespace) {
@@ -40,7 +40,7 @@ export class NamespaceRepository {
       where: and(eq(schema.namespaces.organizationId, this.organizationId), eq(schema.namespaces.id, id)),
       with: {
         namespaceConfig: true,
-      }
+      },
     });
 
     if (!namespace) {
@@ -127,12 +127,9 @@ export class NamespaceRepository {
       checksTimeframeInDays: data.checksTimeframeInDays,
     };
 
-    await this.db
-      .insert(schema.namespaceConfig)
-      .values(values)
-      .onConflictDoUpdate({
-        target: schema.namespaceConfig.namespaceId,
-        set: values,
-      });
+    await this.db.insert(schema.namespaceConfig).values(values).onConflictDoUpdate({
+      target: schema.namespaceConfig.namespaceId,
+      set: values,
+    });
   }
 }

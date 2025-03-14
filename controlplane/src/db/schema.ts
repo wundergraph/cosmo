@@ -501,7 +501,7 @@ export const namespaceConfig = pgTable(
     return {
       uniqueNamespace: unique('unique_namespace').on(t.namespaceId),
     };
-  }
+  },
 );
 
 export const namespaceConfigRelations = relations(namespaceConfig, ({ one }) => ({
