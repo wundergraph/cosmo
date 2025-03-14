@@ -88,6 +88,7 @@ export function getAuditLogs(
     const logs: PlainMessage<AuditLog>[] = auditLogs.map((log) => ({
       actorDisplayName: log.actorDisplayName ?? '',
       actorType: log.actorType ?? '',
+      apiKeyName: log.apiKeyName ?? '',
       auditAction: log.auditAction,
       createdAt: log.createdAt.toISOString(),
       auditableDisplayName: log.auditableDisplayName ?? '',

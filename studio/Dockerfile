@@ -7,6 +7,7 @@ RUN npm install --global pnpm@9
 
 # Files required by pnpm install
 COPY .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY patches patches
 
 # Files required by pnpm install for each package. Tried pnpm fetch but errors.
 COPY connect/package.json connect/

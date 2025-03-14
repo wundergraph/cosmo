@@ -21,6 +21,11 @@
 
 WunderGraph Cosmo is a comprehensive Lifecycle API Management platform tailored for Federated GraphQL. It encompasses everything from Schema Registry, composition checks, and analytics, to metrics, tracing, and routing. Whether you’re looking to deploy 100% on-prem or prefer a [Managed Service](https://cosmo.wundergraph.com/login), Cosmo offers flexibility without vendor lock-in, all under the Apache 2.0 license.
 
+## The State of GraphQL Federation 2024
+
+Get insights from industry experts and Federation practicioners across all industries and learn how companies are using GraphQL Federation.
+Head over to the [State of GraphQL Federation 2024](https://wundergraph.com/state-of-graphql-federation/2024) page and download the full **48 page PDF report** for free!
+
 ### Why Federated GraphQL?
 
 GraphQL Federation empowers organizations to break down their GraphQL schema into multiple smaller, manageable schemas, each maintained by different teams or services. These individual schemas are then combined into a single, unified graph, ensuring that all teams have consistent access to the data they need. In today's data-driven world, where information is often referred to as the new oil, building a unified API that can be consumed by both internal and external teams is more crucial than ever.

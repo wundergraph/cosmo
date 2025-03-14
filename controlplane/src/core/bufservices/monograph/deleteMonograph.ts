@@ -93,6 +93,7 @@ export function deleteMonograph(
           auditableType: 'monograph',
           auditableDisplayName: deletedGraph.name,
           actorDisplayName: authContext.userDisplayName,
+          apiKeyName: authContext.apiKeyName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           targetNamespaceId: deletedGraph.namespaceId,
           targetNamespaceDisplayName: deletedGraph.namespace,

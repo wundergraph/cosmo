@@ -50,9 +50,9 @@ func (f *HttpFlushWriter) Complete() {
 	} else if f.multipart {
 		// Write the final boundary in the multipart response
 		if f.apolloSubscriptionMultipartPrintBoundary {
-			_, _ = f.writer.Write([]byte("--\n"))
+			_, _ = f.writer.Write([]byte("--\r\n"))
 		} else {
-			_, _ = f.writer.Write([]byte("--" + multipartBoundary + "--\n"))
+			_, _ = f.writer.Write([]byte("--" + multipartBoundary + "--\r\n"))
 		}
 	}
 	f.Close()
@@ -88,7 +88,7 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	}
 	if f.multipart && len(resp) > 0 {
 		var err error
-		resp, err = wrapMultipartMessage(resp)
+		resp, err = wrapMultipartMessage(resp, true)
 		if err != nil {
 			return err
 		}
@@ -97,9 +97,9 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	separation := "\n\n"
 	if f.multipart {
 		if !f.apolloSubscriptionMultipartPrintBoundary {
-			separation = "\n"
+			separation = "\r\n"
 		} else {
-			separation = "\n" + multipartStart
+			separation = "\r\n" + multipartStart
 		}
 	} else if f.subscribeOnce {
 		separation = ""
@@ -156,23 +156,27 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 	return ctx, flushWriter, true
 }
 
-func wrapMultipartMessage(resp []byte) ([]byte, error) {
+func wrapMultipartMessage(resp []byte, wrapPayload bool) ([]byte, error) {
 	if string(resp) == heartbeat {
 		return resp, nil
 	}
 
-	// Per the Apollo docs, multipart messages are supposed to be json, wrapped in ` "payload"`
-	a, err := astjson.Parse(`{"payload": {}}`)
+	respValuePreMerge, err := astjson.ParseBytes(resp)
 	if err != nil {
 		return nil, err
 	}
 
-	b, err := astjson.ParseBytes(resp)
+	if !wrapPayload {
+		return respValuePreMerge.MarshalTo(nil), nil
+	}
+
+	// Per the Apollo docs, multipart messages are supposed to be json, wrapped in `"payload"`
+	// for subscriptions
+	payloadWrapper, err := astjson.Parse(`{"payload": {}}`)
 	if err != nil {
 		return nil, err
 	}
-
-	respValue, _, err := astjson.MergeValuesWithPath(a, b, "payload")
+	respValue, _, err := astjson.MergeValuesWithPath(payloadWrapper, respValuePreMerge, "payload")
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +263,7 @@ func GetWriterPrefix(sse bool, multipart bool, firstMessage bool) string {
 		if firstMessage {
 			messageStart = multipartStart
 		}
-		flushBreak = messageStart + "\nContent-Type: " + jsonContent + "\r\n\r\n"
+		flushBreak = messageStart + "\r\nContent-Type: " + jsonContent + "\r\n\r\n"
 	}
 
 	return flushBreak
