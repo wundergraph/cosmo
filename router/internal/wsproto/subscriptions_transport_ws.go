@@ -3,6 +3,7 @@ package wsproto
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/tidwall/sjson"
 )
@@ -37,12 +38,16 @@ type subscriptionsTransportWSMessage struct {
 }
 
 type subscriptionsTransportWSProtocol struct {
-	conn JSONConn
+	conn         JSONConn
+	readTimeout  time.Duration
+	writeTimeout time.Duration
 }
 
-func newSubscriptionsTransportWSProtocol(conn JSONConn) *subscriptionsTransportWSProtocol {
+func newSubscriptionsTransportWSProtocol(conn JSONConn, readTimeout, writeTimeout time.Duration) *subscriptionsTransportWSProtocol {
 	return &subscriptionsTransportWSProtocol{
-		conn: conn,
+		conn:         conn,
+		readTimeout:  readTimeout,
+		writeTimeout: writeTimeout,
 	}
 }
 
@@ -51,6 +56,9 @@ func (p *subscriptionsTransportWSProtocol) Subprotocol() string {
 }
 
 func (p *subscriptionsTransportWSProtocol) Initialize() (json.RawMessage, error) {
+	if err := p.conn.SetReadDeadline(time.Now().Add(p.readTimeout)); err != nil {
+		return nil, err
+	}
 	// First message must be a connection_init
 	var msg subscriptionsTransportWSMessage
 	if err := p.conn.ReadJSON(&msg); err != nil {
@@ -66,6 +74,9 @@ func (p *subscriptionsTransportWSProtocol) Initialize() (json.RawMessage, error)
 }
 
 func (p *subscriptionsTransportWSProtocol) ReadMessage() (*Message, error) {
+	if err := p.conn.SetReadDeadline(time.Now().Add(p.readTimeout)); err != nil {
+		return nil, err
+	}
 	var msg subscriptionsTransportWSMessage
 	if err := p.conn.ReadJSON(&msg); err != nil {
 		return nil, err
@@ -90,6 +101,9 @@ func (p *subscriptionsTransportWSProtocol) ReadMessage() (*Message, error) {
 }
 
 func (p *subscriptionsTransportWSProtocol) Pong(msg *Message) error {
+	if err := p.conn.SetWriteDeadline(time.Now().Add(p.writeTimeout)); err != nil {
+		return err
+	}
 	return p.conn.WriteJSON(subscriptionsTransportWSMessage{
 		ID:      msg.ID,
 		Type:    subscriptionsTransportWSMessageTypeKeepAlive,
@@ -98,6 +112,9 @@ func (p *subscriptionsTransportWSProtocol) Pong(msg *Message) error {
 }
 
 func (p *subscriptionsTransportWSProtocol) WriteGraphQLData(id string, data json.RawMessage, extensions json.RawMessage) error {
+	if err := p.conn.SetWriteDeadline(time.Now().Add(p.writeTimeout)); err != nil {
+		return err
+	}
 	return p.conn.WriteJSON(subscriptionsTransportWSMessage{
 		ID:         id,
 		Type:       subscriptionsTransportWSMessageTypeData,
@@ -112,6 +129,9 @@ func (p *subscriptionsTransportWSProtocol) WriteGraphQLErrors(id string, errors 
 	if err != nil {
 		return fmt.Errorf("encoding JSON: %w", err)
 	}
+	if err := p.conn.SetWriteDeadline(time.Now().Add(p.writeTimeout)); err != nil {
+		return err
+	}
 	return p.conn.WriteJSON(subscriptionsTransportWSMessage{
 		ID:         id,
 		Type:       subscriptionsTransportWSMessageTypeData,
@@ -121,6 +141,9 @@ func (p *subscriptionsTransportWSProtocol) WriteGraphQLErrors(id string, errors 
 }
 
 func (p *subscriptionsTransportWSProtocol) Done(id string) error {
+	if err := p.conn.SetWriteDeadline(time.Now().Add(p.writeTimeout)); err != nil {
+		return err
+	}
 	return p.conn.WriteJSON(subscriptionsTransportWSMessage{
 		ID:   id,
 		Type: subscriptionsTransportWSMessageTypeComplete,

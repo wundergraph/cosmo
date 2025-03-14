@@ -3,6 +3,7 @@ package wsproto
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 // See protocol at https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md
@@ -33,12 +34,16 @@ type graphQLWSMessage struct {
 }
 
 type graphQLWSProtocol struct {
-	conn JSONConn
+	conn         JSONConn
+	readTimeout  time.Duration
+	writeTimeout time.Duration
 }
 
-func newGraphQLWSProtocol(conn JSONConn) *graphQLWSProtocol {
+func newGraphQLWSProtocol(conn JSONConn, readTimeout, writeTimeout time.Duration) *graphQLWSProtocol {
 	return &graphQLWSProtocol{
-		conn: conn,
+		conn:         conn,
+		readTimeout:  readTimeout,
+		writeTimeout: writeTimeout,
 	}
 }
 
@@ -47,6 +52,9 @@ func (p *graphQLWSProtocol) Subprotocol() string {
 }
 
 func (p *graphQLWSProtocol) Initialize() (json.RawMessage, error) {
+	if err := p.conn.SetReadDeadline(time.Now().Add(p.readTimeout)); err != nil {
+		return nil, err
+	}
 	// First message must be a connection_init
 	var msg graphQLWSMessage
 	if err := p.conn.ReadJSON(&msg); err != nil {
@@ -55,6 +63,9 @@ func (p *graphQLWSProtocol) Initialize() (json.RawMessage, error) {
 	if msg.Type != graphQLWSMessageTypeConnectionInit {
 		return nil, fmt.Errorf("first message should be %s, got %s", graphQLWSMessageTypeConnectionInit, msg.Type)
 	}
+	if err := p.conn.SetWriteDeadline(time.Now().Add(p.writeTimeout)); err != nil {
+		return nil, err
+	}
 	if err := p.conn.WriteJSON(graphQLWSMessage{Type: graphQLWSMessageTypeConnectionAck}); err != nil {
 		return nil, fmt.Errorf("sending %s: %w", graphQLWSMessageTypeConnectionAck, err)
 	}
@@ -62,6 +73,9 @@ func (p *graphQLWSProtocol) Initialize() (json.RawMessage, error) {
 }
 
 func (p *graphQLWSProtocol) ReadMessage() (*Message, error) {
+	if err := p.conn.SetReadDeadline(time.Now().Add(p.readTimeout)); err != nil {
+		return nil, err
+	}
 	var msg graphQLWSMessage
 	if err := p.conn.ReadJSON(&msg); err != nil {
 		return nil, err
@@ -88,10 +102,16 @@ func (p *graphQLWSProtocol) ReadMessage() (*Message, error) {
 }
 
 func (p *graphQLWSProtocol) Pong(msg *Message) error {
+	if err := p.conn.SetWriteDeadline(time.Now().Add(p.writeTimeout)); err != nil {
+		return err
+	}
 	return p.conn.WriteJSON(graphQLWSMessage{ID: msg.ID, Type: graphQLWSMessageTypePong, Payload: msg.Payload})
 }
 
 func (p *graphQLWSProtocol) WriteGraphQLData(id string, data json.RawMessage, extensions json.RawMessage) error {
+	if err := p.conn.SetWriteDeadline(time.Now().Add(p.writeTimeout)); err != nil {
+		return err
+	}
 	return p.conn.WriteJSON(graphQLWSMessage{
 		ID:         id,
 		Type:       graphQLWSMessageTypeNext,
@@ -101,6 +121,9 @@ func (p *graphQLWSProtocol) WriteGraphQLData(id string, data json.RawMessage, ex
 }
 
 func (p *graphQLWSProtocol) WriteGraphQLErrors(id string, errors json.RawMessage, extensions json.RawMessage) error {
+	if err := p.conn.SetWriteDeadline(time.Now().Add(p.writeTimeout)); err != nil {
+		return err
+	}
 	return p.conn.WriteJSON(graphQLWSMessage{
 		ID:         id,
 		Type:       graphQLWSMessageTypeError,
@@ -110,5 +133,8 @@ func (p *graphQLWSProtocol) WriteGraphQLErrors(id string, errors json.RawMessage
 }
 
 func (p *graphQLWSProtocol) Done(id string) error {
+	if err := p.conn.SetWriteDeadline(time.Now().Add(p.writeTimeout)); err != nil {
+		return err
+	}
 	return p.conn.WriteJSON(graphQLWSMessage{ID: id, Type: graphQLWSMessageTypeComplete})
 }
