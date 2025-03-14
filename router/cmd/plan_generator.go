@@ -27,6 +27,7 @@ func PlanGenerator(args []string) {
 	f.BoolVar(&cfg.OutputReport, "print-report", false, "write a report.json file, with all the query plans and errors sorted by file name")
 	f.BoolVar(&cfg.FailOnPlanError, "fail-on-error", false, "if at least one plan fails, the command exit code will be 1")
 	f.BoolVar(&cfg.FailFast, "fail-fast", false, "stop as soon as possible if a plan fails")
+	f.UintVar(&cfg.MaxDataSourceCollectorsConcurrency, "max-collectors", 0, "max number of concurrent data source collectors")
 
 	if err := f.Parse(args[1:]); err != nil {
 		f.PrintDefaults()

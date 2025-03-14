@@ -14,21 +14,25 @@ import (
 	"time"
 
 	"github.com/wundergraph/cosmo/router/core"
+	"go.uber.org/zap"
 )
 
 const ReportFileName = "report.json"
 
 type QueryPlanConfig struct {
-	ExecutionConfig string
-	SourceDir       string
-	OutDir          string
-	Concurrency     int
-	Filter          string
-	Timeout         string
-	OutputFiles     bool
-	OutputReport    bool
-	FailOnPlanError bool
-	FailFast        bool
+	ExecutionConfig                    string
+	SourceDir                          string
+	OutDir                             string
+	Concurrency                        int
+	Filter                             string
+	Timeout                            string
+	OutputFiles                        bool
+	OutputReport                       bool
+	FailOnPlanError                    bool
+	FailFast                           bool
+	LogLevel                           string
+	Logger                             *zap.Logger
+	MaxDataSourceCollectorsConcurrency uint
 }
 
 type QueryPlanResults struct {
@@ -97,6 +101,11 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 	defer cancel()
 	ctxError, cancelError := context.WithCancelCause(ctx)
 	defer cancelError(nil)
+
+	pg, err := core.NewPlanGenerator(executionConfigPath, cfg.Logger, cfg.MaxDataSourceCollectorsConcurrency)
+	if err != nil {
+		return fmt.Errorf("failed to create plan generator: %v", err)
+	}
 
 	var planError atomic.Bool
 	wg := sync.WaitGroup{}

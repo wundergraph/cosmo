@@ -20,6 +20,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
+	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
@@ -106,6 +107,25 @@ func (pg *PlanGenerator) parseOperation(operationFilePath string) (*ast.Document
 	}
 
 	return &doc, nil
+}
+
+func NewPlanGenerator(configFilePath string, logger *zap.Logger, maxDataSourceCollectorsConcurrency uint) (*PlanGenerator, error) {
+	pg := &PlanGenerator{}
+	if err := pg.loadConfiguration(configFilePath); err != nil {
+		return nil, err
+	}
+
+	if logger != nil {
+		pg.planConfiguration.Logger = log.NewZapLogger(logger, log.DebugLevel)
+	}
+
+	pg.planConfiguration.MaxDataSourceCollectorsConcurrency = maxDataSourceCollectorsConcurrency
+
+	return pg, nil
+}
+
+func (pg *PlanGenerator) GetPlanner() (*Planner, error) {
+	return NewPlanner(pg.planConfiguration, pg.definition)
 }
 
 func (pg *PlanGenerator) loadConfiguration(configFilePath string) error {
