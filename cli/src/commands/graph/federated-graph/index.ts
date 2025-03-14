@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import GetFederatedGraphChangelog from '../common/changelog.js';
-import GetFederatedGraphVersion from '../common/version/version.js';
+import GetFederatedGraphVersion from '../common/version/index.js';
 import { checkAuth } from '../../auth/utils.js';
 import FetchFederatedGraphSchemaCommand from '../common/fetch-schema.js';
 import ListFederatedGraphs from './commands/list.js';

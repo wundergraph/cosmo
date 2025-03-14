@@ -1,9 +1,9 @@
+import { ROUTER_COMPATIBILITY_VERSIONS } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { Command, program } from 'commander';
-import pc from 'picocolors';
 import Table from 'cli-table3';
-import { ROUTER_COMPATIBILITY_VERSIONS, SupportedRouterCompatibilityVersion } from '@wundergraph/composition';
+import { Command, program } from 'commander';
 import ora from 'ora';
+import pc from 'picocolors';
 import { getBaseHeaders } from '../../../../../core/config.js';
 import { CommonGraphCommandOptions } from '../../../../../core/types/types.js';
 import { handleCompositionResult } from '../../../../../handle-composition-result.js';
@@ -14,9 +14,8 @@ export default (opts: CommonGraphCommandOptions) => {
   const command = new Command('set');
   command.description(`Sets a router compatibility version for the specified ${graphType}.`);
   command.argument('<name>', `The name of the ${graphType} for which to set the router compatibility version.`);
-  command.requiredOption('-v --version [number]', `The router compatibility version to set for the ${graphType}.`);
+  command.requiredOption('-v, --version [number]', `The router compatibility version to set for the ${graphType}.`);
   command.option('-n, --namespace [string]', `The namespace of the ${graphType}.`);
-  command.option('-o, --out [string]', 'Destination file for the SDL.');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.action(async (name, options) => {
     const spinner = ora(`Attempting to set router compatibility version ${options.version}...`).start();
