@@ -96,6 +96,7 @@ jobs:
     needs: [ build-router, build-cli, cli-release-url ]
     outputs:
       workflow_url: ${{ steps.trigger_workflow.outputs.workflow_url }}
+      workflow_id: ${{ steps.trigger_workflow.outputs.workflow_id }}
     steps:
       - uses: convictional/trigger-workflow-and-wait@v1.6.5
         id: trigger_workflow
@@ -113,21 +114,58 @@ jobs:
               "wgc": "${{ needs.build-cli.outputs.wgc || needs.cli-release-url.outputs.wgc }}",
               "token": "${{ secrets.GITHUB_TOKEN }}"
             }
+  get_pr_url:
+    needs: build_test
+    runs-on: ubuntu-latest
+    outputs:
+      pullrequest_url: ${{ steps.get_url.outputs.pr_url }}
+    steps:
+      - name: Download PR info artifact
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: 'wundergraph',
+              repo: 'cosmo-celestial',
+              run_id: '${{ needs.build_test.outputs.workflow_id }}'
+            });
+            const artifact = artifacts.data.artifacts.find(a => a.name === 'pull-request-info');
+            if (!artifact) {
+              throw new Error('Could not find pull-request-info artifact');
+            }
+            const download = await github.rest.actions.downloadArtifact({
+              owner: 'wundergraph',
+              repo: 'cosmo-celestial',
+              artifact_id: artifact.id,
+              archive_format: 'zip'
+            });
+            fs.writeFileSync('artifact.zip', Buffer.from(download.data));
+
+      - name: Unzip artifact
+        run: unzip artifact.zip
+
+      - name: Get PR URL
+        id: get_url
+        run: |
+          pr_url=$(cat pr-url.txt)
+          echo "pr_url=$pr_url" >> $GITHUB_OUTPUT
   comment_on_failure:
     needs: build_test
     if: ${{ failure() }}
     runs-on: ubuntu-latest
     steps:
       - name: Comment PR on failure
-        if: ${{ needs.build_test.outputs.workflow_url == '' }}
+        if: ${{ needs.get_pr_url.outputs.pullrequest_url == '' }}
         uses: mshick/add-pr-comment@v2
         with:
           message: |
             ❌ Internal Query Planner CI failed to run.
       - name: Comment PR on failure
-        if: ${{ needs.build_test.outputs.workflow_url != '' }}
+        if: ${{ needs.get_pr_url.outputs.pullrequest_url != '' }}
         uses: mshick/add-pr-comment@v2
         with:
           message: |
-            ❌ Internal Query Planner CI checks failed in the celestial repository.\n If you are part of the WunderGraph organization, you can see the failed run here: ${{ needs.build_test.outputs.workflow_url }}
+            ❌ Internal Query Planner CI checks failed in the celestial repository.\n If you are part of the WunderGraph organization, you can see the PR with more details here: ${{ needs.get_pr_url.outputs.pullrequest_url }}
       
