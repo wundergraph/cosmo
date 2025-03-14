@@ -16,7 +16,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import {
   Card,
@@ -156,6 +156,11 @@ export const GraphPruningLintConfig = ({
   const [selectedPruneRules, setSelectedPruneRules] = useState<
     GraphPruningConfig[]
   >(data.configs);
+
+  useEffect(() => {
+    setGraphPruningEnabled(data.graphPrunerEnabled);
+    setSelectedPruneRules(data.configs);
+  }, [data]);
 
   return (
     <div className="space-y-6 rounded-lg border p-6">

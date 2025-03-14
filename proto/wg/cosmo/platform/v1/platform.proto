@@ -2038,6 +2038,25 @@ message GetNamespaceLintConfigResponse {
   repeated LintConfig configs = 3;
 }
 
+message GetNamespaceChecksConfigurationRequest {
+   string namespace = 1;
+}
+
+message GetNamespaceChecksConfigurationResponse {
+  Response response = 1;
+  int32 timeframeInDays = 2;
+  int32 timeframeLimitInDays = 3;
+}
+
+message UpdateNamespaceChecksConfigurationRequest {
+  string namespace = 1;
+  int32 timeframeInDays = 2;
+}
+
+message UpdateNamespaceChecksConfigurationResponse {
+  Response response = 1;
+}
+
 message EnableLintingForTheNamespaceRequest {
   string namespace = 1;
   bool enableLinting = 2;
@@ -2820,6 +2839,10 @@ service PlatformService {
   rpc ConfigureNamespaceLintConfig(ConfigureNamespaceLintConfigRequest) returns (ConfigureNamespaceLintConfigResponse) {}
   // GetNamespaceLintConfig returns the lint config of the namespace.
   rpc GetNamespaceLintConfig(GetNamespaceLintConfigRequest) returns (GetNamespaceLintConfigResponse) {}
+  // GetNamespaceChecksConfig returns the checks config of the namespace.
+  rpc GetNamespaceChecksConfig(GetNamespaceChecksConfigurationRequest) returns (GetNamespaceChecksConfigurationResponse) {}
+  // UpdateNamespaceChecksConfig updates the checks configuration for the namespace passed.
+  rpc UpdateNamespaceChecksConfig(UpdateNamespaceChecksConfigurationRequest) returns (UpdateNamespaceChecksConfigurationResponse) {}
   // EnablePruningForTheNamespace enables the graph pruning check for the namespace passed.
   rpc EnableGraphPruning(EnableGraphPruningRequest) returns (EnableGraphPruningResponse) {}
   // ConfigureNamespaceGraphPruningConfig configures the graph pruning config of the organization.
