@@ -111,15 +111,13 @@ func (pl *Planner) parseOperation(operationFilePath string) (*ast.Document, erro
 
 func NewPlanGenerator(configFilePath string, logger *zap.Logger, maxDataSourceCollectorsConcurrency uint) (*PlanGenerator, error) {
 	pg := &PlanGenerator{}
-	if err := pg.loadConfiguration(configFilePath); err != nil {
+	if err := pg.loadConfiguration(
+		configFilePath,
+		logger,
+		maxDataSourceCollectorsConcurrency,
+	); err != nil {
 		return nil, err
 	}
-
-	if logger != nil {
-		pg.planConfiguration.Logger = log.NewZapLogger(logger, log.DebugLevel)
-	}
-
-	pg.planConfiguration.MaxDataSourceCollectorsConcurrency = maxDataSourceCollectorsConcurrency
 
 	return pg, nil
 }
@@ -128,7 +126,7 @@ func (pg *PlanGenerator) GetPlanner() (*Planner, error) {
 	return NewPlanner(pg.planConfiguration, pg.definition)
 }
 
-func (pg *PlanGenerator) loadConfiguration(configFilePath string) error {
+func (pg *PlanGenerator) loadConfiguration(configFilePath string, logger *zap.Logger, maxDataSourceCollectorsConcurrency uint) error {
 	routerConfig, err := execution_config.FromFile(configFilePath)
 	if err != nil {
 		return err
@@ -190,6 +188,12 @@ func (pg *PlanGenerator) loadConfiguration(configFilePath string) error {
 		ConfigurationVisitor:          false,
 		PlanningVisitor:               false,
 		DatasourceVisitor:             false,
+	}
+
+	planConfig.MaxDataSourceCollectorsConcurrency = maxDataSourceCollectorsConcurrency
+
+	if logger != nil {
+		planConfig.Logger = log.NewZapLogger(logger, log.DebugLevel)
 	}
 
 	// this is the GraphQL Schema that we will expose from our API
