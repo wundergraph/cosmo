@@ -119,21 +119,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Comment PR on failure
-        uses: actions/github-script@v7
+        if: ${{ needs.build_test.outputs.workflow_url == '' }}
+        uses: mshick/add-pr-comment@v2
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const workflowUrl = '${{ needs.build_test.outputs.workflow_url }}';
-            let message = `❌ Query Planner CI checks failed in the celestial repository.\nSee the failed run here: ${workflowUrl}`;
-            if (workflowUrl === '') {
-              message = `❌ Query Planner CI failed to run.`;
-            }
-            
-            // Note: GitHub treats PRs as issues in the API, so we use the issue endpoints
-            // context.issue.number will contain the PR number when running from a PR
-            github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,  // Works for both issues and PRs
-              body: message
-            });
+          message: |
+            ❌ Internal Query Planner CI failed to run.
+      - name: Comment PR on failure
+        if: ${{ needs.build_test.outputs.workflow_url != '' }}
+        uses: mshick/add-pr-comment@v2
+        with:
+          message: |
+            ❌ Internal Query Planner CI checks failed in the celestial repository.\nIf you are part of the organization, you can see the failed run here: ${{ needs.build_test.outputs.workflow_url }}
+      
