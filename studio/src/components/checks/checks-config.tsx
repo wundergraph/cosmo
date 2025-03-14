@@ -84,9 +84,9 @@ export const ChecksConfig = ({
     <div className="space-y-6 rounded-lg border p-6">
       <div className="flex w-full items-center justify-between">
         <div className="flex flex-col gap-y-1">
-          <h3 className="font-semibold tracking-tight">Schema Checks Configuration</h3>
+          <h3 className="font-semibold tracking-tight">Schema Checks</h3>
           <p className="text-sm text-muted-foreground">
-            Configure the options used for checks of subgraphs of the namespace.
+            Configure the options used for checks of subgraphs of this namespace.
           </p>
         </div>
 

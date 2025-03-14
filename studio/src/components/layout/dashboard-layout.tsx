@@ -5,7 +5,6 @@ import { formatDateTime } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
 import {
-  CheckCircledIcon,
   Component2Icon,
   Cross1Icon,
   EnvelopeClosedIcon,
@@ -151,14 +150,9 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         matchExact: false,
       },
       {
-        title: "Lint Policy",
-        href: basePath + "/lint-policy",
+        title: "Policies",
+        href: basePath + "/policies",
         icon: <MdOutlinePolicy className="h-4 w-4" />,
-      },
-      {
-        title: "Checks Configuration",
-        href: basePath + "/checks-config",
-        icon: <CheckCircledIcon className="h-4 w-4" />,
       },
       {
         title: "Cache Warmer",

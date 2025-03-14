@@ -43,7 +43,7 @@ export const GraphPruningIssuesTable = ({
           <Button
             onClick={() => {
               router.push(
-                `/${router.query.organizationSlug}/lint-policy?namespace=${router.query.namespace}`,
+                `/${router.query.organizationSlug}/policies?namespace=${router.query.namespace}`,
               );
             }}
           >
