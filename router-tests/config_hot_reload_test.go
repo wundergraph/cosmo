@@ -125,9 +125,9 @@ func TestConfigHotReloadPoller(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employees { id } }`,
 				})
-				require.Equal(t, res.Response.StatusCode, 200)
-				require.Equal(t, xEnv.RouterConfigVersionMain(), res.Response.Header.Get("X-Router-Config-Version"))
-				require.JSONEq(t, employeesIDData, res.Body)
+				assert.Equal(t, res.Response.StatusCode, 200)
+				assert.Equal(t, xEnv.RouterConfigVersionMain(), res.Response.Header.Get("X-Router-Config-Version"))
+				assert.JSONEq(t, employeesIDData, res.Body)
 			}()
 
 			go func() {
@@ -136,9 +136,9 @@ func TestConfigHotReloadPoller(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employees { id } }`,
 				})
-				require.Equal(t, res.Response.StatusCode, 200)
-				require.Equal(t, xEnv.RouterConfigVersionMain(), res.Response.Header.Get("X-Router-Config-Version"))
-				require.JSONEq(t, employeesIDData, res.Body)
+				assert.Equal(t, res.Response.StatusCode, 200)
+				assert.Equal(t, xEnv.RouterConfigVersionMain(), res.Response.Header.Get("X-Router-Config-Version"))
+				assert.JSONEq(t, employeesIDData, res.Body)
 			}()
 
 			// Let's wait a bit to make sure the requests are in flight
@@ -366,8 +366,8 @@ func TestConfigHotReloadFile(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { hello }`,
 				})
-				require.Equal(t, res.Response.StatusCode, 200)
-				require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+				assert.Equal(t, res.Response.StatusCode, 200)
+				assert.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
 			}()
 
 			go func() {
@@ -376,8 +376,8 @@ func TestConfigHotReloadFile(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { hello }`,
 				})
-				require.Equal(t, res.Response.StatusCode, 200)
-				require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+				assert.Equal(t, res.Response.StatusCode, 200)
+				assert.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
 			}()
 
 			time.Sleep(time.Millisecond * 100)
@@ -469,9 +469,7 @@ func TestSwapConfig(t *testing.T) {
 
 			// Let's wait a bit to make sure all requests are in flight
 			// otherwise the shutdown will be too fast and the wait-group will not be done fully
-			require.Eventually(t, func() bool {
-				return startedReq.Load()
-			}, time.Second*10, time.Millisecond*100)
+			require.Eventually(t, startedReq.Load, time.Second*10, time.Millisecond*100)
 			time.Sleep(time.Millisecond * 100)
 
 			var done atomic.Bool
@@ -482,9 +480,7 @@ func TestSwapConfig(t *testing.T) {
 				assert.ErrorContains(t, err, context.DeadlineExceeded.Error())
 			}()
 
-			require.Eventually(t, func() bool {
-				return done.Load()
-			}, time.Second*20, time.Millisecond*100)
+			require.Eventually(t, done.Load, time.Second*20, time.Millisecond*100)
 		})
 	})
 }
