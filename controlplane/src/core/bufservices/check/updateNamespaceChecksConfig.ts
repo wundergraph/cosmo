@@ -40,7 +40,7 @@ export function updateNamespaceChecksConfig(
     });
 
     const timeframeLimitInDays = changeRetention?.limit ?? 7;
-    await namespaceRepo.updateChecksConfiguration({
+    await namespaceRepo.updateConfiguration({
       id: namespace.id,
       checksTimeframeInDays: clamp(req.timeframeInDays, 1, timeframeLimitInDays),
     });

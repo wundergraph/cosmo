@@ -474,7 +474,6 @@ export const namespaces = pgTable(
     enableLinting: boolean('enable_linting').default(false).notNull(),
     enableGraphPruning: boolean('enable_graph_pruning').default(false).notNull(),
     enableCacheWarming: boolean('enable_cache_warming').default(false).notNull(),
-    checksTimeframeInDays: integer('checks_timeframe_in_days'),
   },
   (t) => {
     return {
@@ -484,6 +483,33 @@ export const namespaces = pgTable(
     };
   },
 );
+
+export const namespaceConfig = pgTable(
+  'namespace_config',
+  {
+    namespaceId: uuid('namespace_id')
+      .notNull()
+      .references(() => namespaces.id, {
+        onDelete: 'cascade',
+      }),
+    enableLinting: boolean('enable_linting'),
+    enableGraphPruning: boolean('enable_graph_pruning'),
+    enableCacheWarming: boolean('enable_cache_warming'),
+    checksTimeframeInDays: integer('checks_timeframe_in_days'),
+  },
+  (t) => {
+    return {
+      uniqueNamespace: unique('unique_namespace').on(t.namespaceId),
+    };
+  }
+);
+
+export const namespaceConfigRelations = relations(namespaceConfig, ({ one }) => ({
+  namespace: one(namespaces, {
+    fields: [namespaceConfig.namespaceId],
+    references: [namespaces.id],
+  }),
+}));
 
 export const targetTypeEnum = pgEnum('target_type', ['federated', 'subgraph'] as const);
 
@@ -574,8 +600,9 @@ export const targetsRelations = relations(targets, ({ one, many }) => ({
   }),
 }));
 
-export const namespacesRelations = relations(namespaces, ({ many }) => ({
+export const namespacesRelations = relations(namespaces, ({ many, one }) => ({
   targets: many(targets),
+  namespaceConfig: one(namespaceConfig),
 }));
 
 // Do not cascade delete on deletion of target. The registry should be untouched unless organization is deleted.

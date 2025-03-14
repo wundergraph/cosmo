@@ -1,5 +1,5 @@
 {
-  "id": "83d2869c-6ce1-40cb-a75a-7371321752f0",
+  "id": "ac217afc-5e30-4a22-a70b-b69506e9f607",
   "prevId": "6ef19759-4123-438e-8d66-805d22dbf3f8",
   "version": "7",
   "dialect": "postgresql",
@@ -3071,6 +3071,69 @@
       },
       "checkConstraints": {}
     },
+    "public.namespace_config": {
+      "name": "namespace_config",
+      "schema": "",
+      "columns": {
+        "namespace_id": {
+          "name": "namespace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "enable_linting": {
+          "name": "enable_linting",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "enable_graph_pruning": {
+          "name": "enable_graph_pruning",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "enable_cache_warming": {
+          "name": "enable_cache_warming",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "checks_timeframe_in_days": {
+          "name": "checks_timeframe_in_days",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "namespace_config_namespace_id_namespaces_id_fk": {
+          "name": "namespace_config_namespace_id_namespaces_id_fk",
+          "tableFrom": "namespace_config",
+          "tableTo": "namespaces",
+          "columnsFrom": [
+            "namespace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "unique_namespace": {
+          "name": "unique_namespace",
+          "nullsNotDistinct": false,
+          "columns": [
+            "namespace_id"
+          ]
+        }
+      },
+      "checkConstraints": {}
+    },
     "public.namespace_graph_pruning_check_config": {
       "name": "namespace_graph_pruning_check_config",
       "schema": "",
@@ -3282,12 +3345,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": false
-        },
-        "checks_timeframe_in_days": {
-          "name": "checks_timeframe_in_days",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {

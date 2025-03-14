@@ -99,7 +99,7 @@ export const ChecksConfig = ({
                 onSuccess: (d) => {
                   if (d.response?.code === EnumStatusCode.OK) {
                     toast({
-                      description: "Schema checks configuration updated successfully.",
+                      description: "Schema checks updated successfully.",
                       duration: 3000,
                     });
                   } else if (d.response?.details) {
@@ -109,7 +109,7 @@ export const ChecksConfig = ({
                 onError: () => {
                   toast({
                     description:
-                      "Could not update the schema checks configuration. Please try again.",
+                      "Could not update the schema checks. Please try again.",
                     duration: 3000
                   });
                 },
@@ -143,10 +143,7 @@ export const ChecksConfig = ({
               <TimeframeDropdown
                 value={`${timeframeInDays}`}
                 limit={data.timeframeLimitInDays}
-                onChange={(value) => {
-                  setTimeframeInDays(value);
-                  console.log(value);
-                }}
+                onChange={setTimeframeInDays}
                 disabled={isPending}
               />
             </div>
