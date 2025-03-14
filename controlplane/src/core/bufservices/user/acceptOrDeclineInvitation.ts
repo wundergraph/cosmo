@@ -97,6 +97,7 @@ export function acceptOrDeclineInvitation(
         auditableDisplayName: organization.name,
         auditableType: 'organization',
         actorDisplayName: authContext.userDisplayName,
+        apiKeyName: authContext.apiKeyName,
         actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       });
     } else {
@@ -110,6 +111,7 @@ export function acceptOrDeclineInvitation(
         auditableDisplayName: organization.name,
         auditableType: 'organization',
         actorDisplayName: authContext.userDisplayName,
+        apiKeyName: authContext.apiKeyName,
         actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       });
     }

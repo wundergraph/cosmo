@@ -81,6 +81,7 @@ export function createOrganization(
           targetDisplayName: organization.name,
           auditableType: 'organization',
           actorDisplayName: authContext.userDisplayName,
+          apiKeyName: authContext.apiKeyName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           auditableDisplayName: organization.name,
         });
@@ -123,6 +124,7 @@ export function createOrganization(
           auditableType: 'namespace',
           auditableDisplayName: ns.name,
           actorDisplayName: authContext.userDisplayName,
+          apiKeyName: authContext.apiKeyName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 

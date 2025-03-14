@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/wundergraph/cosmo/router/core"
+	"go.uber.org/zap"
 )
 
 const ReportFileName = "report.json"
@@ -29,10 +30,17 @@ type QueryPlanConfig struct {
 	OutputReport    bool
 	FailOnPlanError bool
 	FailFast        bool
+	LogLevel        string
+	Logger          *zap.Logger
+}
+
+type QueryPlanResults struct {
+	Plans []QueryPlanResult `json:"plans,omitempty"`
+	Error string            `json:"error,omitempty"`
 }
 
 type QueryPlanResult struct {
-	FileName string `json:"file_name"`
+	FileName string `json:"file_name,omitempty"`
 	Plan     string `json:"plan,omitempty"`
 	Error    string `json:"error,omitempty"`
 }
@@ -93,16 +101,20 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 	ctxError, cancelError := context.WithCancelCause(ctx)
 	defer cancelError(nil)
 
+	pg, err := core.NewPlanGenerator(executionConfigPath, cfg.Logger)
+	if err != nil {
+		return fmt.Errorf("failed to create plan generator: %v", err)
+	}
+
 	var planError atomic.Bool
 	wg := sync.WaitGroup{}
 	wg.Add(cfg.Concurrency)
 	for i := 0; i < cfg.Concurrency; i++ {
 		go func(i int) {
 			defer wg.Done()
-			pg, err := core.NewPlanGenerator(executionConfigPath)
+			planner, err := pg.GetPlanner()
 			if err != nil {
-				cancelError(fmt.Errorf("failed to create plan generator: %v", err))
-				return
+				cancelError(fmt.Errorf("failed to get planner: %v", err))
 			}
 			for {
 				select {
@@ -123,7 +135,7 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 
 					queryFilePath := filepath.Join(queriesPath, queryFile.Name())
 
-					outContent, err := pg.PlanOperation(queryFilePath)
+					outContent, err := planner.PlanOperation(queryFilePath)
 					res := QueryPlanResult{
 						FileName: queryFile.Name(),
 						Plan:     outContent,
@@ -153,7 +165,7 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 	}
 	wg.Wait()
 
-	if cfg.OutputReport && ctxError.Err() == nil {
+	if cfg.OutputReport {
 		reportFilePath := filepath.Join(outPath, ReportFileName)
 		reportFile, err := os.Create(reportFilePath)
 		if err != nil {
@@ -164,7 +176,13 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 		slices.SortFunc(results, func(a, b QueryPlanResult) int {
 			return strings.Compare(a.FileName, b.FileName)
 		})
-		data, jsonErr := json.Marshal(results)
+		resultData := QueryPlanResults{
+			Plans: results,
+		}
+		if ctxError.Err() != nil {
+			resultData.Error = context.Cause(ctxError).Error()
+		}
+		data, jsonErr := json.Marshal(resultData)
 		if jsonErr != nil {
 			return fmt.Errorf("failed to marshal result: %v", jsonErr)
 		}

@@ -24,6 +24,10 @@ export const handleCompositionResult = ({
   defaultErrorMessage,
   shouldOutputJson,
   suppressWarnings,
+  failOnCompositionError,
+  failOnCompositionErrorMessage,
+  failOnAdmissionWebhookError,
+  failOnAdmissionWebhookErrorMessage,
 }: {
   responseCode: EnumStatusCode | undefined;
   responseDetails: string | undefined;
@@ -38,6 +42,10 @@ export const handleCompositionResult = ({
   defaultErrorMessage: string;
   shouldOutputJson?: boolean;
   suppressWarnings?: boolean;
+  failOnCompositionError?: boolean;
+  failOnCompositionErrorMessage?: string;
+  failOnAdmissionWebhookError?: boolean;
+  failOnAdmissionWebhookErrorMessage?: string;
 }) => {
   switch (responseCode) {
     case EnumStatusCode.OK: {
@@ -48,6 +56,9 @@ export const handleCompositionResult = ({
           compositionErrors,
           deploymentErrors,
         };
+        if (!suppressWarnings) {
+          successMessageJson.compositionWarnings = compositionWarnings;
+        }
         console.log(JSON.stringify(successMessageJson));
       } else {
         spinner.succeed(successMessage);
@@ -62,6 +73,9 @@ export const handleCompositionResult = ({
           compositionErrors,
           deploymentErrors,
         };
+        if (!suppressWarnings) {
+          compositionFailedMessageJson.compositionWarnings = compositionWarnings;
+        }
         console.log(JSON.stringify(compositionFailedMessageJson));
       } else {
         spinner.fail(subgraphCompositionBaseErrorMessage);
@@ -89,6 +103,10 @@ export const handleCompositionResult = ({
         // Don't exit here with 1 because the change was still applied
         console.log(compositionErrorsTable.toString());
       }
+      if (failOnCompositionError) {
+        console.log(pc.red(pc.bold(failOnCompositionErrorMessage || 'The command failed due to composition errors.')));
+        throw new Error(failOnCompositionErrorMessage || 'The command failed due to composition errors.');
+      }
       break;
     }
     case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
@@ -99,6 +117,9 @@ export const handleCompositionResult = ({
           compositionErrors,
           deploymentErrors,
         };
+        if (!suppressWarnings) {
+          deploymentFailedMessageJson.compositionWarnings = compositionWarnings;
+        }
         console.log(JSON.stringify(deploymentFailedMessageJson));
       } else {
         spinner.warn(deploymentErrorMessage);
@@ -123,6 +144,12 @@ export const handleCompositionResult = ({
         // Don't exit here with 1 because the change was still applied
         console.log(deploymentErrorsTable.toString());
       }
+      if (failOnAdmissionWebhookError) {
+        console.log(
+          pc.red(pc.bold(failOnAdmissionWebhookErrorMessage || 'The command failed due to admission webhook errors.')),
+        );
+        throw new Error(failOnAdmissionWebhookErrorMessage || 'The command failed due to admission webhook errors.');
+      }
       break;
     }
     default: {
@@ -134,6 +161,9 @@ export const handleCompositionResult = ({
           deploymentErrors,
           details: responseDetails,
         };
+        if (!suppressWarnings) {
+          defaultErrorMessageJson.compositionWarnings = compositionWarnings;
+        }
         console.log(JSON.stringify(defaultErrorMessageJson));
       } else {
         spinner.fail(defaultErrorMessage);
@@ -145,7 +175,7 @@ export const handleCompositionResult = ({
     }
   }
 
-  if (!suppressWarnings && compositionWarnings.length > 0) {
+  if (!shouldOutputJson && !suppressWarnings && compositionWarnings.length > 0) {
     const compositionWarningsTable = new Table({
       head: [
         pc.bold(pc.white('FEDERATED_GRAPH_NAME')),

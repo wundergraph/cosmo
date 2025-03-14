@@ -118,6 +118,7 @@ export function removeInvitation(
       auditableDisplayName: user.email,
       auditableType: 'user',
       actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
       targetDisplayName: org.name,
       targetType: 'organization',
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
