@@ -35,7 +35,7 @@ func PlanGenerator(args []string) {
 	f.BoolVar(&cfg.FailOnPlanError, "fail-on-error", false, "if at least one plan fails, the command exit code will be 1")
 	f.BoolVar(&cfg.FailFast, "fail-fast", false, "stop as soon as possible if a plan fails")
 	f.StringVar(&cfg.LogLevel, "log-level", "warning", "log level to use (debug, info, warning, error, panic, fatal)")
-	f.UintVar(&cfg.MaxDataSourceCollectorsConcurrency, "max-collectors", 0, "max number of concurrent data source collectors, if not set or set to 0, no limit will be enforced")
+	f.UintVar(&cfg.MaxDataSourceCollectorsConcurrency, "max-collectors", 0, "max number of concurrent data source collectors, if unset or 0, no limit will be enforced")
 
 	if err := f.Parse(args[1:]); err != nil {
 		f.PrintDefaults()
