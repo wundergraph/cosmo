@@ -113,7 +113,10 @@ func (s *server) SwapGraphServer(ctx context.Context, svr *graphServer) {
 		}
 	}
 
+	// Swap the graph server
+	s.mu.Lock()
 	s.graphServer = svr
+	s.mu.Unlock()
 }
 
 // listenAndServe starts the server and blocks until the server is shutdown.
