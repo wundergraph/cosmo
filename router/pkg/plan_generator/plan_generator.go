@@ -113,10 +113,9 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 	for i := 0; i < cfg.Concurrency; i++ {
 		go func(i int) {
 			defer wg.Done()
-			pg, err := core.NewPlanGenerator(executionConfigPath)
+			planner, err := pg.GetPlanner()
 			if err != nil {
-				cancelError(fmt.Errorf("failed to create plan generator: %v", err))
-				return
+				cancelError(fmt.Errorf("failed to get planner: %v", err))
 			}
 			for {
 				select {
@@ -137,7 +136,7 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 
 					queryFilePath := filepath.Join(queriesPath, queryFile.Name())
 
-					outContent, err := pg.PlanOperation(queryFilePath)
+					outContent, err := planner.PlanOperation(queryFilePath)
 					res := QueryPlanResult{
 						FileName: queryFile.Name(),
 						Plan:     outContent,
