@@ -728,7 +728,7 @@
                   },
                   "expression": {
                     "type": "string",
-                    "description": "The name of the request header from which to extract the value. The value is only extracted when a request context is available otherwise the default value is used."
+                    "description": "The expression used to evaluate to extract a value for logging. The expression is specified as a string. Please see https://expr-lang.org/ for more information on constructing expressions."
                   }
                 },
                 "oneOf": [
