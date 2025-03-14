@@ -129,5 +129,5 @@ jobs:
         uses: mshick/add-pr-comment@v2
         with:
           message: |
-            ❌ Internal Query Planner CI checks failed in the celestial repository.\nIf you are part of the organization, you can see the failed run here: ${{ needs.build_test.outputs.workflow_url }}
+            ❌ Internal Query Planner CI checks failed in the celestial repository.\n If you are part of the WunderGraph organization, you can see the failed run here: ${{ needs.build_test.outputs.workflow_url }}
       
