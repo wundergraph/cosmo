@@ -1773,8 +1773,6 @@ func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	sub := e.Router.EngineStats.Subscribe(ctx)
-
 	report := e.Router.EngineStats.GetReport()
 	if report.Subscriptions == desiredCount {
 		return
@@ -1785,13 +1783,9 @@ func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", report.Subscriptions, desiredCount)
 			return
-		case r, ok := <-sub:
-			if !ok {
-				e.t.Fatalf("channel, closed timed out waiting for subscription count, got %d, want %d", r.Subscriptions, desiredCount)
-				return
-			}
-			if r.Subscriptions == desiredCount {
-				time.Sleep(100 * time.Millisecond) // Give NATS some time to have the subscription set up
+		case <-time.After(100 * time.Millisecond):
+			report = e.Router.EngineStats.GetReport()
+			if report.Subscriptions == desiredCount {
 				return
 			}
 		}
@@ -1804,8 +1798,6 @@ func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.D
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	sub := e.Router.EngineStats.Subscribe(ctx)
-
 	report := e.Router.EngineStats.GetReport()
 	if report.Connections == desiredCount {
 		return
@@ -1816,12 +1808,9 @@ func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.D
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for connection count, got %d, want %d", report.Connections, desiredCount)
 			return
-		case r, ok := <-sub:
-			if !ok {
-				e.t.Fatalf("timed out waiting for connection count, got %d, want %d", r.Connections, desiredCount)
-				return
-			}
-			if r.Connections == desiredCount {
+		case <-time.After(100 * time.Millisecond):
+			report = e.Router.EngineStats.GetReport()
+			if report.Connections == desiredCount {
 				return
 			}
 		}
@@ -1880,8 +1869,6 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	sub := e.Router.EngineStats.Subscribe(ctx)
-
 	report := e.Router.EngineStats.GetReport()
 	if report.MessagesSent == desiredCount {
 		return
@@ -1892,12 +1879,9 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for messages sent, got %d, want %d", report.MessagesSent, desiredCount)
 			return
-		case r, ok := <-sub:
-			if !ok {
-				e.t.Fatalf("channel closed, timed out waiting for messages sent, got %d, want %d", r.MessagesSent, desiredCount)
-				return
-			}
-			if r.MessagesSent == desiredCount {
+		case <-time.After(100 * time.Millisecond):
+			report = e.Router.EngineStats.GetReport()
+			if report.MessagesSent == desiredCount {
 				return
 			}
 		}
@@ -1910,8 +1894,6 @@ func (e *Environment) WaitForMinMessagesSent(minCount uint64, timeout time.Durat
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	sub := e.Router.EngineStats.Subscribe(ctx)
-
 	report := e.Router.EngineStats.GetReport()
 	if report.MessagesSent >= minCount {
 		return
@@ -1922,12 +1904,8 @@ func (e *Environment) WaitForMinMessagesSent(minCount uint64, timeout time.Durat
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", report.MessagesSent, minCount)
 			return
-		case r, ok := <-sub:
-			if !ok {
-				e.t.Fatalf("channel closed, timed out waiting for messages sent, got %d, want at least %d", r.MessagesSent, minCount)
-				return
-			}
-			report = r
+		case <-time.After(100 * time.Millisecond):
+			report = e.Router.EngineStats.GetReport()
 			if report.MessagesSent >= minCount {
 				return
 			}
@@ -1941,8 +1919,6 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	sub := e.Router.EngineStats.Subscribe(ctx)
-
 	report := e.Router.EngineStats.GetReport()
 	if report.Triggers == desiredCount {
 		return
@@ -1953,12 +1929,9 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for trigger count, got %d, want %d", report.Triggers, desiredCount)
 			return
-		case r, ok := <-sub:
-			if !ok {
-				e.t.Fatalf("timed out waiting for trigger count, got %d, want %d", r.Triggers, desiredCount)
-				return
-			}
-			if r.Triggers == desiredCount {
+		case <-time.After(100 * time.Millisecond):
+			report = e.Router.EngineStats.GetReport()
+			if report.Triggers == desiredCount {
 				return
 			}
 		}
