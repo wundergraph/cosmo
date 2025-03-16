@@ -110,6 +110,7 @@ jobs:
           workflow_file_name: 'query-planner-tester.yaml'
           client_payload: >-
             {
+              "branch": "query-plan/pr-${{ github.event.pull_request.number }}",
               "router": "${{ needs.build-router.outputs.image_ref || 'ghcr.io/wundergraph/router:latest' }}",
               "wgc": "${{ needs.build-cli.outputs.wgc || needs.cli-release-url.outputs.wgc }}",
               "token": "${{ secrets.GITHUB_TOKEN }}"
