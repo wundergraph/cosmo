@@ -12,3 +12,12 @@ DO $$ BEGIN
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+
+--
+BEGIN TRANSACTION;
+
+INSERT INTO "public"."namespace_config" ("namespace_id", "enable_linting", "enable_graph_pruning", "enable_cache_warming")
+SELECT "id", "enable_linting", "enable_graph_pruning", "enable_cache_warming"
+FROM "public"."namespaces";
+
+COMMIT;
