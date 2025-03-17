@@ -12,40 +12,33 @@ import (
 	"reflect"
 )
 
-type visitorKind uint
-
-const (
-	usesBodyKey visitorKind = iota
-)
-
 type ExprManager struct {
-	globalVisitors map[visitorKind]ast.Visitor
+	VisitorManager *visitorManager
 }
 
 func CreateNewExprManager() *ExprManager {
 	return &ExprManager{
-		globalVisitors: map[visitorKind]ast.Visitor{
-			usesBodyKey: &UsesBody{},
-		},
+		VisitorManager: createVisitorManager(),
 	}
 }
 
-// CompileExpression compiles an expression and returns the program.
+// CompileExpression compiles an expression and returns the program for the specific type.
 // The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
-func (c *ExprManager) CompileExpression(s string, kind reflect.Kind, visitors ...ast.Visitor) (*vm.Program, error) {
+func (c *ExprManager) CompileExpression(exprString string, kind reflect.Kind, visitors ...ast.Visitor) (*vm.Program, error) {
 	options := mergeOptions(expr.AsKind(kind), visitors)
-	v, err := expr.Compile(s,
-		c.compileOptions(options...)...,
-	)
-	if err != nil {
-		return nil, handleExpressionError(err)
-	}
-	return v, nil
+	return c.compileExpressionWithExprOptions(options, exprString)
 }
 
-func (c *ExprManager) CompileAnyExpression(s string, visitors ...ast.Visitor) (*vm.Program, error) {
+// CompileAnyExpression compiles an expression and returns the program for any type.
+// The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
+func (c *ExprManager) CompileAnyExpression(exprString string, visitors ...ast.Visitor) (*vm.Program, error) {
+	// We need a separate api for any expressions as it does not have an associated reflect.Kind
 	options := mergeOptions(expr.AsAny(), visitors)
-	v, err := expr.Compile(s,
+	return c.compileExpressionWithExprOptions(options, exprString)
+}
+
+func (c *ExprManager) compileExpressionWithExprOptions(options []expr.Option, exprString string) (*vm.Program, error) {
+	v, err := expr.Compile(exprString,
 		c.compileOptions(options...)...,
 	)
 	if err != nil {
@@ -58,14 +51,24 @@ func (c *ExprManager) compileOptions(extra ...expr.Option) []expr.Option {
 	options := []expr.Option{
 		expr.Env(Context{}),
 	}
-
 	options = append(options, extra...)
 
-	for _, visitor := range c.globalVisitors {
+	for _, visitor := range c.VisitorManager.globalVisitors {
 		options = append(options, expr.Patch(visitor))
 	}
-
 	return options
+}
+
+func mergeOptions(typeOption expr.Option, visitors []ast.Visitor) []expr.Option {
+	compilationOptions := []expr.Option{
+		typeOption,
+	}
+
+	for _, visitor := range visitors {
+		compilationOptions = append(compilationOptions, expr.Patch(visitor))
+	}
+
+	return compilationOptions
 }
 
 // ValidateAnyExpression compiles the expression to ensure that the expression itself is valid but more
@@ -98,21 +101,4 @@ func (c *ExprManager) ValidateAnyExpression(s string) error {
 	}
 
 	return nil
-}
-
-func (c *ExprManager) IsBodyUsedInExpressions() bool {
-	body := c.globalVisitors[usesBodyKey].(*UsesBody)
-	return body.UsesBody
-}
-
-func mergeOptions(typeOption expr.Option, visitors []ast.Visitor) []expr.Option {
-	compilationOptions := []expr.Option{
-		typeOption,
-	}
-
-	for _, visitor := range visitors {
-		compilationOptions = append(compilationOptions, expr.Patch(visitor))
-	}
-
-	return compilationOptions
 }

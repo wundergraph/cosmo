@@ -1,29 +1,43 @@
 package expr
 
-import "github.com/expr-lang/expr/ast"
+import (
+	"github.com/expr-lang/expr/ast"
+	"reflect"
+)
 
 type UsesBody struct {
 	UsesBody bool
 }
 
-func (v *UsesBody) Visit(node *ast.Node) {
-	if node == nil {
+func (v *UsesBody) Visit(baseNode *ast.Node) {
+	if baseNode == nil || v.UsesBody {
 		return
 	}
 
-	if v.UsesBody {
+	callNode, ok := (*baseNode).(*ast.CallNode)
+	if !ok {
 		return
 	}
 
-	switch n := (*node).(type) {
-	case *ast.MemberNode:
-		property, propertyOk := n.Property.(*ast.StringNode)
-		node, nodeOk := n.Node.(*ast.IdentifierNode)
-		if propertyOk && nodeOk {
-			// TODO: To change to look for method call for raw body
-			if node.Value == "request" && property.Value == "body" {
-				v.UsesBody = true
-			}
-		}
+	typeDef, ok := callNode.Callee.(*ast.MemberNode)
+	if !ok {
+		return
+	}
+
+	node, ok := typeDef.Node.(*ast.MemberNode)
+	if !ok {
+		return
+	}
+
+	property, ok := typeDef.Property.(*ast.StringNode)
+	if !ok {
+		return
+	}
+
+	isTypeEquals := node.Type() == reflect.TypeOf(RequestBody{})
+	isMethodCalled := property.Value == "GetRawBody"
+
+	if isTypeEquals && isMethodCalled {
+		v.UsesBody = true
 	}
 }

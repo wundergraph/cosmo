@@ -54,7 +54,10 @@ type RequestBody struct {
 	RawBody []byte `expr:"-"`
 }
 
-func (r RequestBody) GetBody() string {
+func (r RequestBody) GetRawBody() string {
+	if r.RawBody == nil {
+		return ""
+	}
 	return string(r.RawBody)
 }
 
