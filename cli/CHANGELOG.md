@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.75.9](https://github.com/wundergraph/cosmo/compare/wgc@0.75.8...wgc@0.75.9) (2025-03-14)
+
+### Bug Fixes
+
+* namespace not considered in version set command ([#1694](https://github.com/wundergraph/cosmo/issues/1694)) ([257f691](https://github.com/wundergraph/cosmo/commit/257f6918a221d5a2bb5bde77d553589dcc584e24)) (@JivusAyrus)
+
 ## [0.75.8](https://github.com/wundergraph/cosmo/compare/wgc@0.75.7...wgc@0.75.8) (2025-03-13)
 
 ### Bug Fixes

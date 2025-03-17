@@ -663,7 +663,8 @@
   "ExecutionConfig": {
     "File": {
       "Path": "",
-      "Watch": false
+      "Watch": false,
+      "WatchInterval": 1000000000
     },
     "Storage": {
       "ProviderID": "s3",

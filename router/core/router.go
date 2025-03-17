@@ -136,8 +136,9 @@ type (
 	}
 
 	ExecutionConfig struct {
-		Watch bool
-		Path  string
+		Watch         bool
+		WatchInterval time.Duration
+		Path          string
 	}
 
 	AccessLogsConfig struct {
@@ -1117,45 +1118,47 @@ func (r *Router) Start(ctx context.Context) error {
 		}()
 
 		if r.executionConfig != nil && r.executionConfig.Watch {
+			w, err := watcher.New(watcher.Options{
+				Logger:   r.logger.With(zap.String("watcher_label", "execution_config")),
+				Path:     r.executionConfig.Path,
+				Interval: r.executionConfig.WatchInterval,
+				Callback: func() {
+					if r.shutdown.Load() {
+						r.logger.Warn("Router is in shutdown state. Skipping config update")
+						return
+					}
 
-			w, err := watcher.NewWatcher(r.logger.With(zap.String("watcher", "execution_config")))
-			if err != nil {
-				return fmt.Errorf("failed to start watcher for execution config file: %w", err)
-			}
+					data, err := os.ReadFile(r.executionConfig.Path)
+					if err != nil {
+						r.logger.Error("Failed to read config file", zap.Error(err))
+						return
+					}
 
-			// Watch the execution config file for changes. Returning an error will stop the watcher.
-			// We intentionally ignore the error here because the user can retry. The watcher is closed when context is done.
-			err = w.Watch(ctx, r.executionConfig.Path, func(events []watcher.Event) error {
-				if r.shutdown.Load() {
-					r.logger.Warn("Router is in shutdown state. Skipping config update")
-					return nil
-				}
+					r.logger.Info("Config file changed. Updating server with new config", zap.String("path", r.executionConfig.Path))
 
-				data, err := os.ReadFile(r.executionConfig.Path)
-				if err != nil {
-					r.logger.Error("Failed to read config file", zap.Error(err))
-					return nil
-				}
+					cfg, err := execution_config.UnmarshalConfig(data)
+					if err != nil {
+						r.logger.Error("Failed to unmarshal config file", zap.Error(err))
+						return
+					}
 
-				r.logger.Info("Config file changed. Updating server with new config", zap.String("path", r.executionConfig.Path))
-
-				cfg, err := execution_config.UnmarshalConfig(data)
-				if err != nil {
-					r.logger.Error("Failed to serialize config file", zap.Error(err))
-					return nil
-				}
-
-				if err := r.newServer(ctx, cfg); err != nil {
-					r.logger.Error("Failed to update server with new config", zap.Error(err))
-					return nil
-				}
-
-				return nil
+					if err := r.newServer(ctx, cfg); err != nil {
+						r.logger.Error("Failed to update server with new config", zap.Error(err))
+						return
+					}
+				},
 			})
+
 			if err != nil {
-				r.logger.Error("Failed to watch execution config file. Restart the router to apply changes", zap.Error(err))
-				return fmt.Errorf("failed to watch execution config file: %w", err)
+				return fmt.Errorf("failed to create watcher: %w", err)
 			}
+
+			go func() {
+				if err := w(ctx); err != nil {
+					r.logger.Error("Error watching execution config", zap.Error(err))
+					return
+				}
+			}()
 
 			r.logger.Info("Watching config file for changes. Router will hot-reload automatically without downtime",
 				zap.String("path", r.executionConfig.Path),
