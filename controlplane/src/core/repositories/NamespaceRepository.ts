@@ -89,9 +89,7 @@ export class NamespaceRepository {
         return;
       }
 
-      await tx
-        .insert(schema.namespaceConfig)
-        .values({ namespaceId: ns[0].id });
+      await tx.insert(schema.namespaceConfig).values({ namespaceId: ns[0].id });
 
       return ns[0];
     });
