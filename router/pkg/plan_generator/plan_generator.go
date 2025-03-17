@@ -20,18 +20,19 @@ import (
 const ReportFileName = "report.json"
 
 type QueryPlanConfig struct {
-	ExecutionConfig string
-	SourceDir       string
-	OutDir          string
-	Concurrency     int
-	Filter          string
-	Timeout         string
-	OutputFiles     bool
-	OutputReport    bool
-	FailOnPlanError bool
-	FailFast        bool
-	LogLevel        string
-	Logger          *zap.Logger
+	ExecutionConfig                    string
+	SourceDir                          string
+	OutDir                             string
+	Concurrency                        int
+	Filter                             string
+	Timeout                            string
+	OutputFiles                        bool
+	OutputReport                       bool
+	FailOnPlanError                    bool
+	FailFast                           bool
+	LogLevel                           string
+	Logger                             *zap.Logger
+	MaxDataSourceCollectorsConcurrency uint
 }
 
 type QueryPlanResults struct {
@@ -101,7 +102,7 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 	ctxError, cancelError := context.WithCancelCause(ctx)
 	defer cancelError(nil)
 
-	pg, err := core.NewPlanGenerator(executionConfigPath, cfg.Logger)
+	pg, err := core.NewPlanGenerator(executionConfigPath, cfg.Logger, cfg.MaxDataSourceCollectorsConcurrency)
 	if err != nil {
 		return fmt.Errorf("failed to create plan generator: %v", err)
 	}
