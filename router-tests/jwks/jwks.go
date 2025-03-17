@@ -83,7 +83,6 @@ func (s *Server) oidcJSON(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("Failed to marshal the OIDC configuration.\nError: %s", err)
 	}
 	_, _ = w.Write(data)
-	w.WriteHeader(http.StatusOK)
 }
 
 func (s *Server) JWKSURL() string {
