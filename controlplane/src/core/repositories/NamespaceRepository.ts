@@ -26,11 +26,11 @@ export class NamespaceRepository {
     return {
       id: namespace.id,
       name: namespace.name,
-      enableGraphPruning: namespace.namespaceConfig?.enableGraphPruning ?? namespace.enableGraphPruning,
-      enableLinting: namespace.namespaceConfig?.enableLinting ?? namespace.enableLinting,
+      enableGraphPruning: namespace.namespaceConfig?.enableGraphPruning ?? false,
+      enableLinting: namespace.namespaceConfig?.enableLinting ?? false,
       organizationId: namespace.organizationId,
       createdBy: namespace.createdBy || undefined,
-      enableCacheWarmer: namespace.namespaceConfig?.enableCacheWarming ?? namespace.enableCacheWarming,
+      enableCacheWarmer: namespace.namespaceConfig?.enableCacheWarming ?? false,
       checksTimeframeInDays: namespace.namespaceConfig?.checksTimeframeInDays || undefined,
     };
   }
@@ -50,11 +50,11 @@ export class NamespaceRepository {
     return {
       id: namespace.id,
       name: namespace.name,
-      enableGraphPruning: namespace.namespaceConfig?.enableGraphPruning ?? namespace.enableGraphPruning,
-      enableLinting: namespace.namespaceConfig?.enableLinting ?? namespace.enableLinting,
+      enableGraphPruning: namespace.namespaceConfig?.enableGraphPruning ?? false,
+      enableLinting: namespace.namespaceConfig?.enableLinting ?? false,
       organizationId: namespace.organizationId,
       createdBy: namespace.createdBy || undefined,
-      enableCacheWarmer: namespace.namespaceConfig?.enableCacheWarming ?? namespace.enableCacheWarming,
+      enableCacheWarmer: namespace.namespaceConfig?.enableCacheWarming ?? false,
       checksTimeframeInDays: namespace.namespaceConfig?.checksTimeframeInDays || undefined,
     };
   }
@@ -74,21 +74,27 @@ export class NamespaceRepository {
     return res.find((r) => r.targets.find((t) => t.id === id));
   }
 
-  public async create(data: { name: string; createdBy: string }) {
-    const ns = await this.db
-      .insert(schema.namespaces)
-      .values({
-        name: data.name,
-        organizationId: this.organizationId,
-        createdBy: data.createdBy,
-      })
-      .returning();
+  public create(data: { name: string; createdBy: string }) {
+    return this.db.transaction(async (tx) => {
+      const ns = await tx
+        .insert(schema.namespaces)
+        .values({
+          name: data.name,
+          organizationId: this.organizationId,
+          createdBy: data.createdBy,
+        })
+        .returning();
 
-    if (ns.length === 0) {
-      return;
-    }
+      if (ns.length === 0) {
+        return;
+      }
 
-    return ns[0];
+      await tx
+        .insert(schema.namespaceConfig)
+        .values({ namespaceId: ns[0].id });
+
+      return ns[0];
+    });
   }
 
   public async delete(name: string) {

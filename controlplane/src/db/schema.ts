@@ -471,9 +471,6 @@ export const namespaces = pgTable(
     createdBy: uuid('created_by').references(() => users.id, {
       onDelete: 'set null',
     }),
-    enableLinting: boolean('enable_linting').default(false).notNull(),
-    enableGraphPruning: boolean('enable_graph_pruning').default(false).notNull(),
-    enableCacheWarming: boolean('enable_cache_warming').default(false).notNull(),
   },
   (t) => {
     return {
@@ -492,9 +489,9 @@ export const namespaceConfig = pgTable(
       .references(() => namespaces.id, {
         onDelete: 'cascade',
       }),
-    enableLinting: boolean('enable_linting'),
-    enableGraphPruning: boolean('enable_graph_pruning'),
-    enableCacheWarming: boolean('enable_cache_warming'),
+    enableLinting: boolean('enable_linting').default(false).notNull(),
+    enableGraphPruning: boolean('enable_graph_pruning').default(false).notNull(),
+    enableCacheWarming: boolean('enable_cache_warming').default(false).notNull(),
     checksTimeframeInDays: integer('checks_timeframe_in_days'),
   },
   (t) => {

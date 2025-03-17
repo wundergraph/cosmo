@@ -1,5 +1,5 @@
 {
-  "id": "ac217afc-5e30-4a22-a70b-b69506e9f607",
+  "id": "b121deac-0dd7-4f4f-891e-b6e9fa3f3864",
   "prevId": "6ef19759-4123-438e-8d66-805d22dbf3f8",
   "version": "7",
   "dialect": "postgresql",
@@ -3085,19 +3085,22 @@
           "name": "enable_linting",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": false
         },
         "enable_graph_pruning": {
           "name": "enable_graph_pruning",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": false
         },
         "enable_cache_warming": {
           "name": "enable_cache_warming",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": false
         },
         "checks_timeframe_in_days": {
           "name": "checks_timeframe_in_days",
@@ -3324,27 +3327,6 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
-        },
-        "enable_linting": {
-          "name": "enable_linting",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "enable_graph_pruning": {
-          "name": "enable_graph_pruning",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "enable_cache_warming": {
-          "name": "enable_cache_warming",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         }
       },
       "indexes": {
