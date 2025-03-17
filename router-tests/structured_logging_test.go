@@ -2366,6 +2366,43 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 		})
 
+		t.Run("validate that the direct raw body field cannot be accessed", func(t *testing.T) {
+			t.Parallel()
+
+			err := testenv.RunWithError(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "service_name",
+							ValueFrom: &config.CustomDynamicAttribute{
+								RequestHeader: "service-name",
+							},
+						},
+						{
+							Key: "operation_hash",
+							ValueFrom: &config.CustomDynamicAttribute{
+								ContextField: core.ContextFieldOperationHash,
+							},
+						},
+						{
+							Key: "expression_body",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.body.RawBody",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					assert.Fail(t, "should not be called")
+				},
+			)
+			require.ErrorContains(t, err, "type expr.RequestBody has no field RawBody")
+		})
+
 	})
 
 }
