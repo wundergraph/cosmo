@@ -11,8 +11,10 @@ execution_config:
 
 log_level: debug
 
-graphql_metrics:
-  prometheus_export_enabled: true
+telemetry:
+  metrics:
+    prometheus:
+      include_schema_usage: true
 
 engine:
   max_concurrent_resolvers: 1024
