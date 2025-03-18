@@ -82,8 +82,9 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 		core.WithHealthCheckPath(cfg.HealthCheckPath),
 		core.WithLivenessCheckPath(cfg.LivenessCheckPath),
 		core.WithGraphQLMetrics(&core.GraphQLMetricsConfig{
-			Enabled:           cfg.GraphqlMetrics.Enabled,
-			CollectorEndpoint: cfg.GraphqlMetrics.CollectorEndpoint,
+			Enabled:                 cfg.GraphqlMetrics.Enabled,
+			PrometheusExportEnabled: cfg.GraphqlMetrics.PrometheusExportEnabled,
+			CollectorEndpoint:       cfg.GraphqlMetrics.CollectorEndpoint,
 		}),
 		core.WithAnonymization(&core.IPAnonymizationConfig{
 			Enabled: cfg.Compliance.AnonymizeIP.Enabled,

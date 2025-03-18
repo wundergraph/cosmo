@@ -736,11 +736,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	metrics := NewRouterMetrics(&routerMetricsConfig{
-		metrics:             gm.metricStore,
-		gqlMetricsExporter:  s.gqlMetricsExporter,
-		exportEnabled:       s.graphqlMetricsConfig.Enabled,
-		routerConfigVersion: routerConfigVersion,
-		logger:              s.logger,
+		metrics:                gm.metricStore,
+		gqlMetricsExporter:     s.gqlMetricsExporter,
+		exportEnabled:          s.graphqlMetricsConfig.Enabled,
+		promSchemaUsageEnabled: s.graphqlMetricsConfig.PrometheusExportEnabled,
+		routerConfigVersion:    routerConfigVersion,
+		logger:                 s.logger,
 	})
 
 	baseLogFields := []zapcore.Field{

@@ -368,6 +368,11 @@
           "type": "boolean",
           "description": "Enable the collection of the GraphQL metrics. The default value is true."
         },
+        "prometheus_export_enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the collection and export of GraphQL schema metrics to Prometheus. The default value is false."
+        },
         "collector_endpoint": {
           "type": "string",
           "description": "The endpoint to which the GraphQL metrics are collected. The endpoint is specified as a string with the format 'scheme://host:port'.",
@@ -2536,10 +2541,10 @@
           "description": "Defines the timeout for the websocket read of the WebSocket client implementation. This is used to set the read deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         },
         "websocket_client_write_timeout": {
-            "type": "string",
-            "format": "go-duration",
-            "default": "10s",
-            "description": "Defines the timeout for the websocket write of the WebSocket client implementation. This is used to set the write deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+          "type": "string",
+          "format": "go-duration",
+          "default": "10s",
+          "description": "Defines the timeout for the websocket write of the WebSocket client implementation. This is used to set the write deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         },
         "websocket_client_ping_interval": {
           "type": "string",
@@ -3085,13 +3090,19 @@
       ],
       "oneOf": [
         {
-          "required": ["value"]
+          "required": [
+            "value"
+          ]
         },
         {
-          "required": ["expression"]
+          "required": [
+            "expression"
+          ]
         },
         {
-          "required": ["value_from"]
+          "required": [
+            "value_from"
+          ]
         }
       ]
     },

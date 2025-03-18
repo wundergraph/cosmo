@@ -36,6 +36,7 @@ type OperationMetrics struct {
 	routerConfigVersion  string
 	logger               *zap.Logger
 	trackUsageInfo       bool
+	promUsageInfo        bool
 }
 
 func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, responseSize int, exportSynchronous bool) {
@@ -77,8 +78,8 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 		m.routerMetrics.ExportSchemaUsageInfo(reqContext.operation, statusCode, reqContext.error != nil, exportSynchronous)
 	}
 
-	// Collect type field usage metrics if enabled
-	if m.trackUsageInfo && reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
+	// Prometheus usage metrics, disabled by default
+	if m.promUsageInfo && reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
 		operationContext := reqContext.operation
 
 		for _, field := range operationContext.typeFieldUsageInfo {
@@ -96,13 +97,14 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 }
 
 type OperationMetricsOptions struct {
-	InFlightAddOption    otelmetric.AddOption
-	SliceAttributes      []attribute.KeyValue
-	RouterConfigVersion  string
-	RequestContentLength int64
-	RouterMetrics        RouterMetrics
-	Logger               *zap.Logger
-	TrackUsageInfo       bool
+	InFlightAddOption     otelmetric.AddOption
+	SliceAttributes       []attribute.KeyValue
+	RouterConfigVersion   string
+	RequestContentLength  int64
+	RouterMetrics         RouterMetrics
+	Logger                *zap.Logger
+	TrackUsageInfo        bool
+	PrometheusSchemaUsage bool
 }
 
 // newOperationMetrics creates a new OperationMetrics struct and starts the operation metrics.
@@ -119,5 +121,6 @@ func newOperationMetrics(opts OperationMetricsOptions) *OperationMetrics {
 		routerMetrics:        opts.RouterMetrics,
 		logger:               opts.Logger,
 		trackUsageInfo:       opts.TrackUsageInfo,
+		promUsageInfo:        opts.PrometheusSchemaUsage,
 	}
 }
