@@ -9,7 +9,7 @@ import (
 	"slices"
 
 	"github.com/buger/jsonparser"
-	pubsubDatasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -29,6 +29,7 @@ type Loader struct {
 	resolver FactoryResolver
 	// includeInfo controls whether additional information like type usage and field usage is included in the plan
 	includeInfo bool
+	logger      *zap.Logger
 }
 
 type FactoryResolver interface {
@@ -133,10 +134,11 @@ func (d *DefaultFactoryResolver) ResolveStaticFactory() (factory plan.PlannerFac
 	return d.static, nil
 }
 
-func NewLoader(includeInfo bool, resolver FactoryResolver) *Loader {
+func NewLoader(includeInfo bool, resolver FactoryResolver, logger *zap.Logger) *Loader {
 	return &Loader{
 		resolver:    resolver,
 		includeInfo: includeInfo,
+		logger:      logger,
 	}
 }
 
@@ -245,7 +247,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 	}
 
 	for _, in := range engineConfig.DatasourceConfigurations {
-		var out plan.DataSource
+		var outs []plan.DataSource
 
 		switch in.Kind {
 		case nodev1.DataSourceKind_STATIC:
@@ -254,6 +256,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				return nil, err
 			}
 
+			var out plan.DataSource
 			out, err = plan.NewDataSourceConfiguration[staticdatasource.Configuration](
 				in.Id,
 				factory,
@@ -265,6 +268,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			if err != nil {
 				return nil, fmt.Errorf("error creating data source configuration for data source %s: %w", in.Id, err)
 			}
+			outs = append(outs, out)
 
 		case nodev1.DataSourceKind_GRAPHQL:
 			header := http.Header{}
@@ -372,6 +376,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				return nil, err
 			}
 
+			var out plan.DataSource
 			out, err = plan.NewDataSourceConfigurationWithName[graphql_datasource.Configuration](
 				in.Id,
 				dataSourceName,
@@ -382,10 +387,18 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			if err != nil {
 				return nil, fmt.Errorf("error creating data source configuration for data source %s: %w", in.Id, err)
 			}
+			outs = append(outs, out)
 
 		case nodev1.DataSourceKind_PUBSUB:
 			var err error
-			out, err = pubsubDatasource.GetDataSourcesFromConfig(context.Background(), in, l.dataSourceMetaData(in), routerEngineConfig.Events)
+
+			outs, err = pubsub.GetDataSourcesFromConfig(
+				context.Background(),
+				in,
+				l.dataSourceMetaData(in),
+				routerEngineConfig.Events,
+				l.logger,
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -393,7 +406,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			return nil, fmt.Errorf("unknown data source type %q", in.Kind)
 		}
 
-		outConfig.DataSources = append(outConfig.DataSources, out)
+		outConfig.DataSources = append(outConfig.DataSources, outs...)
 	}
 	return &outConfig, nil
 }

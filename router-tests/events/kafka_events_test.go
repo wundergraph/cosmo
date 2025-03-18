@@ -1050,6 +1050,70 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
 		})
 	})
+
+	t.Run("mutate", func(t *testing.T) {
+		t.Parallel()
+
+		topics := []string{"employeeUpdated", "employeeUpdatedTwo"}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			ensureTopicExists(t, xEnv, topics...)
+
+			var subscriptionOne struct {
+				employeeUpdatedMyKafka struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+						Surname  string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+			t.Cleanup(func() {
+				_ = client.Close()
+			})
+
+			var counter atomic.Uint32
+
+			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				defer counter.Add(1)
+				require.NoError(t, errValue)
+				require.JSONEq(t, `{"updateEmployeeMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionOneID)
+
+			go func() {
+				clientErr := client.Run()
+				require.NoError(t, clientErr)
+			}()
+
+			go func() {
+				require.Eventually(t, func() bool {
+					return counter.Load() == 1
+				}, KafkaWaitTimeout, time.Millisecond*100)
+				_ = client.Close()
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+
+			// Send a mutation to trigger the first subscription
+			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { success } }`,
+			})
+			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"id":3}}}`, resOne.Body)
+
+			xEnv.WaitForMessagesSent(1, KafkaWaitTimeout)
+			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
+			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
+		})
+	})
 }
 
 func TestFlakyKafkaEvents(t *testing.T) {

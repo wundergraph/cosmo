@@ -4,22 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cespare/xxhash/v2"
-	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"go.uber.org/zap"
 	"io"
 	"sync"
 	"time"
-)
 
-var (
-	_ pubsub_datasource.NatsConnector = (*connector)(nil)
-	_ pubsub_datasource.NatsPubSub    = (*natsPubSub)(nil)
-	_ pubsub.Lifecycle                = (*natsPubSub)(nil)
+	"github.com/cespare/xxhash/v2"
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
 )
 
 type connector struct {
@@ -30,7 +25,7 @@ type connector struct {
 	routerListenAddr string
 }
 
-func NewConnector(logger *zap.Logger, conn *nats.Conn, js jetstream.JetStream, hostName string, routerListenAddr string) pubsub_datasource.NatsConnector {
+func NewConnector(logger *zap.Logger, conn *nats.Conn, js jetstream.JetStream, hostName string, routerListenAddr string) *connector {
 	return &connector{
 		conn:             conn,
 		logger:           logger,
@@ -40,7 +35,7 @@ func NewConnector(logger *zap.Logger, conn *nats.Conn, js jetstream.JetStream, h
 	}
 }
 
-func (c *connector) New(ctx context.Context) pubsub_datasource.NatsPubSub {
+func (c *connector) New(ctx context.Context) *natsPubSub {
 	return &natsPubSub{
 		ctx:              ctx,
 		conn:             c.conn,
@@ -113,7 +108,7 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 		consumer, err := p.js.CreateOrUpdateConsumer(ctx, event.StreamConfiguration.StreamName, consumerConfig)
 		if err != nil {
 			log.Error("error creating or updating consumer", zap.Error(err))
-			return pubsub.NewError(fmt.Sprintf(`failed to create or update consumer for stream "%s"`, event.StreamConfiguration.StreamName), err)
+			return datasource.NewError(fmt.Sprintf(`failed to create or update consumer for stream "%s"`, event.StreamConfiguration.StreamName), err)
 		}
 
 		p.closeWg.Add(1)
@@ -164,7 +159,7 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 		subscription, err := p.conn.ChanSubscribe(subject, msgChan)
 		if err != nil {
 			log.Error("error subscribing to NATS subject", zap.Error(err), zap.String("subscription_subject", subject))
-			return pubsub.NewError(fmt.Sprintf(`failed to subscribe to NATS subject "%s"`, subject), err)
+			return datasource.NewError(fmt.Sprintf(`failed to subscribe to NATS subject "%s"`, subject), err)
 		}
 		subscriptions[i] = subscription
 	}
@@ -218,7 +213,7 @@ func (p *natsPubSub) Publish(_ context.Context, event pubsub_datasource.NatsPubl
 	err := p.conn.Publish(event.Subject, event.Data)
 	if err != nil {
 		log.Error("publish error", zap.Error(err))
-		return pubsub.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
+		return datasource.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
 	}
 
 	return nil
@@ -236,7 +231,7 @@ func (p *natsPubSub) Request(ctx context.Context, event pubsub_datasource.NatsPu
 	msg, err := p.conn.RequestWithContext(ctx, event.Subject, event.Data)
 	if err != nil {
 		log.Error("request error", zap.Error(err))
-		return pubsub.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)
+		return datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)
 	}
 
 	_, err = w.Write(msg.Data)

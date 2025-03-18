@@ -33,8 +33,16 @@ func EventTypeFromString(s string) (EventType, error) {
 	}
 }
 
+type EventMetadata struct {
+	ProviderID string    `json:"providerId"`
+	Type       EventType `json:"type"`
+	TypeName   string    `json:"typeName"`
+	FieldName  string    `json:"fieldName"`
+}
+
 type Configuration struct {
-	pubSubs []Factory
+	Metadata *EventMetadata `json:"metadata"`
+	pubSubs  []plan.Planner
 }
 
 type Planner struct {
@@ -64,6 +72,16 @@ func (p *Planner) EnterField(ref int) {
 
 	fieldName := p.visitor.Operation.FieldNameString(ref)
 	typeName := p.visitor.Walker.EnclosingTypeDefinition.NameString(p.visitor.Definition)
+
+	//var eventConfig PubSubber
+	//for _, cfg := range p.config.pubSubs {
+	//	if pubSub, ok := cfg.(PubSubber); ok {
+	//		if pubSub.MatchFieldNameAndType(fieldName, typeName) {
+	//			eventConfig = &cfg
+	//			break
+	//		}
+	//	}
+	//}
 
 	p.visitor.Walker.StopWithInternalErr(fmt.Errorf("nope fieldName %s and typeName %s", fieldName, typeName))
 
