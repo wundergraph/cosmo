@@ -105,7 +105,7 @@ jobs:
           owner: wundergraph
           repo: cosmo-celestial
           ref: master
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GH_TOKEN_CELESTIAL_TRIGGER }}
           propagate_failure: true
           workflow_file_name: 'query-planner-tester.yaml'
           client_payload: >-
@@ -113,7 +113,7 @@ jobs:
               "branch": "query-plan/pr-${{ github.event.pull_request.number }}",
               "router": "${{ needs.build-router.outputs.image_ref || 'ghcr.io/wundergraph/router:latest' }}",
               "wgc": "${{ needs.build-cli.outputs.wgc || needs.cli-release-url.outputs.wgc }}",
-              "token": "${{ secrets.GITHUB_TOKEN }}"
+              "token": "${{ secrets.GH_TOKEN_CELESTIAL_TRIGGER }}"
             }
   get_pr_url:
     needs: build_test
@@ -124,7 +124,7 @@ jobs:
       - name: Download PR info artifact
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GH_TOKEN_CELESTIAL_TRIGGER }}
           script: |
             const fs = require('fs');
             const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
@@ -168,5 +168,5 @@ jobs:
         uses: mshick/add-pr-comment@v2
         with:
           message: |
-            ❌ Internal Query Planner CI checks failed in the celestial repository.\n If you are part of the WunderGraph organization, you can see the PR with more details here: ${{ needs.get_pr_url.outputs.pullrequest_url }}
+            ❌ Internal Query Planner CI checks failed in the celestial repository, and this is going to stop the merge of this PR.\n If you are part of the WunderGraph organization, you can see the PR with more details here: ${{ needs.get_pr_url.outputs.pullrequest_url }}
       
