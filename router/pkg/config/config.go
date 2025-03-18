@@ -98,6 +98,7 @@ type Prometheus struct {
 	ExcludeMetrics      RegExArray  `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray  `yaml:"exclude_metric_labels,omitempty" env:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
 	ExcludeScopeInfo    bool        `yaml:"exclude_scope_info" envDefault:"false" env:"PROMETHEUS_EXCLUDE_SCOPE_INFO"`
+	IncludeSchemaUsage  bool        `yaml:"include_schema_usage" envDefault:"false" env:"PROMETHEUS_INCLUDE_SCHEMA_USAGE"`
 }
 
 type MetricsOTLPExporter struct {
@@ -188,9 +189,8 @@ type SubgraphTrafficRequestRule struct {
 }
 
 type GraphqlMetrics struct {
-	Enabled                 bool   `yaml:"enabled" envDefault:"true" env:"GRAPHQL_METRICS_ENABLED"`
-	PrometheusExportEnabled bool   `yaml:"prometheus_export_enabled" envDefault:"false" env:"GRAPHQL_METRICS_PROMETHEUS_EXPORT_ENABLED"`
-	CollectorEndpoint       string `yaml:"collector_endpoint" envDefault:"https://cosmo-metrics.wundergraph.com" env:"GRAPHQL_METRICS_COLLECTOR_ENDPOINT"`
+	Enabled           bool   `yaml:"enabled" envDefault:"true" env:"GRAPHQL_METRICS_ENABLED"`
+	CollectorEndpoint string `yaml:"collector_endpoint" envDefault:"https://cosmo-metrics.wundergraph.com" env:"GRAPHQL_METRICS_COLLECTOR_ENDPOINT"`
 }
 
 type BackoffJitterRetry struct {
