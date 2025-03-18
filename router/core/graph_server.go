@@ -5,16 +5,17 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/cespare/xxhash/v2"
-	"github.com/wundergraph/cosmo/router/pkg/execution_config"
-	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	otelmetric "go.opentelemetry.io/otel/metric"
-	oteltrace "go.opentelemetry.io/otel/trace"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/cespare/xxhash/v2"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	otelmetric "go.opentelemetry.io/otel/metric"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 
@@ -938,7 +939,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		baseTripper:      s.baseTransport,
 		subgraphTrippers: subgraphTippers,
 		logger:           s.logger,
-		trackUsageInfo:   s.graphqlMetricsConfig.Enabled,
+		trackUsageInfo:   s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.IncludeSchemaUsage,
 		subscriptionClientOptions: &SubscriptionClientOptions{
 			PingInterval: s.engineExecutionConfiguration.WebSocketClientPingInterval,
 		},
@@ -1146,7 +1147,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		AlwaysSkipLoader:            s.engineExecutionConfiguration.Debug.AlwaysSkipLoader,
 		QueryPlansEnabled:           s.Config.queryPlansEnabled,
 		QueryPlansLoggingEnabled:    s.engineExecutionConfiguration.Debug.PrintQueryPlans,
-		TrackSchemaUsageInfo:        s.graphqlMetricsConfig.Enabled,
+		TrackSchemaUsageInfo:        s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.IncludeSchemaUsage,
 		ClientHeader:                s.clientHeader,
 		ComputeOperationSha256:      computeSha256,
 		ApolloCompatibilityFlags:    &s.apolloCompatibilityFlags,
