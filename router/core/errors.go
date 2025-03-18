@@ -189,7 +189,12 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 	if requestErrors == nil {
 		return
 	}
-	wgRequestParams := NegotiateSubscriptionParams(r)
+
+	requestContext := getRequestContext(r.Context())
+	// We want to prioritize json if it is not a subscription
+	isSubscription := requestContext.operation.opType == "subscription"
+
+	wgRequestParams := NegotiateSubscriptionParams(r, !isSubscription)
 
 	// Is subscription
 	if wgRequestParams.UseSse || wgRequestParams.UseMultipart {
@@ -212,10 +217,8 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 				return
 			}
 		} else if wgRequestParams.UseMultipart {
-			requestContext := getRequestContext(r.Context())
-
 			// Handle multipart error response
-			if err := writeMultipartError(w, requestErrors, requestContext.operation.opType); err != nil {
+			if err := writeMultipartError(w, requestErrors, isSubscription); err != nil {
 				if requestLogger != nil {
 					requestLogger.Error("error writing multipart response", zap.Error(err))
 				}
@@ -245,7 +248,7 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 func writeMultipartError(
 	w http.ResponseWriter,
 	requestErrors graphqlerrors.RequestErrors,
-	operationType OperationType,
+	isSubscription bool,
 ) error {
 	// Start with the multipart boundary
 	prefix := GetWriterPrefix(false, true, true)
@@ -263,7 +266,6 @@ func writeMultipartError(
 		return err
 	}
 
-	isSubscription := operationType == "subscription"
 	resp, err := wrapMultipartMessage(responseBytes, isSubscription)
 	if err != nil {
 		return err

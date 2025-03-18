@@ -124,7 +124,7 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 	if wfw, ok := w.(withFlushWriter); ok {
 		return ctx, wfw.SubscriptionResponseWriter(), true
 	}
-	wgParams := NegotiateSubscriptionParams(r)
+	wgParams := NegotiateSubscriptionParams(r, false)
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
@@ -205,7 +205,7 @@ func setSubscriptionHeaders(wgParams SubscriptionParams, r *http.Request, w http
 	w.Header().Set("X-Accel-Buffering", "no")
 }
 
-func NegotiateSubscriptionParams(r *http.Request) SubscriptionParams {
+func NegotiateSubscriptionParams(r *http.Request, preferJson bool) SubscriptionParams {
 	q := r.URL.Query()
 	acceptHeaders := r.Header.Get("Accept")
 	elements := strings.Split(acceptHeaders, ",")
@@ -228,6 +228,13 @@ func NegotiateSubscriptionParams(r *http.Request) SubscriptionParams {
 			if parsedQ, err := strconv.ParseFloat(qStr, 64); err == nil {
 				qValue = parsedQ
 			}
+		}
+
+		// We also have an exception where we prioritize json over higher priority media types
+		if preferJson && strings.EqualFold(mediaType, jsonContent) {
+			bestQ = qValue
+			bestType = mediaType
+			break
 		}
 
 		// Find the media type with the highest q-value. If none is provided, it will default to the first option
