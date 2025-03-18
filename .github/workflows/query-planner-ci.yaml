@@ -171,4 +171,17 @@ jobs:
             # ❌ Internal Query Planner CI checks failed
             The Internal Query Planner CI checks failed in the celestial repository, and this is going to stop the merge of this PR.
             If you are part of the WunderGraph organization, you can [see the PR with more details](${{ needs.get_pr_url.outputs.pullrequest_url }}).
+  comment_on_success:
+    needs: [build_test, get_pr_url]
+    if: ${{ success() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment PR on failure
+        if: ${{ needs.get_pr_url.outputs.pullrequest_url != '' }}
+        uses: mshick/add-pr-comment@v2
+        with:
+          message: |
+            # ✅ Internal Query Planner CI checks passed
+            The Internal Query Planner CI checks passed in the celestial repository, and this is going to allow the merge of this PR.
+            If you are part of the WunderGraph organization, you can [see the PR with more details](${{ needs.get_pr_url.outputs.pullrequest_url }}).
       
