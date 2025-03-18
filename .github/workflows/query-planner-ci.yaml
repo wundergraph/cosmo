@@ -153,7 +153,7 @@ jobs:
           pr_url=$(cat pr-url.txt)
           echo "pr_url=$pr_url" >> $GITHUB_OUTPUT
   comment_on_failure:
-    needs: build_test
+    needs: [build_test, get_pr_url]
     if: ${{ failure() }}
     runs-on: ubuntu-latest
     steps:
