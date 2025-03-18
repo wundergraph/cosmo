@@ -168,5 +168,7 @@ jobs:
         uses: mshick/add-pr-comment@v2
         with:
           message: |
-            ❌ Internal Query Planner CI checks failed in the celestial repository, and this is going to stop the merge of this PR.\n If you are part of the WunderGraph organization, you can see the PR with more details here: ${{ needs.get_pr_url.outputs.pullrequest_url }}
+            # ❌ Internal Query Planner CI checks failed
+            The Internal Query Planner CI checks failed in the celestial repository, and this is going to stop the merge of this PR.
+            If you are part of the WunderGraph organization, you can see the PR with more details here: ${{ needs.get_pr_url.outputs.pullrequest_url }}
       
