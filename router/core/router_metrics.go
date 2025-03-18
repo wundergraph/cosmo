@@ -1,6 +1,8 @@
 package core
 
 import (
+	"strconv"
+
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 

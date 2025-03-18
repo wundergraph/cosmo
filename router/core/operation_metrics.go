@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
@@ -74,6 +75,23 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 
 	if m.trackUsageInfo && reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
 		m.routerMetrics.ExportSchemaUsageInfo(reqContext.operation, statusCode, reqContext.error != nil, exportSynchronous)
+	}
+
+	// Collect type field usage metrics if enabled
+	if m.trackUsageInfo && reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
+		operationContext := reqContext.operation
+
+		for _, field := range operationContext.typeFieldUsageInfo {
+			rm.MeasureSchemaUsage(ctx, 1, []attribute.KeyValue{
+				attribute.StringSlice("typeName", field.TypeNames),
+			}, otelmetric.WithAttributeSet(attribute.NewSet(
+				attribute.String("fieldName", field.Path[len(field.Path)-1]),
+				attribute.String("operationHash", strconv.FormatUint(operationContext.hash, 10)),
+				attribute.String("operationName", operationContext.name),
+				attribute.String("operationType", operationContext.opType),
+				attribute.String("configVersionId", m.routerConfigVersion),
+			)))
+		}
 	}
 }
 

@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.opentelemetry.io/otel/attribute"
-	"go.uber.org/zap"
 	"os"
 	"strconv"
 	"time"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.uber.org/zap"
 
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -25,6 +26,8 @@ const (
 	ResponseContentLengthCounter  = "router.http.response.content_length"       // Outgoing response bytes total
 	InFlightRequestsUpDownCounter = "router.http.requests.in_flight"            // Number of requests in flight
 	RequestError                  = "router.http.requests.error"                // Total request error count
+
+	SchemaUsageCounter = "router.schema.usage" // Total schema usage count
 
 	OperationPlanningTime = "router.graphql.operation.planning_time" // Time taken to plan the operation
 
@@ -70,6 +73,14 @@ var (
 		otelmetric.WithUnit("ms"),
 		otelmetric.WithDescription(OperationPlanningTimeHistogramDescription),
 	}
+
+	// Schema usage metrics
+
+	SchemaUsageCounterDescription = "Total schema usage count"
+	SchemaUsageCounterOptions     = []otelmetric.Int64CounterOption{
+		otelmetric.WithUnit("count"),
+		otelmetric.WithDescription(SchemaUsageCounterDescription),
+	}
 )
 
 type (
@@ -105,6 +116,7 @@ type (
 		MeasureLatency(ctx context.Context, latency float64, opts ...otelmetric.RecordOption)
 		MeasureRequestError(ctx context.Context, opts ...otelmetric.AddOption)
 		MeasureOperationPlanningTime(ctx context.Context, planningTime float64, opts ...otelmetric.RecordOption)
+		MeasureSchemaUsage(ctx context.Context, schemaUsage int64, opts ...otelmetric.AddOption)
 		Flush(ctx context.Context) error
 	}
 
@@ -118,6 +130,7 @@ type (
 		MeasureLatency(ctx context.Context, latency time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		MeasureRequestError(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
 		MeasureOperationPlanningTime(ctx context.Context, planningTime time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
+		MeasureSchemaUsage(ctx context.Context, schemaUsage int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
 		Flush(ctx context.Context) error
 		Shutdown(ctx context.Context) error
 	}
@@ -331,6 +344,27 @@ func (h *Metrics) MeasureOperationPlanningTime(ctx context.Context, planningTime
 	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
 
 	h.otlpRequestMetrics.MeasureOperationPlanningTime(ctx, elapsedTime, opts...)
+}
+
+func (h *Metrics) MeasureSchemaUsage(ctx context.Context, schemaUsage int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
+	opts := []otelmetric.AddOption{h.baseAttributesOpt, opt}
+
+	// Explode for prometheus metrics
+
+	if len(sliceAttr) == 0 {
+		h.promRequestMetrics.MeasureSchemaUsage(ctx, schemaUsage, opts...)
+	} else {
+		explodeAddInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.AddOption) {
+			newOpts = append(newOpts, opts...)
+			h.promRequestMetrics.MeasureSchemaUsage(ctx, schemaUsage, newOpts...)
+		})
+	}
+
+	// OTEL metrics
+
+	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
+
+	h.otlpRequestMetrics.MeasureSchemaUsage(ctx, schemaUsage, opts...)
 }
 
 // Flush flushes the metrics to the backend synchronously.
