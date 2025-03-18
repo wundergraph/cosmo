@@ -190,9 +190,10 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 		return
 	}
 
+	// According to the tests requestContext can be nil (when called from module WriteResponseError)
+	// As such we have coded this condition defensively to be safe
 	requestContext := getRequestContext(r.Context())
-	// We want to prioritize json if it is not a subscription
-	isSubscription := requestContext.operation.opType == "subscription"
+	isSubscription := requestContext != nil && requestContext.operation != nil && requestContext.operation.opType == "subscription"
 
 	wgRequestParams := NegotiateSubscriptionParams(r, !isSubscription)
 

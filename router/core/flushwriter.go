@@ -232,7 +232,6 @@ func NegotiateSubscriptionParams(r *http.Request, preferJson bool) SubscriptionP
 
 		// We also have an exception where we prioritize json over higher priority media types
 		if preferJson && strings.EqualFold(mediaType, jsonContent) {
-			bestQ = qValue
 			bestType = mediaType
 			break
 		}
