@@ -4,17 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/expr-lang/expr/checker"
-	"github.com/expr-lang/expr/conf"
-	"github.com/expr-lang/expr/parser"
 	"net/http"
 	"net/url"
 	"reflect"
 
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/ast"
+	"github.com/expr-lang/expr/checker"
+	"github.com/expr-lang/expr/conf"
 	"github.com/expr-lang/expr/file"
+	"github.com/expr-lang/expr/parser"
 	"github.com/expr-lang/expr/vm"
+
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 )
 
@@ -172,6 +173,11 @@ func ValidateAnyExpression(s string) error {
 		return handleExpressionError(err)
 	}
 
+	// Check if the expression is just a nil literal
+	if _, ok := tree.Node.(*ast.NilNode); ok {
+		return handleExpressionError(errors.New("disallowed nil"))
+	}
+
 	config := conf.CreateNew()
 	for _, op := range compileOptions() {
 		op(config)
@@ -180,10 +186,6 @@ func ValidateAnyExpression(s string) error {
 	expectedType, err := checker.Check(tree, config)
 	if err != nil {
 		return handleExpressionError(err)
-	}
-
-	if expectedType == nil {
-		return handleExpressionError(errors.New("disallowed nil"))
 	}
 
 	// Disallowed types
