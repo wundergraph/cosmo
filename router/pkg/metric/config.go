@@ -28,6 +28,8 @@ type PrometheusConfig struct {
 	TestRegistry *prometheus.Registry
 	// Whether or not to exclude scope info
 	ExcludeScopeInfo bool
+	// Whether or not to include schema usage metrics
+	IncludeSchemaUsage bool
 }
 
 type OpenTelemetryExporter struct {

@@ -739,7 +739,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		metrics:                gm.metricStore,
 		gqlMetricsExporter:     s.gqlMetricsExporter,
 		exportEnabled:          s.graphqlMetricsConfig.Enabled,
-		promSchemaUsageEnabled: s.graphqlMetricsConfig.PrometheusExportEnabled,
+		promSchemaUsageEnabled: s.metricConfig.Prometheus.IncludeSchemaUsage,
 		routerConfigVersion:    routerConfigVersion,
 		logger:                 s.logger,
 	})
