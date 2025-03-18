@@ -134,6 +134,7 @@ export function inviteUser(
           auditableDisplayName: req.email,
           auditableType: 'user',
           actorDisplayName: authContext.userDisplayName,
+          apiKeyName: authContext.apiKeyName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         });
 
@@ -183,6 +184,7 @@ export function inviteUser(
       auditableDisplayName: req.email,
       auditableType: 'user',
       actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
     });
 

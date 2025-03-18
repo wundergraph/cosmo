@@ -69,7 +69,8 @@
           "Subscriptions": true
         },
         "ExcludeMetrics": null,
-        "ExcludeMetricLabels": null
+        "ExcludeMetricLabels": null,
+        "ExcludeScopeInfo": true
       }
     }
   },
@@ -661,7 +662,8 @@
   "ExecutionConfig": {
     "File": {
       "Path": "",
-      "Watch": false
+      "Watch": false,
+      "WatchInterval": 1000000000
     },
     "Storage": {
       "ProviderID": "s3",

@@ -95,6 +95,7 @@ export function updateOrganizationWebhookConfig(
       auditableType: 'webhook_config',
       auditableDisplayName: req.endpoint,
       actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
     });
 

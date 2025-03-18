@@ -722,6 +722,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	httpRouter.Use(recoveryHandler)
 
+	// Setup any router on request middlewares so that they can be used to manipulate
+	// other downstream internal middlewares such as tracing or authentication
+	httpRouter.Use(s.routerOnRequestHandlers...)
+
 	/**
 	* Initialize base attributes from headers and other sources
 	 */

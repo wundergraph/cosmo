@@ -50,7 +50,8 @@
           "Subscriptions": false
         },
         "ExcludeMetrics": null,
-        "ExcludeMetricLabels": null
+        "ExcludeMetricLabels": null,
+        "ExcludeScopeInfo": false
       }
     }
   },
@@ -358,7 +359,8 @@
   "ExecutionConfig": {
     "File": {
       "Path": "",
-      "Watch": false
+      "Watch": false,
+      "WatchInterval": 1000000000
     },
     "Storage": {
       "ProviderID": "",

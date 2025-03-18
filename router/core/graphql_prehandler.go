@@ -27,7 +27,6 @@ import (
 
 	"github.com/wundergraph/astjson"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization/uploads"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -740,35 +739,35 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		// but files still references the old uploads locations
 		// key `to` is a new variable name
 		// value `from` is an old variable name
+		// we are looping through remapped variables to find a match between old variable name and variable which was holding an upload
 		for to, from := range maps.All(requestContext.operation.remapVariables) {
-			// we look into uploads mapping to find a mach between old variable name before remapping and variable which was holding an upload
-			idx := slices.IndexFunc(uploadsMapping, func(value uploads.UploadPathMapping) bool {
-				return value.VariableName == from
-			})
 
-			if idx == -1 {
-				continue
-			}
-
-			// next step is to compare file upload path with the original upload path from the upload mappings
-			for file := range slices.Values(requestContext.operation.files) {
-				uploadPath := uploadsMapping[idx].NewUploadPath
-				// if NewUploadPath is empty it means that there was no change in the path - e.g. upload was directly passed to the argument
-				if uploadPath == "" {
-					uploadPath = uploadsMapping[idx].OriginalUploadPath
-				}
-
-				if file.VariablePath() != uploadPath {
+			// loop over upload mappings to find a match between variable name and upload variable name
+			for uploadMapping := range slices.Values(uploadsMapping) {
+				if uploadMapping.VariableName != from {
 					continue
 				}
 
-				// trim old variable name prefix
-				oldUploadPathPrefix := fmt.Sprintf("variables.%s.", from)
-				relativeUploadPath := strings.TrimPrefix(uploadPath, oldUploadPathPrefix)
+				uploadPath := uploadMapping.NewUploadPath
+				// if NewUploadPath is empty it means that there was no change in the path - e.g. upload was directly passed to the argument
+				if uploadPath == "" {
+					uploadPath = uploadMapping.OriginalUploadPath
+				}
 
-				// set new variable name prefix
-				updatedPath := fmt.Sprintf("variables.%s.%s", to, relativeUploadPath)
-				file.SetVariablePath(updatedPath)
+				// next step is to compare file upload path with the original upload path from the upload mappings
+				for file := range slices.Values(requestContext.operation.files) {
+					if file.VariablePath() != uploadPath {
+						continue
+					}
+
+					// trim old variable name prefix
+					oldUploadPathPrefix := fmt.Sprintf("variables.%s.", from)
+					relativeUploadPath := strings.TrimPrefix(uploadPath, oldUploadPathPrefix)
+
+					// set new variable name prefix
+					updatedPath := fmt.Sprintf("variables.%s.%s", to, relativeUploadPath)
+					file.SetVariablePath(updatedPath)
+				}
 			}
 		}
 	}

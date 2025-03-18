@@ -110,6 +110,7 @@ export function deleteFederatedSubgraph(
           auditableType: subgraph.isFeatureSubgraph ? 'feature_subgraph' : 'subgraph',
           auditableDisplayName: subgraph.name,
           actorDisplayName: authContext.userDisplayName,
+          apiKeyName: authContext.apiKeyName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           targetNamespaceId: subgraph.namespaceId,
           targetNamespaceDisplayName: subgraph.namespace,

@@ -71,6 +71,13 @@ func (m *MyModule) OnOriginRequest(request *http.Request, ctx core.RequestContex
 	return request, nil
 }
 
+func (m *MyModule) RouterOnRequest(ctx core.RequestContext, next http.Handler) {
+	logger := ctx.Logger()
+	logger.Info("Test RouterOnRequest custom module logs")
+
+	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+}
+
 func (m *MyModule) Middleware(ctx core.RequestContext, next http.Handler) {
 
 	operation := ctx.Operation()
@@ -104,6 +111,7 @@ func (m *MyModule) Module() core.ModuleInfo {
 // Interface guard
 var (
 	_ core.RouterMiddlewareHandler = (*MyModule)(nil)
+	_ core.RouterOnRequestHandler  = (*MyModule)(nil)
 	_ core.EnginePreOriginHandler  = (*MyModule)(nil)
 	_ core.EnginePostOriginHandler = (*MyModule)(nil)
 	_ core.Provisioner             = (*MyModule)(nil)
