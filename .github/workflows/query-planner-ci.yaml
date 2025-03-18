@@ -112,8 +112,7 @@ jobs:
             {
               "branch": "query-plan/pr-${{ github.event.pull_request.number }}",
               "router": "${{ needs.build-router.outputs.image_ref || 'ghcr.io/wundergraph/router:latest' }}",
-              "wgc": "${{ needs.build-cli.outputs.wgc || needs.cli-release-url.outputs.wgc }}",
-              "token": "${{ secrets.GH_TOKEN_CELESTIAL_TRIGGER }}"
+              "wgc": "${{ needs.build-cli.outputs.wgc || needs.cli-release-url.outputs.wgc }}"
             }
   get_pr_url:
     needs: build_test
