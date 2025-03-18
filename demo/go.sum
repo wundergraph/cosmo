@@ -361,8 +361,8 @@ github.com/wundergraph/cosmo/router v0.0.0-20250313152501-2665e6cbc068 h1:YRTnsr
 github.com/wundergraph/cosmo/router v0.0.0-20250313152501-2665e6cbc068/go.mod h1:+SOqClm86/kPrgYbeYqn2nh7einB1OUWsdS5Fxbxh9M=
 github.com/wundergraph/cosmo/router-tests v0.0.0-20250313152501-2665e6cbc068 h1:kTejS1INC752oBYZwghVyz/NOhSJY0wOX6x/JE7m2q4=
 github.com/wundergraph/cosmo/router-tests v0.0.0-20250313152501-2665e6cbc068/go.mod h1:vhIPJfvK0cmadewQt6CWavX06heVNKkmsWzdhxDj+O4=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.163 h1:mfEEEG9+hWYqLZlVZe1wh5naGqIAl49ziIpGrROlG+k=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.163/go.mod h1:B7eV0Qh8Lop9QzIOQcsvKp3S0ejfC6mgyWoJnI917yQ=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.165 h1:Ck9OBPEoABD609Kw3mQrmQuN3jhJAlMuwtcM09j1DIc=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.165/go.mod h1:B7eV0Qh8Lop9QzIOQcsvKp3S0ejfC6mgyWoJnI917yQ=
 github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f/go.mod h1:N2zxlSyiKSe5eX1tZViRH5QA0qijqEDrYZiPEAiq3wU=
 github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb h1:zGWFAtiMcyryUHoUjUJX0/lt1H2+i2Ka2n+D3DImSNo=
 github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb/go.mod h1:N2zxlSyiKSe5eX1tZViRH5QA0qijqEDrYZiPEAiq3wU=
