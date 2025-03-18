@@ -70,7 +70,8 @@
         },
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
-        "ExcludeScopeInfo": true
+        "ExcludeScopeInfo": true,
+        "IncludeSchemaUsage": false
       }
     }
   },
