@@ -117,6 +117,7 @@ jobs:
   get_pr_url:
     needs: build_test
     runs-on: ubuntu-latest
+    if: ${{ always() }}
     outputs:
       pullrequest_url: ${{ steps.get_url.outputs.pr_url }}
     steps:
