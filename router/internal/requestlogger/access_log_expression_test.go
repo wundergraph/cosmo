@@ -2,6 +2,7 @@ package requestlogger
 
 import (
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"testing"
 )
@@ -29,7 +30,8 @@ func TestAccessLogExpressionParsing(t *testing.T) {
 			},
 		}
 
-		expressions, err := GetAccessLogConfigExpressions(customAttributes)
+		exprManager := expr.CreateNewExprManager()
+		expressions, err := GetAccessLogConfigExpressions(customAttributes, exprManager)
 		if err != nil {
 			require.Fail(t, "unexpected error", err)
 		}
@@ -64,7 +66,8 @@ func TestAccessLogExpressionParsing(t *testing.T) {
 			},
 		}
 
-		expressions, err := GetAccessLogConfigExpressions(customAttributes)
+		exprManager := expr.CreateNewExprManager()
+		expressions, err := GetAccessLogConfigExpressions(customAttributes, exprManager)
 		require.NoError(t, err)
 
 		require.Len(t, expressions, 2)
@@ -96,7 +99,8 @@ func TestAccessLogExpressionParsing(t *testing.T) {
 			},
 		}
 
-		_, err := GetAccessLogConfigExpressions(customAttributes)
+		exprManager := expr.CreateNewExprManager()
+		_, err := GetAccessLogConfigExpressions(customAttributes, exprManager)
 		if err != nil {
 			require.Error(t, err)
 			return

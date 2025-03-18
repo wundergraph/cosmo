@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"net/http"
 	"net/url"
 	"strings"
@@ -619,9 +620,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	// we only enable the attribute mapper if we are not using the default cloud exporter
 	enableAttributeMapper := !(s.metricConfig.IsUsingCloudExporter || rmetric.IsDefaultCloudExporterConfigured(s.metricConfig.OpenTelemetry.Exporters))
 
+	exprManager := expr.CreateNewExprManager()
+
 	// We might want to remap or exclude known attributes based on the configuration for metrics
 	mapper := newAttributeMapper(enableAttributeMapper, s.metricConfig.Attributes)
-	attExpressions, attErr := newAttributeExpressions(s.metricConfig.Attributes)
+	attExpressions, attErr := newAttributeExpressions(s.metricConfig.Attributes, exprManager)
 	if attErr != nil {
 		return nil, attErr
 	}
@@ -629,7 +632,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	var telemetryAttExpressions *attributeExpressions
 	if len(s.telemetryAttributes) > 0 {
 		var telemetryAttErr error
-		telemetryAttExpressions, telemetryAttErr = newAttributeExpressions(s.telemetryAttributes)
+		telemetryAttExpressions, telemetryAttErr = newAttributeExpressions(s.telemetryAttributes, exprManager)
 		if telemetryAttErr != nil {
 			return nil, telemetryAttErr
 		}
@@ -832,7 +835,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	var subgraphAccessLogger *requestlogger.SubgraphAccessLogger
 	if s.accessLogsConfig != nil && s.accessLogsConfig.Logger != nil {
-		exprAttributes, err := requestlogger.GetAccessLogConfigExpressions(s.accessLogsConfig.Attributes)
+		exprAttributes, err := requestlogger.GetAccessLogConfigExpressions(s.accessLogsConfig.Attributes, exprManager)
 		if err != nil {
 			return nil, fmt.Errorf("failed building router access log expressions: %w", err)
 		}
@@ -1042,6 +1045,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			Debug:               s.rateLimit.Debug,
 			RejectStatusCode:    s.rateLimit.SimpleStrategy.RejectStatusCode,
 			KeySuffixExpression: s.rateLimit.KeySuffixExpression,
+			ExprManager:         exprManager,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create rate limiter: %w", err)
@@ -1070,6 +1074,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		},
 		SafelistEnabled:             s.persistedOperationsConfig.Safelist.Enabled,
 		LogUnknownOperationsEnabled: s.persistedOperationsConfig.LogUnknown,
+		exprManager:                 exprManager,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create operation blocker: %w", err)
@@ -1102,6 +1107,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		ComputeOperationSha256:      computeSha256,
 		ApolloCompatibilityFlags:    &s.apolloCompatibilityFlags,
 		DisableVariablesRemapping:   s.engineExecutionConfiguration.DisableVariablesRemapping,
+		ExprManager:                 exprManager,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
