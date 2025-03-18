@@ -188,8 +188,9 @@ type SubgraphTrafficRequestRule struct {
 }
 
 type GraphqlMetrics struct {
-	Enabled           bool   `yaml:"enabled" envDefault:"true" env:"GRAPHQL_METRICS_ENABLED"`
-	CollectorEndpoint string `yaml:"collector_endpoint" envDefault:"https://cosmo-metrics.wundergraph.com" env:"GRAPHQL_METRICS_COLLECTOR_ENDPOINT"`
+	Enabled                 bool   `yaml:"enabled" envDefault:"true" env:"GRAPHQL_METRICS_ENABLED"`
+	PrometheusExportEnabled bool   `yaml:"prometheus_export_enabled" envDefault:"false" env:"GRAPHQL_METRICS_PROMETHEUS_EXPORT_ENABLED"`
+	CollectorEndpoint       string `yaml:"collector_endpoint" envDefault:"https://cosmo-metrics.wundergraph.com" env:"GRAPHQL_METRICS_COLLECTOR_ENDPOINT"`
 }
 
 type BackoffJitterRetry struct {
