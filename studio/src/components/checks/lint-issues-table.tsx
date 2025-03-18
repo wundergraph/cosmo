@@ -21,6 +21,9 @@ import {
   TableWrapper,
 } from "../ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { useUser } from "@/hooks/use-user";
+import { useContext } from "react";
+import { GraphContext } from "@/components/layout/graph-layout";
 
 export const LintIssuesTable = ({
   lintIssues,
@@ -32,6 +35,8 @@ export const LintIssuesTable = ({
   isLintingEnabled: boolean;
 }) => {
   const router = useRouter();
+  const user = useUser();
+  const graphContext = useContext(GraphContext);
 
   if (lintIssues.length === 0 && !isLintingEnabled) {
     return (
@@ -43,7 +48,7 @@ export const LintIssuesTable = ({
           <Button
             onClick={() => {
               router.push(
-                `/${router.query.organizationSlug}/policies?namespace=${router.query.namespace}`,
+                `/${user!.currentOrganization.slug}/policies?namespace=${graphContext?.graph?.namespace ?? "default"}`,
               );
             }}
           >

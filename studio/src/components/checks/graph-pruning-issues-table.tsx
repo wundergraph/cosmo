@@ -21,6 +21,9 @@ import {
   TableWrapper,
 } from "../ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { useUser } from "@/hooks/use-user";
+import { GraphContext } from "@/components/layout/graph-layout";
+import { useContext } from "react";
 
 export const GraphPruningIssuesTable = ({
   pruneIssues,
@@ -32,6 +35,8 @@ export const GraphPruningIssuesTable = ({
   isGraphPruningEnabled: boolean;
 }) => {
   const router = useRouter();
+  const user = useUser();
+  const graphContext = useContext(GraphContext);
 
   if (pruneIssues.length === 0 && !isGraphPruningEnabled) {
     return (
@@ -43,7 +48,7 @@ export const GraphPruningIssuesTable = ({
           <Button
             onClick={() => {
               router.push(
-                `/${router.query.organizationSlug}/policies?namespace=${router.query.namespace}`,
+                `/${user!.currentOrganization.slug}/policies?namespace=${graphContext?.graph?.namespace ?? "default"}`,
               );
             }}
           >
