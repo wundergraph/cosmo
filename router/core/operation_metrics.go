@@ -86,11 +86,11 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 			rm.MeasureSchemaUsage(ctx, 1, []attribute.KeyValue{
 				attribute.StringSlice("typeName", field.TypeNames),
 			}, otelmetric.WithAttributeSet(attribute.NewSet(
-				attribute.String("fieldName", field.Path[len(field.Path)-1]),
-				attribute.String("operationHash", strconv.FormatUint(operationContext.hash, 10)),
-				attribute.String("operationName", operationContext.name),
-				attribute.String("operationType", operationContext.opType),
-				attribute.String("configVersionId", m.routerConfigVersion),
+				attribute.String("field_name", field.Path[len(field.Path)-1]),
+				attribute.String("operation_hash", strconv.FormatUint(operationContext.hash, 10)),
+				attribute.String("operation_name", operationContext.name),
+				attribute.String("operation_type", operationContext.opType),
+				attribute.String("config_version_id", m.routerConfigVersion),
 			)))
 		}
 	}
