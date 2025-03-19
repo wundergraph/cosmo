@@ -1,6 +1,11 @@
 import { Warning } from '../warnings/types';
-import { DocumentNode, GraphQLSchema } from 'graphql';
-import { ParentDefinitionData } from '../schema-building/types';
+import { ConstDirectiveNode, DocumentNode, GraphQLSchema, StringValueNode } from 'graphql';
+import {
+  ConfigureDescriptionData,
+  ExtensionType,
+  ParentDefinitionData,
+  PersistedDirectivesData,
+} from '../schema-building/types';
 import { FieldConfiguration } from '../router-configuration/types';
 import { SubgraphConfig } from '../subgraph/types';
 
@@ -48,4 +53,13 @@ export type FederationResultWithContracts = FederationResultWithContractsFailure
 export type ContractTagOptions = {
   tagNamesToExclude: Set<string>;
   tagNamesToInclude: Set<string>;
+};
+
+export type MutualParentDefinitionData = {
+  configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
+  directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
+  extensionType: ExtensionType;
+  name: string;
+  persistedDirectivesData: PersistedDirectivesData;
+  description?: StringValueNode;
 };
