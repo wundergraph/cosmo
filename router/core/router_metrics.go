@@ -37,7 +37,7 @@ type routerMetricsConfig struct {
 	routerConfigVersion    string
 	logger                 *zap.Logger
 	exportEnabled          bool
-	promSchemaUsageEnabled bool
+	promIncludeSchemaUsage bool
 }
 
 func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
@@ -47,7 +47,7 @@ func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
 		routerConfigVersion:    cfg.routerConfigVersion,
 		logger:                 cfg.logger,
 		exportEnabled:          cfg.exportEnabled,
-		promSchemaUsageEnabled: cfg.promSchemaUsageEnabled,
+		promSchemaUsageEnabled: cfg.promIncludeSchemaUsage,
 	}
 }
 
