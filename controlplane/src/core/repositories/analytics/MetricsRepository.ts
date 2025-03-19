@@ -44,6 +44,14 @@ interface GetMetricsProps {
   queryParams?: CoercedFilterValues;
 }
 
+interface LatencySeries {
+  timestamp: string;
+  value: string;
+  p50?: number;
+  p90?: number;
+  p99?: number;
+}
+
 export class MetricsRepository {
   constructor(private client: ClickHouseClient) {}
 
@@ -113,7 +121,7 @@ export class MetricsRepository {
 
     // get time series of last [range] hours
     const querySeries = (start: number, end: number) => {
-      return this.client.queryPromise<{ value: number | null }[]>(
+      return this.client.queryPromise<LatencySeries>(
         `
       WITH
         toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
@@ -244,13 +252,14 @@ export class MetricsRepository {
 
     // get time series of last [range] hours
     const querySeries = (quantile: string, start: number, end: number) => {
-      return this.client.queryPromise<{ value: number | null }[]>(
+      return this.client.queryPromise<LatencySeries>(
         `
         WITH
           toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
           toDateTime('${end}') AS endDate
         SELECT
             toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
+            -- Default
             func_rank(${quantile}, BucketCounts) as rank,
             func_rank_bucket_lower_index(rank, BucketCounts) as b,
             func_histogram_v2(
@@ -259,6 +268,33 @@ export class MetricsRepository {
                 BucketCounts,
                 anyLast(ExplicitBounds)
             ) as value,
+            -- P50
+            func_rank(0.50, BucketCounts) as rank50,
+            func_rank_bucket_lower_index(rank50, BucketCounts) as b50,
+            func_histogram_v2(
+                rank50,
+                b50,
+                BucketCounts,
+                anyLast(ExplicitBounds)
+            ) as p50,
+            -- P90
+            func_rank(0.90, BucketCounts) as rank90,
+            func_rank_bucket_lower_index(rank90, BucketCounts) as b90,
+            func_histogram_v2(
+                rank90,
+                b90,
+                BucketCounts,
+                anyLast(ExplicitBounds)
+            ) as p90,
+            -- P90
+            func_rank(0.99, BucketCounts) as rank99,
+            func_rank_bucket_lower_index(rank99, BucketCounts) as b99,
+            func_histogram_v2(
+                rank99,
+                b99,
+                BucketCounts,
+                anyLast(ExplicitBounds)
+            ) as p99,
 
             -- Histogram aggregations
             sumForEachMerge(BucketCounts) as BucketCounts
@@ -281,7 +317,13 @@ export class MetricsRepository {
     const series = querySeries('0.95', dateRange.start, dateRange.end);
     const prevSeries = querySeries('0.95', prevDateRange.start, prevDateRange.end);
 
-    const [p95Response, prevP95Response, top5Response, seriesResponse, prevSeriesResponse] = await Promise.all([
+    const [
+      p95Response,
+      prevP95Response,
+      top5Response,
+      seriesResponse,
+      prevSeriesResponse,
+    ] = await Promise.all([
       p95,
       prevP95,
       top5,
@@ -299,7 +341,13 @@ export class MetricsRepository {
           value: parseValue(v.value),
           isPersisted: v.isPersisted,
         })),
-        series: this.mapSeries(rangeInHours, seriesResponse, prevSeriesResponse),
+        series: this.mapSeries(rangeInHours, seriesResponse, prevSeriesResponse)
+          // .map((series, index) => ({
+          //   ...series,
+          //   p50: p50MappedSeries[index]?.value ?? "0",
+          //   p90: p90MappedSeries[index]?.value ?? "0",
+          //   p99: p99MappedSeries[index]?.value ?? "0",
+          // })),
       },
     };
   }
@@ -380,7 +428,7 @@ export class MetricsRepository {
 
     // get time series of last [range] hours
     const getSeries = (start: number, end: number) => {
-      return this.client.queryPromise<{ value: number | null }[]>(
+      return this.client.queryPromise<LatencySeries>(
         `
       WITH
         toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
@@ -652,17 +700,19 @@ export class MetricsRepository {
    * @param previousSeries
    * @returns
    */
-  protected mapSeries(diff: number, series: any[] = [], previousSeries?: any[]) {
+  protected mapSeries(diff: number, series: LatencySeries[] = [], previousSeries?: LatencySeries[]) {
     return series.map((s) => {
       const timestamp = new Date(s.timestamp + 'Z').getTime();
       const prevTimestamp = toISO9075(new Date(timestamp - diff * 60 * 60 * 1000));
+      const prevValue = previousSeries?.find((s) => s.timestamp === prevTimestamp)?.value ?? '0';
 
       return {
         timestamp: String(timestamp),
         value: String(s.value),
-        previousValue: String(
-          Number.parseFloat(previousSeries?.find((s) => s.timestamp === prevTimestamp)?.value || '0'),
-        ),
+        previousValue: String(Number.parseFloat(prevValue)),
+        p50: s.p50 === undefined ? undefined : String(s.p50),
+        p90: s.p90 === undefined ? undefined : String(s.p90),
+        p99: s.p99 === undefined ? undefined : String(s.p99),
       };
     });
   }

@@ -2,6 +2,7 @@ import { AnalyticsSelectedFilters } from "@/components/analytics/filters";
 import {
   ErrorMetricsCard,
   ErrorRateOverTimeCard,
+  LatencyDistributionCard,
   LatencyMetricsCard,
   MetricsFilters,
   RequestMetricsCard,
@@ -203,6 +204,7 @@ const AnalyticsPage: NextPageWithLayout = () => {
       </div>
 
       <ErrorRateOverTimeCard />
+      <LatencyDistributionCard timeRange={range ?? 24} series={data?.latency?.series ?? []} />
     </div>
   );
 };

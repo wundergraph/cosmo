@@ -52,6 +52,8 @@ import {
   ResponsiveContainer,
   XAxis,
   YAxis,
+  Line,
+  LineChart,
 } from "recharts";
 
 export const getInfoTip = (range?: number) => {
@@ -810,6 +812,100 @@ export const ErrorRateOverTimeCard = () => {
       </CardHeader>
 
       <CardContent className="h-[240px]">{content}</CardContent>
+    </Card>
+  );
+};
+
+export const LatencyDistributionCard = ({
+  timeRange,
+  series
+} :
+{
+  timeRange: number;
+  series: any[];
+}) => {
+  const formatter = (value: number) => {
+    return formatDurationMetric(value, {
+      maximumFractionDigits: 3,
+    });
+  };
+
+  const { isMobile } = useWindowSize();
+  const { data, ticks, domain, timeFormatter } = useChartData(timeRange, series);
+
+  const p50StrokeColor = "hsl(var(--chart-primary))";
+  const p90StrokeColor = "hsl(var(--warning))";
+  const p99StrokeColor = "hsl(var(--destructive))";
+
+  return (
+    <Card className="bg-transparent">
+      <CardHeader>
+        <div className="flex space-x-2">
+          <CardTitle>Latency</CardTitle>
+          <InfoTooltip>
+            Latency in {getInfoTip(timeRange)}
+          </InfoTooltip>
+        </div>
+      </CardHeader>
+
+      <CardContent className="h-[240px]">
+        <ResponsiveContainer width="99%" height="100%">
+          <LineChart
+            data={data}
+            margin={{ top: 8, right: 8, bottom: 8, left: 0 }}
+          >
+            <Line
+              name="p50"
+              type="monotone"
+              dataKey="p50"
+              animationDuration={300}
+              dot={false}
+              stroke={p50StrokeColor}
+              strokeWidth={1.5}/>
+            <Line
+              name="p90"
+              type="monotone"
+              dataKey="p90"
+              animationDuration={300}
+              dot={false}
+              stroke={p90StrokeColor}
+              strokeWidth={1.5}/>
+            <Line
+              name="p99"
+              type="monotone"
+              dataKey="p99"
+              animationDuration={300}
+              dot={false}
+              stroke={p99StrokeColor}
+              strokeWidth={1.5}/>
+
+            <XAxis
+              dataKey="timestamp"
+              domain={domain}
+              ticks={ticks}
+              tickFormatter={timeFormatter}
+              type="number"
+              interval="preserveStart"
+              minTickGap={60}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: "13px" }}
+            />
+
+            <YAxis
+              hide={isMobile}
+              tickFormatter={formatter}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: "13px" }}
+            />
+
+            <Legend
+              verticalAlign="top"
+              align="right"
+              wrapperStyle={{ fontSize: "13px", marginTop: "-10px" }}
+            />
+
+            <ChartTooltip formatter={formatter} />
+          </LineChart>
+        </ResponsiveContainer>
+      </CardContent>
     </Card>
   );
 };
