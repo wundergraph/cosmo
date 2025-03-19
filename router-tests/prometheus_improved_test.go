@@ -33,7 +33,7 @@ func TestPrometheusImproved(t *testing.T) {
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
 
-			schemaUsage := findMetricFamilyByName(mf, "router_schema_usage_total")
+			schemaUsage := findMetricFamilyByName(mf, "router_graphql_schema_usage_total")
 			schemaUsageMetrics := schemaUsage.GetMetric()
 
 			require.Len(t, schemaUsageMetrics, 8)
