@@ -1166,4 +1166,63 @@ func TestErrorPropagation(t *testing.T) {
 			require.NoError(t, err)
 		})
 	})
+
+	t.Run("skip prioritizing json as the preferred content type for errors on subscription operations", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			NoRetryClient: true,
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableNetPoll:          true,
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 1,
+				}),
+				core.WithSubgraphRetryOptions(false, 0, 0, 0),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Header: map[string][]string{
+					"service-name": {"service-name"},
+					"accept":       {"multipart/mixed;deferSpec=20220824,application/json,application/graphql-response+json,text/plain"},
+				},
+				Query: `subscription employees { employees { ide } }`, // Missing closing bracket
+			})
+			require.NoError(t, err)
+
+			expected := "--graphql\r\n" +
+				"Content-Type: application/json\r\n" +
+				"\r\n" +
+				"{\"payload\":{\"errors\":[{\"message\":\"field: employees not defined on type: Subscription\",\"path\":[\"subscription\"]}]}}"
+			require.Equal(t, expected, resp.Body)
+		})
+	})
+
+	t.Run("prioritize json as the preferred content type for errors on non subscription operations", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			NoRetryClient: true,
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableNetPoll:          true,
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 1,
+				}),
+				core.WithSubgraphRetryOptions(false, 0, 0, 0),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Header: map[string][]string{
+					"service-name": {"service-name"},
+					"accept":       {"multipart/mixed;deferSpec=20220824,application/json,application/graphql-response+json,text/plain"},
+				},
+				Query: `query employees { employees { ide } }`, // Missing closing bracket
+			})
+			require.NoError(t, err)
+
+			expected := `{"errors":[{"message":"field: ide not defined on type: Employee","path":["query","employees"]}]}`
+			require.Equal(t, expected, resp.Body)
+		})
+	})
 }

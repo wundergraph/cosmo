@@ -189,7 +189,13 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 	if requestErrors == nil {
 		return
 	}
-	wgRequestParams := NegotiateSubscriptionParams(r)
+
+	// According to the tests requestContext can be nil (when called from module WriteResponseError)
+	// As such we have coded this condition defensively to be safe
+	requestContext := getRequestContext(r.Context())
+	isSubscription := requestContext != nil && requestContext.operation != nil && requestContext.operation.opType == "subscription"
+
+	wgRequestParams := NegotiateSubscriptionParams(r, !isSubscription)
 
 	// Is subscription
 	if wgRequestParams.UseSse || wgRequestParams.UseMultipart {
@@ -212,10 +218,8 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 				return
 			}
 		} else if wgRequestParams.UseMultipart {
-			requestContext := getRequestContext(r.Context())
-
 			// Handle multipart error response
-			if err := writeMultipartError(w, requestErrors, requestContext.operation.opType); err != nil {
+			if err := writeMultipartError(w, requestErrors, isSubscription); err != nil {
 				if requestLogger != nil {
 					requestLogger.Error("error writing multipart response", zap.Error(err))
 				}
@@ -245,7 +249,7 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 func writeMultipartError(
 	w http.ResponseWriter,
 	requestErrors graphqlerrors.RequestErrors,
-	operationType OperationType,
+	isSubscription bool,
 ) error {
 	// Start with the multipart boundary
 	prefix := GetWriterPrefix(false, true, true)
@@ -263,7 +267,6 @@ func writeMultipartError(
 		return err
 	}
 
-	isSubscription := operationType == "subscription"
 	resp, err := wrapMultipartMessage(responseBytes, isSubscription)
 	if err != nil {
 		return err

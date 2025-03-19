@@ -117,7 +117,7 @@ func TestNegotiateSubscriptionParams(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, NegotiateSubscriptionParams(tt.args.r), "NegotiateSubscriptionParams(%v)", tt.args.r)
+			assert.Equalf(t, tt.want, NegotiateSubscriptionParams(tt.args.r, false), "NegotiateSubscriptionParams(%v)", tt.args.r)
 		})
 	}
 }
