@@ -27,7 +27,7 @@ const (
 	InFlightRequestsUpDownCounter = "router.http.requests.in_flight"            // Number of requests in flight
 	RequestError                  = "router.http.requests.error"                // Total request error count
 
-	SchemaUsageCounter = "router.graphql.schema_usage" // Total field usage
+	SchemaFieldUsageCounter = "router.graphql.schema_field_usage" // Total field usage
 
 	OperationPlanningTime = "router.graphql.operation.planning_time" // Time taken to plan the operation
 
@@ -76,10 +76,10 @@ var (
 
 	// Schema usage metrics
 
-	SchemaUsageCounterDescription = "Total schema usage count"
-	SchemaUsageCounterOptions     = []otelmetric.Int64CounterOption{
+	SchemaFieldUsageCounterDescription = "Total schema field usage count"
+	SchemaFieldUsageCounterOptions     = []otelmetric.Int64CounterOption{
 		otelmetric.WithUnit("count"),
-		otelmetric.WithDescription(SchemaUsageCounterDescription),
+		otelmetric.WithDescription(SchemaFieldUsageCounterDescription),
 	}
 )
 
@@ -116,7 +116,7 @@ type (
 		MeasureLatency(ctx context.Context, latency float64, opts ...otelmetric.RecordOption)
 		MeasureRequestError(ctx context.Context, opts ...otelmetric.AddOption)
 		MeasureOperationPlanningTime(ctx context.Context, planningTime float64, opts ...otelmetric.RecordOption)
-		MeasureSchemaUsage(ctx context.Context, schemaUsage int64, opts ...otelmetric.AddOption)
+		MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, opts ...otelmetric.AddOption)
 		Flush(ctx context.Context) error
 	}
 
@@ -130,7 +130,7 @@ type (
 		MeasureLatency(ctx context.Context, latency time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		MeasureRequestError(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
 		MeasureOperationPlanningTime(ctx context.Context, planningTime time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
-		MeasureSchemaUsage(ctx context.Context, schemaUsage int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
+		MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
 		Flush(ctx context.Context) error
 		Shutdown(ctx context.Context) error
 	}
@@ -346,17 +346,17 @@ func (h *Metrics) MeasureOperationPlanningTime(ctx context.Context, planningTime
 	h.otlpRequestMetrics.MeasureOperationPlanningTime(ctx, elapsedTime, opts...)
 }
 
-func (h *Metrics) MeasureSchemaUsage(ctx context.Context, schemaUsage int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
+func (h *Metrics) MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
 	opts := []otelmetric.AddOption{h.baseAttributesOpt, opt}
 
 	// Explode for prometheus metrics
 
 	if len(sliceAttr) == 0 {
-		h.promRequestMetrics.MeasureSchemaUsage(ctx, schemaUsage, opts...)
+		h.promRequestMetrics.MeasureSchemaFieldUsage(ctx, schemaUsage, opts...)
 	} else {
 		explodeAddInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.AddOption) {
 			newOpts = append(newOpts, opts...)
-			h.promRequestMetrics.MeasureSchemaUsage(ctx, schemaUsage, newOpts...)
+			h.promRequestMetrics.MeasureSchemaFieldUsage(ctx, schemaUsage, newOpts...)
 		})
 	}
 
@@ -364,7 +364,7 @@ func (h *Metrics) MeasureSchemaUsage(ctx context.Context, schemaUsage int64, sli
 
 	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
 
-	h.otlpRequestMetrics.MeasureSchemaUsage(ctx, schemaUsage, opts...)
+	h.otlpRequestMetrics.MeasureSchemaFieldUsage(ctx, schemaUsage, opts...)
 }
 
 // Flush flushes the metrics to the backend synchronously.

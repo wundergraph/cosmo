@@ -92,7 +92,7 @@ func (h *OtlpMetricStore) MeasureOperationPlanningTime(ctx context.Context, plan
 	}
 }
 
-func (h *OtlpMetricStore) MeasureSchemaUsage(_ context.Context, _ int64, _ ...otelmetric.AddOption) {
+func (h *OtlpMetricStore) MeasureSchemaFieldUsage(_ context.Context, _ int64, _ ...otelmetric.AddOption) {
 	// Do not record schema usage in OpenTelemetry
 }
 
