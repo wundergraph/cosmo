@@ -33,7 +33,7 @@ func TestPrometheusImproved(t *testing.T) {
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
 
-			schemaUsage := findMetricFamilyByName(mf, "router_graphql_schema_usage_total")
+			schemaUsage := findMetricFamilyByName(mf, "router_graphql_schema_field_usage_total")
 			schemaUsageMetrics := schemaUsage.GetMetric()
 
 			require.Len(t, schemaUsageMetrics, 8)
@@ -83,6 +83,7 @@ func assertLabel(t *testing.T, labels []*io_prometheus_client.LabelPair, labelNa
 			break
 		}
 	}
+
 	assert.NotNil(t, labelPair, "label %s not found", labelName)
 	assert.Equal(t, expectedValue, *labelPair.Value, "label %s is not %s", labelName, expectedValue)
 }
