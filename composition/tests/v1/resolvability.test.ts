@@ -955,11 +955,7 @@ describe('Field resolvability tests', () => {
   });
 
   test('that interface objects do not create false positives #1.2', () => {
-    const result = federateSubgraphs(
-      [subgraphAX, subgraphAW],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
+    const result = federateSubgraphsSuccess([subgraphAX, subgraphAW], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
         versionTwoRouterDefinitions +
