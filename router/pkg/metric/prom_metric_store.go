@@ -91,8 +91,8 @@ func (h *PromMetricStore) MeasureOperationPlanningTime(ctx context.Context, plan
 	}
 }
 
-func (h *PromMetricStore) MeasureSchemaUsage(ctx context.Context, schemaUsage int64, opts ...otelmetric.AddOption) {
-	if c, ok := h.measurements.counters[SchemaUsageCounter]; ok {
+func (h *PromMetricStore) MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, opts ...otelmetric.AddOption) {
+	if c, ok := h.measurements.counters[SchemaFieldUsageCounter]; ok {
 		c.Add(ctx, schemaUsage, opts...)
 	}
 }

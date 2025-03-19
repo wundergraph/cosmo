@@ -81,7 +81,7 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 	// Prometheus usage metrics, disabled by default
 	if m.promUsageInfo && reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
 		for _, field := range reqContext.operation.typeFieldUsageInfo {
-			rm.MeasureSchemaUsage(ctx, 1, []attribute.KeyValue{
+			rm.MeasureSchemaFieldUsage(ctx, 1, []attribute.KeyValue{
 				attribute.StringSlice("wg_type_name", field.TypeNames),
 			}, otelmetric.WithAttributeSet(attribute.NewSet(
 				attribute.String("wg_field_name", field.Path[len(field.Path)-1]),
