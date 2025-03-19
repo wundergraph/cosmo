@@ -108,9 +108,8 @@ type (
 	}
 
 	GraphQLMetricsConfig struct {
-		Enabled                 bool
-		PrometheusExportEnabled bool
-		CollectorEndpoint       string
+		Enabled           bool
+		CollectorEndpoint string
 	}
 
 	BatchingConfig struct {
@@ -1857,9 +1856,8 @@ func DefaultSubgraphTransportOptions() *SubgraphTransportOptions {
 
 func DefaultGraphQLMetricsConfig() *GraphQLMetricsConfig {
 	return &GraphQLMetricsConfig{
-		Enabled:                 false,
-		PrometheusExportEnabled: false,
-		CollectorEndpoint:       "",
+		Enabled:           false,
+		CollectorEndpoint: "",
 	}
 }
 

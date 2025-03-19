@@ -22,7 +22,7 @@ func TestPrometheusImproved(t *testing.T) {
 			MetricReader:       metricReader,
 			PrometheusRegistry: promRegistry,
 			MetricOptions: testenv.MetricOptions{
-				EnablePrometheusSchemaUsage: true,
+				PromIncludeSchemaUsage: true,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
