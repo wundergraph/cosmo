@@ -235,8 +235,8 @@ export class FederationFactory {
   entityDataByTypeName: Map<string, EntityData>;
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
   errors: Error[] = [];
-  fieldConfigurationByFieldPath = new Map<string, FieldConfiguration>();
-  inaccessiblePaths = new Set<string>();
+  fieldConfigurationByFieldCoords = new Map<string, FieldConfiguration>();
+  inaccessibleCoords = new Set<string>();
   inaccessibleRequiredInputValueErrorByCoords = new Map<string, Error>();
   isMaxDepth = false;
   internalGraph: Graph;
@@ -258,9 +258,8 @@ export class FederationFactory {
   persistedDirectiveDefinitions = new Set<string>([AUTHENTICATED, DEPRECATED, INACCESSIBLE, TAG, REQUIRES_SCOPES]);
   potentialPersistedDirectiveDefinitionDataByDirectiveName = new Map<string, PersistedDirectiveDefinitionData>();
   routerDefinitions: MutableTypeDefinitionNode[] = [DEPRECATED_DEFINITION, TAG_DEFINITION];
-  shareableErrorTypeNames = new Map<string, Set<string>>();
   subscriptionFilterDataByFieldPath = new Map<string, SubscriptionFilterData>();
-  tagNamesByPath = new Map<string, Set<string>>();
+  tagNamesByCoords = new Map<string, Set<string>>();
   warnings: Warning[];
 
   constructor(params: FederationFactoryParams) {
@@ -521,7 +520,7 @@ export class FederationFactory {
   }
 
   generateTagData() {
-    for (const [path, tagNames] of this.tagNamesByPath) {
+    for (const [path, tagNames] of this.tagNamesByCoords) {
       const paths = path.split('.');
       if (paths.length < 1) {
         continue;
@@ -577,7 +576,7 @@ export class FederationFactory {
     );
     const isValueInaccessible = isNodeDataInaccessible(incomingData);
     if (isParentInaccessible || isValueInaccessible) {
-      this.inaccessiblePaths.add(targetData.federatedCoords);
+      this.inaccessibleCoords.add(targetData.federatedCoords);
     }
     this.recordTagNamesByCoords(targetData, targetData.federatedCoords);
     if (!existingData) {
@@ -653,7 +652,7 @@ export class FederationFactory {
      */
     if (isParentInaccessible) {
       this.inaccessibleRequiredInputValueErrorByCoords.delete(inputValueData.federatedCoords);
-      this.inaccessiblePaths.add(inputValueData.federatedCoords);
+      this.inaccessibleCoords.add(inputValueData.federatedCoords);
       return;
     }
     if (!isNodeDataInaccessible(inputValueData)) {
@@ -666,7 +665,7 @@ export class FederationFactory {
       );
       return;
     }
-    this.inaccessiblePaths.add(inputValueData.federatedCoords);
+    this.inaccessibleCoords.add(inputValueData.federatedCoords);
   }
 
   handleSubscriptionFilterDirective(incomingData: FieldData, targetData?: FieldData) {
@@ -790,7 +789,7 @@ export class FederationFactory {
     );
     const isFieldInaccessible = isParentInaccessible || isNodeDataInaccessible(targetData);
     if (isFieldInaccessible) {
-      this.inaccessiblePaths.add(targetData.federatedCoords);
+      this.inaccessibleCoords.add(targetData.federatedCoords);
     }
     this.recordTagNamesByCoords(targetData, targetData.federatedCoords);
     if (!existingData) {
@@ -863,7 +862,7 @@ export class FederationFactory {
   getClientSchemaUnionMembers(unionData: UnionDefinitionData): NamedTypeNode[] {
     const members: NamedTypeNode[] = [];
     for (const [memberName, namedTypeNode] of unionData.memberByMemberTypeName) {
-      if (!this.inaccessiblePaths.has(memberName)) {
+      if (!this.inaccessibleCoords.has(memberName)) {
         members.push(namedTypeNode);
       }
     }
@@ -875,7 +874,7 @@ export class FederationFactory {
     if (data.persistedDirectivesData.tagDirectiveByName.size < 1) {
       return;
     }
-    const tagNames = getValueOrDefault(this.tagNamesByPath, path, () => new Set<string>());
+    const tagNames = getValueOrDefault(this.tagNamesByCoords, path, () => new Set<string>());
     for (const tagName of data.persistedDirectivesData.tagDirectiveByName.keys()) {
       tagNames.add(tagName);
     }
@@ -1014,7 +1013,7 @@ export class FederationFactory {
       const targetData = this.copyEnumValueData(sourceData);
       this.recordTagNamesByCoords(targetData, targetData.federatedCoords);
       if (isParentInaccessible || isNodeDataInaccessible(targetData)) {
-        this.inaccessiblePaths.add(targetData.federatedCoords);
+        this.inaccessibleCoords.add(targetData.federatedCoords);
       }
       output.set(childName, targetData);
     }
@@ -1033,7 +1032,7 @@ export class FederationFactory {
       this.namedOutputTypeNames.add(targetData.namedTypeName);
       this.recordTagNamesByCoords(targetData, targetData.federatedCoords);
       if (isFieldInaccessible) {
-        this.inaccessiblePaths.add(targetData.federatedCoords);
+        this.inaccessibleCoords.add(targetData.federatedCoords);
       }
       fieldDataByFieldName.set(fieldName, targetData);
     }
@@ -1168,7 +1167,7 @@ export class FederationFactory {
     this.recordTagNamesByCoords(targetData);
     const isParentInaccessible = isNodeDataInaccessible(targetData);
     if (isParentInaccessible) {
-      this.inaccessiblePaths.add(targetData.name);
+      this.inaccessibleCoords.add(targetData.name);
     }
     if (entityInterfaceData && entityInterfaceData.interfaceObjectSubgraphs.has(subgraphName)) {
       targetData.kind = Kind.INTERFACE_TYPE_DEFINITION;
@@ -1274,15 +1273,15 @@ export class FederationFactory {
   ) {
     switch (data.kind) {
       case Kind.INPUT_OBJECT_TYPE_DEFINITION:
-        for (const inputFieldName of data.inputValueDataByValueName.keys()) {
-          this.inaccessiblePaths.add(`${data.name}.${inputFieldName}`);
+        for (const inputFieldData of data.inputValueDataByValueName.values()) {
+          this.inaccessibleCoords.add(inputFieldData.federatedCoords);
         }
         break;
       default:
         for (const fieldData of data.fieldDataByFieldName.values()) {
-          this.inaccessiblePaths.add(fieldData.federatedCoords);
+          this.inaccessibleCoords.add(fieldData.federatedCoords);
           for (const inputValueData of fieldData.argumentDataByArgumentName.values()) {
-            this.inaccessiblePaths.add(inputValueData.federatedCoords);
+            this.inaccessibleCoords.add(inputValueData.federatedCoords);
           }
         }
     }
@@ -1771,7 +1770,7 @@ export class FederationFactory {
       this.errors.push(invalidRequiredInputValueError(FIELD, fieldPath, invalidRequiredArguments));
     } else if (argumentNames.length > 0) {
       // fieldConfiguration might already exist through subscriptionFilter
-      getValueOrDefault(this.fieldConfigurationByFieldPath, fieldPath, () => ({
+      getValueOrDefault(this.fieldConfigurationByFieldCoords, fieldPath, () => ({
         argumentNames,
         fieldName: fieldData.name,
         typeName: fieldData.renamedParentTypeName,
@@ -2044,7 +2043,7 @@ export class FederationFactory {
       }
       const clientInterfaces: NamedTypeNode[] = [];
       for (const interfaceTypeName of data.implementedInterfaceTypeNames) {
-        if (!this.inaccessiblePaths.has(interfaceTypeName)) {
+        if (!this.inaccessibleCoords.has(interfaceTypeName)) {
           clientInterfaces.push(stringToNamedTypeNode(interfaceTypeName));
         }
       }
@@ -2089,7 +2088,7 @@ export class FederationFactory {
     const segments = coordinates.split(PERIOD);
     let segment = segments[0];
     for (let i = 0; i < segments.length; i++) {
-      if (this.inaccessiblePaths.has(segment)) {
+      if (this.inaccessibleCoords.has(segment)) {
         return true;
       }
       segment += `.${segments[i + 1]}`;
@@ -2098,21 +2097,21 @@ export class FederationFactory {
   }
 
   validateReferencesOfInaccessibleType(data: ParentDefinitionData) {
-    const paths = this.coordsByNamedTypeName.get(data.name);
-    if (!paths || paths.size < 1) {
+    const allCoords = this.coordsByNamedTypeName.get(data.name);
+    if (!allCoords || allCoords.size < 1) {
       return;
     }
-    const invalidPaths: string[] = [];
-    for (const path of paths) {
-      if (this.inaccessiblePaths.has(path)) {
+    const invalidCoords: Array<string> = [];
+    for (const coords of allCoords) {
+      if (this.inaccessibleCoords.has(coords)) {
         continue;
       }
-      if (!this.validatePathSegmentInaccessibility(path)) {
-        invalidPaths.push(path);
+      if (!this.validatePathSegmentInaccessibility(coords)) {
+        invalidCoords.push(coords);
       }
     }
-    if (invalidPaths.length > 0) {
-      this.errors.push(invalidReferencesOfInaccessibleTypeError(kindToTypeString(data.kind), data.name, invalidPaths));
+    if (invalidCoords.length > 0) {
+      this.errors.push(invalidReferencesOfInaccessibleTypeError(kindToTypeString(data.kind), data.name, invalidCoords));
     }
   }
 
@@ -2145,7 +2144,7 @@ export class FederationFactory {
       return [];
     }
     let lastData: ParentDefinitionData = objectData;
-    if (this.inaccessiblePaths.has(lastData.renamedTypeName)) {
+    if (this.inaccessibleCoords.has(lastData.renamedTypeName)) {
       fieldErrorMessages.push(
         inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage(
           inputFieldPath,
@@ -2196,7 +2195,7 @@ export class FederationFactory {
         );
         return [];
       }
-      if (this.inaccessiblePaths.has(fieldPath)) {
+      if (this.inaccessibleCoords.has(fieldPath)) {
         fieldErrorMessages.push(
           inaccessibleSubscriptionFieldConditionFieldPathFieldErrorMessage(
             inputFieldPath,
@@ -2522,7 +2521,7 @@ export class FederationFactory {
       this.isMaxDepth = false;
       return;
     }
-    getValueOrDefault(this.fieldConfigurationByFieldPath, fieldPath, () => ({
+    getValueOrDefault(this.fieldConfigurationByFieldCoords, fieldPath, () => ({
       argumentNames: [],
       fieldName,
       typeName: parentTypeName,
@@ -2531,7 +2530,7 @@ export class FederationFactory {
 
   validateSubscriptionFiltersAndGenerateConfiguration() {
     for (const [fieldPath, data] of this.subscriptionFilterDataByFieldPath) {
-      if (this.inaccessiblePaths.has(fieldPath)) {
+      if (this.inaccessibleCoords.has(fieldPath)) {
         continue;
       }
 
@@ -2626,14 +2625,15 @@ export class FederationFactory {
     for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(subgraph.name, {
         configurationDataByTypeName: subgraph.configurationDataByTypeName,
+        parentDefinitionDataByTypeName: subgraph.parentDefinitionDataByTypeName,
         schema: subgraph.schema,
       });
     }
     for (const authorizationData of this.authorizationDataByParentTypeName.values()) {
-      upsertAuthorizationConfiguration(this.fieldConfigurationByFieldPath, authorizationData);
+      upsertAuthorizationConfiguration(this.fieldConfigurationByFieldCoords, authorizationData);
     }
     return {
-      fieldConfigurations: Array.from(this.fieldConfigurationByFieldPath.values()),
+      fieldConfigurations: Array.from(this.fieldConfigurationByFieldCoords.values()),
       subgraphConfigBySubgraphName,
       federatedGraphAST: newRouterAST,
       federatedGraphSchema: buildASTSchema(newRouterAST, { assumeValid: true, assumeValidSDL: true }),
@@ -2647,7 +2647,7 @@ export class FederationFactory {
 
   getClientSchemaObjectBoolean() {
     // If the schema does not implement @tag nor @inaccessible, an empty object will be spread
-    if (this.inaccessiblePaths.size < 1 && this.tagNamesByPath.size < 1) {
+    if (this.inaccessibleCoords.size < 1 && this.tagNamesByCoords.size < 1) {
       return {};
     }
     // otherwise, the object is spread in as true
@@ -2671,7 +2671,7 @@ export class FederationFactory {
         getValueOrDefault(childData.persistedDirectivesData.directivesByDirectiveName, INACCESSIBLE, () => [
           generateSimpleDirective(INACCESSIBLE),
         ]);
-        this.inaccessiblePaths.add(`${parentDefinitionData.name}.${childName}`);
+        this.inaccessibleCoords.add(`${parentDefinitionData.name}.${childName}`);
         accessibleChildren -= 1;
       }
     }
@@ -2679,7 +2679,7 @@ export class FederationFactory {
       parentDefinitionData.persistedDirectivesData.directivesByDirectiveName.set(INACCESSIBLE, [
         generateSimpleDirective(INACCESSIBLE),
       ]);
-      this.inaccessiblePaths.add(parentDefinitionData.name);
+      this.inaccessibleCoords.add(parentDefinitionData.name);
     }
   }
 
@@ -2700,7 +2700,7 @@ export class FederationFactory {
         getValueOrDefault(childData.persistedDirectivesData.directivesByDirectiveName, INACCESSIBLE, () => [
           generateSimpleDirective(INACCESSIBLE),
         ]);
-        this.inaccessiblePaths.add(`${parentDefinitionData.name}.${childName}`);
+        this.inaccessibleCoords.add(`${parentDefinitionData.name}.${childName}`);
         accessibleChildren -= 1;
       }
     }
@@ -2708,7 +2708,7 @@ export class FederationFactory {
       parentDefinitionData.persistedDirectivesData.directivesByDirectiveName.set(INACCESSIBLE, [
         generateSimpleDirective(INACCESSIBLE),
       ]);
-      this.inaccessiblePaths.add(parentDefinitionData.name);
+      this.inaccessibleCoords.add(parentDefinitionData.name);
     }
   }
 
@@ -2732,7 +2732,7 @@ export class FederationFactory {
           parentDefinitionData.persistedDirectivesData.directivesByDirectiveName.set(INACCESSIBLE, [
             generateSimpleDirective(INACCESSIBLE),
           ]);
-          this.inaccessiblePaths.add(parentTypeName);
+          this.inaccessibleCoords.add(parentTypeName);
           // If the parent is inaccessible, there is no need to assess further
           continue;
         }
@@ -2776,7 +2776,7 @@ export class FederationFactory {
                 getValueOrDefault(fieldData.persistedDirectivesData.directivesByDirectiveName, INACCESSIBLE, () => [
                   generateSimpleDirective(INACCESSIBLE),
                 ]);
-                this.inaccessiblePaths.add(`${parentTypeName}.${fieldName}`);
+                this.inaccessibleCoords.add(fieldData.federatedCoords);
                 accessibleFields -= 1;
                 continue;
               }
@@ -2795,7 +2795,7 @@ export class FederationFactory {
                     INACCESSIBLE,
                     () => [generateSimpleDirective(INACCESSIBLE)],
                   );
-                  this.inaccessiblePaths.add(inputValueData.federatedCoords);
+                  this.inaccessibleCoords.add(inputValueData.federatedCoords);
                 }
               }
             }
@@ -2803,7 +2803,7 @@ export class FederationFactory {
               parentDefinitionData.persistedDirectivesData.directivesByDirectiveName.set(INACCESSIBLE, [
                 generateSimpleDirective(INACCESSIBLE),
               ]);
-              this.inaccessiblePaths.add(parentTypeName);
+              this.inaccessibleCoords.add(parentTypeName);
             }
         }
       }
@@ -2817,7 +2817,7 @@ export class FederationFactory {
           parentDefinitionData.persistedDirectivesData.directivesByDirectiveName.set(INACCESSIBLE, [
             generateSimpleDirective(INACCESSIBLE),
           ]);
-          this.inaccessiblePaths.add(parentTypeName);
+          this.inaccessibleCoords.add(parentTypeName);
           // If the parent is inaccessible, there is no need to assess further
           continue;
         }
@@ -2828,7 +2828,7 @@ export class FederationFactory {
           parentDefinitionData.persistedDirectivesData.directivesByDirectiveName.set(INACCESSIBLE, [
             generateSimpleDirective(INACCESSIBLE),
           ]);
-          this.inaccessiblePaths.add(parentTypeName);
+          this.inaccessibleCoords.add(parentTypeName);
           // If the parent is inaccessible, there is no need to assess further
           continue;
         }
@@ -2865,7 +2865,7 @@ export class FederationFactory {
                 getValueOrDefault(fieldData.persistedDirectivesData.directivesByDirectiveName, INACCESSIBLE, () => [
                   generateSimpleDirective(INACCESSIBLE),
                 ]);
-                this.inaccessiblePaths.add(`${parentTypeName}.${fieldName}`);
+                this.inaccessibleCoords.add(fieldData.federatedCoords);
                 accessibleFields -= 1;
               }
             }
@@ -2873,7 +2873,7 @@ export class FederationFactory {
               parentDefinitionData.persistedDirectivesData.directivesByDirectiveName.set(INACCESSIBLE, [
                 generateSimpleDirective(INACCESSIBLE),
               ]);
-              this.inaccessiblePaths.add(parentTypeName);
+              this.inaccessibleCoords.add(parentTypeName);
             }
         }
       }
@@ -2911,14 +2911,15 @@ export class FederationFactory {
     for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(subgraph.name, {
         configurationDataByTypeName: subgraph.configurationDataByTypeName,
+        parentDefinitionDataByTypeName: subgraph.parentDefinitionDataByTypeName,
         schema: subgraph.schema,
       });
     }
     for (const authorizationData of this.authorizationDataByParentTypeName.values()) {
-      upsertAuthorizationConfiguration(this.fieldConfigurationByFieldPath, authorizationData);
+      upsertAuthorizationConfiguration(this.fieldConfigurationByFieldCoords, authorizationData);
     }
     return {
-      fieldConfigurations: Array.from(this.fieldConfigurationByFieldPath.values()),
+      fieldConfigurations: Array.from(this.fieldConfigurationByFieldCoords.values()),
       subgraphConfigBySubgraphName,
       federatedGraphAST: newRouterAST,
       federatedGraphSchema: buildASTSchema(newRouterAST, { assumeValid: true, assumeValidSDL: true }),
