@@ -8,8 +8,6 @@ export default (opts: CommonGraphCommandOptions) => {
 
   const command = new Command('version');
   command.description(`Provides commands related to the router compatibility version of a ${graphType}.`);
-  command.argument('<name>', `The name of the ${graphType} to fetch.`);
-  command.option('-n, --namespace [string]', `The namespace of the ${graphType}.`);
   command.addCommand(GetRouterCompatibilityVersion(opts));
   command.addCommand(SetRouterCompatibilityVersion(opts));
 
