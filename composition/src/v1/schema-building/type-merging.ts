@@ -25,7 +25,7 @@ export type FederateTypeResult = FederateTypeSuccess | FederateTypeFailure;
 export type FederateTypeOptions = {
   current: TypeNode;
   other: TypeNode;
-  hostPath: string;
+  coords: string;
   mostRestrictive: boolean;
 };
 

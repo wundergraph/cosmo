@@ -221,6 +221,94 @@ describe('Entity Interface Tests', () => {
     );
   });
 
+  test('that @interfaceObject works correctly with implicit key checks #.1.1', () => {
+    const result = federateSubgraphsSuccess([subgraphI, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(result.success).toBe(true);
+    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionTwoRouterDefinitions +
+          `
+      interface Interface {
+        id: ID!
+        name: String!
+      }
+      
+      type Object {
+        interface: Interface!
+      }
+      
+      type One implements Interface {
+        id: ID!
+        name: String!
+        one: Int!
+      }
+      
+      type Query {
+        objects: [Object!]!
+      }
+      
+      type Three implements Interface {
+          id: ID!
+          name: String!
+          three: Int!
+      }
+      
+      type Two implements Interface {
+        id: ID!
+        name: String!
+        two: Int!
+      }
+
+      scalar openfed__Scope
+    `,
+      ),
+    );
+  });
+
+  test('that  @interfaceObject works correctly with implicit key checks #1.2', () => {
+    const result = federateSubgraphsSuccess([subgraphJ, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(result.success).toBe(true);
+    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      normalizeString(
+        versionTwoRouterDefinitions +
+          `
+      interface Interface {
+        id: ID!
+        name: String!
+      }
+      
+      type Object {
+        interface: Interface!
+      }
+      
+      type One implements Interface {
+        id: ID!
+        name: String!
+        one: Int!
+      }
+      
+      type Query {
+        objects: [Object!]!
+      }
+      
+      type Three implements Interface {
+          id: ID!
+          name: String!
+          three: Int!
+      }
+      
+      type Two implements Interface {
+        id: ID!
+        name: String!
+        two: Int!
+      }
+
+      scalar openfed__Scope
+    `,
+      ),
+    );
+  });
+
   test.skip('that an error is returned if a type declared with @interfaceObject is not an interface in other subgraphs', () => {});
 
   test.skip('that an error is returned if a type declared with @interfaceObject is not an entity', () => {});
@@ -375,6 +463,53 @@ const subgraphH: Subgraph = {
     type EntityTwo implements Interface @key(fields: "id") {
       id: ID!
       name: String!
+    }
+  `),
+};
+
+const subgraphI: Subgraph = {
+  name: 'subgraph-i',
+  url: '',
+  definitions: parse(`
+    interface Interface @key(fields: "id") @key(fields: "name") {
+      id: ID!
+      name: String!
+    }
+    
+    type One implements Interface @key(fields: "id") @key(fields: "name") {
+      id: ID!
+      name: String!
+      one: Int!
+    }
+    
+    type Two implements Interface @key(fields: "id") @key(fields: "name") {
+      id: ID!
+      name: String!
+      two: Int!
+    }
+    
+    type Three implements Interface @key(fields: "id") @key(fields: "name") {
+        id: ID!
+        name: String!
+        three: Int!
+    }
+  `),
+};
+
+const subgraphJ: Subgraph = {
+  name: 'subgraph-j',
+  url: '',
+  definitions: parse(`
+    type Interface @key(fields: "id", resolvable: false) @interfaceObject {
+      id: ID!
+    }
+    
+    type Object {
+      interface: Interface!
+    }
+    
+    type Query {
+      objects: [Object!]!
     }
   `),
 };

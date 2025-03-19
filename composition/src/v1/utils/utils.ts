@@ -409,15 +409,3 @@ export function isNodeKindInterface(kind: Kind) {
 export function isNodeKindObject(kind: Kind) {
   return kind === Kind.OBJECT_TYPE_DEFINITION || kind === Kind.OBJECT_TYPE_EXTENSION;
 }
-
-export function addMapEntries<K, V>(source: Map<K, V>, target: Map<K, V>) {
-  for (const [key, value] of source) {
-    target.set(key, value);
-  }
-}
-
-export function getSingleSetEntry<T>(set: Set<T>): T | undefined {
-  for (const entry of set) {
-    return entry;
-  }
-}

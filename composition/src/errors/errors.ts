@@ -1,5 +1,5 @@
 import { Kind, OperationTypeNode } from 'graphql';
-import { EntityInterfaceFederationData, ObjectDefinitionData } from '../schema-building/types';
+import { EntityInterfaceFederationData, InputValueData, ObjectDefinitionData } from '../schema-building/types';
 import { InvalidRootTypeFieldEventsDirectiveData } from './utils';
 import { UnresolvableFieldData } from '../resolvability-graph/utils';
 import {
@@ -1179,14 +1179,11 @@ export function invalidReferencesOfInaccessibleTypeError(
   );
 }
 
-export function inaccessibleRequiredArgumentError(
-  argumentName: string,
-  argumentPath: string,
-  fieldName: string,
-): Error {
+export function inaccessibleRequiredInputValueError(data: InputValueData, parentCoords: string): Error {
   return new Error(
-    `The argument "${argumentName}" on path "${argumentPath}" is declared "@inaccessible";` +
-      ` however, it is a required argument for field "${fieldName}".`,
+    `The ${data.kind === Kind.ARGUMENT ? 'argument' : 'Input field'} "${data.name}" defined at coordinates` +
+      ` "${data.federatedCoords}" is declared "@inaccessible";  however, it is a required` +
+      ` ${data.kind === Kind.ARGUMENT ? 'argument of field' : 'field of Input Object'} "${parentCoords}".`,
   );
 }
 
