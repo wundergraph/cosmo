@@ -732,21 +732,21 @@ export function newConditionalFieldData(): ConditionalFieldData {
   };
 }
 
-export function getDefinitionDataCoords(data: NodeData, useRenamedPath: boolean): string {
+export function getDefinitionDataCoords(data: NodeData, useFederatedCoords: boolean): string {
   switch (data.kind) {
     case Kind.ENUM_VALUE_DEFINITION: {
       return `${data.parentTypeName}.${data.name}`;
     }
     case Kind.FIELD_DEFINITION: {
-      return `${useRenamedPath ? data.renamedParentTypeName : data.originalParentTypeName}.${data.name}`;
+      return `${useFederatedCoords ? data.renamedParentTypeName : data.originalParentTypeName}.${data.name}`;
     }
     case Kind.ARGUMENT:
     // intentional fallthrough
     case Kind.INPUT_VALUE_DEFINITION: {
-      return useRenamedPath ? data.federatedCoords : data.originalCoords;
+      return useFederatedCoords ? data.federatedCoords : data.originalCoords;
     }
     case Kind.OBJECT_TYPE_DEFINITION: {
-      return useRenamedPath ? data.renamedTypeName : data.name;
+      return useFederatedCoords ? data.renamedTypeName : data.name;
     }
     default:
       return data.name;
@@ -767,16 +767,14 @@ export function newExternalFieldData(isDefinedExternal: boolean): ExternalFieldD
 }
 
 export function getInitialFederatedDescription(data: NodeData): StringValueNode | undefined {
-  if (data.configureDescriptionDataBySubgraphName.size < 1) {
+  const { value, done } = data.configureDescriptionDataBySubgraphName.values().next();
+  if (done) {
     return data.description;
   }
-  // Does not loop because the intention is check whether to propagate the first node data description
-  for (const { propagate, description } of data.configureDescriptionDataBySubgraphName.values()) {
-    if (!propagate) {
-      return;
-    }
-    return getDescriptionFromString(description) || data.description;
+  if (!value.propagate) {
+    return;
   }
+  return getDescriptionFromString(value.description) || data.description;
 }
 
 export function areKindsEqual<T extends ParentDefinitionData>(a: T, b: ParentDefinitionData): b is T {

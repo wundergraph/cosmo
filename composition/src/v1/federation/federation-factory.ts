@@ -1709,17 +1709,6 @@ export class FederationFactory {
     return persistedDirectiveNodes;
   }
 
-  getInitialNodeDescription(data: NodeData): StringValueNode | undefined {
-    const { value, done } = data.configureDescriptionDataBySubgraphName.values().next();
-    if (done) {
-      return data.description;
-    }
-    if (!value.propagate) {
-      return;
-    }
-    return getDescriptionFromString(value.description) || data.description;
-  }
-
   getFederatedGraphNodeDescription(data: NodeData): StringValueNode | undefined {
     if (data.configureDescriptionDataBySubgraphName.size < 1) {
       return data.description;

@@ -2504,14 +2504,14 @@ export class NormalizationFactory {
       return;
     }
     const parentTypeName = this.renamedParentTypeName || this.originalParentTypeName;
-    const fieldPath = `${parentTypeName}.${node.name.value}`;
+    const fieldCoords = `${parentTypeName}.${node.name.value}`;
     const isSubscription = this.getOperationTypeNodeForRootTypeName(parentTypeName) === OperationTypeNode.SUBSCRIPTION;
     for (const directiveNode of node.directives) {
       if (directiveNode.name.value !== SUBSCRIPTION_FILTER) {
         continue;
       }
       if (!isSubscription) {
-        this.errors.push(invalidSubscriptionFilterLocationError(fieldPath));
+        this.errors.push(invalidSubscriptionFilterLocationError(fieldCoords));
         return;
       }
     }
@@ -2526,7 +2526,7 @@ export class NormalizationFactory {
       return;
     }
     const fieldName = node.name.value;
-    const fieldPath = `${this.renamedParentTypeName || this.originalParentTypeName}.${fieldName}`;
+    const fieldCoords = `${this.renamedParentTypeName || this.originalParentTypeName}.${fieldName}`;
     for (const directive of node.directives) {
       const errorMessages: string[] = [];
       let eventConfiguration: EventConfiguration | undefined;
@@ -2581,7 +2581,7 @@ export class NormalizationFactory {
       }
 
       if (errorMessages.length > 0) {
-        this.errors.push(invalidEventDirectiveError(directive.name.value, fieldPath, errorMessages));
+        this.errors.push(invalidEventDirectiveError(directive.name.value, fieldCoords, errorMessages));
         continue;
       }
 
@@ -2640,7 +2640,7 @@ export class NormalizationFactory {
     }
     const validEventDirectiveNames = this.getValidEventsDirectiveNamesForOperationTypeNode(operationTypeNode);
     for (const [fieldName, fieldData] of data.fieldDataByFieldName) {
-      const fieldPath = `${fieldData.originalParentTypeName}.${fieldName}`;
+      const fieldCoords = `${fieldData.originalParentTypeName}.${fieldName}`;
       const definedEventsDirectiveNames = new Set<string>();
       for (const eventsDirectiveName of EVENT_DIRECTIVE_NAMES) {
         if (fieldData.directivesByDirectiveName.has(eventsDirectiveName)) {
@@ -2654,7 +2654,7 @@ export class NormalizationFactory {
         }
       }
       if (definedEventsDirectiveNames.size < 1 || invalidEventsDirectiveNames.size > 0) {
-        invalidEventsDirectiveDataByRootFieldPath.set(fieldPath, {
+        invalidEventsDirectiveDataByRootFieldPath.set(fieldCoords, {
           definesDirectives: definedEventsDirectiveNames.size > 0,
           invalidDirectiveNames: [...invalidEventsDirectiveNames],
         });
@@ -2662,7 +2662,7 @@ export class NormalizationFactory {
       if (operationTypeNode === OperationTypeNode.MUTATION) {
         const typeString = printTypeNode(fieldData.type);
         if (typeString !== NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT) {
-          invalidResponseTypeNameByMutationPath.set(fieldPath, typeString);
+          invalidResponseTypeNameByMutationPath.set(fieldCoords, typeString);
         }
         continue;
       }
@@ -2679,7 +2679,7 @@ export class NormalizationFactory {
         }
       }
       if (!isValid || fieldTypeString !== expectedTypeString) {
-        invalidResponseTypeStringByRootFieldPath.set(fieldPath, fieldTypeString);
+        invalidResponseTypeStringByRootFieldPath.set(fieldCoords, fieldTypeString);
       }
     }
   }
@@ -2704,14 +2704,14 @@ export class NormalizationFactory {
     nonKeyFieldNameByFieldPath: Map<string, string>,
   ) {
     for (const [fieldName, fieldData] of fieldDataByFieldName) {
-      const fieldPath = `${fieldData.originalParentTypeName}.${fieldName}`;
+      const fieldCoords = `${fieldData.originalParentTypeName}.${fieldName}`;
       if (keyFieldNames.has(fieldName)) {
         if (!fieldData.externalFieldDataBySubgraphName.get(this.subgraphName)?.isDefinedExternal) {
-          nonExternalKeyFieldNameByFieldPath.set(fieldPath, fieldName);
+          nonExternalKeyFieldNameByFieldPath.set(fieldCoords, fieldName);
         }
         continue;
       }
-      nonKeyFieldNameByFieldPath.set(fieldPath, fieldName);
+      nonKeyFieldNameByFieldPath.set(fieldCoords, fieldName);
     }
   }
 
@@ -3690,14 +3690,14 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationResult 
           addIterableValuesToSet(fieldNames, existingFieldNames);
         }
         for (const fieldName of fieldNames) {
-          const fieldPath = `${originalParentTypeName}.${fieldName}`;
-          const sourceSubgraphs = overrideSourceSubgraphNamesByFieldPath.get(fieldPath);
+          const fieldCoords = `${originalParentTypeName}.${fieldName}`;
+          const sourceSubgraphs = overrideSourceSubgraphNamesByFieldPath.get(fieldCoords);
           if (!sourceSubgraphs) {
-            overrideSourceSubgraphNamesByFieldPath.set(fieldPath, [subgraphName]);
+            overrideSourceSubgraphNamesByFieldPath.set(fieldCoords, [subgraphName]);
             continue;
           }
           sourceSubgraphs.push(subgraphName);
-          duplicateOverriddenFieldPaths.add(fieldPath);
+          duplicateOverriddenFieldPaths.add(fieldCoords);
         }
       }
     }
