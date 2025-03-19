@@ -27,7 +27,7 @@ const (
 	InFlightRequestsUpDownCounter = "router.http.requests.in_flight"            // Number of requests in flight
 	RequestError                  = "router.http.requests.error"                // Total request error count
 
-	SchemaUsageCounter = "router.schema.usage" // Total schema usage count
+	SchemaUsageCounter = "router.graphql.schema_usage" // Total field usage
 
 	OperationPlanningTime = "router.graphql.operation.planning_time" // Time taken to plan the operation
 

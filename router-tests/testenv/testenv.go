@@ -253,7 +253,7 @@ type MetricOptions struct {
 	EnablePrometheusRouterCache  bool
 	OTLPEngineStatsOptions       EngineStatOptions
 	PrometheusEngineStatsOptions EngineStatOptions
-	EnablePrometheusSchemaUsage  bool
+	PromIncludeSchemaUsage       bool
 }
 
 type Config struct {
@@ -914,7 +914,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetrics,
 			ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetricLabels,
 			ExcludeScopeInfo:    testConfig.MetricOptions.MetricExclusions.ExcludeScopeInfo,
-			IncludeSchemaUsage:  testConfig.MetricOptions.EnablePrometheusSchemaUsage,
+			IncludeSchemaUsage:  testConfig.MetricOptions.PromIncludeSchemaUsage,
 		}
 	}
 
