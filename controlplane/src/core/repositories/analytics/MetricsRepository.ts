@@ -317,13 +317,7 @@ export class MetricsRepository {
     const series = querySeries('0.95', dateRange.start, dateRange.end);
     const prevSeries = querySeries('0.95', prevDateRange.start, prevDateRange.end);
 
-    const [
-      p95Response,
-      prevP95Response,
-      top5Response,
-      seriesResponse,
-      prevSeriesResponse,
-    ] = await Promise.all([
+    const [p95Response, prevP95Response, top5Response, seriesResponse, prevSeriesResponse] = await Promise.all([
       p95,
       prevP95,
       top5,
@@ -341,13 +335,13 @@ export class MetricsRepository {
           value: parseValue(v.value),
           isPersisted: v.isPersisted,
         })),
-        series: this.mapSeries(rangeInHours, seriesResponse, prevSeriesResponse)
-          // .map((series, index) => ({
-          //   ...series,
-          //   p50: p50MappedSeries[index]?.value ?? "0",
-          //   p90: p90MappedSeries[index]?.value ?? "0",
-          //   p99: p99MappedSeries[index]?.value ?? "0",
-          // })),
+        series: this.mapSeries(rangeInHours, seriesResponse, prevSeriesResponse),
+        // .map((series, index) => ({
+        //   ...series,
+        //   p50: p50MappedSeries[index]?.value ?? "0",
+        //   p90: p90MappedSeries[index]?.value ?? "0",
+        //   p99: p99MappedSeries[index]?.value ?? "0",
+        // })),
       },
     };
   }
