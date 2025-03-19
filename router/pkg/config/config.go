@@ -684,8 +684,9 @@ type FallbackExecutionConfigStorage struct {
 }
 
 type ExecutionConfigFile struct {
-	Path  string `yaml:"path,omitempty" env:"EXECUTION_CONFIG_FILE_PATH"`
-	Watch bool   `yaml:"watch,omitempty" envDefault:"false" env:"EXECUTION_CONFIG_FILE_WATCH"`
+	Path          string        `yaml:"path,omitempty" env:"EXECUTION_CONFIG_FILE_PATH"`
+	Watch         bool          `yaml:"watch,omitempty" envDefault:"false" env:"EXECUTION_CONFIG_FILE_WATCH"`
+	WatchInterval time.Duration `yaml:"watch_interval,omitempty" envDefault:"1s" env:"EXECUTION_CONFIG_FILE_WATCH_INTERVAL"`
 }
 
 type ExecutionConfig struct {

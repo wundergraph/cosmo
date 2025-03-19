@@ -72,6 +72,7 @@ export function removeSubgraphMember(
       auditableType: 'user',
       auditableDisplayName: member.email,
       actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
       targetDisplayName: subgraph.name,
       targetId: subgraph.id,
       targetType: 'subgraph',

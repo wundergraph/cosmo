@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.104.1](https://github.com/wundergraph/cosmo/compare/studio@0.104.0...studio@0.104.1) (2025-03-19)
+
+### Bug Fixes
+
+* upgrade `next` dependency to solve vulnerability ([#1698](https://github.com/wundergraph/cosmo/issues/1698)) ([46cf756](https://github.com/wundergraph/cosmo/commit/46cf75601ade8083cf112d7de61de313c88ab7e6)) (@wilsonrivera)
+
+# [0.104.0](https://github.com/wundergraph/cosmo/compare/studio@0.103.0...studio@0.104.0) (2025-03-12)
+
+### Features
+
+* display used api key name on the audit log table ([#1674](https://github.com/wundergraph/cosmo/issues/1674)) ([55ffbdd](https://github.com/wundergraph/cosmo/commit/55ffbdd7ac0ae10106de4bf3c073d650c0537a52)) (@wilsonrivera)
+
 # [0.103.0](https://github.com/wundergraph/cosmo/compare/studio@0.102.0...studio@0.103.0) (2025-03-11)
 
 ### Features

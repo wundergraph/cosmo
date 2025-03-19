@@ -132,6 +132,7 @@ export function createAPIKey(
       auditableType: 'api_key',
       auditableDisplayName: keyName,
       actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
     });
 

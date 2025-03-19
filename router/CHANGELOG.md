@@ -4,6 +4,42 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.192.1](https://github.com/wundergraph/cosmo/compare/router@0.192.0...router@0.192.1) (2025-03-19)
+
+### Bug Fixes
+
+* prefer json as a content type for non subscriptions ([#1705](https://github.com/wundergraph/cosmo/issues/1705)) ([40ebbb1](https://github.com/wundergraph/cosmo/commit/40ebbb1b3450bca6a2183bd68b3f92e9d3b8d9d1)) (@SkArchon)
+* upgrade expr package ([#1703](https://github.com/wundergraph/cosmo/issues/1703)) ([6799c2b](https://github.com/wundergraph/cosmo/commit/6799c2b615e08e70e969707422f3e6e0b1fc78f7)) (@Noroth)
+
+# [0.192.0](https://github.com/wundergraph/cosmo/compare/router@0.191.0...router@0.192.0) (2025-03-14)
+
+### Bug Fixes
+
+* polling based execution config watcher ([#1671](https://github.com/wundergraph/cosmo/issues/1671)) ([31564fd](https://github.com/wundergraph/cosmo/commit/31564fd9841cdbd375d32b66e2aee105ace7305c)) (@endigma)
+
+### Features
+
+* **plan-generator:** add max concurrent data source collectors; update engine to v2.0.0-rc.165 ([#1690](https://github.com/wundergraph/cosmo/issues/1690)) ([f6b40ed](https://github.com/wundergraph/cosmo/commit/f6b40eda3602f84b62feb1f830c1aac4b3af2602)) (@alepane21)
+
+# [0.191.0](https://github.com/wundergraph/cosmo/compare/router@0.190.0...router@0.191.0) (2025-03-13)
+
+### Features
+
+* **router:** add support for jwks discovery via openid-configuration endpoint ([#1646](https://github.com/wundergraph/cosmo/issues/1646)) ([b780408](https://github.com/wundergraph/cosmo/commit/b7804088a122eee3a250da174d9e26022c06726f)) (@Noroth)
+* update engine to rc.164 ([#1687](https://github.com/wundergraph/cosmo/issues/1687)) ([7cd0340](https://github.com/wundergraph/cosmo/commit/7cd034043ad522105f181faa9ef088a343749dc4)) (@Aenimus)
+
+# [0.190.0](https://github.com/wundergraph/cosmo/compare/router@0.189.2...router@0.190.0) (2025-03-12)
+
+### Features
+
+* **plan-generator:** improve memory and cpu usage ([#1684](https://github.com/wundergraph/cosmo/issues/1684)) ([74d72d8](https://github.com/wundergraph/cosmo/commit/74d72d8675656474190f8b1556c727406a866464)) (@alepane21)
+
+## [0.189.2](https://github.com/wundergraph/cosmo/compare/router@0.189.1...router@0.189.2) (2025-03-12)
+
+### Bug Fixes
+
+* make multipart subscriptions compatible with client ([#1675](https://github.com/wundergraph/cosmo/issues/1675)) ([7a0c3ef](https://github.com/wundergraph/cosmo/commit/7a0c3ef2d23446a0e629466af752c4811296e836)) (@SkArchon)
+
 ## [0.189.1](https://github.com/wundergraph/cosmo/compare/router@0.189.0...router@0.189.1) (2025-03-10)
 
 ### Bug Fixes

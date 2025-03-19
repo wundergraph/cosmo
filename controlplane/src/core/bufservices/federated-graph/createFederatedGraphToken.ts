@@ -92,6 +92,7 @@ export function createFederatedGraphToken(
       targetDisplayName: graph.name,
       targetType: 'federated_graph',
       actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       auditableDisplayName: token.name,
       auditableType: 'graph_token',

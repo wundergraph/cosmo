@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.127.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.126.0...controlplane@0.127.0) (2025-03-12)
+
+### Bug Fixes
+
+* improve performance when updating member role ([#1680](https://github.com/wundergraph/cosmo/issues/1680)) ([493184d](https://github.com/wundergraph/cosmo/commit/493184daf5c7b593b509faacafcc204b89d70481)) (@wilsonrivera)
+
+### Features
+
+* display used api key name on the audit log table ([#1674](https://github.com/wundergraph/cosmo/issues/1674)) ([55ffbdd](https://github.com/wundergraph/cosmo/commit/55ffbdd7ac0ae10106de4bf3c073d650c0537a52)) (@wilsonrivera)
+
+# [0.126.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.125.1...controlplane@0.126.0) (2025-03-12)
+
+### Features
+
+* **controlplane:** include base subgraph data in feature subgraph response ([#1668](https://github.com/wundergraph/cosmo/issues/1668)) ([ad63030](https://github.com/wundergraph/cosmo/commit/ad6303059edec65fff3b07e61ff11a4bbba82db5)) (@Noroth)
+
 ## [0.125.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.125.0...controlplane@0.125.1) (2025-03-11)
 
 **Note:** Version bump only for package controlplane

@@ -77,6 +77,7 @@ export function deleteRouterToken(
       targetDisplayName: federatedGraph.name,
       targetType: 'federated_graph',
       actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       auditableDisplayName: currToken.name,
       auditableType: 'graph_token',

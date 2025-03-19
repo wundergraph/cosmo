@@ -65,6 +65,7 @@ export function updateIntegrationConfig(
       auditableType: 'integration',
       auditableDisplayName: integration.name,
       actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
     });
 
