@@ -92,15 +92,15 @@ func createMeasures(meter otelmetric.Meter) (*Measurements, error) {
 
 	h.histograms[OperationPlanningTime] = operationPlanningTime
 
-	schemaUsage, err := meter.Int64Counter(
-		SchemaUsageCounter,
-		SchemaUsageCounterOptions...,
+	schemaFieldUsage, err := meter.Int64Counter(
+		SchemaFieldUsageCounter,
+		SchemaFieldUsageCounterOptions...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create schema usage counter: %w", err)
 	}
 
-	h.counters[SchemaUsageCounter] = schemaUsage
+	h.counters[SchemaFieldUsageCounter] = schemaFieldUsage
 
 	return h, nil
 }
