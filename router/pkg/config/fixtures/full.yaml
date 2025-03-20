@@ -146,6 +146,7 @@ telemetry:
       exclude_metrics: []
       exclude_metric_labels: []
       exclude_scope_info: true
+      include_schema_usage: false
 
 cache_control_policy:
   enabled: true
