@@ -155,6 +155,7 @@ import { updateOrgMemberRole } from './user/updateOrgMemberRole.js';
 import { deleteCacheWarmerOperation } from './cache-warmer/deleteCacheWarmerOperation.js';
 import { setGraphRouterCompatibilityVersion } from './graph/setGraphRouterCompatibilityVersion.js';
 import { getOrganizationBySlug } from './organization/getOrganizationBySlug.js';
+import { checkMultipleSubgraphSchemas } from './check/checkMultipleSubgraphSchemas.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -216,6 +217,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     checkSubgraphSchema: (req, ctx) => {
       return checkSubgraphSchema(opts, req, ctx);
+    },
+
+    checkMultipleSubgraphSchemas: (req, ctx) => {
+      return checkMultipleSubgraphSchemas(opts, req, ctx);
     },
 
     fixSubgraphSchema: (req, ctx) => {

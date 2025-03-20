@@ -821,12 +821,14 @@ export class SubgraphRepository {
 
   public async checks({
     federatedGraphTargetId,
+    federatedGraphName,
     limit,
     offset,
     startDate,
     endDate,
   }: {
     federatedGraphTargetId: string;
+    federatedGraphName: string;
     limit: number;
     offset: number;
     startDate: string;
@@ -851,9 +853,12 @@ export class SubgraphRepository {
       offset,
       orderBy: desc(schemaChecks.createdAt),
       where: and(
-        inArray(
-          schemaChecks.targetId,
-          subgraphs.map(({ targetId }) => targetId),
+        or(
+          inArray(
+            schemaChecks.targetId,
+            subgraphs.map(({ targetId }) => targetId),
+          ),
+          eq(schemaChecks.targetId, federatedGraphTargetId),
         ),
         gt(schemaChecks.createdAt, new Date(startDate)),
         lt(schemaChecks.createdAt, new Date(endDate)),
@@ -866,7 +871,10 @@ export class SubgraphRepository {
       checks: checkList.map((c) => ({
         id: c.id,
         targetID: c.targetId,
-        subgraphName: subgraphs.find((s) => s.targetId === c.targetId)?.name ?? '',
+        subgraphName:
+          c.targetType === 'subgraph'
+            ? subgraphs.find((s) => s.targetId === c.targetId)?.name ?? ''
+            : federatedGraphName,
         timestamp: c.createdAt.toISOString(),
         isBreaking: c.hasBreakingChanges ?? false,
         isComposable: c.isComposable ?? false,
@@ -886,6 +894,7 @@ export class SubgraphRepository {
         clientTrafficCheckSkipped: c.clientTrafficCheckSkipped ?? false,
         lintSkipped: c.lintSkipped ?? false,
         graphPruningSkipped: c.graphPruningSkipped ?? false,
+        targetType: c.targetType,
       })),
       checksCount,
     };
@@ -912,18 +921,24 @@ export class SubgraphRepository {
 
     if (startDate && endDate) {
       conditions = and(
-        inArray(
-          schemaChecks.targetId,
-          subgraphs.map(({ targetId }) => targetId),
+        or(
+          inArray(
+            schemaChecks.targetId,
+            subgraphs.map(({ targetId }) => targetId),
+          ),
+          eq(schemaChecks.targetId, federatedGraphTargetId),
         ),
         gt(schemaChecks.createdAt, new Date(startDate)),
         lt(schemaChecks.createdAt, new Date(endDate)),
       );
     } else {
       conditions = and(
-        inArray(
-          schemaChecks.targetId,
-          subgraphs.map(({ targetId }) => targetId),
+        or(
+          inArray(
+            schemaChecks.targetId,
+            subgraphs.map(({ targetId }) => targetId),
+          ),
+          eq(schemaChecks.targetId, federatedGraphTargetId),
         ),
       );
     }
@@ -939,6 +954,7 @@ export class SubgraphRepository {
   public async checkById(data: {
     id: string;
     federatedGraphTargetId: string;
+    federatedGraphName: string;
   }): Promise<SchemaCheckSummaryDTO | undefined> {
     const check = await this.db.query.schemaChecks.findFirst({
       where: eq(schema.schemaChecks.id, data.id),
@@ -951,19 +967,23 @@ export class SubgraphRepository {
       return;
     }
 
-    const subgraphs = await this.listByFederatedGraph({
-      federatedGraphTargetId: data.federatedGraphTargetId,
-    });
+    let subgraphName = '';
+    if (check.targetType === 'subgraph') {
+      const subgraphs = await this.listByFederatedGraph({
+        federatedGraphTargetId: data.federatedGraphTargetId,
+      });
 
-    const subgraph = subgraphs.find((s) => s.targetId === check.targetId);
-    if (!subgraph) {
-      return;
+      const subgraph = subgraphs.find((s) => s.targetId === check.targetId);
+      if (!subgraph) {
+        return;
+      }
+      subgraphName = subgraph.name;
     }
 
     return {
       id: check.id,
       targetID: check.targetId,
-      subgraphName: subgraph.name ?? '',
+      subgraphName: check.targetType === 'subgraph' ? subgraphName : data.federatedGraphName,
       timestamp: check.createdAt.toISOString(),
       isBreaking: check.hasBreakingChanges ?? false,
       isComposable: check.isComposable ?? false,
@@ -995,6 +1015,7 @@ export class SubgraphRepository {
             commitSha: check.vcsContext.commitSha,
           }
         : undefined,
+      targetType: check.targetType,
     };
   }
 

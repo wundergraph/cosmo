@@ -177,6 +177,7 @@ message SchemaChange{
   optional string path = 3;
   bool isBreaking = 4;
   optional bool hasOverride = 5;
+  optional string subgraphName = 6;
 }
 
 message CompositionError {
@@ -230,6 +231,7 @@ message LintIssue{
   LintSeverity severity = 2;
   string message = 3;
   LintLocation issueLocation = 4;
+  optional string subgraphName = 5;
 }
 
 message GraphPruningIssue{
@@ -239,6 +241,7 @@ message GraphPruningIssue{
   string message = 4;
   LintLocation issueLocation = 5;
   string federatedGraphName = 6;
+  optional string subgraphName = 7;
 }
 
 message CheckSubgraphSchemaResponse {
@@ -466,6 +469,7 @@ message SchemaCheck {
   bool lint_skipped = 14;
   bool graph_pruning_skipped = 15;
   optional VCSContext vcsContext = 16;
+  string targetType = 17;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -2531,6 +2535,41 @@ message SetGraphRouterCompatibilityVersionResponse {
   repeated CompositionWarning compositionWarnings = 6;
 }
 
+ 
+
+message CheckMultipleSubgraphSchemasRequest {
+  message CheckSubgraph {
+    string name = 1;
+    string schema = 2;
+    optional bool delete = 3;
+  }
+  string namespace = 1;
+  string federatedGraphName = 2;
+  repeated CheckSubgraph subgraphs = 3;
+}
+
+message CheckOperationUsageStatsofSubgraph {
+  CheckOperationUsageStats operationUsageStats = 1;
+  string subgraphName = 2;
+}
+
+message CheckMultipleSubgraphSchemasResponse {
+  Response response = 1;
+  string checkId = 2;
+  repeated SchemaChange breakingChanges = 3;
+  repeated SchemaChange nonBreakingChanges = 4;
+  repeated CompositionError compositionErrors = 5;
+  repeated CompositionWarning compositionWarnings = 6;
+  repeated LintIssue lintErrors = 7;
+  repeated LintIssue lintWarnings = 8;
+  repeated GraphPruningIssue graphPruneErrors = 9;
+  repeated GraphPruningIssue graphPruneWarnings = 10;
+  repeated CheckOperationUsageStatsofSubgraph operationUsageStats = 11;
+  bool lintingSkipped = 12;
+  bool graphPruningSkipped = 13;
+  string checkUrl = 14;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -2576,6 +2615,7 @@ service PlatformService {
   rpc DeleteFederatedSubgraph(DeleteFederatedSubgraphRequest) returns (DeleteFederatedSubgraphResponse) {}
   // CheckSubgraphSchema checks if the schema is valid and if it can be composed without conflicts with the provided new subgraph schema.
   rpc CheckSubgraphSchema(CheckSubgraphSchemaRequest) returns (CheckSubgraphSchemaResponse) {}
+  rpc CheckMultipleSubgraphSchemas(CheckMultipleSubgraphSchemasRequest) returns (CheckMultipleSubgraphSchemasResponse) {}
   rpc FixSubgraphSchema(FixSubgraphSchemaRequest) returns (FixSubgraphSchemaResponse) {}
   // UpdateFederatedGraph updates a federated graph with new labels and routing url
   rpc UpdateFederatedGraph(UpdateFederatedGraphRequest) returns (UpdateFederatedGraphResponse) {}

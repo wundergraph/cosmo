@@ -81,6 +81,7 @@ export function getChecksByFederatedGraphName(
 
     const checksData = await subgraphRepo.checks({
       federatedGraphTargetId: federatedGraph.targetId,
+      federatedGraphName: federatedGraph.name,
       limit: req.limit,
       offset: req.offset,
       startDate: dateRange.start,

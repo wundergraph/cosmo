@@ -77,9 +77,11 @@ export class SchemaGraphPruningRepository {
   public async addSchemaCheckGraphPruningIssues({
     schemaCheckId,
     graphPruningIssues,
+    schemaCheckSubgraphId,
   }: {
     schemaCheckId: string;
     graphPruningIssues: GraphPruningIssueResult[];
+    schemaCheckSubgraphId: string;
   }) {
     if (graphPruningIssues.length > 0) {
       await this.db.insert(schemaCheckGraphPruningAction).values(
@@ -92,6 +94,7 @@ export class SchemaGraphPruningRepository {
             location: l.issueLocation,
             isError: l.severity === LintSeverity.error,
             federatedGraphId: l.federatedGraphId,
+            schemaCheckSubgraphId,
           };
         }),
       );
@@ -161,6 +164,7 @@ export class SchemaGraphPruningRepository {
     rangeInDays,
     subgraphRepo,
     fedGraphRepo,
+    schemaCheckSubgraphId,
   }: {
     newGraphQLSchema: GraphQLSchema | undefined;
     namespaceID: string;
@@ -173,6 +177,7 @@ export class SchemaGraphPruningRepository {
     rangeInDays: number;
     fedGraphRepo: FederatedGraphRepository;
     subgraphRepo: SubgraphRepository;
+    schemaCheckSubgraphId: string;
   }) {
     let graphPruningIssues: SchemaGraphPruningIssues = { warnings: [], errors: [] };
     if (isGraphPruningEnabled && chClient && newGraphQLSchema) {
@@ -204,6 +209,7 @@ export class SchemaGraphPruningRepository {
         await this.addSchemaCheckGraphPruningIssues({
           schemaCheckId: schemaCheckID,
           graphPruningIssues: [...graphPruningIssues.warnings, ...graphPruningIssues.errors],
+          schemaCheckSubgraphId,
         });
       }
     }

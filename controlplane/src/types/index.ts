@@ -171,6 +171,7 @@ export interface SchemaCheckDTO {
     commitSha: string;
     branch: string;
   };
+  targetType: 'federated' | 'subgraph';
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {

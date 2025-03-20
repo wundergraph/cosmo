@@ -54,9 +54,11 @@ export class SchemaLintRepository {
   public async addSchemaCheckLintIssues({
     schemaCheckId,
     lintIssues,
+    schemaCheckSubgraphId,
   }: {
     schemaCheckId: string;
     lintIssues: LintIssueResult[];
+    schemaCheckSubgraphId: string;
   }) {
     if (lintIssues.length > 0) {
       await this.db.insert(schemaCheckLintAction).values(
@@ -67,6 +69,7 @@ export class SchemaLintRepository {
             message: l.message,
             location: l.issueLocation,
             isError: l.severity === LintSeverity.error,
+            schemaCheckSubgraphId,
           };
         }),
       );
@@ -99,11 +102,13 @@ export class SchemaLintRepository {
     namespaceId,
     schemaCheckID,
     isLintingEnabled,
+    schemaCheckSubgraphId,
   }: {
     newSchemaSDL: string;
     namespaceId: string;
     schemaCheckID: string;
     isLintingEnabled: boolean;
+    schemaCheckSubgraphId: string;
   }) {
     let lintIssues: SchemaLintIssues = { warnings: [], errors: [] };
     if (isLintingEnabled && newSchemaSDL !== '') {
@@ -120,6 +125,7 @@ export class SchemaLintRepository {
     await this.addSchemaCheckLintIssues({
       schemaCheckId: schemaCheckID,
       lintIssues: [...lintIssues.warnings, ...lintIssues.errors],
+      schemaCheckSubgraphId,
     });
 
     return lintIssues;

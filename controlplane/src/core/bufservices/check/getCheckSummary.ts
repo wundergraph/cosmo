@@ -71,7 +71,11 @@ export function getCheckSummary(
       };
     }
 
-    const check = await subgraphRepo.checkById({ id: req.checkId, federatedGraphTargetId: graph.targetId });
+    const check = await subgraphRepo.checkById({
+      id: req.checkId,
+      federatedGraphTargetId: graph.targetId,
+      federatedGraphName: graph.name,
+    });
     const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
 
     if (!check || !checkDetails) {

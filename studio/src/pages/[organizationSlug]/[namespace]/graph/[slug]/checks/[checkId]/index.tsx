@@ -764,7 +764,7 @@ const CheckDetails = ({
                   >
                     <Link href={{ query: { ...router.query, tab: "schema" } }}>
                       <ReaderIcon />
-                      Schema
+                      Proposed Schema
                     </Link>
                   </TabsTrigger>
                 )}

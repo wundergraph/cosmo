@@ -29,6 +29,7 @@ export class SchemaCheckRepository {
     lintSkipped?: boolean;
     graphPruningSkipped?: boolean;
     vcsContext?: VCSContext;
+    targetType: 'federated' | 'subgraph';
   }): Promise<string> {
     const insertedSchemaCheck = await this.db
       .insert(schemaChecks)
@@ -47,6 +48,7 @@ export class SchemaCheckRepository {
               branch: data.vcsContext.branch,
             }
           : null,
+        targetType: data.targetType,
       })
       .returning()
       .execute();
@@ -76,7 +78,11 @@ export class SchemaCheckRepository {
     return updatedSchemaCheck[0].id;
   }
 
-  public createSchemaCheckChanges(data: { schemaCheckID: string; changes: SchemaDiff[] }) {
+  public createSchemaCheckChanges(data: {
+    schemaCheckID: string;
+    changes: SchemaDiff[];
+    schemaCheckSubgraphId: string;
+  }) {
     if (data.changes.length === 0) {
       return [];
     }
@@ -89,6 +95,7 @@ export class SchemaCheckRepository {
           changeMessage: change.message,
           path: change.path,
           isBreaking: change.isBreaking,
+          schemaCheckSubgraphId: data.schemaCheckSubgraphId,
         })),
       )
       .returning();
@@ -384,5 +391,20 @@ export class SchemaCheckRepository {
     return {
       trafficCheckDays: result?.trafficCheckDays ?? 7,
     };
+  }
+
+  public async createSchemaCheckSubgraph({
+    data,
+  }: {
+    data: {
+      schemaCheckId: string;
+      subgraphId: string;
+      subgraphName: string;
+      proposedSubgraphSchemaSDL: string;
+      isDeleted: boolean;
+    };
+  }) {
+    const schemaCheckSubgraph = await this.db.insert(schema.schemaCheckSubgraphs).values(data).returning();
+    return schemaCheckSubgraph[0].id;
   }
 }
