@@ -557,7 +557,7 @@ export function checkMultipleSubgraphSchemas(
       operationUsageStats,
       lintingSkipped: !namespace.enableLinting,
       graphPruningSkipped: !namespace.enableGraphPruning,
-      checkUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/${federatedGraph.name}/checks/${schemaCheckID}`,
+      checkUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/graph/${federatedGraph.name}/checks/${schemaCheckID}`,
     };
   });
 }
