@@ -53,6 +53,7 @@ import {
 import {
   ArrowLeftIcon,
   CheckCircledIcon,
+  Component2Icon,
   CrossCircledIcon,
   CubeIcon,
   ReaderIcon,
@@ -64,9 +65,11 @@ import {
   forceCheckSuccess,
   getCheckSummary,
   getFederatedGraphs,
+  getProposedSchemaOfCheckedSubgraph,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
   GetCheckSummaryResponse,
+  GetCheckSummaryResponse_CheckedSubgraph,
   GraphPruningIssue,
   LintIssue,
   LintSeverity,
@@ -79,6 +82,16 @@ import { HiOutlineScissors } from "react-icons/hi2";
 import { GraphPruningIssuesTable } from "@/components/checks/graph-pruning-issues-table";
 import { SiLintcode } from "react-icons/si";
 import { cn } from "@/lib/utils";
+import { SDLViewerActions } from "@/components/schema/sdl-viewer";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const ForceSuccess: React.FC<{ onSubmit: () => void }> = (props) => {
   return (
@@ -108,6 +121,117 @@ const ForceSuccess: React.FC<{ onSubmit: () => void }> = (props) => {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  );
+};
+
+const ProposedSchemas = ({
+  checkId,
+  targetType,
+  sdl,
+  checkedSubgraphs,
+  lintIssues,
+  graphPruningIssues,
+}: {
+  checkId: string;
+  targetType: "federated" | "subgraph";
+  sdl?: string;
+  checkedSubgraphs: GetCheckSummaryResponse_CheckedSubgraph[];
+  lintIssues: LintIssue[];
+  graphPruningIssues: GraphPruningIssue[];
+}) => {
+  const router = useRouter();
+  const subgraph = router.query.subgraph as string;
+  const hash = router.asPath.split("#")?.[1];
+
+  const checkedSubgraph = checkedSubgraphs.find((s) => s.name === subgraph);
+
+  const activeSubgraph = checkedSubgraph || checkedSubgraphs?.[0];
+  const activeSubgraphName = activeSubgraph?.name;
+
+  const { data: sdlData, isLoading: fetchingSdl } = useQuery(
+    getProposedSchemaOfCheckedSubgraph,
+    {
+      checkId,
+      checkedSubgraphId: activeSubgraph?.id,
+    },
+    {
+      enabled: !!activeSubgraph && !!activeSubgraphName,
+    },
+  );
+
+  if (fetchingSdl) return <Loader fullscreen />;
+
+  return (
+    <>
+      <div className="-top-[60px] right-8 px-4 md:absolute md:px-0">
+        <div className="flex gap-x-2">
+          {targetType === "federated" && (
+            <Select
+              value={activeSubgraphName}
+              onValueChange={(subgraph) =>
+                router.push({
+                  pathname: router.pathname,
+                  query: {
+                    ...router.query,
+                    subgraph,
+                  },
+                })
+              }
+            >
+              <SelectTrigger
+                value={activeSubgraphName}
+                className="w-full md:ml-auto md:w-[200px]"
+              >
+                <SelectValue aria-label={activeSubgraphName}>
+                  {activeSubgraphName}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                    <Component2Icon className="h-3 w-3" /> Subgraphs
+                  </SelectLabel>
+                  {checkedSubgraphs.map(({ name, id, isDeleted }) => {
+                    return (
+                      <SelectItem key={name} value={name}>
+                        <div
+                          className={cn({
+                            "text-destructive": isDeleted,
+                          })}
+                        >
+                          <p>{name}</p>
+                          <p className="text-xs">{id.split("-")[0]}</p>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          )}
+          <SDLViewerActions
+            sdl={
+              (targetType === "federated" ? sdlData?.proposedSchema : sdl) || ""
+            }
+            size="icon"
+            targetName={activeSubgraphName}
+          />
+        </div>
+      </div>
+      <div className="scrollbar-custom h-full min-h-[300px] w-full overflow-auto">
+        <SDLViewerMonaco
+          schema={
+            (targetType === "federated" ? sdlData?.proposedSchema : sdl) || ""
+          }
+          disablePrettier
+          decorationCollections={getDecorationCollection(
+            lintIssues,
+            graphPruningIssues,
+          )}
+          line={hash ? Number(hash.slice(1)) : undefined}
+        />
+      </div>
+    </>
   );
 };
 
@@ -266,7 +390,6 @@ const CheckDetails = ({
   const slug = router.query.slug as string;
   const id = router.query.checkId as string;
   const tab = router.query.tab as string;
-  const hash = router.asPath.split("#")?.[1];
 
   const { data: allGraphsData } = useQuery(getFederatedGraphs);
 
@@ -917,25 +1040,18 @@ const CheckDetails = ({
                 />
               </TabsContent>
               <TabsContent value="schema" className="relative w-full flex-1">
-                <div className="right-8 top-5 px-4 md:absolute md:px-0">
-                  <CodeViewerActions
-                    code={sdl}
-                    subgraphName={data.check.subgraphName}
-                    size="sm"
-                    variant="outline"
-                  />
-                </div>
-                <div className="scrollbar-custom h-full min-h-[300px] w-full overflow-auto">
-                  <SDLViewerMonaco
-                    schema={sdl}
-                    disablePrettier
-                    decorationCollections={getDecorationCollection(
-                      data.lintIssues,
-                      data.graphPruningIssues,
-                    )}
-                    line={hash ? Number(hash.slice(1)) : undefined}
-                  />
-                </div>
+                <ProposedSchemas
+                  checkId={id}
+                  targetType={
+                    data.check.targetType === "federated"
+                      ? "federated"
+                      : "subgraph"
+                  }
+                  sdl={sdl}
+                  checkedSubgraphs={data.checkedSubgraphs}
+                  lintIssues={data.lintIssues}
+                  graphPruningIssues={data.graphPruningIssues}
+                />
               </TabsContent>
             </div>
           </Tabs>

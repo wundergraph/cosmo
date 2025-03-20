@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { LintConfig, LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import * as schema from '../../db/schema.js';
-import { namespaceLintCheckConfig, schemaCheckLintAction } from '../../db/schema.js';
+import { namespaceLintCheckConfig, schemaCheckLintAction, schemaCheckSubgraphs } from '../../db/schema.js';
 import { SchemaLintDTO, LintSeverityLevel, LintIssueResult, SchemaLintIssues } from '../../types/index.js';
 import { LintRuleEnum } from '../../db/models.js';
 import SchemaLinter from '../services/SchemaLinter.js';
@@ -83,8 +83,10 @@ export class SchemaLintRepository {
         location: schemaCheckLintAction.location,
         isError: schemaCheckLintAction.isError,
         lintRuleType: schemaCheckLintAction.lintRuleType,
+        subgraphName: schemaCheckSubgraphs.subgraphName,
       })
       .from(schemaCheckLintAction)
+      .leftJoin(schemaCheckSubgraphs, eq(schemaCheckSubgraphs.id, schemaCheckLintAction.schemaCheckSubgraphId))
       .where(eq(schemaCheckLintAction.schemaCheckId, schemaCheckId));
 
     return lintIssues.map((l) => {
@@ -93,6 +95,7 @@ export class SchemaLintRepository {
         issueLocation: l.location,
         message: l.message,
         severity: l.isError ? LintSeverity.error : LintSeverity.warn,
+        subgraphName: l.subgraphName,
       } as LintIssueResult;
     });
   }

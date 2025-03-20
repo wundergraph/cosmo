@@ -4,7 +4,11 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { GraphQLSchema } from 'graphql';
 import { GraphPruningRuleEnum } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
-import { namespaceGraphPruningCheckConfig, schemaCheckGraphPruningAction } from '../../db/schema.js';
+import {
+  namespaceGraphPruningCheckConfig,
+  schemaCheckGraphPruningAction,
+  schemaCheckSubgraphs,
+} from '../../db/schema.js';
 import {
   GraphPruningIssueResult,
   LintSeverityLevel,
@@ -117,10 +121,12 @@ export class SchemaGraphPruningRepository {
         graphPruningRuleType: schemaCheckGraphPruningAction.graphPruningRuleType,
         federatedGraphId: schemaCheckGraphPruningAction.federatedGraphId,
         federatedGraphName: schema.targets.name,
+        subgraphName: schemaCheckSubgraphs.subgraphName,
       })
       .from(schemaCheckGraphPruningAction)
       .innerJoin(schema.federatedGraphs, eq(schema.federatedGraphs.id, schemaCheckGraphPruningAction.federatedGraphId))
       .innerJoin(schema.targets, eq(schema.targets.id, schema.federatedGraphs.targetId))
+      .leftJoin(schemaCheckSubgraphs, eq(schemaCheckSubgraphs.id, schemaCheckGraphPruningAction.schemaCheckSubgraphId))
       .where(
         and(
           eq(schemaCheckGraphPruningAction.schemaCheckId, schemaCheckId),
@@ -140,6 +146,7 @@ export class SchemaGraphPruningRepository {
         severity: g.isError ? LintSeverity.error : LintSeverity.warn,
         federatedGraphId: g.federatedGraphId,
         federatedGraphName: g.federatedGraphName,
+        subgraphName: g.subgraphName || undefined,
       };
 
       if (g.isError) {

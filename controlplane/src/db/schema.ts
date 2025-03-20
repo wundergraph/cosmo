@@ -889,6 +889,10 @@ export const schemaCheckChangeActionRelations = relations(schemaCheckChangeActio
     references: [schemaChecks.id],
   }),
   operationUsage: many(schemaCheckChangeActionOperationUsage),
+  checkSubgraph: one(schemaCheckSubgraphs, {
+    fields: [schemaCheckChangeAction.schemaCheckSubgraphId],
+    references: [schemaCheckSubgraphs.id],
+  }),
 }));
 
 export const operationChangeOverrides = pgTable(
@@ -1930,6 +1934,10 @@ export const schemaCheckLintActionRelations = relations(schemaCheckLintAction, (
     fields: [schemaCheckLintAction.schemaCheckId],
     references: [schemaChecks.id],
   }),
+  checkSubgraph: one(schemaCheckSubgraphs, {
+    fields: [schemaCheckLintAction.schemaCheckSubgraphId],
+    references: [schemaCheckSubgraphs.id],
+  }),
 }));
 
 export const schemaCheckGraphPruningAction = pgTable(
@@ -1974,6 +1982,10 @@ export const schemaCheckGraphPruningActionRelations = relations(schemaCheckGraph
   federatedGraph: one(federatedGraphs, {
     fields: [schemaCheckGraphPruningAction.federatedGraphId],
     references: [federatedGraphs.id],
+  }),
+  checkSubgraph: one(schemaCheckSubgraphs, {
+    fields: [schemaCheckGraphPruningAction.schemaCheckSubgraphId],
+    references: [schemaCheckSubgraphs.id],
   }),
 }));
 

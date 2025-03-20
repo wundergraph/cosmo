@@ -3906,6 +3906,11 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
    */
   compositionWarnings: string[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GetCheckSummaryResponse.CheckedSubgraph checkedSubgraphs = 12;
+   */
+  checkedSubgraphs: GetCheckSummaryResponse_CheckedSubgraph[] = [];
+
   constructor(data?: PartialMessage<GetCheckSummaryResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3924,6 +3929,7 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
     { no: 9, name: "lintIssues", kind: "message", T: LintIssue, repeated: true },
     { no: 10, name: "graphPruningIssues", kind: "message", T: GraphPruningIssue, repeated: true },
     { no: 11, name: "compositionWarnings", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 12, name: "checkedSubgraphs", kind: "message", T: GetCheckSummaryResponse_CheckedSubgraph, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryResponse {
@@ -3983,6 +3989,65 @@ export class GetCheckSummaryResponse_AffectedGraph extends Message<GetCheckSumma
 
   static equals(a: GetCheckSummaryResponse_AffectedGraph | PlainMessage<GetCheckSummaryResponse_AffectedGraph> | undefined, b: GetCheckSummaryResponse_AffectedGraph | PlainMessage<GetCheckSummaryResponse_AffectedGraph> | undefined): boolean {
     return proto3.util.equals(GetCheckSummaryResponse_AffectedGraph, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetCheckSummaryResponse.CheckedSubgraph
+ */
+export class GetCheckSummaryResponse_CheckedSubgraph extends Message<GetCheckSummaryResponse_CheckedSubgraph> {
+  /**
+   * its the check subgraph id
+   *
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * its optional because the subgraph can be deleted
+   *
+   * @generated from field: optional string subgraphId = 3;
+   */
+  subgraphId?: string;
+
+  /**
+   * @generated from field: bool isDeleted = 4;
+   */
+  isDeleted = false;
+
+  constructor(data?: PartialMessage<GetCheckSummaryResponse_CheckedSubgraph>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetCheckSummaryResponse.CheckedSubgraph";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "subgraphId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "isDeleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryResponse_CheckedSubgraph {
+    return new GetCheckSummaryResponse_CheckedSubgraph().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCheckSummaryResponse_CheckedSubgraph {
+    return new GetCheckSummaryResponse_CheckedSubgraph().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCheckSummaryResponse_CheckedSubgraph {
+    return new GetCheckSummaryResponse_CheckedSubgraph().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCheckSummaryResponse_CheckedSubgraph | PlainMessage<GetCheckSummaryResponse_CheckedSubgraph> | undefined, b: GetCheckSummaryResponse_CheckedSubgraph | PlainMessage<GetCheckSummaryResponse_CheckedSubgraph> | undefined): boolean {
+    return proto3.util.equals(GetCheckSummaryResponse_CheckedSubgraph, a, b);
   }
 }
 
@@ -20305,6 +20370,92 @@ export class CheckMultipleSubgraphSchemasResponse extends Message<CheckMultipleS
 
   static equals(a: CheckMultipleSubgraphSchemasResponse | PlainMessage<CheckMultipleSubgraphSchemasResponse> | undefined, b: CheckMultipleSubgraphSchemasResponse | PlainMessage<CheckMultipleSubgraphSchemasResponse> | undefined): boolean {
     return proto3.util.equals(CheckMultipleSubgraphSchemasResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetProposedSchemaOfCheckedSubgraphRequest
+ */
+export class GetProposedSchemaOfCheckedSubgraphRequest extends Message<GetProposedSchemaOfCheckedSubgraphRequest> {
+  /**
+   * @generated from field: string checkId = 1;
+   */
+  checkId = "";
+
+  /**
+   * @generated from field: string checkedSubgraphId = 2;
+   */
+  checkedSubgraphId = "";
+
+  constructor(data?: PartialMessage<GetProposedSchemaOfCheckedSubgraphRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetProposedSchemaOfCheckedSubgraphRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "checkId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "checkedSubgraphId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetProposedSchemaOfCheckedSubgraphRequest {
+    return new GetProposedSchemaOfCheckedSubgraphRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetProposedSchemaOfCheckedSubgraphRequest {
+    return new GetProposedSchemaOfCheckedSubgraphRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetProposedSchemaOfCheckedSubgraphRequest {
+    return new GetProposedSchemaOfCheckedSubgraphRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetProposedSchemaOfCheckedSubgraphRequest | PlainMessage<GetProposedSchemaOfCheckedSubgraphRequest> | undefined, b: GetProposedSchemaOfCheckedSubgraphRequest | PlainMessage<GetProposedSchemaOfCheckedSubgraphRequest> | undefined): boolean {
+    return proto3.util.equals(GetProposedSchemaOfCheckedSubgraphRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetProposedSchemaOfCheckedSubgraphResponse
+ */
+export class GetProposedSchemaOfCheckedSubgraphResponse extends Message<GetProposedSchemaOfCheckedSubgraphResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: string proposedSchema = 2;
+   */
+  proposedSchema = "";
+
+  constructor(data?: PartialMessage<GetProposedSchemaOfCheckedSubgraphResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetProposedSchemaOfCheckedSubgraphResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "proposedSchema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetProposedSchemaOfCheckedSubgraphResponse {
+    return new GetProposedSchemaOfCheckedSubgraphResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetProposedSchemaOfCheckedSubgraphResponse {
+    return new GetProposedSchemaOfCheckedSubgraphResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetProposedSchemaOfCheckedSubgraphResponse {
+    return new GetProposedSchemaOfCheckedSubgraphResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetProposedSchemaOfCheckedSubgraphResponse | PlainMessage<GetProposedSchemaOfCheckedSubgraphResponse> | undefined, b: GetProposedSchemaOfCheckedSubgraphResponse | PlainMessage<GetProposedSchemaOfCheckedSubgraphResponse> | undefined): boolean {
+    return proto3.util.equals(GetProposedSchemaOfCheckedSubgraphResponse, a, b);
   }
 }
 

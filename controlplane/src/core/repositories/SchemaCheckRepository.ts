@@ -407,4 +407,28 @@ export class SchemaCheckRepository {
     const schemaCheckSubgraph = await this.db.insert(schema.schemaCheckSubgraphs).values(data).returning();
     return schemaCheckSubgraph[0].id;
   }
+
+  public getCheckedSubgraphsForCheckId(checkId: string) {
+    return this.db.query.schemaCheckSubgraphs.findMany({
+      where: eq(schema.schemaCheckSubgraphs.schemaCheckId, checkId),
+    });
+  }
+
+  public getProposedSchemaOfCheckedSubgraph({
+    checkId,
+    checkedSubgraphId,
+  }: {
+    checkId: string;
+    checkedSubgraphId: string;
+  }) {
+    return this.db.query.schemaCheckSubgraphs.findFirst({
+      where: and(
+        eq(schema.schemaCheckSubgraphs.schemaCheckId, checkId),
+        eq(schema.schemaCheckSubgraphs.id, checkedSubgraphId),
+      ),
+      columns: {
+        proposedSubgraphSchemaSDL: true,
+      },
+    });
+  }
 }

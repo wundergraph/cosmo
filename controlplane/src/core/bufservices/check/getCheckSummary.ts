@@ -1,9 +1,11 @@
+/* eslint-disable camelcase */
 import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   GetCheckSummaryRequest,
   GetCheckSummaryResponse,
+  GetCheckSummaryResponse_CheckedSubgraph,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
@@ -48,6 +50,7 @@ export function getCheckSummary(
         graphPruningIssues: [],
         isGraphPruningEnabled: false,
         isLintingEnabled: false,
+        checkedSubgraphs: [],
       };
     }
 
@@ -68,6 +71,7 @@ export function getCheckSummary(
         graphPruningIssues: [],
         isGraphPruningEnabled: false,
         isLintingEnabled: false,
+        checkedSubgraphs: [],
       };
     }
 
@@ -93,6 +97,7 @@ export function getCheckSummary(
         graphPruningIssues: [],
         isGraphPruningEnabled: false,
         isLintingEnabled: false,
+        checkedSubgraphs: [],
       };
     }
 
@@ -103,6 +108,21 @@ export function getCheckSummary(
       schemaCheckId: req.checkId,
       federatedGraphId: graph.id,
     });
+
+    const checkedSubgraphs: GetCheckSummaryResponse_CheckedSubgraph[] = [];
+    if (check.targetType === 'federated') {
+      const compositionSubgraphs = await schemaCheckRepo.getCheckedSubgraphsForCheckId(req.checkId);
+      for (const subgraph of compositionSubgraphs) {
+        checkedSubgraphs.push(
+          new GetCheckSummaryResponse_CheckedSubgraph({
+            id: subgraph.id,
+            subgraphId: subgraph.subgraphId || undefined,
+            name: subgraph.subgraphName,
+            isDeleted: subgraph.isDeleted,
+          }),
+        );
+      }
+    }
 
     return {
       response: {
@@ -117,6 +137,7 @@ export function getCheckSummary(
       lintIssues,
       graphPruningIssues,
       compositionWarnings: checkDetails.compositionWarnings,
+      checkedSubgraphs,
     };
   });
 }

@@ -71,6 +71,7 @@ export const GraphPruningIssuesTable = ({
             <TableHead className="w-[300px]">Rule</TableHead>
             <TableHead>Field Path</TableHead>
             <TableHead>Message</TableHead>
+            {pruneIssues[0].subgraphName && <TableHead>Subgraph</TableHead>}
             <TableHead className="w-[5px]"></TableHead>
           </TableRow>
         </TableHeader>
@@ -97,6 +98,7 @@ export const GraphPruningIssuesTable = ({
               </TableCell>
               <TableCell>{l.fieldPath}</TableCell>
               <TableCell>{l.message}</TableCell>
+              {l.subgraphName && <TableCell>{l.subgraphName}</TableCell>}
               <TableCell>
                 <div className="flex items-center gap-x-2">
                   <Tooltip delayDuration={100}>
@@ -112,7 +114,11 @@ export const GraphPruningIssuesTable = ({
                             router.query.namespace
                           }/graph/${router.query.slug}/checks/${
                             router.query.checkId
-                          }?tab=schema${
+                          }?tab=schema&${
+                            l.subgraphName
+                              ? `subgraph=${l.subgraphName}`
+                              : ""
+                          }${
                             l.issueLocation?.line
                               ? `#L${l.issueLocation?.line}`
                               : ""

@@ -496,6 +496,15 @@ message GetCheckSummaryResponse {
     int32 traffic_check_days = 2;
   }
 
+  message CheckedSubgraph {
+    // its the check subgraph id
+    string id = 1;
+    string name = 2;
+    // its optional because the subgraph can be deleted
+    optional string subgraphId = 3;
+    bool isDeleted = 4;
+  }
+
   Response response = 1;
   SchemaCheck check = 2;
   repeated AffectedGraph affected_graphs = 3;
@@ -506,6 +515,7 @@ message GetCheckSummaryResponse {
   repeated LintIssue lintIssues = 9;
   repeated GraphPruningIssue graphPruningIssues = 10;
   repeated string compositionWarnings = 11;
+  repeated CheckedSubgraph checkedSubgraphs = 12;
 }
 
 message GetCheckOperationsRequest {
@@ -2570,6 +2580,16 @@ message CheckMultipleSubgraphSchemasResponse {
   string checkUrl = 14;
 }
 
+message GetProposedSchemaOfCheckedSubgraphRequest {
+  string checkId = 1;
+  string checkedSubgraphId = 2;
+}
+
+message GetProposedSchemaOfCheckedSubgraphResponse {
+  Response response = 1;
+  string proposedSchema = 2;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -2616,6 +2636,7 @@ service PlatformService {
   // CheckSubgraphSchema checks if the schema is valid and if it can be composed without conflicts with the provided new subgraph schema.
   rpc CheckSubgraphSchema(CheckSubgraphSchemaRequest) returns (CheckSubgraphSchemaResponse) {}
   rpc CheckMultipleSubgraphSchemas(CheckMultipleSubgraphSchemasRequest) returns (CheckMultipleSubgraphSchemasResponse) {}
+  rpc GetProposedSchemaOfCheckedSubgraph(GetProposedSchemaOfCheckedSubgraphRequest) returns (GetProposedSchemaOfCheckedSubgraphResponse) {}
   rpc FixSubgraphSchema(FixSubgraphSchemaRequest) returns (FixSubgraphSchemaResponse) {}
   // UpdateFederatedGraph updates a federated graph with new labels and routing url
   rpc UpdateFederatedGraph(UpdateFederatedGraphRequest) returns (UpdateFederatedGraphResponse) {}

@@ -1029,6 +1029,13 @@ export class SubgraphRepository {
         isBreaking: true,
       },
       where: eq(schema.schemaCheckChangeAction.schemaCheckId, id),
+      with: {
+        checkSubgraph: {
+          columns: {
+            subgraphName: true,
+          },
+        },
+      },
     });
 
     const errorList = await this.db.query.schemaCheckComposition.findMany({
@@ -1063,6 +1070,7 @@ export class SubgraphRepository {
         message: c.changeMessage ?? '',
         path: c.path ?? undefined,
         isBreaking: c.isBreaking ?? false,
+        subgraphName: c.checkSubgraph?.subgraphName ?? undefined,
       })),
       compositionErrors,
       compositionWarnings,

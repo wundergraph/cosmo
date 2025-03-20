@@ -194,6 +194,7 @@ export interface SchemaCheckDetailsDTO {
     message: string;
     path?: string;
     isBreaking: boolean;
+    subgraphName?: string;
   }[];
   compositionErrors: string[];
   compositionWarnings: string[];
@@ -662,6 +663,7 @@ export interface GraphPruningIssueResult {
   };
   federatedGraphId: string;
   federatedGraphName: string;
+  subgraphName?: string;
 }
 
 export interface SchemaGraphPruningIssues {
