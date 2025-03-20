@@ -255,7 +255,12 @@ type MetricOptions struct {
 	EnablePrometheusRouterCache  bool
 	OTLPEngineStatsOptions       EngineStatOptions
 	PrometheusEngineStatsOptions EngineStatOptions
-	PromIncludeSchemaUsage       bool
+	PrometheusSchemaFieldUsage   PrometheusSchemaFieldUsage
+}
+
+type PrometheusSchemaFieldUsage struct {
+	Enabled             bool
+	IncludeOperationSha bool
 }
 
 type Config struct {
@@ -927,7 +932,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetrics,
 			ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetricLabels,
 			ExcludeScopeInfo:    testConfig.MetricOptions.MetricExclusions.ExcludeScopeInfo,
-			IncludeSchemaUsage:  testConfig.MetricOptions.PromIncludeSchemaUsage,
+			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
+				Enabled:             testConfig.MetricOptions.PrometheusSchemaFieldUsage.Enabled,
+				IncludeOperationSha: testConfig.MetricOptions.PrometheusSchemaFieldUsage.IncludeOperationSha,
+			},
 		}
 	}
 

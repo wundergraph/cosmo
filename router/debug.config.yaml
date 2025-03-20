@@ -3,18 +3,20 @@
 # See pkg/config/config.go for the full list of configuration options.
 # This file is used to debugging purposes only.
 
-version: '1'
+version: "1"
 
 execution_config:
   file:
-    path: './__schemas/config.json'
+    path: "./__schemas/config.json"
 
 log_level: debug
 
 telemetry:
   metrics:
     prometheus:
-      include_schema_usage: true
+      schema_usage:
+        enabled: true
+        include_operation_sha: true
 
 engine:
   max_concurrent_resolvers: 1024
@@ -26,10 +28,10 @@ events:
   providers:
     nats:
       - id: default
-        url: 'nats://localhost:4222'
+        url: "nats://localhost:4222"
       - id: my-nats
-        url: 'nats://localhost:4222'
+        url: "nats://localhost:4222"
     kafka:
       - id: my-kafka
         brokers:
-          - 'localhost:9092'
+          - "localhost:9092"
