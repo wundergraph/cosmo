@@ -11,6 +11,11 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
+// This file exists to be smaller than prometheus_test.go, and use better testing practices.
+// Editors like Cursor, VSCode Copilot Agent, Zed, etc have a lot of trouble with the other file due
+// to its size and testing methodology. In the new file, you should use new helpers where possible, and avoid
+// asserting the values of unrelated metrics/labels.
+
 func TestPrometheusImproved(t *testing.T) {
 	t.Run("Collect and export schema usage metrics to Prometheus when enabled", func(t *testing.T) {
 		t.Parallel()
@@ -34,6 +39,8 @@ func TestPrometheusImproved(t *testing.T) {
 			require.NoError(t, err)
 
 			schemaUsage := findMetricFamilyByName(mf, "router_graphql_schema_field_usage_total")
+			assert.NotNil(t, schemaUsage)
+
 			schemaUsageMetrics := schemaUsage.GetMetric()
 
 			require.Len(t, schemaUsageMetrics, 8)
