@@ -8,6 +8,11 @@ import (
 	"go.uber.org/zap"
 )
 
+func init() {
+	// Register your module here
+	core.RegisterModule(&MyModule{})
+}
+
 const myModuleID = "myModule"
 
 // MyModule is a simple module that has access to the GraphQL operation and add a header to the response
