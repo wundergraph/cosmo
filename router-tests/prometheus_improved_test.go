@@ -40,7 +40,7 @@ func TestPrometheusImproved(t *testing.T) {
 
 			for _, metric := range schemaUsageMetrics {
 				assertLabel(t, metric.Label, "wg_operation_name", "myQuery")
-				assertLabel(t, metric.Label, "wg_operation_hash", "1731669138493683283")
+				assertLabel(t, metric.Label, "wg_operation_sha256", "f46b2e72054341523989a788e798ec5c922517e6106646120d2ff23984cfed4b")
 				assertLabel(t, metric.Label, "wg_operation_type", "query")
 			}
 
@@ -78,12 +78,14 @@ func assertLabel(t *testing.T, labels []*io_prometheus_client.LabelPair, labelNa
 	var labelPair *io_prometheus_client.LabelPair
 
 	for _, label := range labels {
-		if *label.Name == labelName {
+
+		if label.Name != nil && *label.Name == labelName {
 			labelPair = label
 			break
 		}
 	}
 
-	assert.NotNil(t, labelPair, "label %s not found", labelName)
-	assert.Equal(t, expectedValue, *labelPair.Value, "label %s is not %s", labelName, expectedValue)
+	if assert.NotNil(t, labelPair, "label %s not found", labelName) {
+		assert.Equal(t, expectedValue, *labelPair.Value, "label %s is not %s", labelName, expectedValue)
+	}
 }
