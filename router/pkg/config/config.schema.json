@@ -2973,23 +2973,6 @@
       "required": [
         "op",
         "name"
-      ],
-      "oneOf": [
-        {
-          "required": [
-            "value"
-          ]
-        },
-        {
-          "required": [
-            "expression"
-          ]
-        },
-        {
-          "required": [
-            "value_from"
-          ]
-        }
       ]
     },
     "context_fields": {
