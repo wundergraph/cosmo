@@ -1194,10 +1194,21 @@
                   "default": false,
                   "description": "Exclude scope info from Prometheus metrics. The default value is false."
                 },
-                "include_schema_usage": {
-                  "type": "boolean",
-                  "default": false,
-                  "description": "Enable the collection and export of GraphQL schema metrics to Prometheus. The default value is false."
+                "schema_usage": {
+                  "type": "object",
+                  "description": "Configure schema field usage metrics for Prometheus",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable the collection and export of GraphQL schema metrics to Prometheus. The default value is false."
+                    },
+                    "include_operation_sha": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Include the operation SHA256 in the metric labels, this can be an expensive operation. The default value is false."
+                    }
+                  }
                 }
               }
             }

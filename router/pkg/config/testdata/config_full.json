@@ -71,7 +71,10 @@
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "ExcludeScopeInfo": true,
-        "IncludeSchemaUsage": false
+        "SchemaFieldUsage": {
+          "Enabled": true,
+          "IncludeOperationSha": false
+        }
       }
     }
   },
