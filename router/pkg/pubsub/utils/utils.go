@@ -8,7 +8,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-func BuildEventDataBytes(ref int, visitor *plan.Visitor, variables resolve.Variables) ([]byte, error) {
+func BuildEventDataBytes(ref int, visitor *plan.Visitor, variables *resolve.Variables) ([]byte, error) {
 	// Collect the field arguments for fetch based operations
 	fieldArgs := visitor.Operation.FieldArguments(ref)
 	var dataBuffer bytes.Buffer

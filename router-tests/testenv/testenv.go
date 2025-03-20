@@ -51,8 +51,6 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
-
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -2032,11 +2030,11 @@ func DeflakeWSWriteJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err 
 func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, natsData *NatsData, pubSubName func(string) string) *subgraphs.SubgraphOptions {
 	if natsData == nil {
 		return &subgraphs.SubgraphOptions{
-			NatsPubSubByProviderID: map[string]pubsub_datasource.NatsPubSub{},
+			NatsPubSubByProviderID: map[string]*pubsubNats.NatsPubSub{},
 			GetPubSubName:          pubSubName,
 		}
 	}
-	natsPubSubByProviderID := make(map[string]pubsub_datasource.NatsPubSub, len(demoNatsProviders))
+	natsPubSubByProviderID := make(map[string]*pubsubNats.NatsPubSub, len(demoNatsProviders))
 	for _, sourceName := range demoNatsProviders {
 		js, err := jetstream.New(natsData.Connections[0])
 		require.NoError(t, err)

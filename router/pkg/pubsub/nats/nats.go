@@ -12,7 +12,6 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 )
@@ -35,8 +34,8 @@ func NewConnector(logger *zap.Logger, conn *nats.Conn, js jetstream.JetStream, h
 	}
 }
 
-func (c *connector) New(ctx context.Context) *natsPubSub {
-	return &natsPubSub{
+func (c *connector) New(ctx context.Context) *NatsPubSub {
+	return &NatsPubSub{
 		ctx:              ctx,
 		conn:             c.conn,
 		js:               c.js,
@@ -47,7 +46,7 @@ func (c *connector) New(ctx context.Context) *natsPubSub {
 	}
 }
 
-type natsPubSub struct {
+type NatsPubSub struct {
 	ctx              context.Context
 	conn             *nats.Conn
 	logger           *zap.Logger
@@ -61,7 +60,7 @@ type natsPubSub struct {
 // We use the hostname and the address the router is listening on, which should provide a good representation
 // of what a unique instance is from the perspective of the client that has started a subscription to this instance
 // and want to restart the subscription after a failure on the client or router side.
-func (p *natsPubSub) getInstanceIdentifier() string {
+func (p *NatsPubSub) getInstanceIdentifier() string {
 	return fmt.Sprintf("%s-%s", p.hostName, p.routerListenAddr)
 }
 
@@ -69,7 +68,7 @@ func (p *natsPubSub) getInstanceIdentifier() string {
 // we need to make sure that the durable consumer name is unique for each instance and subjects to prevent
 // multiple routers from changing the same consumer, which would lead to message loss and wrong messages delivered
 // to the subscribers
-func (p *natsPubSub) getDurableConsumerName(durableName string, subjects []string) (string, error) {
+func (p *NatsPubSub) getDurableConsumerName(durableName string, subjects []string) (string, error) {
 	subjHash := xxhash.New()
 	_, err := subjHash.WriteString(p.getInstanceIdentifier())
 	if err != nil {
@@ -85,7 +84,7 @@ func (p *natsPubSub) getDurableConsumerName(durableName string, subjects []strin
 	return fmt.Sprintf("%s-%x", durableName, subjHash.Sum64()), nil
 }
 
-func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.NatsSubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
+func (p *NatsPubSub) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "subscribe"),
@@ -201,7 +200,7 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 	return nil
 }
 
-func (p *natsPubSub) Publish(_ context.Context, event pubsub_datasource.NatsPublishAndRequestEventConfiguration) error {
+func (p *NatsPubSub) Publish(_ context.Context, event PublishAndRequestEventConfiguration) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "publish"),
@@ -219,7 +218,7 @@ func (p *natsPubSub) Publish(_ context.Context, event pubsub_datasource.NatsPubl
 	return nil
 }
 
-func (p *natsPubSub) Request(ctx context.Context, event pubsub_datasource.NatsPublishAndRequestEventConfiguration, w io.Writer) error {
+func (p *NatsPubSub) Request(ctx context.Context, event PublishAndRequestEventConfiguration, w io.Writer) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "request"),
@@ -243,11 +242,11 @@ func (p *natsPubSub) Request(ctx context.Context, event pubsub_datasource.NatsPu
 	return err
 }
 
-func (p *natsPubSub) flush(ctx context.Context) error {
+func (p *NatsPubSub) flush(ctx context.Context) error {
 	return p.conn.FlushWithContext(ctx)
 }
 
-func (p *natsPubSub) Shutdown(ctx context.Context) error {
+func (p *NatsPubSub) Shutdown(ctx context.Context) error {
 
 	if p.conn.IsClosed() {
 		return nil

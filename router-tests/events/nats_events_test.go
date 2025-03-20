@@ -136,7 +136,7 @@ func TestNatsEvents(t *testing.T) {
 			natsLogs := xEnv.Observer().FilterMessageSnippet("Nats").All()
 			require.Len(t, natsLogs, 4)
 			providerIDFields := xEnv.Observer().FilterField(zap.String("provider_id", "my-nats")).All()
-			require.Len(t, providerIDFields, 2)
+			require.Len(t, providerIDFields, 3)
 		})
 	})
 

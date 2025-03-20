@@ -22,7 +22,6 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	natsPubsub "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/wundergraph/cosmo/demo/pkg/injector"
@@ -162,7 +161,7 @@ func subgraphHandler(schema graphql.ExecutableSchema) http.Handler {
 }
 
 type SubgraphOptions struct {
-	NatsPubSubByProviderID map[string]pubsub_datasource.NatsPubSub
+	NatsPubSubByProviderID map[string]*natsPubsub.NatsPubSub
 	GetPubSubName          func(string) string
 }
 
@@ -227,7 +226,7 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 		return nil, err
 	}
 
-	natsPubSubByProviderID := map[string]pubsub_datasource.NatsPubSub{
+	natsPubSubByProviderID := map[string]*natsPubsub.NatsPubSub{
 		"default": natsPubsub.NewConnector(zap.NewNop(), defaultConnection, defaultJetStream, "hostname", "test").New(ctx),
 		"my-nats": natsPubsub.NewConnector(zap.NewNop(), myNatsConnection, myNatsJetStream, "hostname", "test").New(ctx),
 	}

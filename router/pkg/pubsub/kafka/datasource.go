@@ -31,7 +31,7 @@ func GetDataSource(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMe
 			return nil, err
 		}
 		factory := k.GetFactory(ctx, config)
-		ds, err := plan.NewDataSourceConfiguration[Configuration](
+		ds, err := plan.NewDataSourceConfiguration(
 			in.Id,
 			factory,
 			dsMeta,
@@ -206,7 +206,7 @@ func (p *Planner) ConfigureFetch() resolve.FetchConfiguration {
 
 	topic := topics[0]
 
-	event, eventErr := utils.BuildEventDataBytes(p.rootFieldRef, p.visitor, p.variables)
+	event, eventErr := utils.BuildEventDataBytes(p.rootFieldRef, p.visitor, &p.variables)
 	if eventErr != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to build event data bytes: %w", eventErr))
 		return resolve.FetchConfiguration{}
