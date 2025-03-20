@@ -1,12 +1,15 @@
 package retrytransport
 
 import (
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 type MockTransport struct {
@@ -26,7 +29,6 @@ func TestRetryOnHTTP5xx(t *testing.T) {
 	tr := RetryHTTPTransport{
 		RoundTripper: &MockTransport{
 			handler: func(req *http.Request) (*http.Response, error) {
-
 				if index < len(defaultRetryableStatusCodes)-1 {
 					index++
 					return &http.Response{
@@ -107,4 +109,87 @@ func TestRetryOnNetErrors(t *testing.T) {
 
 	assert.Equal(t, len(defaultRetryableErrors), retries)
 
+}
+
+// TrackableBody is a custom io.ReadCloser that tracks if it's been read and closed
+type TrackableBody struct {
+	index  int
+	read   bool
+	closed bool
+}
+
+func (b *TrackableBody) Read(p []byte) (n int, err error) {
+	b.read = true
+	return 0, io.EOF
+}
+
+func (b *TrackableBody) Close() error {
+	b.closed = true
+	return nil
+}
+
+func TestResponseBodyDraining(t *testing.T) {
+	logger := zap.NewNop()
+	actualRetries := 0
+	index := -1
+
+	// Create trackable bodies for each response
+	retryCount := 2
+
+	bodies := make([]*TrackableBody, retryCount+1)
+	for i := range bodies {
+		bodies[i] = &TrackableBody{
+			index: i,
+		}
+	}
+
+	tr := RetryHTTPTransport{
+		RoundTripper: &MockTransport{
+			handler: func(req *http.Request) (*http.Response, error) {
+				index++
+				if index < retryCount {
+					return &http.Response{
+						StatusCode: defaultRetryableStatusCodes[0],
+						Body:       bodies[index],
+					}, nil
+				} else {
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       bodies[index],
+					}, nil
+				}
+			},
+		},
+		RetryOptions: RetryOptions{
+			MaxRetryCount: retryCount,
+			Interval:      1 * time.Millisecond,
+			MaxDuration:   10 * time.Millisecond,
+			ShouldRetry: func(err error, req *http.Request, resp *http.Response) bool {
+				return IsRetryableError(err, resp)
+			},
+			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
+				actualRetries++
+			},
+		},
+		Logger: logger,
+	}
+
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
+
+	resp, err := tr.RoundTrip(req)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, retryCount, actualRetries)
+
+	// Verify all bodies were read and closed
+	for i, body := range bodies {
+		if i < retryCount {
+			assert.True(t, body.read, fmt.Sprintf("Body %d was not read", i))
+			assert.True(t, body.closed, fmt.Sprintf("Body %d was not closed", i))
+		} else {
+			// the final successful body should not be read
+			assert.False(t, body.read, fmt.Sprintf("Body %d was read when it shouldnt be", i))
+			assert.False(t, body.closed, fmt.Sprintf("Body %d was closed when it shouldnt be", i))
+		}
+	}
 }

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/cloudflare/backoff"
 	"go.uber.org/zap"
+	"io"
 	"net/http"
 	"strings"
 	"syscall"
@@ -57,7 +58,6 @@ func NewRetryHTTPTransport(roundTripper http.RoundTripper, retryOptions RetryOpt
 }
 
 func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-
 	resp, err := rt.RoundTripper.RoundTrip(req)
 	// Short circuit if the request was successful.
 	if err == nil && isResponseOK(resp) {
@@ -88,6 +88,9 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 		// Wait for the specified backoff period
 		time.Sleep(sleepDuration)
 
+		// drain the previous response before retrying
+		rt.drainBody(resp)
+
 		// Retry the request
 		resp, err = rt.RoundTripper.RoundTrip(req)
 
@@ -99,6 +102,20 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	}
 
 	return resp, err
+}
+
+func (rt *RetryHTTPTransport) drainBody(resp *http.Response) {
+	if resp == nil || resp.Body == nil {
+		return
+	}
+	_, err := io.Copy(io.Discard, resp.Body)
+	if err != nil {
+		rt.Logger.Error("Failed draining when copying the body", zap.Error(err))
+	}
+	err = resp.Body.Close()
+	if err != nil {
+		rt.Logger.Error("Failed draining when closing the body", zap.Error(err))
+	}
 }
 
 func isResponseOK(resp *http.Response) bool {
