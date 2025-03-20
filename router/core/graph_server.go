@@ -515,6 +515,9 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 		// In these case, we'll want to compute the sha256 for every operation, in order to check that the operation
 		// is present in the Persisted Operation cache
 		computeSha256 = true
+	} else if srv.metricConfig.Prometheus.IncludeSchemaUsage {
+		// Prometheus schema field usage metrics use sha256, so we need to ensure it is computed
+		computeSha256 = true
 	}
 
 	if computeSha256 {

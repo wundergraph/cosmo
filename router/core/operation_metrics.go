@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"strconv"
 	"time"
 
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
@@ -85,7 +84,7 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 				attribute.StringSlice("wg_type_name", field.TypeNames),
 			}, otelmetric.WithAttributeSet(attribute.NewSet(
 				attribute.String("wg_field_name", field.Path[len(field.Path)-1]),
-				attribute.String("wg_operation_hash", strconv.FormatUint(reqContext.operation.hash, 10)),
+				attribute.String("wg_operation_sha256", reqContext.operation.sha256Hash),
 				attribute.String("wg_operation_name", reqContext.operation.name),
 				attribute.String("wg_operation_type", reqContext.operation.opType),
 			)))
