@@ -150,8 +150,8 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         matchExact: false,
       },
       {
-        title: "Lint Policy",
-        href: basePath + "/lint-policy",
+        title: "Policies",
+        href: basePath + "/policies",
         icon: <MdOutlinePolicy className="h-4 w-4" />,
       },
       {

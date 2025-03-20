@@ -2,36 +2,28 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  EnableGraphPruningRequest,
-  EnableGraphPruningResponse,
+  GetNamespaceChecksConfigurationRequest,
+  GetNamespaceChecksConfigurationResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
-import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 
-export function enableGraphPruning(
+export function getNamespaceChecksConfig(
   opts: RouterOptions,
-  req: EnableGraphPruningRequest,
+  req: GetNamespaceChecksConfigurationRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<EnableGraphPruningResponse>> {
+): Promise<PlainMessage<GetNamespaceChecksConfigurationResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<EnableGraphPruningResponse>>(ctx, logger, async () => {
+  return handleError<PlainMessage<GetNamespaceChecksConfigurationResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    if (!authContext.hasWriteAccess) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The user doesnt have the permissions to perform this operation`,
-        },
-      };
-    }
-
-    const organizationRepo = new OrganizationRepository(logger, opts.db);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+
     const namespace = await namespaceRepo.byName(req.namespace);
     if (!namespace) {
       return {
@@ -39,31 +31,23 @@ export function enableGraphPruning(
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: `Namespace '${req.namespace}' not found`,
         },
+        timeframeInDays: 0,
+        timeframeLimitInDays: 0,
       };
     }
 
-    const fieldPruningGracePeriod = await organizationRepo.getFeature({
+    const changeRetention = await orgRepo.getFeature({
       organizationId: authContext.organizationId,
-      featureId: 'field-pruning-grace-period',
-    });
-    if (!fieldPruningGracePeriod || !fieldPruningGracePeriod.limit) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `Upgrade to a paid plan to enable graph pruning`,
-        },
-      };
-    }
-
-    await namespaceRepo.updateConfiguration({
-      id: namespace.id,
-      enableGraphPruning: req.enableGraphPruning,
+      featureId: 'breaking-change-retention',
     });
 
+    const timeframeLimitInDays = changeRetention?.limit ?? 7;
     return {
       response: {
         code: EnumStatusCode.OK,
       },
+      timeframeInDays: namespace.checksTimeframeInDays ?? timeframeLimitInDays,
+      timeframeLimitInDays,
     };
   });
 }
