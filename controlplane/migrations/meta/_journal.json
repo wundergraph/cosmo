@@ -799,13 +799,6 @@
       "when": 1741640180846,
       "tag": "0113_misty_lady_ursula",
       "breakpoints": true
-    },
-    {
-      "idx": 114,
-      "version": "7",
-      "when": 1742397166943,
-      "tag": "0114_wandering_micromacro",
-      "breakpoints": true
     }
   ]
 }
