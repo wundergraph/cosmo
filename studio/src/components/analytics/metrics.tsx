@@ -44,7 +44,7 @@ import {
 import { differenceInHours, formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import React, { useCallback, useContext, useId, useMemo } from "react";
+import React, { useCallback, useContext, useId, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -824,6 +824,7 @@ export const LatencyDistributionCard = ({
   timeRange: number;
   series: any[];
 }) => {
+  const [activeLatencies, setActiveLatencies] = useState({ p50: false, p90: false, p99: false });
   const formatter = (value: number) => {
     return formatDurationMetric(value, {
       maximumFractionDigits: 3,
@@ -860,6 +861,7 @@ export const LatencyDistributionCard = ({
               dataKey="p99"
               animationDuration={300}
               dot={false}
+              hide={activeLatencies.p99}
               stroke={p99StrokeColor}
               strokeWidth={1.5}
             />
@@ -869,6 +871,7 @@ export const LatencyDistributionCard = ({
               dataKey="p90"
               animationDuration={300}
               dot={false}
+              hide={activeLatencies.p90}
               stroke={p90StrokeColor}
               strokeWidth={1.5}
             />
@@ -878,6 +881,7 @@ export const LatencyDistributionCard = ({
               dataKey="p50"
               animationDuration={300}
               dot={false}
+              hide={activeLatencies.p50}
               stroke={p50StrokeColor}
               strokeWidth={1.5}
             />
@@ -903,6 +907,12 @@ export const LatencyDistributionCard = ({
               verticalAlign="top"
               align="right"
               wrapperStyle={{ fontSize: "13px", marginTop: "-10px" }}
+              onClick={({ dataKey, inactive }) => {
+                setActiveLatencies({
+                  ...activeLatencies,
+                  [dataKey]: !inactive
+                });
+              }}
             />
 
             <ChartTooltip formatter={formatter} />
