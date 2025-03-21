@@ -39,23 +39,27 @@ func (e *PlannerOperationValidationError) Error() string {
 
 type PlanGenerator struct {
 	planConfiguration *plan.Configuration
+	clientDefinition  *ast.Document
 	definition        *ast.Document
 }
 
 type Planner struct {
 	planner            *plan.Planner
 	definition         *ast.Document
+	clientDefinition   *ast.Document
 	operationValidator *astvalidation.OperationValidator
 }
 
-func NewPlanner(planConfiguration *plan.Configuration, definition *ast.Document) (*Planner, error) {
+func NewPlanner(planConfiguration *plan.Configuration, definition *ast.Document, clientDefinition *ast.Document) (*Planner, error) {
 	planner, err := plan.NewPlanner(*planConfiguration)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create planner: %w", err)
 	}
+
 	return &Planner{
-		planner:    planner,
-		definition: definition,
+		planner:          planner,
+		definition:       definition,
+		clientDefinition: clientDefinition,
 	}, nil
 }
 
@@ -128,7 +132,7 @@ func (pl *Planner) validateOperation(operation *ast.Document) error {
 	))
 
 	report := operationreport.Report{}
-	pl.operationValidator.Validate(operation, pl.definition, &report)
+	pl.operationValidator.Validate(operation, pl.clientDefinition, &report)
 	if report.HasErrors() {
 		return report
 	}
@@ -178,7 +182,7 @@ func NewPlanGeneratorFromConfig(config *nodev1.RouterConfig, logger *zap.Logger,
 }
 
 func (pg *PlanGenerator) GetPlanner() (*Planner, error) {
-	return NewPlanner(pg.planConfiguration, pg.definition)
+	return NewPlanner(pg.planConfiguration, pg.definition, pg.clientDefinition)
 }
 
 func (pg *PlanGenerator) buildRouterConfig(configFilePath string) (*nodev1.RouterConfig, error) {
@@ -254,6 +258,7 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 	if logger != nil {
 		planConfig.Logger = log.NewZapLogger(logger, log.DebugLevel)
 	}
+	var clientSchemaDefinition *ast.Document
 
 	// this is the GraphQL Schema that we will expose from our API
 	definition, report := astparser.ParseGraphqlDocumentString(routerConfig.EngineConfig.GraphqlSchema)
@@ -267,6 +272,20 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 	err = asttransform.MergeDefinitionWithBaseSchema(&definition)
 	if err != nil {
 		return fmt.Errorf("failed to merge graphql schema with base schema: %w", err)
+	}
+
+	if clientSchemaStr := routerConfig.GetEngineConfig().GetGraphqlClientSchema(); clientSchemaStr != "" {
+		clientSchema, report := astparser.ParseGraphqlDocumentString(clientSchemaStr)
+		if report.HasErrors() {
+			return fmt.Errorf("failed to parse graphql client schema from engine config: %w", report)
+		}
+		err = asttransform.MergeDefinitionWithBaseSchema(&clientSchema)
+		if err != nil {
+			return fmt.Errorf("failed to merge graphql client schema with base schema: %w", err)
+		}
+		clientSchemaDefinition = &clientSchema
+	} else {
+		clientSchemaDefinition = &definition
 	}
 
 	// by default, the engine doesn't understand how to resolve the __schema and __type queries
@@ -288,5 +307,6 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 
 	pg.planConfiguration = planConfig
 	pg.definition = &definition
+	pg.clientDefinition = clientSchemaDefinition
 	return nil
 }
