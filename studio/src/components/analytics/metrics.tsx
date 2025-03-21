@@ -7,7 +7,6 @@ import {
   AnalyticsFilters,
 } from "@/components/analytics/filters";
 import { optionConstructor } from "@/components/analytics/getDataTableFilters";
-import { useRange } from "@/components/analytics/use-range";
 import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
 import { EmptyState } from "@/components/empty-state";
 import { InfoTooltip } from "@/components/info-tooltip";
@@ -70,6 +69,11 @@ export const getInfoTip = (range?: number) => {
       return "selected period";
   }
 };
+
+const useTimeRange = () => {
+  const { range, dateRange } = useAnalyticsQueryState();
+  return (dateRange ? differenceInHours(dateRange.end, dateRange.start) : range) ?? 24;
+}
 
 const useSelectedFilters = () => {
   const router = useRouter();
@@ -427,7 +431,7 @@ export const RequestMetricsCard = (props: {
   data?: MetricsDashboardMetric;
   isSubgraphAnalytics?: boolean;
 }) => {
-  const range = useRange();
+  const timeRange = useTimeRange();
   const { data } = props;
 
   const top = data?.top ?? [];
@@ -458,7 +462,7 @@ export const RequestMetricsCard = (props: {
           <div className="flex space-x-2 text-sm">
             <h4>Request Rate</h4>
             <div>
-              <InfoTooltip>RPM in {getInfoTip(range)}</InfoTooltip>
+              <InfoTooltip>RPM in {getInfoTip(timeRange)}</InfoTooltip>
             </div>
           </div>
 
@@ -475,7 +479,7 @@ export const RequestMetricsCard = (props: {
         <Sparkline
           series={data?.series ?? []}
           valueFormatter={formatter}
-          timeRange={range}
+          timeRange={timeRange}
         />
       </CardContent>
       <TopList
@@ -493,7 +497,7 @@ export const LatencyMetricsCard = (props: {
   data?: MetricsDashboardMetric;
   isSubgraphAnalytics?: boolean;
 }) => {
-  const range = useRange();
+  const timeRange = useTimeRange();
   const { data } = props;
 
   const top = data?.top ?? [];
@@ -513,7 +517,7 @@ export const LatencyMetricsCard = (props: {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm">
             <h4>P95 Latency</h4>
-            <InfoTooltip>P95 latency in {getInfoTip(range)}</InfoTooltip>
+            <InfoTooltip>P95 latency in {getInfoTip(timeRange)}</InfoTooltip>
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
 
@@ -528,7 +532,7 @@ export const LatencyMetricsCard = (props: {
         <Sparkline
           series={data?.series ?? []}
           valueFormatter={formatter}
-          timeRange={range}
+          timeRange={timeRange}
         />
       </CardContent>
       <TopList
@@ -546,7 +550,7 @@ export const ErrorMetricsCard = (props: {
   data?: MetricsDashboardMetric;
   isSubgraphAnalytics?: boolean;
 }) => {
-  const range = useRange();
+  const timeRange = useTimeRange();
   const { data } = props;
 
   const top = data?.top ?? [];
@@ -562,7 +566,7 @@ export const ErrorMetricsCard = (props: {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm">
             <h4>Error Percentage</h4>
-            <InfoTooltip>Error percentage in {getInfoTip(range)}</InfoTooltip>
+            <InfoTooltip>Error percentage in {getInfoTip(timeRange)}</InfoTooltip>
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
           <p className="text-sm text-muted-foreground">
@@ -576,7 +580,7 @@ export const ErrorMetricsCard = (props: {
         <ErrorPercentChart
           series={data?.series ?? []}
           valueFormatter={formatter}
-          timeRange={range}
+          timeRange={timeRange}
         />
       </CardContent>
       <TopList
@@ -816,15 +820,9 @@ export const ErrorRateOverTimeCard = () => {
   );
 };
 
-export const LatencyDistributionCard = ({
-  timeRange,
-  series
-} :
-{
-  timeRange: number;
-  series: any[];
-}) => {
+export const LatencyDistributionCard = ({ series } : { series: any[]; }) => {
   const [activeLatencies, setActiveLatencies] = useState({ p50: false, p90: false, p99: false });
+  const timeRange = useTimeRange();
   const formatter = (value: number) => {
     return formatDurationMetric(value, {
       maximumFractionDigits: 3,

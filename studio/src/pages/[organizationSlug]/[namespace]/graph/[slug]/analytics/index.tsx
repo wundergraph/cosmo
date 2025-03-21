@@ -204,7 +204,7 @@ const AnalyticsPage: NextPageWithLayout = () => {
       </div>
 
       <ErrorRateOverTimeCard />
-      <LatencyDistributionCard timeRange={range ?? 24} series={data?.latency?.series ?? []} />
+      <LatencyDistributionCard series={data?.latency?.series ?? []} />
     </div>
   );
 };

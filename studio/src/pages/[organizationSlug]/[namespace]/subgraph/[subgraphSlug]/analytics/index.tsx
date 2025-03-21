@@ -400,7 +400,7 @@ const SubgraphAnalyticsPage: NextPageWithLayout = () => {
       </div>
 
       <SubgraphErrorRateOverTimeCard />
-      <LatencyDistributionCard timeRange={range ?? 24} series={data?.latency?.series ?? []} />
+      <LatencyDistributionCard series={data?.latency?.series ?? []} />
     </div>
   );
 };
