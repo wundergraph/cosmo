@@ -9,7 +9,6 @@ import (
 
 	log "github.com/jensneuse/abstractlogger"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/apollocompatibility"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
@@ -125,11 +124,7 @@ func (pl *Planner) planOperation(operation *ast.Document) (*resolve.FetchTreeQue
 }
 
 func (pl *Planner) validateOperation(operation *ast.Document) error {
-	pl.operationValidator = astvalidation.DefaultOperationValidator(astvalidation.WithApolloCompatibilityFlags(
-		apollocompatibility.Flags{
-			ReplaceUndefinedOpFieldError: true, // TODO: make this configurable
-		},
-	))
+	pl.operationValidator = astvalidation.DefaultOperationValidator()
 
 	report := operationreport.Report{}
 	pl.operationValidator.Validate(operation, pl.clientDefinition, &report)
