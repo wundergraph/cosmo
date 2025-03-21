@@ -9,10 +9,12 @@ import (
 
 	log "github.com/jensneuse/abstractlogger"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/apollocompatibility"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/introspection_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
@@ -27,14 +29,23 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 )
 
+type PlannerOperationValidationError struct {
+	err error
+}
+
+func (e *PlannerOperationValidationError) Error() string {
+	return e.err.Error()
+}
+
 type PlanGenerator struct {
 	planConfiguration *plan.Configuration
 	definition        *ast.Document
 }
 
 type Planner struct {
-	planner    *plan.Planner
-	definition *ast.Document
+	planner            *plan.Planner
+	definition         *ast.Document
+	operationValidator *astvalidation.OperationValidator
 }
 
 func NewPlanner(planConfiguration *plan.Configuration, definition *ast.Document) (*Planner, error) {
@@ -52,6 +63,11 @@ func (pl *Planner) PlanOperation(operationFilePath string) (string, error) {
 	operation, err := pl.parseOperation(operationFilePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse operation: %w", err)
+	}
+
+	err = pl.validateOperation(operation)
+	if err != nil {
+		return "", &PlannerOperationValidationError{err: err}
 	}
 
 	rawPlan, err := pl.planOperation(operation)
@@ -102,6 +118,22 @@ func (pl *Planner) planOperation(operation *ast.Document) (*resolve.FetchTreeQue
 	}
 
 	return &resolve.FetchTreeQueryPlanNode{}, nil
+}
+
+func (pl *Planner) validateOperation(operation *ast.Document) error {
+	pl.operationValidator = astvalidation.DefaultOperationValidator(astvalidation.WithApolloCompatibilityFlags(
+		apollocompatibility.Flags{
+			ReplaceUndefinedOpFieldError: true, // TODO: make this configurable
+		},
+	))
+
+	report := operationreport.Report{}
+	pl.operationValidator.Validate(operation, pl.definition, &report)
+	if report.HasErrors() {
+		return report
+	}
+
+	return nil
 }
 
 func (pl *Planner) parseOperation(operationFilePath string) (*ast.Document, error) {
