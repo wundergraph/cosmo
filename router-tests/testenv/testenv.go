@@ -1152,6 +1152,10 @@ func (e *Environment) GetPubSubName(name string) string {
 	return e.getPubSubName(name)
 }
 
+func (e *Environment) GetKafkaSeeds() []string {
+	return e.cfg.KafkaSeeds
+}
+
 func (e *Environment) RouterConfigVersionMain() string {
 	return e.routerConfigVersionMain
 }
