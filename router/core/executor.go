@@ -2,15 +2,10 @@ package core
 
 import (
 	"context"
-	"crypto/tls"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/nats-io/nats.go"
-	"github.com/twmb/franz-go/pkg/kgo"
-	"github.com/twmb/franz-go/pkg/sasl/plain"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -51,7 +46,6 @@ type ExecutorBuildOptions struct {
 	EngineConfig                   *nodev1.EngineConfiguration
 	Subgraphs                      []*nodev1.Subgraph
 	RouterEngineConfig             *RouterEngineConfiguration
-	PubSubProviders                *EnginePubSubProviders
 	Reporter                       resolve.Reporter
 	ApolloCompatibilityFlags       config.ApolloCompatibilityFlags
 	ApolloRouterCompatibilityFlags config.ApolloRouterCompatibilityFlags
@@ -59,7 +53,7 @@ type ExecutorBuildOptions struct {
 }
 
 func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *ExecutorBuildOptions) (*Executor, error) {
-	planConfig, err := b.buildPlannerConfiguration(ctx, opts.EngineConfig, opts.Subgraphs, opts.RouterEngineConfig, opts.PubSubProviders)
+	planConfig, err := b.buildPlannerConfiguration(ctx, opts.EngineConfig, opts.Subgraphs, opts.RouterEngineConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build planner configuration: %w", err)
 	}
@@ -196,79 +190,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 	}, nil
 }
 
-func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([]nats.Option, error) {
-	opts := []nats.Option{
-		nats.Name(fmt.Sprintf("cosmo.router.edfs.nats.%s", eventSource.ID)),
-		nats.ReconnectJitter(500*time.Millisecond, 2*time.Second),
-		nats.ClosedHandler(func(conn *nats.Conn) {
-			logger.Info("NATS connection closed", zap.String("provider_id", eventSource.ID), zap.Error(conn.LastError()))
-		}),
-		nats.ConnectHandler(func(nc *nats.Conn) {
-			logger.Info("NATS connection established", zap.String("provider_id", eventSource.ID), zap.String("url", nc.ConnectedUrlRedacted()))
-		}),
-		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
-			if err != nil {
-				logger.Error("NATS disconnected; will attempt to reconnect", zap.Error(err), zap.String("provider_id", eventSource.ID))
-			} else {
-				logger.Info("NATS disconnected", zap.String("provider_id", eventSource.ID))
-			}
-		}),
-		nats.ErrorHandler(func(conn *nats.Conn, subscription *nats.Subscription, err error) {
-			if errors.Is(err, nats.ErrSlowConsumer) {
-				logger.Warn(
-					"NATS slow consumer detected. Events are being dropped. Please consider increasing the buffer size or reducing the number of messages being sent.",
-					zap.Error(err),
-					zap.String("provider_id", eventSource.ID),
-				)
-			} else {
-				logger.Error("NATS error", zap.Error(err))
-			}
-		}),
-		nats.ReconnectHandler(func(conn *nats.Conn) {
-			logger.Info("NATS reconnected", zap.String("provider_id", eventSource.ID), zap.String("url", conn.ConnectedUrlRedacted()))
-		}),
-	}
-
-	if eventSource.Authentication != nil {
-		if eventSource.Authentication.Token != nil {
-			opts = append(opts, nats.Token(*eventSource.Authentication.Token))
-		} else if eventSource.Authentication.UserInfo.Username != nil && eventSource.Authentication.UserInfo.Password != nil {
-			opts = append(opts, nats.UserInfo(*eventSource.Authentication.UserInfo.Username, *eventSource.Authentication.UserInfo.Password))
-		}
-	}
-
-	return opts, nil
-}
-
-// buildKafkaOptions creates a list of kgo.Opt options for the given Kafka event source configuration.
-// Only general options like TLS, SASL, etc. are configured here. Specific options like topics, etc. are
-// configured in the KafkaPubSub implementation.
-func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
-	opts := []kgo.Opt{
-		kgo.SeedBrokers(eventSource.Brokers...),
-		// Ensure proper timeouts are set
-		kgo.ProduceRequestTimeout(10 * time.Second),
-		kgo.ConnIdleTimeout(60 * time.Second),
-	}
-
-	if eventSource.TLS != nil && eventSource.TLS.Enabled {
-		opts = append(opts,
-			// Configure TLS. Uses SystemCertPool for RootCAs by default.
-			kgo.DialTLSConfig(new(tls.Config)),
-		)
-	}
-
-	if eventSource.Authentication != nil && eventSource.Authentication.SASLPlain.Username != nil && eventSource.Authentication.SASLPlain.Password != nil {
-		opts = append(opts, kgo.SASL(plain.Auth{
-			User: *eventSource.Authentication.SASLPlain.Username,
-			Pass: *eventSource.Authentication.SASLPlain.Password,
-		}.AsMechanism()))
-	}
-
-	return opts, nil
-}
-
-func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineCfg *RouterEngineConfiguration, pubSubProviders *EnginePubSubProviders) (*plan.Configuration, error) {
+func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineCfg *RouterEngineConfiguration) (*plan.Configuration, error) {
 	// this loader is used to take the engine config and create a plan config
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
@@ -280,9 +202,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		b.logger,
 		routerEngineCfg.Execution.EnableSingleFlight,
 		routerEngineCfg.Execution.EnableNetPoll,
-		pubSubProviders.nats,
-		pubSubProviders.kafka,
-	))
+	), b.logger)
 
 	// this generates the plan config using the data source factories from the config package
 	planConfig, err := loader.Load(engineConfig, subgraphs, routerEngineCfg)

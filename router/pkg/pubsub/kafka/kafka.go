@@ -10,17 +10,12 @@ import (
 
 	"github.com/twmb/franz-go/pkg/kerr"
 	"github.com/twmb/franz-go/pkg/kgo"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 )
 
 var (
-	_ pubsub_datasource.KafkaConnector = (*connector)(nil)
-	_ pubsub_datasource.KafkaPubSub    = (*kafkaPubSub)(nil)
-	_ pubsub.Lifecycle                 = (*kafkaPubSub)(nil)
-
 	errClientClosed = errors.New("client closed")
 )
 
@@ -30,8 +25,7 @@ type connector struct {
 	logger      *zap.Logger
 }
 
-func NewConnector(logger *zap.Logger, opts []kgo.Opt) (pubsub_datasource.KafkaConnector, error) {
-
+func NewConnector(logger *zap.Logger, opts []kgo.Opt) (*connector, error) {
 	writeClient, err := kgo.NewClient(append(opts,
 		// For observability, we set the client ID to "router"
 		kgo.ClientID("cosmo.router.producer"))...,
@@ -47,7 +41,7 @@ func NewConnector(logger *zap.Logger, opts []kgo.Opt) (pubsub_datasource.KafkaCo
 	}, nil
 }
 
-func (c *connector) New(ctx context.Context) pubsub_datasource.KafkaPubSub {
+func (c *connector) New(ctx context.Context) *kafkaPubSub {
 
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -132,15 +126,13 @@ func (p *kafkaPubSub) topicPoller(ctx context.Context, client *kgo.Client, updat
 
 // Subscribe subscribes to the given topics and updates the subscription updater.
 // The engine already deduplicates subscriptions with the same topics, stream configuration, extensions, headers, etc.
-func (p *kafkaPubSub) Subscribe(ctx context.Context, event pubsub_datasource.KafkaSubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
+func (p *kafkaPubSub) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
 
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "subscribe"),
 		zap.Strings("topics", event.Topics),
 	)
-
-	log.Debug("subscribe")
 
 	// Create a new client for the topic
 	client, err := kgo.NewClient(append(p.opts,
@@ -181,7 +173,7 @@ func (p *kafkaPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Kaf
 // Publish publishes the given event to the Kafka topic in a non-blocking way.
 // Publish errors are logged and returned as a pubsub error.
 // The event is written with a dedicated write client.
-func (p *kafkaPubSub) Publish(ctx context.Context, event pubsub_datasource.KafkaPublishEventConfiguration) error {
+func (p *kafkaPubSub) Publish(ctx context.Context, event PublishEventConfiguration) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "publish"),
@@ -209,7 +201,7 @@ func (p *kafkaPubSub) Publish(ctx context.Context, event pubsub_datasource.Kafka
 
 	if pErr != nil {
 		log.Error("publish error", zap.Error(pErr))
-		return pubsub.NewError(fmt.Sprintf("error publishing to Kafka topic %s", event.Topic), pErr)
+		return datasource.NewError(fmt.Sprintf("error publishing to Kafka topic %s", event.Topic), pErr)
 	}
 
 	return nil
