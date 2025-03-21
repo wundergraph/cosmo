@@ -3,6 +3,7 @@ import { AnalyticsSelectedFilters } from "@/components/analytics/filters";
 import {
   ErrorMetricsCard,
   LatencyMetricsCard,
+  LatencyDistributionCard,
   MetricsFilters,
   RequestMetricsCard,
   getInfoTip,
@@ -399,6 +400,7 @@ const SubgraphAnalyticsPage: NextPageWithLayout = () => {
       </div>
 
       <SubgraphErrorRateOverTimeCard />
+      <LatencyDistributionCard series={data?.latency?.series ?? []} />
     </div>
   );
 };

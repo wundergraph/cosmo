@@ -10248,6 +10248,21 @@ export class MetricsSeriesItem extends Message<MetricsSeriesItem> {
    */
   previousValue?: string;
 
+  /**
+   * @generated from field: optional string p50 = 4;
+   */
+  p50?: string;
+
+  /**
+   * @generated from field: optional string p90 = 5;
+   */
+  p90?: string;
+
+  /**
+   * @generated from field: optional string p99 = 6;
+   */
+  p99?: string;
+
   constructor(data?: PartialMessage<MetricsSeriesItem>) {
     super();
     proto3.util.initPartial(data, this);
@@ -10259,6 +10274,9 @@ export class MetricsSeriesItem extends Message<MetricsSeriesItem> {
     { no: 1, name: "timestamp", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "previousValue", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "p50", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "p90", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "p99", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetricsSeriesItem {
