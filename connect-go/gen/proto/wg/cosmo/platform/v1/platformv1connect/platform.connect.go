@@ -436,6 +436,12 @@ const (
 	// PlatformServiceGetNamespaceLintConfigProcedure is the fully-qualified name of the
 	// PlatformService's GetNamespaceLintConfig RPC.
 	PlatformServiceGetNamespaceLintConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/GetNamespaceLintConfig"
+	// PlatformServiceGetNamespaceChecksConfigProcedure is the fully-qualified name of the
+	// PlatformService's GetNamespaceChecksConfig RPC.
+	PlatformServiceGetNamespaceChecksConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/GetNamespaceChecksConfig"
+	// PlatformServiceUpdateNamespaceChecksConfigProcedure is the fully-qualified name of the
+	// PlatformService's UpdateNamespaceChecksConfig RPC.
+	PlatformServiceUpdateNamespaceChecksConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateNamespaceChecksConfig"
 	// PlatformServiceEnableGraphPruningProcedure is the fully-qualified name of the PlatformService's
 	// EnableGraphPruning RPC.
 	PlatformServiceEnableGraphPruningProcedure = "/wg.cosmo.platform.v1.PlatformService/EnableGraphPruning"
@@ -641,6 +647,8 @@ var (
 	platformServiceEnableLintingForTheNamespaceMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("EnableLintingForTheNamespace")
 	platformServiceConfigureNamespaceLintConfigMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("ConfigureNamespaceLintConfig")
 	platformServiceGetNamespaceLintConfigMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceLintConfig")
+	platformServiceGetNamespaceChecksConfigMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceChecksConfig")
+	platformServiceUpdateNamespaceChecksConfigMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("UpdateNamespaceChecksConfig")
 	platformServiceEnableGraphPruningMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("EnableGraphPruning")
 	platformServiceConfigureNamespaceGraphPruningConfigMethodDescriptor  = platformServiceServiceDescriptor.Methods().ByName("ConfigureNamespaceGraphPruningConfig")
 	platformServiceGetNamespaceGraphPruningConfigMethodDescriptor        = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceGraphPruningConfig")
@@ -912,6 +920,10 @@ type PlatformServiceClient interface {
 	ConfigureNamespaceLintConfig(context.Context, *connect.Request[v1.ConfigureNamespaceLintConfigRequest]) (*connect.Response[v1.ConfigureNamespaceLintConfigResponse], error)
 	// GetNamespaceLintConfig returns the lint config of the namespace.
 	GetNamespaceLintConfig(context.Context, *connect.Request[v1.GetNamespaceLintConfigRequest]) (*connect.Response[v1.GetNamespaceLintConfigResponse], error)
+	// GetNamespaceChecksConfig returns the checks config of the namespace.
+	GetNamespaceChecksConfig(context.Context, *connect.Request[v1.GetNamespaceChecksConfigurationRequest]) (*connect.Response[v1.GetNamespaceChecksConfigurationResponse], error)
+	// UpdateNamespaceChecksConfig updates the checks configuration for the namespace passed.
+	UpdateNamespaceChecksConfig(context.Context, *connect.Request[v1.UpdateNamespaceChecksConfigurationRequest]) (*connect.Response[v1.UpdateNamespaceChecksConfigurationResponse], error)
 	// EnablePruningForTheNamespace enables the graph pruning check for the namespace passed.
 	EnableGraphPruning(context.Context, *connect.Request[v1.EnableGraphPruningRequest]) (*connect.Response[v1.EnableGraphPruningResponse], error)
 	// ConfigureNamespaceGraphPruningConfig configures the graph pruning config of the organization.
@@ -1781,6 +1793,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceGetNamespaceLintConfigMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getNamespaceChecksConfig: connect.NewClient[v1.GetNamespaceChecksConfigurationRequest, v1.GetNamespaceChecksConfigurationResponse](
+			httpClient,
+			baseURL+PlatformServiceGetNamespaceChecksConfigProcedure,
+			connect.WithSchema(platformServiceGetNamespaceChecksConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		updateNamespaceChecksConfig: connect.NewClient[v1.UpdateNamespaceChecksConfigurationRequest, v1.UpdateNamespaceChecksConfigurationResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdateNamespaceChecksConfigProcedure,
+			connect.WithSchema(platformServiceUpdateNamespaceChecksConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		enableGraphPruning: connect.NewClient[v1.EnableGraphPruningRequest, v1.EnableGraphPruningResponse](
 			httpClient,
 			baseURL+PlatformServiceEnableGraphPruningProcedure,
@@ -2052,6 +2076,8 @@ type platformServiceClient struct {
 	enableLintingForTheNamespace          *connect.Client[v1.EnableLintingForTheNamespaceRequest, v1.EnableLintingForTheNamespaceResponse]
 	configureNamespaceLintConfig          *connect.Client[v1.ConfigureNamespaceLintConfigRequest, v1.ConfigureNamespaceLintConfigResponse]
 	getNamespaceLintConfig                *connect.Client[v1.GetNamespaceLintConfigRequest, v1.GetNamespaceLintConfigResponse]
+	getNamespaceChecksConfig              *connect.Client[v1.GetNamespaceChecksConfigurationRequest, v1.GetNamespaceChecksConfigurationResponse]
+	updateNamespaceChecksConfig           *connect.Client[v1.UpdateNamespaceChecksConfigurationRequest, v1.UpdateNamespaceChecksConfigurationResponse]
 	enableGraphPruning                    *connect.Client[v1.EnableGraphPruningRequest, v1.EnableGraphPruningResponse]
 	configureNamespaceGraphPruningConfig  *connect.Client[v1.ConfigureNamespaceGraphPruningConfigRequest, v1.ConfigureNamespaceGraphPruningConfigResponse]
 	getNamespaceGraphPruningConfig        *connect.Client[v1.GetNamespaceGraphPruningConfigRequest, v1.GetNamespaceGraphPruningConfigResponse]
@@ -2768,6 +2794,17 @@ func (c *platformServiceClient) GetNamespaceLintConfig(ctx context.Context, req 
 	return c.getNamespaceLintConfig.CallUnary(ctx, req)
 }
 
+// GetNamespaceChecksConfig calls wg.cosmo.platform.v1.PlatformService.GetNamespaceChecksConfig.
+func (c *platformServiceClient) GetNamespaceChecksConfig(ctx context.Context, req *connect.Request[v1.GetNamespaceChecksConfigurationRequest]) (*connect.Response[v1.GetNamespaceChecksConfigurationResponse], error) {
+	return c.getNamespaceChecksConfig.CallUnary(ctx, req)
+}
+
+// UpdateNamespaceChecksConfig calls
+// wg.cosmo.platform.v1.PlatformService.UpdateNamespaceChecksConfig.
+func (c *platformServiceClient) UpdateNamespaceChecksConfig(ctx context.Context, req *connect.Request[v1.UpdateNamespaceChecksConfigurationRequest]) (*connect.Response[v1.UpdateNamespaceChecksConfigurationResponse], error) {
+	return c.updateNamespaceChecksConfig.CallUnary(ctx, req)
+}
+
 // EnableGraphPruning calls wg.cosmo.platform.v1.PlatformService.EnableGraphPruning.
 func (c *platformServiceClient) EnableGraphPruning(ctx context.Context, req *connect.Request[v1.EnableGraphPruningRequest]) (*connect.Response[v1.EnableGraphPruningResponse], error) {
 	return c.enableGraphPruning.CallUnary(ctx, req)
@@ -3132,6 +3169,10 @@ type PlatformServiceHandler interface {
 	ConfigureNamespaceLintConfig(context.Context, *connect.Request[v1.ConfigureNamespaceLintConfigRequest]) (*connect.Response[v1.ConfigureNamespaceLintConfigResponse], error)
 	// GetNamespaceLintConfig returns the lint config of the namespace.
 	GetNamespaceLintConfig(context.Context, *connect.Request[v1.GetNamespaceLintConfigRequest]) (*connect.Response[v1.GetNamespaceLintConfigResponse], error)
+	// GetNamespaceChecksConfig returns the checks config of the namespace.
+	GetNamespaceChecksConfig(context.Context, *connect.Request[v1.GetNamespaceChecksConfigurationRequest]) (*connect.Response[v1.GetNamespaceChecksConfigurationResponse], error)
+	// UpdateNamespaceChecksConfig updates the checks configuration for the namespace passed.
+	UpdateNamespaceChecksConfig(context.Context, *connect.Request[v1.UpdateNamespaceChecksConfigurationRequest]) (*connect.Response[v1.UpdateNamespaceChecksConfigurationResponse], error)
 	// EnablePruningForTheNamespace enables the graph pruning check for the namespace passed.
 	EnableGraphPruning(context.Context, *connect.Request[v1.EnableGraphPruningRequest]) (*connect.Response[v1.EnableGraphPruningResponse], error)
 	// ConfigureNamespaceGraphPruningConfig configures the graph pruning config of the organization.
@@ -3997,6 +4038,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceGetNamespaceLintConfigMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceGetNamespaceChecksConfigHandler := connect.NewUnaryHandler(
+		PlatformServiceGetNamespaceChecksConfigProcedure,
+		svc.GetNamespaceChecksConfig,
+		connect.WithSchema(platformServiceGetNamespaceChecksConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceUpdateNamespaceChecksConfigHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateNamespaceChecksConfigProcedure,
+		svc.UpdateNamespaceChecksConfig,
+		connect.WithSchema(platformServiceUpdateNamespaceChecksConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceEnableGraphPruningHandler := connect.NewUnaryHandler(
 		PlatformServiceEnableGraphPruningProcedure,
 		svc.EnableGraphPruning,
@@ -4399,6 +4452,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceConfigureNamespaceLintConfigHandler.ServeHTTP(w, r)
 		case PlatformServiceGetNamespaceLintConfigProcedure:
 			platformServiceGetNamespaceLintConfigHandler.ServeHTTP(w, r)
+		case PlatformServiceGetNamespaceChecksConfigProcedure:
+			platformServiceGetNamespaceChecksConfigHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateNamespaceChecksConfigProcedure:
+			platformServiceUpdateNamespaceChecksConfigHandler.ServeHTTP(w, r)
 		case PlatformServiceEnableGraphPruningProcedure:
 			platformServiceEnableGraphPruningHandler.ServeHTTP(w, r)
 		case PlatformServiceConfigureNamespaceGraphPruningConfigProcedure:
@@ -4986,6 +5043,14 @@ func (UnimplementedPlatformServiceHandler) ConfigureNamespaceLintConfig(context.
 
 func (UnimplementedPlatformServiceHandler) GetNamespaceLintConfig(context.Context, *connect.Request[v1.GetNamespaceLintConfigRequest]) (*connect.Response[v1.GetNamespaceLintConfigResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetNamespaceLintConfig is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetNamespaceChecksConfig(context.Context, *connect.Request[v1.GetNamespaceChecksConfigurationRequest]) (*connect.Response[v1.GetNamespaceChecksConfigurationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetNamespaceChecksConfig is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdateNamespaceChecksConfig(context.Context, *connect.Request[v1.UpdateNamespaceChecksConfigurationRequest]) (*connect.Response[v1.UpdateNamespaceChecksConfigurationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateNamespaceChecksConfig is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) EnableGraphPruning(context.Context, *connect.Request[v1.EnableGraphPruningRequest]) (*connect.Response[v1.EnableGraphPruningResponse], error) {

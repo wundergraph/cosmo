@@ -14,7 +14,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -101,6 +101,11 @@ export const LinterConfig = ({
   );
   const countByCategory = countLintConfigsByCategory(data.configs);
 
+  useEffect(() => {
+    setLinterEnabled(data.linterEnabled);
+    setSelectedLintRules(data.configs);
+  }, [data]);
+
   return (
     <div className="space-y-6 rounded-lg border p-6">
       <div className="flex w-full items-center justify-between">
@@ -165,7 +170,7 @@ export const LinterConfig = ({
                   ? "Configure the linter rules and its severity levels for the lint check performed during each check operation of this namespace."
                   : "Enable the linter to configure the lint rules."}{" "}
                 <Link
-                  href={docsBaseURL + "/studio/lint-policy"}
+                  href={docsBaseURL + "/studio/policies"}
                   className="text-primary"
                   target="_blank"
                   rel="noreferrer"

@@ -700,4 +700,5 @@ export interface NamespaceDTO {
   enableLinting: boolean;
   enableGraphPruning: boolean;
   enableCacheWarmer: boolean;
+  checksTimeframeInDays?: number;
 }

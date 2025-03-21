@@ -80,6 +80,8 @@ import { enableGraphPruning } from './linting/enableGraphPruning.js';
 import { enableLintingForTheNamespace } from './linting/enableLintingForTheNamespace.js';
 import { getNamespaceGraphPruningConfig } from './linting/getNamespaceGraphPruningConfig.js';
 import { getNamespaceLintConfig } from './linting/getNamespaceLintConfig.js';
+import { getNamespaceChecksConfig } from './check/getNamespaceChecksConfig.js';
+import { updateNamespaceChecksConfig } from './check/updateNamespaceChecksConfig.js';
 import { createMonograph } from './monograph/createMonograph.js';
 import { deleteMonograph } from './monograph/deleteMonograph.js';
 import { migrateMonograph } from './monograph/migrateMonograph.js';
@@ -695,6 +697,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getNamespaceLintConfig: (req, ctx) => {
       return getNamespaceLintConfig(opts, req, ctx);
+    },
+
+    getNamespaceChecksConfig: (req, ctx) => {
+      return getNamespaceChecksConfig(opts, req, ctx);
+    },
+
+    updateNamespaceChecksConfig: (req, ctx) => {
+      return updateNamespaceChecksConfig(opts, req, ctx);
     },
 
     getNamespaceGraphPruningConfig: (req, ctx) => {
