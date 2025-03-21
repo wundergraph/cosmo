@@ -108,13 +108,19 @@ func (rt *RetryHTTPTransport) drainBody(resp *http.Response) {
 	if resp == nil || resp.Body == nil {
 		return
 	}
+
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			rt.Logger.Error("Failed draining when closing the body", zap.Error(err))
+		}
+	}()
+
+	// When we close the body only will go internally marks the persisted connection as true
+	// which is important so that it can reuse the connection internally for retrying
 	_, err := io.Copy(io.Discard, resp.Body)
 	if err != nil {
 		rt.Logger.Error("Failed draining when copying the body", zap.Error(err))
-	}
-	err = resp.Body.Close()
-	if err != nil {
-		rt.Logger.Error("Failed draining when closing the body", zap.Error(err))
 	}
 }
 
