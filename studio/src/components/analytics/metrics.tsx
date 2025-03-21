@@ -855,13 +855,14 @@ export const LatencyDistributionCard = ({
             margin={{ top: 8, right: 8, bottom: 8, left: 0 }}
           >
             <Line
-              name="p50"
+              name="p99"
               type="monotone"
-              dataKey="p50"
+              dataKey="p99"
               animationDuration={300}
               dot={false}
-              stroke={p50StrokeColor}
-              strokeWidth={1.5}/>
+              stroke={p99StrokeColor}
+              strokeWidth={1.5}
+            />
             <Line
               name="p90"
               type="monotone"
@@ -869,15 +870,17 @@ export const LatencyDistributionCard = ({
               animationDuration={300}
               dot={false}
               stroke={p90StrokeColor}
-              strokeWidth={1.5}/>
+              strokeWidth={1.5}
+            />
             <Line
-              name="p99"
+              name="p50"
               type="monotone"
-              dataKey="p99"
+              dataKey="p50"
               animationDuration={300}
               dot={false}
-              stroke={p99StrokeColor}
-              strokeWidth={1.5}/>
+              stroke={p50StrokeColor}
+              strokeWidth={1.5}
+            />
 
             <XAxis
               dataKey="timestamp"

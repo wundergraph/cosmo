@@ -82,6 +82,9 @@ export const useChartData = (
     ...t,
     value: Number.parseFloat(t.value) || 0,
     previousValue: Number.parseFloat(t.previousValue) || 0,
+    p99: 'p99' in t ? Number.parseFloat(t.p99) || 0 : undefined,
+    p90: 'p90' in t ? Number.parseFloat(t.p90) || 0 : undefined,
+    p50: 'p50' in t ? Number.parseFloat(t.p50) || 0 : undefined,
     // We use millisecond timestamp everywhere
     timestamp:
       t.timestamp instanceof Date
