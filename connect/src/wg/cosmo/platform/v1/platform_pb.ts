@@ -15982,6 +15982,172 @@ export class GetNamespaceLintConfigResponse extends Message<GetNamespaceLintConf
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.GetNamespaceChecksConfigurationRequest
+ */
+export class GetNamespaceChecksConfigurationRequest extends Message<GetNamespaceChecksConfigurationRequest> {
+  /**
+   * @generated from field: string namespace = 1;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<GetNamespaceChecksConfigurationRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetNamespaceChecksConfigurationRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetNamespaceChecksConfigurationRequest {
+    return new GetNamespaceChecksConfigurationRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetNamespaceChecksConfigurationRequest {
+    return new GetNamespaceChecksConfigurationRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetNamespaceChecksConfigurationRequest {
+    return new GetNamespaceChecksConfigurationRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetNamespaceChecksConfigurationRequest | PlainMessage<GetNamespaceChecksConfigurationRequest> | undefined, b: GetNamespaceChecksConfigurationRequest | PlainMessage<GetNamespaceChecksConfigurationRequest> | undefined): boolean {
+    return proto3.util.equals(GetNamespaceChecksConfigurationRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetNamespaceChecksConfigurationResponse
+ */
+export class GetNamespaceChecksConfigurationResponse extends Message<GetNamespaceChecksConfigurationResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: int32 timeframeInDays = 2;
+   */
+  timeframeInDays = 0;
+
+  /**
+   * @generated from field: int32 timeframeLimitInDays = 3;
+   */
+  timeframeLimitInDays = 0;
+
+  constructor(data?: PartialMessage<GetNamespaceChecksConfigurationResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetNamespaceChecksConfigurationResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "timeframeInDays", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "timeframeLimitInDays", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetNamespaceChecksConfigurationResponse {
+    return new GetNamespaceChecksConfigurationResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetNamespaceChecksConfigurationResponse {
+    return new GetNamespaceChecksConfigurationResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetNamespaceChecksConfigurationResponse {
+    return new GetNamespaceChecksConfigurationResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetNamespaceChecksConfigurationResponse | PlainMessage<GetNamespaceChecksConfigurationResponse> | undefined, b: GetNamespaceChecksConfigurationResponse | PlainMessage<GetNamespaceChecksConfigurationResponse> | undefined): boolean {
+    return proto3.util.equals(GetNamespaceChecksConfigurationResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateNamespaceChecksConfigurationRequest
+ */
+export class UpdateNamespaceChecksConfigurationRequest extends Message<UpdateNamespaceChecksConfigurationRequest> {
+  /**
+   * @generated from field: string namespace = 1;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: int32 timeframeInDays = 2;
+   */
+  timeframeInDays = 0;
+
+  constructor(data?: PartialMessage<UpdateNamespaceChecksConfigurationRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateNamespaceChecksConfigurationRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "timeframeInDays", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateNamespaceChecksConfigurationRequest {
+    return new UpdateNamespaceChecksConfigurationRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateNamespaceChecksConfigurationRequest {
+    return new UpdateNamespaceChecksConfigurationRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateNamespaceChecksConfigurationRequest {
+    return new UpdateNamespaceChecksConfigurationRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateNamespaceChecksConfigurationRequest | PlainMessage<UpdateNamespaceChecksConfigurationRequest> | undefined, b: UpdateNamespaceChecksConfigurationRequest | PlainMessage<UpdateNamespaceChecksConfigurationRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateNamespaceChecksConfigurationRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateNamespaceChecksConfigurationResponse
+ */
+export class UpdateNamespaceChecksConfigurationResponse extends Message<UpdateNamespaceChecksConfigurationResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<UpdateNamespaceChecksConfigurationResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateNamespaceChecksConfigurationResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateNamespaceChecksConfigurationResponse {
+    return new UpdateNamespaceChecksConfigurationResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateNamespaceChecksConfigurationResponse {
+    return new UpdateNamespaceChecksConfigurationResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateNamespaceChecksConfigurationResponse {
+    return new UpdateNamespaceChecksConfigurationResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateNamespaceChecksConfigurationResponse | PlainMessage<UpdateNamespaceChecksConfigurationResponse> | undefined, b: UpdateNamespaceChecksConfigurationResponse | PlainMessage<UpdateNamespaceChecksConfigurationResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateNamespaceChecksConfigurationResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.EnableLintingForTheNamespaceRequest
  */
 export class EnableLintingForTheNamespaceRequest extends Message<EnableLintingForTheNamespaceRequest> {
