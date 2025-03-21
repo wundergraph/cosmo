@@ -227,6 +227,17 @@ export function checkSubgraphSchema(
       lintSkipped: !namespace.enableLinting,
       graphPruningSkipped: !namespace.enableGraphPruning,
       vcsContext: req.vcsContext,
+      targetType: 'subgraph',
+    });
+
+    const schemaCheckSubgraphId = await schemaCheckRepo.createSchemaCheckSubgraph({
+      data: {
+        schemaCheckId: schemaCheckID,
+        subgraphId: subgraph.id,
+        subgraphName: subgraph.name,
+        proposedSubgraphSchemaSDL: newSchemaSDL,
+        isDeleted: !!req.delete,
+      },
     });
 
     const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL, routerCompatibilityVersion);
@@ -255,11 +266,13 @@ export function checkSubgraphSchema(
     await schemaCheckRepo.createSchemaCheckChanges({
       changes: schemaChanges.nonBreakingChanges,
       schemaCheckID,
+      schemaCheckSubgraphId,
     });
 
     const storedBreakingChanges = await schemaCheckRepo.createSchemaCheckChanges({
       changes: schemaChanges.breakingChanges,
       schemaCheckID,
+      schemaCheckSubgraphId,
     });
 
     const composer = new Composer(
@@ -369,6 +382,7 @@ export function checkSubgraphSchema(
       newSchemaSDL,
       namespaceId: namespace.id,
       isLintingEnabled: namespace.enableLinting,
+      schemaCheckSubgraphId,
     });
 
     const graphPruningIssues: SchemaGraphPruningIssues = await schemaGraphPruningRepo.performSchemaGraphPruningCheck({
@@ -383,6 +397,7 @@ export function checkSubgraphSchema(
       fedGraphRepo,
       subgraphRepo,
       rangeInDays: limit,
+      schemaCheckSubgraphId,
     });
 
     // Update the overall schema check with the results

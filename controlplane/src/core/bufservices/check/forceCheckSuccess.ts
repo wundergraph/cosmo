@@ -48,7 +48,11 @@ export function forceCheckSuccess(
       };
     }
 
-    const check = await subgraphRepo.checkById({ id: req.checkId, federatedGraphTargetId: graph.targetId });
+    const check = await subgraphRepo.checkById({
+      id: req.checkId,
+      federatedGraphTargetId: graph.targetId,
+      federatedGraphName: graph.name,
+    });
 
     if (!check) {
       return {

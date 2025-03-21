@@ -778,10 +778,35 @@ export const schemaChecks = pgTable(
       commitSha: string;
       branch: string;
     }>(),
+    targetType: targetTypeEnum('target_type').notNull().default('subgraph'),
   },
   (t) => {
     return {
       targetIdIndex: index('sc_target_id_idx').on(t.targetId),
+    };
+  },
+);
+
+export const schemaCheckSubgraphs = pgTable(
+  'schema_check_subgraphs', // scs
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    schemaCheckId: uuid('schema_check_id')
+      .notNull()
+      .references(() => schemaChecks.id, {
+        onDelete: 'cascade',
+      }),
+    subgraphId: uuid('subgraph_id').references(() => subgraphs.id, {
+      onDelete: 'set null',
+    }),
+    subgraphName: text('subgraph_name').notNull(),
+    proposedSubgraphSchemaSDL: text('proposed_subgraph_schema_sdl'),
+    isDeleted: boolean('is_deleted').default(false).notNull(),
+  },
+  (t) => {
+    return {
+      schemaCheckIdIndex: index('scs_schema_check_id_idx').on(t.schemaCheckId),
+      subgraphIdIndex: index('scs_subgraph_id_idx').on(t.subgraphId),
     };
   },
 );
@@ -872,6 +897,9 @@ export const schemaCheckChangeAction = pgTable(
     isBreaking: boolean('is_breaking').default(false),
     path: text('path'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    schemaCheckSubgraphId: uuid('schema_check_subgraph_id').references(() => schemaCheckSubgraphs.id, {
+      onDelete: 'set null',
+    }),
   },
   (t) => {
     return {
@@ -886,6 +914,10 @@ export const schemaCheckChangeActionRelations = relations(schemaCheckChangeActio
     references: [schemaChecks.id],
   }),
   operationUsage: many(schemaCheckChangeActionOperationUsage),
+  checkSubgraph: one(schemaCheckSubgraphs, {
+    fields: [schemaCheckChangeAction.schemaCheckSubgraphId],
+    references: [schemaCheckSubgraphs.id],
+  }),
 }));
 
 export const operationChangeOverrides = pgTable(
@@ -1911,6 +1943,9 @@ export const schemaCheckLintAction = pgTable(
       .$type<{ line: number; column: number; endLine?: number; endColumn?: number }>()
       .notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    schemaCheckSubgraphId: uuid('schema_check_subgraph_id').references(() => schemaCheckSubgraphs.id, {
+      onDelete: 'set null',
+    }),
   },
   (t) => {
     return {
@@ -1923,6 +1958,10 @@ export const schemaCheckLintActionRelations = relations(schemaCheckLintAction, (
   check: one(schemaChecks, {
     fields: [schemaCheckLintAction.schemaCheckId],
     references: [schemaChecks.id],
+  }),
+  checkSubgraph: one(schemaCheckSubgraphs, {
+    fields: [schemaCheckLintAction.schemaCheckSubgraphId],
+    references: [schemaCheckSubgraphs.id],
   }),
 }));
 
@@ -1948,6 +1987,9 @@ export const schemaCheckGraphPruningAction = pgTable(
       .references(() => federatedGraphs.id, {
         onDelete: 'cascade',
       }),
+    schemaCheckSubgraphId: uuid('schema_check_subgraph_id').references(() => schemaCheckSubgraphs.id, {
+      onDelete: 'set null',
+    }),
   },
   (t) => {
     return {
@@ -1965,6 +2007,10 @@ export const schemaCheckGraphPruningActionRelations = relations(schemaCheckGraph
   federatedGraph: one(federatedGraphs, {
     fields: [schemaCheckGraphPruningAction.federatedGraphId],
     references: [federatedGraphs.id],
+  }),
+  checkSubgraph: one(schemaCheckSubgraphs, {
+    fields: [schemaCheckGraphPruningAction.schemaCheckSubgraphId],
+    references: [schemaCheckSubgraphs.id],
   }),
 }));
 

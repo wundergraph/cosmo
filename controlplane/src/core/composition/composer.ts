@@ -13,7 +13,7 @@ import {
 } from '@wundergraph/composition';
 import { buildRouterConfig, ComposedSubgraph as IComposedSubgraph } from '@wundergraph/cosmo-shared';
 import { FastifyBaseLogger } from 'fastify';
-import { DocumentNode, parse, printSchema } from 'graphql';
+import { DocumentNode, GraphQLSchema, parse, printSchema } from 'graphql';
 import {
   FeatureFlagRouterExecutionConfig,
   FeatureFlagRouterExecutionConfigs,
@@ -36,6 +36,8 @@ import * as schema from '../../db/schema.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { CacheWarmerRepository } from '../repositories/CacheWarmerRepository.js';
 import { NamespaceRepository } from '../repositories/NamespaceRepository.js';
+import { InspectorSchemaChange } from '../services/SchemaUsageTrafficInspector.js';
+import { SchemaCheckChangeAction } from '../../db/models.js';
 import { composeSubgraphs, composeFederatedGraphWithPotentialContracts } from './composition.js';
 import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult } from './schemaCheck.js';
 
@@ -188,6 +190,14 @@ export class RouterConfigUploadError extends Error {
 
 export type ComposeDeploymentError = RouterConfigUploadError | AdmissionError | Error;
 
+export type CheckSubgraph = {
+  subgraph: SubgraphDTO;
+  newSchemaSDL: string;
+  newGraphQLSchema?: GraphQLSchema;
+  isNewSchemaSDL: boolean;
+  inspectorChanges: InspectorSchemaChange[];
+  storedBreakingChanges: SchemaCheckChangeAction[];
+};
 export class Composer {
   constructor(
     private logger: FastifyBaseLogger,
@@ -666,5 +676,79 @@ export class Composer {
 
       return [filteredSubgraphs, subgraphsToBeComposed];
     });
+  }
+
+  async composeWithProposedSchemas({
+    subgraphs,
+    graph,
+  }: {
+    subgraphs: Map<string, CheckSubgraph>;
+    graph: FederatedGraphDTO;
+  }) {
+    const composedGraphs: ComposedFederatedGraph[] = [];
+    try {
+      const subgraphsToBeComposed: Subgraph[] = [];
+      const subgraphDTOs: SubgraphDTO[] = [];
+      for (const [name, subgraph] of subgraphs.entries()) {
+        if (!subgraph.isNewSchemaSDL) {
+          continue;
+        }
+        subgraphsToBeComposed.push({
+          name,
+          url: subgraph.subgraph.routingUrl,
+          definitions: parse(subgraph.newSchemaSDL),
+        });
+        subgraphDTOs.push(subgraph.subgraph);
+      }
+
+      const contracts = await this.contractRepo.bySourceFederatedGraphId(graph.id);
+
+      if (contracts.length === 0) {
+        const federationResult = composeSubgraphs(subgraphsToBeComposed, graph.routerCompatibilityVersion);
+        composedGraphs.push(mapResultToComposedGraph(graph, subgraphDTOs, federationResult));
+        return composedGraphs;
+      }
+
+      const tagOptionsByContractName = new Map<string, ContractTagOptions>();
+
+      for (const contract of contracts) {
+        tagOptionsByContractName.set(
+          contract.downstreamFederatedGraph.target.name,
+          newContractTagOptionsFromArrays(contract.excludeTags, contract.includeTags),
+        );
+      }
+
+      const federationResult = composeFederatedGraphWithPotentialContracts(
+        subgraphsToBeComposed,
+        tagOptionsByContractName,
+        graph.routerCompatibilityVersion,
+      );
+      composedGraphs.push(mapResultToComposedGraph(graph, subgraphDTOs, federationResult));
+
+      if (!federationResult.success) {
+        return composedGraphs;
+      }
+
+      for (const [contractName, contractResult] of federationResult.federationResultByContractName) {
+        const contractGraph = await this.federatedGraphRepo.byName(contractName, graph.namespace);
+        if (!contractGraph) {
+          throw new Error(`Contract graph ${contractName} not found`);
+        }
+        composedGraphs.push(mapResultToComposedGraph(contractGraph, subgraphDTOs, contractResult));
+      }
+    } catch (e: any) {
+      composedGraphs.push({
+        id: graph.id,
+        name: graph.name,
+        namespace: graph.namespace,
+        namespaceId: graph.namespaceId,
+        targetID: graph.targetId,
+        fieldConfigurations: [],
+        errors: [e],
+        subgraphs: [],
+        warnings: [],
+      });
+    }
+    return composedGraphs;
   }
 }

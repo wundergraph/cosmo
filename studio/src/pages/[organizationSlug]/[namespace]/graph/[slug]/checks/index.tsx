@@ -146,7 +146,7 @@ const ChecksPage: NextPageWithLayout = () => {
             <TableRow>
               <TableHead>Check</TableHead>
               {graphContext.graph.supportsFederation && (
-                <TableHead>Subgraph</TableHead>
+                <TableHead>Target</TableHead>
               )}
               <TableHead>Tasks</TableHead>
               <TableHead></TableHead>

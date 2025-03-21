@@ -110,6 +110,12 @@ const (
 	// PlatformServiceCheckSubgraphSchemaProcedure is the fully-qualified name of the PlatformService's
 	// CheckSubgraphSchema RPC.
 	PlatformServiceCheckSubgraphSchemaProcedure = "/wg.cosmo.platform.v1.PlatformService/CheckSubgraphSchema"
+	// PlatformServiceCheckMultipleSubgraphSchemasProcedure is the fully-qualified name of the
+	// PlatformService's CheckMultipleSubgraphSchemas RPC.
+	PlatformServiceCheckMultipleSubgraphSchemasProcedure = "/wg.cosmo.platform.v1.PlatformService/CheckMultipleSubgraphSchemas"
+	// PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure is the fully-qualified name of the
+	// PlatformService's GetProposedSchemaOfCheckedSubgraph RPC.
+	PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetProposedSchemaOfCheckedSubgraph"
 	// PlatformServiceFixSubgraphSchemaProcedure is the fully-qualified name of the PlatformService's
 	// FixSubgraphSchema RPC.
 	PlatformServiceFixSubgraphSchemaProcedure = "/wg.cosmo.platform.v1.PlatformService/FixSubgraphSchema"
@@ -532,6 +538,8 @@ var (
 	platformServiceDeleteFederatedGraphMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("DeleteFederatedGraph")
 	platformServiceDeleteFederatedSubgraphMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("DeleteFederatedSubgraph")
 	platformServiceCheckSubgraphSchemaMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("CheckSubgraphSchema")
+	platformServiceCheckMultipleSubgraphSchemasMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("CheckMultipleSubgraphSchemas")
+	platformServiceGetProposedSchemaOfCheckedSubgraphMethodDescriptor    = platformServiceServiceDescriptor.Methods().ByName("GetProposedSchemaOfCheckedSubgraph")
 	platformServiceFixSubgraphSchemaMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("FixSubgraphSchema")
 	platformServiceUpdateFederatedGraphMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("UpdateFederatedGraph")
 	platformServiceUpdateSubgraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UpdateSubgraph")
@@ -706,6 +714,8 @@ type PlatformServiceClient interface {
 	DeleteFederatedSubgraph(context.Context, *connect.Request[v1.DeleteFederatedSubgraphRequest]) (*connect.Response[v1.DeleteFederatedSubgraphResponse], error)
 	// CheckSubgraphSchema checks if the schema is valid and if it can be composed without conflicts with the provided new subgraph schema.
 	CheckSubgraphSchema(context.Context, *connect.Request[v1.CheckSubgraphSchemaRequest]) (*connect.Response[v1.CheckSubgraphSchemaResponse], error)
+	CheckMultipleSubgraphSchemas(context.Context, *connect.Request[v1.CheckMultipleSubgraphSchemasRequest]) (*connect.Response[v1.CheckMultipleSubgraphSchemasResponse], error)
+	GetProposedSchemaOfCheckedSubgraph(context.Context, *connect.Request[v1.GetProposedSchemaOfCheckedSubgraphRequest]) (*connect.Response[v1.GetProposedSchemaOfCheckedSubgraphResponse], error)
 	FixSubgraphSchema(context.Context, *connect.Request[v1.FixSubgraphSchemaRequest]) (*connect.Response[v1.FixSubgraphSchemaResponse], error)
 	// UpdateFederatedGraph updates a federated graph with new labels and routing url
 	UpdateFederatedGraph(context.Context, *connect.Request[v1.UpdateFederatedGraphRequest]) (*connect.Response[v1.UpdateFederatedGraphResponse], error)
@@ -1120,6 +1130,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceCheckSubgraphSchemaProcedure,
 			connect.WithSchema(platformServiceCheckSubgraphSchemaMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		checkMultipleSubgraphSchemas: connect.NewClient[v1.CheckMultipleSubgraphSchemasRequest, v1.CheckMultipleSubgraphSchemasResponse](
+			httpClient,
+			baseURL+PlatformServiceCheckMultipleSubgraphSchemasProcedure,
+			connect.WithSchema(platformServiceCheckMultipleSubgraphSchemasMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getProposedSchemaOfCheckedSubgraph: connect.NewClient[v1.GetProposedSchemaOfCheckedSubgraphRequest, v1.GetProposedSchemaOfCheckedSubgraphResponse](
+			httpClient,
+			baseURL+PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure,
+			connect.WithSchema(platformServiceGetProposedSchemaOfCheckedSubgraphMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		fixSubgraphSchema: connect.NewClient[v1.FixSubgraphSchemaRequest, v1.FixSubgraphSchemaResponse](
@@ -1945,6 +1967,8 @@ type platformServiceClient struct {
 	deleteFederatedGraph                  *connect.Client[v1.DeleteFederatedGraphRequest, v1.DeleteFederatedGraphResponse]
 	deleteFederatedSubgraph               *connect.Client[v1.DeleteFederatedSubgraphRequest, v1.DeleteFederatedSubgraphResponse]
 	checkSubgraphSchema                   *connect.Client[v1.CheckSubgraphSchemaRequest, v1.CheckSubgraphSchemaResponse]
+	checkMultipleSubgraphSchemas          *connect.Client[v1.CheckMultipleSubgraphSchemasRequest, v1.CheckMultipleSubgraphSchemasResponse]
+	getProposedSchemaOfCheckedSubgraph    *connect.Client[v1.GetProposedSchemaOfCheckedSubgraphRequest, v1.GetProposedSchemaOfCheckedSubgraphResponse]
 	fixSubgraphSchema                     *connect.Client[v1.FixSubgraphSchemaRequest, v1.FixSubgraphSchemaResponse]
 	updateFederatedGraph                  *connect.Client[v1.UpdateFederatedGraphRequest, v1.UpdateFederatedGraphResponse]
 	updateSubgraph                        *connect.Client[v1.UpdateSubgraphRequest, v1.UpdateSubgraphResponse]
@@ -2201,6 +2225,18 @@ func (c *platformServiceClient) DeleteFederatedSubgraph(ctx context.Context, req
 // CheckSubgraphSchema calls wg.cosmo.platform.v1.PlatformService.CheckSubgraphSchema.
 func (c *platformServiceClient) CheckSubgraphSchema(ctx context.Context, req *connect.Request[v1.CheckSubgraphSchemaRequest]) (*connect.Response[v1.CheckSubgraphSchemaResponse], error) {
 	return c.checkSubgraphSchema.CallUnary(ctx, req)
+}
+
+// CheckMultipleSubgraphSchemas calls
+// wg.cosmo.platform.v1.PlatformService.CheckMultipleSubgraphSchemas.
+func (c *platformServiceClient) CheckMultipleSubgraphSchemas(ctx context.Context, req *connect.Request[v1.CheckMultipleSubgraphSchemasRequest]) (*connect.Response[v1.CheckMultipleSubgraphSchemasResponse], error) {
+	return c.checkMultipleSubgraphSchemas.CallUnary(ctx, req)
+}
+
+// GetProposedSchemaOfCheckedSubgraph calls
+// wg.cosmo.platform.v1.PlatformService.GetProposedSchemaOfCheckedSubgraph.
+func (c *platformServiceClient) GetProposedSchemaOfCheckedSubgraph(ctx context.Context, req *connect.Request[v1.GetProposedSchemaOfCheckedSubgraphRequest]) (*connect.Response[v1.GetProposedSchemaOfCheckedSubgraphResponse], error) {
+	return c.getProposedSchemaOfCheckedSubgraph.CallUnary(ctx, req)
 }
 
 // FixSubgraphSchema calls wg.cosmo.platform.v1.PlatformService.FixSubgraphSchema.
@@ -2927,6 +2963,8 @@ type PlatformServiceHandler interface {
 	DeleteFederatedSubgraph(context.Context, *connect.Request[v1.DeleteFederatedSubgraphRequest]) (*connect.Response[v1.DeleteFederatedSubgraphResponse], error)
 	// CheckSubgraphSchema checks if the schema is valid and if it can be composed without conflicts with the provided new subgraph schema.
 	CheckSubgraphSchema(context.Context, *connect.Request[v1.CheckSubgraphSchemaRequest]) (*connect.Response[v1.CheckSubgraphSchemaResponse], error)
+	CheckMultipleSubgraphSchemas(context.Context, *connect.Request[v1.CheckMultipleSubgraphSchemasRequest]) (*connect.Response[v1.CheckMultipleSubgraphSchemasResponse], error)
+	GetProposedSchemaOfCheckedSubgraph(context.Context, *connect.Request[v1.GetProposedSchemaOfCheckedSubgraphRequest]) (*connect.Response[v1.GetProposedSchemaOfCheckedSubgraphResponse], error)
 	FixSubgraphSchema(context.Context, *connect.Request[v1.FixSubgraphSchemaRequest]) (*connect.Response[v1.FixSubgraphSchemaResponse], error)
 	// UpdateFederatedGraph updates a federated graph with new labels and routing url
 	UpdateFederatedGraph(context.Context, *connect.Request[v1.UpdateFederatedGraphRequest]) (*connect.Response[v1.UpdateFederatedGraphResponse], error)
@@ -3337,6 +3375,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceCheckSubgraphSchemaProcedure,
 		svc.CheckSubgraphSchema,
 		connect.WithSchema(platformServiceCheckSubgraphSchemaMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceCheckMultipleSubgraphSchemasHandler := connect.NewUnaryHandler(
+		PlatformServiceCheckMultipleSubgraphSchemasProcedure,
+		svc.CheckMultipleSubgraphSchemas,
+		connect.WithSchema(platformServiceCheckMultipleSubgraphSchemasMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetProposedSchemaOfCheckedSubgraphHandler := connect.NewUnaryHandler(
+		PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure,
+		svc.GetProposedSchemaOfCheckedSubgraph,
+		connect.WithSchema(platformServiceGetProposedSchemaOfCheckedSubgraphMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceFixSubgraphSchemaHandler := connect.NewUnaryHandler(
@@ -4184,6 +4234,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceDeleteFederatedSubgraphHandler.ServeHTTP(w, r)
 		case PlatformServiceCheckSubgraphSchemaProcedure:
 			platformServiceCheckSubgraphSchemaHandler.ServeHTTP(w, r)
+		case PlatformServiceCheckMultipleSubgraphSchemasProcedure:
+			platformServiceCheckMultipleSubgraphSchemasHandler.ServeHTTP(w, r)
+		case PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure:
+			platformServiceGetProposedSchemaOfCheckedSubgraphHandler.ServeHTTP(w, r)
 		case PlatformServiceFixSubgraphSchemaProcedure:
 			platformServiceFixSubgraphSchemaHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateFederatedGraphProcedure:
@@ -4553,6 +4607,14 @@ func (UnimplementedPlatformServiceHandler) DeleteFederatedSubgraph(context.Conte
 
 func (UnimplementedPlatformServiceHandler) CheckSubgraphSchema(context.Context, *connect.Request[v1.CheckSubgraphSchemaRequest]) (*connect.Response[v1.CheckSubgraphSchemaResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CheckSubgraphSchema is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) CheckMultipleSubgraphSchemas(context.Context, *connect.Request[v1.CheckMultipleSubgraphSchemasRequest]) (*connect.Response[v1.CheckMultipleSubgraphSchemasResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CheckMultipleSubgraphSchemas is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetProposedSchemaOfCheckedSubgraph(context.Context, *connect.Request[v1.GetProposedSchemaOfCheckedSubgraphRequest]) (*connect.Response[v1.GetProposedSchemaOfCheckedSubgraphResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetProposedSchemaOfCheckedSubgraph is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) FixSubgraphSchema(context.Context, *connect.Request[v1.FixSubgraphSchemaRequest]) (*connect.Response[v1.FixSubgraphSchemaResponse], error) {
