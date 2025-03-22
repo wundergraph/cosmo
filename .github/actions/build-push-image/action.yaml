@@ -28,6 +28,10 @@ inputs:
   load_Image:
     description: "Whether to make the image locally available to the build. Doesn't work with multi-platform builds"
     default: "false"
+outputs:
+  image_ref:
+    description: "The reference of the image that was built"
+    value: "ghcr.io/${{ github.repository }}/${{ inputs.image_name }}:sha-${{ github.sha }}"
 
 runs:
   using: "composite"
