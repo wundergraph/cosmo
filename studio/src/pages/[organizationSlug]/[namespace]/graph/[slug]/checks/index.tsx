@@ -35,6 +35,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ChecksFilterMenu, parseSelectedSubgraphs } from "@/components/checks/checks-filter-menu";
+import { SelectedChecksFilters } from "@/components/checks/selected-checks-filters";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { docsBaseURL } from "@/lib/constants";
@@ -63,6 +65,7 @@ const ChecksPage: NextPageWithLayout = () => {
     : 1;
 
   const limit = Number.parseInt((router.query.pageSize as string) || "10");
+  const selectedSubgraphs = parseSelectedSubgraphs(router.query.subgraphs);
 
   const {
     dateRange: { start, end },
@@ -80,6 +83,7 @@ const ChecksPage: NextPageWithLayout = () => {
     {
       name: router.query.slug as string,
       namespace: router.query.namespace as string,
+      subgraphs: selectedSubgraphs,
       limit: limit > 50 ? 50 : limit,
       offset: (pageNumber - 1) * limit,
       startDate: formatISO(startDate),
@@ -140,6 +144,7 @@ const ChecksPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex h-full flex-col gap-y-3">
+      <SelectedChecksFilters selectedSubgraphs={selectedSubgraphs} />
       <TableWrapper>
         <Table>
           <TableHeader>
@@ -376,6 +381,8 @@ const ChecksToolbar = () => {
         onChange={onDateRangeChange}
         calendarDaysLimit={breakingChangeRetention}
       />
+
+      <ChecksFilterMenu />
     </Toolbar>
   );
 };

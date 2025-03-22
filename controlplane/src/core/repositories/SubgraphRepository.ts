@@ -11,6 +11,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { WebsocketSubprotocol } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
+import { validate as isValidUuid } from "uuid";
 import {
   featureSubgraphsToBaseSubgraphs,
   fieldGracePeriod,
@@ -673,13 +674,17 @@ export class SubgraphRepository {
   }
 
   /**
-   * Returns all subgraphs that are part of the federated graph.
+   * When the parameter `subgraphs` is provided as an array of ids, those the subgraphs corresponding to the
+   * provided identifiers and belonging to the federated graph will be returned; otherwise, all subgraphs
+   * that are part of the federated graph are returned.
+   *
    * Even if they have not been published yet. Optionally, you can set the `published` flag to true
    * to only return subgraphs that have been published with a version.
    */
   public async listByFederatedGraph(data: {
     federatedGraphTargetId: string;
     published?: boolean;
+    subgraphs?: string[];
   }): Promise<SubgraphDTO[]> {
     const target = await this.db.query.targets.findFirst({
       where: and(
@@ -700,6 +705,10 @@ export class SubgraphRepository {
       return [];
     }
 
+    const subgraphsToSelect = Array.isArray(data.subgraphs) && data.subgraphs.length > 0
+      ? data.subgraphs.filter((v) => isValidUuid(v))
+      : [];
+
     const targets = await this.db
       .select({
         id: schema.targets.id,
@@ -707,7 +716,15 @@ export class SubgraphRepository {
         lastUpdatedAt: schema.schemaVersion.createdAt,
       })
       .from(schema.targets)
-      .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
+      .innerJoin(
+        schema.subgraphs,
+        subgraphsToSelect.length > 0
+          ? and(
+            eq(schema.subgraphs.targetId, schema.targets.id),
+            inArray(schema.subgraphs.id, subgraphsToSelect)
+          )
+          : eq(schema.subgraphs.targetId, schema.targets.id)
+      )
       [data.published ? 'innerJoin' : 'leftJoin'](
         schema.schemaVersion,
         eq(schema.subgraphs.schemaVersionId, schema.schemaVersion.id),
@@ -825,18 +842,21 @@ export class SubgraphRepository {
     offset,
     startDate,
     endDate,
+    subgraphs,
   }: {
     federatedGraphTargetId: string;
     limit: number;
     offset: number;
     startDate: string;
     endDate: string;
+    subgraphs: string[];
   }): Promise<GetChecksResponse> {
-    const subgraphs = await this.listByFederatedGraph({
+    const selectedSubgraphs = await this.listByFederatedGraph({
       federatedGraphTargetId,
+      subgraphs,
     });
 
-    if (subgraphs.length === 0) {
+    if (selectedSubgraphs.length === 0) {
       return {
         checks: [],
         checksCount: 0,
@@ -853,7 +873,7 @@ export class SubgraphRepository {
       where: and(
         inArray(
           schemaChecks.targetId,
-          subgraphs.map(({ targetId }) => targetId),
+          selectedSubgraphs.map(({ targetId }) => targetId),
         ),
         gt(schemaChecks.createdAt, new Date(startDate)),
         lt(schemaChecks.createdAt, new Date(endDate)),
@@ -866,7 +886,7 @@ export class SubgraphRepository {
       checks: checkList.map((c) => ({
         id: c.id,
         targetID: c.targetId,
-        subgraphName: subgraphs.find((s) => s.targetId === c.targetId)?.name ?? '',
+        subgraphName: selectedSubgraphs.find((s) => s.targetId === c.targetId)?.name ?? '',
         timestamp: c.createdAt.toISOString(),
         isBreaking: c.hasBreakingChanges ?? false,
         isComposable: c.isComposable ?? false,

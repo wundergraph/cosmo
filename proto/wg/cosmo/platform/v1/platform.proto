@@ -441,6 +441,7 @@ message GetChecksByFederatedGraphNameRequest {
   string startDate = 4;
   string endDate = 5;
   string namespace = 6;
+  repeated string subgraphs = 7;
 }
 
 message SchemaCheck {

@@ -85,6 +85,7 @@ export function getChecksByFederatedGraphName(
       offset: req.offset,
       startDate: dateRange.start,
       endDate: dateRange.end,
+      subgraphs: req.subgraphs,
     });
     const totalChecksCount = await subgraphRepo.getChecksCount({ federatedGraphTargetId: federatedGraph.targetId });
 
