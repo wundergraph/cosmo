@@ -1,7 +1,6 @@
 package nats
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -11,18 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jensneuse/abstractlogger"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/utils"
 	"go.uber.org/zap"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
@@ -45,11 +39,11 @@ func GetDataSource(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMe
 			return nil, err
 		}
 		factory := k.GetFactory(ctx, config, k.providers)
-		ds, err := plan.NewDataSourceConfiguration[Configuration](
+		ds, err := plan.NewDataSourceConfiguration[datasource.Implementer[*nodev1.NatsEventConfiguration, *NatsPubSub]](
 			in.Id,
 			factory,
 			dsMeta,
-			Configuration{
+			&Configuration{
 				EventConfiguration: natsData,
 				Logger:             logger,
 			},
@@ -155,8 +149,8 @@ func (n *Nats) PrepareProviders(ctx context.Context, in *nodev1.DataSourceConfig
 	return nil
 }
 
-func (n *Nats) GetFactory(executionContext context.Context, config config.EventsConfiguration, providers map[string]*NatsPubSub) *Factory {
-	return NewFactory(executionContext, config, providers)
+func (n *Nats) GetFactory(executionContext context.Context, config config.EventsConfiguration, providers map[string]*NatsPubSub) *datasource.Factory[*nodev1.NatsEventConfiguration, *NatsPubSub] {
+	return datasource.NewFactory[*nodev1.NatsEventConfiguration](executionContext, config, n.providers)
 }
 
 func NewPubSub(logger *zap.Logger) Nats {
@@ -169,323 +163,112 @@ type Configuration struct {
 	Data               string `json:"data"`
 	EventConfiguration []*nodev1.NatsEventConfiguration
 	Logger             *zap.Logger
+	requestConfig      *PublishAndRequestEventConfiguration
+	publishConfig      *PublishAndRequestEventConfiguration
+	subscribeConfig    *SubscriptionEventConfiguration
 }
 
-type Planner struct {
-	id              int
-	config          Configuration
-	providers       map[string]*NatsPubSub
-	rootFieldRef    int
-	variables       resolve.Variables
-	visitor         *plan.Visitor
-	eventConfig     *nodev1.NatsEventConfiguration
-	publishConfig   *PublishAndRequestEventConfiguration
-	requestConfig   *PublishAndRequestEventConfiguration
-	subscribeConfig *SubscriptionEventConfiguration
+func (c *Configuration) GetEventsDataConfigurations() []*nodev1.NatsEventConfiguration {
+	return c.EventConfiguration
 }
 
-func (p *Planner) addContextVariableByArgumentRef(argumentRef int, argumentPath []string) (string, error) {
-	variablePath, err := p.visitor.Operation.VariablePathByArgumentRefAndArgumentPath(argumentRef, argumentPath, p.visitor.Walker.Ancestors[0].Ref)
-	if err != nil {
-		return "", err
-	}
-	/* The definition is passed as both definition and operation below because getJSONRootType resolves the type
-	 * from the first argument, but finalInputValueTypeRef comes from the definition
-	 */
-	contextVariable := &resolve.ContextVariable{
-		Path:     variablePath,
-		Renderer: resolve.NewPlainVariableRenderer(),
-	}
-	variablePlaceHolder, _ := p.variables.AddVariable(contextVariable)
-	return variablePlaceHolder, nil
-}
-
-func (p *Planner) extractEventSubject(fieldRef int, subject string) (string, error) {
-	matches := argument_templates.ArgumentTemplateRegex.FindAllStringSubmatch(subject, -1)
-	// If no argument templates are defined, there are only static values
-	if len(matches) < 1 {
-		if isValidNatsSubject(subject) {
-			return subject, nil
-		}
-		return "", fmt.Errorf(`subject "%s" is not a valid NATS subject`, subject)
-	}
-	fieldNameBytes := p.visitor.Operation.FieldNameBytes(fieldRef)
-	// TODO: handling for interfaces and unions
-	fieldDefinitionRef, ok := p.visitor.Definition.ObjectTypeDefinitionFieldWithName(p.visitor.Walker.EnclosingTypeDefinition.Ref, fieldNameBytes)
-	if !ok {
-		return "", fmt.Errorf(`expected field definition to exist for field "%s"`, fieldNameBytes)
-	}
-	subjectWithVariableTemplateReplacements := subject
-	for templateNumber, groups := range matches {
-		// The first group is the whole template; the second is the period delimited argument path
-		if len(groups) != 2 {
-			return "", fmt.Errorf(`argument template #%d defined on field "%s" is invalid: expected 2 matching groups but received %d`, templateNumber+1, fieldNameBytes, len(groups)-1)
-		}
-		validationResult, err := argument_templates.ValidateArgumentPath(p.visitor.Definition, groups[1], fieldDefinitionRef)
-		if err != nil {
-			return "", fmt.Errorf(`argument template #%d defined on field "%s" is invalid: %w`, templateNumber+1, fieldNameBytes, err)
-		}
-		argumentNameBytes := []byte(validationResult.ArgumentPath[0])
-		argumentRef, ok := p.visitor.Operation.FieldArgument(fieldRef, argumentNameBytes)
-		if !ok {
-			return "", fmt.Errorf(`operation field "%s" does not define argument "%s"`, fieldNameBytes, argumentNameBytes)
-		}
-		// variablePlaceholder has the form $$0$$, $$1$$, etc.
-		variablePlaceholder, err := p.addContextVariableByArgumentRef(argumentRef, validationResult.ArgumentPath)
-		if err != nil {
-			return "", fmt.Errorf(`failed to retrieve variable placeholder for argument ""%s" defined on operation field "%s": %w`, argumentNameBytes, fieldNameBytes, err)
-		}
-		// Replace the template literal with the variable placeholder (and reuse the variable if it already exists)
-		subjectWithVariableTemplateReplacements = strings.ReplaceAll(subjectWithVariableTemplateReplacements, groups[0], variablePlaceholder)
-	}
-	// Substitute the variable templates for dummy values to check naïvely that the string is a valid NATS subject
-	if isValidNatsSubject(variableTemplateRegex.ReplaceAllLiteralString(subjectWithVariableTemplateReplacements, "a")) {
-		return subjectWithVariableTemplateReplacements, nil
-	}
-	return "", fmt.Errorf(`subject "%s" is not a valid NATS subject`, subject)
-}
-
-func (p *Planner) SetID(id int) {
-	p.id = id
-}
-
-func (p *Planner) ID() (id int) {
-	return p.id
-}
-
-func (p *Planner) DownstreamResponseFieldAlias(downstreamFieldRef int) (alias string, exists bool) {
-	// skip, not required
-	return
-}
-
-func (p *Planner) DataSourcePlanningBehavior() plan.DataSourcePlanningBehavior {
-	return plan.DataSourcePlanningBehavior{
-		MergeAliasedRootNodes:      false,
-		OverrideFieldPathFromAlias: false,
-	}
-}
-
-func (p *Planner) Register(visitor *plan.Visitor, configuration plan.DataSourceConfiguration[Configuration], _ plan.DataSourcePlannerConfiguration) error {
-	p.visitor = visitor
-	visitor.Walker.RegisterEnterFieldVisitor(p)
-	visitor.Walker.RegisterEnterDocumentVisitor(p)
-	p.config = configuration.CustomConfiguration()
-	return nil
-}
-
-func (p *Planner) ConfigureFetch() resolve.FetchConfiguration {
-	var evtCfg PublishEventConfiguration
+func (c *Configuration) GetResolveDataSource(eventConfig *nodev1.NatsEventConfiguration, pubsub *NatsPubSub) (resolve.DataSource, error) {
 	var dataSource resolve.DataSource
 
-	event, eventErr := utils.BuildEventDataBytes(p.rootFieldRef, p.visitor, &p.variables)
-	if eventErr != nil {
-		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to build event data bytes: %w", eventErr))
-		return resolve.FetchConfiguration{}
-	}
-
-	if p.publishConfig != nil {
-		pubsub, ok := p.providers[p.publishConfig.ProviderID]
-		if !ok {
-			p.visitor.Walker.StopWithInternalErr(fmt.Errorf("no pubsub connection exists with provider id \"%s\"", p.subscribeConfig.ProviderID))
-			return resolve.FetchConfiguration{}
-		}
-		evtCfg = PublishEventConfiguration{
-			ProviderID: p.publishConfig.ProviderID,
-			Subject:    p.publishConfig.Subject,
-			Data:       event,
-		}
+	typeName := eventConfig.GetEngineEventConfiguration().GetType()
+	switch typeName {
+	case nodev1.EventType_PUBLISH, nodev1.EventType_REQUEST:
 		dataSource = &NatsPublishDataSource{
 			pubSub: pubsub,
 		}
-	} else if p.requestConfig != nil {
-		pubsub, ok := p.providers[p.requestConfig.ProviderID]
-		if !ok {
-			p.visitor.Walker.StopWithInternalErr(fmt.Errorf("no pubsub connection exists with provider id \"%s\"", p.requestConfig.ProviderID))
-			return resolve.FetchConfiguration{}
-		}
-		dataSource = &NatsRequestDataSource{
-			pubSub: pubsub,
-		}
-		evtCfg = PublishEventConfiguration{
-			ProviderID: p.requestConfig.ProviderID,
-			Subject:    p.requestConfig.Subject,
-			Data:       event,
-		}
-	} else {
-		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to configure fetch: event config is nil"))
-		return resolve.FetchConfiguration{}
+	default:
+		return nil, fmt.Errorf("failed to configure fetch: invalid event type \"%s\" for Nats", typeName.String())
 	}
 
-	return resolve.FetchConfiguration{
-		Input:      evtCfg.MarshalJSONTemplate(),
-		Variables:  p.variables,
-		DataSource: dataSource,
-		PostProcessing: resolve.PostProcessingConfiguration{
-			MergePath: []string{p.eventConfig.GetEngineEventConfiguration().GetFieldName()},
-		},
-	}
+	return dataSource, nil
 }
 
-func (p *Planner) ConfigureSubscription() plan.SubscriptionConfiguration {
-	if p.subscribeConfig == nil {
-		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to configure subscription: event manager is nil"))
-		return plan.SubscriptionConfiguration{}
-	}
-	pubsub, ok := p.providers[p.subscribeConfig.ProviderID]
-	if !ok {
-		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("no pubsub connection exists with provider id \"%s\"", p.subscribeConfig.ProviderID))
-		return plan.SubscriptionConfiguration{}
-	}
+func (c *Configuration) GetResolveDataSourceSubscription(eventConfig *nodev1.NatsEventConfiguration, pubsub *NatsPubSub) (resolve.SubscriptionDataSource, error) {
+	return &SubscriptionSource{
+		pubSub: pubsub,
+	}, nil
+}
+
+func (c *Configuration) GetResolveDataSourceSubscriptionInput(eventConfig *nodev1.NatsEventConfiguration, pubsub *NatsPubSub) (string, error) {
+	providerId := c.GetProviderId(eventConfig)
+
 	evtCfg := SubscriptionEventConfiguration{
-		ProviderID:          p.subscribeConfig.ProviderID,
-		Subjects:            p.subscribeConfig.Subjects,
-		StreamConfiguration: p.subscribeConfig.StreamConfiguration,
+		ProviderID: providerId,
+		Subjects:   eventConfig.GetSubjects(),
+	}
+	if eventConfig.StreamConfiguration != nil {
+		evtCfg.StreamConfiguration = &StreamConfiguration{
+			Consumer:                  eventConfig.StreamConfiguration.ConsumerName,
+			StreamName:                eventConfig.StreamConfiguration.StreamName,
+			ConsumerInactiveThreshold: eventConfig.StreamConfiguration.ConsumerInactiveThreshold,
+		}
 	}
 	object, err := json.Marshal(evtCfg)
 	if err != nil {
-		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to marshal event subscription streamConfiguration"))
-		return plan.SubscriptionConfiguration{}
+		return "", fmt.Errorf("failed to marshal event subscription streamConfiguration")
 	}
-
-	return plan.SubscriptionConfiguration{
-		Input:     string(object),
-		Variables: p.variables,
-		DataSource: &SubscriptionSource{
-			pubSub: pubsub,
-		},
-		PostProcessing: resolve.PostProcessingConfiguration{
-			MergePath: []string{p.eventConfig.GetEngineEventConfiguration().GetFieldName()},
-		},
-	}
+	return string(object), nil
 }
 
-func (p *Planner) EnterDocument(_, _ *ast.Document) {
-	p.rootFieldRef = -1
-	p.eventConfig = nil
+func (c *Configuration) GetResolveDataSourceInput(eventConfig *nodev1.NatsEventConfiguration, event []byte) (string, error) {
+	subjects := eventConfig.GetSubjects()
+
+	if len(subjects) != 1 {
+		return "", fmt.Errorf("publish and request events should define one subject but received %d", len(subjects))
+	}
+
+	subject := subjects[0]
+
+	providerId := c.GetProviderId(eventConfig)
+
+	evtCfg := PublishEventConfiguration{
+		ProviderID: providerId,
+		Subject:    subject,
+		Data:       event,
+	}
+
+	return evtCfg.MarshalJSONTemplate(), nil
 }
 
-func (p *Planner) EnterField(ref int) {
-	if p.rootFieldRef != -1 {
-		// This is a nested field; nothing needs to be done
-		return
-	}
-	p.rootFieldRef = ref
+func (c *Configuration) GetProviderId(eventConfig *nodev1.NatsEventConfiguration) string {
+	return eventConfig.GetEngineEventConfiguration().GetProviderId()
+}
 
-	fieldName := p.visitor.Operation.FieldNameString(ref)
-	typeName := p.visitor.Walker.EnclosingTypeDefinition.NameString(p.visitor.Definition)
-
-	var eventConfig *nodev1.NatsEventConfiguration
-	for _, cfg := range p.config.EventConfiguration {
-		if cfg.GetEngineEventConfiguration().GetTypeName() == typeName && cfg.GetEngineEventConfiguration().GetFieldName() == fieldName {
-			eventConfig = cfg
-			break
-		}
-	}
-
-	if eventConfig == nil {
-		return
-	}
-
-	p.eventConfig = eventConfig
-
-	providerId := eventConfig.GetEngineEventConfiguration().GetProviderId()
-
-	switch v := eventConfig.GetEngineEventConfiguration().GetType(); v {
+func (c *Configuration) transformEventConfig(cfg *nodev1.NatsEventConfiguration, fn datasource.ArgumentTemplateCallback) (*nodev1.NatsEventConfiguration, error) {
+	switch v := cfg.GetEngineEventConfiguration().GetType(); v {
 	case nodev1.EventType_PUBLISH, nodev1.EventType_REQUEST:
-		if len(p.eventConfig.GetSubjects()) != 1 {
-			p.visitor.Walker.StopWithInternalErr(fmt.Errorf("publish events should define one subject but received %d", len(p.eventConfig.GetSubjects())))
-			return
-		}
-		_, found := p.providers[providerId]
-		if !found {
-			p.visitor.Walker.StopWithInternalErr(fmt.Errorf("unable to publish events of provider with id %s", providerId))
-		}
-		extractedSubject, err := p.extractEventSubject(ref, eventConfig.GetSubjects()[0])
+		extractedSubject, err := fn(cfg.GetSubjects()[0])
 		if err != nil {
-			p.visitor.Walker.StopWithInternalErr(fmt.Errorf("unable to parse subject with id %s", eventConfig.GetSubjects()[0]))
+			return cfg, fmt.Errorf("unable to parse subject with id %s", cfg.GetSubjects()[0])
 		}
-		cfg := &PublishAndRequestEventConfiguration{
-			ProviderID: providerId,
-			Subject:    extractedSubject,
-			Data:       json.RawMessage("[]"),
-		}
-		if v == nodev1.EventType_REQUEST {
-			p.requestConfig = cfg
-		} else {
-			p.publishConfig = cfg
-		}
+		cfg.Subjects = []string{extractedSubject}
 	case nodev1.EventType_SUBSCRIBE:
-		if len(p.eventConfig.Subjects) == 0 {
-			p.visitor.Walker.StopWithInternalErr(fmt.Errorf("expected at least one subscription subject but received %d", len(p.eventConfig.Subjects)))
-			return
-		}
-		extractedSubjects := make([]string, 0, len(p.eventConfig.Subjects))
-		for _, rawSubject := range p.eventConfig.Subjects {
-			extractedSubject, err := p.extractEventSubject(ref, rawSubject)
+		extractedSubjects := make([]string, 0, len(cfg.Subjects))
+		for _, rawSubject := range cfg.Subjects {
+			extractedSubject, err := fn(rawSubject)
 			if err != nil {
-				p.visitor.Walker.StopWithInternalErr(fmt.Errorf("could not extract subscription event subjects: %w", err))
-				return
+				return cfg, nil
 			}
 			extractedSubjects = append(extractedSubjects, extractedSubject)
 		}
-		var streamConf *StreamConfiguration
-		if p.eventConfig.StreamConfiguration != nil {
-			streamConf = &StreamConfiguration{}
-			streamConf.Consumer = p.eventConfig.StreamConfiguration.ConsumerName
-			streamConf.ConsumerInactiveThreshold = p.eventConfig.StreamConfiguration.ConsumerInactiveThreshold
-			streamConf.StreamName = p.eventConfig.StreamConfiguration.StreamName
-		}
-
 		slices.Sort(extractedSubjects)
-		p.subscribeConfig = &SubscriptionEventConfiguration{
-			ProviderID:          providerId,
-			Subjects:            extractedSubjects,
-			StreamConfiguration: streamConf,
+		cfg.Subjects = extractedSubjects
+	}
+	return cfg, nil
+}
+
+func (c *Configuration) FindEventConfig(eventConfigs []*nodev1.NatsEventConfiguration, typeName string, fieldName string, fn datasource.ArgumentTemplateCallback) (*nodev1.NatsEventConfiguration, error) {
+	for _, cfg := range eventConfigs {
+		if cfg.GetEngineEventConfiguration().GetTypeName() == typeName && cfg.GetEngineEventConfiguration().GetFieldName() == fieldName {
+			return c.transformEventConfig(cfg, fn)
 		}
-	default:
-		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("invalid EventType \"%s\" for Kafka", eventConfig.GetEngineEventConfiguration().GetType()))
 	}
-}
-
-type Source struct{}
-
-func (Source) Load(ctx context.Context, input []byte, out *bytes.Buffer) (err error) {
-	_, err = out.Write(input)
-	return
-}
-
-func (Source) LoadWithFiles(ctx context.Context, input []byte, files []*httpclient.FileUpload, out *bytes.Buffer) (err error) {
-	panic("not implemented")
-}
-
-func NewFactory(executionContext context.Context, config config.EventsConfiguration, providers map[string]*NatsPubSub) *Factory {
-	return &Factory{
-		executionContext:    executionContext,
-		eventsConfiguration: config,
-		providers:           providers,
-	}
-}
-
-type Factory struct {
-	config              Configuration
-	eventsConfiguration config.EventsConfiguration
-	executionContext    context.Context
-	providers           map[string]*NatsPubSub
-}
-
-func (f *Factory) Planner(_ abstractlogger.Logger) plan.DataSourcePlanner[Configuration] {
-	return &Planner{
-		config:    f.config,
-		providers: f.providers,
-	}
-}
-
-func (f *Factory) Context() context.Context {
-	return f.executionContext
-}
-
-func (f *Factory) UpstreamSchema(dataSourceConfig plan.DataSourceConfiguration[Configuration]) (*ast.Document, bool) {
-	return nil, false
+	return nil, fmt.Errorf("failed to find event config for type name \"%s\" and field name \"%s\"", typeName, fieldName)
 }
 
 func isValidNatsSubject(subject string) bool {

@@ -33,7 +33,6 @@ type SubscriptionSource struct {
 }
 
 func (s *SubscriptionSource) UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
-
 	val, _, _, err := jsonparser.Get(input, "topics")
 	if err != nil {
 		return err
