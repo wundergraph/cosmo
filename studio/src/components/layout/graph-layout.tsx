@@ -184,6 +184,12 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         matchExact: false,
         icon: <PiBracketsCurlyBold className="h-4 w-4" />,
       },
+      {
+        title: "Proposals",
+        href: basePath + "/proposals",
+        matchExact: false,
+        icon: <PiBracketsCurlyBold className="h-4 w-4" />,
+      },
     ];
   }, [organizationSlug, namespace, slug]);
 
@@ -269,20 +275,17 @@ export const GraphSelect = () => {
 
   const sortedGraphs = sortFederatedGraphs(data?.graphs ?? []);
 
-  const groupedGraphs = sortedGraphs.reduce<Record<string, FederatedGraph[]>>(
-    (result, graph) => {
-      const { namespace, name } = graph;
+  const groupedGraphs = sortedGraphs.reduce<Record>((result, graph) => {
+    const { namespace, name } = graph;
 
-      if (!result[namespace]) {
-        result[namespace] = [];
-      }
+    if (!result[namespace]) {
+      result[namespace] = [];
+    }
 
-      result[namespace].push(graph);
+    result[namespace].push(graph);
 
-      return result;
-    },
-    {},
-  );
+    return result;
+  }, {});
 
   if (router.pathname.split("/")[3] !== "graph") {
     return null;
@@ -374,7 +377,7 @@ export interface TitleLayoutProps {
   toolbar?: React.ReactNode;
   noPadding?: boolean;
   children?: React.ReactNode;
-  scrollRef?: React.RefObject<HTMLDivElement>;
+  scrollRef?: React.RefObject;
 }
 
 export const GraphPageLayout = ({
