@@ -710,3 +710,21 @@ export interface NamespaceDTO {
   enableCacheWarmer: boolean;
   checksTimeframeInDays?: number;
 }
+
+export interface ProposalDTO {
+  id: string;
+  name: string;
+  federatedGraphId: string;
+  createdAt: string;
+  createdById: string;
+  createdByEmail?: string;
+  state: string;
+}
+
+export interface ProposalSubgraphDTO {
+  id: string;
+  subgraphName: string;
+  subgraphId?: string;
+  schemaSDL: string;
+  isDeleted: boolean;
+}

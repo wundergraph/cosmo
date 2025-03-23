@@ -159,6 +159,10 @@ import { setGraphRouterCompatibilityVersion } from './graph/setGraphRouterCompat
 import { getOrganizationBySlug } from './organization/getOrganizationBySlug.js';
 import { checkSubgraphSchemas } from './check/checkSubgraphSchemas.js';
 import { getProposedSchemaOfCheckedSubgraph } from './check/getProposedSchemaOfCheckedSubgraph.js';
+import { getProposalsByFederatedGraph } from './proposal/getProposalsByFederatedGraph.js';
+import { updateProposal } from './proposal/updateProposal.js';
+import { createProposal } from './proposal/createProposal.js';
+import { getProposal } from './proposal/getProposal.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -803,6 +807,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     setGraphRouterCompatibilityVersion: (req, ctx) => {
       return setGraphRouterCompatibilityVersion(opts, req, ctx);
+    },
+
+    getProposalsByFederatedGraph: (req, ctx) => {
+      return getProposalsByFederatedGraph(opts, req, ctx);
+    },
+
+    updateProposal: (req, ctx) => {
+      return updateProposal(opts, req, ctx);
+    },
+
+    createProposal: (req, ctx) => {
+      return createProposal(opts, req, ctx);
+    },
+
+    getProposal: (req, ctx) => {
+      return getProposal(opts, req, ctx);
     },
   };
 }

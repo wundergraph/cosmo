@@ -2618,6 +2618,66 @@ message GetProposedSchemaOfCheckedSubgraphResponse {
   string proposedSchema = 2;
 }
 
+message Proposal {
+  string id = 1;
+  string name = 2;
+  string createdAt = 3;
+  string createdByEmail = 4;
+  string state = 5;
+  string federatedGraphId = 6;
+  string federatedGraphName = 7;
+  repeated ProposalSubgraph subgraphs = 8;
+}
+
+message ProposalSubgraph {
+  string name = 1;
+  string schemaSDL = 2;
+  bool isDeleted = 3;
+}
+
+message CreateProposalRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+  string name = 3;
+  repeated ProposalSubgraph subgraphs = 4;
+  bool didHubCreate = 5;
+}
+
+message CreateProposalResponse {
+  Response response = 1;
+  string proposalId = 2;
+}
+
+message GetProposalRequest {
+  string proposalId = 1;
+}
+
+message GetProposalResponse {
+  Response response = 1;
+  Proposal proposal = 2;
+}
+
+message GetProposalsByFederatedGraphRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+}   
+
+message GetProposalsByFederatedGraphResponse {
+  Response response = 1;
+  repeated Proposal proposals = 2;
+}
+
+message UpdateProposalRequest {
+  string proposalId = 1;
+  string state = 2;
+  repeated ProposalSubgraph updatedSubgraphs = 3;
+  string namespace = 4;
+}
+
+message UpdateProposalResponse {
+  Response response = 1;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -2964,4 +3024,10 @@ service PlatformService {
 
   // Graph
   rpc SetGraphRouterCompatibilityVersion(SetGraphRouterCompatibilityVersionRequest) returns (SetGraphRouterCompatibilityVersionResponse) { }
+
+  // Proposal
+  rpc CreateProposal(CreateProposalRequest) returns (CreateProposalResponse) {}
+  rpc GetProposal(GetProposalRequest) returns (GetProposalResponse) {}
+  rpc GetProposalsByFederatedGraph(GetProposalsByFederatedGraphRequest) returns (GetProposalsByFederatedGraphResponse) {}
+  rpc UpdateProposal(UpdateProposalRequest) returns (UpdateProposalResponse) {}
 }

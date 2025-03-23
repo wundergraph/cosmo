@@ -2181,3 +2181,62 @@ export const namespaceCacheWarmerConfig = pgTable(
 export const namespaceCacheWarmerConfigRelations = relations(namespaceCacheWarmerConfig, ({ one }) => ({
   namespace: one(namespaces),
 }));
+
+export const proposalStateEnum = pgEnum('proposal_state', ['DRAFT', 'APPROVED', 'PUBLISHED', 'CLOSED'] as const);
+
+export const proposals = pgTable(
+  'proposals', // pr
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    name: text('name').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+    createdById: uuid('created_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    state: proposalStateEnum('state').notNull(),
+    didHubCreate: boolean('did_hub_create').default(false).notNull(),
+  },
+  (t) => ({
+    uniqueFederatedGraphClientName: unique('federated_graph_proposal_name').on(t.federatedGraphId, t.name),
+    createdByIdIndex: index('pr_created_by_id_idx').on(t.createdById),
+  }),
+);
+
+export const proposalRelations = relations(proposals, ({ one }) => ({
+  federatedGraph: one(federatedGraphs, {
+    fields: [proposals.federatedGraphId],
+    references: [federatedGraphs.id],
+  }),
+}));
+
+export const proposalSubgraphs = pgTable(
+  'proposal_subgraphs', // prs
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    proposalId: uuid('proposal_id')
+      .notNull()
+      .references(() => proposals.id, { onDelete: 'cascade' }),
+    subgraphId: uuid('subgraph_id')
+      .references(() => subgraphs.id, {
+        onDelete: 'cascade',
+      }),
+    subgraphName: text('subgraph_name').notNull(),
+    schemaSDL: text('schema_sdl'),
+    isDeleted: boolean('is_deleted').default(false).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uniqueProposalSubgraph: unique('proposal_subgraph').on(t.proposalId, t.subgraphId),
+  }),
+);
+
+export const proposalSubgraphsRelations = relations(proposalSubgraphs, ({ one }) => ({
+  proposal: one(proposals, { fields: [proposalSubgraphs.proposalId], references: [proposals.id] }),
+  subgraph: one(subgraphs, { fields: [proposalSubgraphs.subgraphId], references: [subgraphs.id] }),
+}));

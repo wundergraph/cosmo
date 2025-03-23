@@ -508,6 +508,18 @@ const (
 	// PlatformServiceSetGraphRouterCompatibilityVersionProcedure is the fully-qualified name of the
 	// PlatformService's SetGraphRouterCompatibilityVersion RPC.
 	PlatformServiceSetGraphRouterCompatibilityVersionProcedure = "/wg.cosmo.platform.v1.PlatformService/SetGraphRouterCompatibilityVersion"
+	// PlatformServiceCreateProposalProcedure is the fully-qualified name of the PlatformService's
+	// CreateProposal RPC.
+	PlatformServiceCreateProposalProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateProposal"
+	// PlatformServiceGetProposalProcedure is the fully-qualified name of the PlatformService's
+	// GetProposal RPC.
+	PlatformServiceGetProposalProcedure = "/wg.cosmo.platform.v1.PlatformService/GetProposal"
+	// PlatformServiceGetProposalsByFederatedGraphProcedure is the fully-qualified name of the
+	// PlatformService's GetProposalsByFederatedGraph RPC.
+	PlatformServiceGetProposalsByFederatedGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetProposalsByFederatedGraph"
+	// PlatformServiceUpdateProposalProcedure is the fully-qualified name of the PlatformService's
+	// UpdateProposal RPC.
+	PlatformServiceUpdateProposalProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateProposal"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -671,6 +683,10 @@ var (
 	platformServiceUpgradePlanMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("UpgradePlan")
 	platformServiceListRouterCompatibilityVersionsMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("ListRouterCompatibilityVersions")
 	platformServiceSetGraphRouterCompatibilityVersionMethodDescriptor    = platformServiceServiceDescriptor.Methods().ByName("SetGraphRouterCompatibilityVersion")
+	platformServiceCreateProposalMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("CreateProposal")
+	platformServiceGetProposalMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("GetProposal")
+	platformServiceGetProposalsByFederatedGraphMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetProposalsByFederatedGraph")
+	platformServiceUpdateProposalMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UpdateProposal")
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -970,6 +986,11 @@ type PlatformServiceClient interface {
 	ListRouterCompatibilityVersions(context.Context, *connect.Request[v1.ListRouterCompatibilityVersionsRequest]) (*connect.Response[v1.ListRouterCompatibilityVersionsResponse], error)
 	// Graph
 	SetGraphRouterCompatibilityVersion(context.Context, *connect.Request[v1.SetGraphRouterCompatibilityVersionRequest]) (*connect.Response[v1.SetGraphRouterCompatibilityVersionResponse], error)
+	// Proposal
+	CreateProposal(context.Context, *connect.Request[v1.CreateProposalRequest]) (*connect.Response[v1.CreateProposalResponse], error)
+	GetProposal(context.Context, *connect.Request[v1.GetProposalRequest]) (*connect.Response[v1.GetProposalResponse], error)
+	GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error)
+	UpdateProposal(context.Context, *connect.Request[v1.UpdateProposalRequest]) (*connect.Response[v1.UpdateProposalResponse], error)
 }
 
 // NewPlatformServiceClient constructs a client for the wg.cosmo.platform.v1.PlatformService
@@ -1937,6 +1958,30 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceSetGraphRouterCompatibilityVersionMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		createProposal: connect.NewClient[v1.CreateProposalRequest, v1.CreateProposalResponse](
+			httpClient,
+			baseURL+PlatformServiceCreateProposalProcedure,
+			connect.WithSchema(platformServiceCreateProposalMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getProposal: connect.NewClient[v1.GetProposalRequest, v1.GetProposalResponse](
+			httpClient,
+			baseURL+PlatformServiceGetProposalProcedure,
+			connect.WithSchema(platformServiceGetProposalMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getProposalsByFederatedGraph: connect.NewClient[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse](
+			httpClient,
+			baseURL+PlatformServiceGetProposalsByFederatedGraphProcedure,
+			connect.WithSchema(platformServiceGetProposalsByFederatedGraphMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		updateProposal: connect.NewClient[v1.UpdateProposalRequest, v1.UpdateProposalResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdateProposalProcedure,
+			connect.WithSchema(platformServiceUpdateProposalMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -2100,6 +2145,10 @@ type platformServiceClient struct {
 	upgradePlan                           *connect.Client[v1.UpgradePlanRequest, v1.UpgradePlanResponse]
 	listRouterCompatibilityVersions       *connect.Client[v1.ListRouterCompatibilityVersionsRequest, v1.ListRouterCompatibilityVersionsResponse]
 	setGraphRouterCompatibilityVersion    *connect.Client[v1.SetGraphRouterCompatibilityVersionRequest, v1.SetGraphRouterCompatibilityVersionResponse]
+	createProposal                        *connect.Client[v1.CreateProposalRequest, v1.CreateProposalResponse]
+	getProposal                           *connect.Client[v1.GetProposalRequest, v1.GetProposalResponse]
+	getProposalsByFederatedGraph          *connect.Client[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse]
+	updateProposal                        *connect.Client[v1.UpdateProposalRequest, v1.UpdateProposalResponse]
 }
 
 // CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
@@ -2921,6 +2970,27 @@ func (c *platformServiceClient) SetGraphRouterCompatibilityVersion(ctx context.C
 	return c.setGraphRouterCompatibilityVersion.CallUnary(ctx, req)
 }
 
+// CreateProposal calls wg.cosmo.platform.v1.PlatformService.CreateProposal.
+func (c *platformServiceClient) CreateProposal(ctx context.Context, req *connect.Request[v1.CreateProposalRequest]) (*connect.Response[v1.CreateProposalResponse], error) {
+	return c.createProposal.CallUnary(ctx, req)
+}
+
+// GetProposal calls wg.cosmo.platform.v1.PlatformService.GetProposal.
+func (c *platformServiceClient) GetProposal(ctx context.Context, req *connect.Request[v1.GetProposalRequest]) (*connect.Response[v1.GetProposalResponse], error) {
+	return c.getProposal.CallUnary(ctx, req)
+}
+
+// GetProposalsByFederatedGraph calls
+// wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph.
+func (c *platformServiceClient) GetProposalsByFederatedGraph(ctx context.Context, req *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error) {
+	return c.getProposalsByFederatedGraph.CallUnary(ctx, req)
+}
+
+// UpdateProposal calls wg.cosmo.platform.v1.PlatformService.UpdateProposal.
+func (c *platformServiceClient) UpdateProposal(ctx context.Context, req *connect.Request[v1.UpdateProposalRequest]) (*connect.Response[v1.UpdateProposalResponse], error) {
+	return c.updateProposal.CallUnary(ctx, req)
+}
+
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
 type PlatformServiceHandler interface {
 	// PlaygroundScripts
@@ -3218,6 +3288,11 @@ type PlatformServiceHandler interface {
 	ListRouterCompatibilityVersions(context.Context, *connect.Request[v1.ListRouterCompatibilityVersionsRequest]) (*connect.Response[v1.ListRouterCompatibilityVersionsResponse], error)
 	// Graph
 	SetGraphRouterCompatibilityVersion(context.Context, *connect.Request[v1.SetGraphRouterCompatibilityVersionRequest]) (*connect.Response[v1.SetGraphRouterCompatibilityVersionResponse], error)
+	// Proposal
+	CreateProposal(context.Context, *connect.Request[v1.CreateProposalRequest]) (*connect.Response[v1.CreateProposalResponse], error)
+	GetProposal(context.Context, *connect.Request[v1.GetProposalRequest]) (*connect.Response[v1.GetProposalResponse], error)
+	GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error)
+	UpdateProposal(context.Context, *connect.Request[v1.UpdateProposalRequest]) (*connect.Response[v1.UpdateProposalResponse], error)
 }
 
 // NewPlatformServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -4181,6 +4256,30 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceSetGraphRouterCompatibilityVersionMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceCreateProposalHandler := connect.NewUnaryHandler(
+		PlatformServiceCreateProposalProcedure,
+		svc.CreateProposal,
+		connect.WithSchema(platformServiceCreateProposalMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetProposalHandler := connect.NewUnaryHandler(
+		PlatformServiceGetProposalProcedure,
+		svc.GetProposal,
+		connect.WithSchema(platformServiceGetProposalMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetProposalsByFederatedGraphHandler := connect.NewUnaryHandler(
+		PlatformServiceGetProposalsByFederatedGraphProcedure,
+		svc.GetProposalsByFederatedGraph,
+		connect.WithSchema(platformServiceGetProposalsByFederatedGraphMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceUpdateProposalHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateProposalProcedure,
+		svc.UpdateProposal,
+		connect.WithSchema(platformServiceUpdateProposalMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlatformServiceCreatePlaygroundScriptProcedure:
@@ -4499,6 +4598,14 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceListRouterCompatibilityVersionsHandler.ServeHTTP(w, r)
 		case PlatformServiceSetGraphRouterCompatibilityVersionProcedure:
 			platformServiceSetGraphRouterCompatibilityVersionHandler.ServeHTTP(w, r)
+		case PlatformServiceCreateProposalProcedure:
+			platformServiceCreateProposalHandler.ServeHTTP(w, r)
+		case PlatformServiceGetProposalProcedure:
+			platformServiceGetProposalHandler.ServeHTTP(w, r)
+		case PlatformServiceGetProposalsByFederatedGraphProcedure:
+			platformServiceGetProposalsByFederatedGraphHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateProposalProcedure:
+			platformServiceUpdateProposalHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -5138,4 +5245,20 @@ func (UnimplementedPlatformServiceHandler) ListRouterCompatibilityVersions(conte
 
 func (UnimplementedPlatformServiceHandler) SetGraphRouterCompatibilityVersion(context.Context, *connect.Request[v1.SetGraphRouterCompatibilityVersionRequest]) (*connect.Response[v1.SetGraphRouterCompatibilityVersionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.SetGraphRouterCompatibilityVersion is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) CreateProposal(context.Context, *connect.Request[v1.CreateProposalRequest]) (*connect.Response[v1.CreateProposalResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateProposal is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetProposal(context.Context, *connect.Request[v1.GetProposalRequest]) (*connect.Response[v1.GetProposalResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetProposal is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdateProposal(context.Context, *connect.Request[v1.UpdateProposalRequest]) (*connect.Response[v1.UpdateProposalResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateProposal is not implemented"))
 }
