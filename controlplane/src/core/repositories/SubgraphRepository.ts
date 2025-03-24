@@ -872,7 +872,7 @@ export class SubgraphRepository {
       ),
     });
 
-    const checksCount = await this.getChecksCount({ federatedGraphTargetId, startDate, endDate });
+    const checksCount = await this.getChecksCount({ federatedGraphTargetId, startDate, endDate, includeSubgraphs });
 
     return {
       checks: checkList.map((c) => ({
@@ -907,13 +907,16 @@ export class SubgraphRepository {
     federatedGraphTargetId,
     startDate,
     endDate,
+    includeSubgraphs,
   }: {
     federatedGraphTargetId: string;
     startDate?: string;
     endDate?: string;
+    includeSubgraphs?: string[];
   }): Promise<number> {
     const subgraphs = await this.listByFederatedGraph({
       federatedGraphTargetId,
+      includeSubgraphs,
     });
 
     if (subgraphs.length === 0) {
