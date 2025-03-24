@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.192.1](https://github.com/wundergraph/cosmo/compare/router@0.192.0...router@0.192.1) (2025-03-19)
+
+### Bug Fixes
+
+* prefer json as a content type for non subscriptions ([#1705](https://github.com/wundergraph/cosmo/issues/1705)) ([40ebbb1](https://github.com/wundergraph/cosmo/commit/40ebbb1b3450bca6a2183bd68b3f92e9d3b8d9d1)) (@SkArchon)
+* upgrade expr package ([#1703](https://github.com/wundergraph/cosmo/issues/1703)) ([6799c2b](https://github.com/wundergraph/cosmo/commit/6799c2b615e08e70e969707422f3e6e0b1fc78f7)) (@Noroth)
+
 # [0.192.0](https://github.com/wundergraph/cosmo/compare/router@0.191.0...router@0.192.0) (2025-03-14)
 
 ### Bug Fixes
