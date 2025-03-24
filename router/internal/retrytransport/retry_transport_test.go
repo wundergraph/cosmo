@@ -1,6 +1,7 @@
 package retrytransport
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -109,6 +110,55 @@ func TestRetryOnNetErrors(t *testing.T) {
 
 	assert.Equal(t, len(defaultRetryableErrors), retries)
 
+}
+
+func TestDoNotRetryWhenErrorIsNotRetryableAndResponseIsNil(t *testing.T) {
+	logger := zap.NewNop()
+	finalError := errors.New("some error")
+
+	expectedRetries := 2
+	retries := 0
+	index := -1
+	maxRetryCount := 7
+
+	tr := RetryHTTPTransport{
+		RoundTripper: &MockTransport{
+			handler: func(req *http.Request) (*http.Response, error) {
+				index++
+				// The first retry we return a retryable error
+				if index == 0 {
+					return &http.Response{StatusCode: defaultRetryableStatusCodes[0]}, nil
+					// The second retry we return a retryable status code
+				} else if index == 1 {
+					return nil, defaultRetryableErrors[index]
+					// The third retry we return a nil response as well as a non-retryable error
+				} else {
+					return nil, finalError
+				}
+			},
+		},
+		RetryOptions: RetryOptions{
+			MaxRetryCount: maxRetryCount,
+			Interval:      1 * time.Millisecond,
+			MaxDuration:   10 * time.Millisecond,
+			ShouldRetry: func(err error, req *http.Request, resp *http.Response) bool {
+				return IsRetryableError(err, resp)
+			},
+			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
+				retries++
+			},
+		},
+		Logger: logger,
+	}
+
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
+
+	resp, err := tr.RoundTrip(req)
+	assert.Error(t, finalError, err)
+	assert.Nil(t, resp)
+
+	assert.Equal(t, expectedRetries, retries)
+	assert.NotEqual(t, maxRetryCount, retries)
 }
 
 // TrackableBody is a custom io.ReadCloser that tracks if it's been read and closed
