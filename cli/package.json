@@ -64,7 +64,7 @@
     "ora": "^8.0.1",
     "pathe": "^1.1.1",
     "picocolors": "^1.0.0",
-    "undici": "^6.19.8"
+    "undici": "^6.21.1"
   },
   "devDependencies": {
     "@types/bun": "^1.2.3",
