@@ -904,6 +904,7 @@ export const LatencyDistributionCard = ({ series } : { series: any[]; }) => {
             <Legend
               verticalAlign="top"
               align="right"
+              inactiveColor="hsl(var(--muted-foreground) / 0.45)"
               wrapperStyle={{ fontSize: "13px", marginTop: "-10px" }}
               onClick={({ dataKey, inactive }) => {
                 setActiveLatencies({
