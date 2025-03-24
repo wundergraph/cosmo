@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/utils"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
@@ -15,7 +14,6 @@ import (
 type Planner[EC EventConfigType, P any] struct {
 	id           int
 	config       Implementer[EC, P]
-	eventsConfig config.EventsConfiguration
 	eventConfig  EC
 	rootFieldRef int
 	variables    resolve.Variables

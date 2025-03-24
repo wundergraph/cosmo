@@ -26,7 +26,6 @@ type ArgumentTemplateCallback func(tpl string) (string, error)
 
 type PubSubImplementer[F any] interface {
 	PrepareProviders(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration) error
-	//	ConnectProviders(ctx context.Context) error
 	GetFactory(executionContext context.Context, config config.EventsConfiguration) F
 }
 
@@ -39,7 +38,6 @@ type Implementer[EC EventConfigType, P any] interface {
 	GetResolveDataSource(eventConfig EC, pubsub P) (resolve.DataSource, error)
 	GetResolveDataSourceSubscription(eventConfig EC, pubsub P) (resolve.SubscriptionDataSource, error)
 	GetResolveDataSourceSubscriptionInput(eventConfig EC, pubsub P) (string, error)
-	//GetResolveDataSourceInput(eventConfig EC, ref int, visitor *plan.Visitor, variables *resolve.Variables) (string, error)
 	GetResolveDataSourceInput(eventConfig EC, event []byte) (string, error)
 	GetProviderId(eventConfig EC) string
 	FindEventConfig(eventConfigs []EC, typeName string, fieldName string, fn ArgumentTemplateCallback) (EC, error)

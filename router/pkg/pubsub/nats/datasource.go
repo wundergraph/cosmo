@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -25,11 +24,6 @@ import (
 const (
 	fwc  = '>'
 	tsep = "."
-)
-
-// A variable template has form $$number$$ where the number can range from one to multiple digits
-var (
-	variableTemplateRegex = regexp.MustCompile(`\$\$\d+\$\$`)
 )
 
 func GetDataSource(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger) (plan.DataSource, error) {
@@ -196,9 +190,6 @@ type Configuration struct {
 	Data               string `json:"data"`
 	EventConfiguration []*nodev1.NatsEventConfiguration
 	Logger             *zap.Logger
-	requestConfig      *PublishAndRequestEventConfiguration
-	publishConfig      *PublishAndRequestEventConfiguration
-	subscribeConfig    *SubscriptionEventConfiguration
 }
 
 func (c *Configuration) GetEventsDataConfigurations() []*nodev1.NatsEventConfiguration {
@@ -283,6 +274,9 @@ func (c *Configuration) transformEventConfig(cfg *nodev1.NatsEventConfiguration,
 		if err != nil {
 			return cfg, fmt.Errorf("unable to parse subject with id %s", cfg.GetSubjects()[0])
 		}
+		if !isValidNatsSubject(extractedSubject) {
+			return cfg, fmt.Errorf("invalid subject: %s", extractedSubject)
+		}
 		cfg.Subjects = []string{extractedSubject}
 	case nodev1.EventType_SUBSCRIBE:
 		extractedSubjects := make([]string, 0, len(cfg.Subjects))
@@ -290,6 +284,9 @@ func (c *Configuration) transformEventConfig(cfg *nodev1.NatsEventConfiguration,
 			extractedSubject, err := fn(rawSubject)
 			if err != nil {
 				return cfg, nil
+			}
+			if !isValidNatsSubject(extractedSubject) {
+				return cfg, fmt.Errorf("invalid subject: %s", extractedSubject)
 			}
 			extractedSubjects = append(extractedSubjects, extractedSubject)
 		}
