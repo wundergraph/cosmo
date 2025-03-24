@@ -407,6 +407,7 @@ export class NormalizationFactory {
   lastChildNodeKind: Kind = Kind.NULL;
   leafTypeNamesWithAuthorizationDirectives = new Set<string>();
   keyFieldSetDataByTypeName = new Map<string, KeyFieldSetData>();
+  keyFieldSetsByEntityTypeNameByFieldCoords = new Map<string, Map<string, Set<string>>>();
   keyFieldNamesByParentTypeName = new Map<string, Set<string>>();
   operationTypeNodeByTypeName = new Map<string, OperationTypeNode>();
   originalParentTypeName = '';
@@ -2927,7 +2928,7 @@ export class NormalizationFactory {
       const configurationData = getValueOrDefault(this.configurationDataByTypeName, typeName, () =>
         newConfigurationData(true, typeName),
       );
-      const keys = validateKeyFieldSets(this, parentData, keyFieldSetDataByFieldSet, configurationData.fieldNames);
+      const keys = validateKeyFieldSets(this, parentData, keyFieldSetDataByFieldSet);
       if (keys) {
         configurationData.keys = keys;
       }
@@ -3556,6 +3557,7 @@ export class NormalizationFactory {
       isEventDrivenGraph: this.isSubgraphEventDrivenGraph,
       isVersionTwo: this.isSubgraphVersionTwo,
       keyFieldNamesByParentTypeName: this.keyFieldNamesByParentTypeName,
+      keyFieldSetsByEntityTypeNameByKeyFieldCoords: this.keyFieldSetsByEntityTypeNameByFieldCoords,
       operationTypes: this.operationTypeNodeByTypeName,
       originalTypeNameByRenamedTypeName: this.originalTypeNameByRenamedTypeName,
       overridesByTargetSubgraphName: this.overridesByTargetSubgraphName,
