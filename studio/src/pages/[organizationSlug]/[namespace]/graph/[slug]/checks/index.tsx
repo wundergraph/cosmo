@@ -83,13 +83,15 @@ const ChecksPage: NextPageWithLayout = () => {
     {
       name: router.query.slug as string,
       namespace: router.query.namespace as string,
-      includeSubgraphs: !selectedSubgraphs.length
-        ? graphContext?.subgraphs?.map((sg) => sg.id) ?? []
-        : selectedSubgraphs,
       limit: limit > 50 ? 50 : limit,
       offset: (pageNumber - 1) * limit,
       startDate: formatISO(startDate),
       endDate: formatISO(endDate),
+      filters: {
+        subgraphs: !selectedSubgraphs.length
+          ? graphContext?.subgraphs?.map((sg) => sg.id) ?? []
+          : selectedSubgraphs,
+      },
     },
     {
       placeholderData: (prev) => prev,

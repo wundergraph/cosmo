@@ -80,22 +80,7 @@ export function getChecksByFederatedGraphName(
       };
     }
 
-    // ensure that at least one valid subgraph identifier was provided, otherwise, exit
-    const includeSubgraphs = Array.isArray(req.includeSubgraphs)
-      ? req.includeSubgraphs.filter((id) => isValidUuid(id))
-      : [];
-
-    if (includeSubgraphs.length === 0) {
-      return {
-        response: {
-          code: EnumStatusCode.OK,
-        },
-        checks: [],
-        checksCountBasedOnDateRange: 0,
-        totalChecksCount: 0,
-      };
-    }
-
+    const includeSubgraphs = req.filters?.subgraphs?.filter((id) => isValidUuid(id)) ?? [];
     const checksData = await subgraphRepo.checks({
       federatedGraphTargetId: federatedGraph.targetId,
       limit: req.limit,
@@ -104,6 +89,7 @@ export function getChecksByFederatedGraphName(
       endDate: dateRange.end,
       includeSubgraphs,
     });
+
     const totalChecksCount = await subgraphRepo.getChecksCount({ federatedGraphTargetId: federatedGraph.targetId });
 
     return {
