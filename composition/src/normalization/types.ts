@@ -29,6 +29,7 @@ export type NormalizationResultSuccess = {
   isEventDrivenGraph: boolean;
   isVersionTwo: boolean;
   keyFieldNamesByParentTypeName: Map<string, Set<string>>;
+  keyFieldSetsByEntityTypeNameByKeyFieldCoords: Map<string, Map<string, Set<string>>>;
   operationTypes: Map<string, OperationTypeNode>;
   overridesByTargetSubgraphName: Map<string, Map<string, Set<string>>>;
   parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
