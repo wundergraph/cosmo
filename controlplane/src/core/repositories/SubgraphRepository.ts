@@ -9,9 +9,9 @@ import { addDays } from 'date-fns';
 import { SQL, and, asc, count, desc, eq, getTableName, gt, inArray, like, lt, notInArray, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
+import { validate as isValidUuid } from 'uuid';
 import { WebsocketSubprotocol } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
-import { validate as isValidUuid } from "uuid";
 import {
   featureSubgraphsToBaseSubgraphs,
   fieldGracePeriod,
@@ -705,9 +705,8 @@ export class SubgraphRepository {
       return [];
     }
 
-    const subgraphsToSelect = Array.isArray(data.subgraphs) && data.subgraphs.length > 0
-      ? data.subgraphs.filter((v) => isValidUuid(v))
-      : [];
+    const subgraphsToSelect =
+      Array.isArray(data.subgraphs) && data.subgraphs.length > 0 ? data.subgraphs.filter((v) => isValidUuid(v)) : [];
 
     const targets = await this.db
       .select({
@@ -719,11 +718,8 @@ export class SubgraphRepository {
       .innerJoin(
         schema.subgraphs,
         subgraphsToSelect.length > 0
-          ? and(
-            eq(schema.subgraphs.targetId, schema.targets.id),
-            inArray(schema.subgraphs.id, subgraphsToSelect)
-          )
-          : eq(schema.subgraphs.targetId, schema.targets.id)
+          ? and(eq(schema.subgraphs.targetId, schema.targets.id), inArray(schema.subgraphs.id, subgraphsToSelect))
+          : eq(schema.subgraphs.targetId, schema.targets.id),
       )
       [data.published ? 'innerJoin' : 'leftJoin'](
         schema.schemaVersion,
