@@ -264,3 +264,7 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 	pg.definition = &definition
 	return nil
 }
+
+func (pg *PlanGenerator) GetPlanConfiguration() *plan.Configuration {
+	return pg.planConfiguration
+}
