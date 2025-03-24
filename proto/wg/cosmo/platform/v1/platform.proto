@@ -434,6 +434,10 @@ message GetLatestSubgraphSDLResponse {
   optional string version_id = 3;
 }
 
+message GetChecksByFederatedGraphNameFilters {
+  repeated string subgraphs = 1;
+}
+
 message GetChecksByFederatedGraphNameRequest {
   string name = 1;
   int32 limit = 2;
@@ -441,6 +445,7 @@ message GetChecksByFederatedGraphNameRequest {
   string startDate = 4;
   string endDate = 5;
   string namespace = 6;
+  optional GetChecksByFederatedGraphNameFilters filters = 7;
 }
 
 message SchemaCheck {
