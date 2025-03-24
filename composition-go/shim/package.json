@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.8.10",
-    "esbuild": "^0.20.0",
+    "esbuild": "^0.25.0",
     "esbuild-plugin-polyfill-node": "^0.3.0",
     "tsup": "^8.0.1",
     "typescript": "^5.2.2"
