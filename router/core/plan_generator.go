@@ -62,6 +62,15 @@ func (pl *Planner) PlanOperation(operationFilePath string) (string, error) {
 	return rawPlan.PrettyPrint(), nil
 }
 
+func (pl *Planner) PlanParsedOperation(operation *ast.Document) (*resolve.FetchTreeQueryPlanNode, error) {
+	rawPlan, err := pl.planOperation(operation)
+	if err != nil {
+		return nil, fmt.Errorf("failed to plan operation: %w", err)
+	}
+
+	return rawPlan, nil
+}
+
 func (pl *Planner) planOperation(operation *ast.Document) (*resolve.FetchTreeQueryPlanNode, error) {
 	report := operationreport.Report{}
 
@@ -111,11 +120,25 @@ func (pl *Planner) parseOperation(operationFilePath string) (*ast.Document, erro
 
 func NewPlanGenerator(configFilePath string, logger *zap.Logger, maxDataSourceCollectorsConcurrency uint) (*PlanGenerator, error) {
 	pg := &PlanGenerator{}
+	routerConfig, err := pg.buildRouterConfig(configFilePath)
+	if err != nil {
+		return nil, err
+	}
+
 	if err := pg.loadConfiguration(
-		configFilePath,
+		routerConfig,
 		logger,
 		maxDataSourceCollectorsConcurrency,
 	); err != nil {
+		return nil, err
+	}
+
+	return pg, nil
+}
+
+func NewPlanGeneratorFromConfig(config *nodev1.RouterConfig, logger *zap.Logger, maxDataSourceCollectorsConcurrency uint) (*PlanGenerator, error) {
+	pg := &PlanGenerator{}
+	if err := pg.loadConfiguration(config, logger, maxDataSourceCollectorsConcurrency); err != nil {
 		return nil, err
 	}
 
@@ -126,12 +149,16 @@ func (pg *PlanGenerator) GetPlanner() (*Planner, error) {
 	return NewPlanner(pg.planConfiguration, pg.definition)
 }
 
-func (pg *PlanGenerator) loadConfiguration(configFilePath string, logger *zap.Logger, maxDataSourceCollectorsConcurrency uint) error {
+func (pg *PlanGenerator) buildRouterConfig(configFilePath string) (*nodev1.RouterConfig, error) {
 	routerConfig, err := execution_config.FromFile(configFilePath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	return routerConfig, nil
+}
+
+func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, logger *zap.Logger, maxDataSourceCollectorsConcurrency uint) error {
 	natSources := map[string]pubsub_datasource.NatsPubSub{}
 	kafkaSources := map[string]pubsub_datasource.KafkaPubSub{}
 	for _, ds := range routerConfig.GetEngineConfig().GetDatasourceConfigurations() {
@@ -230,4 +257,8 @@ func (pg *PlanGenerator) loadConfiguration(configFilePath string, logger *zap.Lo
 	pg.planConfiguration = planConfig
 	pg.definition = &definition
 	return nil
+}
+
+func (pg *PlanGenerator) GetPlanConfiguration() *plan.Configuration {
+	return pg.planConfiguration
 }
