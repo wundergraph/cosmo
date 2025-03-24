@@ -9,7 +9,6 @@ import { addDays } from 'date-fns';
 import { SQL, and, asc, count, desc, eq, getTableName, gt, inArray, like, lt, notInArray, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
-import { validate as isValidUuid } from 'uuid';
 import { WebsocketSubprotocol } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
@@ -684,7 +683,7 @@ export class SubgraphRepository {
   public async listByFederatedGraph(data: {
     federatedGraphTargetId: string;
     published?: boolean;
-    subgraphs?: string[];
+    includeSubgraphs?: string[];
   }): Promise<SubgraphDTO[]> {
     const target = await this.db.query.targets.findFirst({
       where: and(
@@ -705,9 +704,6 @@ export class SubgraphRepository {
       return [];
     }
 
-    const subgraphsToSelect =
-      Array.isArray(data.subgraphs) && data.subgraphs.length > 0 ? data.subgraphs.filter((v) => isValidUuid(v)) : [];
-
     const targets = await this.db
       .select({
         id: schema.targets.id,
@@ -717,8 +713,8 @@ export class SubgraphRepository {
       .from(schema.targets)
       .innerJoin(
         schema.subgraphs,
-        subgraphsToSelect.length > 0
-          ? and(eq(schema.subgraphs.targetId, schema.targets.id), inArray(schema.subgraphs.id, subgraphsToSelect))
+        Array.isArray(data.includeSubgraphs) && data.includeSubgraphs.length > 0
+          ? and(eq(schema.subgraphs.targetId, schema.targets.id), inArray(schema.subgraphs.id, data.includeSubgraphs))
           : eq(schema.subgraphs.targetId, schema.targets.id),
       )
       [data.published ? 'innerJoin' : 'leftJoin'](
@@ -838,18 +834,18 @@ export class SubgraphRepository {
     offset,
     startDate,
     endDate,
-    subgraphs,
+    includeSubgraphs,
   }: {
     federatedGraphTargetId: string;
     limit: number;
     offset: number;
     startDate: string;
     endDate: string;
-    subgraphs: string[];
+    includeSubgraphs: string[];
   }): Promise<GetChecksResponse> {
     const selectedSubgraphs = await this.listByFederatedGraph({
       federatedGraphTargetId,
-      subgraphs,
+      includeSubgraphs,
     });
 
     if (selectedSubgraphs.length === 0) {

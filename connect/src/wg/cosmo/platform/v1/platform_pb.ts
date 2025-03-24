@@ -3473,9 +3473,9 @@ export class GetChecksByFederatedGraphNameRequest extends Message<GetChecksByFed
   namespace = "";
 
   /**
-   * @generated from field: repeated string subgraphs = 7;
+   * @generated from field: repeated string includeSubgraphs = 7;
    */
-  subgraphs: string[] = [];
+  includeSubgraphs: string[] = [];
 
   constructor(data?: PartialMessage<GetChecksByFederatedGraphNameRequest>) {
     super();
@@ -3491,7 +3491,7 @@ export class GetChecksByFederatedGraphNameRequest extends Message<GetChecksByFed
     { no: 4, name: "startDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "endDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 7, name: "subgraphs", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 7, name: "includeSubgraphs", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChecksByFederatedGraphNameRequest {

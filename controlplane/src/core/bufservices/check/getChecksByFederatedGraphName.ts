@@ -1,6 +1,7 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { validate as isValidUuid } from 'uuid';
 import {
   GetChecksByFederatedGraphNameRequest,
   GetChecksByFederatedGraphNameResponse,
@@ -79,13 +80,29 @@ export function getChecksByFederatedGraphName(
       };
     }
 
+    // ensure that at least one valid subgraph identifier was provided, otherwise, exit
+    const includeSubgraphs = Array.isArray(req.includeSubgraphs)
+      ? req.includeSubgraphs.filter((id) => isValidUuid(id))
+      : [];
+
+    if (includeSubgraphs.length === 0) {
+      return {
+        response: {
+          code: EnumStatusCode.OK,
+        },
+        checks: [],
+        checksCountBasedOnDateRange: 0,
+        totalChecksCount: 0,
+      };
+    }
+
     const checksData = await subgraphRepo.checks({
       federatedGraphTargetId: federatedGraph.targetId,
       limit: req.limit,
       offset: req.offset,
       startDate: dateRange.start,
       endDate: dateRange.end,
-      subgraphs: req.subgraphs,
+      includeSubgraphs,
     });
     const totalChecksCount = await subgraphRepo.getChecksCount({ federatedGraphTargetId: federatedGraph.targetId });
 

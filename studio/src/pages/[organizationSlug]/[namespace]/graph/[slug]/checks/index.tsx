@@ -65,7 +65,7 @@ const ChecksPage: NextPageWithLayout = () => {
     : 1;
 
   const limit = Number.parseInt((router.query.pageSize as string) || "10");
-  const selectedSubgraphs = parseSelectedSubgraphs(router.query.subgraphs);
+  const selectedSubgraphs =  parseSelectedSubgraphs(router.query.subgraphs);
 
   const {
     dateRange: { start, end },
@@ -83,7 +83,9 @@ const ChecksPage: NextPageWithLayout = () => {
     {
       name: router.query.slug as string,
       namespace: router.query.namespace as string,
-      subgraphs: selectedSubgraphs,
+      includeSubgraphs: !selectedSubgraphs.length
+        ? graphContext?.subgraphs?.map((sg) => sg.id) ?? []
+        : selectedSubgraphs,
       limit: limit > 50 ? 50 : limit,
       offset: (pageNumber - 1) * limit,
       startDate: formatISO(startDate),
