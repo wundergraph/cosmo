@@ -5,7 +5,7 @@ go 1.23
 require (
 	github.com/MicahParks/jwkset v0.5.19
 	github.com/buger/jsonparser v1.1.1
-	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.1
 	github.com/hashicorp/consul/sdk v0.16.1
