@@ -125,13 +125,14 @@ func TestDoNotRetryWhenErrorIsNotRetryableAndResponseIsNil(t *testing.T) {
 		RoundTripper: &MockTransport{
 			handler: func(req *http.Request) (*http.Response, error) {
 				index++
-				if index == 0 {
+				switch index {
+				case 0:
 					// The first retry we return a retryable error
 					return &http.Response{StatusCode: defaultRetryableStatusCodes[0]}, nil
-				} else if index == 1 {
+				case 1:
 					// The second retry we return a retryable status code
 					return nil, defaultRetryableErrors[index]
-				} else {
+				default:
 					// The third retry we return a nil response as well as a non-retryable error
 					return nil, finalError
 				}
