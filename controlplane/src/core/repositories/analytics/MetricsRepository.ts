@@ -336,12 +336,6 @@ export class MetricsRepository {
           isPersisted: v.isPersisted,
         })),
         series: this.mapSeries(rangeInHours, seriesResponse, prevSeriesResponse),
-        // .map((series, index) => ({
-        //   ...series,
-        //   p50: p50MappedSeries[index]?.value ?? "0",
-        //   p90: p90MappedSeries[index]?.value ?? "0",
-        //   p99: p99MappedSeries[index]?.value ?? "0",
-        // })),
       },
     };
   }
