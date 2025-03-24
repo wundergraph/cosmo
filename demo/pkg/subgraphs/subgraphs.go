@@ -206,29 +206,19 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 	if defaultSourceNameURL := os.Getenv("NATS_URL"); defaultSourceNameURL != "" {
 		url = defaultSourceNameURL
 	}
+
+	natsPubSubByProviderID := map[string]*natsPubsub.NatsPubSub{
+		"default": natsPubsub.NewConnector(zap.NewNop(), url, []nats.Option{}, "hostname", "test").New(ctx),
+		"my-nats": natsPubsub.NewConnector(zap.NewNop(), url, []nats.Option{}, "hostname", "test").New(ctx),
+	}
+
 	defaultConnection, err := nats.Connect(url)
 	if err != nil {
 		log.Printf("failed to connect to nats source \"nats\": %v", err)
 	}
-
-	myNatsConnection, err := nats.Connect(url)
-	if err != nil {
-		log.Printf("failed to connect to nats source \"my-nats\": %v", err)
-	}
-
 	defaultJetStream, err := jetstream.New(defaultConnection)
 	if err != nil {
 		return nil, err
-	}
-
-	myNatsJetStream, err := jetstream.New(myNatsConnection)
-	if err != nil {
-		return nil, err
-	}
-
-	natsPubSubByProviderID := map[string]*natsPubsub.NatsPubSub{
-		"default": natsPubsub.NewConnector(zap.NewNop(), defaultConnection, defaultJetStream, "hostname", "test").New(ctx),
-		"my-nats": natsPubsub.NewConnector(zap.NewNop(), myNatsConnection, myNatsJetStream, "hostname", "test").New(ctx),
 	}
 
 	_, err = defaultJetStream.CreateOrUpdateStream(ctx, jetstream.StreamConfig{

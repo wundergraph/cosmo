@@ -17,28 +17,29 @@ import (
 )
 
 type connector struct {
-	conn             *nats.Conn
+	client           *LazyClient
 	logger           *zap.Logger
-	js               jetstream.JetStream
 	hostName         string
 	routerListenAddr string
 }
 
-func NewConnector(logger *zap.Logger, conn *nats.Conn, js jetstream.JetStream, hostName string, routerListenAddr string) *connector {
+func NewConnector(logger *zap.Logger, url string, opts []nats.Option, hostName string, routerListenAddr string) *connector {
+	client := NewLazyClient(url, opts...)
 	return &connector{
-		conn:             conn,
+		client:           client,
 		logger:           logger,
-		js:               js,
 		hostName:         hostName,
 		routerListenAddr: routerListenAddr,
 	}
 }
 
 func (c *connector) New(ctx context.Context) *NatsPubSub {
+	if c.logger == nil {
+		c.logger = zap.NewNop()
+	}
 	return &NatsPubSub{
 		ctx:              ctx,
-		conn:             c.conn,
-		js:               c.js,
+		client:           c.client,
 		logger:           c.logger.With(zap.String("pubsub", "nats")),
 		closeWg:          sync.WaitGroup{},
 		hostName:         c.hostName,
@@ -48,9 +49,8 @@ func (c *connector) New(ctx context.Context) *NatsPubSub {
 
 type NatsPubSub struct {
 	ctx              context.Context
-	conn             *nats.Conn
+	client           *LazyClient
 	logger           *zap.Logger
-	js               jetstream.JetStream
 	closeWg          sync.WaitGroup
 	hostName         string
 	routerListenAddr string
@@ -104,7 +104,7 @@ func (p *NatsPubSub) Subscribe(ctx context.Context, event SubscriptionEventConfi
 		if event.StreamConfiguration.ConsumerInactiveThreshold > 0 {
 			consumerConfig.InactiveThreshold = time.Duration(event.StreamConfiguration.ConsumerInactiveThreshold) * time.Second
 		}
-		consumer, err := p.js.CreateOrUpdateConsumer(ctx, event.StreamConfiguration.StreamName, consumerConfig)
+		consumer, err := p.client.GetJetStream().CreateOrUpdateConsumer(ctx, event.StreamConfiguration.StreamName, consumerConfig)
 		if err != nil {
 			log.Error("error creating or updating consumer", zap.Error(err))
 			return datasource.NewError(fmt.Sprintf(`failed to create or update consumer for stream "%s"`, event.StreamConfiguration.StreamName), err)
@@ -155,7 +155,7 @@ func (p *NatsPubSub) Subscribe(ctx context.Context, event SubscriptionEventConfi
 	msgChan := make(chan *nats.Msg)
 	subscriptions := make([]*nats.Subscription, len(event.Subjects))
 	for i, subject := range event.Subjects {
-		subscription, err := p.conn.ChanSubscribe(subject, msgChan)
+		subscription, err := p.client.GetClient().ChanSubscribe(subject, msgChan)
 		if err != nil {
 			log.Error("error subscribing to NATS subject", zap.Error(err), zap.String("subscription_subject", subject))
 			return datasource.NewError(fmt.Sprintf(`failed to subscribe to NATS subject "%s"`, subject), err)
@@ -209,7 +209,7 @@ func (p *NatsPubSub) Publish(_ context.Context, event PublishAndRequestEventConf
 
 	log.Debug("publish", zap.ByteString("data", event.Data))
 
-	err := p.conn.Publish(event.Subject, event.Data)
+	err := p.client.GetClient().Publish(event.Subject, event.Data)
 	if err != nil {
 		log.Error("publish error", zap.Error(err))
 		return datasource.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
@@ -227,7 +227,7 @@ func (p *NatsPubSub) Request(ctx context.Context, event PublishAndRequestEventCo
 
 	log.Debug("request", zap.ByteString("data", event.Data))
 
-	msg, err := p.conn.RequestWithContext(ctx, event.Subject, event.Data)
+	msg, err := p.client.GetClient().RequestWithContext(ctx, event.Subject, event.Data)
 	if err != nil {
 		log.Error("request error", zap.Error(err))
 		return datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)
@@ -243,12 +243,12 @@ func (p *NatsPubSub) Request(ctx context.Context, event PublishAndRequestEventCo
 }
 
 func (p *NatsPubSub) flush(ctx context.Context) error {
-	return p.conn.FlushWithContext(ctx)
+	return p.client.GetClient().FlushWithContext(ctx)
 }
 
 func (p *NatsPubSub) Shutdown(ctx context.Context) error {
 
-	if p.conn.IsClosed() {
+	if p.client.GetClient().IsClosed() {
 		return nil
 	}
 
@@ -260,7 +260,7 @@ func (p *NatsPubSub) Shutdown(ctx context.Context) error {
 		err = errors.Join(err, fErr)
 	}
 
-	drainErr := p.conn.Drain()
+	drainErr := p.client.GetClient().Drain()
 	if drainErr != nil {
 		p.logger.Error("error draining NATS connection", zap.Error(drainErr))
 	}

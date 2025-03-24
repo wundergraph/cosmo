@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -40,7 +41,7 @@ func GetDataSource(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMe
 		}
 		factory := k.GetFactory(ctx, config, k.providers)
 		ds, err := plan.NewDataSourceConfiguration[datasource.Implementer[*nodev1.NatsEventConfiguration, *NatsPubSub]](
-			in.Id,
+			in.Id+"-nats",
 			factory,
 			dsMeta,
 			&Configuration{
@@ -114,6 +115,46 @@ type Nats struct {
 	routerListenAddr string // How to get it here?
 }
 
+type LazyClient struct {
+	once   sync.Once
+	url    string
+	opts   []nats.Option
+	client *nats.Conn
+	js     jetstream.JetStream
+}
+
+func (c *LazyClient) Connect(opts ...nats.Option) (err error) {
+	c.once.Do(func() {
+		c.client, err = nats.Connect(c.url, opts...)
+		if err != nil {
+			return
+		}
+		c.js, err = jetstream.New(c.client)
+	})
+	return
+}
+
+func (c *LazyClient) GetClient() *nats.Conn {
+	if c.client == nil {
+		c.Connect()
+	}
+	return c.client
+}
+
+func (c *LazyClient) GetJetStream() jetstream.JetStream {
+	if c.js == nil {
+		c.Connect()
+	}
+	return c.js
+}
+
+func NewLazyClient(url string, opts ...nats.Option) *LazyClient {
+	return &LazyClient{
+		url:  url,
+		opts: opts,
+	}
+}
+
 func (n *Nats) PrepareProviders(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration) error {
 	definedProviders := make(map[string]bool)
 	for _, provider := range config.Providers.Nats {
@@ -135,16 +176,8 @@ func (n *Nats) PrepareProviders(ctx context.Context, in *nodev1.DataSourceConfig
 		if err != nil {
 			return fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", provider.ID, err)
 		}
-		natsConnection, err := nats.Connect(provider.URL, options...)
-		if err != nil {
-			return fmt.Errorf("failed to create connection for Nats provider with ID \"%s\": %w", provider.ID, err)
-		}
-		js, err := jetstream.New(natsConnection)
-		if err != nil {
-			return err
-		}
 
-		n.providers[provider.ID] = NewConnector(n.logger, natsConnection, js, n.hostName, n.routerListenAddr).New(ctx)
+		n.providers[provider.ID] = NewConnector(n.logger, provider.URL, options, n.hostName, n.routerListenAddr).New(ctx)
 	}
 	return nil
 }
@@ -177,8 +210,12 @@ func (c *Configuration) GetResolveDataSource(eventConfig *nodev1.NatsEventConfig
 
 	typeName := eventConfig.GetEngineEventConfiguration().GetType()
 	switch typeName {
-	case nodev1.EventType_PUBLISH, nodev1.EventType_REQUEST:
+	case nodev1.EventType_PUBLISH:
 		dataSource = &NatsPublishDataSource{
+			pubSub: pubsub,
+		}
+	case nodev1.EventType_REQUEST:
+		dataSource = &NatsRequestDataSource{
 			pubSub: pubsub,
 		}
 	default:

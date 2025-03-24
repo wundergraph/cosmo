@@ -37,7 +37,6 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 	"github.com/twmb/franz-go/pkg/kadm"
@@ -2040,10 +2039,7 @@ func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, nats
 	}
 	natsPubSubByProviderID := make(map[string]*pubsubNats.NatsPubSub, len(demoNatsProviders))
 	for _, sourceName := range demoNatsProviders {
-		js, err := jetstream.New(natsData.Connections[0])
-		require.NoError(t, err)
-
-		natsPubSubByProviderID[sourceName] = pubsubNats.NewConnector(logger, natsData.Connections[0], js, "hostname", "listenaddr").New(ctx)
+		natsPubSubByProviderID[sourceName] = pubsubNats.NewConnector(logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr").New(ctx)
 	}
 
 	return &subgraphs.SubgraphOptions{
