@@ -120,7 +120,7 @@ func (rt *RetryHTTPTransport) drainBody(resp *http.Response) {
 	// which is important so that it can reuse the connection internally for retrying
 	_, err := io.Copy(io.Discard, resp.Body)
 	if err != nil {
-		rt.Logger.Error("Failed draining when copying the body", zap.Error(err))
+		rt.Logger.Error("Failed draining when discarding the body", zap.Error(err))
 	}
 }
 
