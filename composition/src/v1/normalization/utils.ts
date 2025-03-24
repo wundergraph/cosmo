@@ -125,7 +125,6 @@ export function validateKeyFieldSets(
   nf: NormalizationFactory,
   entityParentData: CompositeOutputData,
   keyFieldSetDataByFieldSet: Map<string, KeyFieldSetData>,
-  fieldNames: Set<string>,
 ): RequiredFieldConfiguration[] | undefined {
   const entityInterfaceData = nf.entityInterfaceDataByTypeName.get(entityParentData.name);
   const entityTypeName = entityParentData.name;
@@ -207,6 +206,16 @@ export function validateKeyFieldSets(
             errorMessages.push(duplicateFieldInFieldSetErrorMessage(rawFieldSet, fieldCoords));
             return BREAK;
           }
+          // Add the field set for which the field coordinates contribute a key field
+          getValueOrDefault(
+            getValueOrDefault(
+              nf.keyFieldSetsByEntityTypeNameByFieldCoords,
+              fieldCoords,
+              () => new Map<string, Set<string>>(),
+            ),
+            entityTypeName,
+            () => new Set<string>(),
+          ).add(fieldSet);
           currentPath.push(fieldName);
           // Fields that form part of an entity key are intrinsically shareable
           fieldData.isShareableBySubgraphName.set(nf.subgraphName, true);
