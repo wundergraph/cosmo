@@ -13,7 +13,7 @@ require (
 	github.com/go-redis/redis_rate/v10 v10.0.1
 	github.com/gobwas/ws v1.4.0
 	github.com/goccy/go-yaml v1.13.4
-	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/gorilla/websocket v1.5.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-retryablehttp v0.7.7
@@ -63,7 +63,7 @@ require (
 	github.com/alicebob/miniredis/v2 v2.34.0
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/dgraph-io/ristretto/v2 v2.1.0
-	github.com/expr-lang/expr v1.16.9
+	github.com/expr-lang/expr v1.17.0
 	github.com/klauspost/compress v1.17.9
 	github.com/minio/minio-go/v7 v7.0.74
 	github.com/pquerna/cachecontrol v0.2.0
