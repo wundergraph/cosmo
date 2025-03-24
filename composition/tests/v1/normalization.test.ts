@@ -12,7 +12,6 @@ import {
   INTERFACE_UPPER,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
-  invalidKeyDirectivesError,
   invalidProvidesOrRequiresDirectivesError,
   invalidSelectionSetErrorMessage,
   KEY,
@@ -27,6 +26,7 @@ import {
   REQUIRES,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SHAREABLE,
+  Subgraph,
   TAG,
   undefinedDirectiveError,
   undefinedFieldInFieldSetErrorMessage,
@@ -44,7 +44,8 @@ import {
   versionOneBaseSchema,
   versionTwoBaseSchema,
 } from './utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+import { normalizeString, normalizeSubgraphSuccess, schemaToSortedNormalizedString } from '../utils/utils';
+import { parse } from 'graphql';
 
 describe('Normalization tests', () => {
   test('that an unparsable graph returns an error', () => {
@@ -1909,4 +1910,61 @@ describe('Normalization tests', () => {
     `),
     );
   });
+
+  test('that the correct keyFieldSetsByEntityTypeNameByFieldCoords is generated', () => {
+    const result = normalizeSubgraphSuccess(na, ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(result.keyFieldSetsByEntityTypeNameByKeyFieldCoords).toStrictEqual(
+      new Map<string, Map<string, Set<string>>>([
+        [
+          'EntityOne.object',
+          new Map<string, Set<string>>([
+            ['EntityOne', new Set<string>(['object { id } uuid', 'object { nested { id } }'])],
+          ]),
+        ],
+        ['Object.id', new Map<string, Set<string>>([['EntityOne', new Set<string>(['object { id } uuid'])]])],
+        ['EntityOne.uuid', new Map<string, Set<string>>([['EntityOne', new Set<string>(['object { id } uuid'])]])],
+        ['Object.nested', new Map<string, Set<string>>([['EntityOne', new Set<string>(['object { nested { id } }'])]])],
+        [
+          'Nested.id',
+          new Map<string, Set<string>>([
+            ['EntityOne', new Set<string>(['object { nested { id } }'])],
+            ['EntityTwo', new Set<string>(['nested { id } uuid'])],
+            ['Nested', new Set<string>(['id'])],
+          ]),
+        ],
+        [
+          'EntityTwo.uuid',
+          new Map<string, Set<string>>([['EntityTwo', new Set<string>(['name uuid', 'nested { id } uuid'])]]),
+        ],
+        ['EntityTwo.name', new Map<string, Set<string>>([['EntityTwo', new Set<string>(['name uuid'])]])],
+        ['EntityTwo.nested', new Map<string, Set<string>>([['EntityTwo', new Set<string>(['nested { id } uuid'])]])],
+      ]),
+    );
+  });
 });
+
+const na: Subgraph = {
+  name: 'na',
+  url: '',
+  definitions: parse(`
+    type EntityOne @key(fields: "uuid object { id }") @key(fields: "object { nested { id } }") {
+      uuid: ID!
+      object: Object!
+    }
+    
+    type EntityTwo @key(fields: "uuid name") @key(fields: "uuid nested { id }") {
+      uuid: ID!
+      name: String!
+      nested: Nested!
+    }
+    
+    type Object {
+      id: ID!
+      nested: Nested!
+    }
+    
+    type Nested @key(fields: "id") {
+      id: ID!
+    }
+  `),
+};
