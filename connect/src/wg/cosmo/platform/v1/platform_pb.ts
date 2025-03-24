@@ -3439,6 +3439,43 @@ export class GetLatestSubgraphSDLResponse extends Message<GetLatestSubgraphSDLRe
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.GetChecksByFederatedGraphNameFilters
+ */
+export class GetChecksByFederatedGraphNameFilters extends Message<GetChecksByFederatedGraphNameFilters> {
+  /**
+   * @generated from field: repeated string subgraphs = 1;
+   */
+  subgraphs: string[] = [];
+
+  constructor(data?: PartialMessage<GetChecksByFederatedGraphNameFilters>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetChecksByFederatedGraphNameFilters";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "subgraphs", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChecksByFederatedGraphNameFilters {
+    return new GetChecksByFederatedGraphNameFilters().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetChecksByFederatedGraphNameFilters {
+    return new GetChecksByFederatedGraphNameFilters().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetChecksByFederatedGraphNameFilters {
+    return new GetChecksByFederatedGraphNameFilters().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetChecksByFederatedGraphNameFilters | PlainMessage<GetChecksByFederatedGraphNameFilters> | undefined, b: GetChecksByFederatedGraphNameFilters | PlainMessage<GetChecksByFederatedGraphNameFilters> | undefined): boolean {
+    return proto3.util.equals(GetChecksByFederatedGraphNameFilters, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.GetChecksByFederatedGraphNameRequest
  */
 export class GetChecksByFederatedGraphNameRequest extends Message<GetChecksByFederatedGraphNameRequest> {
@@ -3472,6 +3509,11 @@ export class GetChecksByFederatedGraphNameRequest extends Message<GetChecksByFed
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional wg.cosmo.platform.v1.GetChecksByFederatedGraphNameFilters filters = 7;
+   */
+  filters?: GetChecksByFederatedGraphNameFilters;
+
   constructor(data?: PartialMessage<GetChecksByFederatedGraphNameRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3486,6 +3528,7 @@ export class GetChecksByFederatedGraphNameRequest extends Message<GetChecksByFed
     { no: 4, name: "startDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "endDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "filters", kind: "message", T: GetChecksByFederatedGraphNameFilters, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChecksByFederatedGraphNameRequest {
