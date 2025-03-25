@@ -19,6 +19,22 @@ test('Normalize urls', () => {
       input: 'https://example.com/a/b/c/d?query=123#fragment',
       expected: 'https://example.com/a/b/c/d',
     },
+    {
+      input: 'localhost:3000',
+      expected: 'localhost:3000',
+    },
+    {
+      input: '//localhost:3000',
+      expected: 'localhost:3000',
+    },
+    {
+      input: 'http://example.com',
+      expected: 'http://example.com',
+    },
+    {
+      input: 'telnet://192.0.2.16:80/',
+      expected: 'telnet://192.0.2.16:80',
+    },
   ];
 
   for (const u of urls) {

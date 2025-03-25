@@ -29,7 +29,23 @@ export function normalizeURL(url: string): string {
     return url;
   }
 
-  const parsedUrl = new URL(url);
+  let urlToParse = url;
+  let includeProtocol = true;
+  if (urlToParse.startsWith('//')) {
+    includeProtocol = false;
+    urlToParse = `http:${urlToParse}`;
+  }
+
+  if (!URL.canParse(urlToParse)) {
+    return url;
+  }
+
+  let parsedUrl = new URL(urlToParse);
+  if (!parsedUrl.hostname) {
+    includeProtocol = false;
+    parsedUrl = new URL(`http://${urlToParse}`);
+  }
+
   let path = parsedUrl.pathname;
 
   // Remove the trailing slash if present
@@ -38,7 +54,9 @@ export function normalizeURL(url: string): string {
   }
 
   const port = parsedUrl.port ? `:${parsedUrl.port}` : '';
-  return `${parsedUrl.protocol}//${parsedUrl.hostname}${port}${path}`;
+  return includeProtocol
+    ? `${parsedUrl.protocol}//${parsedUrl.hostname}${port}${path}`
+    : `${parsedUrl.hostname}${port}${path}`;
 }
 
 export function isValidUrl(url: string) {
