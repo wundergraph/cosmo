@@ -137,8 +137,14 @@ var (
 	natsServer *natsserver.Server
 )
 
+type NatParams struct {
+	Opts []nats.Option
+	Url  string
+}
+
 type NatsData struct {
 	Connections []*nats.Conn
+	Params      []*NatParams
 	Server      *natsserver.Server
 }
 
@@ -148,6 +154,17 @@ func setupNatsData(t testing.TB) (*NatsData, error) {
 	}
 	natsData.Server = natsServer
 	for range demoNatsProviders {
+		param := &NatParams{
+			Url: natsData.Server.ClientURL(),
+			Opts: []nats.Option{
+				nats.MaxReconnects(10),
+				nats.ReconnectWait(1 * time.Second),
+				nats.Timeout(5 * time.Second),
+				nats.ErrorHandler(func(conn *nats.Conn, subscription *nats.Subscription, err error) {
+					t.Log(err)
+				}),
+			},
+		}
 		natsConnection, err := nats.Connect(
 			natsData.Server.ClientURL(),
 			nats.MaxReconnects(10),
@@ -160,6 +177,8 @@ func setupNatsData(t testing.TB) (*NatsData, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		natsData.Params = append(natsData.Params, param)
 		natsData.Connections = append(natsData.Connections, natsConnection)
 	}
 	return natsData, nil

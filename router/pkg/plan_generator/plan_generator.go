@@ -116,6 +116,7 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 			planner, err := pg.GetPlanner()
 			if err != nil {
 				cancelError(fmt.Errorf("failed to get planner: %v", err))
+				return
 			}
 			for {
 				select {
