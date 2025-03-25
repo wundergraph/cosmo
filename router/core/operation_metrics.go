@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"slices"
 	"strconv"
 	"time"
 
@@ -80,25 +81,26 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 
 	// Prometheus usage metrics, disabled by default
 	if m.promUsageInfo && reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
-		operationAttributes := []attribute.KeyValue{
-			attribute.String("wg_operation_hash", strconv.FormatUint(reqContext.operation.hash, 10)),
-			attribute.String("wg_operation_name", reqContext.operation.name),
-			attribute.String("wg_operation_type", reqContext.operation.opType),
+		opAttrs := []attribute.KeyValue{
+			rotel.WgOperationName.String(reqContext.operation.name),
+			rotel.WgOperationHash.String(strconv.FormatUint(reqContext.operation.hash, 10)),
+			rotel.WgOperationType.String(reqContext.operation.opType),
 		}
 
 		if reqContext.operation.sha256Hash != "" {
-			operationAttributes = append(operationAttributes, attribute.String("wg_operation_sha256", reqContext.operation.sha256Hash))
+			opAttrs = append(opAttrs, attribute.String("wg_operation_sha256", reqContext.operation.sha256Hash))
 		}
 
 		for _, field := range reqContext.operation.typeFieldUsageInfo {
-			rm.MeasureSchemaFieldUsage(ctx, 1,
-				[]attribute.KeyValue{attribute.StringSlice("wg_type_name", field.TypeNames)},
-				otelmetric.WithAttributeSet(
-					attribute.NewSet(append(
-						operationAttributes,
-						attribute.String("wg_field_name", field.Path[len(field.Path)-1]),
-					)...)),
-			)
+			fieldAttrs := []attribute.KeyValue{
+				attribute.String("wg_field_name", field.Path[len(field.Path)-1]),
+			}
+
+			fieldSliceAttrs := []attribute.KeyValue{
+				attribute.StringSlice("wg_type_name", field.TypeNames),
+			}
+
+			rm.MeasureSchemaFieldUsage(ctx, 1, fieldSliceAttrs, otelmetric.WithAttributeSet(attribute.NewSet(slices.Concat(opAttrs, fieldAttrs)...)))
 		}
 	}
 }
