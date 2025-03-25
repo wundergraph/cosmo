@@ -42,10 +42,15 @@ type Request struct {
 	Header RequestHeaders `expr:"header"`
 	Body   RequestBody    `expr:"body"`
 	Error  error          `expr:"error"`
+	Trace  Trace          `expr:"trace"`
 }
 
 type RequestBody struct {
 	Raw string `expr:"raw"`
+}
+
+type Trace struct {
+	Sampled bool `expr:"sampled"`
 }
 
 // RequestURL is the context for the URL object in expressions
