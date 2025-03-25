@@ -227,7 +227,6 @@ export function checkSubgraphSchema(
       lintSkipped: !namespace.enableLinting,
       graphPruningSkipped: !namespace.enableGraphPruning,
       vcsContext: req.vcsContext,
-      targetType: 'subgraph',
     });
 
     const schemaCheckSubgraphId = await schemaCheckRepo.createSchemaCheckSubgraph({

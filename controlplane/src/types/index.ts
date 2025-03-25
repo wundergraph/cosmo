@@ -147,8 +147,8 @@ export interface MigrationSubgraph {
 
 export interface SchemaCheckDTO {
   id: string;
-  targetID: string;
-  subgraphName: string;
+  targetID?: string;
+  subgraphName?: string;
   timestamp: string;
   isComposable: boolean;
   isBreaking: boolean;
@@ -171,7 +171,6 @@ export interface SchemaCheckDTO {
     commitSha: string;
     branch: string;
   };
-  targetType: 'federated' | 'subgraph';
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {

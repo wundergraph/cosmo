@@ -750,7 +750,6 @@ export const schemaChecks = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     targetId: uuid('target_id')
-      .notNull()
       .references(() => targets.id, {
         onDelete: 'cascade',
       }),
@@ -778,7 +777,6 @@ export const schemaChecks = pgTable(
       commitSha: string;
       branch: string;
     }>(),
-    targetType: targetTypeEnum('target_type').notNull().default('subgraph'),
   },
   (t) => {
     return {

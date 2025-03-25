@@ -870,11 +870,8 @@ export class SubgraphRepository {
     return {
       checks: checkList.map((c) => ({
         id: c.id,
-        targetID: c.targetId,
-        subgraphName:
-          c.targetType === 'subgraph'
-            ? subgraphs.find((s) => s.targetId === c.targetId)?.name ?? ''
-            : federatedGraphName,
+        targetID: c.targetId || undefined,
+        subgraphName: subgraphs.find((s) => s.targetId === c.targetId)?.name || undefined,
         timestamp: c.createdAt.toISOString(),
         isBreaking: c.hasBreakingChanges ?? false,
         isComposable: c.isComposable ?? false,
@@ -894,7 +891,6 @@ export class SubgraphRepository {
         clientTrafficCheckSkipped: c.clientTrafficCheckSkipped ?? false,
         lintSkipped: c.lintSkipped ?? false,
         graphPruningSkipped: c.graphPruningSkipped ?? false,
-        targetType: c.targetType,
       })),
       checksCount,
     };
@@ -967,23 +963,16 @@ export class SubgraphRepository {
       return;
     }
 
-    let subgraphName = '';
-    if (check.targetType === 'subgraph') {
-      const subgraphs = await this.listByFederatedGraph({
-        federatedGraphTargetId: data.federatedGraphTargetId,
-      });
+    const subgraphs = await this.listByFederatedGraph({
+      federatedGraphTargetId: data.federatedGraphTargetId,
+    });
+    const subgraph = subgraphs.find((s) => s.targetId === check.targetId);
 
-      const subgraph = subgraphs.find((s) => s.targetId === check.targetId);
-      if (!subgraph) {
-        return;
-      }
-      subgraphName = subgraph.name;
-    }
 
     return {
       id: check.id,
-      targetID: check.targetId,
-      subgraphName: check.targetType === 'subgraph' ? subgraphName : data.federatedGraphName,
+      targetID: check.targetId || undefined,
+      subgraphName: subgraph?.name || undefined,
       timestamp: check.createdAt.toISOString(),
       isBreaking: check.hasBreakingChanges ?? false,
       isComposable: check.isComposable ?? false,
@@ -1015,7 +1004,6 @@ export class SubgraphRepository {
             commitSha: check.vcsContext.commitSha,
           }
         : undefined,
-      targetType: check.targetType,
     };
   }
 

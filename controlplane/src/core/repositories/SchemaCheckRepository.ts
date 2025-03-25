@@ -21,15 +21,15 @@ export class SchemaCheckRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 
   public async create(data: {
-    targetId: string;
+    targetId?: string;
     isComposable?: boolean;
     isDeleted?: boolean;
+    // TODO: remove proposedSubgraphSchemaSDL as we will be storing those in the schema_check_subgraphs table
     proposedSubgraphSchemaSDL: string;
     trafficCheckSkipped?: boolean;
     lintSkipped?: boolean;
     graphPruningSkipped?: boolean;
     vcsContext?: VCSContext;
-    targetType: 'federated' | 'subgraph';
   }): Promise<string> {
     const insertedSchemaCheck = await this.db
       .insert(schemaChecks)
@@ -48,7 +48,6 @@ export class SchemaCheckRepository {
               branch: data.vcsContext.branch,
             }
           : null,
-        targetType: data.targetType,
       })
       .returning()
       .execute();

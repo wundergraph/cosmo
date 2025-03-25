@@ -3,8 +3,8 @@ import { HandlerContext } from '@connectrpc/connect';
 import { buildASTSchema } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  CheckMultipleSubgraphSchemasRequest,
-  CheckMultipleSubgraphSchemasResponse,
+  CheckSubgraphSchemasRequest,
+  CheckSubgraphSchemasResponse,
   CheckOperationUsageStats,
   CheckOperationUsageStatsofSubgraph,
   CompositionError,
@@ -14,7 +14,7 @@ import {
   SchemaChange,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { GraphQLSchema, parse } from 'graphql';
-import { SchemaGraphPruningIssues, SchemaLintIssues } from '../../../types/index.js';
+import { FederatedGraphDTO, SchemaGraphPruningIssues, SchemaLintIssues } from '../../../types/index.js';
 import { CheckSubgraph, Composer } from '../../composition/composer.js';
 import { buildSchema } from '../../composition/composition.js';
 import { getDiffBetweenGraphs } from '../../composition/schemaCheck.js';
@@ -36,14 +36,14 @@ import {
 } from '../../services/SchemaUsageTrafficInspector.js';
 import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError } from '../../util.js';
 
-export function checkMultipleSubgraphSchemas(
+export function checkSubgraphSchemas(
   opts: RouterOptions,
-  req: CheckMultipleSubgraphSchemasRequest,
+  req: CheckSubgraphSchemasRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<CheckMultipleSubgraphSchemasResponse>> {
+): Promise<PlainMessage<CheckSubgraphSchemasResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<CheckMultipleSubgraphSchemasResponse>>(ctx, logger, async () => {
+  return handleError<PlainMessage<CheckSubgraphSchemasResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -128,29 +128,6 @@ export function checkMultipleSubgraphSchemas(
       };
     }
 
-    const federatedGraph = await fedGraphRepo.byName(req.federatedGraphName, req.namespace);
-    if (!federatedGraph) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `Federated graph '${req.federatedGraphName}' not found`,
-        },
-        breakingChanges: [],
-        nonBreakingChanges: [],
-        compositionErrors: [],
-        checkId: '',
-        lintWarnings: [],
-        lintErrors: [],
-        graphPruneWarnings: [],
-        graphPruneErrors: [],
-        compositionWarnings: [],
-        operationUsageStats: [],
-        lintingSkipped: false,
-        graphPruningSkipped: false,
-        checkUrl: '',
-      };
-    }
-
     const changeRetention = await orgRepo.getFeature({
       organizationId: authContext.organizationId,
       featureId: 'breaking-change-retention',
@@ -158,27 +135,10 @@ export function checkMultipleSubgraphSchemas(
 
     const limit = changeRetention?.limit ?? 7;
 
-    const checkSubgraphs: Map<string, CheckSubgraph> = new Map();
-    const subgraphsByFederatedGraph = await subgraphRepo.listByFederatedGraph({
-      federatedGraphTargetId: federatedGraph.targetId,
-    });
-
-    for (const s of subgraphsByFederatedGraph) {
-      checkSubgraphs.set(s.name, {
-        subgraph: s,
-        newSchemaSDL: s.schemaSDL,
-        isNewSchemaSDL: false,
-        inspectorChanges: [],
-        storedBreakingChanges: [],
-      });
-    }
-
     const schemaCheckID = await schemaCheckRepo.create({
-      targetId: federatedGraph.targetId,
       proposedSubgraphSchemaSDL: '',
       lintSkipped: !namespace.enableLinting,
       graphPruningSkipped: !namespace.enableGraphPruning,
-      targetType: 'federated',
     });
 
     const breakingChanges: SchemaChange[] = [];
@@ -191,6 +151,9 @@ export function checkMultipleSubgraphSchemas(
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
     const operationUsageStats: CheckOperationUsageStatsofSubgraph[] = [];
+
+    const federatedGraphs: FederatedGraphDTO[] = [];
+    const checkSubgraphs: Map<string, CheckSubgraph> = new Map();
 
     for (const s of req.subgraphs) {
       const subgraph = await subgraphRepo.byName(s.name, req.namespace);
@@ -241,8 +204,16 @@ export function checkMultipleSubgraphSchemas(
         };
       }
 
+      const graphs = await fedGraphRepo.bySubgraphLabels({
+        labels: subgraph.labels,
+        namespaceId: namespace.id,
+        excludeContracts: true,
+      });
+
+      federatedGraphs.push(...graphs.filter((g) => !federatedGraphs.some((fg) => fg.id === g.id)));
+
       const newSchemaSDL = s.delete ? '' : s.schema;
-      const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion([federatedGraph]);
+      const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion(graphs);
       let newGraphQLSchema: GraphQLSchema | undefined;
       if (newSchemaSDL) {
         try {
@@ -297,19 +268,9 @@ export function checkMultipleSubgraphSchemas(
         }
       }
 
-      const schemaCheckSubgraphId = await schemaCheckRepo.createSchemaCheckSubgraph({
-        data: {
-          schemaCheckId: schemaCheckID,
-          subgraphId: subgraph.id,
-          subgraphName: subgraph.name,
-          proposedSubgraphSchemaSDL: newSchemaSDL,
-          isDeleted: !!s.delete,
-        },
-      });
-
       const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL, routerCompatibilityVersion);
       if (schemaChanges.kind === 'failure') {
-        logger.warn(`Error finding diff between graphs of the subgraph ${s.name}: ${schemaChanges.error}`);
+        logger.warn(`Error finding diff between graphs of the subgraph ${subgraph.name}: ${schemaChanges.error}`);
         return {
           response: {
             code: schemaChanges.errorCode,
@@ -332,6 +293,28 @@ export function checkMultipleSubgraphSchemas(
         };
       }
 
+      checkSubgraphs.set(s.name, {
+        subgraph,
+        newSchemaSDL,
+        newGraphQLSchema,
+        schemaChanges,
+        inspectorChanges: [],
+        storedBreakingChanges: [],
+      });
+    }
+
+    for (const s of checkSubgraphs.values()) {
+      const { subgraph, newSchemaSDL, newGraphQLSchema, schemaChanges } = s;
+      const schemaCheckSubgraphId = await schemaCheckRepo.createSchemaCheckSubgraph({
+        data: {
+          schemaCheckId: schemaCheckID,
+          subgraphId: subgraph.id,
+          subgraphName: subgraph.name,
+          proposedSubgraphSchemaSDL: newSchemaSDL,
+          isDeleted: newSchemaSDL === '',
+        },
+      });
+
       await schemaCheckRepo.createSchemaCheckChanges({
         changes: schemaChanges.nonBreakingChanges,
         schemaCheckID,
@@ -351,11 +334,8 @@ export function checkMultipleSubgraphSchemas(
         storedBreakingChanges,
       );
 
-      checkSubgraphs.set(s.name, {
-        subgraph,
-        newSchemaSDL,
-        newGraphQLSchema,
-        isNewSchemaSDL: true,
+      checkSubgraphs.set(subgraph.name, {
+        ...s,
         inspectorChanges,
         storedBreakingChanges,
       });
@@ -388,7 +368,7 @@ export function checkMultipleSubgraphSchemas(
           (c) =>
             new SchemaChange({
               ...c,
-              subgraphName: s.name,
+              subgraphName: subgraph.name,
             }),
         ),
       );
@@ -397,7 +377,7 @@ export function checkMultipleSubgraphSchemas(
           (c) =>
             new SchemaChange({
               ...c,
-              subgraphName: s.name,
+              subgraphName: subgraph.name,
             }),
         ),
       );
@@ -406,7 +386,7 @@ export function checkMultipleSubgraphSchemas(
           (e) =>
             new LintIssue({
               ...e,
-              subgraphName: s.name,
+              subgraphName: subgraph.name,
             }),
         ),
       );
@@ -415,7 +395,7 @@ export function checkMultipleSubgraphSchemas(
           (w) =>
             new LintIssue({
               ...w,
-              subgraphName: s.name,
+              subgraphName: subgraph.name,
             }),
         ),
       );
@@ -424,7 +404,7 @@ export function checkMultipleSubgraphSchemas(
           (e) =>
             new GraphPruningIssue({
               ...e,
-              subgraphName: s.name,
+              subgraphName: subgraph.name,
             }),
         ),
       );
@@ -433,7 +413,7 @@ export function checkMultipleSubgraphSchemas(
           (w) =>
             new GraphPruningIssue({
               ...w,
-              subgraphName: s.name,
+              subgraphName: subgraph.name,
             }),
         ),
       );
@@ -450,8 +430,8 @@ export function checkMultipleSubgraphSchemas(
     );
 
     const result = await composer.composeWithProposedSchemas({
-      subgraphs: checkSubgraphs,
-      graph: federatedGraph,
+      inputSubgraphs: checkSubgraphs,
+      graphs: federatedGraphs,
     });
 
     await schemaCheckRepo.createSchemaCheckCompositions({
@@ -557,7 +537,7 @@ export function checkMultipleSubgraphSchemas(
       operationUsageStats,
       lintingSkipped: !namespace.enableLinting,
       graphPruningSkipped: !namespace.enableGraphPruning,
-      checkUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/graph/${federatedGraph.name}/checks/${schemaCheckID}`,
+      checkUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/graph/$federatedGraphName/checks/${schemaCheckID}`,
     };
   });
 }
