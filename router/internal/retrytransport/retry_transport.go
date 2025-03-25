@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/cloudflare/backoff"
 	"go.uber.org/zap"
+	"io"
 	"net/http"
 	"strings"
 	"syscall"
@@ -42,22 +43,27 @@ type RetryOptions struct {
 	ShouldRetry   ShouldRetryFunc
 }
 
+type requestLoggerGetter func(req *http.Request) *zap.Logger
+
 type RetryHTTPTransport struct {
-	RoundTripper http.RoundTripper
-	RetryOptions RetryOptions
-	Logger       *zap.Logger
+	RoundTripper     http.RoundTripper
+	RetryOptions     RetryOptions
+	getRequestLogger requestLoggerGetter
 }
 
-func NewRetryHTTPTransport(roundTripper http.RoundTripper, retryOptions RetryOptions, logger *zap.Logger) *RetryHTTPTransport {
+func NewRetryHTTPTransport(
+	roundTripper http.RoundTripper,
+	retryOptions RetryOptions,
+	getRequestLogger requestLoggerGetter,
+) *RetryHTTPTransport {
 	return &RetryHTTPTransport{
-		RoundTripper: roundTripper,
-		RetryOptions: retryOptions,
-		Logger:       logger,
+		RoundTripper:     roundTripper,
+		RetryOptions:     retryOptions,
+		getRequestLogger: getRequestLogger,
 	}
 }
 
 func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-
 	resp, err := rt.RoundTripper.RoundTrip(req)
 	// Short circuit if the request was successful.
 	if err == nil && isResponseOK(resp) {
@@ -66,6 +72,8 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 
 	b := backoff.New(rt.RetryOptions.MaxDuration, rt.RetryOptions.Interval)
 	defer b.Reset()
+
+	requestLogger := rt.getRequestLogger(req)
 
 	// Retry logic
 	retries := 0
@@ -79,7 +87,7 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 		// Wait for the specified backoff period
 		sleepDuration := b.Duration()
 
-		rt.Logger.Debug("Retrying request",
+		requestLogger.Debug("Retrying request",
 			zap.Int("retry", retries),
 			zap.String("url", req.URL.String()),
 			zap.Duration("sleep", sleepDuration),
@@ -87,6 +95,9 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 
 		// Wait for the specified backoff period
 		time.Sleep(sleepDuration)
+
+		// drain the previous response before retrying
+		rt.drainBody(resp, requestLogger)
 
 		// Retry the request
 		resp, err = rt.RoundTripper.RoundTrip(req)
@@ -99,6 +110,26 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	}
 
 	return resp, err
+}
+
+func (rt *RetryHTTPTransport) drainBody(resp *http.Response, logger *zap.Logger) {
+	if resp == nil || resp.Body == nil {
+		return
+	}
+
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			logger.Error("Failed draining when closing the body", zap.Error(err))
+		}
+	}()
+
+	// When we close the body only will go internally marks the persisted connection as true
+	// which is important so that it can reuse the connection internally for retrying
+	_, err := io.Copy(io.Discard, resp.Body)
+	if err != nil {
+		logger.Error("Failed draining when discarding the body", zap.Error(err))
+	}
 }
 
 func isResponseOK(resp *http.Response) bool {

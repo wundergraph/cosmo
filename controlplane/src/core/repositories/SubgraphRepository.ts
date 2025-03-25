@@ -673,13 +673,17 @@ export class SubgraphRepository {
   }
 
   /**
-   * Returns all subgraphs that are part of the federated graph.
+   * When the parameter `subgraphs` is provided as an array of ids, those the subgraphs corresponding to the
+   * provided identifiers and belonging to the federated graph will be returned; otherwise, all subgraphs
+   * that are part of the federated graph are returned.
+   *
    * Even if they have not been published yet. Optionally, you can set the `published` flag to true
    * to only return subgraphs that have been published with a version.
    */
   public async listByFederatedGraph(data: {
     federatedGraphTargetId: string;
     published?: boolean;
+    includeSubgraphs?: string[];
   }): Promise<SubgraphDTO[]> {
     const target = await this.db.query.targets.findFirst({
       where: and(
@@ -707,7 +711,12 @@ export class SubgraphRepository {
         lastUpdatedAt: schema.schemaVersion.createdAt,
       })
       .from(schema.targets)
-      .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
+      .innerJoin(
+        schema.subgraphs,
+        Array.isArray(data.includeSubgraphs) && data.includeSubgraphs.length > 0
+          ? and(eq(schema.subgraphs.targetId, schema.targets.id), inArray(schema.subgraphs.id, data.includeSubgraphs))
+          : eq(schema.subgraphs.targetId, schema.targets.id),
+      )
       [data.published ? 'innerJoin' : 'leftJoin'](
         schema.schemaVersion,
         eq(schema.subgraphs.schemaVersionId, schema.schemaVersion.id),
@@ -826,6 +835,7 @@ export class SubgraphRepository {
     offset,
     startDate,
     endDate,
+    includeSubgraphs,
   }: {
     federatedGraphTargetId: string;
     federatedGraphName: string;
@@ -833,12 +843,14 @@ export class SubgraphRepository {
     offset: number;
     startDate: string;
     endDate: string;
+    includeSubgraphs: string[];
   }): Promise<GetChecksResponse> {
-    const subgraphs = await this.listByFederatedGraph({
+    const selectedSubgraphs = await this.listByFederatedGraph({
       federatedGraphTargetId,
+      includeSubgraphs,
     });
 
-    if (subgraphs.length === 0) {
+    if (selectedSubgraphs.length === 0) {
       return {
         checks: [],
         checksCount: 0,
@@ -853,25 +865,22 @@ export class SubgraphRepository {
       offset,
       orderBy: desc(schemaChecks.createdAt),
       where: and(
-        or(
-          inArray(
-            schemaChecks.targetId,
-            subgraphs.map(({ targetId }) => targetId),
-          ),
-          eq(schemaChecks.targetId, federatedGraphTargetId),
+        inArray(
+          schemaChecks.targetId,
+          selectedSubgraphs.map(({ targetId }) => targetId),
         ),
         gt(schemaChecks.createdAt, new Date(startDate)),
         lt(schemaChecks.createdAt, new Date(endDate)),
       ),
     });
 
-    const checksCount = await this.getChecksCount({ federatedGraphTargetId, startDate, endDate });
+    const checksCount = await this.getChecksCount({ federatedGraphTargetId, startDate, endDate, includeSubgraphs });
 
     return {
       checks: checkList.map((c) => ({
         id: c.id,
         targetID: c.targetId || undefined,
-        subgraphName: subgraphs.find((s) => s.targetId === c.targetId)?.name || undefined,
+        subgraphName: selectedSubgraphs.find((s) => s.targetId === c.targetId)?.name || undefined,
         timestamp: c.createdAt.toISOString(),
         isBreaking: c.hasBreakingChanges ?? false,
         isComposable: c.isComposable ?? false,
@@ -900,13 +909,16 @@ export class SubgraphRepository {
     federatedGraphTargetId,
     startDate,
     endDate,
+    includeSubgraphs,
   }: {
     federatedGraphTargetId: string;
     startDate?: string;
     endDate?: string;
+    includeSubgraphs?: string[];
   }): Promise<number> {
     const subgraphs = await this.listByFederatedGraph({
       federatedGraphTargetId,
+      includeSubgraphs,
     });
 
     if (subgraphs.length === 0) {
@@ -967,7 +979,6 @@ export class SubgraphRepository {
       federatedGraphTargetId: data.federatedGraphTargetId,
     });
     const subgraph = subgraphs.find((s) => s.targetId === check.targetId);
-
 
     return {
       id: check.id,

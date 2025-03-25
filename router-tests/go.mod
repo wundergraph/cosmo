@@ -5,7 +5,7 @@ go 1.23
 require (
 	github.com/MicahParks/jwkset v0.5.19
 	github.com/buger/jsonparser v1.1.1
-	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.1
 	github.com/hashicorp/consul/sdk v0.16.1
@@ -23,9 +23,9 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20250313180000-fb09e532baf7
-	github.com/wundergraph/cosmo/router v0.0.0-20250313180000-fb09e532baf7
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.165
+	github.com/wundergraph/cosmo/demo v0.0.0-20250325163111-208e63bb0e3d
+	github.com/wundergraph/cosmo/router v0.0.0-20250325163111-208e63bb0e3d
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.166
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
