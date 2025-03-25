@@ -29,8 +29,7 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 			PrometheusRegistry: promRegistry,
 			MetricOptions: testenv.MetricOptions{
 				PrometheusSchemaFieldUsage: testenv.PrometheusSchemaFieldUsage{
-					Enabled:             true,
-					IncludeOperationSha: false,
+					Enabled: true,
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -52,7 +51,6 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 			for _, metric := range schemaUsageMetrics {
 				assertLabelValue(t, metric.Label, "wg_operation_name", "myQuery")
 				assertLabelValue(t, metric.Label, "wg_operation_type", "query")
-				assertLabelValue(t, metric.Label, "wg_operation_hash", "1731669138493683283")
 
 				assertLabelNotPresent(t, metric.Label, "wg_operation_sha256")
 			}
@@ -161,7 +159,6 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 
 			for _, metric := range schemaUsageMetrics {
 				assertLabelValue(t, metric.Label, "wg_operation_type", "query")
-				assertLabelValue(t, metric.Label, "wg_operation_hash", "1731669138493683283")
 
 				assertLabelNotPresent(t, metric.Label, "wg_operation_name")
 				assertLabelNotPresent(t, metric.Label, "otel_scope_info")
