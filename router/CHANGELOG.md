@@ -4,6 +4,14 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.192.2](https://github.com/wundergraph/cosmo/compare/router@0.192.1...router@0.192.2) (2025-03-25)
+
+### Bug Fixes
+
+* ensure to close any responses before retrying ([#1713](https://github.com/wundergraph/cosmo/issues/1713)) ([0f21399](https://github.com/wundergraph/cosmo/commit/0f21399c19ebea3b4a65caeb7ccee9622a7a2cd5)) (@SkArchon)
+* updated go jwt dependency to fix vulnerability ([#1714](https://github.com/wundergraph/cosmo/issues/1714)) ([247b3cf](https://github.com/wundergraph/cosmo/commit/247b3cf5ee65a12910b68aca363e5ad3ec2a8be5)) (@SkArchon)
+* upgrade `vite` to solve vulnerability ([#1700](https://github.com/wundergraph/cosmo/issues/1700)) ([a8bb8e5](https://github.com/wundergraph/cosmo/commit/a8bb8e591d1a0523ad77a593240aef7974e7c8b3)) (@wilsonrivera)
+
 ## [0.192.1](https://github.com/wundergraph/cosmo/compare/router@0.192.0...router@0.192.1) (2025-03-19)
 
 ### Bug Fixes
