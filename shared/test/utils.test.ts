@@ -9,10 +9,18 @@ test('Normalize urls', () => {
     },
     {
       input: 'https://localhost:3000/?',
+      expected: 'https://localhost:3000/',
+    },
+    {
+      input: 'https://localhost:3000?',
       expected: 'https://localhost:3000',
     },
     {
       input: 'https://subdomain.example.com/test/#fragment/',
+      expected: 'https://subdomain.example.com/test/',
+    },
+    {
+      input: 'https://subdomain.example.com/test#fragment/',
       expected: 'https://subdomain.example.com/test',
     },
     {
@@ -21,11 +29,11 @@ test('Normalize urls', () => {
     },
     {
       input: 'localhost:3000',
-      expected: 'localhost:3000',
+      expected: 'https://localhost:3000',
     },
     {
       input: '//localhost:3000',
-      expected: 'localhost:3000',
+      expected: 'https://localhost:3000',
     },
     {
       input: 'http://example.com',
@@ -33,7 +41,7 @@ test('Normalize urls', () => {
     },
     {
       input: 'telnet://192.0.2.16:80/',
-      expected: 'telnet://192.0.2.16:80',
+      expected: 'telnet://192.0.2.16:80/',
     },
   ];
 

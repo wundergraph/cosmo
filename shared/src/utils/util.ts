@@ -21,6 +21,8 @@ export function joinLabel({ key, value }: { key: string; value: string }) {
 /**
  * Normalize the URL by removing the trailing slash, fragments and query parameters.
  * Only the protocol, hostname, port and path are preserved.
+ *
+ * If no protocol is provided, defaults to https.
  * @param url
  */
 export function normalizeURL(url: string): string {
@@ -29,34 +31,20 @@ export function normalizeURL(url: string): string {
     return url;
   }
 
-  let urlToParse = url;
-  let includeProtocol = true;
-  if (urlToParse.startsWith('//')) {
-    includeProtocol = false;
-    urlToParse = `http:${urlToParse}`;
-  }
-
-  if (!URL.canParse(urlToParse)) {
-    return url;
-  }
-
-  let parsedUrl = new URL(urlToParse);
-  if (!parsedUrl.hostname) {
-    includeProtocol = false;
-    parsedUrl = new URL(`http://${urlToParse}`);
-  }
+  const urlToParse = url.includes('://') ? url : `https://${url}`;
+  const parsedUrl = new URL(urlToParse);
 
   let path = parsedUrl.pathname;
-
-  // Remove the trailing slash if present
-  if (path.endsWith('/')) {
+  if (
+    path.endsWith('/') &&
+    !url.endsWith(`/${parsedUrl.search}${parsedUrl.hash}`) &&
+    !url.endsWith(`/?${parsedUrl.hash}`)
+  ) {
     path = path.slice(0, -1);
   }
 
   const port = parsedUrl.port ? `:${parsedUrl.port}` : '';
-  return includeProtocol
-    ? `${parsedUrl.protocol}//${parsedUrl.hostname}${port}${path}`
-    : `${parsedUrl.hostname}${port}${path}`;
+  return `${parsedUrl.protocol}//${parsedUrl.hostname}${port}${path}`;
 }
 
 export function isValidUrl(url: string) {
