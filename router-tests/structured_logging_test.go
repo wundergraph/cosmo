@@ -2313,7 +2313,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					{
 						Key: "expression_body",
 						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "request.body.GetRawBody()",
+							Expression: "request.body.raw",
 						},
 					},
 				},

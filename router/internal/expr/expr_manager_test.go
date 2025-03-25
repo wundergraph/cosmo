@@ -20,8 +20,7 @@ func (v *VisitorExample) Visit(node *ast.Node) {
 		return
 	}
 
-	switch (*node).(type) {
-	case *ast.MemberNode:
+	if _, ok := (*node).(*ast.MemberNode); ok {
 		v.Uses = true
 	}
 }
