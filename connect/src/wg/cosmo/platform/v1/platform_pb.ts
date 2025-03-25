@@ -3439,6 +3439,43 @@ export class GetLatestSubgraphSDLResponse extends Message<GetLatestSubgraphSDLRe
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.GetChecksByFederatedGraphNameFilters
+ */
+export class GetChecksByFederatedGraphNameFilters extends Message<GetChecksByFederatedGraphNameFilters> {
+  /**
+   * @generated from field: repeated string subgraphs = 1;
+   */
+  subgraphs: string[] = [];
+
+  constructor(data?: PartialMessage<GetChecksByFederatedGraphNameFilters>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetChecksByFederatedGraphNameFilters";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "subgraphs", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChecksByFederatedGraphNameFilters {
+    return new GetChecksByFederatedGraphNameFilters().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetChecksByFederatedGraphNameFilters {
+    return new GetChecksByFederatedGraphNameFilters().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetChecksByFederatedGraphNameFilters {
+    return new GetChecksByFederatedGraphNameFilters().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetChecksByFederatedGraphNameFilters | PlainMessage<GetChecksByFederatedGraphNameFilters> | undefined, b: GetChecksByFederatedGraphNameFilters | PlainMessage<GetChecksByFederatedGraphNameFilters> | undefined): boolean {
+    return proto3.util.equals(GetChecksByFederatedGraphNameFilters, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.GetChecksByFederatedGraphNameRequest
  */
 export class GetChecksByFederatedGraphNameRequest extends Message<GetChecksByFederatedGraphNameRequest> {
@@ -3472,6 +3509,11 @@ export class GetChecksByFederatedGraphNameRequest extends Message<GetChecksByFed
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional wg.cosmo.platform.v1.GetChecksByFederatedGraphNameFilters filters = 7;
+   */
+  filters?: GetChecksByFederatedGraphNameFilters;
+
   constructor(data?: PartialMessage<GetChecksByFederatedGraphNameRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3486,6 +3528,7 @@ export class GetChecksByFederatedGraphNameRequest extends Message<GetChecksByFed
     { no: 4, name: "startDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "endDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "filters", kind: "message", T: GetChecksByFederatedGraphNameFilters, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChecksByFederatedGraphNameRequest {
@@ -10248,6 +10291,21 @@ export class MetricsSeriesItem extends Message<MetricsSeriesItem> {
    */
   previousValue?: string;
 
+  /**
+   * @generated from field: optional string p50 = 4;
+   */
+  p50?: string;
+
+  /**
+   * @generated from field: optional string p90 = 5;
+   */
+  p90?: string;
+
+  /**
+   * @generated from field: optional string p99 = 6;
+   */
+  p99?: string;
+
   constructor(data?: PartialMessage<MetricsSeriesItem>) {
     super();
     proto3.util.initPartial(data, this);
@@ -10259,6 +10317,9 @@ export class MetricsSeriesItem extends Message<MetricsSeriesItem> {
     { no: 1, name: "timestamp", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "previousValue", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "p50", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "p90", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "p99", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetricsSeriesItem {
