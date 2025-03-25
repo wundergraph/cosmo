@@ -5,13 +5,6 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/expr"
-	"net/http"
-	"net/url"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto/v2"
 	"github.com/go-chi/chi/v5"
@@ -21,6 +14,7 @@ import (
 	"github.com/klauspost/compress/gzip"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -30,6 +24,11 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/exp/maps"
+	"net/http"
+	"net/url"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
@@ -821,6 +820,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 					span := oteltrace.SpanFromContext(r.Context())
 					span.SetAttributes(reqContext.telemetry.traceAttrs...)
+
+					// Set if the trace is sampled in the expression context
+					isSampled := span.SpanContext().IsSampled()
+					reqContext.expressionContext.Request.Trace.Sampled = isSampled
 
 					// Set the trace ID in the response header
 					if s.traceConfig.ResponseTraceHeader.Enabled {
