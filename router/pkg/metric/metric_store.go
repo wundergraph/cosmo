@@ -359,12 +359,6 @@ func (h *Metrics) MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64
 			h.promRequestMetrics.MeasureSchemaFieldUsage(ctx, schemaUsage, newOpts...)
 		})
 	}
-
-	// OTEL metrics
-
-	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
-
-	h.otlpRequestMetrics.MeasureSchemaFieldUsage(ctx, schemaUsage, opts...)
 }
 
 // Flush flushes the metrics to the backend synchronously.
