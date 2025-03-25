@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.129.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.129.0...controlplane@0.129.1) (2025-03-25)
+
+### Bug Fixes
+
+* fix incorrect calculation of the `p90` and `p99` subgraph metrics ([#1720](https://github.com/wundergraph/cosmo/issues/1720)) ([816e186](https://github.com/wundergraph/cosmo/commit/816e18618b6ddc00f4011995920911049a25c073)) (@wilsonrivera)
+
 # [0.129.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.128.0...controlplane@0.129.0) (2025-03-25)
 
 ### Features
