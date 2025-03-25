@@ -291,7 +291,7 @@ export class SubgraphMetricsRepository {
             ) as p50,
             -- P90
             func_rank(0.90, BucketCounts) as rank90,
-            func_rank_bucket_lower_index(rank50, BucketCounts) as b90,
+            func_rank_bucket_lower_index(rank90, BucketCounts) as b90,
             func_histogram_v2(
                 rank90,
                 b90,
@@ -300,7 +300,7 @@ export class SubgraphMetricsRepository {
             ) as p90,
             -- P99
             func_rank(0.99, BucketCounts) as rank99,
-            func_rank_bucket_lower_index(rank50, BucketCounts) as b99,
+            func_rank_bucket_lower_index(rank99, BucketCounts) as b99,
             func_histogram_v2(
                 rank99,
                 b99,
