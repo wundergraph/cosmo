@@ -4,6 +4,7 @@ ARG TARGETOS
 ARG TARGETARCH
 ARG COMMIT
 ARG DATE
+ARG WITH_TESTS="true"
 
 ARG VERSION=dev
 ENV VERSION=$VERSION
@@ -24,7 +25,7 @@ RUN go mod download
 COPY . .
 
 # Run tests
-RUN make test
+RUN if [ "$WITH_TESTS" = "true" ]; then make test; fi
 
 # Build the binary with manual build info injection
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
