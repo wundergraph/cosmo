@@ -91,11 +91,11 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 
 		for _, field := range reqContext.operation.typeFieldUsageInfo {
 			fieldAttrs := []attribute.KeyValue{
-				rotel.WgFieldName.String(field.Path[len(field.Path)-1]),
+				rotel.WgGraphQLFieldName.String(field.Path[len(field.Path)-1]),
 			}
 
 			fieldSliceAttrs := []attribute.KeyValue{
-				rotel.WgFieldType.StringSlice(field.TypeNames),
+				rotel.WgGraphQLFieldType.StringSlice(field.TypeNames),
 			}
 
 			rm.MeasureSchemaFieldUsage(ctx, 1, fieldSliceAttrs, otelmetric.WithAttributeSet(attribute.NewSet(slices.Concat(opAttrs, fieldAttrs)...)))
