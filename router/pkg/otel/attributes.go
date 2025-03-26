@@ -50,9 +50,9 @@ const (
 	HTTPRequestUploadFileCount = attribute.Key("http.request.upload.file_count")
 
 	// Prometheus Schema Field Usage Attrs
-	WgOperationSha256 = attribute.Key("wg.operation.sha256")
-	WgFieldName       = attribute.Key("wg.field_name")
-	WgFieldType       = attribute.Key("wg.type_name")
+	WgOperationSha256  = attribute.Key("wg.operation.sha256")
+	WgGraphQLFieldName = attribute.Key("wg.graphql.field.name")
+	WgGraphQLFieldType = attribute.Key("wg.graphql.field.type")
 )
 
 const (
