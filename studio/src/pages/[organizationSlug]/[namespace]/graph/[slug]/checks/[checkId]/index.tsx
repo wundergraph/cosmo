@@ -469,7 +469,9 @@ const CheckDetails = ({
     data.check.subgraphName ||
     (data.check.checkedSubgraphs.length > 1
       ? "Multiple Subgraphs"
-      : data.check.checkedSubgraphs[0].subgraphName);
+      : data.check.checkedSubgraphs.length > 0
+      ? data.check.checkedSubgraphs[0].subgraphName
+      : "Subgraph");
 
   const setTab = (tab: string) => {
     const query: Record<string, any> = {

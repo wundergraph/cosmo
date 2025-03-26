@@ -233,7 +233,9 @@ const ChecksPage: NextPageWithLayout = () => {
                           {subgraphName ||
                             (checkedSubgraphs.length > 1
                               ? "Multiple Subgraphs"
-                              : checkedSubgraphs[0].subgraphName)}
+                              : checkedSubgraphs.length > 0
+                              ? checkedSubgraphs[0].subgraphName
+                              : "Subgraph")}
                         </TableCell>
                       )}
                       <TableCell>

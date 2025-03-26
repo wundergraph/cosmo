@@ -859,7 +859,7 @@ export class SubgraphRepository {
     }
 
     const checkList = await this.db
-      .select({
+      .selectDistinctOn([schemaChecks.id], {
         id: schemaChecks.id,
         targetId: schemaChecks.targetId,
         createdAt: schemaChecks.createdAt,
@@ -888,9 +888,9 @@ export class SubgraphRepository {
           lt(schemaChecks.createdAt, new Date(endDate)),
         ),
       )
-      .orderBy(desc(schemaChecks.createdAt))
       .limit(limit)
-      .offset(offset);
+      .offset(offset)
+      .orderBy(schemaChecks.id, desc(schemaChecks.createdAt));
 
     const checksCount = await this.getChecksCount({ federatedGraphTargetId, startDate, endDate, includeSubgraphs });
 
@@ -977,16 +977,17 @@ export class SubgraphRepository {
       );
     }
 
-    const checksCount = await this.db
-      .select({ count: count() })
+    // Use a subquery with distinct check IDs to get the count
+    const checks = await this.db
+      .selectDistinct({ id: schemaChecks.id })
       .from(schemaChecks)
       .innerJoin(schema.schemaCheckSubgraphs, eq(schema.schemaCheckSubgraphs.schemaCheckId, schemaChecks.id))
       .where(conditions);
 
-    if (checksCount.length === 0) {
+    if (checks.length === 0) {
       return 0;
     }
-    return checksCount[0].count;
+    return checks.length;
   }
 
   public async checkById(data: {
