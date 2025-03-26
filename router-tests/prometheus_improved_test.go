@@ -2,6 +2,7 @@ package integration
 
 import (
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -9,6 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
@@ -17,17 +20,9 @@ import (
 // to its size and testing methodology. In the new file, you should use new helpers where possible, and avoid
 // asserting the values of unrelated metrics/labels.
 
-const (
-	SchemaFieldUsageMetricName = "router_graphql_schema_field_usage_total"
-
-	WgOperationSha256  = "wg_operation_sha256"
-	WgGraphQLFieldName = "wg_graphql_field_name"
-	WgGraphQLFieldType = "wg_graphql_field_type"
-	WgOperationName    = "wg_operation_name"
-	WgOperationType    = "wg_operation_type"
-)
-
 func TestPrometheusSchemaUsage(t *testing.T) {
+	var SchemaFieldUsageMetricName = "router_graphql_schema_field_usage_total"
+
 	t.Run("operation attributes are correctly added when enabled", func(t *testing.T) {
 		t.Parallel()
 
@@ -59,36 +54,36 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 			require.Len(t, schemaUsageMetrics, 8)
 
 			for _, metric := range schemaUsageMetrics {
-				assertLabelValue(t, metric.Label, WgOperationName, "myQuery")
-				assertLabelValue(t, metric.Label, WgOperationType, "query")
+				assertLabelValue(t, metric.Label, otel.WgOperationName, "myQuery")
+				assertLabelValue(t, metric.Label, otel.WgOperationType, "query")
 
-				assertLabelNotPresent(t, metric.Label, WgOperationSha256)
+				assertLabelNotPresent(t, metric.Label, otel.WgOperationSha256)
 			}
 
-			assertLabelValue(t, schemaUsageMetrics[0].Label, WgGraphQLFieldName, "currentMood")
-			assertLabelValue(t, schemaUsageMetrics[0].Label, WgGraphQLFieldType, "Employee")
+			assertLabelValue(t, schemaUsageMetrics[0].Label, otel.WgGraphQLFieldName, "currentMood")
+			assertLabelValue(t, schemaUsageMetrics[0].Label, otel.WgGraphQLFieldType, "Employee")
 
-			assertLabelValue(t, schemaUsageMetrics[1].Label, WgGraphQLFieldName, "employee")
-			assertLabelValue(t, schemaUsageMetrics[1].Label, WgGraphQLFieldType, "Query")
+			assertLabelValue(t, schemaUsageMetrics[1].Label, otel.WgGraphQLFieldName, "employee")
+			assertLabelValue(t, schemaUsageMetrics[1].Label, otel.WgGraphQLFieldType, "Query")
 
-			assertLabelValue(t, schemaUsageMetrics[2].Label, WgGraphQLFieldName, "id")
-			assertLabelValue(t, schemaUsageMetrics[2].Label, WgGraphQLFieldType, "Employee")
+			assertLabelValue(t, schemaUsageMetrics[2].Label, otel.WgGraphQLFieldName, "id")
+			assertLabelValue(t, schemaUsageMetrics[2].Label, otel.WgGraphQLFieldType, "Employee")
 
-			assertLabelValue(t, schemaUsageMetrics[3].Label, WgGraphQLFieldName, "role")
-			assertLabelValue(t, schemaUsageMetrics[3].Label, WgGraphQLFieldType, "Employee")
+			assertLabelValue(t, schemaUsageMetrics[3].Label, otel.WgGraphQLFieldName, "role")
+			assertLabelValue(t, schemaUsageMetrics[3].Label, otel.WgGraphQLFieldType, "Employee")
 
 			// 'role' is an interface, so it counts for each implementing type, and the interface itself
-			assertLabelValue(t, schemaUsageMetrics[4].Label, WgGraphQLFieldName, "title")
-			assertLabelValue(t, schemaUsageMetrics[4].Label, WgGraphQLFieldType, "Engineer")
+			assertLabelValue(t, schemaUsageMetrics[4].Label, otel.WgGraphQLFieldName, "title")
+			assertLabelValue(t, schemaUsageMetrics[4].Label, otel.WgGraphQLFieldType, "Engineer")
 
-			assertLabelValue(t, schemaUsageMetrics[5].Label, WgGraphQLFieldName, "title")
-			assertLabelValue(t, schemaUsageMetrics[5].Label, WgGraphQLFieldType, "Marketer")
+			assertLabelValue(t, schemaUsageMetrics[5].Label, otel.WgGraphQLFieldName, "title")
+			assertLabelValue(t, schemaUsageMetrics[5].Label, otel.WgGraphQLFieldType, "Marketer")
 
-			assertLabelValue(t, schemaUsageMetrics[6].Label, WgGraphQLFieldName, "title")
-			assertLabelValue(t, schemaUsageMetrics[6].Label, WgGraphQLFieldType, "Operator")
+			assertLabelValue(t, schemaUsageMetrics[6].Label, otel.WgGraphQLFieldName, "title")
+			assertLabelValue(t, schemaUsageMetrics[6].Label, otel.WgGraphQLFieldType, "Operator")
 
-			assertLabelValue(t, schemaUsageMetrics[7].Label, WgGraphQLFieldName, "title")
-			assertLabelValue(t, schemaUsageMetrics[7].Label, WgGraphQLFieldType, "RoleType")
+			assertLabelValue(t, schemaUsageMetrics[7].Label, otel.WgGraphQLFieldName, "title")
+			assertLabelValue(t, schemaUsageMetrics[7].Label, otel.WgGraphQLFieldType, "RoleType")
 		})
 	})
 
@@ -124,7 +119,7 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 			require.Len(t, schemaUsageMetrics, 8)
 
 			for _, metric := range schemaUsageMetrics {
-				assertLabelValue(t, metric.Label, WgOperationSha256, "f46b2e72054341523989a788e798ec5c922517e6106646120d2ff23984cfed4b")
+				assertLabelValue(t, metric.Label, otel.WgOperationSha256, "f46b2e72054341523989a788e798ec5c922517e6106646120d2ff23984cfed4b")
 			}
 		})
 	})
@@ -167,7 +162,7 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 			require.Len(t, schemaUsageMetrics, 8)
 
 			for _, metric := range schemaUsageMetrics {
-				assertLabelValue(t, metric.Label, WgOperationType, "query")
+				assertLabelValue(t, metric.Label, otel.WgOperationType, "query")
 
 				assertLabelNotPresent(t, metric.Label, "otel_scope_info")
 			}
@@ -175,30 +170,32 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 	})
 }
 
-func assertLabelNotPresent(t *testing.T, labels []*io_prometheus_client.LabelPair, labelName string) {
+func assertLabelNotPresent(t *testing.T, labels []*io_prometheus_client.LabelPair, labelKey attribute.Key) {
 	t.Helper()
 
-	labelPair := findLabel(labels, labelName)
+	labelPair := findLabel(labels, labelKey)
 
-	if !assert.Nil(t, labelPair, "label %s not nil", labelName) {
-		assert.Nil(t, labelPair.Value, "label %s value should be nil, found value `%s`", labelName, *labelPair.Value)
+	if !assert.Nil(t, labelPair, "label %s not nil", labelKey) {
+		assert.Nil(t, labelPair.Value, "label %s value should be nil, found value `%s`", labelKey, *labelPair.Value)
 	}
 
 }
 
-func assertLabelValue(t *testing.T, labels []*io_prometheus_client.LabelPair, labelName string, expectedValue string) {
+func assertLabelValue(t *testing.T, labels []*io_prometheus_client.LabelPair, labelKey attribute.Key, expectedValue string) {
 	t.Helper()
 
-	labelPair := findLabel(labels, labelName)
+	labelPair := findLabel(labels, labelKey)
 
-	if assert.NotNil(t, labelPair, "label %s not found", labelName) {
-		assert.Equal(t, expectedValue, *labelPair.Value, "label %s value is not %s", labelName, expectedValue)
+	if assert.NotNil(t, labelPair, "label %s not found", labelKey) {
+		assert.Equal(t, expectedValue, *labelPair.Value, "label %s value is not %s", labelKey, expectedValue)
 	}
 }
 
-func findLabel(labels []*io_prometheus_client.LabelPair, labelName string) *io_prometheus_client.LabelPair {
+func findLabel(labels []*io_prometheus_client.LabelPair, labelKey attribute.Key) *io_prometheus_client.LabelPair {
+	key := strings.ReplaceAll(string(labelKey), ".", "_")
+
 	for _, label := range labels {
-		if label.Name != nil && *label.Name == labelName {
+		if label.Name != nil && *label.Name == key {
 			return label
 		}
 	}
