@@ -4,6 +4,8 @@ on:
     paths:
       - 'cli/**/*'
       - 'connect/**/*'
+      - 'shared/**/*'
+      - 'composition/**/*'
       - '.github/workflows/cli-ci.yaml'
 
 concurrency:

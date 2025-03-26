@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.75.12](https://github.com/wundergraph/cosmo/compare/wgc@0.75.11...wgc@0.75.12) (2025-03-25)
+
+### Bug Fixes
+
+* upgrade `undici` to solve vulnerability ([#1701](https://github.com/wundergraph/cosmo/issues/1701)) ([3b4b2d9](https://github.com/wundergraph/cosmo/commit/3b4b2d9638c059bee654f3596135a48ecd698690)) (@wilsonrivera)
+
+## [0.75.11](https://github.com/wundergraph/cosmo/compare/wgc@0.75.10...wgc@0.75.11) (2025-03-20)
+
+**Note:** Version bump only for package wgc
+
+## [0.75.10](https://github.com/wundergraph/cosmo/compare/wgc@0.75.9...wgc@0.75.10) (2025-03-19)
+
+**Note:** Version bump only for package wgc
+
 ## [0.75.9](https://github.com/wundergraph/cosmo/compare/wgc@0.75.8...wgc@0.75.9) (2025-03-14)
 
 ### Bug Fixes

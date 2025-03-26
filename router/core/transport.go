@@ -69,7 +69,16 @@ func NewCustomTransport(
 	}
 
 	if retryOptions.Enabled {
-		ct.roundTripper = retrytransport.NewRetryHTTPTransport(roundTripper, retryOptions, logger)
+		// The round trip method is almost always called via the http.Client RoundTripper interface
+		// as a result we cannot pass in the request context logger directly, since this will break the interface
+		// The RoundTripper is also not in the core package so it does not have access to the
+		// getRequestContext function since its private to only the core package
+		// As a workaround we pass in a function that can be used to get the logger from within the round tripper
+		getRequestContextLogger := func(req *http.Request) *zap.Logger {
+			reqContext := getRequestContext(req.Context())
+			return reqContext.Logger()
+		}
+		ct.roundTripper = retrytransport.NewRetryHTTPTransport(roundTripper, retryOptions, getRequestContextLogger)
 	} else {
 		ct.roundTripper = roundTripper
 	}
