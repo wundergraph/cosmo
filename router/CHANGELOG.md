@@ -4,6 +4,51 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.193.0](https://github.com/wundergraph/cosmo/compare/router@0.192.3...router@0.193.0) (2025-03-26)
+
+### Features
+
+* add request body to expression context ([#1664](https://github.com/wundergraph/cosmo/issues/1664)) ([8929aa4](https://github.com/wundergraph/cosmo/commit/8929aa4049f9bc00a132023e6ad6828a9bb269c9)) (@SkArchon)
+* add the ability to check if the request has been sampled using the expression context ([#1721](https://github.com/wundergraph/cosmo/issues/1721)) ([9fefa9a](https://github.com/wundergraph/cosmo/commit/9fefa9a773fe015e55442ccf1c3a8bbaa16dabdd)) (@SkArchon)
+
+## [0.192.3](https://github.com/wundergraph/cosmo/compare/router@0.192.2...router@0.192.3) (2025-03-25)
+
+### Bug Fixes
+
+* catch an error on provides with fragments ([#1723](https://github.com/wundergraph/cosmo/issues/1723)) ([9bb5de6](https://github.com/wundergraph/cosmo/commit/9bb5de67bcc1df486181c9c6ff6166bde64aab78)) (@devsergiy)
+
+## [0.192.2](https://github.com/wundergraph/cosmo/compare/router@0.192.1...router@0.192.2) (2025-03-25)
+
+### Bug Fixes
+
+* ensure to close any responses before retrying ([#1713](https://github.com/wundergraph/cosmo/issues/1713)) ([0f21399](https://github.com/wundergraph/cosmo/commit/0f21399c19ebea3b4a65caeb7ccee9622a7a2cd5)) (@SkArchon)
+* updated go jwt dependency to fix vulnerability ([#1714](https://github.com/wundergraph/cosmo/issues/1714)) ([247b3cf](https://github.com/wundergraph/cosmo/commit/247b3cf5ee65a12910b68aca363e5ad3ec2a8be5)) (@SkArchon)
+* upgrade `vite` to solve vulnerability ([#1700](https://github.com/wundergraph/cosmo/issues/1700)) ([a8bb8e5](https://github.com/wundergraph/cosmo/commit/a8bb8e591d1a0523ad77a593240aef7974e7c8b3)) (@wilsonrivera)
+
+## [0.192.1](https://github.com/wundergraph/cosmo/compare/router@0.192.0...router@0.192.1) (2025-03-19)
+
+### Bug Fixes
+
+* prefer json as a content type for non subscriptions ([#1705](https://github.com/wundergraph/cosmo/issues/1705)) ([40ebbb1](https://github.com/wundergraph/cosmo/commit/40ebbb1b3450bca6a2183bd68b3f92e9d3b8d9d1)) (@SkArchon)
+* upgrade expr package ([#1703](https://github.com/wundergraph/cosmo/issues/1703)) ([6799c2b](https://github.com/wundergraph/cosmo/commit/6799c2b615e08e70e969707422f3e6e0b1fc78f7)) (@Noroth)
+
+# [0.192.0](https://github.com/wundergraph/cosmo/compare/router@0.191.0...router@0.192.0) (2025-03-14)
+
+### Bug Fixes
+
+* polling based execution config watcher ([#1671](https://github.com/wundergraph/cosmo/issues/1671)) ([31564fd](https://github.com/wundergraph/cosmo/commit/31564fd9841cdbd375d32b66e2aee105ace7305c)) (@endigma)
+
+### Features
+
+* **plan-generator:** add max concurrent data source collectors; update engine to v2.0.0-rc.165 ([#1690](https://github.com/wundergraph/cosmo/issues/1690)) ([f6b40ed](https://github.com/wundergraph/cosmo/commit/f6b40eda3602f84b62feb1f830c1aac4b3af2602)) (@alepane21)
+
+# [0.191.0](https://github.com/wundergraph/cosmo/compare/router@0.190.0...router@0.191.0) (2025-03-13)
+
+### Features
+
+* **router:** add support for jwks discovery via openid-configuration endpoint ([#1646](https://github.com/wundergraph/cosmo/issues/1646)) ([b780408](https://github.com/wundergraph/cosmo/commit/b7804088a122eee3a250da174d9e26022c06726f)) (@Noroth)
+* update engine to rc.164 ([#1687](https://github.com/wundergraph/cosmo/issues/1687)) ([7cd0340](https://github.com/wundergraph/cosmo/commit/7cd034043ad522105f181faa9ef088a343749dc4)) (@Aenimus)
+
 # [0.190.0](https://github.com/wundergraph/cosmo/compare/router@0.189.2...router@0.190.0) (2025-03-12)
 
 ### Features

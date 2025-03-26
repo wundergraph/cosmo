@@ -74,7 +74,7 @@ export function configureCacheWarmer(
       };
     }
 
-    await namespaceRepo.toggleEnableCacheWarmer({ id: namespace.id, enableCacheWarming: req.enableCacheWarmer });
+    await namespaceRepo.updateConfiguration({ id: namespace.id, enableCacheWarming: req.enableCacheWarmer });
 
     const cacheWarmerRepo = new CacheWarmerRepository(opts.chClient, opts.db);
     if (req.enableCacheWarmer) {
