@@ -858,25 +858,42 @@ export class SubgraphRepository {
       };
     }
 
-    const checkList = await this.db.query.schemaChecks.findMany({
-      columns: {
-        proposedSubgraphSchemaSDL: false,
-      },
-      limit,
-      offset,
-      orderBy: desc(schemaChecks.createdAt),
-      where: and(
-        inArray(
-          schemaChecks.targetId,
-          selectedSubgraphs.map(({ targetId }) => targetId),
+    const checkList = await this.db
+      .select({
+        id: schemaChecks.id,
+        targetId: schemaChecks.targetId,
+        createdAt: schemaChecks.createdAt,
+        hasBreakingChanges: schemaChecks.hasBreakingChanges,
+        isComposable: schemaChecks.isComposable,
+        isDeleted: schemaChecks.isDeleted,
+        hasClientTraffic: schemaChecks.hasClientTraffic,
+        forcedSuccess: schemaChecks.forcedSuccess,
+        ghDetails: schemaChecks.ghDetails,
+        hasLintErrors: schemaChecks.hasLintErrors,
+        hasGraphPruningErrors: schemaChecks.hasGraphPruningErrors,
+        clientTrafficCheckSkipped: schemaChecks.clientTrafficCheckSkipped,
+        lintSkipped: schemaChecks.lintSkipped,
+        graphPruningSkipped: schemaChecks.graphPruningSkipped,
+        vcsContext: schemaChecks.vcsContext,
+      })
+      .from(schemaChecks)
+      .innerJoin(schema.schemaCheckSubgraphs, eq(schema.schemaCheckSubgraphs.schemaCheckId, schemaChecks.id))
+      .where(
+        and(
+          inArray(
+            schema.schemaCheckSubgraphs.subgraphName,
+            selectedSubgraphs.map(({ name }) => name),
+          ),
+          gt(schemaChecks.createdAt, new Date(startDate)),
+          lt(schemaChecks.createdAt, new Date(endDate)),
         ),
-        gt(schemaChecks.createdAt, new Date(startDate)),
-        lt(schemaChecks.createdAt, new Date(endDate)),
-      ),
-    });
-    
+      )
+      .orderBy(desc(schemaChecks.createdAt))
+      .limit(limit)
+      .offset(offset);
+
     const checksCount = await this.getChecksCount({ federatedGraphTargetId, startDate, endDate, includeSubgraphs });
-    
+
     const schemaCheckRepo = new SchemaCheckRepository(this.db);
     // Get all checkedSubgraphs for all checks in one go
     const checksWithSubgraphs = await Promise.all(

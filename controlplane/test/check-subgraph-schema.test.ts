@@ -129,6 +129,15 @@ describe('CheckSubgraphSchema', (ctx) => {
     expect(checkResp.compositionErrors).toHaveLength(1);
     expect(checkResp.compositionErrors[0].message).toBe(noBaseDefinitionForExtensionError(OBJECT, 'Product').message);
 
+    const checkSummary = await client.getCheckSummary({
+      namespace: DEFAULT_NAMESPACE,
+      graphName: federatedGraphName,
+      checkId: checkResp.checkId,
+    });
+
+    expect(checkSummary.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkSummary.affectedGraphs).toHaveLength(1);
+    expect(checkSummary.check?.checkedSubgraphs.length).toEqual(1);
     await server.close();
   });
 
@@ -175,6 +184,16 @@ describe('CheckSubgraphSchema', (ctx) => {
       invalidOverrideTargetSubgraphNameWarning('employees', 'Query', ['hello'], subgraphName).message,
     );
 
+    const checkSummary = await client.getCheckSummary({
+      namespace: DEFAULT_NAMESPACE,
+      graphName: federatedGraphName,
+      checkId: checkResp.checkId,
+    });
+
+    expect(checkSummary.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkSummary.affectedGraphs).toHaveLength(1);
+    expect(checkSummary.check?.checkedSubgraphs.length).toEqual(1);
+
     await server.close();
   });
 
@@ -210,6 +229,16 @@ describe('CheckSubgraphSchema', (ctx) => {
     expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
     expect(checkResp.compositionErrors).toHaveLength(0);
     expect(checkResp.breakingChanges).toHaveLength(0);
+
+    const checkSummary = await client.getCheckSummary({
+      namespace: DEFAULT_NAMESPACE,
+      graphName: federatedGraphName,
+      checkId: checkResp.checkId,
+    });
+
+    expect(checkSummary.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkSummary.affectedGraphs).toHaveLength(1);
+    expect(checkSummary.check?.checkedSubgraphs.length).toEqual(1);
 
     await server.close();
   });

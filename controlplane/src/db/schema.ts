@@ -1017,6 +1017,8 @@ export const schemaCheckRelations = relations(schemaChecks, ({ many }) => ({
   changes: many(schemaCheckChangeAction),
   compositions: many(schemaCheckComposition),
   affectedGraphs: many(schemaCheckFederatedGraphs),
+  subgraphs: many(schemaCheckSubgraphs),
+  federatedGraphs: many(schemaCheckFederatedGraphs),
 }));
 
 export const users = pgTable('users', {
