@@ -25,7 +25,7 @@ export function SelectedChecksFilters({
   }));
 
   return (
-    <div className="flex flex-wrap gap-1">
+    <>
       <div>
         <DataTableFacetedFilter
           id="subgraphs"
@@ -52,6 +52,6 @@ export function SelectedChecksFilters({
         <Cross2Icon className="mr-2 h-4 w-4" />
         Reset
       </Button>
-    </div>
+    </>
   );
 }
