@@ -139,6 +139,7 @@ export function checkSubgraphSchemas(
       proposedSubgraphSchemaSDL: '',
       lintSkipped: !namespace.enableLinting,
       graphPruningSkipped: !namespace.enableGraphPruning,
+      vcsContext: req.vcsContext,
     });
 
     const breakingChanges: SchemaChange[] = [];
@@ -300,6 +301,7 @@ export function checkSubgraphSchemas(
         schemaChanges,
         inspectorChanges: [],
         storedBreakingChanges: [],
+        checkSubgraphId: '',
       });
     }
 
@@ -312,6 +314,7 @@ export function checkSubgraphSchemas(
           subgraphName: subgraph.name,
           proposedSubgraphSchemaSDL: newSchemaSDL,
           isDeleted: newSchemaSDL === '',
+          isNew: false,
         },
       });
 
@@ -338,6 +341,7 @@ export function checkSubgraphSchemas(
         ...s,
         inspectorChanges,
         storedBreakingChanges,
+        checkSubgraphId: schemaCheckSubgraphId,
       });
 
       const lintIssues: SchemaLintIssues = await schemaLintRepo.performSchemaLintCheck({
@@ -429,20 +433,31 @@ export function checkSubgraphSchemas(
       opts.chClient,
     );
 
-    const result = await composer.composeWithProposedSchemas({
+    const { composedGraphs, checkSubgraphsByFedGraph } = await composer.composeWithProposedSchemas({
       inputSubgraphs: checkSubgraphs,
       graphs: federatedGraphs,
     });
 
     await schemaCheckRepo.createSchemaCheckCompositions({
       schemaCheckID,
-      compositions: result,
+      compositions: composedGraphs,
     });
 
     let hasClientTraffic = false;
 
-    for (const composition of result) {
-      await schemaCheckRepo.createCheckedFederatedGraph(schemaCheckID, composition.id, limit);
+    for (const composition of composedGraphs) {
+      const checkFederatedGraphId = await schemaCheckRepo.createCheckedFederatedGraph(
+        schemaCheckID,
+        composition.id,
+        limit,
+      );
+      const checkSubgraphsUsedForComposition = checkSubgraphsByFedGraph.get(composition.id);
+      if (checkSubgraphsUsedForComposition && checkSubgraphsUsedForComposition.length > 0) {
+        await schemaCheckRepo.createSchemaCheckSubgraphFederatedGraphs({
+          schemaCheckFederatedGraphId: checkFederatedGraphId,
+          checkSubgraphIds: checkSubgraphsUsedForComposition,
+        });
+      }
 
       for (const error of composition.errors) {
         compositionErrors.push({

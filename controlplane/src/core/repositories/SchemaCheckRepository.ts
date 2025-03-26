@@ -15,6 +15,7 @@ import { ComposedFederatedGraph } from '../composition/composer.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { InspectorOperationResult } from '../services/SchemaUsageTrafficInspector.js';
 import { createBatches } from '../util.js';
+import { CheckedSubgraphDTO } from '../../types/index.js';
 import { FederatedGraphConfig } from './FederatedGraphRepository.js';
 
 export class SchemaCheckRepository {
@@ -243,14 +244,16 @@ export class SchemaCheckRepository {
   }
 
   public async createCheckedFederatedGraph(schemaCheckId: string, federatedGraphId: string, trafficCheckDays: number) {
-    await this.db
+    const result = await this.db
       .insert(schema.schemaCheckFederatedGraphs)
       .values({
         checkId: schemaCheckId,
         federatedGraphId,
         trafficCheckDays,
       })
-      .execute();
+      .returning();
+
+    return result[0].id;
   }
 
   public async getAffectedOperationsByCheckId({
@@ -401,16 +404,54 @@ export class SchemaCheckRepository {
       subgraphName: string;
       proposedSubgraphSchemaSDL: string;
       isDeleted: boolean;
+      isNew: boolean;
     };
   }) {
     const schemaCheckSubgraph = await this.db.insert(schema.schemaCheckSubgraphs).values(data).returning();
     return schemaCheckSubgraph[0].id;
   }
 
-  public getCheckedSubgraphsForCheckId(checkId: string) {
-    return this.db.query.schemaCheckSubgraphs.findMany({
-      where: eq(schema.schemaCheckSubgraphs.schemaCheckId, checkId),
-    });
+  public async getCheckedSubgraphsForCheckIdAndFederatedGraphId({
+    checkId,
+    federatedGraphId,
+  }: {
+    checkId: string;
+    federatedGraphId: string;
+  }): Promise<CheckedSubgraphDTO[]> {
+    const result = await this.db
+      .select({
+        id: schema.schemaCheckSubgraphs.id,
+        subgraphId: schema.schemaCheckSubgraphs.subgraphId,
+        subgraphName: schema.schemaCheckSubgraphs.subgraphName,
+        isDeleted: schema.schemaCheckSubgraphs.isDeleted,
+        isNew: schema.schemaCheckSubgraphs.isNew,
+      })
+      .from(schema.schemaCheckFederatedGraphs)
+      .innerJoin(
+        schema.schemaCheckSubgraphsFederatedGraphs,
+        eq(
+          schema.schemaCheckFederatedGraphs.id,
+          schema.schemaCheckSubgraphsFederatedGraphs.schemaCheckFederatedGraphId,
+        ),
+      )
+      .innerJoin(
+        schema.schemaCheckSubgraphs,
+        eq(schema.schemaCheckSubgraphsFederatedGraphs.schemaCheckSubgraphId, schema.schemaCheckSubgraphs.id),
+      )
+      .where(
+        and(
+          eq(schema.schemaCheckFederatedGraphs.checkId, checkId),
+          eq(schema.schemaCheckFederatedGraphs.federatedGraphId, federatedGraphId),
+        ),
+      );
+
+    return result.map((subgraph) => ({
+      id: subgraph.id,
+      subgraphId: subgraph.subgraphId || undefined,
+      subgraphName: subgraph.subgraphName,
+      isDeleted: subgraph.isDeleted,
+      isNew: subgraph.isNew,
+    }));
   }
 
   public getProposedSchemaOfCheckedSubgraph({
@@ -429,5 +470,23 @@ export class SchemaCheckRepository {
         proposedSubgraphSchemaSDL: true,
       },
     });
+  }
+
+  public async createSchemaCheckSubgraphFederatedGraphs({
+    schemaCheckFederatedGraphId,
+    checkSubgraphIds,
+  }: {
+    schemaCheckFederatedGraphId: string;
+    checkSubgraphIds: string[];
+  }) {
+    await this.db
+      .insert(schema.schemaCheckSubgraphsFederatedGraphs)
+      .values(
+        checkSubgraphIds.map((checkSubgraphId) => ({
+          schemaCheckFederatedGraphId,
+          schemaCheckSubgraphId: checkSubgraphId,
+        })),
+      )
+      .execute();
   }
 }

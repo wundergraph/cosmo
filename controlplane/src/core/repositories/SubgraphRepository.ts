@@ -43,6 +43,7 @@ import { ClickHouseClient } from '../clickhouse/index.js';
 import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
+import { SchemaCheckRepository } from './SchemaCheckRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 
@@ -830,7 +831,7 @@ export class SubgraphRepository {
 
   public async checks({
     federatedGraphTargetId,
-    federatedGraphName,
+    federatedGraphId,
     limit,
     offset,
     startDate,
@@ -838,7 +839,7 @@ export class SubgraphRepository {
     includeSubgraphs,
   }: {
     federatedGraphTargetId: string;
-    federatedGraphName: string;
+    federatedGraphId: string;
     limit: number;
     offset: number;
     startDate: string;
@@ -873,34 +874,48 @@ export class SubgraphRepository {
         lt(schemaChecks.createdAt, new Date(endDate)),
       ),
     });
-
+    
     const checksCount = await this.getChecksCount({ federatedGraphTargetId, startDate, endDate, includeSubgraphs });
+    
+    const schemaCheckRepo = new SchemaCheckRepository(this.db);
+    // Get all checkedSubgraphs for all checks in one go
+    const checksWithSubgraphs = await Promise.all(
+      checkList.map(async (c) => {
+        const checkedSubgraphs = await schemaCheckRepo.getCheckedSubgraphsForCheckIdAndFederatedGraphId({
+          checkId: c.id,
+          federatedGraphId,
+        });
+
+        return {
+          id: c.id,
+          targetID: c.targetId || undefined,
+          subgraphName: selectedSubgraphs.find((s) => s.targetId === c.targetId)?.name || undefined,
+          timestamp: c.createdAt.toISOString(),
+          isBreaking: c.hasBreakingChanges ?? false,
+          isComposable: c.isComposable ?? false,
+          isDeleted: c.isDeleted ?? false,
+          hasClientTraffic: c.hasClientTraffic ?? false,
+          isForcedSuccess: c.forcedSuccess ?? false,
+          ghDetails: c.ghDetails
+            ? {
+                commitSha: c.ghDetails.commitSha,
+                ownerSlug: c.ghDetails.ownerSlug,
+                repositorySlug: c.ghDetails.repositorySlug,
+                checkRunId: c.ghDetails.checkRunId,
+              }
+            : undefined,
+          hasLintErrors: c.hasLintErrors ?? false,
+          hasGraphPruningErrors: c.hasGraphPruningErrors ?? false,
+          clientTrafficCheckSkipped: c.clientTrafficCheckSkipped ?? false,
+          lintSkipped: c.lintSkipped ?? false,
+          graphPruningSkipped: c.graphPruningSkipped ?? false,
+          checkedSubgraphs,
+        };
+      }),
+    );
 
     return {
-      checks: checkList.map((c) => ({
-        id: c.id,
-        targetID: c.targetId || undefined,
-        subgraphName: selectedSubgraphs.find((s) => s.targetId === c.targetId)?.name || undefined,
-        timestamp: c.createdAt.toISOString(),
-        isBreaking: c.hasBreakingChanges ?? false,
-        isComposable: c.isComposable ?? false,
-        isDeleted: c.isDeleted ?? false,
-        hasClientTraffic: c.hasClientTraffic ?? false,
-        isForcedSuccess: c.forcedSuccess ?? false,
-        ghDetails: c.ghDetails
-          ? {
-              commitSha: c.ghDetails.commitSha,
-              ownerSlug: c.ghDetails.ownerSlug,
-              repositorySlug: c.ghDetails.repositorySlug,
-              checkRunId: c.ghDetails.checkRunId,
-            }
-          : undefined,
-        hasLintErrors: c.hasLintErrors ?? false,
-        hasGraphPruningErrors: c.hasGraphPruningErrors ?? false,
-        clientTrafficCheckSkipped: c.clientTrafficCheckSkipped ?? false,
-        lintSkipped: c.lintSkipped ?? false,
-        graphPruningSkipped: c.graphPruningSkipped ?? false,
-      })),
+      checks: checksWithSubgraphs,
       checksCount,
     };
   }
@@ -962,7 +977,7 @@ export class SubgraphRepository {
   public async checkById(data: {
     id: string;
     federatedGraphTargetId: string;
-    federatedGraphName: string;
+    federatedGraphId: string;
   }): Promise<SchemaCheckSummaryDTO | undefined> {
     const check = await this.db.query.schemaChecks.findFirst({
       where: eq(schema.schemaChecks.id, data.id),
@@ -979,6 +994,12 @@ export class SubgraphRepository {
       federatedGraphTargetId: data.federatedGraphTargetId,
     });
     const subgraph = subgraphs.find((s) => s.targetId === check.targetId);
+
+    const schemaCheckRepo = new SchemaCheckRepository(this.db);
+    const checkedSubgraphs = await schemaCheckRepo.getCheckedSubgraphsForCheckIdAndFederatedGraphId({
+      checkId: check.id,
+      federatedGraphId: data.federatedGraphId,
+    });
 
     return {
       id: check.id,
@@ -1015,6 +1036,7 @@ export class SubgraphRepository {
             commitSha: check.vcsContext.commitSha,
           }
         : undefined,
+      checkedSubgraphs,
     };
   }
 

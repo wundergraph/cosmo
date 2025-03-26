@@ -46,7 +46,7 @@ export function getCheckOperations(
     const check = await subgraphRepo.checkById({
       id: req.checkId,
       federatedGraphTargetId: graph.targetId,
-      federatedGraphName: graph.name,
+      federatedGraphId: graph.id,
     });
     const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
 

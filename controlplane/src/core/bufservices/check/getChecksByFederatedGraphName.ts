@@ -83,7 +83,7 @@ export function getChecksByFederatedGraphName(
     const includeSubgraphs = req.filters?.subgraphs?.filter((id) => isValidUuid(id)) ?? [];
     const checksData = await subgraphRepo.checks({
       federatedGraphTargetId: federatedGraph.targetId,
-      federatedGraphName: federatedGraph.name,
+      federatedGraphId: federatedGraph.id,
       limit: req.limit,
       offset: req.offset,
       startDate: dateRange.start,

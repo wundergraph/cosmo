@@ -458,6 +458,16 @@ message SchemaCheck {
     string repositorySlug = 3;
   }
 
+  message CheckedSubgraph {
+    // its the check subgraph id
+    string id = 1;
+    string subgraphName = 2;
+    // its optional because the subgraph can be deleted
+    optional string subgraphId = 3;
+    bool isDeleted = 4;
+    bool isNew = 5;
+  }
+
   string id = 1;
   optional string targetID = 2;
   optional string subgraphName = 3;
@@ -474,6 +484,7 @@ message SchemaCheck {
   bool lint_skipped = 14;
   bool graph_pruning_skipped = 15;
   optional VCSContext vcsContext = 16;
+  repeated CheckedSubgraph checkedSubgraphs = 17;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -498,15 +509,8 @@ message GetCheckSummaryResponse {
   message AffectedGraph {
     string id = 1;
     int32 traffic_check_days = 2;
-  }
-
-  message CheckedSubgraph {
-    // its the check subgraph id
-    string id = 1;
-    string name = 2;
-    // its optional because the subgraph can be deleted
-    optional string subgraphId = 3;
-    bool isDeleted = 4;
+    string name = 3;
+    bool isCheckSuccessful = 4;
   }
 
   Response response = 1;
@@ -519,7 +523,6 @@ message GetCheckSummaryResponse {
   repeated LintIssue lintIssues = 9;
   repeated GraphPruningIssue graphPruningIssues = 10;
   repeated string compositionWarnings = 11;
-  repeated CheckedSubgraph checkedSubgraphs = 12;
 }
 
 message GetCheckOperationsRequest {
@@ -2579,6 +2582,8 @@ message CheckSubgraphSchemasRequest {
   }
   string namespace = 1;
   repeated CheckSubgraph subgraphs = 2;
+  GitInfo gitInfo = 3;
+  optional VCSContext vcsContext = 4;
 }
 
 message CheckOperationUsageStatsofSubgraph {

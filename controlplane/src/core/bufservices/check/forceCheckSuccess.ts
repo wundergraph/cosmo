@@ -51,7 +51,7 @@ export function forceCheckSuccess(
     const check = await subgraphRepo.checkById({
       id: req.checkId,
       federatedGraphTargetId: graph.targetId,
-      federatedGraphName: graph.name,
+      federatedGraphId: graph.id,
     });
 
     if (!check) {

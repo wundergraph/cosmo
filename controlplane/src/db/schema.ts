@@ -749,10 +749,9 @@ export const schemaChecks = pgTable(
   'schema_checks', // sc
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    targetId: uuid('target_id')
-      .references(() => targets.id, {
-        onDelete: 'cascade',
-      }),
+    targetId: uuid('target_id').references(() => targets.id, {
+      onDelete: 'cascade',
+    }),
     isComposable: boolean('is_composable').default(false),
     isDeleted: boolean('is_deleted').default(false),
     hasBreakingChanges: boolean('has_breaking_changes').default(false),
@@ -800,6 +799,7 @@ export const schemaCheckSubgraphs = pgTable(
     subgraphName: text('subgraph_name').notNull(),
     proposedSubgraphSchemaSDL: text('proposed_subgraph_schema_sdl'),
     isDeleted: boolean('is_deleted').default(false).notNull(),
+    isNew: boolean('is_new').default(false).notNull(),
   },
   (t) => {
     return {
@@ -850,6 +850,7 @@ export const schemaCheckChangeActionOperationUsageRelations = relations(
 export const schemaCheckFederatedGraphs = pgTable(
   'schema_check_federated_graphs', // scfg
   {
+    id: uuid('id').primaryKey().defaultRandom(),
     checkId: uuid('check_id')
       .notNull()
       .references(() => schemaChecks.id, {
@@ -880,6 +881,30 @@ export const schemaCheckFederatedGraphsRelations = relations(schemaCheckFederate
     references: [federatedGraphs.id],
   }),
 }));
+
+// a join table between schema check subgraphs and schema check fed graphs
+export const schemaCheckSubgraphsFederatedGraphs = pgTable(
+  'schema_check_subgraphs_federated_graphs', // scsfg
+  {
+    schemaCheckFederatedGraphId: uuid('schema_check_federated_graph_id').references(
+      () => schemaCheckFederatedGraphs.id,
+      {
+        onDelete: 'cascade',
+      },
+    ),
+    schemaCheckSubgraphId: uuid('schema_check_subgraph_id').references(() => schemaCheckSubgraphs.id, {
+      onDelete: 'cascade',
+    }),
+  },
+  (t) => {
+    return {
+      schemaCheckSubgraphIdIndex: index('scsfg_schema_check_subgraph_id_idx').on(t.schemaCheckSubgraphId),
+      schemaCheckFederatedGraphIdIndex: index('scsfg_schema_check_federated_graph_id_idx').on(
+        t.schemaCheckFederatedGraphId,
+      ),
+    };
+  },
+);
 
 export const schemaCheckChangeAction = pgTable(
   'schema_check_change_action', // scca

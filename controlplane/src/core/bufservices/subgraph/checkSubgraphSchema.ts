@@ -220,9 +220,7 @@ export function checkSubgraphSchema(
     }
 
     const schemaCheckID = await schemaCheckRepo.create({
-      targetId: subgraph.targetId,
-      isDeleted: !!req.delete,
-      proposedSubgraphSchemaSDL: newSchemaSDL,
+      proposedSubgraphSchemaSDL: '',
       trafficCheckSkipped: req.skipTrafficCheck,
       lintSkipped: !namespace.enableLinting,
       graphPruningSkipped: !namespace.enableGraphPruning,
@@ -236,6 +234,7 @@ export function checkSubgraphSchema(
         subgraphName: subgraph.name,
         proposedSubgraphSchemaSDL: newSchemaSDL,
         isDeleted: !!req.delete,
+        isNew: false,
       },
     });
 
@@ -317,7 +316,15 @@ export function checkSubgraphSchema(
     limit = clamp(namespace?.checksTimeframeInDays ?? limit, 1, limit);
 
     for (const composition of result.compositions) {
-      await schemaCheckRepo.createCheckedFederatedGraph(schemaCheckID, composition.id, limit);
+      const checkFederatedGraphId = await schemaCheckRepo.createCheckedFederatedGraph(
+        schemaCheckID,
+        composition.id,
+        limit,
+      );
+      await schemaCheckRepo.createSchemaCheckSubgraphFederatedGraphs({
+        schemaCheckFederatedGraphId: checkFederatedGraphId,
+        checkSubgraphIds: [schemaCheckSubgraphId],
+      });
 
       for (const error of composition.errors) {
         compositionErrors.push({

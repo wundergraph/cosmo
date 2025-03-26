@@ -192,6 +192,7 @@ export type ComposeDeploymentError = RouterConfigUploadError | AdmissionError | 
 
 export type CheckSubgraph = {
   subgraph: SubgraphDTO;
+  checkSubgraphId: string;
   newSchemaSDL: string;
   newGraphQLSchema?: GraphQLSchema;
   inspectorChanges: InspectorSchemaChange[];
@@ -686,6 +687,8 @@ export class Composer {
     graphs: FederatedGraphDTO[];
   }) {
     const composedGraphs: ComposedFederatedGraph[] = [];
+    // the key is the federated graph id and the value is the list of check subgraph ids which are part of the composition for that federated graph
+    const checkSubgraphsByFedGraph = new Map<string, string[]>();
     for (const graph of graphs) {
       try {
         const subgraphsOfFedGraph = await this.subgraphRepo.byGraphLabelMatchers({
@@ -698,6 +701,10 @@ export class Composer {
         for (const subgraph of subgraphsOfFedGraph) {
           const inputSubgraph = inputSubgraphs.get(subgraph.name);
           if (inputSubgraph) {
+            checkSubgraphsByFedGraph.set(graph.id, [
+              ...(checkSubgraphsByFedGraph.get(graph.id) || []),
+              inputSubgraph.checkSubgraphId,
+            ]);
             subgraphsToBeComposed.push({
               name: subgraph.name,
               url: subgraph.routingUrl,
@@ -717,7 +724,7 @@ export class Composer {
         if (contracts.length === 0) {
           const federationResult = composeSubgraphs(subgraphsToBeComposed, graph.routerCompatibilityVersion);
           composedGraphs.push(mapResultToComposedGraph(graph, subgraphsOfFedGraph, federationResult));
-          return composedGraphs;
+          continue;
         }
 
         const tagOptionsByContractName = new Map<string, ContractTagOptions>();
@@ -737,7 +744,7 @@ export class Composer {
         composedGraphs.push(mapResultToComposedGraph(graph, subgraphsOfFedGraph, federationResult));
 
         if (!federationResult.success) {
-          return composedGraphs;
+          continue;
         }
 
         for (const [contractName, contractResult] of federationResult.federationResultByContractName) {
@@ -761,6 +768,9 @@ export class Composer {
         });
       }
     }
-    return composedGraphs;
+    return {
+      composedGraphs,
+      checkSubgraphsByFedGraph,
+    };
   }
 }

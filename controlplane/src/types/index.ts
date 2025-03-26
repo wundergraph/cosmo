@@ -145,6 +145,14 @@ export interface MigrationSubgraph {
   schema: string;
 }
 
+export interface CheckedSubgraphDTO {
+  id: string;
+  subgraphId?: string;
+  subgraphName: string;
+  isDeleted: boolean;
+  isNew: boolean;
+}
+
 export interface SchemaCheckDTO {
   id: string;
   targetID?: string;
@@ -171,6 +179,7 @@ export interface SchemaCheckDTO {
     commitSha: string;
     branch: string;
   };
+  checkedSubgraphs: CheckedSubgraphDTO[];
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {

@@ -7,7 +7,6 @@ import {
 import { ChangesTable } from "@/components/checks/changes-table";
 import { LintIssuesTable } from "@/components/checks/lint-issues-table";
 import { CheckOperations } from "@/components/checks/operations";
-import { CodeViewerActions } from "@/components/code-viewer";
 import { EmptyState } from "@/components/empty-state";
 import { InfoTooltip } from "@/components/info-tooltip";
 import {
@@ -69,10 +68,10 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
   GetCheckSummaryResponse,
-  GetCheckSummaryResponse_CheckedSubgraph,
   GraphPruningIssue,
   LintIssue,
   LintSeverity,
+  SchemaCheck_CheckedSubgraph,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow, subDays } from "date-fns";
 import { useRouter } from "next/router";
@@ -126,16 +125,14 @@ const ForceSuccess: React.FC<{ onSubmit: () => void }> = (props) => {
 
 const ProposedSchemas = ({
   checkId,
-  targetType,
   sdl,
   checkedSubgraphs,
   lintIssues,
   graphPruningIssues,
 }: {
   checkId: string;
-  targetType: "federated" | "subgraph";
   sdl?: string;
-  checkedSubgraphs: GetCheckSummaryResponse_CheckedSubgraph[];
+  checkedSubgraphs: SchemaCheck_CheckedSubgraph[];
   lintIssues: LintIssue[];
   graphPruningIssues: GraphPruningIssue[];
 }) => {
@@ -143,10 +140,12 @@ const ProposedSchemas = ({
   const subgraph = router.query.subgraph as string;
   const hash = router.asPath.split("#")?.[1];
 
-  const checkedSubgraph = checkedSubgraphs.find((s) => s.name === subgraph);
+  const checkedSubgraph = checkedSubgraphs.find(
+    (s) => s.subgraphName === subgraph,
+  );
 
   const activeSubgraph = checkedSubgraph || checkedSubgraphs?.[0];
-  const activeSubgraphName = activeSubgraph?.name;
+  const activeSubgraphName = activeSubgraph?.subgraphName;
 
   const { data: sdlData, isLoading: fetchingSdl } = useQuery(
     getProposedSchemaOfCheckedSubgraph,
@@ -165,7 +164,7 @@ const ProposedSchemas = ({
     <>
       <div className="-top-[60px] right-8 px-4 md:absolute md:px-0">
         <div className="flex gap-x-2">
-          {targetType === "federated" && (
+          {checkedSubgraphs.length > 0 && (
             <Select
               value={activeSubgraphName}
               onValueChange={(subgraph) =>
@@ -191,27 +190,30 @@ const ProposedSchemas = ({
                   <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
                     <Component2Icon className="h-3 w-3" /> Subgraphs
                   </SelectLabel>
-                  {checkedSubgraphs.map(({ name, id, isDeleted }) => {
-                    return (
-                      <SelectItem key={name} value={name}>
-                        <div
-                          className={cn({
-                            "text-destructive": isDeleted,
-                          })}
-                        >
-                          <p>{name}</p>
-                          <p className="text-xs">{id.split("-")[0]}</p>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
+                  {checkedSubgraphs.map(
+                    ({ subgraphName: name, id, isDeleted }) => {
+                      return (
+                        <SelectItem key={name} value={name}>
+                          <div
+                            className={cn({
+                              "text-destructive": isDeleted,
+                            })}
+                          >
+                            <p>{name}</p>
+                            <p className="text-xs">{id.split("-")[0]}</p>
+                          </div>
+                        </SelectItem>
+                      );
+                    },
+                  )}
                 </SelectGroup>
               </SelectContent>
             </Select>
           )}
           <SDLViewerActions
             sdl={
-              (targetType === "federated" ? sdlData?.proposedSchema : sdl) || ""
+              (checkedSubgraphs.length > 0 ? sdlData?.proposedSchema : sdl) ||
+              ""
             }
             size="icon"
             targetName={activeSubgraphName}
@@ -221,7 +223,7 @@ const ProposedSchemas = ({
       <div className="scrollbar-custom h-full min-h-[300px] w-full overflow-auto">
         <SDLViewerMonaco
           schema={
-            (targetType === "federated" ? sdlData?.proposedSchema : sdl) || ""
+            (checkedSubgraphs.length > 0 ? sdlData?.proposedSchema : sdl) || ""
           }
           disablePrettier
           decorationCollections={getDecorationCollection(
@@ -391,8 +393,6 @@ const CheckDetails = ({
   const id = router.query.checkId as string;
   const tab = router.query.tab as string;
 
-  const { data: allGraphsData } = useQuery(getFederatedGraphs);
-
   const { mutate: forceSuccess } = useMutation(forceCheckSuccess, {
     onSuccess: (data) => {
       if (data.response?.code === EnumStatusCode.OK) {
@@ -465,6 +465,12 @@ const CheckDetails = ({
     ? "No operations were affected by breaking changes"
     : "All tasks were successful";
 
+  const subgraphName =
+    data.check.subgraphName ||
+    (data.check.checkedSubgraphs.length > 1
+      ? "Multiple Subgraphs"
+      : data.check.checkedSubgraphs[0].subgraphName);
+
   const setTab = (tab: string) => {
     const query: Record<string, any> = {
       ...router.query,
@@ -512,7 +518,7 @@ const CheckDetails = ({
                 >
                   <div className="flex items-center gap-x-1">
                     <CubeIcon />
-                    {data.check.subgraphName}
+                    {subgraphName}
                   </div>
                 </Link>
               </dd>
@@ -656,20 +662,17 @@ const CheckDetails = ({
               <dt className="text-sm text-muted-foreground">Affected Graphs</dt>
               <dd className="flex flex-wrap items-center gap-2">
                 {data.affectedGraphs.map((ag) => {
-                  const graph = allGraphsData?.graphs.find(
-                    (g) => g.id === ag.id,
-                  );
-
-                  if (!graph) return null;
-
                   return (
                     <Link
                       key={ag.id}
-                      href={`/${organizationSlug}/${graph.namespace}/graph/${graph.name}`}
-                      className="flex items-center gap-x-1 text-sm"
+                      href={`/${organizationSlug}/${namespace}/graph/${ag.name}/checks/${id}`}
+                      className={cn(
+                        "flex items-center gap-x-1 text-sm",
+                        !ag.isCheckSuccessful && "text-destructive",
+                      )}
                     >
                       <PiGraphLight />
-                      {graph.name}
+                      {ag.name}
                     </Link>
                   );
                 })}
@@ -1042,13 +1045,8 @@ const CheckDetails = ({
               <TabsContent value="schema" className="relative w-full flex-1">
                 <ProposedSchemas
                   checkId={id}
-                  targetType={
-                    data.check.targetType === "federated"
-                      ? "federated"
-                      : "subgraph"
-                  }
                   sdl={sdl}
-                  checkedSubgraphs={data.checkedSubgraphs}
+                  checkedSubgraphs={data.check.checkedSubgraphs}
                   lintIssues={data.lintIssues}
                   graphPruningIssues={data.graphPruningIssues}
                 />
