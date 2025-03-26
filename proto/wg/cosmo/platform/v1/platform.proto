@@ -434,6 +434,10 @@ message GetLatestSubgraphSDLResponse {
   optional string version_id = 3;
 }
 
+message GetChecksByFederatedGraphNameFilters {
+  repeated string subgraphs = 1;
+}
+
 message GetChecksByFederatedGraphNameRequest {
   string name = 1;
   int32 limit = 2;
@@ -441,6 +445,7 @@ message GetChecksByFederatedGraphNameRequest {
   string startDate = 4;
   string endDate = 5;
   string namespace = 6;
+  optional GetChecksByFederatedGraphNameFilters filters = 7;
 }
 
 message SchemaCheck {
@@ -1342,6 +1347,9 @@ message MetricsSeriesItem {
   string timestamp = 1;
   string value = 2;
   optional string previousValue = 3;
+  optional string p50 = 4;
+  optional string p90 = 5;
+  optional string p99 = 6;
 }
 
 message MetricsDashboard {

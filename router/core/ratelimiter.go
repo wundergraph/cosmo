@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"sync"
 
 	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
@@ -28,8 +29,8 @@ type CosmoRateLimiterOptions struct {
 	RejectStatusCode int
 
 	KeySuffixExpression string
-
 	FailOpen bool
+	ExprManager         *expr.Manager
 }
 
 func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, err error) {
@@ -45,7 +46,7 @@ func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, e
 		rl.rejectStatusCode = 200
 	}
 	if opts.KeySuffixExpression != "" {
-		rl.keySuffixProgram, err = expr.CompileStringExpression(opts.KeySuffixExpression)
+		rl.keySuffixProgram, err = opts.ExprManager.CompileExpression(opts.KeySuffixExpression, reflect.String)
 		if err != nil {
 			return nil, err
 		}

@@ -5,12 +5,6 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"net/http"
-	"net/url"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto/v2"
 	"github.com/go-chi/chi/v5"
@@ -20,6 +14,7 @@ import (
 	"github.com/klauspost/compress/gzip"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -29,6 +24,11 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/exp/maps"
+	"net/http"
+	"net/url"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
@@ -619,9 +619,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	// we only enable the attribute mapper if we are not using the default cloud exporter
 	enableAttributeMapper := !(s.metricConfig.IsUsingCloudExporter || rmetric.IsDefaultCloudExporterConfigured(s.metricConfig.OpenTelemetry.Exporters))
 
+	exprManager := expr.CreateNewExprManager()
+
 	// We might want to remap or exclude known attributes based on the configuration for metrics
 	mapper := newAttributeMapper(enableAttributeMapper, s.metricConfig.Attributes)
-	attExpressions, attErr := newAttributeExpressions(s.metricConfig.Attributes)
+	attExpressions, attErr := newAttributeExpressions(s.metricConfig.Attributes, exprManager)
 	if attErr != nil {
 		return nil, attErr
 	}
@@ -629,7 +631,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	var telemetryAttExpressions *attributeExpressions
 	if len(s.telemetryAttributes) > 0 {
 		var telemetryAttErr error
-		telemetryAttExpressions, telemetryAttErr = newAttributeExpressions(s.telemetryAttributes)
+		telemetryAttExpressions, telemetryAttErr = newAttributeExpressions(s.telemetryAttributes, exprManager)
 		if telemetryAttErr != nil {
 			return nil, telemetryAttErr
 		}
@@ -819,6 +821,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 					span := oteltrace.SpanFromContext(r.Context())
 					span.SetAttributes(reqContext.telemetry.traceAttrs...)
 
+					// Set if the trace is sampled in the expression context
+					isSampled := span.SpanContext().IsSampled()
+					reqContext.expressionContext.Request.Trace.Sampled = isSampled
+
 					// Set the trace ID in the response header
 					if s.traceConfig.ResponseTraceHeader.Enabled {
 						w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
@@ -832,7 +838,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	var subgraphAccessLogger *requestlogger.SubgraphAccessLogger
 	if s.accessLogsConfig != nil && s.accessLogsConfig.Logger != nil {
-		exprAttributes, err := requestlogger.GetAccessLogConfigExpressions(s.accessLogsConfig.Attributes)
+		exprAttributes, err := requestlogger.GetAccessLogConfigExpressions(s.accessLogsConfig.Attributes, exprManager)
 		if err != nil {
 			return nil, fmt.Errorf("failed building router access log expressions: %w", err)
 		}
@@ -1043,6 +1049,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			RejectStatusCode:    s.rateLimit.SimpleStrategy.RejectStatusCode,
 			KeySuffixExpression: s.rateLimit.KeySuffixExpression,
 			FailOpen:            s.rateLimit.FailOpen,
+			ExprManager:         exprManager,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create rate limiter: %w", err)
@@ -1071,6 +1078,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		},
 		SafelistEnabled:             s.persistedOperationsConfig.Safelist.Enabled,
 		LogUnknownOperationsEnabled: s.persistedOperationsConfig.LogUnknown,
+		exprManager:                 exprManager,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create operation blocker: %w", err)
@@ -1103,6 +1111,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		ComputeOperationSha256:      computeSha256,
 		ApolloCompatibilityFlags:    &s.apolloCompatibilityFlags,
 		DisableVariablesRemapping:   s.engineExecutionConfiguration.DisableVariablesRemapping,
+		ExprManager:                 exprManager,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
