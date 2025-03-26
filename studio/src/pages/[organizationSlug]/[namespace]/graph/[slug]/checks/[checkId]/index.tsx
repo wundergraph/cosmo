@@ -5,6 +5,7 @@ import {
   isCheckSuccessful,
 } from "@/components/check-badge-icon";
 import { ChangesTable } from "@/components/checks/changes-table";
+import { GraphPruningIssuesTable } from "@/components/checks/graph-pruning-issues-table";
 import { LintIssuesTable } from "@/components/checks/lint-issues-table";
 import { CheckOperations } from "@/components/checks/operations";
 import { EmptyState } from "@/components/empty-state";
@@ -14,6 +15,7 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
+import { SDLViewerActions } from "@/components/schema/sdl-viewer";
 import {
   DecorationCollection,
   SDLViewerMonaco,
@@ -34,6 +36,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/components/ui/link";
 import { Loader } from "@/components/ui/loader";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
@@ -44,8 +55,11 @@ import { useToast } from "@/components/ui/use-toast";
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { formatDate, formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
+import { cn } from "@/lib/utils";
+import { useMutation, useQuery } from "@connectrpc/connect-query";
 import {
   CheckCircleIcon,
+  ExclamationCircleIcon,
   ExclamationTriangleIcon,
   NoSymbolIcon,
 } from "@heroicons/react/24/outline";
@@ -58,12 +72,10 @@ import {
   ReaderIcon,
   UpdateIcon,
 } from "@radix-ui/react-icons";
-import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   forceCheckSuccess,
   getCheckSummary,
-  getFederatedGraphs,
   getProposedSchemaOfCheckedSubgraph,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
@@ -76,21 +88,9 @@ import {
 import { formatDistanceToNow, subDays } from "date-fns";
 import { useRouter } from "next/router";
 import React, { useContext, useMemo } from "react";
-import { PiBracketsCurlyBold, PiGraphLight } from "react-icons/pi";
 import { HiOutlineScissors } from "react-icons/hi2";
-import { GraphPruningIssuesTable } from "@/components/checks/graph-pruning-issues-table";
+import { PiBracketsCurlyBold, PiCubeFocus, PiGraphLight } from "react-icons/pi";
 import { SiLintcode } from "react-icons/si";
-import { cn } from "@/lib/utils";
-import { SDLViewerActions } from "@/components/schema/sdl-viewer";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const ForceSuccess: React.FC<{ onSubmit: () => void }> = (props) => {
   return (
@@ -661,21 +661,30 @@ const CheckDetails = ({
 
           {data.affectedGraphs.length > 0 && (
             <div className="flex-start flex flex-col gap-1">
-              <dt className="text-sm text-muted-foreground">Affected Graphs</dt>
-              <dd className="flex flex-wrap items-center gap-2">
+              <dt className="mb-2 text-sm text-muted-foreground">
+                Affected Graphs
+              </dt>
+              <dd className="flex flex-row flex-wrap gap-2 lg:flex lg:flex-col">
                 {data.affectedGraphs.map((ag) => {
                   return (
-                    <Link
+                    <Badge
                       key={ag.id}
-                      href={`/${organizationSlug}/${namespace}/graph/${ag.name}/checks/${id}`}
-                      className={cn(
-                        "flex items-center gap-x-1 text-sm",
-                        !ag.isCheckSuccessful && "text-destructive",
-                      )}
+                      variant="outline"
+                      className="flex items-center space-x-2 py-2"
                     >
-                      <PiGraphLight />
-                      {ag.name}
-                    </Link>
+                      {getCheckIcon(ag.isCheckSuccessful)}
+                      <Link
+                        href={`/${organizationSlug}/${namespace}/graph/${ag.name}/checks/${id}`}
+                        className=" flex-1 truncate hover:underline"
+                      >
+                        <span>{ag.name}</span>
+                      </Link>
+                      <InfoTooltip>
+                        {ag.isCheckSuccessful
+                          ? "Check successful"
+                          : "Check failed"}
+                      </InfoTooltip>
+                    </Badge>
                   );
                 })}
               </dd>
@@ -806,11 +815,33 @@ const CheckDetails = ({
         </dl>
         <div className="scrollbar-custom h-full flex-1 overflow-auto">
           <Tabs
-            value={tab ?? "changes"}
+            value={tab ?? "composition"}
             className="flex h-full min-h-0 flex-col"
           >
             <div className="flex flex-row px-4 py-4 lg:px-6">
               <TabsList className="justify-start overflow-x-auto scrollbar-none">
+                <TabsTrigger
+                  value="composition"
+                  className="flex items-center gap-x-2"
+                  asChild
+                >
+                  <Link
+                    href={{
+                      query: { ...router.query, tab: "composition" },
+                    }}
+                  >
+                    <PiCubeFocus className="flex-shrink-0" />
+                    Composition{" "}
+                    {data.compositionErrors.length ? (
+                      <Badge
+                        variant="muted"
+                        className="bg-white px-1.5 text-current dark:bg-gray-900/60"
+                      >
+                        {data.changes.length}
+                      </Badge>
+                    ) : null}
+                  </Link>
+                </TabsTrigger>
                 <TabsTrigger
                   value="changes"
                   className="flex items-center gap-x-2"
@@ -900,7 +931,7 @@ const CheckDetails = ({
             </div>
             <div className="flex min-h-0 flex-1">
               <TabsContent
-                value="changes"
+                value="composition"
                 className="w-full space-y-4 px-4 lg:px-6"
               >
                 {data.compositionErrors?.length ? (
@@ -935,6 +966,30 @@ const CheckDetails = ({
                   </Alert>
                 ) : null}
 
+                {data.compositionErrors.length === 0 &&
+                data.compositionWarnings.length === 0 &&
+                !data.check.isComposable ? (
+                  <EmptyState
+                    icon={
+                      <CrossCircledIcon className="h-16 w-16 text-destructive" />
+                    }
+                    title="Composition Check Failed"
+                    description='This check succeeded for the current federated graph, but it failed in one or more other affected federated graphs. Please check the "Affected Graphs" section to identify which graphs encountered composition errors.'
+                  />
+                ) : data.compositionErrors.length === 0 &&
+                  data.compositionWarnings.length === 0 ? (
+                  <EmptyState
+                    icon={<CheckCircleIcon className="text-success" />}
+                    title="Composition Check Successful"
+                    description="There are no composition errors or warnings."
+                  />
+                ) : null}
+              </TabsContent>
+
+              <TabsContent
+                value="changes"
+                className="w-full space-y-4 px-4 lg:px-6"
+              >
                 {data.check.isBreaking &&
                 data.check.isComposable &&
                 data.check.hasClientTraffic ? (
@@ -1042,6 +1097,7 @@ const CheckDetails = ({
                   pruneIssues={data.graphPruningIssues}
                   caption={`${data.graphPruningIssues.length} issues found`}
                   isGraphPruningEnabled={!data.check?.graphPruningSkipped}
+                  hasGraphPruningErrors={data.check.hasGraphPruningErrors}
                 />
               </TabsContent>
               <TabsContent value="schema" className="relative w-full flex-1">
