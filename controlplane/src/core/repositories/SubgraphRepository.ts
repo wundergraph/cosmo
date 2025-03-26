@@ -961,29 +961,27 @@ export class SubgraphRepository {
 
     if (startDate && endDate) {
       conditions = and(
-        or(
-          inArray(
-            schemaChecks.targetId,
-            subgraphs.map(({ targetId }) => targetId),
-          ),
-          eq(schemaChecks.targetId, federatedGraphTargetId),
+        inArray(
+          schema.schemaCheckSubgraphs.subgraphName,
+          subgraphs.map(({ name }) => name),
         ),
         gt(schemaChecks.createdAt, new Date(startDate)),
         lt(schemaChecks.createdAt, new Date(endDate)),
       );
     } else {
       conditions = and(
-        or(
-          inArray(
-            schemaChecks.targetId,
-            subgraphs.map(({ targetId }) => targetId),
-          ),
-          eq(schemaChecks.targetId, federatedGraphTargetId),
+        inArray(
+          schema.schemaCheckSubgraphs.subgraphName,
+          subgraphs.map(({ name }) => name),
         ),
       );
     }
 
-    const checksCount = await this.db.select({ count: count() }).from(schemaChecks).where(conditions);
+    const checksCount = await this.db
+      .select({ count: count() })
+      .from(schemaChecks)
+      .innerJoin(schema.schemaCheckSubgraphs, eq(schema.schemaCheckSubgraphs.schemaCheckId, schemaChecks.id))
+      .where(conditions);
 
     if (checksCount.length === 0) {
       return 0;
