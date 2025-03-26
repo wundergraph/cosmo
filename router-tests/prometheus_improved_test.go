@@ -17,6 +17,16 @@ import (
 // to its size and testing methodology. In the new file, you should use new helpers where possible, and avoid
 // asserting the values of unrelated metrics/labels.
 
+const (
+	SchemaFieldUsageMetricName = "router_graphql_schema_field_usage_total"
+
+	WgOperationSha256  = "wg_operation_sha256"
+	WgGraphQLFieldName = "wg_graphql_field_name"
+	WgGraphQLFieldType = "wg_graphql_field_type"
+	WgOperationName    = "wg_operation_name"
+	WgOperationType    = "wg_operation_type"
+)
+
 func TestPrometheusSchemaUsage(t *testing.T) {
 	t.Run("operation attributes are correctly added when enabled", func(t *testing.T) {
 		t.Parallel()
@@ -41,7 +51,7 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
 
-			schemaUsage := findMetricFamilyByName(mf, "router_graphql_schema_field_usage_total")
+			schemaUsage := findMetricFamilyByName(mf, SchemaFieldUsageMetricName)
 			assert.NotNil(t, schemaUsage)
 
 			schemaUsageMetrics := schemaUsage.GetMetric()
@@ -49,36 +59,36 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 			require.Len(t, schemaUsageMetrics, 8)
 
 			for _, metric := range schemaUsageMetrics {
-				assertLabelValue(t, metric.Label, "wg_operation_name", "myQuery")
-				assertLabelValue(t, metric.Label, "wg_operation_type", "query")
+				assertLabelValue(t, metric.Label, WgOperationName, "myQuery")
+				assertLabelValue(t, metric.Label, WgOperationType, "query")
 
-				assertLabelNotPresent(t, metric.Label, "wg_operation_sha256")
+				assertLabelNotPresent(t, metric.Label, WgOperationSha256)
 			}
 
-			assertLabelValue(t, schemaUsageMetrics[0].Label, "wg_field_name", "currentMood")
-			assertLabelValue(t, schemaUsageMetrics[0].Label, "wg_type_name", "Employee")
+			assertLabelValue(t, schemaUsageMetrics[0].Label, WgGraphQLFieldName, "currentMood")
+			assertLabelValue(t, schemaUsageMetrics[0].Label, WgGraphQLFieldType, "Employee")
 
-			assertLabelValue(t, schemaUsageMetrics[1].Label, "wg_field_name", "employee")
-			assertLabelValue(t, schemaUsageMetrics[1].Label, "wg_type_name", "Query")
+			assertLabelValue(t, schemaUsageMetrics[1].Label, WgGraphQLFieldName, "employee")
+			assertLabelValue(t, schemaUsageMetrics[1].Label, WgGraphQLFieldType, "Query")
 
-			assertLabelValue(t, schemaUsageMetrics[2].Label, "wg_field_name", "id")
-			assertLabelValue(t, schemaUsageMetrics[2].Label, "wg_type_name", "Employee")
+			assertLabelValue(t, schemaUsageMetrics[2].Label, WgGraphQLFieldName, "id")
+			assertLabelValue(t, schemaUsageMetrics[2].Label, WgGraphQLFieldType, "Employee")
 
-			assertLabelValue(t, schemaUsageMetrics[3].Label, "wg_field_name", "role")
-			assertLabelValue(t, schemaUsageMetrics[3].Label, "wg_type_name", "Employee")
+			assertLabelValue(t, schemaUsageMetrics[3].Label, WgGraphQLFieldName, "role")
+			assertLabelValue(t, schemaUsageMetrics[3].Label, WgGraphQLFieldType, "Employee")
 
 			// 'role' is an interface, so it counts for each implementing type, and the interface itself
-			assertLabelValue(t, schemaUsageMetrics[4].Label, "wg_field_name", "title")
-			assertLabelValue(t, schemaUsageMetrics[4].Label, "wg_type_name", "Engineer")
+			assertLabelValue(t, schemaUsageMetrics[4].Label, WgGraphQLFieldName, "title")
+			assertLabelValue(t, schemaUsageMetrics[4].Label, WgGraphQLFieldType, "Engineer")
 
-			assertLabelValue(t, schemaUsageMetrics[5].Label, "wg_field_name", "title")
-			assertLabelValue(t, schemaUsageMetrics[5].Label, "wg_type_name", "Marketer")
+			assertLabelValue(t, schemaUsageMetrics[5].Label, WgGraphQLFieldName, "title")
+			assertLabelValue(t, schemaUsageMetrics[5].Label, WgGraphQLFieldType, "Marketer")
 
-			assertLabelValue(t, schemaUsageMetrics[6].Label, "wg_field_name", "title")
-			assertLabelValue(t, schemaUsageMetrics[6].Label, "wg_type_name", "Operator")
+			assertLabelValue(t, schemaUsageMetrics[6].Label, WgGraphQLFieldName, "title")
+			assertLabelValue(t, schemaUsageMetrics[6].Label, WgGraphQLFieldType, "Operator")
 
-			assertLabelValue(t, schemaUsageMetrics[7].Label, "wg_field_name", "title")
-			assertLabelValue(t, schemaUsageMetrics[7].Label, "wg_type_name", "RoleType")
+			assertLabelValue(t, schemaUsageMetrics[7].Label, WgGraphQLFieldName, "title")
+			assertLabelValue(t, schemaUsageMetrics[7].Label, WgGraphQLFieldType, "RoleType")
 		})
 	})
 
@@ -106,7 +116,7 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
 
-			schemaUsage := findMetricFamilyByName(mf, "router_graphql_schema_field_usage_total")
+			schemaUsage := findMetricFamilyByName(mf, SchemaFieldUsageMetricName)
 			assert.NotNil(t, schemaUsage)
 
 			schemaUsageMetrics := schemaUsage.GetMetric()
@@ -114,7 +124,7 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 			require.Len(t, schemaUsageMetrics, 8)
 
 			for _, metric := range schemaUsageMetrics {
-				assertLabelValue(t, metric.Label, "wg_operation_sha256", "f46b2e72054341523989a788e798ec5c922517e6106646120d2ff23984cfed4b")
+				assertLabelValue(t, metric.Label, WgOperationSha256, "f46b2e72054341523989a788e798ec5c922517e6106646120d2ff23984cfed4b")
 			}
 		})
 	})
@@ -133,7 +143,6 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 				MetricExclusions: testenv.MetricExclusions{
 					ExcludedPrometheusMetricLabels: []*regexp.Regexp{
 						regexp.MustCompile("^otel_scope_info$"),
-						regexp.MustCompile("^wg_operation_name$"),
 					},
 				},
 				PrometheusSchemaFieldUsage: testenv.PrometheusSchemaFieldUsage{
@@ -150,7 +159,7 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
 
-			schemaUsage := findMetricFamilyByName(mf, "router_graphql_schema_field_usage_total")
+			schemaUsage := findMetricFamilyByName(mf, SchemaFieldUsageMetricName)
 			assert.NotNil(t, schemaUsage)
 
 			schemaUsageMetrics := schemaUsage.GetMetric()
@@ -158,9 +167,8 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 			require.Len(t, schemaUsageMetrics, 8)
 
 			for _, metric := range schemaUsageMetrics {
-				assertLabelValue(t, metric.Label, "wg_operation_type", "query")
+				assertLabelValue(t, metric.Label, WgOperationType, "query")
 
-				assertLabelNotPresent(t, metric.Label, "wg_operation_name")
 				assertLabelNotPresent(t, metric.Label, "otel_scope_info")
 			}
 		})
