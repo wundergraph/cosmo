@@ -984,9 +984,6 @@ export class SubgraphRepository {
       .innerJoin(schema.schemaCheckSubgraphs, eq(schema.schemaCheckSubgraphs.schemaCheckId, schemaChecks.id))
       .where(conditions);
 
-    if (checks.length === 0) {
-      return 0;
-    }
     return checks.length;
   }
 
