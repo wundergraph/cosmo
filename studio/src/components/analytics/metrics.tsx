@@ -343,10 +343,11 @@ interface SparklineProps {
   timeRange: number;
   className?: string;
   valueFormatter?: (value: any) => any;
+  syncId?: string;
 }
 
 const Sparkline: React.FC<SparklineProps> = (props) => {
-  const { timeRange = 24, valueFormatter } = props;
+  const { timeRange = 24, valueFormatter, syncId } = props;
   const id = useId();
 
   const { data, ticks, domain, timeFormatter } = useChartData(
@@ -362,6 +363,7 @@ const Sparkline: React.FC<SparklineProps> = (props) => {
         <AreaChart
           data={data}
           margin={{ top: 10, right: 6, bottom: 8, left: 6 }}
+          syncId={syncId}
         >
           <defs>
             <linearGradient
@@ -430,9 +432,10 @@ const Sparkline: React.FC<SparklineProps> = (props) => {
 export const RequestMetricsCard = (props: {
   data?: MetricsDashboardMetric;
   isSubgraphAnalytics?: boolean;
+  syncId?: string;
 }) => {
   const timeRange = useTimeRange();
-  const { data } = props;
+  const { data, syncId } = props;
 
   const top = data?.top ?? [];
 
@@ -480,6 +483,7 @@ export const RequestMetricsCard = (props: {
           series={data?.series ?? []}
           valueFormatter={formatter}
           timeRange={timeRange}
+          syncId={syncId}
         />
       </CardContent>
       <TopList
@@ -496,9 +500,10 @@ export const RequestMetricsCard = (props: {
 export const LatencyMetricsCard = (props: {
   data?: MetricsDashboardMetric;
   isSubgraphAnalytics?: boolean;
+  syncId?: string;
 }) => {
   const timeRange = useTimeRange();
-  const { data } = props;
+  const { data, syncId } = props;
 
   const top = data?.top ?? [];
 
@@ -533,6 +538,7 @@ export const LatencyMetricsCard = (props: {
           series={data?.series ?? []}
           valueFormatter={formatter}
           timeRange={timeRange}
+          syncId={syncId}
         />
       </CardContent>
       <TopList
@@ -549,9 +555,10 @@ export const LatencyMetricsCard = (props: {
 export const ErrorMetricsCard = (props: {
   data?: MetricsDashboardMetric;
   isSubgraphAnalytics?: boolean;
+  syncId?: string;
 }) => {
   const timeRange = useTimeRange();
-  const { data } = props;
+  const { data, syncId } = props;
 
   const top = data?.top ?? [];
 
@@ -581,6 +588,7 @@ export const ErrorMetricsCard = (props: {
           series={data?.series ?? []}
           valueFormatter={formatter}
           timeRange={timeRange}
+          syncId={syncId}
         />
       </CardContent>
       <TopList
@@ -599,7 +607,7 @@ export const ErrorMetricsCard = (props: {
 };
 
 const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
-  const { timeRange = 24, valueFormatter } = props;
+  const { timeRange = 24, valueFormatter, syncId } = props;
   const id = useId();
   const { data, ticks, domain, timeFormatter } = useChartData(
     timeRange,
@@ -612,6 +620,7 @@ const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
         <AreaChart
           data={data}
           margin={{ top: 10, right: 6, bottom: 8, left: 6 }}
+          syncId={syncId}
         >
           <defs>
             <linearGradient id={`${id}-gradient`} x1="0" y1="0" x2="0" y2="1">
@@ -664,7 +673,7 @@ const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
   );
 };
 
-export const ErrorRateOverTimeCard = () => {
+export const ErrorRateOverTimeCard = ({ syncId }: { syncId?: string }) => {
   const id = useId();
   const graphContext = useContext(GraphContext);
 
@@ -746,6 +755,7 @@ export const ErrorRateOverTimeCard = () => {
         <AreaChart
           data={data}
           margin={{ top: 8, right: 8, bottom: 8, left: 0 }}
+          syncId={syncId}
         >
           <defs>
             <linearGradient id={`${id}-gradient`} x1="0" y1="0" x2="0" y2="1">
@@ -820,7 +830,7 @@ export const ErrorRateOverTimeCard = () => {
   );
 };
 
-export const LatencyDistributionCard = ({ series } : { series: any[]; }) => {
+export const LatencyDistributionCard = ({ series, syncId } : { series: any[]; syncId?: string; }) => {
   const [activeLatencies, setActiveLatencies] = useState({ p50: false, p90: false, p99: false });
   const timeRange = useTimeRange();
   const formatter = (value: number) => {
@@ -852,6 +862,7 @@ export const LatencyDistributionCard = ({ series } : { series: any[]; }) => {
           <LineChart
             data={data}
             margin={{ top: 8, right: 8, bottom: 8, left: 0 }}
+            syncId={syncId}
           >
             <Line
               name="p99"
