@@ -1,8 +1,9 @@
-CREATE TYPE "public"."proposal_state" AS ENUM('draft', 'accepted', 'published', 'closed');--> statement-breakpoint
+CREATE TYPE "public"."proposal_state" AS ENUM('DRAFT', 'APPROVED', 'PUBLISHED', 'CLOSED');--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "proposal_subgraphs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"proposal_id" uuid NOT NULL,
-	"subgraph_id" uuid NOT NULL,
+	"subgraph_id" uuid,
+	"subgraph_name" text NOT NULL,
 	"schema_sdl" text,
 	"is_deleted" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -17,6 +18,7 @@ CREATE TABLE IF NOT EXISTS "proposals" (
 	"updated_at" timestamp with time zone,
 	"created_by_id" uuid,
 	"state" "proposal_state" NOT NULL,
+	"did_hub_create" boolean DEFAULT false NOT NULL,
 	CONSTRAINT "federated_graph_proposal_name" UNIQUE("federated_graph_id","name")
 );
 --> statement-breakpoint

@@ -1,6 +1,6 @@
 {
-  "id": "97462d95-0289-44d9-8697-1fccc01d3984",
-  "prevId": "5c54e157-abdb-4dfe-be13-fee5bac7fbb9",
+  "id": "1ffabcf7-6daf-4fc5-a3ce-77fdc6c8ef12",
+  "prevId": "8461bf41-d565-4da9-938c-60749db42cbc",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4624,6 +4624,12 @@
           "name": "subgraph_id",
           "type": "uuid",
           "primaryKey": false,
+          "notNull": false
+        },
+        "subgraph_name": {
+          "name": "subgraph_name",
+          "type": "text",
+          "primaryKey": false,
           "notNull": true
         },
         "schema_sdl": {
@@ -4737,6 +4743,13 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
+        },
+        "did_hub_create": {
+          "name": "did_hub_create",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         }
       },
       "indexes": {
@@ -5158,6 +5171,13 @@
       "name": "schema_check_federated_graphs",
       "schema": "",
       "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
         "check_id": {
           "name": "check_id",
           "type": "uuid",
@@ -5534,6 +5554,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": false
+        },
+        "is_new": {
+          "name": "is_new",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         }
       },
       "indexes": {
@@ -5600,6 +5627,87 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "public.schema_check_subgraphs_federated_graphs": {
+      "name": "schema_check_subgraphs_federated_graphs",
+      "schema": "",
+      "columns": {
+        "schema_check_federated_graph_id": {
+          "name": "schema_check_federated_graph_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "schema_check_subgraph_id": {
+          "name": "schema_check_subgraph_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "scsfg_schema_check_subgraph_id_idx": {
+          "name": "scsfg_schema_check_subgraph_id_idx",
+          "columns": [
+            {
+              "expression": "schema_check_subgraph_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "scsfg_schema_check_federated_graph_id_idx": {
+          "name": "scsfg_schema_check_federated_graph_id_idx",
+          "columns": [
+            {
+              "expression": "schema_check_federated_graph_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "schema_check_subgraphs_federated_graphs_schema_check_federated_graph_id_schema_check_federated_graphs_id_fk": {
+          "name": "schema_check_subgraphs_federated_graphs_schema_check_federated_graph_id_schema_check_federated_graphs_id_fk",
+          "tableFrom": "schema_check_subgraphs_federated_graphs",
+          "tableTo": "schema_check_federated_graphs",
+          "columnsFrom": [
+            "schema_check_federated_graph_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "schema_check_subgraphs_federated_graphs_schema_check_subgraph_id_schema_check_subgraphs_id_fk": {
+          "name": "schema_check_subgraphs_federated_graphs_schema_check_subgraph_id_schema_check_subgraphs_id_fk",
+          "tableFrom": "schema_check_subgraphs_federated_graphs",
+          "tableTo": "schema_check_subgraphs",
+          "columnsFrom": [
+            "schema_check_subgraph_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "public.schema_checks": {
       "name": "schema_checks",
       "schema": "",
@@ -5615,7 +5723,7 @@
           "name": "target_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "is_composable": {
           "name": "is_composable",
@@ -5709,14 +5817,6 @@
           "type": "json",
           "primaryKey": false,
           "notNull": false
-        },
-        "target_type": {
-          "name": "target_type",
-          "type": "target_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'subgraph'"
         }
       },
       "indexes": {
@@ -7294,10 +7394,10 @@
       "name": "proposal_state",
       "schema": "public",
       "values": [
-        "draft",
-        "accepted",
-        "published",
-        "closed"
+        "DRAFT",
+        "APPROVED",
+        "PUBLISHED",
+        "CLOSED"
       ]
     },
     "public.schema_change_type": {
