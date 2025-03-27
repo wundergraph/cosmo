@@ -151,7 +151,6 @@ const ChecksPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex h-full flex-col gap-y-3">
-      <SelectedChecksFilters selectedSubgraphs={selectedSubgraphs} />
       <TableWrapper>
         <Table>
           <TableHeader>
