@@ -858,8 +858,33 @@ export class SubgraphRepository {
       };
     }
 
-    const checkList = await this.db
+    const checkIds = await this.db
       .selectDistinctOn([schemaChecks.id], {
+        id: schemaChecks.id,
+      })
+      .from(schemaChecks)
+      .leftJoin(schema.schemaCheckSubgraphs, eq(schema.schemaCheckSubgraphs.schemaCheckId, schemaChecks.id))
+      .where(
+        and(
+          or(
+            inArray(
+              schema.schemaCheckSubgraphs.subgraphName,
+              selectedSubgraphs.map(({ name }) => name),
+            ),
+            inArray(
+              schemaChecks.targetId,
+              selectedSubgraphs.map(({ targetId }) => targetId),
+            ),
+          ),
+          gt(schemaChecks.createdAt, new Date(startDate)),
+          lt(schemaChecks.createdAt, new Date(endDate)),
+        ),
+      )
+      .orderBy(schemaChecks.id);
+
+    // Get the full check details for the selected IDs, ordered by creation date
+    const checkList = await this.db
+      .select({
         id: schemaChecks.id,
         targetId: schemaChecks.targetId,
         createdAt: schemaChecks.createdAt,
@@ -877,20 +902,15 @@ export class SubgraphRepository {
         vcsContext: schemaChecks.vcsContext,
       })
       .from(schemaChecks)
-      .innerJoin(schema.schemaCheckSubgraphs, eq(schema.schemaCheckSubgraphs.schemaCheckId, schemaChecks.id))
       .where(
-        and(
-          inArray(
-            schema.schemaCheckSubgraphs.subgraphName,
-            selectedSubgraphs.map(({ name }) => name),
-          ),
-          gt(schemaChecks.createdAt, new Date(startDate)),
-          lt(schemaChecks.createdAt, new Date(endDate)),
+        inArray(
+          schemaChecks.id,
+          checkIds.map((c) => c.id),
         ),
       )
+      .orderBy(desc(schemaChecks.createdAt))
       .limit(limit)
-      .offset(offset)
-      .orderBy(schemaChecks.id, desc(schemaChecks.createdAt));
+      .offset(offset);
 
     const checksCount = await this.getChecksCount({ federatedGraphTargetId, startDate, endDate, includeSubgraphs });
 
@@ -961,18 +981,30 @@ export class SubgraphRepository {
 
     if (startDate && endDate) {
       conditions = and(
-        inArray(
-          schema.schemaCheckSubgraphs.subgraphName,
-          subgraphs.map(({ name }) => name),
+        or(
+          inArray(
+            schema.schemaCheckSubgraphs.subgraphName,
+            subgraphs.map(({ name }) => name),
+          ),
+          inArray(
+            schemaChecks.targetId,
+            subgraphs.map(({ targetId }) => targetId),
+          ),
         ),
         gt(schemaChecks.createdAt, new Date(startDate)),
         lt(schemaChecks.createdAt, new Date(endDate)),
       );
     } else {
       conditions = and(
-        inArray(
-          schema.schemaCheckSubgraphs.subgraphName,
-          subgraphs.map(({ name }) => name),
+        or(
+          inArray(
+            schema.schemaCheckSubgraphs.subgraphName,
+            subgraphs.map(({ name }) => name),
+          ),
+          inArray(
+            schemaChecks.targetId,
+            subgraphs.map(({ targetId }) => targetId),
+          ),
         ),
       );
     }
@@ -981,7 +1013,7 @@ export class SubgraphRepository {
     const checks = await this.db
       .selectDistinct({ id: schemaChecks.id })
       .from(schemaChecks)
-      .innerJoin(schema.schemaCheckSubgraphs, eq(schema.schemaCheckSubgraphs.schemaCheckId, schemaChecks.id))
+      .leftJoin(schema.schemaCheckSubgraphs, eq(schema.schemaCheckSubgraphs.schemaCheckId, schemaChecks.id))
       .where(conditions);
 
     return checks.length;
