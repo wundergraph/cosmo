@@ -2222,10 +2222,9 @@ export const proposalSubgraphs = pgTable(
     proposalId: uuid('proposal_id')
       .notNull()
       .references(() => proposals.id, { onDelete: 'cascade' }),
-    subgraphId: uuid('subgraph_id')
-      .references(() => subgraphs.id, {
-        onDelete: 'cascade',
-      }),
+    subgraphId: uuid('subgraph_id').references(() => subgraphs.id, {
+      onDelete: 'cascade',
+    }),
     subgraphName: text('subgraph_name').notNull(),
     schemaSDL: text('schema_sdl'),
     isDeleted: boolean('is_deleted').default(false).notNull(),
