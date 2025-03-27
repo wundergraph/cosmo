@@ -28,8 +28,12 @@ export function normalizeURL(url: string): string {
     return url;
   }
 
-  const hasProtocol = url.includes('://');
-  const urlToParse = hasProtocol ? url : url.startsWith('//') ? `http:${url}` : `http://${url}`;
+  let urlToParse = url;
+  const hasProtocol = urlToParse.includes('://');
+  if (!hasProtocol) {
+    urlToParse = urlToParse.startsWith('//') ? `http:${urlToParse}` : `http://${urlToParse}`;
+  }
+
   if (!URL.canParse(urlToParse)) {
     throw new Error('Invalid URL');
   }
