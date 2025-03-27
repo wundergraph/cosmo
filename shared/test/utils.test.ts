@@ -1,8 +1,8 @@
-import { expect, test } from 'vitest';
+import { expect, test, describe } from 'vitest';
 import { normalizeURL } from '../src';
 
-test('Normalize urls', () => {
-  const urls = [
+describe('normalizeURL', () => {
+  test.each([
     {
       input: 'https://localhost:3000?test=1',
       expected: 'https://localhost:3000',
@@ -12,7 +12,15 @@ test('Normalize urls', () => {
       expected: 'https://localhost:3000/',
     },
     {
+      input: 'https://localhost:3000/?##',
+      expected: 'https://localhost:3000/',
+    },
+    {
       input: 'https://localhost:3000?',
+      expected: 'https://localhost:3000',
+    },
+    {
+      input: 'https://localhost:3000?#',
       expected: 'https://localhost:3000',
     },
     {
@@ -29,24 +37,25 @@ test('Normalize urls', () => {
     },
     {
       input: 'localhost:3000',
-      expected: 'https://localhost:3000',
-    },
-    {
-      input: '//localhost:3000',
-      expected: 'https://localhost:3000',
+      expected: 'http://localhost:3000',
     },
     {
       input: 'http://example.com',
       expected: 'http://example.com',
     },
     {
-      input: 'telnet://192.0.2.16:80/',
-      expected: 'telnet://192.0.2.16:80/',
+      input: 'ws://example.com',
+      expected: 'ws://example.com',
     },
-  ];
+    {
+      input: 'ftp://example.com',
+      expected: 'ftp://example.com',
+    },
+  ])('should normalize $input', ({ input, expected }) => {
+    expect(normalizeURL(input)).toBe(expected);
+  });
 
-  for (const u of urls) {
-    const result = normalizeURL(u.input);
-    expect(result).toBe(u.expected);
-  }
+  test.each(['invalid url', '//localhost'])('should throw for invalid url: %s', (input) => {
+    expect(() => normalizeURL(input)).toThrowError();
+  });
 });
