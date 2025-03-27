@@ -14,6 +14,7 @@ export default (opts: CommonGraphCommandOptions) => {
   command.argument('<name>', `The name of the ${graphType} to fetch.`);
   command.option('-n, --namespace [string]', `The namespace of the ${graphType}.`);
   command.option('-o, --out [string]', 'Destination file for the SDL.');
+  command.option('-c, --client-schema', 'Output the client schema SDL.');
   command.action(async (name, options) => {
     const resp = await opts.client.platform.getFederatedGraphSDLByName(
       {
@@ -35,10 +36,11 @@ export default (opts: CommonGraphCommandOptions) => {
       return;
     }
 
+    const schema = (options.clientSchema ? resp.clientSchema : resp.sdl) ?? '';
     if (options.out) {
-      await writeFile(resolve(options.out), resp.sdl ?? '');
+      await writeFile(resolve(options.out), schema);
     } else {
-      console.log(resp.sdl);
+      console.log(schema);
     }
   });
 
