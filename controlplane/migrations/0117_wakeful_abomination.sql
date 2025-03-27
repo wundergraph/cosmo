@@ -1,1 +1,0 @@
-ALTER TABLE "schema_check_subgraphs" ADD COLUMN "is_new" boolean DEFAULT false NOT NULL;
