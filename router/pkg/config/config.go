@@ -105,7 +105,7 @@ type Prometheus struct {
 type PrometheusSchemaFieldUsage struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 
-	IncludeOperationSha bool `yaml:"include_sha" envDefault:"false" env:"INCLUDE_OP_SHA"`
+	IncludeOperationSha bool `yaml:"include_operation_sha" envDefault:"false" env:"INCLUDE_OPERATION_SHA"`
 }
 
 type MetricsOTLPExporter struct {
