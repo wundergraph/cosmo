@@ -29,7 +29,7 @@ export function normalizeURL(url: string): string {
   }
 
   const hasProtocol = url.includes('://');
-  const urlToParse = hasProtocol ? url : (url.startsWith('//') ? `http:${url}` : `http://${url}`);
+  const urlToParse = hasProtocol ? url : url.startsWith('//') ? `http:${url}` : `http://${url}`;
   if (!URL.canParse(urlToParse)) {
     throw new Error('Invalid URL');
   }
