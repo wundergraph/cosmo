@@ -275,7 +275,7 @@ export const GraphSelect = () => {
 
   const sortedGraphs = sortFederatedGraphs(data?.graphs ?? []);
 
-  const groupedGraphs = sortedGraphs.reduce<Record>((result, graph) => {
+  const groupedGraphs = sortedGraphs.reduce<Record<string, FederatedGraph[]>>((result, graph) => {
     const { namespace, name } = graph;
 
     if (!result[namespace]) {
@@ -377,7 +377,7 @@ export interface TitleLayoutProps {
   toolbar?: React.ReactNode;
   noPadding?: boolean;
   children?: React.ReactNode;
-  scrollRef?: React.RefObject;
+  scrollRef?: React.RefObject<HTMLDivElement>;
 }
 
 export const GraphPageLayout = ({
