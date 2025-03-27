@@ -40,6 +40,10 @@ describe('normalizeURL', () => {
       expected: 'http://localhost:3000',
     },
     {
+      input: '//localhost:3000',
+      expected: 'http://localhost:3000',
+    },
+    {
       input: 'http://example.com',
       expected: 'http://example.com',
     },
@@ -55,7 +59,21 @@ describe('normalizeURL', () => {
     expect(normalizeURL(input)).toBe(expected);
   });
 
-  test.each(['invalid url', '//localhost'])('should throw for invalid url: %s', (input) => {
+  test.each([
+    'invalid url',
+    '/?',
+    '/############'
+  ])('should throw for invalid url: %s', (input) => {
     expect(() => normalizeURL(input)).toThrowError();
+  });
+
+  test('should normalize url with long fragment', () => {
+    let url = 'https://example.com/#';
+    for (let i = 0; i < 3000; i++) {
+      url += 'a';
+    }
+
+    const result = normalizeURL(url);
+    expect(result).toBe('https://example.com/');
   });
 });

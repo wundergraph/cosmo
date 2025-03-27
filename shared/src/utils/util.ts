@@ -24,12 +24,12 @@ export function joinLabel({ key, value }: { key: string; value: string }) {
  * @param url
  */
 export function normalizeURL(url: string): string {
-  if (!url || !URL.canParse(url)) {
-    throw new Error('Invalid URL');
+  if (!url) {
+    return url;
   }
 
   const hasProtocol = url.includes('://');
-  const urlToParse = hasProtocol ? url : `http://${url}`;
+  const urlToParse = hasProtocol ? url : (url.startsWith('//') ? `http:${url}` : `http://${url}`);
   if (!URL.canParse(urlToParse)) {
     throw new Error('Invalid URL');
   }
@@ -43,7 +43,7 @@ export function normalizeURL(url: string): string {
   parsedUrl.hash = '';
 
   let path = parsedUrl.pathname;
-  const hasTrailingSlash = /^([^?#]*\/)(?:\?.*)?(?:#.*)?$/.test(urlToParse);
+  const hasTrailingSlash = /^([^#?]*\/)(?:\?.*)?(?:#.*)?$/.test(urlToParse);
   if (!hasTrailingSlash && path.endsWith('/')) {
     path = path.slice(0, -1);
   }
