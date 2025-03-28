@@ -55,7 +55,7 @@ export function enableGraphPruning(
       };
     }
 
-    await namespaceRepo.toggleEnableGraphPruning({
+    await namespaceRepo.updateConfiguration({
       id: namespace.id,
       enableGraphPruning: req.enableGraphPruning,
     });

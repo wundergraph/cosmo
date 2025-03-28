@@ -5,6 +5,7 @@ on:
       - "controlplane/**/*"
       - "connect/**/*"
       - "composition/**/*"
+      - "shared/**/*"
       - ".github/workflows/cp-ci.yaml"
       - ".github/scripts/setup-keycloak.sh"
 
