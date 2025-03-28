@@ -220,13 +220,22 @@ export function checkSubgraphSchema(
     }
 
     const schemaCheckID = await schemaCheckRepo.create({
-      targetId: subgraph.targetId,
-      isDeleted: !!req.delete,
-      proposedSubgraphSchemaSDL: newSchemaSDL,
+      proposedSubgraphSchemaSDL: '',
       trafficCheckSkipped: req.skipTrafficCheck,
       lintSkipped: !namespace.enableLinting,
       graphPruningSkipped: !namespace.enableGraphPruning,
       vcsContext: req.vcsContext,
+    });
+
+    const schemaCheckSubgraphId = await schemaCheckRepo.createSchemaCheckSubgraph({
+      data: {
+        schemaCheckId: schemaCheckID,
+        subgraphId: subgraph.id,
+        subgraphName: subgraph.name,
+        proposedSubgraphSchemaSDL: newSchemaSDL,
+        isDeleted: !!req.delete,
+        isNew: false,
+      },
     });
 
     const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL, routerCompatibilityVersion);
@@ -255,11 +264,13 @@ export function checkSubgraphSchema(
     await schemaCheckRepo.createSchemaCheckChanges({
       changes: schemaChanges.nonBreakingChanges,
       schemaCheckID,
+      schemaCheckSubgraphId,
     });
 
     const storedBreakingChanges = await schemaCheckRepo.createSchemaCheckChanges({
       changes: schemaChanges.breakingChanges,
       schemaCheckID,
+      schemaCheckSubgraphId,
     });
 
     const composer = new Composer(
@@ -305,7 +316,15 @@ export function checkSubgraphSchema(
     limit = clamp(namespace?.checksTimeframeInDays ?? limit, 1, limit);
 
     for (const composition of result.compositions) {
-      await schemaCheckRepo.createCheckedFederatedGraph(schemaCheckID, composition.id, limit);
+      const checkFederatedGraphId = await schemaCheckRepo.createCheckedFederatedGraph(
+        schemaCheckID,
+        composition.id,
+        limit,
+      );
+      await schemaCheckRepo.createSchemaCheckSubgraphFederatedGraphs({
+        schemaCheckFederatedGraphId: checkFederatedGraphId,
+        checkSubgraphIds: [schemaCheckSubgraphId],
+      });
 
       for (const error of composition.errors) {
         compositionErrors.push({
@@ -369,6 +388,7 @@ export function checkSubgraphSchema(
       newSchemaSDL,
       namespaceId: namespace.id,
       isLintingEnabled: namespace.enableLinting,
+      schemaCheckSubgraphId,
     });
 
     const graphPruningIssues: SchemaGraphPruningIssues = await schemaGraphPruningRepo.performSchemaGraphPruningCheck({
@@ -383,6 +403,7 @@ export function checkSubgraphSchema(
       fedGraphRepo,
       subgraphRepo,
       rangeInDays: limit,
+      schemaCheckSubgraphId,
     });
 
     // Update the overall schema check with the results

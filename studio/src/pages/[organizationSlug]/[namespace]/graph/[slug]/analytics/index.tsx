@@ -27,6 +27,7 @@ import { Loader } from "@/components/ui/loader";
 import { Spacer } from "@/components/ui/spacer";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { NextPageWithLayout } from "@/lib/page";
+import { createConnectQueryKey, useQuery } from "@connectrpc/connect-query";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { UpdateIcon } from "@radix-ui/react-icons";
 import {
@@ -34,15 +35,16 @@ import {
   useIsFetching,
   useQueryClient,
 } from "@tanstack/react-query";
-import { createConnectQueryKey, useQuery } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getGraphMetrics,
   getMetricsErrorRate,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import {
+  AnalyticsViewResultFilter
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatISO } from "date-fns";
 import { useContext } from "react";
-import { AnalyticsViewResultFilter } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 
 export type OperationAnalytics = {
   name: string;

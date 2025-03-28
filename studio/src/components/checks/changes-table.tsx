@@ -101,6 +101,7 @@ export const ChangesTable = ({
           <TableRow>
             <TableHead className="w-[200px]">Change</TableHead>
             <TableHead>Description</TableHead>
+            {changes[0].subgraphName && <TableHead>Subgraph</TableHead>}
             {operationHash && !hasIgnoreAll && <TableHead>Override</TableHead>}
             <TableHead className="w-2/12 2xl:w-1/12"></TableHead>
           </TableRow>
@@ -114,6 +115,7 @@ export const ChangesTable = ({
               operationHash={operationHash}
               operationName={operationName}
               openUsage={openUsage}
+              subgraphName={c.subgraphName}
             />
           ))}
         </TableBody>
@@ -132,6 +134,7 @@ const Row = ({
   hasIgnoreAll,
   operationHash,
   operationName,
+  subgraphName,
   openUsage,
 }: {
   changeType: string;
@@ -142,6 +145,7 @@ const Row = ({
   hasIgnoreAll?: boolean;
   operationHash?: string;
   operationName?: string;
+  subgraphName?: string;
   openUsage: (changeType: string, path?: string) => void;
 }) => {
   const router = useRouter();
@@ -230,6 +234,7 @@ const Row = ({
         </div>
       </TableCell>
       <TableCell>{message}</TableCell>
+      <TableCell>{subgraphName}</TableCell>
       {operationHash && !hasIgnoreAll && (
         <TableCell>
           <Tooltip delayDuration={100}>
