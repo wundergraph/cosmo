@@ -25,6 +25,7 @@ export type NormalizationResultSuccess = {
   configurationDataByTypeName: Map<string, ConfigurationData>;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
   entityDataByTypeName: Map<string, EntityData>;
+  fieldCoordsByNamedTypeName: Map<string, Set<string>>;
   originalTypeNameByRenamedTypeName: Map<string, string>;
   isEventDrivenGraph: boolean;
   isVersionTwo: boolean;
@@ -54,6 +55,7 @@ export type BatchNormalizationResultSuccess = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
   entityDataByTypeName: Map<string, EntityData>;
+  fieldCoordsByNamedTypeName: Map<string, Set<string>>;
   internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
   internalGraph: Graph;
   warnings: Array<Warning>;
