@@ -1161,7 +1161,8 @@ func TestErrorPropagation(t *testing.T) {
 			expected := "--graphql\r\n" +
 				"Content-Type: application/json\r\n" +
 				"\r\n" +
-				"{\"payload\":{\"errors\":[{\"message\":\"field: employees not defined on type: Subscription\",\"path\":[\"subscription\"]}]}}"
+				"{\"payload\":{\"errors\":[{\"message\":\"field: employees not defined on type: Subscription\",\"path\":[\"subscription\"]}]}}\r\n" +
+				"--graphql--"
 			require.Equal(t, expected, resp.Body)
 			require.NoError(t, err)
 		})

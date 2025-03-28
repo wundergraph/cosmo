@@ -22,7 +22,8 @@ const (
 	jsonContent          = "application/json"
 	sseMimeType          = "text/event-stream"
 	heartbeat            = "{}"
-	multipartContent     = multipartMime + "; boundary=" + multipartBoundary
+	subscriptionSpec     = "subscriptionSpec=1.0"
+	multipartContent     = multipartMime + "; " + subscriptionSpec + "; boundary=" + multipartBoundary
 	multipartStart       = "\r\n--" + multipartBoundary
 )
 
