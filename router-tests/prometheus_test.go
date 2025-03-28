@@ -13,7 +13,7 @@ import (
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router-tests/modules/custom-module/module"
+	"github.com/wundergraph/cosmo/router-tests/modules/custom-module"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -4235,7 +4235,7 @@ func TestPrometheusWithModule(t *testing.T) {
 	cfg := config.Config{
 		Graph: config.Graph{},
 		Modules: map[string]interface{}{
-			"myModule": module.MyModule{
+			"myModule": custom_module.MyModule{
 				Value: 1,
 			},
 		},
@@ -4246,7 +4246,7 @@ func TestPrometheusWithModule(t *testing.T) {
 		PrometheusRegistry: promRegistry,
 		RouterOptions: []core.Option{
 			core.WithModulesConfig(cfg.Modules),
-			core.WithCustomModules(&module.MyModule{}),
+			core.WithCustomModules(&custom_module.MyModule{}),
 		},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 		t.Helper()

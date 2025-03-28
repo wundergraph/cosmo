@@ -1,4 +1,4 @@
-package module
+package custom_module
 
 import (
 	"fmt"
@@ -7,11 +7,6 @@ import (
 	"github.com/wundergraph/cosmo/router/core"
 	"go.uber.org/zap"
 )
-
-func init() {
-	// Register your module here
-	core.RegisterModule(&MyModule{})
-}
 
 const myModuleID = "myModule"
 

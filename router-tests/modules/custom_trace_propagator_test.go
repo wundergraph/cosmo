@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/wundergraph/cosmo/router-tests/modules/custom-module/module"
+	"github.com/wundergraph/cosmo/router-tests/modules/custom-module"
 	custom_trace_propagator "github.com/wundergraph/cosmo/router-tests/modules/custom-trace-propagator"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -24,7 +24,7 @@ func TestModuleCustomPropagator(t *testing.T) {
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"myModule":     module.MyModule{Value: 1},
+				"myModule":     custom_module.MyModule{Value: 1},
 				"custom_trace": custom_trace_propagator.CustomTracePropagatorModule{Value: 2},
 			},
 		}
@@ -42,7 +42,7 @@ func TestModuleCustomPropagator(t *testing.T) {
 			},
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
-				core.WithCustomModules(&module.MyModule{}, &custom_trace_propagator.CustomTracePropagatorModule{}),
+				core.WithCustomModules(&custom_module.MyModule{}, &custom_trace_propagator.CustomTracePropagatorModule{}),
 				core.WithTracing(&rtrace.Config{
 					Enabled: true,
 				}),

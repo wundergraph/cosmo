@@ -10,7 +10,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/wundergraph/cosmo/router-tests/modules/custom-module/module"
+	"github.com/wundergraph/cosmo/router-tests/modules/custom-module"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
@@ -19,7 +19,7 @@ func TestModuleSetCustomHeader(t *testing.T) {
 	cfg := config.Config{
 		Graph: config.Graph{},
 		Modules: map[string]interface{}{
-			"myModule": module.MyModule{
+			"myModule": custom_module.MyModule{
 				Value: 1,
 			},
 		},
@@ -28,7 +28,7 @@ func TestModuleSetCustomHeader(t *testing.T) {
 	testenv.Run(t, &testenv.Config{
 		RouterOptions: []core.Option{
 			core.WithModulesConfig(cfg.Modules),
-			core.WithCustomModules(&module.MyModule{}),
+			core.WithCustomModules(&custom_module.MyModule{}),
 		},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 		res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -47,7 +47,7 @@ func TestCustomModuleLogs(t *testing.T) {
 	cfg := config.Config{
 		Graph: config.Graph{},
 		Modules: map[string]interface{}{
-			"myModule": module.MyModule{
+			"myModule": custom_module.MyModule{
 				Value: 1,
 			},
 		},
@@ -58,7 +58,7 @@ func TestCustomModuleLogs(t *testing.T) {
 	testenv.Run(t, &testenv.Config{
 		RouterOptions: []core.Option{
 			core.WithModulesConfig(cfg.Modules),
-			core.WithCustomModules(&module.MyModule{}),
+			core.WithCustomModules(&custom_module.MyModule{}),
 		},
 		LogObservation: testenv.LogObservationConfig{
 			Enabled:  true,
