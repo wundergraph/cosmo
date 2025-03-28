@@ -463,6 +463,11 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 		computeSha256 = true
 	}
 
+	if srv.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled && srv.metricConfig.Prometheus.PromSchemaFieldUsage.IncludeOperationSha {
+		// Prometheus schema field usage metrics use sha256, so we need to ensure it is computed
+		computeSha256 = true
+	}
+
 	if computeSha256 {
 		operationHashCacheConfig := &ristretto.Config[uint64, string]{
 			MaxCost:            srv.engineExecutionConfiguration.OperationHashCacheSize,
@@ -674,11 +679,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	metrics := NewRouterMetrics(&routerMetricsConfig{
-		metrics:             gm.metricStore,
-		gqlMetricsExporter:  s.gqlMetricsExporter,
-		exportEnabled:       s.graphqlMetricsConfig.Enabled,
-		routerConfigVersion: routerConfigVersion,
-		logger:              s.logger,
+		metrics:                gm.metricStore,
+		gqlMetricsExporter:     s.gqlMetricsExporter,
+		exportEnabled:          s.graphqlMetricsConfig.Enabled,
+		promIncludeSchemaUsage: s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
+		routerConfigVersion:    routerConfigVersion,
+		logger:                 s.logger,
 	})
 
 	baseLogFields := []zapcore.Field{
@@ -900,7 +906,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		baseURL:        s.baseURL,
 		transport:      s.executionTransport,
 		logger:         s.logger,
-		trackUsageInfo: s.graphqlMetricsConfig.Enabled,
+		trackUsageInfo: s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
 		transportOptions: &TransportOptions{
 			Proxy:                    s.executionTransportProxy,
 			SubgraphTransportOptions: s.subgraphTransportOptions,
@@ -1105,7 +1111,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		AlwaysSkipLoader:            s.engineExecutionConfiguration.Debug.AlwaysSkipLoader,
 		QueryPlansEnabled:           s.Config.queryPlansEnabled,
 		QueryPlansLoggingEnabled:    s.engineExecutionConfiguration.Debug.PrintQueryPlans,
-		TrackSchemaUsageInfo:        s.graphqlMetricsConfig.Enabled,
+		TrackSchemaUsageInfo:        s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
 		ClientHeader:                s.clientHeader,
 		ComputeOperationSha256:      computeSha256,
 		ApolloCompatibilityFlags:    &s.apolloCompatibilityFlags,

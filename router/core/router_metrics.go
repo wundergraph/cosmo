@@ -1,9 +1,10 @@
 package core
 
 import (
+	"strconv"
+
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
-	"strconv"
 
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
@@ -22,28 +23,31 @@ type RouterMetrics interface {
 // routerMetrics encapsulates all data and configuration that the router
 // uses to collect and its metrics
 type routerMetrics struct {
-	metrics             metric.Store
-	gqlMetricsExporter  *graphqlmetrics.Exporter
-	routerConfigVersion string
-	logger              *zap.Logger
-	exportEnabled       bool
+	metrics                metric.Store
+	gqlMetricsExporter     *graphqlmetrics.Exporter
+	routerConfigVersion    string
+	logger                 *zap.Logger
+	exportEnabled          bool
+	promSchemaUsageEnabled bool
 }
 
 type routerMetricsConfig struct {
-	metrics             metric.Store
-	gqlMetricsExporter  *graphqlmetrics.Exporter
-	routerConfigVersion string
-	logger              *zap.Logger
-	exportEnabled       bool
+	metrics                metric.Store
+	gqlMetricsExporter     *graphqlmetrics.Exporter
+	routerConfigVersion    string
+	logger                 *zap.Logger
+	exportEnabled          bool
+	promIncludeSchemaUsage bool
 }
 
 func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
 	return &routerMetrics{
-		metrics:             cfg.metrics,
-		gqlMetricsExporter:  cfg.gqlMetricsExporter,
-		routerConfigVersion: cfg.routerConfigVersion,
-		logger:              cfg.logger,
-		exportEnabled:       cfg.exportEnabled,
+		metrics:                cfg.metrics,
+		gqlMetricsExporter:     cfg.gqlMetricsExporter,
+		routerConfigVersion:    cfg.routerConfigVersion,
+		logger:                 cfg.logger,
+		exportEnabled:          cfg.exportEnabled,
+		promSchemaUsageEnabled: cfg.promIncludeSchemaUsage,
 	}
 }
 
@@ -52,13 +56,14 @@ func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
 // returns nil, but OperationMetrics is safe to call with a nil receiver.
 func (m *routerMetrics) StartOperation(logger *zap.Logger, requestContentLength int64, sliceAttr []attribute.KeyValue, inFlightAddOption otelmetric.AddOption) *OperationMetrics {
 	metrics := newOperationMetrics(OperationMetricsOptions{
-		RouterMetrics:        m,
-		Logger:               logger,
-		RequestContentLength: requestContentLength,
-		RouterConfigVersion:  m.routerConfigVersion,
-		TrackUsageInfo:       m.exportEnabled,
-		InFlightAddOption:    inFlightAddOption,
-		SliceAttributes:      sliceAttr,
+		RouterMetrics:         m,
+		Logger:                logger,
+		RequestContentLength:  requestContentLength,
+		RouterConfigVersion:   m.routerConfigVersion,
+		TrackUsageInfo:        m.exportEnabled,
+		PrometheusSchemaUsage: m.promSchemaUsageEnabled,
+		InFlightAddOption:     inFlightAddOption,
+		SliceAttributes:       sliceAttr,
 	})
 	return metrics
 }

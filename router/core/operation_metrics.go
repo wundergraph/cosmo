@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
@@ -35,6 +36,7 @@ type OperationMetrics struct {
 	routerConfigVersion  string
 	logger               *zap.Logger
 	trackUsageInfo       bool
+	promUsageInfo        bool
 }
 
 func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, responseSize int, exportSynchronous bool) {
@@ -75,16 +77,41 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 	if m.trackUsageInfo && reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
 		m.routerMetrics.ExportSchemaUsageInfo(reqContext.operation, statusCode, reqContext.error != nil, exportSynchronous)
 	}
+
+	// Prometheus usage metrics, disabled by default
+	if m.promUsageInfo && reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
+		opAttrs := []attribute.KeyValue{
+			rotel.WgOperationName.String(reqContext.operation.name),
+			rotel.WgOperationType.String(reqContext.operation.opType),
+		}
+
+		if reqContext.operation.sha256Hash != "" {
+			opAttrs = append(opAttrs, rotel.WgOperationSha256.String(reqContext.operation.sha256Hash))
+		}
+
+		for _, field := range reqContext.operation.typeFieldUsageInfo {
+			fieldAttrs := []attribute.KeyValue{
+				rotel.WgGraphQLFieldName.String(field.Path[len(field.Path)-1]),
+			}
+
+			fieldSliceAttrs := []attribute.KeyValue{
+				rotel.WgGraphQLFieldType.StringSlice(field.TypeNames),
+			}
+
+			rm.MeasureSchemaFieldUsage(ctx, 1, fieldSliceAttrs, otelmetric.WithAttributeSet(attribute.NewSet(slices.Concat(opAttrs, fieldAttrs)...)))
+		}
+	}
 }
 
 type OperationMetricsOptions struct {
-	InFlightAddOption    otelmetric.AddOption
-	SliceAttributes      []attribute.KeyValue
-	RouterConfigVersion  string
-	RequestContentLength int64
-	RouterMetrics        RouterMetrics
-	Logger               *zap.Logger
-	TrackUsageInfo       bool
+	InFlightAddOption     otelmetric.AddOption
+	SliceAttributes       []attribute.KeyValue
+	RouterConfigVersion   string
+	RequestContentLength  int64
+	RouterMetrics         RouterMetrics
+	Logger                *zap.Logger
+	TrackUsageInfo        bool
+	PrometheusSchemaUsage bool
 }
 
 // newOperationMetrics creates a new OperationMetrics struct and starts the operation metrics.
@@ -101,5 +128,6 @@ func newOperationMetrics(opts OperationMetricsOptions) *OperationMetrics {
 		routerMetrics:        opts.RouterMetrics,
 		logger:               opts.Logger,
 		trackUsageInfo:       opts.TrackUsageInfo,
+		promUsageInfo:        opts.PrometheusSchemaUsage,
 	}
 }
