@@ -10,7 +10,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/wundergraph/cosmo/router/cmd/custom/module"
+	"github.com/wundergraph/cosmo/router-tests/modules/custom-module/module"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )

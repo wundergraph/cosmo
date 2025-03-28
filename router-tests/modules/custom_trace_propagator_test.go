@@ -8,9 +8,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/wundergraph/cosmo/router-tests/modules/custom-module/module"
 	custom_trace_propagator "github.com/wundergraph/cosmo/router-tests/modules/custom-trace-propagator"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"github.com/wundergraph/cosmo/router/cmd/custom/module"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
