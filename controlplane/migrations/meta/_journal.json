@@ -806,6 +806,34 @@
       "when": 1742231470871,
       "tag": "0114_volatile_norrin_radd",
       "breakpoints": true
+    },
+    {
+      "idx": 115,
+      "version": "7",
+      "when": 1743073591587,
+      "tag": "0115_first_giant_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 116,
+      "version": "7",
+      "when": 1743107194663,
+      "tag": "0116_broad_black_tom",
+      "breakpoints": true
+    },
+    {
+      "idx": 117,
+      "version": "7",
+      "when": 1743107974438,
+      "tag": "0117_legal_beyonder",
+      "breakpoints": true
+    },
+    {
+      "idx": 118,
+      "version": "7",
+      "when": 1743112383134,
+      "tag": "0118_gorgeous_blue_marvel",
+      "breakpoints": true
     }
   ]
 }

@@ -110,6 +110,12 @@ const (
 	// PlatformServiceCheckSubgraphSchemaProcedure is the fully-qualified name of the PlatformService's
 	// CheckSubgraphSchema RPC.
 	PlatformServiceCheckSubgraphSchemaProcedure = "/wg.cosmo.platform.v1.PlatformService/CheckSubgraphSchema"
+	// PlatformServiceCheckSubgraphSchemasProcedure is the fully-qualified name of the PlatformService's
+	// CheckSubgraphSchemas RPC.
+	PlatformServiceCheckSubgraphSchemasProcedure = "/wg.cosmo.platform.v1.PlatformService/CheckSubgraphSchemas"
+	// PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure is the fully-qualified name of the
+	// PlatformService's GetProposedSchemaOfCheckedSubgraph RPC.
+	PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetProposedSchemaOfCheckedSubgraph"
 	// PlatformServiceFixSubgraphSchemaProcedure is the fully-qualified name of the PlatformService's
 	// FixSubgraphSchema RPC.
 	PlatformServiceFixSubgraphSchemaProcedure = "/wg.cosmo.platform.v1.PlatformService/FixSubgraphSchema"
@@ -502,6 +508,27 @@ const (
 	// PlatformServiceSetGraphRouterCompatibilityVersionProcedure is the fully-qualified name of the
 	// PlatformService's SetGraphRouterCompatibilityVersion RPC.
 	PlatformServiceSetGraphRouterCompatibilityVersionProcedure = "/wg.cosmo.platform.v1.PlatformService/SetGraphRouterCompatibilityVersion"
+	// PlatformServiceCreateProposalProcedure is the fully-qualified name of the PlatformService's
+	// CreateProposal RPC.
+	PlatformServiceCreateProposalProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateProposal"
+	// PlatformServiceGetProposalProcedure is the fully-qualified name of the PlatformService's
+	// GetProposal RPC.
+	PlatformServiceGetProposalProcedure = "/wg.cosmo.platform.v1.PlatformService/GetProposal"
+	// PlatformServiceGetProposalsByFederatedGraphProcedure is the fully-qualified name of the
+	// PlatformService's GetProposalsByFederatedGraph RPC.
+	PlatformServiceGetProposalsByFederatedGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetProposalsByFederatedGraph"
+	// PlatformServiceUpdateProposalProcedure is the fully-qualified name of the PlatformService's
+	// UpdateProposal RPC.
+	PlatformServiceUpdateProposalProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateProposal"
+	// PlatformServiceEnableProposalsForNamespaceProcedure is the fully-qualified name of the
+	// PlatformService's EnableProposalsForNamespace RPC.
+	PlatformServiceEnableProposalsForNamespaceProcedure = "/wg.cosmo.platform.v1.PlatformService/EnableProposalsForNamespace"
+	// PlatformServiceConfigureNamespaceProposalConfigProcedure is the fully-qualified name of the
+	// PlatformService's ConfigureNamespaceProposalConfig RPC.
+	PlatformServiceConfigureNamespaceProposalConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/ConfigureNamespaceProposalConfig"
+	// PlatformServiceGetNamespaceProposalConfigProcedure is the fully-qualified name of the
+	// PlatformService's GetNamespaceProposalConfig RPC.
+	PlatformServiceGetNamespaceProposalConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/GetNamespaceProposalConfig"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -532,6 +559,8 @@ var (
 	platformServiceDeleteFederatedGraphMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("DeleteFederatedGraph")
 	platformServiceDeleteFederatedSubgraphMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("DeleteFederatedSubgraph")
 	platformServiceCheckSubgraphSchemaMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("CheckSubgraphSchema")
+	platformServiceCheckSubgraphSchemasMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("CheckSubgraphSchemas")
+	platformServiceGetProposedSchemaOfCheckedSubgraphMethodDescriptor    = platformServiceServiceDescriptor.Methods().ByName("GetProposedSchemaOfCheckedSubgraph")
 	platformServiceFixSubgraphSchemaMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("FixSubgraphSchema")
 	platformServiceUpdateFederatedGraphMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("UpdateFederatedGraph")
 	platformServiceUpdateSubgraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UpdateSubgraph")
@@ -663,6 +692,13 @@ var (
 	platformServiceUpgradePlanMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("UpgradePlan")
 	platformServiceListRouterCompatibilityVersionsMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("ListRouterCompatibilityVersions")
 	platformServiceSetGraphRouterCompatibilityVersionMethodDescriptor    = platformServiceServiceDescriptor.Methods().ByName("SetGraphRouterCompatibilityVersion")
+	platformServiceCreateProposalMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("CreateProposal")
+	platformServiceGetProposalMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("GetProposal")
+	platformServiceGetProposalsByFederatedGraphMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetProposalsByFederatedGraph")
+	platformServiceUpdateProposalMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UpdateProposal")
+	platformServiceEnableProposalsForNamespaceMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("EnableProposalsForNamespace")
+	platformServiceConfigureNamespaceProposalConfigMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("ConfigureNamespaceProposalConfig")
+	platformServiceGetNamespaceProposalConfigMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceProposalConfig")
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -706,6 +742,8 @@ type PlatformServiceClient interface {
 	DeleteFederatedSubgraph(context.Context, *connect.Request[v1.DeleteFederatedSubgraphRequest]) (*connect.Response[v1.DeleteFederatedSubgraphResponse], error)
 	// CheckSubgraphSchema checks if the schema is valid and if it can be composed without conflicts with the provided new subgraph schema.
 	CheckSubgraphSchema(context.Context, *connect.Request[v1.CheckSubgraphSchemaRequest]) (*connect.Response[v1.CheckSubgraphSchemaResponse], error)
+	CheckSubgraphSchemas(context.Context, *connect.Request[v1.CheckSubgraphSchemasRequest]) (*connect.Response[v1.CheckSubgraphSchemasResponse], error)
+	GetProposedSchemaOfCheckedSubgraph(context.Context, *connect.Request[v1.GetProposedSchemaOfCheckedSubgraphRequest]) (*connect.Response[v1.GetProposedSchemaOfCheckedSubgraphResponse], error)
 	FixSubgraphSchema(context.Context, *connect.Request[v1.FixSubgraphSchemaRequest]) (*connect.Response[v1.FixSubgraphSchemaResponse], error)
 	// UpdateFederatedGraph updates a federated graph with new labels and routing url
 	UpdateFederatedGraph(context.Context, *connect.Request[v1.UpdateFederatedGraphRequest]) (*connect.Response[v1.UpdateFederatedGraphResponse], error)
@@ -960,6 +998,21 @@ type PlatformServiceClient interface {
 	ListRouterCompatibilityVersions(context.Context, *connect.Request[v1.ListRouterCompatibilityVersionsRequest]) (*connect.Response[v1.ListRouterCompatibilityVersionsResponse], error)
 	// Graph
 	SetGraphRouterCompatibilityVersion(context.Context, *connect.Request[v1.SetGraphRouterCompatibilityVersionRequest]) (*connect.Response[v1.SetGraphRouterCompatibilityVersionResponse], error)
+	// Proposal
+	// Create a proposal for a federated graph
+	CreateProposal(context.Context, *connect.Request[v1.CreateProposalRequest]) (*connect.Response[v1.CreateProposalResponse], error)
+	// Get a proposal by id
+	GetProposal(context.Context, *connect.Request[v1.GetProposalRequest]) (*connect.Response[v1.GetProposalResponse], error)
+	// Get proposals by federated graph
+	GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error)
+	// Update a proposal
+	UpdateProposal(context.Context, *connect.Request[v1.UpdateProposalRequest]) (*connect.Response[v1.UpdateProposalResponse], error)
+	// EnableProposalsForNamespace enables the proposals for the namespace passed.
+	EnableProposalsForNamespace(context.Context, *connect.Request[v1.EnableProposalsForNamespaceRequest]) (*connect.Response[v1.EnableProposalsForNamespaceResponse], error)
+	// ConfigureNamespaceProposalConfig configures the proposal config of the namespace passed.
+	ConfigureNamespaceProposalConfig(context.Context, *connect.Request[v1.ConfigureNamespaceProposalConfigRequest]) (*connect.Response[v1.ConfigureNamespaceProposalConfigResponse], error)
+	// GetNamespaceProposalConfig returns the proposal config of the namespace passed.
+	GetNamespaceProposalConfig(context.Context, *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error)
 }
 
 // NewPlatformServiceClient constructs a client for the wg.cosmo.platform.v1.PlatformService
@@ -1120,6 +1173,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceCheckSubgraphSchemaProcedure,
 			connect.WithSchema(platformServiceCheckSubgraphSchemaMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		checkSubgraphSchemas: connect.NewClient[v1.CheckSubgraphSchemasRequest, v1.CheckSubgraphSchemasResponse](
+			httpClient,
+			baseURL+PlatformServiceCheckSubgraphSchemasProcedure,
+			connect.WithSchema(platformServiceCheckSubgraphSchemasMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getProposedSchemaOfCheckedSubgraph: connect.NewClient[v1.GetProposedSchemaOfCheckedSubgraphRequest, v1.GetProposedSchemaOfCheckedSubgraphResponse](
+			httpClient,
+			baseURL+PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure,
+			connect.WithSchema(platformServiceGetProposedSchemaOfCheckedSubgraphMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		fixSubgraphSchema: connect.NewClient[v1.FixSubgraphSchemaRequest, v1.FixSubgraphSchemaResponse](
@@ -1915,6 +1980,48 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceSetGraphRouterCompatibilityVersionMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		createProposal: connect.NewClient[v1.CreateProposalRequest, v1.CreateProposalResponse](
+			httpClient,
+			baseURL+PlatformServiceCreateProposalProcedure,
+			connect.WithSchema(platformServiceCreateProposalMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getProposal: connect.NewClient[v1.GetProposalRequest, v1.GetProposalResponse](
+			httpClient,
+			baseURL+PlatformServiceGetProposalProcedure,
+			connect.WithSchema(platformServiceGetProposalMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getProposalsByFederatedGraph: connect.NewClient[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse](
+			httpClient,
+			baseURL+PlatformServiceGetProposalsByFederatedGraphProcedure,
+			connect.WithSchema(platformServiceGetProposalsByFederatedGraphMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		updateProposal: connect.NewClient[v1.UpdateProposalRequest, v1.UpdateProposalResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdateProposalProcedure,
+			connect.WithSchema(platformServiceUpdateProposalMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		enableProposalsForNamespace: connect.NewClient[v1.EnableProposalsForNamespaceRequest, v1.EnableProposalsForNamespaceResponse](
+			httpClient,
+			baseURL+PlatformServiceEnableProposalsForNamespaceProcedure,
+			connect.WithSchema(platformServiceEnableProposalsForNamespaceMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		configureNamespaceProposalConfig: connect.NewClient[v1.ConfigureNamespaceProposalConfigRequest, v1.ConfigureNamespaceProposalConfigResponse](
+			httpClient,
+			baseURL+PlatformServiceConfigureNamespaceProposalConfigProcedure,
+			connect.WithSchema(platformServiceConfigureNamespaceProposalConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getNamespaceProposalConfig: connect.NewClient[v1.GetNamespaceProposalConfigRequest, v1.GetNamespaceProposalConfigResponse](
+			httpClient,
+			baseURL+PlatformServiceGetNamespaceProposalConfigProcedure,
+			connect.WithSchema(platformServiceGetNamespaceProposalConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -1945,6 +2052,8 @@ type platformServiceClient struct {
 	deleteFederatedGraph                  *connect.Client[v1.DeleteFederatedGraphRequest, v1.DeleteFederatedGraphResponse]
 	deleteFederatedSubgraph               *connect.Client[v1.DeleteFederatedSubgraphRequest, v1.DeleteFederatedSubgraphResponse]
 	checkSubgraphSchema                   *connect.Client[v1.CheckSubgraphSchemaRequest, v1.CheckSubgraphSchemaResponse]
+	checkSubgraphSchemas                  *connect.Client[v1.CheckSubgraphSchemasRequest, v1.CheckSubgraphSchemasResponse]
+	getProposedSchemaOfCheckedSubgraph    *connect.Client[v1.GetProposedSchemaOfCheckedSubgraphRequest, v1.GetProposedSchemaOfCheckedSubgraphResponse]
 	fixSubgraphSchema                     *connect.Client[v1.FixSubgraphSchemaRequest, v1.FixSubgraphSchemaResponse]
 	updateFederatedGraph                  *connect.Client[v1.UpdateFederatedGraphRequest, v1.UpdateFederatedGraphResponse]
 	updateSubgraph                        *connect.Client[v1.UpdateSubgraphRequest, v1.UpdateSubgraphResponse]
@@ -2076,6 +2185,13 @@ type platformServiceClient struct {
 	upgradePlan                           *connect.Client[v1.UpgradePlanRequest, v1.UpgradePlanResponse]
 	listRouterCompatibilityVersions       *connect.Client[v1.ListRouterCompatibilityVersionsRequest, v1.ListRouterCompatibilityVersionsResponse]
 	setGraphRouterCompatibilityVersion    *connect.Client[v1.SetGraphRouterCompatibilityVersionRequest, v1.SetGraphRouterCompatibilityVersionResponse]
+	createProposal                        *connect.Client[v1.CreateProposalRequest, v1.CreateProposalResponse]
+	getProposal                           *connect.Client[v1.GetProposalRequest, v1.GetProposalResponse]
+	getProposalsByFederatedGraph          *connect.Client[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse]
+	updateProposal                        *connect.Client[v1.UpdateProposalRequest, v1.UpdateProposalResponse]
+	enableProposalsForNamespace           *connect.Client[v1.EnableProposalsForNamespaceRequest, v1.EnableProposalsForNamespaceResponse]
+	configureNamespaceProposalConfig      *connect.Client[v1.ConfigureNamespaceProposalConfigRequest, v1.ConfigureNamespaceProposalConfigResponse]
+	getNamespaceProposalConfig            *connect.Client[v1.GetNamespaceProposalConfigRequest, v1.GetNamespaceProposalConfigResponse]
 }
 
 // CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
@@ -2201,6 +2317,17 @@ func (c *platformServiceClient) DeleteFederatedSubgraph(ctx context.Context, req
 // CheckSubgraphSchema calls wg.cosmo.platform.v1.PlatformService.CheckSubgraphSchema.
 func (c *platformServiceClient) CheckSubgraphSchema(ctx context.Context, req *connect.Request[v1.CheckSubgraphSchemaRequest]) (*connect.Response[v1.CheckSubgraphSchemaResponse], error) {
 	return c.checkSubgraphSchema.CallUnary(ctx, req)
+}
+
+// CheckSubgraphSchemas calls wg.cosmo.platform.v1.PlatformService.CheckSubgraphSchemas.
+func (c *platformServiceClient) CheckSubgraphSchemas(ctx context.Context, req *connect.Request[v1.CheckSubgraphSchemasRequest]) (*connect.Response[v1.CheckSubgraphSchemasResponse], error) {
+	return c.checkSubgraphSchemas.CallUnary(ctx, req)
+}
+
+// GetProposedSchemaOfCheckedSubgraph calls
+// wg.cosmo.platform.v1.PlatformService.GetProposedSchemaOfCheckedSubgraph.
+func (c *platformServiceClient) GetProposedSchemaOfCheckedSubgraph(ctx context.Context, req *connect.Request[v1.GetProposedSchemaOfCheckedSubgraphRequest]) (*connect.Response[v1.GetProposedSchemaOfCheckedSubgraphResponse], error) {
+	return c.getProposedSchemaOfCheckedSubgraph.CallUnary(ctx, req)
 }
 
 // FixSubgraphSchema calls wg.cosmo.platform.v1.PlatformService.FixSubgraphSchema.
@@ -2886,6 +3013,44 @@ func (c *platformServiceClient) SetGraphRouterCompatibilityVersion(ctx context.C
 	return c.setGraphRouterCompatibilityVersion.CallUnary(ctx, req)
 }
 
+// CreateProposal calls wg.cosmo.platform.v1.PlatformService.CreateProposal.
+func (c *platformServiceClient) CreateProposal(ctx context.Context, req *connect.Request[v1.CreateProposalRequest]) (*connect.Response[v1.CreateProposalResponse], error) {
+	return c.createProposal.CallUnary(ctx, req)
+}
+
+// GetProposal calls wg.cosmo.platform.v1.PlatformService.GetProposal.
+func (c *platformServiceClient) GetProposal(ctx context.Context, req *connect.Request[v1.GetProposalRequest]) (*connect.Response[v1.GetProposalResponse], error) {
+	return c.getProposal.CallUnary(ctx, req)
+}
+
+// GetProposalsByFederatedGraph calls
+// wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph.
+func (c *platformServiceClient) GetProposalsByFederatedGraph(ctx context.Context, req *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error) {
+	return c.getProposalsByFederatedGraph.CallUnary(ctx, req)
+}
+
+// UpdateProposal calls wg.cosmo.platform.v1.PlatformService.UpdateProposal.
+func (c *platformServiceClient) UpdateProposal(ctx context.Context, req *connect.Request[v1.UpdateProposalRequest]) (*connect.Response[v1.UpdateProposalResponse], error) {
+	return c.updateProposal.CallUnary(ctx, req)
+}
+
+// EnableProposalsForNamespace calls
+// wg.cosmo.platform.v1.PlatformService.EnableProposalsForNamespace.
+func (c *platformServiceClient) EnableProposalsForNamespace(ctx context.Context, req *connect.Request[v1.EnableProposalsForNamespaceRequest]) (*connect.Response[v1.EnableProposalsForNamespaceResponse], error) {
+	return c.enableProposalsForNamespace.CallUnary(ctx, req)
+}
+
+// ConfigureNamespaceProposalConfig calls
+// wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceProposalConfig.
+func (c *platformServiceClient) ConfigureNamespaceProposalConfig(ctx context.Context, req *connect.Request[v1.ConfigureNamespaceProposalConfigRequest]) (*connect.Response[v1.ConfigureNamespaceProposalConfigResponse], error) {
+	return c.configureNamespaceProposalConfig.CallUnary(ctx, req)
+}
+
+// GetNamespaceProposalConfig calls wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig.
+func (c *platformServiceClient) GetNamespaceProposalConfig(ctx context.Context, req *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error) {
+	return c.getNamespaceProposalConfig.CallUnary(ctx, req)
+}
+
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
 type PlatformServiceHandler interface {
 	// PlaygroundScripts
@@ -2927,6 +3092,8 @@ type PlatformServiceHandler interface {
 	DeleteFederatedSubgraph(context.Context, *connect.Request[v1.DeleteFederatedSubgraphRequest]) (*connect.Response[v1.DeleteFederatedSubgraphResponse], error)
 	// CheckSubgraphSchema checks if the schema is valid and if it can be composed without conflicts with the provided new subgraph schema.
 	CheckSubgraphSchema(context.Context, *connect.Request[v1.CheckSubgraphSchemaRequest]) (*connect.Response[v1.CheckSubgraphSchemaResponse], error)
+	CheckSubgraphSchemas(context.Context, *connect.Request[v1.CheckSubgraphSchemasRequest]) (*connect.Response[v1.CheckSubgraphSchemasResponse], error)
+	GetProposedSchemaOfCheckedSubgraph(context.Context, *connect.Request[v1.GetProposedSchemaOfCheckedSubgraphRequest]) (*connect.Response[v1.GetProposedSchemaOfCheckedSubgraphResponse], error)
 	FixSubgraphSchema(context.Context, *connect.Request[v1.FixSubgraphSchemaRequest]) (*connect.Response[v1.FixSubgraphSchemaResponse], error)
 	// UpdateFederatedGraph updates a federated graph with new labels and routing url
 	UpdateFederatedGraph(context.Context, *connect.Request[v1.UpdateFederatedGraphRequest]) (*connect.Response[v1.UpdateFederatedGraphResponse], error)
@@ -3181,6 +3348,21 @@ type PlatformServiceHandler interface {
 	ListRouterCompatibilityVersions(context.Context, *connect.Request[v1.ListRouterCompatibilityVersionsRequest]) (*connect.Response[v1.ListRouterCompatibilityVersionsResponse], error)
 	// Graph
 	SetGraphRouterCompatibilityVersion(context.Context, *connect.Request[v1.SetGraphRouterCompatibilityVersionRequest]) (*connect.Response[v1.SetGraphRouterCompatibilityVersionResponse], error)
+	// Proposal
+	// Create a proposal for a federated graph
+	CreateProposal(context.Context, *connect.Request[v1.CreateProposalRequest]) (*connect.Response[v1.CreateProposalResponse], error)
+	// Get a proposal by id
+	GetProposal(context.Context, *connect.Request[v1.GetProposalRequest]) (*connect.Response[v1.GetProposalResponse], error)
+	// Get proposals by federated graph
+	GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error)
+	// Update a proposal
+	UpdateProposal(context.Context, *connect.Request[v1.UpdateProposalRequest]) (*connect.Response[v1.UpdateProposalResponse], error)
+	// EnableProposalsForNamespace enables the proposals for the namespace passed.
+	EnableProposalsForNamespace(context.Context, *connect.Request[v1.EnableProposalsForNamespaceRequest]) (*connect.Response[v1.EnableProposalsForNamespaceResponse], error)
+	// ConfigureNamespaceProposalConfig configures the proposal config of the namespace passed.
+	ConfigureNamespaceProposalConfig(context.Context, *connect.Request[v1.ConfigureNamespaceProposalConfigRequest]) (*connect.Response[v1.ConfigureNamespaceProposalConfigResponse], error)
+	// GetNamespaceProposalConfig returns the proposal config of the namespace passed.
+	GetNamespaceProposalConfig(context.Context, *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error)
 }
 
 // NewPlatformServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -3337,6 +3519,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceCheckSubgraphSchemaProcedure,
 		svc.CheckSubgraphSchema,
 		connect.WithSchema(platformServiceCheckSubgraphSchemaMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceCheckSubgraphSchemasHandler := connect.NewUnaryHandler(
+		PlatformServiceCheckSubgraphSchemasProcedure,
+		svc.CheckSubgraphSchemas,
+		connect.WithSchema(platformServiceCheckSubgraphSchemasMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetProposedSchemaOfCheckedSubgraphHandler := connect.NewUnaryHandler(
+		PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure,
+		svc.GetProposedSchemaOfCheckedSubgraph,
+		connect.WithSchema(platformServiceGetProposedSchemaOfCheckedSubgraphMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceFixSubgraphSchemaHandler := connect.NewUnaryHandler(
@@ -4132,6 +4326,48 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceSetGraphRouterCompatibilityVersionMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceCreateProposalHandler := connect.NewUnaryHandler(
+		PlatformServiceCreateProposalProcedure,
+		svc.CreateProposal,
+		connect.WithSchema(platformServiceCreateProposalMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetProposalHandler := connect.NewUnaryHandler(
+		PlatformServiceGetProposalProcedure,
+		svc.GetProposal,
+		connect.WithSchema(platformServiceGetProposalMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetProposalsByFederatedGraphHandler := connect.NewUnaryHandler(
+		PlatformServiceGetProposalsByFederatedGraphProcedure,
+		svc.GetProposalsByFederatedGraph,
+		connect.WithSchema(platformServiceGetProposalsByFederatedGraphMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceUpdateProposalHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateProposalProcedure,
+		svc.UpdateProposal,
+		connect.WithSchema(platformServiceUpdateProposalMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceEnableProposalsForNamespaceHandler := connect.NewUnaryHandler(
+		PlatformServiceEnableProposalsForNamespaceProcedure,
+		svc.EnableProposalsForNamespace,
+		connect.WithSchema(platformServiceEnableProposalsForNamespaceMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceConfigureNamespaceProposalConfigHandler := connect.NewUnaryHandler(
+		PlatformServiceConfigureNamespaceProposalConfigProcedure,
+		svc.ConfigureNamespaceProposalConfig,
+		connect.WithSchema(platformServiceConfigureNamespaceProposalConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetNamespaceProposalConfigHandler := connect.NewUnaryHandler(
+		PlatformServiceGetNamespaceProposalConfigProcedure,
+		svc.GetNamespaceProposalConfig,
+		connect.WithSchema(platformServiceGetNamespaceProposalConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlatformServiceCreatePlaygroundScriptProcedure:
@@ -4184,6 +4420,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceDeleteFederatedSubgraphHandler.ServeHTTP(w, r)
 		case PlatformServiceCheckSubgraphSchemaProcedure:
 			platformServiceCheckSubgraphSchemaHandler.ServeHTTP(w, r)
+		case PlatformServiceCheckSubgraphSchemasProcedure:
+			platformServiceCheckSubgraphSchemasHandler.ServeHTTP(w, r)
+		case PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure:
+			platformServiceGetProposedSchemaOfCheckedSubgraphHandler.ServeHTTP(w, r)
 		case PlatformServiceFixSubgraphSchemaProcedure:
 			platformServiceFixSubgraphSchemaHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateFederatedGraphProcedure:
@@ -4446,6 +4686,20 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceListRouterCompatibilityVersionsHandler.ServeHTTP(w, r)
 		case PlatformServiceSetGraphRouterCompatibilityVersionProcedure:
 			platformServiceSetGraphRouterCompatibilityVersionHandler.ServeHTTP(w, r)
+		case PlatformServiceCreateProposalProcedure:
+			platformServiceCreateProposalHandler.ServeHTTP(w, r)
+		case PlatformServiceGetProposalProcedure:
+			platformServiceGetProposalHandler.ServeHTTP(w, r)
+		case PlatformServiceGetProposalsByFederatedGraphProcedure:
+			platformServiceGetProposalsByFederatedGraphHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateProposalProcedure:
+			platformServiceUpdateProposalHandler.ServeHTTP(w, r)
+		case PlatformServiceEnableProposalsForNamespaceProcedure:
+			platformServiceEnableProposalsForNamespaceHandler.ServeHTTP(w, r)
+		case PlatformServiceConfigureNamespaceProposalConfigProcedure:
+			platformServiceConfigureNamespaceProposalConfigHandler.ServeHTTP(w, r)
+		case PlatformServiceGetNamespaceProposalConfigProcedure:
+			platformServiceGetNamespaceProposalConfigHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -4553,6 +4807,14 @@ func (UnimplementedPlatformServiceHandler) DeleteFederatedSubgraph(context.Conte
 
 func (UnimplementedPlatformServiceHandler) CheckSubgraphSchema(context.Context, *connect.Request[v1.CheckSubgraphSchemaRequest]) (*connect.Response[v1.CheckSubgraphSchemaResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CheckSubgraphSchema is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) CheckSubgraphSchemas(context.Context, *connect.Request[v1.CheckSubgraphSchemasRequest]) (*connect.Response[v1.CheckSubgraphSchemasResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CheckSubgraphSchemas is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetProposedSchemaOfCheckedSubgraph(context.Context, *connect.Request[v1.GetProposedSchemaOfCheckedSubgraphRequest]) (*connect.Response[v1.GetProposedSchemaOfCheckedSubgraphResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetProposedSchemaOfCheckedSubgraph is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) FixSubgraphSchema(context.Context, *connect.Request[v1.FixSubgraphSchemaRequest]) (*connect.Response[v1.FixSubgraphSchemaResponse], error) {
@@ -5077,4 +5339,32 @@ func (UnimplementedPlatformServiceHandler) ListRouterCompatibilityVersions(conte
 
 func (UnimplementedPlatformServiceHandler) SetGraphRouterCompatibilityVersion(context.Context, *connect.Request[v1.SetGraphRouterCompatibilityVersionRequest]) (*connect.Response[v1.SetGraphRouterCompatibilityVersionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.SetGraphRouterCompatibilityVersion is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) CreateProposal(context.Context, *connect.Request[v1.CreateProposalRequest]) (*connect.Response[v1.CreateProposalResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateProposal is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetProposal(context.Context, *connect.Request[v1.GetProposalRequest]) (*connect.Response[v1.GetProposalResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetProposal is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdateProposal(context.Context, *connect.Request[v1.UpdateProposalRequest]) (*connect.Response[v1.UpdateProposalResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateProposal is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) EnableProposalsForNamespace(context.Context, *connect.Request[v1.EnableProposalsForNamespaceRequest]) (*connect.Response[v1.EnableProposalsForNamespaceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.EnableProposalsForNamespace is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) ConfigureNamespaceProposalConfig(context.Context, *connect.Request[v1.ConfigureNamespaceProposalConfigRequest]) (*connect.Response[v1.ConfigureNamespaceProposalConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceProposalConfig is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetNamespaceProposalConfig(context.Context, *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig is not implemented"))
 }

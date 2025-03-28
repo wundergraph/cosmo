@@ -13,6 +13,7 @@ import {
   webhookDeliveries,
   graphPruningRulesEnum,
   cacheWarmerOperations,
+  proposalStateEnum,
 } from './schema.js';
 
 export type FederatedGraph = typeof federatedGraphs.$inferSelect;
@@ -28,7 +29,7 @@ export type LintRuleEnum = (typeof lintRulesEnum.enumValues)[number];
 export type GraphPruningRuleEnum = (typeof graphPruningRulesEnum.enumValues)[number];
 export type WebsocketSubprotocol = (typeof websocketSubprotocolEnum.enumValues)[number];
 export type CacheWarmupOperation = typeof cacheWarmerOperations.$inferInsert;
-
+export type ProposalState = (typeof proposalStateEnum.enumValues)[number];
 export type WebhookDeliveryInfo = typeof webhookDeliveries.$inferInsert;
 
 export type AuditableType =
@@ -48,7 +49,8 @@ export type AuditableType =
   | 'namespace'
   | 'router_config'
   | 'operation_change_override'
-  | 'operation_ignore_all_override';
+  | 'operation_ignore_all_override'
+  | 'proposal';
 
 export type AuditTargetType = 'organization' | 'subgraph' | 'federated_graph' | 'monograph' | 'user';
 
@@ -125,4 +127,6 @@ export type AuditLogFullAction =
   | 'operation_change_override.created'
   | 'operation_change_override.deleted'
   | 'operation_ignore_override.created'
-  | 'operation_ignore_override.deleted';
+  | 'operation_ignore_override.deleted'
+  | 'proposal.created'
+  | 'proposal.updated';

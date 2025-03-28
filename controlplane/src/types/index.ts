@@ -21,7 +21,8 @@ export type FeatureIds =
   | 'oidc'
   | 'scim'
   | 'field-pruning-grace-period'
-  | 'cache-warmer';
+  | 'cache-warmer'
+  | 'proposals';
 
 export type Features = {
   [key in FeatureIds]: Feature;
@@ -145,10 +146,18 @@ export interface MigrationSubgraph {
   schema: string;
 }
 
+export interface CheckedSubgraphDTO {
+  id: string;
+  subgraphId?: string;
+  subgraphName: string;
+  isDeleted: boolean;
+  isNew: boolean;
+}
+
 export interface SchemaCheckDTO {
   id: string;
-  targetID: string;
-  subgraphName: string;
+  targetID?: string;
+  subgraphName?: string;
   timestamp: string;
   isComposable: boolean;
   isBreaking: boolean;
@@ -171,6 +180,7 @@ export interface SchemaCheckDTO {
     commitSha: string;
     branch: string;
   };
+  checkedSubgraphs: CheckedSubgraphDTO[];
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {
@@ -193,6 +203,7 @@ export interface SchemaCheckDetailsDTO {
     message: string;
     path?: string;
     isBreaking: boolean;
+    subgraphName?: string;
   }[];
   compositionErrors: string[];
   compositionWarnings: string[];
@@ -661,6 +672,7 @@ export interface GraphPruningIssueResult {
   };
   federatedGraphId: string;
   federatedGraphName: string;
+  subgraphName?: string;
 }
 
 export interface SchemaGraphPruningIssues {
@@ -698,4 +710,23 @@ export interface NamespaceDTO {
   enableGraphPruning: boolean;
   enableCacheWarmer: boolean;
   checksTimeframeInDays?: number;
+  enableProposals: boolean;
+}
+
+export interface ProposalDTO {
+  id: string;
+  name: string;
+  federatedGraphId: string;
+  createdAt: string;
+  createdById: string;
+  createdByEmail?: string;
+  state: string;
+}
+
+export interface ProposalSubgraphDTO {
+  id: string;
+  subgraphName: string;
+  subgraphId?: string;
+  schemaSDL: string;
+  isDeleted: boolean;
 }
