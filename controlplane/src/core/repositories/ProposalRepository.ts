@@ -1,8 +1,9 @@
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { ProposalState } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
-import { ProposalDTO, ProposalSubgraphDTO } from '../../types/index.js';
+import { LintSeverityLevel, ProposalDTO, ProposalSubgraphDTO } from '../../types/index.js';
+import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 
 /**
  * Repository for organization related operations.
@@ -213,5 +214,92 @@ export class ProposalRepository {
       state: proposal[0].state,
       federatedGraphId: proposal[0].federatedGraphId,
     };
+  }
+
+  public async configureProposalConfig({
+    namespaceId,
+    checkSeverityLevel,
+    publishSeverityLevel,
+  }: {
+    namespaceId: string;
+    checkSeverityLevel: LintSeverityLevel;
+    publishSeverityLevel: LintSeverityLevel;
+  }) {
+    await this.db
+      .insert(schema.namespaceProposalConfig)
+      .values({
+        namespaceId,
+        checkSeverityLevel,
+        publishSeverityLevel,
+      })
+      .onConflictDoUpdate({
+        target: schema.namespaceProposalConfig.namespaceId,
+        set: {
+          checkSeverityLevel,
+          publishSeverityLevel,
+        },
+      });
+  }
+
+  public async deleteProposalConfig({ namespaceId }: { namespaceId: string }) {
+    await this.db
+      .delete(schema.namespaceProposalConfig)
+      .where(eq(schema.namespaceProposalConfig.namespaceId, namespaceId));
+  }
+
+  public async getProposalConfig({ namespaceId }: { namespaceId: string }) {
+    const proposalConfig = await this.db
+      .select({
+        checkSeverityLevel: schema.namespaceProposalConfig.checkSeverityLevel,
+        publishSeverityLevel: schema.namespaceProposalConfig.publishSeverityLevel,
+      })
+      .from(schema.namespaceProposalConfig)
+      .where(eq(schema.namespaceProposalConfig.namespaceId, namespaceId));
+
+    if (proposalConfig.length === 0) {
+      return;
+    }
+
+    return proposalConfig[0];
+  }
+
+  public async getApprovedProposalSubgraphsBySubgraphId({ subgraphId }: { subgraphId: string }) {
+    const proposalSubgraphs = await this.db
+      .select({
+        id: schema.proposalSubgraphs.id,
+        proposedSchemaSDL: schema.proposalSubgraphs.schemaSDL,
+      })
+      .from(schema.proposalSubgraphs)
+      .innerJoin(schema.proposals, eq(schema.proposalSubgraphs.proposalId, schema.proposals.id))
+      .where(and(eq(schema.proposalSubgraphs.subgraphId, subgraphId), eq(schema.proposals.state, 'APPROVED')));
+
+    return proposalSubgraphs;
+  }
+
+  public async matchSchemaWithProposal({
+    subgraphId,
+    schema,
+    routerCompatibilityVersion,
+  }: {
+    subgraphId: string;
+    schema: string;
+    routerCompatibilityVersion: string;
+  }) {
+    const proposalSubgraphs = await this.getApprovedProposalSubgraphsBySubgraphId({ subgraphId });
+
+    for (const proposalSubgraph of proposalSubgraphs) {
+      if (!proposalSubgraph.proposedSchemaSDL) {
+        continue;
+      }
+      const proposedSchema = proposalSubgraph.proposedSchemaSDL;
+      const schemaChanges = await getDiffBetweenGraphs(schema, proposedSchema, routerCompatibilityVersion);
+      if (schemaChanges.kind === 'failure') {
+        continue;
+      }
+      if (schemaChanges.changes.length === 0) {
+        return true;
+      }
+    }
+    return false;
   }
 }

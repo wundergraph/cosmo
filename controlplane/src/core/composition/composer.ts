@@ -198,6 +198,7 @@ export type CheckSubgraph = {
   inspectorChanges: InspectorSchemaChange[];
   schemaChanges: GetDiffBetweenGraphsSuccess;
   storedBreakingChanges: SchemaCheckChangeAction[];
+  routerCompatibilityVersion: string;
 };
 export class Composer {
   constructor(

@@ -163,6 +163,9 @@ import { getProposalsByFederatedGraph } from './proposal/getProposalsByFederated
 import { updateProposal } from './proposal/updateProposal.js';
 import { createProposal } from './proposal/createProposal.js';
 import { getProposal } from './proposal/getProposal.js';
+import { enableProposalsForNamespace } from './proposal/enableProposalsForNamespace.js';
+import { getNamespaceProposalConfig } from './proposal/getNamespaceProposalConfig.js';
+import { configureNamespaceProposalConfig } from './proposal/configureNamespaceProposalConfig.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -823,6 +826,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getProposal: (req, ctx) => {
       return getProposal(opts, req, ctx);
+    },
+
+    enableProposalsForNamespace: (req, ctx) => {
+      return enableProposalsForNamespace(opts, req, ctx);
+    },
+
+    configureNamespaceProposalConfig: (req, ctx) => {
+      return configureNamespaceProposalConfig(opts, req, ctx);
+    },
+
+    getNamespaceProposalConfig: (req, ctx) => {
+      return getNamespaceProposalConfig(opts, req, ctx);
     },
   };
 }

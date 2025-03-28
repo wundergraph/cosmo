@@ -35,6 +35,7 @@ import {
   SchemaUsageTrafficInspector,
 } from '../../services/SchemaUsageTrafficInspector.js';
 import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError } from '../../util.js';
+import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 
 export function checkSubgraphSchemas(
   opts: RouterOptions,
@@ -56,6 +57,7 @@ export function checkSubgraphSchemas(
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
     const graphCompostionRepo = new GraphCompositionRepository(logger, opts.db);
+    const proposalRepo = new ProposalRepository(opts.db);
     const trafficInspector = new SchemaUsageTrafficInspector(opts.chClient!);
 
     req.namespace = req.namespace || DefaultNamespace;
@@ -302,11 +304,50 @@ export function checkSubgraphSchemas(
         inspectorChanges: [],
         storedBreakingChanges: [],
         checkSubgraphId: '',
+        routerCompatibilityVersion,
       });
     }
 
+    let proposalMatchMessage: string | undefined;
     for (const s of checkSubgraphs.values()) {
       const { subgraph, newSchemaSDL, newGraphQLSchema, schemaChanges } = s;
+      if (namespace.enableProposals) {
+        const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
+        if (proposalConfig) {
+          const match = await proposalRepo.matchSchemaWithProposal({
+            subgraphId: subgraph.id,
+            schema: newSchemaSDL,
+            routerCompatibilityVersion: s.routerCompatibilityVersion,
+          });
+          if (!match) {
+            if (proposalConfig.checkSeverityLevel === 'warn') {
+              proposalMatchMessage += `The subgraph ${subgraph.name}'s schema does not match to this subgraph's schema in any approved proposal.\n`;
+            } else {
+              return {
+                response: {
+                  code: EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL,
+                  details: `The subgraph ${subgraph.name}'s schema does not match to this subgraph's schema in any approved proposal.`,
+                },
+                breakingChanges: [],
+                nonBreakingChanges: [],
+                compositionErrors: [],
+                checkId: '',
+                lintWarnings: [],
+                lintErrors: [],
+                graphPruneWarnings: [],
+                graphPruneErrors: [],
+                compositionWarnings: [],
+                operationUsageStats: [],
+                lintingSkipped: false,
+                graphPruningSkipped: false,
+                checkUrl: '',
+                proposalMatchMessage: `The subgraph ${subgraph.name}'s schema does not match to this subgraph's schema in any approved proposal.`,
+              };
+            }
+          }
+        }
+      }
+
       const schemaCheckSubgraphId = await schemaCheckRepo.createSchemaCheckSubgraph({
         data: {
           schemaCheckId: schemaCheckID,
@@ -553,6 +594,7 @@ export function checkSubgraphSchemas(
       lintingSkipped: !namespace.enableLinting,
       graphPruningSkipped: !namespace.enableGraphPruning,
       checkUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/graph/$federatedGraphName/checks/${schemaCheckID}`,
+      proposalMatchMessage,
     };
   });
 }

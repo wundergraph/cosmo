@@ -493,6 +493,7 @@ export const namespaceConfig = pgTable(
     enableGraphPruning: boolean('enable_graph_pruning').default(false).notNull(),
     enableCacheWarming: boolean('enable_cache_warming').default(false).notNull(),
     checksTimeframeInDays: integer('checks_timeframe_in_days'),
+    enableProposals: boolean('enable_proposals').default(false).notNull(),
   },
   (t) => {
     return {
@@ -1952,6 +1953,33 @@ export const namespaceGraphPruningCheckConfigRelations = relations(namespaceGrap
   }),
 }));
 
+export const namespaceProposalConfig = pgTable(
+  'namespace_proposal_config', // npc
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    namespaceId: uuid('namespace_id')
+      .notNull()
+      .references(() => namespaces.id, {
+        onDelete: 'cascade',
+      }),
+    checkSeverityLevel: lintSeverityEnum('check_severity_level').notNull(),
+    publishSeverityLevel: lintSeverityEnum('publish_severity_level').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => {
+    return {
+      uniqueNamespace: unique('npc_namespace_id_idx').on(t.namespaceId),
+    };
+  },
+);
+
+export const namespaceProposalConfigRelations = relations(namespaceProposalConfig, ({ one }) => ({
+  namespace: one(namespaces, {
+    fields: [namespaceProposalConfig.namespaceId],
+    references: [namespaces.id],
+  }),
+}));
+
 export const schemaCheckLintAction = pgTable(
   'schema_check_lint_action', // sclact
   {
@@ -2223,12 +2251,14 @@ export const proposalSubgraphs = pgTable(
       .notNull()
       .references(() => proposals.id, { onDelete: 'cascade' }),
     subgraphId: uuid('subgraph_id').references(() => subgraphs.id, {
-      onDelete: 'cascade',
+      onDelete: 'set null',
     }),
     subgraphName: text('subgraph_name').notNull(),
     schemaSDL: text('schema_sdl'),
     isDeleted: boolean('is_deleted').default(false).notNull(),
+    isNew: boolean('is_new').default(false).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
   },
   (t) => ({
     uniqueProposalSubgraph: unique('proposal_subgraph').on(t.proposalId, t.subgraphId),

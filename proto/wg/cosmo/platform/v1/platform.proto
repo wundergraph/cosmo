@@ -63,6 +63,7 @@ message PublishFederatedSubgraphResponse {
   repeated DeploymentError deploymentErrors = 3;
   optional bool hasChanged = 4;
   repeated CompositionWarning compositionWarnings = 5;
+  optional string proposalMatchMessage = 6;
 }
 
 message GitInfo {
@@ -259,6 +260,7 @@ message CheckSubgraphSchemaResponse {
   repeated GraphPruningIssue graphPruneErrors = 11;
   optional bool client_traffic_check_skipped = 12;
   repeated CompositionWarning compositionWarnings = 13;
+  optional string proposalMatchMessage = 14;
 }
 
 message FixSubgraphSchemaResponse {
@@ -2606,6 +2608,7 @@ message CheckSubgraphSchemasResponse {
   bool lintingSkipped = 12;
   bool graphPruningSkipped = 13;
   string checkUrl = 14;
+  optional string proposalMatchMessage = 15;
 }
 
 message GetProposedSchemaOfCheckedSubgraphRequest {
@@ -2676,6 +2679,36 @@ message UpdateProposalRequest {
 
 message UpdateProposalResponse {
   Response response = 1;
+}
+
+message EnableProposalsForNamespaceRequest {
+  string namespace = 1;
+  bool enableProposals = 2;
+}
+
+message EnableProposalsForNamespaceResponse {
+  Response response = 1;
+}
+
+message ConfigureNamespaceProposalConfigRequest {
+  string namespace = 1;
+  LintSeverity checkSeverityLevel = 2;
+  LintSeverity publishSeverityLevel = 3;
+}
+
+message ConfigureNamespaceProposalConfigResponse {
+  Response response = 1;
+}
+
+message GetNamespaceProposalConfigRequest {
+  string namespace = 1;
+}
+
+message GetNamespaceProposalConfigResponse {
+  Response response = 1;
+  bool enabled = 2;
+  LintSeverity checkSeverityLevel = 3;
+  LintSeverity publishSeverityLevel = 4;
 }
 
 service PlatformService {
@@ -3026,8 +3059,18 @@ service PlatformService {
   rpc SetGraphRouterCompatibilityVersion(SetGraphRouterCompatibilityVersionRequest) returns (SetGraphRouterCompatibilityVersionResponse) { }
 
   // Proposal
+  // Create a proposal for a federated graph
   rpc CreateProposal(CreateProposalRequest) returns (CreateProposalResponse) {}
+  // Get a proposal by id
   rpc GetProposal(GetProposalRequest) returns (GetProposalResponse) {}
+  // Get proposals by federated graph
   rpc GetProposalsByFederatedGraph(GetProposalsByFederatedGraphRequest) returns (GetProposalsByFederatedGraphResponse) {}
+  // Update a proposal
   rpc UpdateProposal(UpdateProposalRequest) returns (UpdateProposalResponse) {}
+  // EnableProposalsForNamespace enables the proposals for the namespace passed.
+  rpc EnableProposalsForNamespace(EnableProposalsForNamespaceRequest) returns (EnableProposalsForNamespaceResponse) {}
+  // ConfigureNamespaceProposalConfig configures the proposal config of the namespace passed.
+  rpc ConfigureNamespaceProposalConfig(ConfigureNamespaceProposalConfigRequest) returns (ConfigureNamespaceProposalConfigResponse) {}
+  // GetNamespaceProposalConfig returns the proposal config of the namespace passed.
+  rpc GetNamespaceProposalConfig(GetNamespaceProposalConfigRequest) returns (GetNamespaceProposalConfigResponse) {}
 }

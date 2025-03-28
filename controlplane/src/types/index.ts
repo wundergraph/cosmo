@@ -21,7 +21,8 @@ export type FeatureIds =
   | 'oidc'
   | 'scim'
   | 'field-pruning-grace-period'
-  | 'cache-warmer';
+  | 'cache-warmer'
+  | 'proposals';
 
 export type Features = {
   [key in FeatureIds]: Feature;
@@ -709,6 +710,7 @@ export interface NamespaceDTO {
   enableGraphPruning: boolean;
   enableCacheWarmer: boolean;
   checksTimeframeInDays?: number;
+  enableProposals: boolean;
 }
 
 export interface ProposalDTO {

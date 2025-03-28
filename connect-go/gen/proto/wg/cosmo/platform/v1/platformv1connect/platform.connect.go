@@ -520,6 +520,15 @@ const (
 	// PlatformServiceUpdateProposalProcedure is the fully-qualified name of the PlatformService's
 	// UpdateProposal RPC.
 	PlatformServiceUpdateProposalProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateProposal"
+	// PlatformServiceEnableProposalsForNamespaceProcedure is the fully-qualified name of the
+	// PlatformService's EnableProposalsForNamespace RPC.
+	PlatformServiceEnableProposalsForNamespaceProcedure = "/wg.cosmo.platform.v1.PlatformService/EnableProposalsForNamespace"
+	// PlatformServiceConfigureNamespaceProposalConfigProcedure is the fully-qualified name of the
+	// PlatformService's ConfigureNamespaceProposalConfig RPC.
+	PlatformServiceConfigureNamespaceProposalConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/ConfigureNamespaceProposalConfig"
+	// PlatformServiceGetNamespaceProposalConfigProcedure is the fully-qualified name of the
+	// PlatformService's GetNamespaceProposalConfig RPC.
+	PlatformServiceGetNamespaceProposalConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/GetNamespaceProposalConfig"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -687,6 +696,9 @@ var (
 	platformServiceGetProposalMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("GetProposal")
 	platformServiceGetProposalsByFederatedGraphMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetProposalsByFederatedGraph")
 	platformServiceUpdateProposalMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UpdateProposal")
+	platformServiceEnableProposalsForNamespaceMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("EnableProposalsForNamespace")
+	platformServiceConfigureNamespaceProposalConfigMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("ConfigureNamespaceProposalConfig")
+	platformServiceGetNamespaceProposalConfigMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceProposalConfig")
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -987,10 +999,20 @@ type PlatformServiceClient interface {
 	// Graph
 	SetGraphRouterCompatibilityVersion(context.Context, *connect.Request[v1.SetGraphRouterCompatibilityVersionRequest]) (*connect.Response[v1.SetGraphRouterCompatibilityVersionResponse], error)
 	// Proposal
+	// Create a proposal for a federated graph
 	CreateProposal(context.Context, *connect.Request[v1.CreateProposalRequest]) (*connect.Response[v1.CreateProposalResponse], error)
+	// Get a proposal by id
 	GetProposal(context.Context, *connect.Request[v1.GetProposalRequest]) (*connect.Response[v1.GetProposalResponse], error)
+	// Get proposals by federated graph
 	GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error)
+	// Update a proposal
 	UpdateProposal(context.Context, *connect.Request[v1.UpdateProposalRequest]) (*connect.Response[v1.UpdateProposalResponse], error)
+	// EnableProposalsForNamespace enables the proposals for the namespace passed.
+	EnableProposalsForNamespace(context.Context, *connect.Request[v1.EnableProposalsForNamespaceRequest]) (*connect.Response[v1.EnableProposalsForNamespaceResponse], error)
+	// ConfigureNamespaceProposalConfig configures the proposal config of the namespace passed.
+	ConfigureNamespaceProposalConfig(context.Context, *connect.Request[v1.ConfigureNamespaceProposalConfigRequest]) (*connect.Response[v1.ConfigureNamespaceProposalConfigResponse], error)
+	// GetNamespaceProposalConfig returns the proposal config of the namespace passed.
+	GetNamespaceProposalConfig(context.Context, *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error)
 }
 
 // NewPlatformServiceClient constructs a client for the wg.cosmo.platform.v1.PlatformService
@@ -1982,6 +2004,24 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceUpdateProposalMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		enableProposalsForNamespace: connect.NewClient[v1.EnableProposalsForNamespaceRequest, v1.EnableProposalsForNamespaceResponse](
+			httpClient,
+			baseURL+PlatformServiceEnableProposalsForNamespaceProcedure,
+			connect.WithSchema(platformServiceEnableProposalsForNamespaceMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		configureNamespaceProposalConfig: connect.NewClient[v1.ConfigureNamespaceProposalConfigRequest, v1.ConfigureNamespaceProposalConfigResponse](
+			httpClient,
+			baseURL+PlatformServiceConfigureNamespaceProposalConfigProcedure,
+			connect.WithSchema(platformServiceConfigureNamespaceProposalConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getNamespaceProposalConfig: connect.NewClient[v1.GetNamespaceProposalConfigRequest, v1.GetNamespaceProposalConfigResponse](
+			httpClient,
+			baseURL+PlatformServiceGetNamespaceProposalConfigProcedure,
+			connect.WithSchema(platformServiceGetNamespaceProposalConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -2149,6 +2189,9 @@ type platformServiceClient struct {
 	getProposal                           *connect.Client[v1.GetProposalRequest, v1.GetProposalResponse]
 	getProposalsByFederatedGraph          *connect.Client[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse]
 	updateProposal                        *connect.Client[v1.UpdateProposalRequest, v1.UpdateProposalResponse]
+	enableProposalsForNamespace           *connect.Client[v1.EnableProposalsForNamespaceRequest, v1.EnableProposalsForNamespaceResponse]
+	configureNamespaceProposalConfig      *connect.Client[v1.ConfigureNamespaceProposalConfigRequest, v1.ConfigureNamespaceProposalConfigResponse]
+	getNamespaceProposalConfig            *connect.Client[v1.GetNamespaceProposalConfigRequest, v1.GetNamespaceProposalConfigResponse]
 }
 
 // CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
@@ -2991,6 +3034,23 @@ func (c *platformServiceClient) UpdateProposal(ctx context.Context, req *connect
 	return c.updateProposal.CallUnary(ctx, req)
 }
 
+// EnableProposalsForNamespace calls
+// wg.cosmo.platform.v1.PlatformService.EnableProposalsForNamespace.
+func (c *platformServiceClient) EnableProposalsForNamespace(ctx context.Context, req *connect.Request[v1.EnableProposalsForNamespaceRequest]) (*connect.Response[v1.EnableProposalsForNamespaceResponse], error) {
+	return c.enableProposalsForNamespace.CallUnary(ctx, req)
+}
+
+// ConfigureNamespaceProposalConfig calls
+// wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceProposalConfig.
+func (c *platformServiceClient) ConfigureNamespaceProposalConfig(ctx context.Context, req *connect.Request[v1.ConfigureNamespaceProposalConfigRequest]) (*connect.Response[v1.ConfigureNamespaceProposalConfigResponse], error) {
+	return c.configureNamespaceProposalConfig.CallUnary(ctx, req)
+}
+
+// GetNamespaceProposalConfig calls wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig.
+func (c *platformServiceClient) GetNamespaceProposalConfig(ctx context.Context, req *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error) {
+	return c.getNamespaceProposalConfig.CallUnary(ctx, req)
+}
+
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
 type PlatformServiceHandler interface {
 	// PlaygroundScripts
@@ -3289,10 +3349,20 @@ type PlatformServiceHandler interface {
 	// Graph
 	SetGraphRouterCompatibilityVersion(context.Context, *connect.Request[v1.SetGraphRouterCompatibilityVersionRequest]) (*connect.Response[v1.SetGraphRouterCompatibilityVersionResponse], error)
 	// Proposal
+	// Create a proposal for a federated graph
 	CreateProposal(context.Context, *connect.Request[v1.CreateProposalRequest]) (*connect.Response[v1.CreateProposalResponse], error)
+	// Get a proposal by id
 	GetProposal(context.Context, *connect.Request[v1.GetProposalRequest]) (*connect.Response[v1.GetProposalResponse], error)
+	// Get proposals by federated graph
 	GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error)
+	// Update a proposal
 	UpdateProposal(context.Context, *connect.Request[v1.UpdateProposalRequest]) (*connect.Response[v1.UpdateProposalResponse], error)
+	// EnableProposalsForNamespace enables the proposals for the namespace passed.
+	EnableProposalsForNamespace(context.Context, *connect.Request[v1.EnableProposalsForNamespaceRequest]) (*connect.Response[v1.EnableProposalsForNamespaceResponse], error)
+	// ConfigureNamespaceProposalConfig configures the proposal config of the namespace passed.
+	ConfigureNamespaceProposalConfig(context.Context, *connect.Request[v1.ConfigureNamespaceProposalConfigRequest]) (*connect.Response[v1.ConfigureNamespaceProposalConfigResponse], error)
+	// GetNamespaceProposalConfig returns the proposal config of the namespace passed.
+	GetNamespaceProposalConfig(context.Context, *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error)
 }
 
 // NewPlatformServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -4280,6 +4350,24 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceUpdateProposalMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceEnableProposalsForNamespaceHandler := connect.NewUnaryHandler(
+		PlatformServiceEnableProposalsForNamespaceProcedure,
+		svc.EnableProposalsForNamespace,
+		connect.WithSchema(platformServiceEnableProposalsForNamespaceMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceConfigureNamespaceProposalConfigHandler := connect.NewUnaryHandler(
+		PlatformServiceConfigureNamespaceProposalConfigProcedure,
+		svc.ConfigureNamespaceProposalConfig,
+		connect.WithSchema(platformServiceConfigureNamespaceProposalConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetNamespaceProposalConfigHandler := connect.NewUnaryHandler(
+		PlatformServiceGetNamespaceProposalConfigProcedure,
+		svc.GetNamespaceProposalConfig,
+		connect.WithSchema(platformServiceGetNamespaceProposalConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlatformServiceCreatePlaygroundScriptProcedure:
@@ -4606,6 +4694,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetProposalsByFederatedGraphHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateProposalProcedure:
 			platformServiceUpdateProposalHandler.ServeHTTP(w, r)
+		case PlatformServiceEnableProposalsForNamespaceProcedure:
+			platformServiceEnableProposalsForNamespaceHandler.ServeHTTP(w, r)
+		case PlatformServiceConfigureNamespaceProposalConfigProcedure:
+			platformServiceConfigureNamespaceProposalConfigHandler.ServeHTTP(w, r)
+		case PlatformServiceGetNamespaceProposalConfigProcedure:
+			platformServiceGetNamespaceProposalConfigHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -5261,4 +5355,16 @@ func (UnimplementedPlatformServiceHandler) GetProposalsByFederatedGraph(context.
 
 func (UnimplementedPlatformServiceHandler) UpdateProposal(context.Context, *connect.Request[v1.UpdateProposalRequest]) (*connect.Response[v1.UpdateProposalResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateProposal is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) EnableProposalsForNamespace(context.Context, *connect.Request[v1.EnableProposalsForNamespaceRequest]) (*connect.Response[v1.EnableProposalsForNamespaceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.EnableProposalsForNamespace is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) ConfigureNamespaceProposalConfig(context.Context, *connect.Request[v1.ConfigureNamespaceProposalConfigRequest]) (*connect.Response[v1.ConfigureNamespaceProposalConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceProposalConfig is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetNamespaceProposalConfig(context.Context, *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig is not implemented"))
 }

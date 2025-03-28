@@ -8,6 +8,7 @@ import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 
 export function createProposal(
   opts: RouterOptions,
@@ -24,6 +25,18 @@ export function createProposal(
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const proposalRepo = new ProposalRepository(opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
+    const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+
+    const namespace = await namespaceRepo.byName(req.namespace);
+    if (!namespace) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Namespace ${req.namespace} not found`,
+        },
+        proposalId: '',
+      };
+    }
 
     const federatedGraph = await federatedGraphRepo.byName(req.federatedGraphName, req.namespace);
     if (!federatedGraph) {
@@ -31,6 +44,16 @@ export function createProposal(
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: `Federated graph ${req.federatedGraphName} not found`,
+        },
+        proposalId: '',
+      };
+    }
+
+    if (!namespace.enableProposals) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Proposals are not enabled for namespace ${req.namespace}`,
         },
         proposalId: '',
       };

@@ -39,6 +39,7 @@ import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
 import { TitleLayout } from "./title-layout";
 import { FaGripfire } from "react-icons/fa";
+import { DocumentPlusIcon } from "@heroicons/react/24/outline";
 
 export const StarBanner = ({
   isDisabled,
@@ -158,6 +159,11 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         title: "Cache Warmer",
         href: basePath + "/cache-warmer",
         icon: <FaGripfire className="h-4 w-4" />,
+      },
+      {
+        title: "Proposals Config",
+        href: basePath + "/proposal-config",
+        icon: <DocumentPlusIcon className="h-4 w-4" />,
         separator: true,
       },
       {

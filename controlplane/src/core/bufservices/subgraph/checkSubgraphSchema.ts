@@ -37,6 +37,7 @@ import {
   handleError,
   clamp,
 } from '../../util.js';
+import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 
 export function checkSubgraphSchema(
   opts: RouterOptions,
@@ -58,7 +59,7 @@ export function checkSubgraphSchema(
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
     const graphCompostionRepo = new GraphCompositionRepository(logger, opts.db);
-
+    const proposalRepo = new ProposalRepository(opts.db);
     req.namespace = req.namespace || DefaultNamespace;
 
     if (!authContext.hasWriteAccess) {
@@ -219,6 +220,8 @@ export function checkSubgraphSchema(
       }
     }
 
+    
+
     const schemaCheckID = await schemaCheckRepo.create({
       proposedSubgraphSchemaSDL: '',
       trafficCheckSkipped: req.skipTrafficCheck,
@@ -238,6 +241,41 @@ export function checkSubgraphSchema(
       },
     });
 
+    let proposalMatchMessage: string | undefined;
+    if (namespace.enableProposals) {
+      const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
+      if (proposalConfig) {
+        const match = await proposalRepo.matchSchemaWithProposal({
+          subgraphId: subgraph.id,
+          schema: newSchemaSDL,
+          routerCompatibilityVersion,
+        });
+        if (!match) {
+          if (proposalConfig.checkSeverityLevel === 'warn') {
+            proposalMatchMessage = `The subgraph ${req.subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`;
+          } else {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL,
+                details: `The subgraph ${req.subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`,
+              },
+              breakingChanges: [],
+              nonBreakingChanges: [],
+              compositionErrors: [],
+              checkId: '',
+              checkedFederatedGraphs: [],
+              lintWarnings: [],
+              lintErrors: [],
+              graphPruneWarnings: [],
+              graphPruneErrors: [],
+              compositionWarnings: [],
+              proposalMatchMessage: `The subgraph ${req.subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`,
+            };
+          }
+        }
+      }
+    }
+
     const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL, routerCompatibilityVersion);
     if (schemaChanges.kind === 'failure') {
       logger.warn(`Error finding diff between graphs: ${schemaChanges.error}`);
@@ -256,6 +294,7 @@ export function checkSubgraphSchema(
         graphPruneWarnings: [],
         graphPruneErrors: [],
         compositionWarnings: [],
+        proposalMatchMessage,
       };
     }
 
@@ -456,6 +495,7 @@ export function checkSubgraphSchema(
       graphPruneErrors: graphPruningIssues.errors,
       clientTrafficCheckSkipped: req.skipTrafficCheck,
       compositionWarnings,
+      proposalMatchMessage,
     };
   });
 }
