@@ -659,13 +659,16 @@ const CheckDetails = ({
             </dd>
           </div>
 
-          {data.affectedGraphs.length > 0 && (
+          {data.affectedGraphs.length > 1 && (
             <div className="flex-start flex flex-col gap-1">
               <dt className="mb-2 text-sm text-muted-foreground">
-                Affected Graphs
+                Other Affected Graphs
               </dt>
               <dd className="flex flex-row flex-wrap gap-2 lg:flex lg:flex-col">
                 {data.affectedGraphs.map((ag) => {
+                  if (ag.id === graphContext.graph?.id) {
+                    return null;
+                  }
                   return (
                     <Badge
                       key={ag.id}
