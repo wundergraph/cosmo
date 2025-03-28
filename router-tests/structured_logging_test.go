@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/sdk/metric"
 	"math"
 	"net/http"
 	"os"
@@ -2237,6 +2238,337 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 		})
 
+		t.Run("validate the evaluation of the body.raw expression for a query", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "service_name",
+							ValueFrom: &config.CustomDynamicAttribute{
+								RequestHeader: "service-name",
+							},
+						},
+						{
+							Key: "operation_hash",
+							ValueFrom: &config.CustomDynamicAttribute{
+								ContextField: core.ContextFieldOperationHash,
+							},
+						},
+						{
+							Key: "expression_body",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.body.raw",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query:  `query employees { employees { id } }`,
+						Header: map[string][]string{"service-name": {"service-name"}},
+					})
+					require.JSONEq(t, employeesIDData, res.Body)
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestLogAll := requestLog.All()
+					requestContext := requestLogAll[0].ContextMap()
+
+					expectedValues := map[string]interface{}{
+						"log_type":        "request",
+						"status":          int64(200),
+						"method":          "POST",
+						"path":            "/graphql",
+						"query":           "",
+						"ip":              "[REDACTED]",
+						"service_name":    "service-name",                                         // From request header
+						"operation_hash":  "1163600561566987607",                                  // From context
+						"expression_body": "{\"query\":\"query employees { employees { id } }\"}", // From expression
+					}
+					additionalExpectedKeys := []string{
+						"user_agent",
+						"latency",
+						"config_version",
+						"request_id",
+						"pid",
+						"hostname",
+					}
+					checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+				},
+			)
+		})
+
+		t.Run("validate the evaluation of the body.raw expression for a file upload", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{
+				AccessLogFields: []config.CustomAttribute{
+					{
+						Key: "operation_hash",
+						ValueFrom: &config.CustomDynamicAttribute{
+							ContextField: core.ContextFieldOperationHash,
+						},
+					},
+					{
+						Key: "expression_body",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.body.raw",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+				RouterOptions: []core.Option{
+					core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
+						MaxRequestBodyBytes:  5 << 20,
+						DecompressionEnabled: true,
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				files := []testenv.FileUpload{
+					{VariablesPath: "variables.files.0", FileContent: []byte("Contents of first file")},
+					{VariablesPath: "variables.files.1", FileContent: []byte("Contents of second file")},
+				}
+
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     "mutation($files: [Upload!]!) { multipleUpload(files: $files)}",
+					Variables: []byte(`{"files":[null, null]}`),
+					Files:     files,
+				})
+
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+				requestContext := requestLogAll[0].ContextMap()
+
+				expectedValues := map[string]interface{}{
+					"log_type":        "request",
+					"status":          int64(200),
+					"method":          "POST",
+					"path":            "/graphql",
+					"query":           "",
+					"ip":              "[REDACTED]",
+					"operation_hash":  "12894448895119646991",                                                                                                // From context
+					"expression_body": "{\"query\":\"mutation($files: [Upload!]!) { multipleUpload(files: $files)}\",\"variables\":{\"files\":[null,null]}}", // From expression
+				}
+				additionalExpectedKeys := []string{
+					"user_agent",
+					"latency",
+					"config_version",
+					"request_id",
+					"pid",
+					"hostname",
+				}
+				checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+
+			})
+		})
+
+		t.Run("validate the evaluation of the body.raw expression conditionally where body.raw is not evaluated", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "service_name",
+							ValueFrom: &config.CustomDynamicAttribute{
+								RequestHeader: "service-name",
+							},
+						},
+						{
+							Key: "operation_hash",
+							ValueFrom: &config.CustomDynamicAttribute{
+								ContextField: core.ContextFieldOperationHash,
+							},
+						},
+						{
+							Key: "expression_body",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.error ?? request.body.raw",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query:  `query employees { employees { id2 } }`,
+						Header: map[string][]string{"service-name": {"service-name"}},
+					})
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestLogAll := requestLog.All()
+					requestContext := requestLogAll[0].ContextMap()
+
+					expectedValues := map[string]interface{}{
+						"log_type":        "request",
+						"status":          int64(200),
+						"method":          "POST",
+						"path":            "/graphql",
+						"query":           "",
+						"ip":              "[REDACTED]",
+						"service_name":    "service-name",                             // From request header
+						"operation_hash":  "13143784263060310243",                     // From context
+						"expression_body": "field: id2 not defined on type: Employee", // From expression
+					}
+					additionalExpectedKeys := []string{
+						"user_agent",
+						"latency",
+						"config_version",
+						"request_id",
+						"pid",
+						"hostname",
+					}
+					checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+				},
+			)
+		})
+
+		t.Run("validate the evaluation of the body.raw expression conditionally where body.raw is evaluated", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "service_name",
+							ValueFrom: &config.CustomDynamicAttribute{
+								RequestHeader: "service-name",
+							},
+						},
+						{
+							Key: "operation_hash",
+							ValueFrom: &config.CustomDynamicAttribute{
+								ContextField: core.ContextFieldOperationHash,
+							},
+						},
+						{
+							Key: "expression_body",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.error ?? request.body.raw",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query:  `query employees { employees { id } }`,
+						Header: map[string][]string{"service-name": {"service-name"}},
+					})
+					require.JSONEq(t, employeesIDData, res.Body)
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestLogAll := requestLog.All()
+					requestContext := requestLogAll[0].ContextMap()
+
+					expectedValues := map[string]interface{}{
+						"log_type":        "request",
+						"status":          int64(200),
+						"method":          "POST",
+						"path":            "/graphql",
+						"query":           "",
+						"ip":              "[REDACTED]",
+						"service_name":    "service-name",                                         // From request header
+						"operation_hash":  "1163600561566987607",                                  // From context
+						"expression_body": "{\"query\":\"query employees { employees { id } }\"}", // From expression
+					}
+					additionalExpectedKeys := []string{
+						"user_agent",
+						"latency",
+						"config_version",
+						"request_id",
+						"pid",
+						"hostname",
+					}
+					checkValues(t, requestContext, expectedValues, additionalExpectedKeys)
+				},
+			)
+		})
+
+		t.Run("verify trace.sampled in expression is true when request is sampled", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			testenv.Run(t, &testenv.Config{
+				AccessLogFields: []config.CustomAttribute{
+					{
+						Key: "is_sampled",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.trace.sampled",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+				TraceExporter:                exporter,
+				DisableSimulateCloudExporter: true,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+				requestContextMap := requestLogAll[0].ContextMap()
+
+				require.True(t, requestContextMap["is_sampled"].(bool))
+
+				sn := exporter.GetSpans().Snapshots()
+				require.Len(t, sn, 9)
+			})
+		})
+
+		t.Run("verify trace.sampled in expression is false when request is not sampled", func(t *testing.T) {
+			t.Parallel()
+
+			metricReader := metric.NewManualReader()
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			testenv.Run(t, &testenv.Config{
+				AccessLogFields: []config.CustomAttribute{
+					{
+						Key: "is_sampled",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.trace.sampled",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+				TraceExporter:                exporter,
+				MetricReader:                 metricReader,
+				DisableSimulateCloudExporter: true,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+					Header: map[string][]string{
+						// traceparent header without sample flag set
+						"traceparent": {"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203332-00"}, // 00 = not sampled
+					},
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+				requestContextMap := requestLogAll[0].ContextMap()
+
+				require.False(t, requestContextMap["is_sampled"].(bool))
+
+				sn := exporter.GetSpans().Snapshots()
+				require.Len(t, sn, 0)
+			})
+		})
 	})
 
 }

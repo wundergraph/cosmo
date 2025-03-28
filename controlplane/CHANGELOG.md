@@ -4,6 +4,19 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.129.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.129.0...controlplane@0.129.1) (2025-03-25)
+
+### Bug Fixes
+
+* fix incorrect calculation of the `p90` and `p99` subgraph metrics ([#1720](https://github.com/wundergraph/cosmo/issues/1720)) ([816e186](https://github.com/wundergraph/cosmo/commit/816e18618b6ddc00f4011995920911049a25c073)) (@wilsonrivera)
+
+# [0.129.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.128.0...controlplane@0.129.0) (2025-03-25)
+
+### Features
+
+* allow to filter checks by subgraph name ([#1716](https://github.com/wundergraph/cosmo/issues/1716)) ([ae69dcd](https://github.com/wundergraph/cosmo/commit/ae69dcde94611196f7f8b47702e25cdcdfa41a19)) (@wilsonrivera)
+* introduce `p50`, `p90` and `p99` latency metrics for graphs and subgraphs ([#1710](https://github.com/wundergraph/cosmo/issues/1710)) ([1c55ed5](https://github.com/wundergraph/cosmo/commit/1c55ed51fe17be7371633a176c356e581ed44c62)) (@wilsonrivera)
+
 # [0.128.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.127.1...controlplane@0.128.0) (2025-03-20)
 
 ### Features
