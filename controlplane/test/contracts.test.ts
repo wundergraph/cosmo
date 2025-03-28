@@ -2088,11 +2088,6 @@ describe('Contract tests', () => {
     );
     expect(normalizeString(newExecutionConfig.engineConfig!.graphqlClientSchema!)).toBe(
       normalizeString(`
-      directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-      directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-
-      scalar openfed__Scope
-      
       type Query {
         internalUser(id: ID!): InternalUser!
         internalProduct(sku: ID!): InternalProduct!
