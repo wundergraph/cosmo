@@ -1282,13 +1282,16 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 	}
 
 	var wg sync.WaitGroup
+	var mu sync.Mutex
 
 	if r.prometheusServer != nil {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			if subErr := r.prometheusServer.Close(); subErr != nil {
+				mu.Lock()
 				err = errors.Join(err, fmt.Errorf("failed to shutdown prometheus server: %w", subErr))
+				mu.Unlock()
 			}
 		}()
 	}
@@ -1300,7 +1303,9 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if subErr := r.tracerProvider.Shutdown(ctx); subErr != nil {
+				mu.Lock()
 				err = errors.Join(err, fmt.Errorf("failed to shutdown tracer: %w", subErr))
+				mu.Unlock()
 			}
 		}()
 	}
@@ -1312,7 +1317,9 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if subErr := r.gqlMetricsExporter.Shutdown(ctx); subErr != nil {
+				mu.Lock()
 				err = errors.Join(err, fmt.Errorf("failed to shutdown graphql metrics exporter: %w", subErr))
+				mu.Unlock()
 			}
 		}()
 	}
@@ -1324,7 +1331,9 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if subErr := r.promMeterProvider.Shutdown(ctx); subErr != nil {
+				mu.Lock()
 				err = errors.Join(err, fmt.Errorf("failed to shutdown prometheus meter provider: %w", subErr))
+				mu.Unlock()
 			}
 		}()
 	}
@@ -1336,7 +1345,9 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if subErr := r.otlpMeterProvider.Shutdown(ctx); subErr != nil {
+				mu.Lock()
 				err = errors.Join(err, fmt.Errorf("failed to shutdown OTLP meter provider: %w", subErr))
+				mu.Unlock()
 			}
 		}()
 	}
@@ -1348,7 +1359,9 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if closeErr := r.redisClient.Close(); closeErr != nil {
+				mu.Lock()
 				err = errors.Join(err, fmt.Errorf("failed to close redis client: %w", closeErr))
+				mu.Unlock()
 			}
 		}()
 	}
@@ -1360,7 +1373,9 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		for _, module := range r.modules {
 			if cleaner, ok := module.(Cleaner); ok {
 				if subErr := cleaner.Cleanup(); subErr != nil {
+					mu.Lock()
 					err = errors.Join(err, fmt.Errorf("failed to clean module %s: %w", module.Module().ID, subErr))
+					mu.Unlock()
 				}
 			}
 		}
