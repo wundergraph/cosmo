@@ -47,7 +47,8 @@ export type FieldConfiguration = {
   typeName: string;
   subscriptionFilterCondition?: SubscriptionCondition;
   requiresAuthentication?: boolean;
-  requiredScopes?: string[][];
+  requiredScopes?: Array<Array<string>>;
+  requiredScopesByOR?: Array<Array<string>>;
 };
 
 export type FieldSetConditionData = {

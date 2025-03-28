@@ -909,3 +909,5 @@ export const CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION: MutableDirectiveDefinition
 };
 
 export const EDFS_ARGS_REGEXP = /{{\s*args\.([a-zA-Z0-9_]+)\s*}}/g;
+
+export const MAX_OR_SCOPES = 16;

@@ -29,7 +29,7 @@ export function normalizeSubgraphFailure(
   version: SupportedRouterCompatibilityVersion,
 ): NormalizationResultFailure {
   const result = normalizeSubgraph(subgraph.definitions, subgraph.name, undefined, version);
-  expect(result.success).toBe(false);
+  expect(result.success, 'normalizeSubgraph succeeded when expected to fail').toBe(false);
   return result as NormalizationResultFailure;
 }
 
@@ -38,7 +38,7 @@ export function normalizeSubgraphSuccess(
   version: SupportedRouterCompatibilityVersion,
 ): NormalizationResultSuccess {
   const result = normalizeSubgraph(subgraph.definitions, subgraph.name, undefined, version);
-  expect(result.success).toBe(true);
+  expect(result.success, 'normalizeSubgraph failed when expected to succeed').toBe(true);
   return result as NormalizationResultSuccess;
 }
 
@@ -47,7 +47,7 @@ export function federateSubgraphsFailure(
   version: SupportedRouterCompatibilityVersion,
 ): FederationResultFailure {
   const result = federateSubgraphs(subgraphs, version);
-  expect(result.success).toBe(false);
+  expect(result.success, 'federateSubgraphs succeeded when expected to fail').toBe(false);
   return result as FederationResultFailure;
 }
 
@@ -56,6 +56,6 @@ export function federateSubgraphsSuccess(
   version: SupportedRouterCompatibilityVersion,
 ): FederationResultSuccess {
   const result = federateSubgraphs(subgraphs, version);
-  expect(result.success).toBe(true);
+  expect(result.success, 'federateSubgraphs failed when expected to succeed').toBe(true);
   return result as FederationResultSuccess;
 }

@@ -22,7 +22,6 @@ import {
   CompositeOutputData,
   ConditionalFieldData,
   DefinitionData,
-  EnumDefinitionData,
   EnumValueData,
   ExtensionType,
   ExternalFieldData,
@@ -34,7 +33,6 @@ import {
   ParentDefinitionData,
   PersistedDirectiveDefinitionData,
   PersistedDirectivesData,
-  ScalarDefinitionData,
 } from './types';
 import { MutableFieldNode, MutableInputValueNode, MutableTypeDefinitionNode } from './ast';
 import { ObjectTypeNode, setToNameNodeArray, stringToNameNode } from '../ast/utils';
@@ -47,13 +45,13 @@ import { SubscriptionFilterValue } from '../router-configuration/types';
 import {
   ARGUMENT,
   AUTHENTICATED,
+  AUTHORIZATION_DIRECTIVES,
   BOOLEAN_SCALAR,
   DEPRECATED,
   DEPRECATED_DEFAULT_ARGUMENT_VALUE,
   DIRECTIVE_DEFINITION,
   EXTERNAL,
   FLOAT_SCALAR,
-  IGNORED_PARENT_DIRECTIVES,
   INACCESSIBLE,
   INHERITABLE_DIRECTIVE_NAMES,
   INPUT_FIELD,
@@ -208,28 +206,6 @@ export function getRenamedRootTypeName(typeName: string, operationByTypeName: Ma
 }
 type ChildDefinitionNode = EnumValueDefinitionNode | FieldDefinitionNode | InputValueDefinitionNode;
 
-function addAuthorizationDirectivesToFieldData(
-  authorizationDataByParentTypeName: Map<string, AuthorizationData>,
-  fieldData: FieldData,
-) {
-  const authorizationData = authorizationDataByParentTypeName.get(fieldData.originalParentTypeName);
-  if (!authorizationData) {
-    return;
-  }
-  const fieldAuthorizationData = authorizationData.fieldAuthorizationDataByFieldName.get(fieldData.name);
-  if (!fieldAuthorizationData) {
-    return;
-  }
-  if (fieldAuthorizationData.requiresAuthentication) {
-    const authenticatedDirective = generateSimpleDirective(AUTHENTICATED);
-    fieldData.directivesByDirectiveName.set(AUTHENTICATED, [authenticatedDirective]);
-  }
-  if (fieldAuthorizationData.requiredScopes.length > 0) {
-    const requiresScopesDirective = generateRequiresScopesDirective(fieldAuthorizationData.requiredScopes);
-    fieldData.directivesByDirectiveName.set(REQUIRES_SCOPES, [requiresScopesDirective]);
-  }
-}
-
 function propagateFieldDataArguments(fieldData: FieldData) {
   for (const argumentData of fieldData.argumentDataByArgumentName.values()) {
     // First propagate the argument's directives
@@ -240,23 +216,20 @@ function propagateFieldDataArguments(fieldData: FieldData) {
   }
 }
 
-export function childMapToValueArray<V extends ChildData, N extends ChildDefinitionNode = V['node']>(
-  map: Map<string, V>,
-  authorizationDataByParentTypeName: Map<string, AuthorizationData>,
-): N[] {
-  const valueArray: ChildDefinitionNode[] = [];
+export function childMapToValueArray<T extends ChildData, U extends ChildDefinitionNode = T['node']>(
+  map: Map<string, T>,
+): Array<U> {
+  const valueArray: Array<ChildDefinitionNode> = [];
   for (const childData of map.values()) {
-    if (childData.node.kind === Kind.FIELD_DEFINITION) {
-      const fieldData = childData as FieldData;
-      addAuthorizationDirectivesToFieldData(authorizationDataByParentTypeName, fieldData);
-      propagateFieldDataArguments(fieldData);
+    if (isFieldData(childData)) {
+      propagateFieldDataArguments(childData);
     }
     for (const directiveNodes of childData.directivesByDirectiveName.values()) {
       childData.node.directives.push(...directiveNodes);
     }
     valueArray.push(childData.node);
   }
-  return valueArray as N[];
+  return valueArray as Array<U>;
 }
 
 export function removeInheritableDirectivesFromObjectParent(parentData: ParentDefinitionData) {
@@ -265,12 +238,6 @@ export function removeInheritableDirectivesFromObjectParent(parentData: ParentDe
   }
   for (const directiveName of INHERITABLE_DIRECTIVE_NAMES) {
     parentData.directivesByDirectiveName.delete(directiveName);
-  }
-}
-
-export function removeIgnoredDirectives(data: CompositeOutputData | EnumDefinitionData | ScalarDefinitionData) {
-  for (const directiveName of IGNORED_PARENT_DIRECTIVES) {
-    data.directivesByDirectiveName.delete(directiveName);
   }
 }
 
@@ -344,7 +311,11 @@ export function extractPersistedDirectives(
   persistedDirectiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
 ): PersistedDirectivesData {
   for (const [directiveName, directiveNodes] of directivesByDirectiveName) {
-    if (!persistedDirectiveDefinitionByDirectiveName.has(directiveName)) {
+    // @authenticated and @requiresScopes are handled differently
+    if (
+      AUTHORIZATION_DIRECTIVES.has(directiveName) ||
+      !persistedDirectiveDefinitionByDirectiveName.has(directiveName)
+    ) {
       continue;
     }
     if (directiveName === DEPRECATED) {
@@ -370,22 +341,38 @@ export function extractPersistedDirectives(
   return persistedDirectivesData;
 }
 
-export function pushAuthorizationDirectives(fieldData: FieldData, authorizationData?: AuthorizationData) {
-  if (!authorizationData) {
+export function propagateAuthDirectives(parentData: ParentDefinitionData, authData?: AuthorizationData) {
+  if (!authData) {
     return;
   }
-  const fieldAuthorizationData = authorizationData.fieldAuthorizationDataByFieldName.get(fieldData.name);
-  if (!fieldAuthorizationData) {
+  if (authData.requiresAuthentication) {
+    parentData.persistedDirectivesData.directivesByDirectiveName.set(AUTHENTICATED, [
+      generateSimpleDirective(AUTHENTICATED),
+    ]);
+  }
+  if (authData.requiredScopes.length > 0) {
+    parentData.persistedDirectivesData.directivesByDirectiveName.set(REQUIRES_SCOPES, [
+      generateRequiresScopesDirective(authData.requiredScopes),
+    ]);
+  }
+}
+
+export function propagateFieldAuthDirectives(fieldData: FieldData, authData?: AuthorizationData) {
+  if (!authData) {
     return;
   }
-  if (fieldAuthorizationData.requiresAuthentication) {
+  const fieldAuthData = authData.fieldAuthDataByFieldName.get(fieldData.name);
+  if (!fieldAuthData) {
+    return;
+  }
+  if (fieldAuthData.originalData.requiresAuthentication) {
     fieldData.persistedDirectivesData.directivesByDirectiveName.set(AUTHENTICATED, [
       generateSimpleDirective(AUTHENTICATED),
     ]);
   }
-  if (fieldAuthorizationData.requiredScopes.length > 0) {
+  if (fieldAuthData.originalData.requiredScopes.length > 0) {
     fieldData.persistedDirectivesData.directivesByDirectiveName.set(REQUIRES_SCOPES, [
-      generateRequiresScopesDirective(fieldAuthorizationData.requiredScopes),
+      generateRequiresScopesDirective(fieldAuthData.originalData.requiredScopes),
     ]);
   }
 }
@@ -779,4 +766,8 @@ export function getInitialFederatedDescription(data: NodeData): StringValueNode 
 
 export function areKindsEqual<T extends ParentDefinitionData>(a: T, b: ParentDefinitionData): b is T {
   return a.kind === b.kind;
+}
+
+export function isFieldData(data: ChildData): data is FieldData {
+  return data.kind === Kind.FIELD_DEFINITION;
 }

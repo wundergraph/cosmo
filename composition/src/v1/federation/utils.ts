@@ -29,6 +29,7 @@ export type FederationFactoryParams = {
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
   entityDataByTypeName: Map<string, EntityData>;
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
+  fieldCoordsByNamedTypeName: Map<string, Set<string>>;
   internalGraph: Graph;
   internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
   warnings: Warning[];

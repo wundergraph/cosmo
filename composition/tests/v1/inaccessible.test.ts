@@ -22,7 +22,7 @@ import {
   Subgraph,
   UNION,
 } from '../../src';
-import { versionTwoClientDefinitions, versionTwoRouterDefinitions } from './utils/utils';
+import { schemaQueryDefinition, versionTwoRouterDefinitions } from './utils/utils';
 import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
@@ -58,7 +58,7 @@ describe('@inaccessible tests', () => {
     );
     expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema!)).toBe(
       normalizeString(
-        versionTwoClientDefinitions +
+        schemaQueryDefinition +
           `
       type Entity {
         age: Int!
@@ -68,8 +68,6 @@ describe('@inaccessible tests', () => {
       type Query {
         entity: Entity!
       }
-      
-      scalar openfed__Scope
     `,
       ),
     );
@@ -133,7 +131,7 @@ describe('@inaccessible tests', () => {
     );
     expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema!)).toBe(
       normalizeString(
-        versionTwoClientDefinitions +
+        schemaQueryDefinition +
           `
       type Entity implements Interface {
         id: ID!
@@ -146,8 +144,6 @@ describe('@inaccessible tests', () => {
       type Query {
         entity: Entity!
       }
-      
-      scalar openfed__Scope
     `,
       ),
     );
@@ -184,7 +180,7 @@ describe('@inaccessible tests', () => {
     );
     expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
       normalizeString(
-        versionTwoClientDefinitions +
+        schemaQueryDefinition +
           `
       type Entity implements Interface {
         age: Int!
@@ -199,8 +195,6 @@ describe('@inaccessible tests', () => {
       type Query {
         entity: Entity!
       }
-      
-      scalar openfed__Scope
     `,
       ),
     );
@@ -325,7 +319,7 @@ describe('@inaccessible tests', () => {
     );
     expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
       normalizeString(
-        versionTwoClientDefinitions +
+        schemaQueryDefinition +
           `
       type Object {
         name: String!
@@ -334,8 +328,6 @@ describe('@inaccessible tests', () => {
       type Query {
         dummy: String!
       }
-      
-      scalar openfed__Scope
     `,
       ),
     );
@@ -374,7 +366,7 @@ describe('@inaccessible tests', () => {
     );
     expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
       normalizeString(
-        versionTwoClientDefinitions +
+        schemaQueryDefinition +
           `
       type ObjectTwo {
         name: String!
@@ -386,8 +378,6 @@ describe('@inaccessible tests', () => {
       }
       
       union Union = ObjectTwo
-      
-      scalar openfed__Scope
     `,
       ),
     );
@@ -430,7 +420,7 @@ describe('@inaccessible tests', () => {
     );
     expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
       normalizeString(
-        versionTwoClientDefinitions +
+        schemaQueryDefinition +
           `
       type ObjectThree {
         name: String!
@@ -440,8 +430,6 @@ describe('@inaccessible tests', () => {
         dummy: String!
         objectThree: ObjectThree!
       }
-      
-      scalar openfed__Scope
     `,
       ),
     );
@@ -475,13 +463,11 @@ describe('@inaccessible tests', () => {
     );
     expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
       normalizeString(
-        versionTwoClientDefinitions +
+        schemaQueryDefinition +
           `
       type Query {
         dummy: String!
       }
-      
-      scalar openfed__Scope
     `,
       ),
     );
@@ -511,13 +497,11 @@ describe('@inaccessible tests', () => {
     );
     expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
       normalizeString(
-        versionTwoClientDefinitions +
+        schemaQueryDefinition +
           `
       type Query {
         dummy: String!
       }
-      
-      scalar openfed__Scope
     `,
       ),
     );
@@ -551,7 +535,7 @@ describe('@inaccessible tests', () => {
     );
     expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
       normalizeString(
-        versionTwoClientDefinitions +
+        schemaQueryDefinition +
           `
       type Object {
         scalar(scalar: Scalar!): Scalar!
@@ -563,8 +547,6 @@ describe('@inaccessible tests', () => {
       }
       
       scalar Scalar
-      
-      scalar openfed__Scope
     `,
       ),
     );
@@ -598,7 +580,7 @@ describe('@inaccessible tests', () => {
     );
     expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
       normalizeString(
-        versionTwoClientDefinitions +
+        schemaQueryDefinition +
           `
       type Object {
         scalar(scalar: Scalar!): Scalar!
@@ -610,8 +592,6 @@ describe('@inaccessible tests', () => {
       }
       
       scalar Scalar
-      
-      scalar openfed__Scope
     `,
       ),
     );
@@ -661,7 +641,7 @@ describe('@inaccessible tests', () => {
     );
     expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
       normalizeString(
-        versionTwoClientDefinitions +
+        schemaQueryDefinition +
           `
       type Object {
         name: String!
@@ -673,8 +653,6 @@ describe('@inaccessible tests', () => {
       }
       
       scalar Scalar
-      
-      scalar openfed__Scope
     `,
       ),
     );

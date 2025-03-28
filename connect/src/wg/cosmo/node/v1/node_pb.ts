@@ -900,6 +900,11 @@ export class AuthorizationConfiguration extends Message<AuthorizationConfigurati
    */
   requiredOrScopes: Scopes[] = [];
 
+  /**
+   * @generated from field: repeated wg.cosmo.node.v1.Scopes required_or_scopes_by_or = 3;
+   */
+  requiredOrScopesByOr: Scopes[] = [];
+
   constructor(data?: PartialMessage<AuthorizationConfiguration>) {
     super();
     proto3.util.initPartial(data, this);
@@ -910,6 +915,7 @@ export class AuthorizationConfiguration extends Message<AuthorizationConfigurati
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "requires_authentication", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 2, name: "required_or_scopes", kind: "message", T: Scopes, repeated: true },
+    { no: 3, name: "required_or_scopes_by_or", kind: "message", T: Scopes, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AuthorizationConfiguration {

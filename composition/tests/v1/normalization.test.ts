@@ -1830,38 +1830,7 @@ describe('Normalization tests', () => {
   });
 
   test('that a subgraph is normalized correctly', () => {
-    const result = normalizeSubgraphFromString(
-      `
-      enum Enum @requiresScopes(scopes: [["read:enum"]]) {
-        VALUE
-      }
-      
-      """
-        This is the description for Interface
-      """
-      interface Interface @requiresScopes(scopes: [["read:private"]]) {
-        field(argumentOne: String!): Enum! @authenticated
-      }
-      
-      """
-        This is the description for Object
-      """
-      type Object implements Interface @requiresScopes(scopes: [["read:object"]]) {
-        """
-          This is the description for Object.field
-        """
-        field(
-          """
-            This is the description for the argumentOne argument of Object.field
-          """
-          argumentOne: String!
-        ): Enum!
-      }
-    `,
-      true,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
-    expect(result.success).toBe(true);
+    const result = normalizeSubgraphSuccess(nb, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(result.schema)).toBe(
       normalizeString(`
       directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
@@ -1878,21 +1847,21 @@ describe('Normalization tests', () => {
       directive @shareable repeatable on FIELD_DEFINITION | OBJECT
       directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
       
-      enum Enum {
+      enum Enum @requiresScopes(scopes: [["read:enum"]]) {
         VALUE
       }
       
       """
         This is the description for Interface
       """
-      interface Interface {
-        field(argumentOne: String!): Enum! @authenticated @requiresScopes(scopes: [["read:private", "read:enum"]])
+      interface Interface @requiresScopes(scopes: [["read:private"]]) {
+        field(argumentOne: String!): Enum! @authenticated
       }
 
       """
         This is the description for Object
       """
-      type Object implements Interface {
+      type Object implements Interface @requiresScopes(scopes: [["read:object"]]) {
         """
           This is the description for Object.field
         """
@@ -1901,7 +1870,7 @@ describe('Normalization tests', () => {
             This is the description for the argumentOne argument of Object.field
           """
           argumentOne: String!
-        ): Enum! @authenticated @requiresScopes(scopes: [["read:object", "read:enum", "read:private"]])
+        ): Enum!
       }
       
       scalar openfed__FieldSet
@@ -1966,5 +1935,37 @@ const na: Subgraph = {
     type Nested @key(fields: "id") {
       id: ID!
     }
+  `),
+};
+
+const nb: Subgraph = {
+  name: 'nb',
+  url: '',
+  definitions: parse(`
+      enum Enum @requiresScopes(scopes: [["read:enum"]]) {
+        VALUE
+      }
+      
+      """
+        This is the description for Interface
+      """
+      interface Interface @requiresScopes(scopes: [["read:private"]]) {
+        field(argumentOne: String!): Enum! @authenticated
+      }
+      
+      """
+        This is the description for Object
+      """
+      type Object implements Interface @requiresScopes(scopes: [["read:object"]]) {
+        """
+          This is the description for Object.field
+        """
+        field(
+          """
+            This is the description for the argumentOne argument of Object.field
+          """
+          argumentOne: String!
+        ): Enum!
+      }
   `),
 };

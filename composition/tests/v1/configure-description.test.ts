@@ -27,7 +27,7 @@ import {
   FederationResultSuccess,
 } from '../../src';
 import {
-  baseDirectiveDefinitionWithConfigureDescription,
+  baseDirectiveDefinitionsWithConfigureDescription,
   schemaQueryDefinition,
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
@@ -123,7 +123,7 @@ describe('@openfed__configureDescription tests', () => {
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
           schemaQueryDefinition +
-            baseDirectiveDefinitionWithConfigureDescription +
+            baseDirectiveDefinitionsWithConfigureDescription +
             `
           """
           nf.Query

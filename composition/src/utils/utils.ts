@@ -85,6 +85,14 @@ export function addIterableValuesToSet<T>(source: Array<T> | Iterable<T>, target
   }
 }
 
+export function addSets<T>(a: Set<T>, b: Set<T>): Set<T> {
+  const output = new Set<T>(a);
+  for (const item of b) {
+    output.add(item);
+  }
+  return output;
+}
+
 export function kindToTypeString(kind: Kind): string {
   switch (kind) {
     case Kind.BOOLEAN: {

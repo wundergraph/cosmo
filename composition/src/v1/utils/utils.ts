@@ -1,12 +1,4 @@
-import {
-  DocumentNode,
-  EnumTypeDefinitionNode,
-  FieldDefinitionNode,
-  InterfaceTypeDefinitionNode,
-  Kind,
-  ObjectTypeDefinitionNode,
-  ScalarTypeDefinitionNode,
-} from 'graphql';
+import { DocumentNode, Kind } from 'graphql';
 import { FieldConfiguration } from '../../router-configuration/types';
 import {
   AuthorizationData,
@@ -15,6 +7,9 @@ import {
   EntityInterfaceSubgraphData,
   FieldAuthorizationData,
   FieldData,
+  InterfaceDefinitionData,
+  ObjectDefinitionData,
+  ParentDefinitionData,
   SimpleFieldData,
 } from '../../schema-building/types';
 import {
@@ -33,17 +28,20 @@ import {
   STRING_SCALAR,
   UNION,
 } from '../../utils/string-constants';
-import { addIterableValuesToSet, getValueOrDefault } from '../../utils/utils';
+import { addIterableValuesToSet, addSets } from '../../utils/utils';
 import { KeyFieldSetData } from '../normalization/types';
+import { MAX_OR_SCOPES } from './constants';
+import 'core-js/modules/esnext.set.is-subset-of.v2';
+import 'core-js/modules/esnext.set.is-superset-of.v2';
 
-export function subtractSourceSetFromTargetSet<T>(source: Set<T>, target: Set<T>) {
+export function subtractSet<T>(source: Set<T>, target: Set<T>) {
   for (const entry of source) {
     target.delete(entry);
   }
 }
 
-export function mapToArrayOfValues<K, V>(map: Map<K, V>): V[] {
-  const output: V[] = [];
+export function mapToArrayOfValues<K, V>(map: Map<K, V>): Array<V> {
+  const output: Array<V> = [];
   for (const value of map.values()) {
     output.push(value);
   }
@@ -252,160 +250,200 @@ export function updateEntityData({ entityData, keyFieldSetDataByFieldSet, subgra
 export function newFieldAuthorizationData(fieldName: string): FieldAuthorizationData {
   return {
     fieldName,
-    requiresAuthentication: false,
-    requiredScopes: [],
+    inheritedData: {
+      requiredScopes: [],
+      requiredScopesByOR: [],
+      requiresAuthentication: false,
+    },
+    originalData: {
+      requiredScopes: [],
+      requiresAuthentication: false,
+    },
   };
-}
-
-export function resetAuthorizationData(authorizationData?: AuthorizationData) {
-  if (!authorizationData) {
-    return;
-  }
-  authorizationData.requiresAuthentication = false;
-  authorizationData.requiredScopes = [];
-  authorizationData.hasParentLevelAuthorization = false;
-}
-
-export function getAuthorizationDataToUpdate(
-  authorizationContainer: AuthorizationData,
-  node:
-    | EnumTypeDefinitionNode
-    | FieldDefinitionNode
-    | InterfaceTypeDefinitionNode
-    | ObjectTypeDefinitionNode
-    | ScalarTypeDefinitionNode,
-): AuthorizationData | FieldAuthorizationData {
-  if (node.kind === Kind.FIELD_DEFINITION) {
-    const name = node.name.value;
-    return getValueOrDefault(authorizationContainer.fieldAuthorizationDataByFieldName, name, () =>
-      newFieldAuthorizationData(name),
-    );
-  }
-  authorizationContainer.hasParentLevelAuthorization = true;
-  return authorizationContainer;
 }
 
 export function newAuthorizationData(typeName: string): AuthorizationData {
   return {
-    fieldAuthorizationDataByFieldName: new Map<string, FieldAuthorizationData>(),
-    hasParentLevelAuthorization: false,
-    requiresAuthentication: false,
+    fieldAuthDataByFieldName: new Map<string, FieldAuthorizationData>(),
     requiredScopes: [],
+    requiredScopesByOR: [],
+    requiresAuthentication: false,
     typeName,
   };
 }
 
-export const maxOrScopes = 16;
+export function addScopes(targetORScopes: Array<Set<string>>, sourceANDScopes: Set<string>) {
+  for (let i = targetORScopes.length - 1; i > -1; i--) {
+    if (targetORScopes[i].isSubsetOf(sourceANDScopes)) {
+      return;
+    }
+    if (targetORScopes[i].isSupersetOf(sourceANDScopes)) {
+      targetORScopes.splice(i, 1);
+    }
+  }
+  targetORScopes.push(sourceANDScopes);
+}
 
-export function mergeAuthorizationDataByAND(
-  source: AuthorizationData | FieldAuthorizationData,
-  target: AuthorizationData | FieldAuthorizationData,
-): boolean {
-  target.requiresAuthentication ||= source.requiresAuthentication;
-  const sourceScopesLength = source.requiredScopes.length;
-  if (sourceScopesLength < 1) {
-    return true;
-  }
-  const targetScopesLength = target.requiredScopes.length;
-  if (targetScopesLength < 1) {
-    if (sourceScopesLength > maxOrScopes) {
-      return false;
+export function mergeRequiredScopesByAND(
+  targetScopes: Array<Set<string>>,
+  sourceScopes: Array<Set<string>>,
+): Array<Set<string>> {
+  if (targetScopes.length < 1 || sourceScopes.length < 1) {
+    for (const sourceANDScopes of sourceScopes) {
+      targetScopes.push(new Set<string>(sourceANDScopes));
     }
-    for (const andScopes of source.requiredScopes) {
-      target.requiredScopes.push(new Set<string>(andScopes));
-    }
-    return true;
+    return targetScopes;
   }
-  if (sourceScopesLength * targetScopesLength > maxOrScopes) {
-    return false;
-  }
-  const mergedOrScopes: Set<string>[] = [];
-  for (const existingAndScopes of target.requiredScopes) {
-    for (const incomingAndScopes of source.requiredScopes) {
-      const newAndScopes = new Set<string>(existingAndScopes);
-      addIterableValuesToSet(incomingAndScopes, newAndScopes);
-      mergedOrScopes.push(newAndScopes);
+  const mergedANDScopes: Array<Set<string>> = [];
+  for (const sourceANDScopes of sourceScopes) {
+    for (const targetANDScopes of targetScopes) {
+      const mergedScopes = addSets(sourceANDScopes, targetANDScopes);
+      addScopes(mergedANDScopes, mergedScopes);
     }
   }
-  target.requiredScopes = mergedOrScopes;
-  return true;
+  return mergedANDScopes;
+}
+
+export function mergeRequiredScopesByOR(targetScopes: Array<Set<string>>, sourceScopes: Array<Set<string>>): boolean {
+  for (const sourceANDScopes of sourceScopes) {
+    addScopes(targetScopes, sourceANDScopes);
+  }
+  return targetScopes.length <= MAX_OR_SCOPES;
 }
 
 export function upsertFieldAuthorizationData(
   fieldAuthorizationDataByFieldName: Map<string, FieldAuthorizationData>,
-  incomingFieldAuthorizationData: FieldAuthorizationData,
+  incomingData: FieldAuthorizationData,
 ): boolean {
-  const fieldName = incomingFieldAuthorizationData.fieldName;
-  const existingFieldAuthorizationData = fieldAuthorizationDataByFieldName.get(fieldName);
-  if (!existingFieldAuthorizationData) {
-    if (incomingFieldAuthorizationData.requiredScopes.length > maxOrScopes) {
-      return false;
-    }
-    const fieldAuthorizationData = newFieldAuthorizationData(fieldName);
-    fieldAuthorizationData.requiresAuthentication ||= incomingFieldAuthorizationData.requiresAuthentication;
-    for (const andScopes of incomingFieldAuthorizationData.requiredScopes) {
-      fieldAuthorizationData.requiredScopes.push(new Set<string>(andScopes));
-    }
-    fieldAuthorizationDataByFieldName.set(fieldName, fieldAuthorizationData);
+  const fieldName = incomingData.fieldName;
+  const existingData = fieldAuthorizationDataByFieldName.get(fieldName);
+  if (!existingData) {
+    fieldAuthorizationDataByFieldName.set(fieldName, copyFieldAuthorizationData(incomingData));
     return true;
   }
-  existingFieldAuthorizationData.requiresAuthentication ||= incomingFieldAuthorizationData.requiresAuthentication;
-  return mergeAuthorizationDataByAND(incomingFieldAuthorizationData, existingFieldAuthorizationData);
+  existingData.inheritedData.requiresAuthentication ||= incomingData.inheritedData.requiresAuthentication;
+  existingData.originalData.requiresAuthentication ||= incomingData.originalData.requiresAuthentication;
+  if (
+    !mergeRequiredScopesByOR(
+      existingData.inheritedData.requiredScopesByOR,
+      incomingData.inheritedData.requiredScopes,
+    ) ||
+    existingData.inheritedData.requiredScopes.length * incomingData.inheritedData.requiredScopes.length >
+      MAX_OR_SCOPES ||
+    existingData.originalData.requiredScopes.length * incomingData.originalData.requiredScopes.length > MAX_OR_SCOPES
+  ) {
+    return false;
+  }
+  existingData.inheritedData.requiredScopes = mergeRequiredScopesByAND(
+    existingData.inheritedData.requiredScopes,
+    incomingData.inheritedData.requiredScopes,
+  );
+  existingData.originalData.requiredScopes = mergeRequiredScopesByAND(
+    existingData.originalData.requiredScopes,
+    incomingData.originalData.requiredScopes,
+  );
+  return true;
+}
+
+function copyFieldAuthorizationDataByFieldName(
+  source: Map<string, FieldAuthorizationData>,
+): Map<string, FieldAuthorizationData> {
+  const target = new Map<string, FieldAuthorizationData>();
+  for (const [fieldName, data] of source) {
+    target.set(fieldName, copyFieldAuthorizationData(data));
+  }
+  return target;
+}
+
+function copyFieldAuthorizationData(data: FieldAuthorizationData): FieldAuthorizationData {
+  return {
+    fieldName: data.fieldName,
+    inheritedData: {
+      requiredScopes: [...data.inheritedData.requiredScopes],
+      requiredScopesByOR: [...data.inheritedData.requiredScopes],
+      requiresAuthentication: data.inheritedData.requiresAuthentication,
+    },
+    originalData: {
+      requiredScopes: [...data.originalData.requiredScopes],
+      requiresAuthentication: data.originalData.requiresAuthentication,
+    },
+  };
+}
+
+function copyAuthorizationData(data: AuthorizationData): AuthorizationData {
+  return {
+    fieldAuthDataByFieldName: copyFieldAuthorizationDataByFieldName(data.fieldAuthDataByFieldName),
+    requiredScopes: [...data.requiredScopes],
+    requiredScopesByOR: [...data.requiredScopes],
+    requiresAuthentication: data.requiresAuthentication,
+    typeName: data.typeName,
+  };
 }
 
 export function upsertAuthorizationData(
   authorizationDataByParentTypeName: Map<string, AuthorizationData>,
-  incomingAuthorizationData: AuthorizationData,
-  invalidOrScopesFieldPaths: Set<string>,
+  incomingData: AuthorizationData,
+  invalidORScopesCoords: Set<string>,
 ) {
-  const existingAuthorizationData = authorizationDataByParentTypeName.get(incomingAuthorizationData.typeName);
-  if (!existingAuthorizationData) {
-    authorizationDataByParentTypeName.set(incomingAuthorizationData.typeName, incomingAuthorizationData);
+  const existingData = authorizationDataByParentTypeName.get(incomingData.typeName);
+  if (!existingData) {
+    authorizationDataByParentTypeName.set(incomingData.typeName, copyAuthorizationData(incomingData));
     return;
   }
-  for (const [fieldName, fieldAuthorizationData] of incomingAuthorizationData.fieldAuthorizationDataByFieldName) {
-    if (
-      !upsertFieldAuthorizationData(existingAuthorizationData.fieldAuthorizationDataByFieldName, fieldAuthorizationData)
-    ) {
-      invalidOrScopesFieldPaths.add(`${incomingAuthorizationData.typeName}.${fieldName}`);
+  existingData.requiresAuthentication ||= incomingData.requiresAuthentication;
+  if (
+    !mergeRequiredScopesByOR(existingData.requiredScopesByOR, incomingData.requiredScopes) ||
+    existingData.requiredScopes.length * incomingData.requiredScopes.length > MAX_OR_SCOPES
+  ) {
+    invalidORScopesCoords.add(incomingData.typeName);
+  } else {
+    existingData.requiredScopes = mergeRequiredScopesByAND(existingData.requiredScopes, incomingData.requiredScopes);
+  }
+  for (const [fieldName, fieldAuthData] of incomingData.fieldAuthDataByFieldName) {
+    if (!upsertFieldAuthorizationData(existingData.fieldAuthDataByFieldName, fieldAuthData)) {
+      invalidORScopesCoords.add(`${incomingData.typeName}.${fieldName}`);
     }
   }
 }
 
 export function upsertAuthorizationConfiguration(
-  fieldConfigurationByFieldPath: Map<string, FieldConfiguration>,
+  fieldConfigurationByFieldCoords: Map<string, FieldConfiguration>,
   authorizationData: AuthorizationData,
 ) {
   const typeName = authorizationData.typeName;
-  for (const [fieldName, fieldAuthorizationData] of authorizationData.fieldAuthorizationDataByFieldName) {
-    const fieldPath = `${typeName}.${fieldName}`;
-    const existingFieldConfiguration = fieldConfigurationByFieldPath.get(fieldPath);
-    if (existingFieldConfiguration) {
-      existingFieldConfiguration.requiresAuthentication = fieldAuthorizationData.requiresAuthentication;
-      existingFieldConfiguration.requiredScopes = fieldAuthorizationData.requiredScopes.map((orScopes) => [
+  for (const [fieldName, fieldAuthData] of authorizationData.fieldAuthDataByFieldName) {
+    const fieldCoords = `${typeName}.${fieldName}`;
+    const existingConfig = fieldConfigurationByFieldCoords.get(fieldCoords);
+    if (existingConfig) {
+      existingConfig.requiresAuthentication = fieldAuthData.inheritedData.requiresAuthentication;
+      existingConfig.requiredScopes = fieldAuthData.inheritedData.requiredScopes.map((orScopes) => [...orScopes]);
+      existingConfig.requiredScopesByOR = fieldAuthData.inheritedData.requiredScopesByOR.map((orScopes) => [
         ...orScopes,
       ]);
     } else {
-      fieldConfigurationByFieldPath.set(fieldPath, {
+      fieldConfigurationByFieldCoords.set(fieldCoords, {
         argumentNames: [],
         typeName,
         fieldName,
-        requiresAuthentication: fieldAuthorizationData.requiresAuthentication,
-        requiredScopes: fieldAuthorizationData.requiredScopes.map((orScopes) => [...orScopes]),
+        requiresAuthentication: fieldAuthData.inheritedData.requiresAuthentication,
+        requiredScopes: fieldAuthData.inheritedData.requiredScopes.map((orScopes) => [...orScopes]),
+        requiredScopesByOR: fieldAuthData.inheritedData.requiredScopesByOR.map((orScopes) => [...orScopes]),
       });
     }
   }
 }
 
-export function setAndGetValue<K, V>(map: Map<K, V>, key: K, value: V) {
-  map.set(key, value);
-  return value;
-}
-
-export function isNodeKindInterface(kind: Kind) {
-  return kind === Kind.INTERFACE_TYPE_DEFINITION || kind === Kind.INTERFACE_TYPE_EXTENSION;
-}
-
 export function isNodeKindObject(kind: Kind) {
   return kind === Kind.OBJECT_TYPE_DEFINITION || kind === Kind.OBJECT_TYPE_EXTENSION;
+}
+
+export function isInterfaceDefinitionData(data: ParentDefinitionData): data is InterfaceDefinitionData {
+  return data.kind === Kind.INTERFACE_TYPE_DEFINITION;
+}
+
+export function isObjectDefinitionData(data?: ParentDefinitionData): data is ObjectDefinitionData {
+  if (!data) {
+    return false;
+  }
+  return data.kind === Kind.OBJECT_TYPE_DEFINITION;
 }

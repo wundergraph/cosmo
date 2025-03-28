@@ -18,8 +18,8 @@ import {
 import { describe, expect, test } from 'vitest';
 import {
   baseDirectiveDefinitions,
+  schemaQueryDefinition,
   versionOneRouterDefinitions,
-  versionTwoClientDefinitions,
   versionTwoRouterDefinitions,
 } from './utils/utils';
 import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
@@ -603,7 +603,7 @@ describe('Enum tests', () => {
       );
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
-          versionTwoClientDefinitions +
+          schemaQueryDefinition +
             `
             enum Enum {
               A
@@ -614,8 +614,6 @@ describe('Enum tests', () => {
               enum(enum: Enum!): Enum!
               enumTwo(enum: Enum!): Enum!
             }
-
-            scalar openfed__Scope
           `,
         ),
       );
@@ -648,7 +646,7 @@ describe('Enum tests', () => {
       );
       expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
         normalizeString(
-          versionTwoClientDefinitions +
+          schemaQueryDefinition +
             `
             enum Enum {
               A
@@ -659,8 +657,6 @@ describe('Enum tests', () => {
               enum(enum: Enum!): Enum!
               enumTwo(enum: Enum!): Enum!
             }
-
-            scalar openfed__Scope
           `,
         ),
       );

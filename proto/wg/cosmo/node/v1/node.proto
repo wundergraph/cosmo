@@ -104,6 +104,7 @@ message Scopes {
 message AuthorizationConfiguration {
   bool requires_authentication = 1;
   repeated Scopes required_or_scopes = 2;
+  repeated Scopes required_or_scopes_by_or = 3;
 }
 
 message FieldConfiguration {
