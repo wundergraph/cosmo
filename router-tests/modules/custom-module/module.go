@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const myModuleID = "myModule"
+const myModuleID = "myTestModule"
 
 // MyModule is a simple module that has access to the GraphQL operation and add a header to the response
 // It demonstrates how to use the different handlers to customize the router.
