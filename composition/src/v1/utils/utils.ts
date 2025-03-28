@@ -31,6 +31,8 @@ import {
 import { addIterableValuesToSet, addSets } from '../../utils/utils';
 import { KeyFieldSetData } from '../normalization/types';
 import { MAX_OR_SCOPES } from './constants';
+import 'core-js/modules/esnext.set.is-subset-of.v2';
+import 'core-js/modules/esnext.set.is-superset-of.v2';
 
 export function subtractSet<T>(source: Set<T>, target: Set<T>) {
   for (const entry of source) {
