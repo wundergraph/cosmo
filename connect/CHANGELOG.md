@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.98.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.98.0...@wundergraph/cosmo-connect@0.98.1) (2025-03-28)
+
+### Bug Fixes
+
+* authorization directive cascading ([#1733](https://github.com/wundergraph/cosmo/issues/1733)) ([0199fb5](https://github.com/wundergraph/cosmo/commit/0199fb5f88104a585b74a79638f54f1a3b812436)) (@Aenimus)
+
 # [0.98.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.97.0...@wundergraph/cosmo-connect@0.98.0) (2025-03-25)
 
 ### Features
