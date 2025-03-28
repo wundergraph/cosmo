@@ -221,7 +221,7 @@ export function childMapToValueArray<T extends ChildData, U extends ChildDefinit
 ): Array<U> {
   const valueArray: Array<ChildDefinitionNode> = [];
   for (const childData of map.values()) {
-    if (isNodeFieldData(childData)) {
+    if (isFieldData(childData)) {
       propagateFieldDataArguments(childData);
     }
     for (const directiveNodes of childData.directivesByDirectiveName.values()) {
@@ -768,6 +768,6 @@ export function areKindsEqual<T extends ParentDefinitionData>(a: T, b: ParentDef
   return a.kind === b.kind;
 }
 
-export function isNodeFieldData(data: ChildData): data is FieldData {
+export function isFieldData(data: ChildData): data is FieldData {
   return data.kind === Kind.FIELD_DEFINITION;
 }

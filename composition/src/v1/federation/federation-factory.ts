@@ -2046,7 +2046,6 @@ export class FederationFactory {
             );
             fieldAuthData.inheritedData.requiresAuthentication ||= namedTypeAuthData.requiresAuthentication;
             if (
-              // !mergeRequiredScopesByOR(fieldAuthData.inheritedData.requiredScopesByOR, namedTypeAuthData.requiredScopesByOR) ||
               fieldAuthData.inheritedData.requiredScopes.length * namedTypeAuthData.requiredScopes.length >
               MAX_OR_SCOPES
             ) {
