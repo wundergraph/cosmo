@@ -1,5 +1,4 @@
 import { CompositionErrorsBanner } from "@/components/composition-errors-banner";
-import { ThreadSheet } from "@/components/discussions/thread";
 import {
   GraphContext,
   GraphPageLayout,
@@ -7,20 +6,32 @@ import {
 } from "@/components/layout/graph-layout";
 import { PageHeader } from "@/components/layout/head";
 import { EmptySchema } from "@/components/schema/empty-schema-state";
-import {
-  SDLViewerActions,
-  SchemaSettings,
-} from "@/components/schema/sdl-viewer";
+import { SDLViewerActions } from "@/components/schema/sdl-viewer";
 import { SDLViewerMonaco } from "@/components/schema/sdl-viewer-monaco";
 import { SchemaToolbar } from "@/components/schema/toolbar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Loader } from "@/components/ui/loader";
 import { Separator } from "@/components/ui/separator";
 import useHash from "@/hooks/use-hash";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
-import { CheckIcon, Component2Icon } from "@radix-ui/react-icons";
 import { useQuery } from "@connectrpc/connect-query";
+import { ChevronUpDownIcon } from "@heroicons/react/24/outline";
+import { Component2Icon } from "@radix-ui/react-icons";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getFederatedGraphSDLByName,
@@ -29,25 +40,8 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext } from "react";
-import { PiGraphLight } from "react-icons/pi";
 import { MdOutlineFeaturedPlayList } from "react-icons/md";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-  DropdownMenuGroup,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuPortal,
-  DropdownMenuSubContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuLabel,
-  DropdownMenuItemIndicator,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { ChevronUpDownIcon } from "@heroicons/react/24/outline";
-import { RxComponentPlaceholder } from "react-icons/rx";
+import { PiGraphLight } from "react-icons/pi";
 
 const SDLPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -264,7 +258,7 @@ const SDLPage: NextPageWithLayout = () => {
                           </DropdownMenuPortal>
                         </DropdownMenuSub>
                       </DropdownMenuGroup>
-                      
+
                       {featureFlags.length > 0 && (
                         <>
                           <Separator className="my-2" />
@@ -373,7 +367,6 @@ const SDLPage: NextPageWithLayout = () => {
                     : undefined
                 }
               />
-              <SchemaSettings />
             </div>
           </SchemaToolbar>
         }
@@ -385,7 +378,6 @@ const SDLPage: NextPageWithLayout = () => {
           />
         )}
         {content}
-        <ThreadSheet schemaVersionId={activeGraphWithSDL.versionId ?? ""} />
       </GraphPageLayout>
     </PageHeader>
   );
