@@ -25,7 +25,12 @@ import {
 import fs from 'node:fs';
 import path, { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { documentNodeToNormalizedString, normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+import {
+  documentNodeToNormalizedString,
+  federateSubgraphsSuccess,
+  normalizeString,
+  schemaToSortedNormalizedString,
+} from '../utils/utils';
 
 // @ts-ignore
 const __filename = fileURLToPath(import.meta.url);
@@ -85,11 +90,10 @@ describe('FederationFactory tests', () => {
   });
 
   test('that the demo subgraphs federate to generate the correct federated graph', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphsSuccess(
       [demoEmployees, demoFamily, demoHobbies, demoProducts],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
+    );
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
         `
@@ -178,10 +182,10 @@ describe('FederationFactory tests', () => {
         surname: String!
       }
       
-      type DirectiveFact implements TopSecretFact {
-        description: FactContent! @authenticated @requiresScopes(scopes: [["read:scalar"], ["read:all"]])
-        factType: TopSecretFactType @authenticated
-        title: String! @authenticated
+      type DirectiveFact implements TopSecretFact @authenticated {
+        description: FactContent!
+        factType: TopSecretFactType
+        title: String!
       }
       
       type Documentation {
@@ -227,10 +231,10 @@ describe('FederationFactory tests', () => {
         FULLSTACK
       }
       
-      type EntityFact implements TopSecretFact {
-        description: FactContent! @authenticated @requiresScopes(scopes: [["read:entity", "read:scalar"], ["read:entity", "read:all"]])
-        factType: TopSecretFactType @authenticated @requiresScopes(scopes: [["read:entity"]])
-        title: String! @requiresScopes(scopes: [["read:entity"]])
+      type EntityFact implements TopSecretFact @requiresScopes(scopes: [["read:entity"]]) {
+        description: FactContent!
+        factType: TopSecretFactType
+        title: String!
       }
       
       type Exercise {
@@ -248,7 +252,7 @@ describe('FederationFactory tests', () => {
         yearsOfExperience: Float!
       }
       
-      scalar FactContent
+      scalar FactContent @requiresScopes(scopes: [["read:scalar"], ["read:all"]])
 
       type Flying implements Experience {
         planeModels: [String!]!
@@ -300,8 +304,8 @@ describe('FederationFactory tests', () => {
       }
 
       type MiscellaneousFact implements TopSecretFact {
-        description: FactContent! @requiresScopes(scopes: [["read:miscellaneous", "read:scalar"], ["read:miscellaneous", "read:all"]]) @authenticated
-        factType: TopSecretFactType @authenticated
+        description: FactContent! @requiresScopes(scopes: [["read:miscellaneous"]])
+        factType: TopSecretFactType
         title: String!
       }
       
@@ -383,7 +387,7 @@ describe('FederationFactory tests', () => {
       type Query {
         employee(id: Int!): Employee
         employees: [Employee!]!
-        factTypes: [TopSecretFactType!] @authenticated
+        factTypes: [TopSecretFactType!]
         findEmployees(criteria: SearchInput): [Employee!]!
         productTypes: [Products!]!
         products: [Products!]!
@@ -419,12 +423,12 @@ describe('FederationFactory tests', () => {
         unixTime: Int!
       }
       
-      interface TopSecretFact {
-        description: FactContent! @authenticated @requiresScopes(scopes: [["read:scalar"], ["read:all"]])
-        factType: TopSecretFactType @authenticated
+      interface TopSecretFact @authenticated {
+        description: FactContent!
+        factType: TopSecretFactType
       }
       
-      enum TopSecretFactType {
+      enum TopSecretFactType @authenticated {
         DIRECTIVE
         ENTITY
         MISCELLANEOUS
