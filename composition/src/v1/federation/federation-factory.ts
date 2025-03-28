@@ -2125,12 +2125,7 @@ export class FederationFactory {
       TAG_DEFINITION,
       SCOPE_SCALAR_DEFINITION,
     ];
-    this.clientDefinitions = [
-      AUTHENTICATED_DEFINITION,
-      DEPRECATED_DEFINITION,
-      REQUIRES_SCOPES_DEFINITION,
-      SCOPE_SCALAR_DEFINITION,
-    ];
+    this.clientDefinitions = [DEPRECATED_DEFINITION];
   }
 
   validatePathSegmentInaccessibility(path: string): boolean {

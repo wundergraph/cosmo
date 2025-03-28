@@ -119,18 +119,3 @@ export const versionTwoRouterDirectiveDefinitions = `
 `;
 
 export const versionTwoRouterDefinitions = schemaQueryDefinition + versionTwoRouterDirectiveDefinitions;
-
-export const versionTwoClientDirectiveDefinitions = `
-    directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-    directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-`;
-
-export const versionTwoClientDefinitions = schemaQueryDefinition + versionTwoClientDirectiveDefinitions;
-
-export function createSubgraph(name: string, schemaString: string): Subgraph {
-  return {
-    definitions: parse(schemaString),
-    name,
-    url: '',
-  };
-}

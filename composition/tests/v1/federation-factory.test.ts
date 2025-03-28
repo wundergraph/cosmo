@@ -18,7 +18,6 @@ import {
   schemaQueryDefinition,
   versionOnePersistedBaseSchema,
   versionOneRouterDefinitions,
-  versionTwoClientDefinitions,
   versionTwoRouterDefinitions,
   versionTwoRouterDirectiveDefinitions,
 } from './utils/utils';
@@ -694,7 +693,7 @@ describe('FederationFactory tests', () => {
     );
     expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
       normalizeString(
-        versionTwoClientDefinitions +
+        schemaQueryDefinition +
           `
       type Entity {
         enum: Enum!
@@ -718,8 +717,6 @@ describe('FederationFactory tests', () => {
       }
       
       union Union = Entity
-      
-      scalar openfed__Scope
     `,
       ),
     );
@@ -786,7 +783,7 @@ describe('FederationFactory tests', () => {
     );
     expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
       normalizeString(
-        versionTwoClientDefinitions +
+        schemaQueryDefinition +
           `
       type Entity {
         enum: Enum!
@@ -810,8 +807,6 @@ describe('FederationFactory tests', () => {
       }
       
       union Union = Entity
-      
-      scalar openfed__Scope
     `,
       ),
     );
