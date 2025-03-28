@@ -31,6 +31,7 @@
     "@graphql-tools/merge": "^9.0.0",
     "@graphql-tools/schema": "^10.0.0",
     "@graphql-tools/utils": "^10.1.0",
+    "core-js": "^3.41.0",
     "graphql": "^16.9.0",
     "lodash": "^4.17.21",
     "pathe": "^1.1.1"
