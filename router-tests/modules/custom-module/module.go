@@ -1,4 +1,4 @@
-package module
+package custom_module
 
 import (
 	"fmt"
@@ -8,12 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func init() {
-	// Register your module here
-	core.RegisterModule(&MyModule{})
-}
-
-const myModuleID = "myModule"
+const myModuleID = "myTestModule"
 
 // MyModule is a simple module that has access to the GraphQL operation and add a header to the response
 // It demonstrates how to use the different handlers to customize the router.

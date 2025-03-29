@@ -10,9 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 	integration "github.com/wundergraph/cosmo/router-tests"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
+	"github.com/wundergraph/cosmo/router-tests/modules/custom-module"
 	setScopesModule "github.com/wundergraph/cosmo/router-tests/modules/custom-set-scopes"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"github.com/wundergraph/cosmo/router/cmd/custom/module"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -51,7 +51,7 @@ func TestCustomModuleSetScopes(t *testing.T) {
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"myModule": module.MyModule{
+				"myModule": custom_module.MyModule{
 					Value: 1,
 				},
 				"setScopesModule": setScopesModule.SetScopesModule{
@@ -65,7 +65,7 @@ func TestCustomModuleSetScopes(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
 				core.WithModulesConfig(cfg.Modules),
-				core.WithCustomModules(&module.MyModule{}, &setScopesModule.SetScopesModule{}),
+				core.WithCustomModules(&custom_module.MyModule{}, &setScopesModule.SetScopesModule{}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
@@ -91,7 +91,7 @@ func TestCustomModuleSetScopes(t *testing.T) {
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"myModule": module.MyModule{
+				"myModule": custom_module.MyModule{
 					Value: 1,
 				},
 				"setScopesModule": setScopesModule.SetScopesModule{
@@ -105,7 +105,7 @@ func TestCustomModuleSetScopes(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
 				core.WithModulesConfig(cfg.Modules),
-				core.WithCustomModules(&module.MyModule{}, &setScopesModule.SetScopesModule{}),
+				core.WithCustomModules(&custom_module.MyModule{}, &setScopesModule.SetScopesModule{}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
