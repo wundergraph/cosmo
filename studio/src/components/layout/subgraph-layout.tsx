@@ -33,6 +33,7 @@ import {
 import { useRouter } from "next/router";
 import { Fragment, createContext, useMemo, useState } from "react";
 import { PiChat, PiGraphLight } from "react-icons/pi";
+import { OrgPendingDeletionBanner } from "@/components/org-pending-deletion-banner";
 import { EmptyState } from "../empty-state";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -292,6 +293,7 @@ export const SubgraphPageLayout = ({
         </div>
         {toolbar}
       </div>
+      <OrgPendingDeletionBanner />
       <div
         ref={scrollRef}
         className={cn(

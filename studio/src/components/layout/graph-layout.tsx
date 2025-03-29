@@ -56,6 +56,7 @@ import { Loader } from "../ui/loader";
 import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
+import { OrgPendingDeletionBanner } from "@/components/org-pending-deletion-banner";
 
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse["graph"];
@@ -421,6 +422,7 @@ export const GraphPageLayout = ({
         </div>
         {toolbar}
       </div>
+      <OrgPendingDeletionBanner />
       <div
         ref={scrollRef}
         className={cn(

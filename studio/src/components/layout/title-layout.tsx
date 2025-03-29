@@ -2,6 +2,7 @@ import { useCurrentOrganization } from "@/hooks/use-current-organization";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { cn } from "@/lib/utils";
 import { Fragment } from "react";
+import { OrgPendingDeletionBanner } from "@/components/org-pending-deletion-banner";
 
 export interface TitleLayoutProps {
   title: React.ReactNode;
@@ -72,6 +73,7 @@ export const TitleLayout = ({
         )}
         {toolbar}
       </div>
+      <OrgPendingDeletionBanner />
       <div
         className={cn(
           "scrollbar-custom h-auto flex-1 overflow-y-auto",

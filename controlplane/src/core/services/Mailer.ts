@@ -45,7 +45,6 @@ export default class Mailer {
     organizationName: string;
     invitedBy?: string;
   }) {
-    const emailBody = readFileSync('./src/templates/email/organizationInvite.html').toString('utf8');
     let inviteBody;
     if (invitedBy) {
       inviteBody = `Hello <strong>${receiverEmail}</strong>, you have been invited to the
@@ -61,8 +60,7 @@ export default class Mailer {
       inviteBody,
     };
 
-    const template = ejs.compile(emailBody);
-    const htmlBody = template(data);
+    const htmlBody = this.getTemplate('./src/templates/email/organizationInvite.html', data);
 
     await this.client.sendMail({
       from: 'system@wundergraph.com',
@@ -70,5 +68,30 @@ export default class Mailer {
       subject: `[WunderGraph Cosmo] You have been invited to the ${organizationName} organization.`,
       html: htmlBody,
     });
+  }
+
+  public async sendOrganizationDeletionQueuedEmail({ receiverEmails, ...data }: {
+    receiverEmails: string[];
+    organizationName: string,
+    userDisplayName: string,
+    queuedOnDate: string,
+    deletionDate: string,
+    restoreLink: string,
+  }) {
+    const htmlBody = this.getTemplate('./src/templates/emails/organizationDeletionQueued.html', data);
+
+    await this.client.sendMail({
+      from: 'system@wundergraph.com',
+      to: receiverEmails,
+      subject: `[WunderGraph Cosmo] Organization ${data.organizationName} have been queued for deletion.`,
+      html: htmlBody,
+    });
+  }
+
+  private getTemplate<T extends ejs.Data>(templateFile: string, data: T) {
+    const emailBody = readFileSync(templateFile).toString('utf8');
+
+    const template = ejs.compile(emailBody, { openDelimiter: '[', closeDelimiter: ']' });
+    return template(data);
   }
 }

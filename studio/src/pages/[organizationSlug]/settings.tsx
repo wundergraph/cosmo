@@ -1433,6 +1433,7 @@ const LeaveOrganization = () => {
 const DeleteOrganization = () => {
   const user = useContext(UserContext);
   const router = useRouter();
+  const sessionQueryClient = useContext(SessionClientContext);
   const [open, setOpen] = useState(false);
 
   const regex = new RegExp(`^${user?.currentOrganization.name}$`);
@@ -1458,9 +1459,10 @@ const DeleteOrganization = () => {
   const { mutate, isPending } = useMutation(deleteOrganization, {
     onSuccess: (d) => {
       if (d.response?.code === EnumStatusCode.OK) {
-        router.reload();
+        // router.reload();
+        sessionQueryClient.refetchQueries();
         toast({
-          description: "Deleted the organization succesfully.",
+          description: "Organization deletion queued successfully.",
           duration: 3000,
         });
       } else if (d.response?.details) {
@@ -1518,17 +1520,23 @@ const DeleteOrganization = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                Are you sure you want to delete this organization?
+                Delete {user?.currentOrganization?.name}
               </DialogTitle>
-              <span className="text-sm text-muted-foreground">
-                This action cannot be undone.
-              </span>
             </DialogHeader>
-            <form onSubmit={handleSubmit(handleDeleteOrg)} className="mt-2">
+            <form onSubmit={handleSubmit(handleDeleteOrg)} className="mt-2 space-y-3">
+              <div>
+                Removing the organization <strong>{user?.currentOrganization?.name}</strong> is a permanent action
+                which cannot be undone! Are you sure you want to continue?
+              </div>
+
+              <div>
+                This will remove the organization, graphs, subgraphs, feature flags, members, api keys and
+                any other
+              </div>
+
               <div className="flex flex-col gap-y-3">
-                <span className="text-sm">
-                  Enter <strong>{user?.currentOrganization.name}</strong> to
-                  confirm you want to delete this organization.
+                <span>
+                  To confirm, enter &quot;{user?.currentOrganization.name}&quot; in the box below.
                 </span>
                 <Input
                   type="text"
@@ -1550,7 +1558,7 @@ const DeleteOrganization = () => {
                     type="submit"
                     disabled={!isValid}
                   >
-                    Delete
+                    Delete this organization
                   </Button>
                 </div>
               </div>
@@ -1562,10 +1570,20 @@ const DeleteOrganization = () => {
   );
 };
 
+const RestoreOrganization = () => {
+  return (
+    <>
+      <a id="restore-org"></a>
+      <DeleteOrganization />
+    </>
+  );
+};
+
 const SettingsDashboardPage: NextPageWithLayout = () => {
   const user = useUser();
   const isAdmin = useIsAdmin();
   const isCreator = useIsCreator();
+  const orgIsPendingDeletion = Boolean(user?.currentOrganization?.deletion);
 
   const {
     data: providerData,
@@ -1622,11 +1640,12 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
         refetch={refetchOIDCProvider}
       />
       <Scim />
-      {(!isCreator || orgs > 1) && <Separator className="my-2" />}
+      {(!isCreator || orgs > 1 || orgIsPendingDeletion) && <Separator className="my-2" />}
 
       {!isCreator && <LeaveOrganization />}
 
-      {orgs > 1 && <DeleteOrganization />}
+      {orgs > 1 && !orgIsPendingDeletion && <DeleteOrganization />}
+      {isAdmin && orgIsPendingDeletion && <RestoreOrganization />}
     </div>
   );
 };
