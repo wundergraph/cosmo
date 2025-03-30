@@ -8,7 +8,8 @@ import (
 )
 
 const (
-	writeWait = 10 * time.Second
+	defaultReadTimeout  = 5 * time.Second
+	defaultWriteTimeout = 10 * time.Second
 )
 
 type Proto interface {
@@ -65,14 +66,22 @@ func IsSupportedSubprotocol(subProtocol string) bool {
 	return false
 }
 
-func NewProtocol(subProtocol string, conn JSONConn, readTimeout time.Duration) (Proto, error) {
+func NewProtocol(subProtocol string, conn JSONConn, readTimeout, writeTimeout time.Duration) (Proto, error) {
+
+	if readTimeout == 0 {
+		readTimeout = defaultReadTimeout
+	}
+	if writeTimeout == 0 {
+		writeTimeout = defaultWriteTimeout
+	}
+
 	switch subProtocol {
 	case GraphQLWSSubprotocol:
-		return newGraphQLWSProtocol(conn, readTimeout, writeWait), nil
+		return newGraphQLWSProtocol(conn, readTimeout, writeTimeout), nil
 	case SubscriptionsTransportWSSubprotocol:
-		return newSubscriptionsTransportWSProtocol(conn, readTimeout, writeWait), nil
+		return newSubscriptionsTransportWSProtocol(conn, readTimeout, writeTimeout), nil
 	case AbsintheWSSubProtocol:
-		return newAbsintheWSProtocol(conn, readTimeout, writeWait), nil
+		return newAbsintheWSProtocol(conn, readTimeout, writeTimeout), nil
 	}
 	return nil, fmt.Errorf("could not find a suitable websocket subprotocol, supported ones are: %s", strings.Join(Subprotocols(), ", "))
 }

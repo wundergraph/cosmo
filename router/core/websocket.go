@@ -53,6 +53,7 @@ type WebsocketMiddlewareOptions struct {
 	Logger             *zap.Logger
 	Stats              statistics.EngineStatistics
 	ReadTimeout        time.Duration
+	WriteTimeout       time.Duration
 
 	EnableNetPoll         bool
 	NetPollTimeout        time.Duration
@@ -81,6 +82,7 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		logger:                    opts.Logger,
 		stats:                     opts.Stats,
 		readTimeout:               opts.ReadTimeout,
+		writeTimeout:              opts.WriteTimeout,
 		config:                    opts.WebSocketConfiguration,
 		clientHeader:              opts.ClientHeader,
 		attributes:                opts.Attributes,
@@ -221,7 +223,8 @@ type WebsocketHandler struct {
 	stats      statistics.EngineStatistics
 	attributes []attribute.KeyValue
 
-	readTimeout time.Duration
+	readTimeout  time.Duration
+	writeTimeout time.Duration
 
 	absintheHandlerEnabled bool
 	absintheHandlerPath    string
@@ -289,7 +292,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	// because it's hijacked by the websocket connection
 
 	conn := newWSConnectionWrapper(c)
-	protocol, err := wsproto.NewProtocol(subProtocol, conn, h.readTimeout)
+	protocol, err := wsproto.NewProtocol(subProtocol, conn, h.readTimeout, h.writeTimeout)
 	if err != nil {
 		requestLogger.Error("Create websocket protocol", zap.Error(err))
 		_ = c.Close()
