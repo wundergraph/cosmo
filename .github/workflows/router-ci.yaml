@@ -141,8 +141,9 @@ jobs:
         credentials:
           username: ${{secrets.DOCKER_USERNAME}}
           password: ${{secrets.DOCKER_PASSWORD}}
+        ports:
+          - 4222:4222
       redis:
-        # Docker Hub image
         image: redis:7
         # Set health checks to wait until redis has started
         options: >-
