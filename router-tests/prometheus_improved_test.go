@@ -61,29 +61,29 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 			}
 
 			assertLabelValue(t, schemaUsageMetrics[0].Label, otel.WgGraphQLFieldName, "currentMood")
-			assertLabelValue(t, schemaUsageMetrics[0].Label, otel.WgGraphQLFieldType, "Employee")
+			assertLabelValue(t, schemaUsageMetrics[0].Label, otel.WgGraphQLFieldParentType, "Employee")
 
 			assertLabelValue(t, schemaUsageMetrics[1].Label, otel.WgGraphQLFieldName, "employee")
-			assertLabelValue(t, schemaUsageMetrics[1].Label, otel.WgGraphQLFieldType, "Query")
+			assertLabelValue(t, schemaUsageMetrics[1].Label, otel.WgGraphQLFieldParentType, "Query")
 
 			assertLabelValue(t, schemaUsageMetrics[2].Label, otel.WgGraphQLFieldName, "id")
-			assertLabelValue(t, schemaUsageMetrics[2].Label, otel.WgGraphQLFieldType, "Employee")
+			assertLabelValue(t, schemaUsageMetrics[2].Label, otel.WgGraphQLFieldParentType, "Employee")
 
 			assertLabelValue(t, schemaUsageMetrics[3].Label, otel.WgGraphQLFieldName, "role")
-			assertLabelValue(t, schemaUsageMetrics[3].Label, otel.WgGraphQLFieldType, "Employee")
+			assertLabelValue(t, schemaUsageMetrics[3].Label, otel.WgGraphQLFieldParentType, "Employee")
 
 			// 'role' is an interface, so it counts for each implementing type, and the interface itself
 			assertLabelValue(t, schemaUsageMetrics[4].Label, otel.WgGraphQLFieldName, "title")
-			assertLabelValue(t, schemaUsageMetrics[4].Label, otel.WgGraphQLFieldType, "Engineer")
+			assertLabelValue(t, schemaUsageMetrics[4].Label, otel.WgGraphQLFieldParentType, "Engineer")
 
 			assertLabelValue(t, schemaUsageMetrics[5].Label, otel.WgGraphQLFieldName, "title")
-			assertLabelValue(t, schemaUsageMetrics[5].Label, otel.WgGraphQLFieldType, "Marketer")
+			assertLabelValue(t, schemaUsageMetrics[5].Label, otel.WgGraphQLFieldParentType, "Marketer")
 
 			assertLabelValue(t, schemaUsageMetrics[6].Label, otel.WgGraphQLFieldName, "title")
-			assertLabelValue(t, schemaUsageMetrics[6].Label, otel.WgGraphQLFieldType, "Operator")
+			assertLabelValue(t, schemaUsageMetrics[6].Label, otel.WgGraphQLFieldParentType, "Operator")
 
 			assertLabelValue(t, schemaUsageMetrics[7].Label, otel.WgGraphQLFieldName, "title")
-			assertLabelValue(t, schemaUsageMetrics[7].Label, otel.WgGraphQLFieldType, "RoleType")
+			assertLabelValue(t, schemaUsageMetrics[7].Label, otel.WgGraphQLFieldParentType, "RoleType")
 		})
 	})
 
@@ -139,17 +139,17 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 			}
 
 			assertLabelValue(t, schemaUsageMetrics[0].Label, otel.WgGraphQLFieldName, "currentMood")
-			assertLabelValue(t, schemaUsageMetrics[0].Label, otel.WgGraphQLFieldType, "Employee")
+			assertLabelValue(t, schemaUsageMetrics[0].Label, otel.WgGraphQLFieldParentType, "Employee")
 
 			assert.InEpsilon(t, 1.0, *schemaUsageMetrics[0].Counter.Value, 0.0001)
 
 			assertLabelValue(t, schemaUsageMetrics[1].Label, otel.WgGraphQLFieldName, "employee")
-			assertLabelValue(t, schemaUsageMetrics[1].Label, otel.WgGraphQLFieldType, "Query")
+			assertLabelValue(t, schemaUsageMetrics[1].Label, otel.WgGraphQLFieldParentType, "Query")
 
 			assert.InEpsilon(t, 2.0, *schemaUsageMetrics[1].Counter.Value, 0.0001)
 
 			assertLabelValue(t, schemaUsageMetrics[2].Label, otel.WgGraphQLFieldName, "id")
-			assertLabelValue(t, schemaUsageMetrics[2].Label, otel.WgGraphQLFieldType, "Employee")
+			assertLabelValue(t, schemaUsageMetrics[2].Label, otel.WgGraphQLFieldParentType, "Employee")
 
 			assert.InEpsilon(t, 2.0, *schemaUsageMetrics[2].Counter.Value, 0.0001)
 		})
