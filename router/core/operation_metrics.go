@@ -95,7 +95,7 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 			}
 
 			fieldSliceAttrs := []attribute.KeyValue{
-				rotel.WgGraphQLFieldType.StringSlice(field.TypeNames),
+				rotel.WgGraphQLFieldParentType.StringSlice(field.TypeNames),
 			}
 
 			rm.MeasureSchemaFieldUsage(ctx, 1, fieldSliceAttrs, otelmetric.WithAttributeSet(attribute.NewSet(slices.Concat(opAttrs, fieldAttrs)...)))
