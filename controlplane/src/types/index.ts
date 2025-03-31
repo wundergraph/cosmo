@@ -222,7 +222,7 @@ export interface OrganizationDTO {
   deletion?: {
     queuedAt: string;
     queuedBy?: string;
-  }
+  };
 }
 
 export interface UserDTO {

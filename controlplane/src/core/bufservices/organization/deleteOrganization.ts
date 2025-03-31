@@ -5,12 +5,12 @@ import {
   DeleteOrganizationRequest,
   DeleteOrganizationResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { addDays } from "date-fns";
+import { addDays } from 'date-fns';
 import { BillingRepository } from '../../repositories/BillingRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { AuditLogRepository } from "../../repositories/AuditLogRepository.js";
+import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 
 export function deleteOrganization(
   opts: RouterOptions,
@@ -83,7 +83,7 @@ export function deleteOrganization(
         },
       };
     }
-    
+
     // If the organization deletion have already been queued we shouldn't do it again
     if (org.deletion) {
       return {
@@ -118,13 +118,10 @@ export function deleteOrganization(
     });
 
     if (opts.mailerClient && orgAdmins.length > 0) {
-      const intl = Intl.DateTimeFormat(
-        undefined,
-        {
-          dateStyle: "medium",
-          timeStyle: "short",
-        }
-      );
+      const intl = Intl.DateTimeFormat(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      });
 
       await opts.mailerClient.sendOrganizationDeletionQueuedEmail({
         receiverEmails: orgAdmins.map((m) => m.email),

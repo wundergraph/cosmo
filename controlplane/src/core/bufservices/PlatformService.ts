@@ -100,7 +100,7 @@ import { updateOrganizationWebhookConfig } from './notification/updateOrganizati
 import { createOrganization } from './organization/createOrganization.js';
 import { deleteOrganization } from './organization/deleteOrganization.js';
 import { restoreOrganization } from './organization/restoreOrganization.js';
-import { getOrganizationSubscription } from './organization/getOrganizationSubscription.js'
+import { getOrganizationSubscription } from './organization/getOrganizationSubscription.js';
 import { getAuditLogs } from './organization/getAuditLogs.js';
 import { getOrganizationMembers } from './organization/getOrganizationMembers.js';
 import { getPendingOrganizationMembers } from './organization/getPendingOrganizationMembers.js';

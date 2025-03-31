@@ -152,9 +152,9 @@ export class OrganizationRepository {
         : undefined,
       deletion: org[0].queuedForDeletionAt
         ? {
-          queuedAt: org[0].queuedForDeletionAt?.toISOString() ?? '',
-          queuedBy: org[0].queuedForDeletionBy || undefined,
-        }
+            queuedAt: org[0].queuedForDeletionAt?.toISOString() ?? '',
+            queuedBy: org[0].queuedForDeletionBy || undefined,
+          }
         : undefined,
     };
   }
@@ -216,9 +216,9 @@ export class OrganizationRepository {
         : undefined,
       deletion: org[0].queuedForDeletionAt
         ? {
-          queuedAt: org[0].queuedForDeletionAt?.toISOString() ?? '',
-          queuedBy: org[0].queuedForDeletionBy || undefined,
-        }
+            queuedAt: org[0].queuedForDeletionAt?.toISOString() ?? '',
+            queuedBy: org[0].queuedForDeletionBy || undefined,
+          }
         : undefined,
     };
   }
@@ -306,9 +306,9 @@ export class OrganizationRepository {
             : undefined,
           deletion: org.queuedForDeletionAt
             ? {
-              queuedAt: org.queuedForDeletionAt?.toISOString() ?? '',
-              queuedBy: org.queuedForDeletionBy || undefined,
-            }
+                queuedAt: org.queuedForDeletionAt?.toISOString() ?? '',
+                queuedBy: org.queuedForDeletionBy || undefined,
+              }
             : undefined,
         };
       }),
@@ -878,8 +878,8 @@ export class OrganizationRepository {
 
   public async queueOrganizationDeletion(input: {
     organizationId: string;
-    queuedBy?: string,
-    deleteOrganizationQueue: DeleteOrganizationQueue
+    queuedBy?: string;
+    deleteOrganizationQueue: DeleteOrganizationQueue;
   }) {
     const now = new Date();
     await this.db
@@ -899,14 +899,13 @@ export class OrganizationRepository {
       },
       {
         delay,
-      }
+      },
     );
   }
 
-  public restoreOrganization(input: {
-    organizationId: string
-  }) {
-    return this.db.update(schema.organizations)
+  public restoreOrganization(input: { organizationId: string }) {
+    return this.db
+      .update(schema.organizations)
       .set({
         queuedForDeletionAt: null,
         queuedForDeletionBy: null,

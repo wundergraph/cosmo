@@ -71,13 +71,16 @@ export default class Mailer {
     });
   }
 
-  public async sendOrganizationDeletionQueuedEmail({ receiverEmails, ...data }: {
+  public async sendOrganizationDeletionQueuedEmail({
+    receiverEmails,
+    ...data
+  }: {
     receiverEmails: string[];
-    organizationName: string,
-    userDisplayName: string,
-    queuedOnDate: string,
-    deletionDate: string,
-    restoreLink: string,
+    organizationName: string;
+    userDisplayName: string;
+    queuedOnDate: string;
+    deletionDate: string;
+    restoreLink: string;
   }) {
     const htmlBody = this.renderTemplate('organizationDeletionQueued.html', data);
 

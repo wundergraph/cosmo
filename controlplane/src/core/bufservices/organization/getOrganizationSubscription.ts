@@ -1,14 +1,14 @@
 import {
   GetOrganizationSubscriptionRequest,
-  GetOrganizationSubscriptionResponse
+  GetOrganizationSubscriptionResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { HandlerContext } from '@connectrpc/connect';
-import { PlainMessage } from "@bufbuild/protobuf";
+import { PlainMessage } from '@bufbuild/protobuf';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { OrganizationRepository } from "../../repositories/OrganizationRepository.js";
-import { BillingRepository } from "../../repositories/BillingRepository.js";
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { BillingRepository } from '../../repositories/BillingRepository.js';
 
 export function getOrganizationSubscription(
   opts: RouterOptions,
