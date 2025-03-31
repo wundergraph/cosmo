@@ -202,13 +202,14 @@ services:
       - dev
 
   nats:
-    image: nats:${DC_NATS_VERSION:-2.10.6}
+    image: ghcr.io/wundergraph/cosmo/nats:${DC_NATS_VERSION:-2.11.0}
+    build:
+      context: .
+      dockerfile: docker/nats/Dockerfile
     ports:
       - '4222:4222'
       - '8222:8222'
       - '6222:6222'
-    command:
-      - '--js'
     networks:
       - primary
     profiles:

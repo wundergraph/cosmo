@@ -137,8 +137,7 @@ jobs:
     timeout-minutes: 30
     services:
       nats:
-        image: bitnami/nats:latest
-        options: --env NATS_EXTRA_ARGS="-js"
+        image: ghcr.io/wundergraph/cosmo/nats:2.11.0
         credentials:
           username: ${{secrets.DOCKER_USERNAME}}
           password: ${{secrets.DOCKER_PASSWORD}}
