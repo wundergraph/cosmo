@@ -9,12 +9,15 @@ IMAGE_NAME="nats"
 IMAGE_TAG="2.11.0"
 GHCR_IMAGE="ghcr.io/${REPOSITORY}/${IMAGE_NAME}:${IMAGE_TAG}"
 
+# Create and use a buildx builder (if not exists)
+docker buildx create --name multi-builder --use --bootstrap || true
+
 # Build the Docker image
-echo "🔨 Building image..."
-docker build -t "$GHCR_IMAGE" .
+# Build and push multi-arch image
+echo "🔨 Building multi-arch image for linux/amd64 and linux/arm64..."
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t "$GHCR_IMAGE" \
+  --push .
 
-# Push the image to GitHub Container Registry
-echo "🚀 Pushing to GitHub Container Registry..."
-docker push "$GHCR_IMAGE"
-
-echo "✅ Done! Image pushed to $GHCR_IMAGE"
+echo "✅ Done! Multi-arch image pushed to $GHCR_IMAGE"

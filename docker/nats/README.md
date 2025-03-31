@@ -6,7 +6,7 @@ __Reason:__ We haven't found any docker image that can run NATS with JetStream e
 
 ## Build & Release
 
-Run the following command to build and push the image to the registry:
+Run the following command to build and push the image for `linux/amd64`,`linux/arm64` and push it to the registry:
 
 ```bash
 ./build-push.sh
