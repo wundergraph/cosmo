@@ -1,5 +1,5 @@
 {
-  "name": "emails",
+  "name": "@wundergraph/controlplane-emails",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -17,5 +17,8 @@
     "@types/react-dom": "18.3.0",
     "react": "18.3.1",
     "react-email": "4.0.0"
+  },
+  "dependencies": {
+    "next": "15.2.4"
   }
 }
