@@ -24,7 +24,7 @@ func setupNatsClients(t testing.TB) (*NatsData, error) {
 	natsData := &NatsData{}
 	for range demoNatsProviders {
 		natsConnection, err := nats.Connect(
-			nats.DefaultURL,
+			"nats://localhost:4222",
 			nats.MaxReconnects(10),
 			nats.ReconnectWait(1*time.Second),
 			nats.Timeout(10*time.Second),
