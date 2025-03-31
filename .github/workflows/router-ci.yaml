@@ -141,6 +141,8 @@ jobs:
         credentials:
           username: ${{secrets.DOCKER_USERNAME}}
           password: ${{secrets.DOCKER_PASSWORD}}
+        options:
+          '--js'
         ports:
           - 4222:4222
       redis:
