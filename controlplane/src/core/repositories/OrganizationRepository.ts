@@ -882,18 +882,13 @@ export class OrganizationRepository {
     deleteOrganizationQueue: DeleteOrganizationQueue
   }) {
     const now = new Date();
-    await this.db.transaction(async (tx) => {
-      const billingRepo = new BillingRepository(tx);
-      await billingRepo.cancelSubscription(input.organizationId);
-
-      await tx
-        .update(schema.organizations)
-        .set({
-          queuedForDeletionAt: now,
-          queuedForDeletionBy: input.queuedBy,
-        })
-        .where(eq(schema.organizations.id, input.organizationId));
-    });
+    await this.db
+      .update(schema.organizations)
+      .set({
+        queuedForDeletionAt: now,
+        queuedForDeletionBy: input.queuedBy,
+      })
+      .where(eq(schema.organizations.id, input.organizationId));
 
     const oneMonthFromNow = addDays(now, 30);
     const delay = Number(oneMonthFromNow) - Number(now);
@@ -906,6 +901,17 @@ export class OrganizationRepository {
         delay,
       }
     );
+  }
+
+  public restoreOrganization(input: {
+    organizationId: string
+  }) {
+    return this.db.update(schema.organizations)
+      .set({
+        queuedForDeletionAt: null,
+        queuedForDeletionBy: null,
+      })
+      .where(eq(schema.organizations.id, input.organizationId));
   }
 
   /**

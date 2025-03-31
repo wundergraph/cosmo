@@ -286,6 +286,12 @@ const (
 	// PlatformServiceDeleteOrganizationProcedure is the fully-qualified name of the PlatformService's
 	// DeleteOrganization RPC.
 	PlatformServiceDeleteOrganizationProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteOrganization"
+	// PlatformServiceRestoreOrganizationProcedure is the fully-qualified name of the PlatformService's
+	// RestoreOrganization RPC.
+	PlatformServiceRestoreOrganizationProcedure = "/wg.cosmo.platform.v1.PlatformService/RestoreOrganization"
+	// PlatformServiceGetOrganizationSubscriptionProcedure is the fully-qualified name of the
+	// PlatformService's GetOrganizationSubscription RPC.
+	PlatformServiceGetOrganizationSubscriptionProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOrganizationSubscription"
 	// PlatformServiceLeaveOrganizationProcedure is the fully-qualified name of the PlatformService's
 	// LeaveOrganization RPC.
 	PlatformServiceLeaveOrganizationProcedure = "/wg.cosmo.platform.v1.PlatformService/LeaveOrganization"
@@ -591,6 +597,8 @@ var (
 	platformServiceDeleteIntegrationMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("DeleteIntegration")
 	platformServiceDeleteUserMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("DeleteUser")
 	platformServiceDeleteOrganizationMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("DeleteOrganization")
+	platformServiceRestoreOrganizationMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("RestoreOrganization")
+	platformServiceGetOrganizationSubscriptionMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationSubscription")
 	platformServiceLeaveOrganizationMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("LeaveOrganization")
 	platformServiceUpdateOrganizationDetailsMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("UpdateOrganizationDetails")
 	platformServiceUpdateOrgMemberRoleMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("UpdateOrgMemberRole")
@@ -823,6 +831,10 @@ type PlatformServiceClient interface {
 	DeleteUser(context.Context, *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error)
 	// DeleteOrganization deletes an organization
 	DeleteOrganization(context.Context, *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error)
+	// RestoreOrganization restore an organization pending deletion
+	RestoreOrganization(context.Context, *connect.Request[v1.RestoreOrganizationRequest]) (*connect.Response[v1.RestoreOrganizationResponse], error)
+	// GetOrganizationSubscription gets the active organization subscription information
+	GetOrganizationSubscription(context.Context, *connect.Request[v1.GetOrganizationSubscriptionRequest]) (*connect.Response[v1.GetOrganizationSubscriptionResponse], error)
 	// LeaveOrganization removes a member from the organization
 	LeaveOrganization(context.Context, *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error)
 	// UpdateOrganizationDetails updates the name and slug of the organization
@@ -1476,6 +1488,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceDeleteOrganizationMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		restoreOrganization: connect.NewClient[v1.RestoreOrganizationRequest, v1.RestoreOrganizationResponse](
+			httpClient,
+			baseURL+PlatformServiceRestoreOrganizationProcedure,
+			connect.WithSchema(platformServiceRestoreOrganizationMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getOrganizationSubscription: connect.NewClient[v1.GetOrganizationSubscriptionRequest, v1.GetOrganizationSubscriptionResponse](
+			httpClient,
+			baseURL+PlatformServiceGetOrganizationSubscriptionProcedure,
+			connect.WithSchema(platformServiceGetOrganizationSubscriptionMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		leaveOrganization: connect.NewClient[v1.LeaveOrganizationRequest, v1.LeaveOrganizationResponse](
 			httpClient,
 			baseURL+PlatformServiceLeaveOrganizationProcedure,
@@ -2004,6 +2028,8 @@ type platformServiceClient struct {
 	deleteIntegration                     *connect.Client[v1.DeleteIntegrationRequest, v1.DeleteIntegrationResponse]
 	deleteUser                            *connect.Client[v1.DeleteUserRequest, v1.DeleteUserResponse]
 	deleteOrganization                    *connect.Client[v1.DeleteOrganizationRequest, v1.DeleteOrganizationResponse]
+	restoreOrganization                   *connect.Client[v1.RestoreOrganizationRequest, v1.RestoreOrganizationResponse]
+	getOrganizationSubscription           *connect.Client[v1.GetOrganizationSubscriptionRequest, v1.GetOrganizationSubscriptionResponse]
 	leaveOrganization                     *connect.Client[v1.LeaveOrganizationRequest, v1.LeaveOrganizationResponse]
 	updateOrganizationDetails             *connect.Client[v1.UpdateOrganizationDetailsRequest, v1.UpdateOrganizationDetailsResponse]
 	updateOrgMemberRole                   *connect.Client[v1.UpdateOrgMemberRoleRequest, v1.UpdateOrgMemberRoleResponse]
@@ -2510,6 +2536,17 @@ func (c *platformServiceClient) DeleteUser(ctx context.Context, req *connect.Req
 // DeleteOrganization calls wg.cosmo.platform.v1.PlatformService.DeleteOrganization.
 func (c *platformServiceClient) DeleteOrganization(ctx context.Context, req *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error) {
 	return c.deleteOrganization.CallUnary(ctx, req)
+}
+
+// RestoreOrganization calls wg.cosmo.platform.v1.PlatformService.RestoreOrganization.
+func (c *platformServiceClient) RestoreOrganization(ctx context.Context, req *connect.Request[v1.RestoreOrganizationRequest]) (*connect.Response[v1.RestoreOrganizationResponse], error) {
+	return c.restoreOrganization.CallUnary(ctx, req)
+}
+
+// GetOrganizationSubscription calls
+// wg.cosmo.platform.v1.PlatformService.GetOrganizationSubscription.
+func (c *platformServiceClient) GetOrganizationSubscription(ctx context.Context, req *connect.Request[v1.GetOrganizationSubscriptionRequest]) (*connect.Response[v1.GetOrganizationSubscriptionResponse], error) {
+	return c.getOrganizationSubscription.CallUnary(ctx, req)
 }
 
 // LeaveOrganization calls wg.cosmo.platform.v1.PlatformService.LeaveOrganization.
@@ -3044,6 +3081,10 @@ type PlatformServiceHandler interface {
 	DeleteUser(context.Context, *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error)
 	// DeleteOrganization deletes an organization
 	DeleteOrganization(context.Context, *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error)
+	// RestoreOrganization restore an organization pending deletion
+	RestoreOrganization(context.Context, *connect.Request[v1.RestoreOrganizationRequest]) (*connect.Response[v1.RestoreOrganizationResponse], error)
+	// GetOrganizationSubscription gets the active organization subscription information
+	GetOrganizationSubscription(context.Context, *connect.Request[v1.GetOrganizationSubscriptionRequest]) (*connect.Response[v1.GetOrganizationSubscriptionResponse], error)
 	// LeaveOrganization removes a member from the organization
 	LeaveOrganization(context.Context, *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error)
 	// UpdateOrganizationDetails updates the name and slug of the organization
@@ -3693,6 +3734,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceDeleteOrganizationMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceRestoreOrganizationHandler := connect.NewUnaryHandler(
+		PlatformServiceRestoreOrganizationProcedure,
+		svc.RestoreOrganization,
+		connect.WithSchema(platformServiceRestoreOrganizationMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetOrganizationSubscriptionHandler := connect.NewUnaryHandler(
+		PlatformServiceGetOrganizationSubscriptionProcedure,
+		svc.GetOrganizationSubscription,
+		connect.WithSchema(platformServiceGetOrganizationSubscriptionMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceLeaveOrganizationHandler := connect.NewUnaryHandler(
 		PlatformServiceLeaveOrganizationProcedure,
 		svc.LeaveOrganization,
@@ -4302,6 +4355,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceDeleteUserHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteOrganizationProcedure:
 			platformServiceDeleteOrganizationHandler.ServeHTTP(w, r)
+		case PlatformServiceRestoreOrganizationProcedure:
+			platformServiceRestoreOrganizationHandler.ServeHTTP(w, r)
+		case PlatformServiceGetOrganizationSubscriptionProcedure:
+			platformServiceGetOrganizationSubscriptionHandler.ServeHTTP(w, r)
 		case PlatformServiceLeaveOrganizationProcedure:
 			platformServiceLeaveOrganizationHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateOrganizationDetailsProcedure:
@@ -4789,6 +4846,14 @@ func (UnimplementedPlatformServiceHandler) DeleteUser(context.Context, *connect.
 
 func (UnimplementedPlatformServiceHandler) DeleteOrganization(context.Context, *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteOrganization is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) RestoreOrganization(context.Context, *connect.Request[v1.RestoreOrganizationRequest]) (*connect.Response[v1.RestoreOrganizationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.RestoreOrganization is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetOrganizationSubscription(context.Context, *connect.Request[v1.GetOrganizationSubscriptionRequest]) (*connect.Response[v1.GetOrganizationSubscriptionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOrganizationSubscription is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) LeaveOrganization(context.Context, *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error) {

@@ -7,10 +7,8 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { addDays } from "date-fns";
 import { BillingRepository } from '../../repositories/BillingRepository.js';
-import { OidcRepository } from '../../repositories/OidcRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import OidcProvider from '../../services/OidcProvider.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { AuditLogRepository } from "../../repositories/AuditLogRepository.js";
 
@@ -28,8 +26,6 @@ export function deleteOrganization(
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const auditLogRepo = new AuditLogRepository(opts.db);
     const billingRepo = new BillingRepository(opts.db);
-    const oidcRepo = new OidcRepository(opts.db);
-    const oidcProvider = new OidcProvider();
 
     const memberships = await orgRepo.memberships({ userId: authContext.userId });
     const orgCount = memberships.length;
@@ -40,6 +36,16 @@ export function deleteOrganization(
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: `Organization not found`,
+        },
+      };
+    }
+
+    const subscription = await billingRepo.getActiveSubscriptionOfOrganization(org.id);
+    if (subscription?.id) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: 'The organization subscription must be cancelled before the organization is deleted.',
         },
       };
     }
@@ -126,7 +132,7 @@ export function deleteOrganization(
         userDisplayName: authContext.userDisplayName,
         queuedOnDate: intl.format(now),
         deletionDate: intl.format(oneMonthFromNow),
-        restoreLink: `${process.env.WEB_BASE_URL}/${org.slug}/settings/restore`,
+        restoreLink: `${process.env.WEB_BASE_URL}/${org.slug}/settings`,
       });
     }
 

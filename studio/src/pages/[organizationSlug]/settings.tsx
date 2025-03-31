@@ -57,14 +57,12 @@ import { useIsCreator } from "@/hooks/use-is-creator";
 import { useUser } from "@/hooks/use-user";
 import { calURL, docsBaseURL, scimBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
 import { MinusCircledIcon, PlusIcon } from "@radix-ui/react-icons";
 import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createOIDCProvider,
   deleteOIDCProvider,
-  deleteOrganization,
   getOIDCProvider,
   leaveOrganization,
   updateFeatureSettings,
@@ -86,6 +84,8 @@ import {
 } from "react";
 import { FaMagic } from "react-icons/fa";
 import { z } from "zod";
+import { DeleteOrganization } from "@/components/settings/delete-organization";
+import { RestoreOrganization } from "@/components/settings/restore-organization";
 
 const OrganizationDetails = () => {
   const user = useContext(UserContext);
@@ -1427,155 +1427,6 @@ const LeaveOrganization = () => {
         </AlertDialog>
       </CardHeader>
     </Card>
-  );
-};
-
-const DeleteOrganization = () => {
-  const user = useContext(UserContext);
-  const router = useRouter();
-  const sessionQueryClient = useContext(SessionClientContext);
-  const [open, setOpen] = useState(false);
-
-  const regex = new RegExp(`^${user?.currentOrganization.name}$`);
-  const schema = z.object({
-    organizationName: z.string().regex(regex, {
-      message: "Please enter the organization name as requested.",
-    }),
-  });
-
-  type DeleteOrgInput = z.infer<typeof schema>;
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isValid },
-  } = useZodForm<DeleteOrgInput>({
-    schema,
-    mode: "onChange",
-  });
-
-  const { toast } = useToast();
-
-  const { mutate, isPending } = useMutation(deleteOrganization, {
-    onSuccess: (d) => {
-      if (d.response?.code === EnumStatusCode.OK) {
-        // router.reload();
-        sessionQueryClient.refetchQueries();
-        toast({
-          description: "Organization deletion queued successfully.",
-          duration: 3000,
-        });
-      } else if (d.response?.details) {
-        toast({ description: d.response.details, duration: 3000 });
-      }
-      setOpen(false);
-    },
-    onError: (error) => {
-      toast({
-        description: "Could not delete the organization. Please try again.",
-        duration: 3000,
-      });
-      setOpen(false);
-    },
-  });
-
-  const handleDeleteOrg = () => {
-    mutate({
-      userID: user?.id,
-    });
-  };
-
-  return (
-    <Card className="border-destructive">
-      <CardHeader className="gap-y-6 md:flex-row">
-        <div className="space-y-1.5">
-          <CardTitle>Delete Organization</CardTitle>
-          <CardDescription className="text-sm text-muted-foreground">
-            The organization will be permanently deleted. This action is
-            irreversible and can not be undone.
-          </CardDescription>
-        </div>
-        <Dialog
-          open={
-            user?.currentOrganization.roles.includes("admin") ? open : false
-          }
-          onOpenChange={setOpen}
-        >
-          <DialogTrigger
-            className={cn({
-              "cursor-not-allowed":
-                !user?.currentOrganization.roles.includes("admin"),
-            })}
-            asChild
-          >
-            <Button
-              type="submit"
-              variant="destructive"
-              className="w-full md:ml-auto md:w-max"
-              disabled={!user?.currentOrganization.roles.includes("admin")}
-            >
-              Delete organization
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                Delete {user?.currentOrganization?.name}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit(handleDeleteOrg)} className="mt-2 space-y-3">
-              <div>
-                Removing the organization <strong>{user?.currentOrganization?.name}</strong> is a permanent action
-                which cannot be undone! Are you sure you want to continue?
-              </div>
-
-              <div>
-                This will remove the organization, graphs, subgraphs, feature flags, members, api keys and
-                any other
-              </div>
-
-              <div className="flex flex-col gap-y-3">
-                <span>
-                  To confirm, enter &quot;{user?.currentOrganization.name}&quot; in the box below.
-                </span>
-                <Input
-                  type="text"
-                  {...register("organizationName")}
-                  autoFocus={true}
-                />
-                {errors.organizationName && (
-                  <span className="px-2 text-xs text-destructive">
-                    {errors.organizationName.message}
-                  </span>
-                )}
-                <div className="mt-2 flex justify-end gap-x-4">
-                  <Button variant="outline" onClick={() => setOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    isLoading={isPending}
-                    type="submit"
-                    disabled={!isValid}
-                  >
-                    Delete this organization
-                  </Button>
-                </div>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </CardHeader>
-    </Card>
-  );
-};
-
-const RestoreOrganization = () => {
-  return (
-    <>
-      <a id="restore-org"></a>
-      <DeleteOrganization />
-    </>
   );
 };
 

@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createTransport, Transporter } from 'nodemailer';
 import * as ejs from 'ejs';
 import { MailerParams } from '../../types/index.js';
@@ -60,7 +61,7 @@ export default class Mailer {
       inviteBody,
     };
 
-    const htmlBody = this.getTemplate('./src/templates/email/organizationInvite.html', data);
+    const htmlBody = this.renderTemplate('organizationInvite.html', data);
 
     await this.client.sendMail({
       from: 'system@wundergraph.com',
@@ -78,7 +79,7 @@ export default class Mailer {
     deletionDate: string,
     restoreLink: string,
   }) {
-    const htmlBody = this.getTemplate('./src/templates/emails/organizationDeletionQueued.html', data);
+    const htmlBody = this.renderTemplate('organizationDeletionQueued.html', data);
 
     await this.client.sendMail({
       from: 'system@wundergraph.com',
@@ -88,8 +89,8 @@ export default class Mailer {
     });
   }
 
-  private getTemplate<T extends ejs.Data>(templateFile: string, data: T) {
-    const emailBody = readFileSync(templateFile).toString('utf8');
+  private renderTemplate<T extends ejs.Data>(templateFile: string, data: T) {
+    const emailBody = readFileSync(join('./src/templates/emails', templateFile)).toString('utf8');
 
     const template = ejs.compile(emailBody, { openDelimiter: '[', closeDelimiter: ']' });
     return template(data);

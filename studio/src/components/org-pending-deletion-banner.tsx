@@ -23,7 +23,7 @@ export function OrgPendingDeletionBanner() {
         ? (
           <p>
             If this was unintentional and you would like to cancel the deletion, head to the{' '}
-            <Link href={`/${org.slug}/settings/restore`} className="text-primary">
+            <Link href={`/${org.slug}/settings`} className="text-primary">
               settings page
             </Link>.
           </p>
