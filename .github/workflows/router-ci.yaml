@@ -137,7 +137,8 @@ jobs:
     timeout-minutes: 30
     services:
       nats:
-        image: nats:latest
+        image: bitnami/nats:latest
+        options: --env NATS_EXTRA_ARGS="-js"
         credentials:
           username: ${{secrets.DOCKER_USERNAME}}
           password: ${{secrets.DOCKER_PASSWORD}}
