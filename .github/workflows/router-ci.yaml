@@ -138,9 +138,6 @@ jobs:
     services:
       nats:
         image: ghcr.io/wundergraph/cosmo/nats:2.11.0
-        credentials:
-          username: ${{secrets.DOCKER_USERNAME}}
-          password: ${{secrets.DOCKER_PASSWORD}}
         ports:
           - 4222:4222
           - 8222:8222
