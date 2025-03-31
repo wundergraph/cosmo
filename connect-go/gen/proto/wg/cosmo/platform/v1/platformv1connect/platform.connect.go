@@ -349,30 +349,6 @@ const (
 	// PlatformServiceGetSubgraphMembersProcedure is the fully-qualified name of the PlatformService's
 	// GetSubgraphMembers RPC.
 	PlatformServiceGetSubgraphMembersProcedure = "/wg.cosmo.platform.v1.PlatformService/GetSubgraphMembers"
-	// PlatformServiceCreateDiscussionProcedure is the fully-qualified name of the PlatformService's
-	// CreateDiscussion RPC.
-	PlatformServiceCreateDiscussionProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateDiscussion"
-	// PlatformServiceReplyToDiscussionProcedure is the fully-qualified name of the PlatformService's
-	// ReplyToDiscussion RPC.
-	PlatformServiceReplyToDiscussionProcedure = "/wg.cosmo.platform.v1.PlatformService/ReplyToDiscussion"
-	// PlatformServiceGetAllDiscussionsProcedure is the fully-qualified name of the PlatformService's
-	// GetAllDiscussions RPC.
-	PlatformServiceGetAllDiscussionsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetAllDiscussions"
-	// PlatformServiceUpdateDiscussionCommentProcedure is the fully-qualified name of the
-	// PlatformService's UpdateDiscussionComment RPC.
-	PlatformServiceUpdateDiscussionCommentProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateDiscussionComment"
-	// PlatformServiceDeleteDiscussionCommentProcedure is the fully-qualified name of the
-	// PlatformService's DeleteDiscussionComment RPC.
-	PlatformServiceDeleteDiscussionCommentProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteDiscussionComment"
-	// PlatformServiceGetDiscussionProcedure is the fully-qualified name of the PlatformService's
-	// GetDiscussion RPC.
-	PlatformServiceGetDiscussionProcedure = "/wg.cosmo.platform.v1.PlatformService/GetDiscussion"
-	// PlatformServiceGetDiscussionSchemasProcedure is the fully-qualified name of the PlatformService's
-	// GetDiscussionSchemas RPC.
-	PlatformServiceGetDiscussionSchemasProcedure = "/wg.cosmo.platform.v1.PlatformService/GetDiscussionSchemas"
-	// PlatformServiceSetDiscussionResolutionProcedure is the fully-qualified name of the
-	// PlatformService's SetDiscussionResolution RPC.
-	PlatformServiceSetDiscussionResolutionProcedure = "/wg.cosmo.platform.v1.PlatformService/SetDiscussionResolution"
 	// PlatformServiceAddReadmeProcedure is the fully-qualified name of the PlatformService's AddReadme
 	// RPC.
 	PlatformServiceAddReadmeProcedure = "/wg.cosmo.platform.v1.PlatformService/AddReadme"
@@ -430,6 +406,12 @@ const (
 	// PlatformServiceGetNamespaceLintConfigProcedure is the fully-qualified name of the
 	// PlatformService's GetNamespaceLintConfig RPC.
 	PlatformServiceGetNamespaceLintConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/GetNamespaceLintConfig"
+	// PlatformServiceGetNamespaceChecksConfigProcedure is the fully-qualified name of the
+	// PlatformService's GetNamespaceChecksConfig RPC.
+	PlatformServiceGetNamespaceChecksConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/GetNamespaceChecksConfig"
+	// PlatformServiceUpdateNamespaceChecksConfigProcedure is the fully-qualified name of the
+	// PlatformService's UpdateNamespaceChecksConfig RPC.
+	PlatformServiceUpdateNamespaceChecksConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateNamespaceChecksConfig"
 	// PlatformServiceEnableGraphPruningProcedure is the fully-qualified name of the PlatformService's
 	// EnableGraphPruning RPC.
 	PlatformServiceEnableGraphPruningProcedure = "/wg.cosmo.platform.v1.PlatformService/EnableGraphPruning"
@@ -606,14 +588,6 @@ var (
 	platformServiceAddSubgraphMemberMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("AddSubgraphMember")
 	platformServiceRemoveSubgraphMemberMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("RemoveSubgraphMember")
 	platformServiceGetSubgraphMembersMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphMembers")
-	platformServiceCreateDiscussionMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("CreateDiscussion")
-	platformServiceReplyToDiscussionMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("ReplyToDiscussion")
-	platformServiceGetAllDiscussionsMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("GetAllDiscussions")
-	platformServiceUpdateDiscussionCommentMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("UpdateDiscussionComment")
-	platformServiceDeleteDiscussionCommentMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("DeleteDiscussionComment")
-	platformServiceGetDiscussionMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetDiscussion")
-	platformServiceGetDiscussionSchemasMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("GetDiscussionSchemas")
-	platformServiceSetDiscussionResolutionMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("SetDiscussionResolution")
 	platformServiceAddReadmeMethodDescriptor                             = platformServiceServiceDescriptor.Methods().ByName("AddReadme")
 	platformServiceGetUserAccessiblePermissionsMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetUserAccessiblePermissions")
 	platformServiceCreateFeatureFlagMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("CreateFeatureFlag")
@@ -633,6 +607,8 @@ var (
 	platformServiceEnableLintingForTheNamespaceMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("EnableLintingForTheNamespace")
 	platformServiceConfigureNamespaceLintConfigMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("ConfigureNamespaceLintConfig")
 	platformServiceGetNamespaceLintConfigMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceLintConfig")
+	platformServiceGetNamespaceChecksConfigMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceChecksConfig")
+	platformServiceUpdateNamespaceChecksConfigMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("UpdateNamespaceChecksConfig")
 	platformServiceEnableGraphPruningMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("EnableGraphPruning")
 	platformServiceConfigureNamespaceGraphPruningConfigMethodDescriptor  = platformServiceServiceDescriptor.Methods().ByName("ConfigureNamespaceGraphPruningConfig")
 	platformServiceGetNamespaceGraphPruningConfigMethodDescriptor        = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceGraphPruningConfig")
@@ -857,22 +833,6 @@ type PlatformServiceClient interface {
 	RemoveSubgraphMember(context.Context, *connect.Request[v1.RemoveSubgraphMemberRequest]) (*connect.Response[v1.RemoveSubgraphMemberResponse], error)
 	// GetSubgraphMembers gets all the members of the subgraph
 	GetSubgraphMembers(context.Context, *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error)
-	// CreateDiscussion creates a new discussion with an opening comment
-	CreateDiscussion(context.Context, *connect.Request[v1.CreateDiscussionRequest]) (*connect.Response[v1.CreateDiscussionResponse], error)
-	// ReplyToDiscussion creates a new comment in the discussion
-	ReplyToDiscussion(context.Context, *connect.Request[v1.ReplyToDiscussionRequest]) (*connect.Response[v1.ReplyToDiscussionResponse], error)
-	// GetAllDiscussions fetches all discussions which may be scoped to a schema version if passed
-	GetAllDiscussions(context.Context, *connect.Request[v1.GetAllDiscussionsRequest]) (*connect.Response[v1.GetAllDiscussionsResponse], error)
-	// UpdateDiscussionComment edits the comment in the discussion
-	UpdateDiscussionComment(context.Context, *connect.Request[v1.UpdateDiscussionCommentRequest]) (*connect.Response[v1.UpdateDiscussionCommentResponse], error)
-	// DeleteDiscussionComment deletes the comment or the discussion if it is an opening comment
-	DeleteDiscussionComment(context.Context, *connect.Request[v1.DeleteDiscussionCommentRequest]) (*connect.Response[v1.DeleteDiscussionCommentResponse], error)
-	// GetDiscussion gets the entire discussion thread
-	GetDiscussion(context.Context, *connect.Request[v1.GetDiscussionRequest]) (*connect.Response[v1.GetDiscussionResponse], error)
-	// GetDiscussionSchemas gets the reference and latest schema of the target graph in which the discussion was created
-	GetDiscussionSchemas(context.Context, *connect.Request[v1.GetDiscussionSchemasRequest]) (*connect.Response[v1.GetDiscussionSchemasResponse], error)
-	// SetDiscussionResolutionRequest marks the discussion as resolved or not
-	SetDiscussionResolution(context.Context, *connect.Request[v1.SetDiscussionResolutionRequest]) (*connect.Response[v1.SetDiscussionResolutionResponse], error)
 	// AddReadme adds a readme of a target, can be a subgraph or a federated graph
 	AddReadme(context.Context, *connect.Request[v1.AddReadmeRequest]) (*connect.Response[v1.AddReadmeResponse], error)
 	// GetUserAccessiblePermissions returns all the federated and subgraphs where the user has write permissions
@@ -902,6 +862,10 @@ type PlatformServiceClient interface {
 	ConfigureNamespaceLintConfig(context.Context, *connect.Request[v1.ConfigureNamespaceLintConfigRequest]) (*connect.Response[v1.ConfigureNamespaceLintConfigResponse], error)
 	// GetNamespaceLintConfig returns the lint config of the namespace.
 	GetNamespaceLintConfig(context.Context, *connect.Request[v1.GetNamespaceLintConfigRequest]) (*connect.Response[v1.GetNamespaceLintConfigResponse], error)
+	// GetNamespaceChecksConfig returns the checks config of the namespace.
+	GetNamespaceChecksConfig(context.Context, *connect.Request[v1.GetNamespaceChecksConfigurationRequest]) (*connect.Response[v1.GetNamespaceChecksConfigurationResponse], error)
+	// UpdateNamespaceChecksConfig updates the checks configuration for the namespace passed.
+	UpdateNamespaceChecksConfig(context.Context, *connect.Request[v1.UpdateNamespaceChecksConfigurationRequest]) (*connect.Response[v1.UpdateNamespaceChecksConfigurationResponse], error)
 	// EnablePruningForTheNamespace enables the graph pruning check for the namespace passed.
 	EnableGraphPruning(context.Context, *connect.Request[v1.EnableGraphPruningRequest]) (*connect.Response[v1.EnableGraphPruningResponse], error)
 	// ConfigureNamespaceGraphPruningConfig configures the graph pruning config of the organization.
@@ -1590,54 +1554,6 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceGetSubgraphMembersMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		createDiscussion: connect.NewClient[v1.CreateDiscussionRequest, v1.CreateDiscussionResponse](
-			httpClient,
-			baseURL+PlatformServiceCreateDiscussionProcedure,
-			connect.WithSchema(platformServiceCreateDiscussionMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		replyToDiscussion: connect.NewClient[v1.ReplyToDiscussionRequest, v1.ReplyToDiscussionResponse](
-			httpClient,
-			baseURL+PlatformServiceReplyToDiscussionProcedure,
-			connect.WithSchema(platformServiceReplyToDiscussionMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		getAllDiscussions: connect.NewClient[v1.GetAllDiscussionsRequest, v1.GetAllDiscussionsResponse](
-			httpClient,
-			baseURL+PlatformServiceGetAllDiscussionsProcedure,
-			connect.WithSchema(platformServiceGetAllDiscussionsMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		updateDiscussionComment: connect.NewClient[v1.UpdateDiscussionCommentRequest, v1.UpdateDiscussionCommentResponse](
-			httpClient,
-			baseURL+PlatformServiceUpdateDiscussionCommentProcedure,
-			connect.WithSchema(platformServiceUpdateDiscussionCommentMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		deleteDiscussionComment: connect.NewClient[v1.DeleteDiscussionCommentRequest, v1.DeleteDiscussionCommentResponse](
-			httpClient,
-			baseURL+PlatformServiceDeleteDiscussionCommentProcedure,
-			connect.WithSchema(platformServiceDeleteDiscussionCommentMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		getDiscussion: connect.NewClient[v1.GetDiscussionRequest, v1.GetDiscussionResponse](
-			httpClient,
-			baseURL+PlatformServiceGetDiscussionProcedure,
-			connect.WithSchema(platformServiceGetDiscussionMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		getDiscussionSchemas: connect.NewClient[v1.GetDiscussionSchemasRequest, v1.GetDiscussionSchemasResponse](
-			httpClient,
-			baseURL+PlatformServiceGetDiscussionSchemasProcedure,
-			connect.WithSchema(platformServiceGetDiscussionSchemasMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		setDiscussionResolution: connect.NewClient[v1.SetDiscussionResolutionRequest, v1.SetDiscussionResolutionResponse](
-			httpClient,
-			baseURL+PlatformServiceSetDiscussionResolutionProcedure,
-			connect.WithSchema(platformServiceSetDiscussionResolutionMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
 		addReadme: connect.NewClient[v1.AddReadmeRequest, v1.AddReadmeResponse](
 			httpClient,
 			baseURL+PlatformServiceAddReadmeProcedure,
@@ -1757,6 +1673,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceGetNamespaceLintConfigProcedure,
 			connect.WithSchema(platformServiceGetNamespaceLintConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getNamespaceChecksConfig: connect.NewClient[v1.GetNamespaceChecksConfigurationRequest, v1.GetNamespaceChecksConfigurationResponse](
+			httpClient,
+			baseURL+PlatformServiceGetNamespaceChecksConfigProcedure,
+			connect.WithSchema(platformServiceGetNamespaceChecksConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		updateNamespaceChecksConfig: connect.NewClient[v1.UpdateNamespaceChecksConfigurationRequest, v1.UpdateNamespaceChecksConfigurationResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdateNamespaceChecksConfigProcedure,
+			connect.WithSchema(platformServiceUpdateNamespaceChecksConfigMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		enableGraphPruning: connect.NewClient[v1.EnableGraphPruningRequest, v1.EnableGraphPruningResponse](
@@ -2001,14 +1929,6 @@ type platformServiceClient struct {
 	addSubgraphMember                     *connect.Client[v1.AddSubgraphMemberRequest, v1.AddSubgraphMemberResponse]
 	removeSubgraphMember                  *connect.Client[v1.RemoveSubgraphMemberRequest, v1.RemoveSubgraphMemberResponse]
 	getSubgraphMembers                    *connect.Client[v1.GetSubgraphMembersRequest, v1.GetSubgraphMembersResponse]
-	createDiscussion                      *connect.Client[v1.CreateDiscussionRequest, v1.CreateDiscussionResponse]
-	replyToDiscussion                     *connect.Client[v1.ReplyToDiscussionRequest, v1.ReplyToDiscussionResponse]
-	getAllDiscussions                     *connect.Client[v1.GetAllDiscussionsRequest, v1.GetAllDiscussionsResponse]
-	updateDiscussionComment               *connect.Client[v1.UpdateDiscussionCommentRequest, v1.UpdateDiscussionCommentResponse]
-	deleteDiscussionComment               *connect.Client[v1.DeleteDiscussionCommentRequest, v1.DeleteDiscussionCommentResponse]
-	getDiscussion                         *connect.Client[v1.GetDiscussionRequest, v1.GetDiscussionResponse]
-	getDiscussionSchemas                  *connect.Client[v1.GetDiscussionSchemasRequest, v1.GetDiscussionSchemasResponse]
-	setDiscussionResolution               *connect.Client[v1.SetDiscussionResolutionRequest, v1.SetDiscussionResolutionResponse]
 	addReadme                             *connect.Client[v1.AddReadmeRequest, v1.AddReadmeResponse]
 	getUserAccessiblePermissions          *connect.Client[v1.GetUserAccessiblePermissionsRequest, v1.GetUserAccessiblePermissionsResponse]
 	createFeatureFlag                     *connect.Client[v1.CreateFeatureFlagRequest, v1.CreateFeatureFlagResponse]
@@ -2028,6 +1948,8 @@ type platformServiceClient struct {
 	enableLintingForTheNamespace          *connect.Client[v1.EnableLintingForTheNamespaceRequest, v1.EnableLintingForTheNamespaceResponse]
 	configureNamespaceLintConfig          *connect.Client[v1.ConfigureNamespaceLintConfigRequest, v1.ConfigureNamespaceLintConfigResponse]
 	getNamespaceLintConfig                *connect.Client[v1.GetNamespaceLintConfigRequest, v1.GetNamespaceLintConfigResponse]
+	getNamespaceChecksConfig              *connect.Client[v1.GetNamespaceChecksConfigurationRequest, v1.GetNamespaceChecksConfigurationResponse]
+	updateNamespaceChecksConfig           *connect.Client[v1.UpdateNamespaceChecksConfigurationRequest, v1.UpdateNamespaceChecksConfigurationResponse]
 	enableGraphPruning                    *connect.Client[v1.EnableGraphPruningRequest, v1.EnableGraphPruningResponse]
 	configureNamespaceGraphPruningConfig  *connect.Client[v1.ConfigureNamespaceGraphPruningConfigRequest, v1.ConfigureNamespaceGraphPruningConfigResponse]
 	getNamespaceGraphPruningConfig        *connect.Client[v1.GetNamespaceGraphPruningConfigRequest, v1.GetNamespaceGraphPruningConfigResponse]
@@ -2592,46 +2514,6 @@ func (c *platformServiceClient) GetSubgraphMembers(ctx context.Context, req *con
 	return c.getSubgraphMembers.CallUnary(ctx, req)
 }
 
-// CreateDiscussion calls wg.cosmo.platform.v1.PlatformService.CreateDiscussion.
-func (c *platformServiceClient) CreateDiscussion(ctx context.Context, req *connect.Request[v1.CreateDiscussionRequest]) (*connect.Response[v1.CreateDiscussionResponse], error) {
-	return c.createDiscussion.CallUnary(ctx, req)
-}
-
-// ReplyToDiscussion calls wg.cosmo.platform.v1.PlatformService.ReplyToDiscussion.
-func (c *platformServiceClient) ReplyToDiscussion(ctx context.Context, req *connect.Request[v1.ReplyToDiscussionRequest]) (*connect.Response[v1.ReplyToDiscussionResponse], error) {
-	return c.replyToDiscussion.CallUnary(ctx, req)
-}
-
-// GetAllDiscussions calls wg.cosmo.platform.v1.PlatformService.GetAllDiscussions.
-func (c *platformServiceClient) GetAllDiscussions(ctx context.Context, req *connect.Request[v1.GetAllDiscussionsRequest]) (*connect.Response[v1.GetAllDiscussionsResponse], error) {
-	return c.getAllDiscussions.CallUnary(ctx, req)
-}
-
-// UpdateDiscussionComment calls wg.cosmo.platform.v1.PlatformService.UpdateDiscussionComment.
-func (c *platformServiceClient) UpdateDiscussionComment(ctx context.Context, req *connect.Request[v1.UpdateDiscussionCommentRequest]) (*connect.Response[v1.UpdateDiscussionCommentResponse], error) {
-	return c.updateDiscussionComment.CallUnary(ctx, req)
-}
-
-// DeleteDiscussionComment calls wg.cosmo.platform.v1.PlatformService.DeleteDiscussionComment.
-func (c *platformServiceClient) DeleteDiscussionComment(ctx context.Context, req *connect.Request[v1.DeleteDiscussionCommentRequest]) (*connect.Response[v1.DeleteDiscussionCommentResponse], error) {
-	return c.deleteDiscussionComment.CallUnary(ctx, req)
-}
-
-// GetDiscussion calls wg.cosmo.platform.v1.PlatformService.GetDiscussion.
-func (c *platformServiceClient) GetDiscussion(ctx context.Context, req *connect.Request[v1.GetDiscussionRequest]) (*connect.Response[v1.GetDiscussionResponse], error) {
-	return c.getDiscussion.CallUnary(ctx, req)
-}
-
-// GetDiscussionSchemas calls wg.cosmo.platform.v1.PlatformService.GetDiscussionSchemas.
-func (c *platformServiceClient) GetDiscussionSchemas(ctx context.Context, req *connect.Request[v1.GetDiscussionSchemasRequest]) (*connect.Response[v1.GetDiscussionSchemasResponse], error) {
-	return c.getDiscussionSchemas.CallUnary(ctx, req)
-}
-
-// SetDiscussionResolution calls wg.cosmo.platform.v1.PlatformService.SetDiscussionResolution.
-func (c *platformServiceClient) SetDiscussionResolution(ctx context.Context, req *connect.Request[v1.SetDiscussionResolutionRequest]) (*connect.Response[v1.SetDiscussionResolutionResponse], error) {
-	return c.setDiscussionResolution.CallUnary(ctx, req)
-}
-
 // AddReadme calls wg.cosmo.platform.v1.PlatformService.AddReadme.
 func (c *platformServiceClient) AddReadme(ctx context.Context, req *connect.Request[v1.AddReadmeRequest]) (*connect.Response[v1.AddReadmeResponse], error) {
 	return c.addReadme.CallUnary(ctx, req)
@@ -2730,6 +2612,17 @@ func (c *platformServiceClient) ConfigureNamespaceLintConfig(ctx context.Context
 // GetNamespaceLintConfig calls wg.cosmo.platform.v1.PlatformService.GetNamespaceLintConfig.
 func (c *platformServiceClient) GetNamespaceLintConfig(ctx context.Context, req *connect.Request[v1.GetNamespaceLintConfigRequest]) (*connect.Response[v1.GetNamespaceLintConfigResponse], error) {
 	return c.getNamespaceLintConfig.CallUnary(ctx, req)
+}
+
+// GetNamespaceChecksConfig calls wg.cosmo.platform.v1.PlatformService.GetNamespaceChecksConfig.
+func (c *platformServiceClient) GetNamespaceChecksConfig(ctx context.Context, req *connect.Request[v1.GetNamespaceChecksConfigurationRequest]) (*connect.Response[v1.GetNamespaceChecksConfigurationResponse], error) {
+	return c.getNamespaceChecksConfig.CallUnary(ctx, req)
+}
+
+// UpdateNamespaceChecksConfig calls
+// wg.cosmo.platform.v1.PlatformService.UpdateNamespaceChecksConfig.
+func (c *platformServiceClient) UpdateNamespaceChecksConfig(ctx context.Context, req *connect.Request[v1.UpdateNamespaceChecksConfigurationRequest]) (*connect.Response[v1.UpdateNamespaceChecksConfigurationResponse], error) {
+	return c.updateNamespaceChecksConfig.CallUnary(ctx, req)
 }
 
 // EnableGraphPruning calls wg.cosmo.platform.v1.PlatformService.EnableGraphPruning.
@@ -3049,22 +2942,6 @@ type PlatformServiceHandler interface {
 	RemoveSubgraphMember(context.Context, *connect.Request[v1.RemoveSubgraphMemberRequest]) (*connect.Response[v1.RemoveSubgraphMemberResponse], error)
 	// GetSubgraphMembers gets all the members of the subgraph
 	GetSubgraphMembers(context.Context, *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error)
-	// CreateDiscussion creates a new discussion with an opening comment
-	CreateDiscussion(context.Context, *connect.Request[v1.CreateDiscussionRequest]) (*connect.Response[v1.CreateDiscussionResponse], error)
-	// ReplyToDiscussion creates a new comment in the discussion
-	ReplyToDiscussion(context.Context, *connect.Request[v1.ReplyToDiscussionRequest]) (*connect.Response[v1.ReplyToDiscussionResponse], error)
-	// GetAllDiscussions fetches all discussions which may be scoped to a schema version if passed
-	GetAllDiscussions(context.Context, *connect.Request[v1.GetAllDiscussionsRequest]) (*connect.Response[v1.GetAllDiscussionsResponse], error)
-	// UpdateDiscussionComment edits the comment in the discussion
-	UpdateDiscussionComment(context.Context, *connect.Request[v1.UpdateDiscussionCommentRequest]) (*connect.Response[v1.UpdateDiscussionCommentResponse], error)
-	// DeleteDiscussionComment deletes the comment or the discussion if it is an opening comment
-	DeleteDiscussionComment(context.Context, *connect.Request[v1.DeleteDiscussionCommentRequest]) (*connect.Response[v1.DeleteDiscussionCommentResponse], error)
-	// GetDiscussion gets the entire discussion thread
-	GetDiscussion(context.Context, *connect.Request[v1.GetDiscussionRequest]) (*connect.Response[v1.GetDiscussionResponse], error)
-	// GetDiscussionSchemas gets the reference and latest schema of the target graph in which the discussion was created
-	GetDiscussionSchemas(context.Context, *connect.Request[v1.GetDiscussionSchemasRequest]) (*connect.Response[v1.GetDiscussionSchemasResponse], error)
-	// SetDiscussionResolutionRequest marks the discussion as resolved or not
-	SetDiscussionResolution(context.Context, *connect.Request[v1.SetDiscussionResolutionRequest]) (*connect.Response[v1.SetDiscussionResolutionResponse], error)
 	// AddReadme adds a readme of a target, can be a subgraph or a federated graph
 	AddReadme(context.Context, *connect.Request[v1.AddReadmeRequest]) (*connect.Response[v1.AddReadmeResponse], error)
 	// GetUserAccessiblePermissions returns all the federated and subgraphs where the user has write permissions
@@ -3094,6 +2971,10 @@ type PlatformServiceHandler interface {
 	ConfigureNamespaceLintConfig(context.Context, *connect.Request[v1.ConfigureNamespaceLintConfigRequest]) (*connect.Response[v1.ConfigureNamespaceLintConfigResponse], error)
 	// GetNamespaceLintConfig returns the lint config of the namespace.
 	GetNamespaceLintConfig(context.Context, *connect.Request[v1.GetNamespaceLintConfigRequest]) (*connect.Response[v1.GetNamespaceLintConfigResponse], error)
+	// GetNamespaceChecksConfig returns the checks config of the namespace.
+	GetNamespaceChecksConfig(context.Context, *connect.Request[v1.GetNamespaceChecksConfigurationRequest]) (*connect.Response[v1.GetNamespaceChecksConfigurationResponse], error)
+	// UpdateNamespaceChecksConfig updates the checks configuration for the namespace passed.
+	UpdateNamespaceChecksConfig(context.Context, *connect.Request[v1.UpdateNamespaceChecksConfigurationRequest]) (*connect.Response[v1.UpdateNamespaceChecksConfigurationResponse], error)
 	// EnablePruningForTheNamespace enables the graph pruning check for the namespace passed.
 	EnableGraphPruning(context.Context, *connect.Request[v1.EnableGraphPruningRequest]) (*connect.Response[v1.EnableGraphPruningResponse], error)
 	// ConfigureNamespaceGraphPruningConfig configures the graph pruning config of the organization.
@@ -3778,54 +3659,6 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceGetSubgraphMembersMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	platformServiceCreateDiscussionHandler := connect.NewUnaryHandler(
-		PlatformServiceCreateDiscussionProcedure,
-		svc.CreateDiscussion,
-		connect.WithSchema(platformServiceCreateDiscussionMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceReplyToDiscussionHandler := connect.NewUnaryHandler(
-		PlatformServiceReplyToDiscussionProcedure,
-		svc.ReplyToDiscussion,
-		connect.WithSchema(platformServiceReplyToDiscussionMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceGetAllDiscussionsHandler := connect.NewUnaryHandler(
-		PlatformServiceGetAllDiscussionsProcedure,
-		svc.GetAllDiscussions,
-		connect.WithSchema(platformServiceGetAllDiscussionsMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceUpdateDiscussionCommentHandler := connect.NewUnaryHandler(
-		PlatformServiceUpdateDiscussionCommentProcedure,
-		svc.UpdateDiscussionComment,
-		connect.WithSchema(platformServiceUpdateDiscussionCommentMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceDeleteDiscussionCommentHandler := connect.NewUnaryHandler(
-		PlatformServiceDeleteDiscussionCommentProcedure,
-		svc.DeleteDiscussionComment,
-		connect.WithSchema(platformServiceDeleteDiscussionCommentMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceGetDiscussionHandler := connect.NewUnaryHandler(
-		PlatformServiceGetDiscussionProcedure,
-		svc.GetDiscussion,
-		connect.WithSchema(platformServiceGetDiscussionMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceGetDiscussionSchemasHandler := connect.NewUnaryHandler(
-		PlatformServiceGetDiscussionSchemasProcedure,
-		svc.GetDiscussionSchemas,
-		connect.WithSchema(platformServiceGetDiscussionSchemasMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceSetDiscussionResolutionHandler := connect.NewUnaryHandler(
-		PlatformServiceSetDiscussionResolutionProcedure,
-		svc.SetDiscussionResolution,
-		connect.WithSchema(platformServiceSetDiscussionResolutionMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
 	platformServiceAddReadmeHandler := connect.NewUnaryHandler(
 		PlatformServiceAddReadmeProcedure,
 		svc.AddReadme,
@@ -3945,6 +3778,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceGetNamespaceLintConfigProcedure,
 		svc.GetNamespaceLintConfig,
 		connect.WithSchema(platformServiceGetNamespaceLintConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetNamespaceChecksConfigHandler := connect.NewUnaryHandler(
+		PlatformServiceGetNamespaceChecksConfigProcedure,
+		svc.GetNamespaceChecksConfig,
+		connect.WithSchema(platformServiceGetNamespaceChecksConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceUpdateNamespaceChecksConfigHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateNamespaceChecksConfigProcedure,
+		svc.UpdateNamespaceChecksConfig,
+		connect.WithSchema(platformServiceUpdateNamespaceChecksConfigMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceEnableGraphPruningHandler := connect.NewUnaryHandler(
@@ -4291,22 +4136,6 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceRemoveSubgraphMemberHandler.ServeHTTP(w, r)
 		case PlatformServiceGetSubgraphMembersProcedure:
 			platformServiceGetSubgraphMembersHandler.ServeHTTP(w, r)
-		case PlatformServiceCreateDiscussionProcedure:
-			platformServiceCreateDiscussionHandler.ServeHTTP(w, r)
-		case PlatformServiceReplyToDiscussionProcedure:
-			platformServiceReplyToDiscussionHandler.ServeHTTP(w, r)
-		case PlatformServiceGetAllDiscussionsProcedure:
-			platformServiceGetAllDiscussionsHandler.ServeHTTP(w, r)
-		case PlatformServiceUpdateDiscussionCommentProcedure:
-			platformServiceUpdateDiscussionCommentHandler.ServeHTTP(w, r)
-		case PlatformServiceDeleteDiscussionCommentProcedure:
-			platformServiceDeleteDiscussionCommentHandler.ServeHTTP(w, r)
-		case PlatformServiceGetDiscussionProcedure:
-			platformServiceGetDiscussionHandler.ServeHTTP(w, r)
-		case PlatformServiceGetDiscussionSchemasProcedure:
-			platformServiceGetDiscussionSchemasHandler.ServeHTTP(w, r)
-		case PlatformServiceSetDiscussionResolutionProcedure:
-			platformServiceSetDiscussionResolutionHandler.ServeHTTP(w, r)
 		case PlatformServiceAddReadmeProcedure:
 			platformServiceAddReadmeHandler.ServeHTTP(w, r)
 		case PlatformServiceGetUserAccessiblePermissionsProcedure:
@@ -4345,6 +4174,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceConfigureNamespaceLintConfigHandler.ServeHTTP(w, r)
 		case PlatformServiceGetNamespaceLintConfigProcedure:
 			platformServiceGetNamespaceLintConfigHandler.ServeHTTP(w, r)
+		case PlatformServiceGetNamespaceChecksConfigProcedure:
+			platformServiceGetNamespaceChecksConfigHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateNamespaceChecksConfigProcedure:
+			platformServiceUpdateNamespaceChecksConfigHandler.ServeHTTP(w, r)
 		case PlatformServiceEnableGraphPruningProcedure:
 			platformServiceEnableGraphPruningHandler.ServeHTTP(w, r)
 		case PlatformServiceConfigureNamespaceGraphPruningConfigProcedure:
@@ -4818,38 +4651,6 @@ func (UnimplementedPlatformServiceHandler) GetSubgraphMembers(context.Context, *
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetSubgraphMembers is not implemented"))
 }
 
-func (UnimplementedPlatformServiceHandler) CreateDiscussion(context.Context, *connect.Request[v1.CreateDiscussionRequest]) (*connect.Response[v1.CreateDiscussionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateDiscussion is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) ReplyToDiscussion(context.Context, *connect.Request[v1.ReplyToDiscussionRequest]) (*connect.Response[v1.ReplyToDiscussionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ReplyToDiscussion is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) GetAllDiscussions(context.Context, *connect.Request[v1.GetAllDiscussionsRequest]) (*connect.Response[v1.GetAllDiscussionsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetAllDiscussions is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) UpdateDiscussionComment(context.Context, *connect.Request[v1.UpdateDiscussionCommentRequest]) (*connect.Response[v1.UpdateDiscussionCommentResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateDiscussionComment is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) DeleteDiscussionComment(context.Context, *connect.Request[v1.DeleteDiscussionCommentRequest]) (*connect.Response[v1.DeleteDiscussionCommentResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteDiscussionComment is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) GetDiscussion(context.Context, *connect.Request[v1.GetDiscussionRequest]) (*connect.Response[v1.GetDiscussionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetDiscussion is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) GetDiscussionSchemas(context.Context, *connect.Request[v1.GetDiscussionSchemasRequest]) (*connect.Response[v1.GetDiscussionSchemasResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetDiscussionSchemas is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) SetDiscussionResolution(context.Context, *connect.Request[v1.SetDiscussionResolutionRequest]) (*connect.Response[v1.SetDiscussionResolutionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.SetDiscussionResolution is not implemented"))
-}
-
 func (UnimplementedPlatformServiceHandler) AddReadme(context.Context, *connect.Request[v1.AddReadmeRequest]) (*connect.Response[v1.AddReadmeResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.AddReadme is not implemented"))
 }
@@ -4924,6 +4725,14 @@ func (UnimplementedPlatformServiceHandler) ConfigureNamespaceLintConfig(context.
 
 func (UnimplementedPlatformServiceHandler) GetNamespaceLintConfig(context.Context, *connect.Request[v1.GetNamespaceLintConfigRequest]) (*connect.Response[v1.GetNamespaceLintConfigResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetNamespaceLintConfig is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetNamespaceChecksConfig(context.Context, *connect.Request[v1.GetNamespaceChecksConfigurationRequest]) (*connect.Response[v1.GetNamespaceChecksConfigurationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetNamespaceChecksConfig is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdateNamespaceChecksConfig(context.Context, *connect.Request[v1.UpdateNamespaceChecksConfigurationRequest]) (*connect.Response[v1.UpdateNamespaceChecksConfigurationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateNamespaceChecksConfig is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) EnableGraphPruning(context.Context, *connect.Request[v1.EnableGraphPruningRequest]) (*connect.Response[v1.EnableGraphPruningResponse], error) {

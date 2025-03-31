@@ -12,7 +12,6 @@ import {
   INTERFACE_UPPER,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
-  invalidKeyDirectivesError,
   invalidProvidesOrRequiresDirectivesError,
   invalidSelectionSetErrorMessage,
   KEY,
@@ -27,6 +26,7 @@ import {
   REQUIRES,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SHAREABLE,
+  Subgraph,
   TAG,
   undefinedDirectiveError,
   undefinedFieldInFieldSetErrorMessage,
@@ -44,7 +44,8 @@ import {
   versionOneBaseSchema,
   versionTwoBaseSchema,
 } from './utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../utils/utils';
+import { normalizeString, normalizeSubgraphSuccess, schemaToSortedNormalizedString } from '../utils/utils';
+import { parse } from 'graphql';
 
 describe('Normalization tests', () => {
   test('that an unparsable graph returns an error', () => {
@@ -1829,8 +1830,118 @@ describe('Normalization tests', () => {
   });
 
   test('that a subgraph is normalized correctly', () => {
-    const result = normalizeSubgraphFromString(
-      `
+    const result = normalizeSubgraphSuccess(nb, ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      normalizeString(`
+      directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
+      directive @composeDirective(name: String!) repeatable on SCHEMA
+      directive @extends on INTERFACE | OBJECT
+      directive @external on FIELD_DEFINITION | OBJECT
+      directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+      directive @interfaceObject on OBJECT
+      directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
+      directive @override(from: String!) on FIELD_DEFINITION
+      directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
+      directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
+      directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
+      directive @shareable repeatable on FIELD_DEFINITION | OBJECT
+      directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+      
+      enum Enum @requiresScopes(scopes: [["read:enum"]]) {
+        VALUE
+      }
+      
+      """
+        This is the description for Interface
+      """
+      interface Interface @requiresScopes(scopes: [["read:private"]]) {
+        field(argumentOne: String!): Enum! @authenticated
+      }
+
+      """
+        This is the description for Object
+      """
+      type Object implements Interface @requiresScopes(scopes: [["read:object"]]) {
+        """
+          This is the description for Object.field
+        """
+        field(
+          """
+            This is the description for the argumentOne argument of Object.field
+          """
+          argumentOne: String!
+        ): Enum!
+      }
+      
+      scalar openfed__FieldSet
+      
+      scalar openfed__Scope
+    `),
+    );
+  });
+
+  test('that the correct keyFieldSetsByEntityTypeNameByFieldCoords is generated', () => {
+    const result = normalizeSubgraphSuccess(na, ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(result.keyFieldSetsByEntityTypeNameByKeyFieldCoords).toStrictEqual(
+      new Map<string, Map<string, Set<string>>>([
+        [
+          'EntityOne.object',
+          new Map<string, Set<string>>([
+            ['EntityOne', new Set<string>(['object { id } uuid', 'object { nested { id } }'])],
+          ]),
+        ],
+        ['Object.id', new Map<string, Set<string>>([['EntityOne', new Set<string>(['object { id } uuid'])]])],
+        ['EntityOne.uuid', new Map<string, Set<string>>([['EntityOne', new Set<string>(['object { id } uuid'])]])],
+        ['Object.nested', new Map<string, Set<string>>([['EntityOne', new Set<string>(['object { nested { id } }'])]])],
+        [
+          'Nested.id',
+          new Map<string, Set<string>>([
+            ['EntityOne', new Set<string>(['object { nested { id } }'])],
+            ['EntityTwo', new Set<string>(['nested { id } uuid'])],
+            ['Nested', new Set<string>(['id'])],
+          ]),
+        ],
+        [
+          'EntityTwo.uuid',
+          new Map<string, Set<string>>([['EntityTwo', new Set<string>(['name uuid', 'nested { id } uuid'])]]),
+        ],
+        ['EntityTwo.name', new Map<string, Set<string>>([['EntityTwo', new Set<string>(['name uuid'])]])],
+        ['EntityTwo.nested', new Map<string, Set<string>>([['EntityTwo', new Set<string>(['nested { id } uuid'])]])],
+      ]),
+    );
+  });
+});
+
+const na: Subgraph = {
+  name: 'na',
+  url: '',
+  definitions: parse(`
+    type EntityOne @key(fields: "uuid object { id }") @key(fields: "object { nested { id } }") {
+      uuid: ID!
+      object: Object!
+    }
+    
+    type EntityTwo @key(fields: "uuid name") @key(fields: "uuid nested { id }") {
+      uuid: ID!
+      name: String!
+      nested: Nested!
+    }
+    
+    type Object {
+      id: ID!
+      nested: Nested!
+    }
+    
+    type Nested @key(fields: "id") {
+      id: ID!
+    }
+  `),
+};
+
+const nb: Subgraph = {
+  name: 'nb',
+  url: '',
+  definitions: parse(`
       enum Enum @requiresScopes(scopes: [["read:enum"]]) {
         VALUE
       }
@@ -1856,57 +1967,5 @@ describe('Normalization tests', () => {
           argumentOne: String!
         ): Enum!
       }
-    `,
-      true,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.schema)).toBe(
-      normalizeString(`
-      directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-      directive @composeDirective(name: String!) repeatable on SCHEMA
-      directive @extends on INTERFACE | OBJECT
-      directive @external on FIELD_DEFINITION | OBJECT
-      directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-      directive @interfaceObject on OBJECT
-      directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
-      directive @override(from: String!) on FIELD_DEFINITION
-      directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
-      directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
-      directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-      directive @shareable repeatable on FIELD_DEFINITION | OBJECT
-      directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-      
-      enum Enum {
-        VALUE
-      }
-      
-      """
-        This is the description for Interface
-      """
-      interface Interface {
-        field(argumentOne: String!): Enum! @authenticated @requiresScopes(scopes: [["read:private", "read:enum"]])
-      }
-
-      """
-        This is the description for Object
-      """
-      type Object implements Interface {
-        """
-          This is the description for Object.field
-        """
-        field(
-          """
-            This is the description for the argumentOne argument of Object.field
-          """
-          argumentOne: String!
-        ): Enum! @authenticated @requiresScopes(scopes: [["read:object", "read:enum", "read:private"]])
-      }
-      
-      scalar openfed__FieldSet
-      
-      scalar openfed__Scope
-    `),
-    );
-  });
-});
+  `),
+};

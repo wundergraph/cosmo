@@ -10,6 +10,7 @@ import {
   Subgraph,
   SupportedRouterCompatibilityVersion,
 } from '../../src';
+import { expect } from 'vitest';
 
 export function normalizeString(input: string): string {
   return input.replaceAll(/\n| {2,}/g, '');
@@ -27,26 +28,34 @@ export function normalizeSubgraphFailure(
   subgraph: Subgraph,
   version: SupportedRouterCompatibilityVersion,
 ): NormalizationResultFailure {
-  return normalizeSubgraph(subgraph.definitions, subgraph.name, undefined, version) as NormalizationResultFailure;
+  const result = normalizeSubgraph(subgraph.definitions, subgraph.name, undefined, version);
+  expect(result.success, 'normalizeSubgraph succeeded when expected to fail').toBe(false);
+  return result as NormalizationResultFailure;
 }
 
 export function normalizeSubgraphSuccess(
   subgraph: Subgraph,
   version: SupportedRouterCompatibilityVersion,
 ): NormalizationResultSuccess {
-  return normalizeSubgraph(subgraph.definitions, subgraph.name, undefined, version) as NormalizationResultSuccess;
+  const result = normalizeSubgraph(subgraph.definitions, subgraph.name, undefined, version);
+  expect(result.success, 'normalizeSubgraph failed when expected to succeed').toBe(true);
+  return result as NormalizationResultSuccess;
 }
 
 export function federateSubgraphsFailure(
   subgraphs: Array<Subgraph>,
   version: SupportedRouterCompatibilityVersion,
 ): FederationResultFailure {
-  return federateSubgraphs(subgraphs, version) as FederationResultFailure;
+  const result = federateSubgraphs(subgraphs, version);
+  expect(result.success, 'federateSubgraphs succeeded when expected to fail').toBe(false);
+  return result as FederationResultFailure;
 }
 
 export function federateSubgraphsSuccess(
   subgraphs: Array<Subgraph>,
   version: SupportedRouterCompatibilityVersion,
 ): FederationResultSuccess {
-  return federateSubgraphs(subgraphs, version) as FederationResultSuccess;
+  const result = federateSubgraphs(subgraphs, version);
+  expect(result.success, 'federateSubgraphs failed when expected to succeed').toBe(true);
+  return result as FederationResultSuccess;
 }

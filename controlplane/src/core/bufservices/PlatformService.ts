@@ -38,14 +38,6 @@ import { removeOperationOverrides } from './check/removeOperationOverrides.js';
 import { toggleChangeOverridesForAllOperations } from './check/toggleChangeOverridesForAllOperations.js';
 import { createContract } from './contract/createContract.js';
 import { updateContract } from './contract/updateContract.js';
-import { createDiscussion } from './discussion/createDiscussion.js';
-import { deleteDiscussionComment } from './discussion/deleteDiscussionComment.js';
-import { getAllDiscussions } from './discussion/getAllDiscussions.js';
-import { getDiscussion } from './discussion/getDiscussion.js';
-import { getDiscussionSchemas } from './discussion/getDiscussionSchemas.js';
-import { replyToDiscussion } from './discussion/replyToDiscussion.js';
-import { setDiscussionResolution } from './discussion/setDiscussionResolution.js';
-import { updateDiscussionComment } from './discussion/updateDiscussionComment.js';
 import { createFeatureFlag } from './feature-flag/createFeatureFlag.js';
 import { deleteFeatureFlag } from './feature-flag/deleteFeatureFlag.js';
 import { enableFeatureFlag } from './feature-flag/enableFeatureFlag.js';
@@ -80,6 +72,8 @@ import { enableGraphPruning } from './linting/enableGraphPruning.js';
 import { enableLintingForTheNamespace } from './linting/enableLintingForTheNamespace.js';
 import { getNamespaceGraphPruningConfig } from './linting/getNamespaceGraphPruningConfig.js';
 import { getNamespaceLintConfig } from './linting/getNamespaceLintConfig.js';
+import { getNamespaceChecksConfig } from './check/getNamespaceChecksConfig.js';
+import { updateNamespaceChecksConfig } from './check/updateNamespaceChecksConfig.js';
 import { createMonograph } from './monograph/createMonograph.js';
 import { deleteMonograph } from './monograph/deleteMonograph.js';
 import { migrateMonograph } from './monograph/migrateMonograph.js';
@@ -643,38 +637,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return createBillingPortalSession(opts, req, ctx);
     },
 
-    createDiscussion: (req, ctx) => {
-      return createDiscussion(opts, req, ctx);
-    },
-
-    replyToDiscussion: (req, ctx) => {
-      return replyToDiscussion(opts, req, ctx);
-    },
-
-    getAllDiscussions: (req, ctx) => {
-      return getAllDiscussions(opts, req, ctx);
-    },
-
-    updateDiscussionComment: (req, ctx) => {
-      return updateDiscussionComment(opts, req, ctx);
-    },
-
-    deleteDiscussionComment: (req, ctx) => {
-      return deleteDiscussionComment(opts, req, ctx);
-    },
-
-    getDiscussion: (req, ctx) => {
-      return getDiscussion(opts, req, ctx);
-    },
-
-    getDiscussionSchemas: (req, ctx) => {
-      return getDiscussionSchemas(opts, req, ctx);
-    },
-
-    setDiscussionResolution: (req, ctx) => {
-      return setDiscussionResolution(opts, req, ctx);
-    },
-
     getSubgraphMetrics: (req, ctx) => {
       return getSubgraphMetrics(opts, req, ctx);
     },
@@ -685,6 +647,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getNamespaceLintConfig: (req, ctx) => {
       return getNamespaceLintConfig(opts, req, ctx);
+    },
+
+    getNamespaceChecksConfig: (req, ctx) => {
+      return getNamespaceChecksConfig(opts, req, ctx);
+    },
+
+    updateNamespaceChecksConfig: (req, ctx) => {
+      return updateNamespaceChecksConfig(opts, req, ctx);
     },
 
     getNamespaceGraphPruningConfig: (req, ctx) => {

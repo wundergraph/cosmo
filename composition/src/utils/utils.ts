@@ -79,10 +79,18 @@ export function numberToOrdinal(num: number): string {
   }
 }
 
-export function addIterableValuesToSet<T>(source: T[] | Iterable<T>, target: Set<T>) {
+export function addIterableValuesToSet<T>(source: Array<T> | Iterable<T>, target: Set<T>) {
   for (const value of source) {
     target.add(value);
   }
+}
+
+export function addSets<T>(a: Set<T>, b: Set<T>): Set<T> {
+  const output = new Set<T>(a);
+  for (const item of b) {
+    output.add(item);
+  }
+  return output;
 }
 
 export function kindToTypeString(kind: Kind): string {
@@ -207,4 +215,42 @@ export function generateRequiresScopesDirective(orScopes: Set<string>[]): ConstD
       },
     ],
   };
+}
+
+// shallow copy
+export function copyObjectValueMap<K, V>(source: Map<K, V>): Map<K, V> {
+  const output = new Map<K, V>();
+  for (const [key, value] of source) {
+    output.set(key, { ...value });
+  }
+  return output;
+}
+
+export function addNewObjectValueMapEntries<K, V>(source: Map<K, V>, target: Map<K, V>) {
+  for (const [key, value] of source) {
+    target.set(key, { ...value });
+  }
+}
+
+// shallow copy
+export function copyArrayValueMap<K, V>(source: Map<K, Array<V>>): Map<K, Array<V>> {
+  const output = new Map<K, Array<V>>();
+  for (const [key, value] of source) {
+    output.set(key, [...value]);
+  }
+  return output;
+}
+
+export function addMapEntries<K, V>(source: Map<K, V>, target: Map<K, V>) {
+  for (const [key, value] of source) {
+    target.set(key, value);
+  }
+}
+
+export function getSingleSetEntry<T>(set: Set<T>): T | undefined {
+  const { value, done } = set.values().next();
+  if (done) {
+    return;
+  }
+  return value;
 }

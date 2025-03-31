@@ -4,6 +4,35 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.129.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.129.1...controlplane@0.129.2) (2025-03-28)
+
+### Bug Fixes
+
+* authorization directive cascading ([#1733](https://github.com/wundergraph/cosmo/issues/1733)) ([0199fb5](https://github.com/wundergraph/cosmo/commit/0199fb5f88104a585b74a79638f54f1a3b812436)) (@Aenimus)
+
+## [0.129.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.129.0...controlplane@0.129.1) (2025-03-25)
+
+### Bug Fixes
+
+* fix incorrect calculation of the `p90` and `p99` subgraph metrics ([#1720](https://github.com/wundergraph/cosmo/issues/1720)) ([816e186](https://github.com/wundergraph/cosmo/commit/816e18618b6ddc00f4011995920911049a25c073)) (@wilsonrivera)
+
+# [0.129.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.128.0...controlplane@0.129.0) (2025-03-25)
+
+### Features
+
+* allow to filter checks by subgraph name ([#1716](https://github.com/wundergraph/cosmo/issues/1716)) ([ae69dcd](https://github.com/wundergraph/cosmo/commit/ae69dcde94611196f7f8b47702e25cdcdfa41a19)) (@wilsonrivera)
+* introduce `p50`, `p90` and `p99` latency metrics for graphs and subgraphs ([#1710](https://github.com/wundergraph/cosmo/issues/1710)) ([1c55ed5](https://github.com/wundergraph/cosmo/commit/1c55ed51fe17be7371633a176c356e581ed44c62)) (@wilsonrivera)
+
+# [0.128.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.127.1...controlplane@0.128.0) (2025-03-20)
+
+### Features
+
+* implement checks configuration ([#1688](https://github.com/wundergraph/cosmo/issues/1688)) ([2cab283](https://github.com/wundergraph/cosmo/commit/2cab283b2cdeda7f943250d460150472eb464d22)) (@wilsonrivera)
+
+## [0.127.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.127.0...controlplane@0.127.1) (2025-03-19)
+
+**Note:** Version bump only for package controlplane
+
 # [0.127.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.126.0...controlplane@0.127.0) (2025-03-12)
 
 ### Bug Fixes
