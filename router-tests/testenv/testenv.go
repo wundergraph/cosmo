@@ -26,7 +26,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -352,65 +351,31 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	var (
 		kafkaAdminClient *kadm.Client
-		kafkaStarted     sync.WaitGroup
 		kafkaClient      *kgo.Client
-		natsStarted      sync.WaitGroup
 		natsSetup        *NatsData
-		kafkaSetup       *KafkaData
 		pubSubPrefix     = strconv.FormatUint(rand.Uint64(), 16)
 	)
 
-	if len(cfg.KafkaSeeds) == 0 {
-		cfg.KafkaSeeds = []string{"localhost:9092"}
-	}
-
 	if cfg.EnableKafka {
-		// Depending on whether or not we are in CI e.g. Github Actions, we
-		// either start a kafka container or use the one provided by the CI
-		// This is faster in GHA due to pitiful DIND speed, and helps prevent timeout
-		// related errors (for now)
-		if os.Getenv("CI") == "true" {
-			cfg.KafkaSeeds = []string{"localhost:9092"}
+		cfg.KafkaSeeds = []string{"localhost:9092"}
 
-			client, err := kgo.NewClient(
-				kgo.SeedBrokers(cfg.KafkaSeeds...),
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			kafkaClient = client
-			kafkaAdminClient = kadm.NewClient(kafkaClient)
-		} else {
-			kafkaStarted.Add(1)
-			go func() {
-				defer kafkaStarted.Done()
-
-				var kafkaSetupErr error
-				kafkaSetup, kafkaSetupErr = setupKafkaServer(t)
-				if kafkaSetupErr != nil || kafkaSetup == nil {
-					t.Fatalf("could not setup kafka: %s", kafkaSetupErr.Error())
-					return
-				}
-
-				kafkaClient = kafkaSetup.Client
-				kafkaAdminClient = kadm.NewClient(kafkaClient)
-
-				cfg.KafkaSeeds = kafkaSetup.Brokers
-			}()
+		client, err := kgo.NewClient(
+			kgo.SeedBrokers(cfg.KafkaSeeds...),
+		)
+		if err != nil {
+			return nil, err
 		}
+
+		kafkaClient = client
+		kafkaAdminClient = kadm.NewClient(kafkaClient)
 	}
 
 	if cfg.EnableNats {
-		natsStarted.Add(1)
-		go func() {
-			defer natsStarted.Done()
-			var natsErr error
-			natsSetup, natsErr = setupNatsServers(t)
-			if natsErr != nil {
-				t.Fatalf("could not setup nats: %s", natsErr.Error())
-			}
-		}()
+		s, err := setupNatsClients(t)
+		if err != nil {
+			t.Fatalf("could not setup nats clients: %s", err.Error())
+		}
+		natsSetup = s
 	}
 
 	if cfg.AssertCacheMetrics != nil {
@@ -457,8 +422,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	requiredPorts := 2
 
 	ports := freeport.GetN(t, requiredPorts)
-
-	natsStarted.Wait()
 
 	getPubSubName := GetPubSubNameFn(pubSubPrefix)
 
@@ -620,8 +583,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 		client = retryClient.StandardClient()
 	}
-
-	kafkaStarted.Wait()
 
 	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
 	if err != nil {
@@ -847,7 +808,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		for _, sourceName := range demoNatsProviders {
 			natsEventSources = append(natsEventSources, config.NatsEventSource{
 				ID:  sourceName,
-				URL: natsData.Server.ClientURL(),
+				URL: nats.DefaultURL,
 			})
 		}
 	}

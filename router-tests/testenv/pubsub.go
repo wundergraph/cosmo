@@ -5,16 +5,12 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/consul/sdk/freeport"
-	natsserver "github.com/nats-io/nats-server/v2/server"
-	natstest "github.com/nats-io/nats-server/v2/test"
 	"github.com/nats-io/nats.go"
 	"github.com/ory/dockertest/v3"
 	"github.com/ory/dockertest/v3/docker"
@@ -128,27 +124,18 @@ func setupKafkaServer(t testing.TB) (*KafkaData, error) {
 	return kafkaData, nil
 }
 
-var (
-	natsMux    sync.Mutex
-	natsServer *natsserver.Server
-)
-
 type NatsData struct {
 	Connections []*nats.Conn
-	Server      *natsserver.Server
 }
 
-func setupNatsData(t testing.TB) (*NatsData, error) {
-	natsData := &NatsData{
-		Server: natsServer,
-	}
-	natsData.Server = natsServer
+func setupNatsClients(t testing.TB) (*NatsData, error) {
+	natsData := &NatsData{}
 	for range demoNatsProviders {
 		natsConnection, err := nats.Connect(
-			natsData.Server.ClientURL(),
+			nats.DefaultURL,
 			nats.MaxReconnects(10),
 			nats.ReconnectWait(1*time.Second),
-			nats.Timeout(5*time.Second),
+			nats.Timeout(10*time.Second),
 			nats.ErrorHandler(func(conn *nats.Conn, subscription *nats.Subscription, err error) {
 				t.Log(err)
 			}),
@@ -159,53 +146,6 @@ func setupNatsData(t testing.TB) (*NatsData, error) {
 		natsData.Connections = append(natsData.Connections, natsConnection)
 	}
 	return natsData, nil
-}
-
-func setupNatsServers(t testing.TB) (*NatsData, error) {
-	natsMux.Lock()
-	defer natsMux.Unlock()
-
-	if natsServer != nil {
-		return setupNatsData(t)
-	}
-
-	// get free port for nats and never frees it!
-	// don't use Get!
-	natsPorts, natsPortsErr := freeport.Take(1)
-	if natsPortsErr != nil {
-		t.Fatalf("could not get free port for nats: %s", natsPortsErr.Error())
-	}
-	natsPort := natsPorts[0]
-
-	// create dir in tmp for nats server
-	natsDir := filepath.Join(os.TempDir(), fmt.Sprintf("nats-%s", uuid.New()))
-	err := os.MkdirAll(natsDir, os.ModePerm)
-	if err != nil {
-		t.Fatalf("could not create nats dir: %s", err)
-	}
-
-	//t.Cleanup(func() {
-	//	err := os.RemoveAll(natsDir)
-	//	if err != nil {
-	//		panic(fmt.Errorf("could not remove temporary nats directory, %w", err))
-	//	}
-	//})
-
-	opts := natsserver.Options{
-		Host:      "localhost",
-		NoLog:     true,
-		NoSigs:    true,
-		JetStream: true,
-		Port:      natsPort,
-		StoreDir:  natsDir,
-	}
-
-	natsServer = natstest.RunServer(&opts)
-	if natsServer == nil {
-		t.Fatalf("could not start NATS test server")
-	}
-
-	return setupNatsData(t)
 }
 
 func addPubSubPrefixToEngineConfiguration(engineConfig *nodev1.EngineConfiguration, getPubSubName func(string) string) {
