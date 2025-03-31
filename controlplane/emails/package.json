@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "email dev --dir src --port 3400",
-    "build": "email export --dir src --outDir ../src/templates/emails --pretty"
+    "build": "email export --dir src --outDir ../src/templates/emails --pretty && pnpm run --filter ../ lint:fix"
   },
   "keywords": [],
   "author": "",

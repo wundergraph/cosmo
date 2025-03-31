@@ -59,6 +59,9 @@ jobs:
       - name: Generate code
         run: pnpm buf generate --template buf.ts.gen.yaml
 
+      - name: Generate email templates
+        run: pnpm run --filter ./controlplane/emails build
+
       - name: Check if git is not dirty after generating files
         run: git diff --no-ext-diff --exit-code
 
