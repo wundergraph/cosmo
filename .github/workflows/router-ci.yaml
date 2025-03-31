@@ -137,12 +137,10 @@ jobs:
     timeout-minutes: 30
     services:
       nats:
-        image: nats:2.10.6
+        image: nats:latest
         credentials:
           username: ${{secrets.DOCKER_USERNAME}}
           password: ${{secrets.DOCKER_PASSWORD}}
-        options:
-          '--js'
         ports:
           - 4222:4222
           - 8222:8222
