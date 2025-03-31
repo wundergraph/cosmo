@@ -136,6 +136,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services:
+      nats:
+        image: nats:2.10.6
+        credentials:
+          username: ${{secrets.DOCKER_USERNAME}}
+          password: ${{secrets.DOCKER_PASSWORD}}
       redis:
         # Docker Hub image
         image: redis:7
