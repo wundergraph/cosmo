@@ -6,7 +6,7 @@
 // @ts-nocheck
 
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { AcceptOrDeclineInvitationRequest, AcceptOrDeclineInvitationResponse, AddReadmeRequest, AddReadmeResponse, AddSubgraphMemberRequest, AddSubgraphMemberResponse, CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, ComputeCacheWarmerOperationsRequest, ComputeCacheWarmerOperationsResponse, ConfigureCacheWarmerRequest, ConfigureCacheWarmerResponse, ConfigureNamespaceGraphPruningConfigRequest, ConfigureNamespaceGraphPruningConfigResponse, ConfigureNamespaceLintConfigRequest, ConfigureNamespaceLintConfigResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateBillingPortalSessionRequest, CreateBillingPortalSessionResponse, CreateCheckoutSessionRequest, CreateCheckoutSessionResponse, CreateContractRequest, CreateContractResponse, CreateDiscussionRequest, CreateDiscussionResponse, CreateFeatureFlagRequest, CreateFeatureFlagResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateIgnoreOverridesForAllOperationsRequest, CreateIgnoreOverridesForAllOperationsResponse, CreateIntegrationRequest, CreateIntegrationResponse, CreateMonographRequest, CreateMonographResponse, CreateNamespaceRequest, CreateNamespaceResponse, CreateOIDCProviderRequest, CreateOIDCProviderResponse, CreateOperationIgnoreAllOverrideRequest, CreateOperationIgnoreAllOverrideResponse, CreateOperationOverridesRequest, CreateOperationOverridesResponse, CreateOrganizationRequest, CreateOrganizationResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, CreatePlaygroundScriptRequest, CreatePlaygroundScriptResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteCacheWarmerOperationRequest, DeleteCacheWarmerOperationResponse, DeleteDiscussionCommentRequest, DeleteDiscussionCommentResponse, DeleteFeatureFlagRequest, DeleteFeatureFlagResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteIntegrationRequest, DeleteIntegrationResponse, DeleteMonographRequest, DeleteMonographResponse, DeleteNamespaceRequest, DeleteNamespaceResponse, DeleteOIDCProviderRequest, DeleteOIDCProviderResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, DeletePlaygroundScriptRequest, DeletePlaygroundScriptResponse, DeleteRouterTokenRequest, DeleteRouterTokenResponse, DeleteUserRequest, DeleteUserResponse, EnableFeatureFlagRequest, EnableFeatureFlagResponse, EnableGraphPruningRequest, EnableGraphPruningResponse, EnableLintingForTheNamespaceRequest, EnableLintingForTheNamespaceResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, ForceCheckSuccessRequest, ForceCheckSuccessResponse, GenerateRouterTokenRequest, GenerateRouterTokenResponse, GetAllDiscussionsRequest, GetAllDiscussionsResponse, GetAllOverridesRequest, GetAllOverridesResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetAuditLogsRequest, GetAuditLogsResponse, GetBillingPlansRequest, GetBillingPlansResponse, GetCacheWarmerConfigRequest, GetCacheWarmerConfigResponse, GetCacheWarmerOperationsRequest, GetCacheWarmerOperationsResponse, GetChangelogBySchemaVersionRequest, GetChangelogBySchemaVersionResponse, GetCheckOperationsRequest, GetCheckOperationsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetCheckSummaryRequest, GetCheckSummaryResponse, GetClientsRequest, GetClientsResponse, GetCompositionDetailsRequest, GetCompositionDetailsResponse, GetCompositionsRequest, GetCompositionsResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetDiscussionRequest, GetDiscussionResponse, GetDiscussionSchemasRequest, GetDiscussionSchemasResponse, GetFeatureFlagByNameRequest, GetFeatureFlagByNameResponse, GetFeatureFlagsByFederatedGraphRequest, GetFeatureFlagsByFederatedGraphResponse, GetFeatureFlagsRequest, GetFeatureFlagsResponse, GetFeatureSubgraphsByFeatureFlagRequest, GetFeatureSubgraphsByFeatureFlagResponse, GetFeatureSubgraphsRequest, GetFeatureSubgraphsResponse, GetFederatedGraphByIdRequest, GetFederatedGraphByIdResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphsBySubgraphLabelsRequest, GetFederatedGraphsBySubgraphLabelsResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFieldUsageRequest, GetFieldUsageResponse, GetGraphMetricsRequest, GetGraphMetricsResponse, GetInvitationsRequest, GetInvitationsResponse, GetLatestSubgraphSDLRequest, GetLatestSubgraphSDLResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetNamespaceChecksConfigurationRequest, GetNamespaceChecksConfigurationResponse, GetNamespaceGraphPruningConfigRequest, GetNamespaceGraphPruningConfigResponse, GetNamespaceLintConfigRequest, GetNamespaceLintConfigResponse, GetNamespaceRequest, GetNamespaceResponse, GetNamespacesRequest, GetNamespacesResponse, GetOIDCProviderRequest, GetOIDCProviderResponse, GetOperationContentRequest, GetOperationContentResponse, GetOperationOverridesRequest, GetOperationOverridesResponse, GetOrganizationBySlugRequest, GetOrganizationBySlugResponse, GetOrganizationIntegrationsRequest, GetOrganizationIntegrationsResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationRequestsCountRequest, GetOrganizationRequestsCountResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetOrganizationWebhookHistoryRequest, GetOrganizationWebhookHistoryResponse, GetOrganizationWebhookMetaRequest, GetOrganizationWebhookMetaResponse, GetPendingOrganizationMembersRequest, GetPendingOrganizationMembersResponse, GetPersistedOperationsRequest, GetPersistedOperationsResponse, GetPlaygroundScriptsRequest, GetPlaygroundScriptsResponse, GetRoutersRequest, GetRoutersResponse, GetRouterTokensRequest, GetRouterTokensResponse, GetSdlBySchemaVersionRequest, GetSdlBySchemaVersionResponse, GetSubgraphByIdRequest, GetSubgraphByIdResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphMembersRequest, GetSubgraphMembersResponse, GetSubgraphMetricsErrorRateRequest, GetSubgraphMetricsErrorRateResponse, GetSubgraphMetricsRequest, GetSubgraphMetricsResponse, GetSubgraphSDLFromLatestCompositionRequest, GetSubgraphSDLFromLatestCompositionResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, GetUserAccessiblePermissionsRequest, GetUserAccessiblePermissionsResponse, GetUserAccessibleResourcesRequest, GetUserAccessibleResourcesResponse, GetWebhookDeliveryDetailsRequest, GetWebhookDeliveryDetailsResponse, InviteUserRequest, InviteUserResponse, IsGitHubAppInstalledRequest, IsGitHubAppInstalledResponse, IsMemberLimitReachedRequest, IsMemberLimitReachedResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, ListRouterCompatibilityVersionsRequest, ListRouterCompatibilityVersionsResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, MigrateMonographRequest, MigrateMonographResponse, MoveGraphRequest, MoveGraphResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, PublishMonographRequest, PublishMonographResponse, PublishPersistedOperationsRequest, PublishPersistedOperationsResponse, PushCacheWarmerOperationRequest, PushCacheWarmerOperationResponse, RedeliverWebhookRequest, RedeliverWebhookResponse, RemoveInvitationRequest, RemoveInvitationResponse, RemoveOperationIgnoreAllOverrideRequest, RemoveOperationIgnoreAllOverrideResponse, RemoveOperationOverridesRequest, RemoveOperationOverridesResponse, RemoveOrganizationMemberRequest, RemoveOrganizationMemberResponse, RemoveSubgraphMemberRequest, RemoveSubgraphMemberResponse, RenameNamespaceRequest, RenameNamespaceResponse, ReplyToDiscussionRequest, ReplyToDiscussionResponse, SetDiscussionResolutionRequest, SetDiscussionResolutionResponse, SetGraphRouterCompatibilityVersionRequest, SetGraphRouterCompatibilityVersionResponse, ToggleChangeOverridesForAllOperationsRequest, ToggleChangeOverridesForAllOperationsResponse, UpdateContractRequest, UpdateContractResponse, UpdateDiscussionCommentRequest, UpdateDiscussionCommentResponse, UpdateFeatureFlagRequest, UpdateFeatureFlagResponse, UpdateFeatureSettingsRequest, UpdateFeatureSettingsResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateIDPMappersRequest, UpdateIDPMappersResponse, UpdateIntegrationConfigRequest, UpdateIntegrationConfigResponse, UpdateMonographRequest, UpdateMonographResponse, UpdateNamespaceChecksConfigurationRequest, UpdateNamespaceChecksConfigurationResponse, UpdateOrganizationDetailsRequest, UpdateOrganizationDetailsResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberRoleRequest, UpdateOrgMemberRoleResponse, UpdatePlaygroundScriptRequest, UpdatePlaygroundScriptResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, UpgradePlanRequest, UpgradePlanResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
+import { AcceptOrDeclineInvitationRequest, AcceptOrDeclineInvitationResponse, AddReadmeRequest, AddReadmeResponse, AddSubgraphMemberRequest, AddSubgraphMemberResponse, CheckFederatedGraphRequest, CheckFederatedGraphResponse, CheckSubgraphSchemaRequest, CheckSubgraphSchemaResponse, ComputeCacheWarmerOperationsRequest, ComputeCacheWarmerOperationsResponse, ConfigureCacheWarmerRequest, ConfigureCacheWarmerResponse, ConfigureNamespaceGraphPruningConfigRequest, ConfigureNamespaceGraphPruningConfigResponse, ConfigureNamespaceLintConfigRequest, ConfigureNamespaceLintConfigResponse, CreateAPIKeyRequest, CreateAPIKeyResponse, CreateBillingPortalSessionRequest, CreateBillingPortalSessionResponse, CreateCheckoutSessionRequest, CreateCheckoutSessionResponse, CreateContractRequest, CreateContractResponse, CreateFeatureFlagRequest, CreateFeatureFlagResponse, CreateFederatedGraphRequest, CreateFederatedGraphResponse, CreateFederatedGraphTokenRequest, CreateFederatedGraphTokenResponse, CreateFederatedSubgraphRequest, CreateFederatedSubgraphResponse, CreateIgnoreOverridesForAllOperationsRequest, CreateIgnoreOverridesForAllOperationsResponse, CreateIntegrationRequest, CreateIntegrationResponse, CreateMonographRequest, CreateMonographResponse, CreateNamespaceRequest, CreateNamespaceResponse, CreateOIDCProviderRequest, CreateOIDCProviderResponse, CreateOperationIgnoreAllOverrideRequest, CreateOperationIgnoreAllOverrideResponse, CreateOperationOverridesRequest, CreateOperationOverridesResponse, CreateOrganizationRequest, CreateOrganizationResponse, CreateOrganizationWebhookConfigRequest, CreateOrganizationWebhookConfigResponse, CreatePlaygroundScriptRequest, CreatePlaygroundScriptResponse, DeleteAPIKeyRequest, DeleteAPIKeyResponse, DeleteCacheWarmerOperationRequest, DeleteCacheWarmerOperationResponse, DeleteFeatureFlagRequest, DeleteFeatureFlagResponse, DeleteFederatedGraphRequest, DeleteFederatedGraphResponse, DeleteFederatedSubgraphRequest, DeleteFederatedSubgraphResponse, DeleteIntegrationRequest, DeleteIntegrationResponse, DeleteMonographRequest, DeleteMonographResponse, DeleteNamespaceRequest, DeleteNamespaceResponse, DeleteOIDCProviderRequest, DeleteOIDCProviderResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, DeleteOrganizationWebhookConfigRequest, DeleteOrganizationWebhookConfigResponse, DeletePlaygroundScriptRequest, DeletePlaygroundScriptResponse, DeleteRouterTokenRequest, DeleteRouterTokenResponse, DeleteUserRequest, DeleteUserResponse, EnableFeatureFlagRequest, EnableFeatureFlagResponse, EnableGraphPruningRequest, EnableGraphPruningResponse, EnableLintingForTheNamespaceRequest, EnableLintingForTheNamespaceResponse, FixSubgraphSchemaRequest, FixSubgraphSchemaResponse, ForceCheckSuccessRequest, ForceCheckSuccessResponse, GenerateRouterTokenRequest, GenerateRouterTokenResponse, GetAllOverridesRequest, GetAllOverridesResponse, GetAnalyticsViewRequest, GetAnalyticsViewResponse, GetAPIKeysRequest, GetAPIKeysResponse, GetAuditLogsRequest, GetAuditLogsResponse, GetBillingPlansRequest, GetBillingPlansResponse, GetCacheWarmerConfigRequest, GetCacheWarmerConfigResponse, GetCacheWarmerOperationsRequest, GetCacheWarmerOperationsResponse, GetChangelogBySchemaVersionRequest, GetChangelogBySchemaVersionResponse, GetCheckOperationsRequest, GetCheckOperationsResponse, GetChecksByFederatedGraphNameRequest, GetChecksByFederatedGraphNameResponse, GetCheckSummaryRequest, GetCheckSummaryResponse, GetClientsRequest, GetClientsResponse, GetCompositionDetailsRequest, GetCompositionDetailsResponse, GetCompositionsRequest, GetCompositionsResponse, GetDashboardAnalyticsViewRequest, GetDashboardAnalyticsViewResponse, GetFeatureFlagByNameRequest, GetFeatureFlagByNameResponse, GetFeatureFlagsByFederatedGraphRequest, GetFeatureFlagsByFederatedGraphResponse, GetFeatureFlagsRequest, GetFeatureFlagsResponse, GetFeatureSubgraphsByFeatureFlagRequest, GetFeatureSubgraphsByFeatureFlagResponse, GetFeatureSubgraphsRequest, GetFeatureSubgraphsResponse, GetFederatedGraphByIdRequest, GetFederatedGraphByIdResponse, GetFederatedGraphByNameRequest, GetFederatedGraphByNameResponse, GetFederatedGraphChangelogRequest, GetFederatedGraphChangelogResponse, GetFederatedGraphsBySubgraphLabelsRequest, GetFederatedGraphsBySubgraphLabelsResponse, GetFederatedGraphSDLByNameRequest, GetFederatedGraphSDLByNameResponse, GetFederatedGraphsRequest, GetFederatedGraphsResponse, GetFieldUsageRequest, GetFieldUsageResponse, GetGraphMetricsRequest, GetGraphMetricsResponse, GetInvitationsRequest, GetInvitationsResponse, GetLatestSubgraphSDLRequest, GetLatestSubgraphSDLResponse, GetMetricsErrorRateRequest, GetMetricsErrorRateResponse, GetNamespaceChecksConfigurationRequest, GetNamespaceChecksConfigurationResponse, GetNamespaceGraphPruningConfigRequest, GetNamespaceGraphPruningConfigResponse, GetNamespaceLintConfigRequest, GetNamespaceLintConfigResponse, GetNamespaceRequest, GetNamespaceResponse, GetNamespacesRequest, GetNamespacesResponse, GetOIDCProviderRequest, GetOIDCProviderResponse, GetOperationContentRequest, GetOperationContentResponse, GetOperationOverridesRequest, GetOperationOverridesResponse, GetOrganizationBySlugRequest, GetOrganizationBySlugResponse, GetOrganizationIntegrationsRequest, GetOrganizationIntegrationsResponse, GetOrganizationMembersRequest, GetOrganizationMembersResponse, GetOrganizationRequestsCountRequest, GetOrganizationRequestsCountResponse, GetOrganizationWebhookConfigsRequest, GetOrganizationWebhookConfigsResponse, GetOrganizationWebhookHistoryRequest, GetOrganizationWebhookHistoryResponse, GetOrganizationWebhookMetaRequest, GetOrganizationWebhookMetaResponse, GetPendingOrganizationMembersRequest, GetPendingOrganizationMembersResponse, GetPersistedOperationsRequest, GetPersistedOperationsResponse, GetPlaygroundScriptsRequest, GetPlaygroundScriptsResponse, GetRoutersRequest, GetRoutersResponse, GetRouterTokensRequest, GetRouterTokensResponse, GetSdlBySchemaVersionRequest, GetSdlBySchemaVersionResponse, GetSubgraphByIdRequest, GetSubgraphByIdResponse, GetSubgraphByNameRequest, GetSubgraphByNameResponse, GetSubgraphMembersRequest, GetSubgraphMembersResponse, GetSubgraphMetricsErrorRateRequest, GetSubgraphMetricsErrorRateResponse, GetSubgraphMetricsRequest, GetSubgraphMetricsResponse, GetSubgraphSDLFromLatestCompositionRequest, GetSubgraphSDLFromLatestCompositionResponse, GetSubgraphsRequest, GetSubgraphsResponse, GetTraceRequest, GetTraceResponse, GetUserAccessiblePermissionsRequest, GetUserAccessiblePermissionsResponse, GetUserAccessibleResourcesRequest, GetUserAccessibleResourcesResponse, GetWebhookDeliveryDetailsRequest, GetWebhookDeliveryDetailsResponse, InviteUserRequest, InviteUserResponse, IsGitHubAppInstalledRequest, IsGitHubAppInstalledResponse, IsMemberLimitReachedRequest, IsMemberLimitReachedResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, ListRouterCompatibilityVersionsRequest, ListRouterCompatibilityVersionsResponse, MigrateFromApolloRequest, MigrateFromApolloResponse, MigrateMonographRequest, MigrateMonographResponse, MoveGraphRequest, MoveGraphResponse, PublishFederatedSubgraphRequest, PublishFederatedSubgraphResponse, PublishMonographRequest, PublishMonographResponse, PublishPersistedOperationsRequest, PublishPersistedOperationsResponse, PushCacheWarmerOperationRequest, PushCacheWarmerOperationResponse, RedeliverWebhookRequest, RedeliverWebhookResponse, RemoveInvitationRequest, RemoveInvitationResponse, RemoveOperationIgnoreAllOverrideRequest, RemoveOperationIgnoreAllOverrideResponse, RemoveOperationOverridesRequest, RemoveOperationOverridesResponse, RemoveOrganizationMemberRequest, RemoveOrganizationMemberResponse, RemoveSubgraphMemberRequest, RemoveSubgraphMemberResponse, RenameNamespaceRequest, RenameNamespaceResponse, SetGraphRouterCompatibilityVersionRequest, SetGraphRouterCompatibilityVersionResponse, ToggleChangeOverridesForAllOperationsRequest, ToggleChangeOverridesForAllOperationsResponse, UpdateContractRequest, UpdateContractResponse, UpdateFeatureFlagRequest, UpdateFeatureFlagResponse, UpdateFeatureSettingsRequest, UpdateFeatureSettingsResponse, UpdateFederatedGraphRequest, UpdateFederatedGraphResponse, UpdateIDPMappersRequest, UpdateIDPMappersResponse, UpdateIntegrationConfigRequest, UpdateIntegrationConfigResponse, UpdateMonographRequest, UpdateMonographResponse, UpdateNamespaceChecksConfigurationRequest, UpdateNamespaceChecksConfigurationResponse, UpdateOrganizationDetailsRequest, UpdateOrganizationDetailsResponse, UpdateOrganizationWebhookConfigRequest, UpdateOrganizationWebhookConfigResponse, UpdateOrgMemberRoleRequest, UpdateOrgMemberRoleResponse, UpdatePlaygroundScriptRequest, UpdatePlaygroundScriptResponse, UpdateSubgraphRequest, UpdateSubgraphResponse, UpgradePlanRequest, UpgradePlanResponse, WhoAmIRequest, WhoAmIResponse } from "./platform_pb.js";
 
 /**
  * PlaygroundScripts
@@ -1659,134 +1659,6 @@ export const getSubgraphMembers = {
   kind: MethodKind.Unary,
   I: GetSubgraphMembersRequest,
   O: GetSubgraphMembersResponse,
-  service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
-} as const;
-
-/**
- * CreateDiscussion creates a new discussion with an opening comment
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.CreateDiscussion
- */
-export const createDiscussion = {
-  localName: "createDiscussion",
-  name: "CreateDiscussion",
-  kind: MethodKind.Unary,
-  I: CreateDiscussionRequest,
-  O: CreateDiscussionResponse,
-  service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
-} as const;
-
-/**
- * ReplyToDiscussion creates a new comment in the discussion
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.ReplyToDiscussion
- */
-export const replyToDiscussion = {
-  localName: "replyToDiscussion",
-  name: "ReplyToDiscussion",
-  kind: MethodKind.Unary,
-  I: ReplyToDiscussionRequest,
-  O: ReplyToDiscussionResponse,
-  service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
-} as const;
-
-/**
- * GetAllDiscussions fetches all discussions which may be scoped to a schema version if passed
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetAllDiscussions
- */
-export const getAllDiscussions = {
-  localName: "getAllDiscussions",
-  name: "GetAllDiscussions",
-  kind: MethodKind.Unary,
-  I: GetAllDiscussionsRequest,
-  O: GetAllDiscussionsResponse,
-  service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
-} as const;
-
-/**
- * UpdateDiscussionComment edits the comment in the discussion
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.UpdateDiscussionComment
- */
-export const updateDiscussionComment = {
-  localName: "updateDiscussionComment",
-  name: "UpdateDiscussionComment",
-  kind: MethodKind.Unary,
-  I: UpdateDiscussionCommentRequest,
-  O: UpdateDiscussionCommentResponse,
-  service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
-} as const;
-
-/**
- * DeleteDiscussionComment deletes the comment or the discussion if it is an opening comment
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.DeleteDiscussionComment
- */
-export const deleteDiscussionComment = {
-  localName: "deleteDiscussionComment",
-  name: "DeleteDiscussionComment",
-  kind: MethodKind.Unary,
-  I: DeleteDiscussionCommentRequest,
-  O: DeleteDiscussionCommentResponse,
-  service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
-} as const;
-
-/**
- * GetDiscussion gets the entire discussion thread
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetDiscussion
- */
-export const getDiscussion = {
-  localName: "getDiscussion",
-  name: "GetDiscussion",
-  kind: MethodKind.Unary,
-  I: GetDiscussionRequest,
-  O: GetDiscussionResponse,
-  service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
-} as const;
-
-/**
- * GetDiscussionSchemas gets the reference and latest schema of the target graph in which the discussion was created
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.GetDiscussionSchemas
- */
-export const getDiscussionSchemas = {
-  localName: "getDiscussionSchemas",
-  name: "GetDiscussionSchemas",
-  kind: MethodKind.Unary,
-  I: GetDiscussionSchemasRequest,
-  O: GetDiscussionSchemasResponse,
-  service: {
-    typeName: "wg.cosmo.platform.v1.PlatformService"
-  }
-} as const;
-
-/**
- * SetDiscussionResolutionRequest marks the discussion as resolved or not
- *
- * @generated from rpc wg.cosmo.platform.v1.PlatformService.SetDiscussionResolution
- */
-export const setDiscussionResolution = {
-  localName: "setDiscussionResolution",
-  name: "SetDiscussionResolution",
-  kind: MethodKind.Unary,
-  I: SetDiscussionResolutionRequest,
-  O: SetDiscussionResolutionResponse,
   service: {
     typeName: "wg.cosmo.platform.v1.PlatformService"
   }
