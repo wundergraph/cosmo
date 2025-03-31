@@ -208,6 +208,7 @@ services:
       - '8222:8222'
       - '6222:6222'
     command:
+      - 'nats'
       - '--js'
     networks:
       - primary
