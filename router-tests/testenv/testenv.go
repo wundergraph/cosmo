@@ -808,7 +808,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		for _, sourceName := range demoNatsProviders {
 			natsEventSources = append(natsEventSources, config.NatsEventSource{
 				ID:  sourceName,
-				URL: "nats://localhost:4222",
+				URL: nats.DefaultURL,
 			})
 		}
 	}
