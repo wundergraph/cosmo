@@ -137,22 +137,7 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 
 					queryFilePath := filepath.Join(queriesPath, queryFile.Name())
 
-					var outContent string
-					func() {
-						defer func() {
-							if r := recover(); r != nil {
-								// Reinitialize the planner on panic
-								var reinitErr error
-								planner, reinitErr = pg.GetPlanner()
-								if reinitErr != nil {
-									cancelError(fmt.Errorf("failed to reinitialize planner after panic: %v", reinitErr))
-								}
-								err = fmt.Errorf("panic during plan generation: %v", r)
-							}
-						}()
-						outContent, err = planner.PlanOperation(queryFilePath)
-					}()
-
+					outContent, err := planner.PlanOperation(queryFilePath)
 					res := QueryPlanResult{
 						FileName: queryFile.Name(),
 						Plan:     outContent,
