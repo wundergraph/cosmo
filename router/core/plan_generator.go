@@ -90,7 +90,13 @@ func (pl *Planner) PlanParsedOperation(operation *ast.Document) (*resolve.FetchT
 	return rawPlan, nil
 }
 
-func (pl *Planner) planOperation(operation *ast.Document) (*resolve.FetchTreeQueryPlanNode, error) {
+func (pl *Planner) planOperation(operation *ast.Document) (planNode *resolve.FetchTreeQueryPlanNode, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic during plan generation: %v", r)
+		}
+	}()
+
 	report := operationreport.Report{}
 
 	var operationName []byte
@@ -123,7 +129,13 @@ func (pl *Planner) planOperation(operation *ast.Document) (*resolve.FetchTreeQue
 	return &resolve.FetchTreeQueryPlanNode{}, nil
 }
 
-func (pl *Planner) validateOperation(operation *ast.Document) error {
+func (pl *Planner) validateOperation(operation *ast.Document) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic during operation validation: %v", r)
+		}
+	}()
+
 	pl.operationValidator = astvalidation.DefaultOperationValidator()
 
 	report := operationreport.Report{}
