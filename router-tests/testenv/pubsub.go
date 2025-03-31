@@ -1,19 +1,11 @@
 package testenv
 
 import (
-	"context"
-	"fmt"
-	"net/url"
-	"os"
-	"strconv"
-	"sync"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/consul/sdk/freeport"
 	"github.com/nats-io/nats.go"
 	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
 	"github.com/twmb/franz-go/pkg/kgo"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
@@ -22,106 +14,6 @@ type KafkaData struct {
 	Client   *kgo.Client
 	Brokers  []string
 	Resource *dockertest.Resource
-}
-
-var (
-	kafkaMux       sync.Mutex
-	kafkaRefs      int32
-	kafkaData      *KafkaData
-	kafkaContainer *dockertest.Resource
-)
-
-func getHostPort(resource *dockertest.Resource, id string) string {
-	dockerURL := os.Getenv("DOCKER_HOST")
-	if dockerURL == "" {
-		return resource.GetHostPort(id)
-	}
-	u, err := url.Parse(dockerURL)
-	if err != nil {
-		panic(err)
-	}
-	return u.Hostname() + ":" + resource.GetPort(id)
-}
-
-func setupKafkaServer(t testing.TB) (*KafkaData, error) {
-	kafkaMux.Lock()
-	defer kafkaMux.Unlock()
-
-	kafkaRefs += 1
-
-	t.Cleanup(func() {
-		kafkaMux.Lock()
-		defer kafkaMux.Unlock()
-
-		if kafkaRefs > 1 {
-			kafkaRefs -= 1
-		} else if kafkaContainer != nil {
-			if err := kafkaContainer.Close(); err != nil {
-				t.Fatalf("could not purge kafka container: %s", err.Error())
-			}
-		}
-	})
-
-	if kafkaData != nil {
-		return kafkaData, nil
-	}
-
-	kafkaData = &KafkaData{}
-
-	pool, err := dockertest.NewPool("")
-	if err != nil {
-		return nil, err
-	}
-
-	if err := pool.Client.Ping(); err != nil {
-		return nil, err
-	}
-
-	port := freeport.GetOne(t)
-
-	container, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Repository: "bitnami/kafka",
-		Tag:        "3.7.0",
-		PortBindings: map[docker.Port][]docker.PortBinding{
-			"9092/tcp": {docker.PortBinding{HostIP: "localhost", HostPort: strconv.Itoa(port)}},
-		},
-		Env: []string{
-			"KAFKA_ENABLE_KRAFT=yes",
-			"KAFKA_CFG_PROCESS_ROLES=controller,broker",
-			"KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER",
-			"KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093",
-			"KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT",
-			"KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@localhost:9093",
-			"KAFKA_CFG_TRANSACTION_PARTITION_VERIFICATION_ENABLE=false",
-			fmt.Sprintf("KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:%d", port),
-			"KAFKA_CFG_NODE_ID=1",
-			"ALLOW_PLAINTEXT_LISTENER=yes",
-			"KAFKA_KRAFT_CLUSTER_ID=XkpGZQ27R3eTl3OdTm2LYA",
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := kgo.NewClient(
-		kgo.SeedBrokers(getHostPort(container, "9092/tcp")),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	err = pool.Retry(func() error {
-		return client.Ping(context.Background())
-	})
-	if err != nil {
-		t.Fatalf("could not ping kafka: %s", err.Error())
-	}
-
-	kafkaData.Client = client
-	kafkaData.Brokers = []string{getHostPort(container, "9092/tcp")}
-	kafkaContainer = container
-
-	return kafkaData, nil
 }
 
 type NatsData struct {
