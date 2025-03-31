@@ -208,6 +208,9 @@ services:
       - '8222:8222'
       - '6222:6222'
     command:
+      - 'nats-server'
+      - '--config'
+      - '/etc/nats/nats-server.conf'
       - 'nats'
       - '--js'
     networks:
