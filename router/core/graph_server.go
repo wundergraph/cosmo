@@ -512,11 +512,17 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			}
 		}
 	} else if srv.persistedOperationsConfig.Safelist.Enabled || srv.persistedOperationsConfig.LogUnknown {
+		// THIS IS A BUG!! Tests in router-tests/safelist_test.go rely on the buggy functionality
+		// and maybe code related to safelist feature does as well. This doesn't get executed if either of the above
+		// two top-level conditions are met, which is the non-emptyness of the array/config, not the presence of the
+		// condition that enables computing sha256.
+
 		// In these case, we'll want to compute the sha256 for every operation, in order to check that the operation
 		// is present in the Persisted Operation cache
 		computeSha256 = true
 	}
 
+	// This could be folded into the above checks, but it's separated out to isolate it from the bug
 	if srv.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled && srv.metricConfig.Prometheus.PromSchemaFieldUsage.IncludeOperationSha {
 		// Prometheus schema field usage metrics use sha256, so we need to ensure it is computed
 		computeSha256 = true
@@ -741,12 +747,14 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	metrics := NewRouterMetrics(&routerMetricsConfig{
-		metrics:                gm.metricStore,
-		gqlMetricsExporter:     s.gqlMetricsExporter,
-		exportEnabled:          s.graphqlMetricsConfig.Enabled,
-		promIncludeSchemaUsage: s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
-		routerConfigVersion:    routerConfigVersion,
-		logger:                 s.logger,
+		metrics:             gm.metricStore,
+		gqlMetricsExporter:  s.gqlMetricsExporter,
+		exportEnabled:       s.graphqlMetricsConfig.Enabled,
+		routerConfigVersion: routerConfigVersion,
+		logger:              s.logger,
+
+		promSchemaUsageEnabled:             s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
+		promSchemaUsageIncludeOperationSha: s.metricConfig.Prometheus.PromSchemaFieldUsage.IncludeOperationSha,
 	})
 
 	baseLogFields := []zapcore.Field{

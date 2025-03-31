@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -152,6 +154,48 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 			assertLabelValue(t, schemaUsageMetrics[2].Label, otel.WgGraphQLFieldParentType, "Employee")
 
 			assert.InEpsilon(t, 2.0, *schemaUsageMetrics[2].Counter.Value, 0.0001)
+		})
+	})
+
+	t.Run("operation sha not included if disabled even if computed for another reason", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+		promRegistry := prometheus.NewRegistry()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:       metricReader,
+			PrometheusRegistry: promRegistry,
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					LogUnknown: true,
+				}),
+			},
+			MetricOptions: testenv.MetricOptions{
+				PrometheusSchemaFieldUsage: testenv.PrometheusSchemaFieldUsage{
+					Enabled:             true,
+					IncludeOperationSha: false,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query myQuery { employee(id: 1) { id currentMood role { title } } }`,
+			})
+			require.JSONEq(t, `{"data":{"employee":{"id":1,"currentMood":"HAPPY","role":{"title":["Founder","CEO"]}}}}`, res.Body)
+
+			mf, err := promRegistry.Gather()
+			require.NoError(t, err)
+
+			schemaUsage := findMetricFamilyByName(mf, SchemaFieldUsageMetricName)
+			assert.NotNil(t, schemaUsage)
+
+			schemaUsageMetrics := schemaUsage.GetMetric()
+
+			require.Len(t, schemaUsageMetrics, 8)
+
+			for _, metric := range schemaUsageMetrics {
+				assertLabelNotPresent(t, metric.Label, otel.WgOperationSha256)
+			}
 		})
 	})
 
