@@ -145,6 +145,8 @@ jobs:
           '--js'
         ports:
           - 4222:4222
+          - 8222:8222
+          - 6222:6222
       redis:
         image: redis:7
         # Set health checks to wait until redis has started
