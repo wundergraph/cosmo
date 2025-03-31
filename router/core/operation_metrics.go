@@ -36,7 +36,9 @@ type OperationMetrics struct {
 	routerConfigVersion  string
 	logger               *zap.Logger
 	trackUsageInfo       bool
-	promUsageInfo        bool
+
+	promSchemaUsageEnabled             bool
+	promSchemaUsageIncludeOperationSha bool
 }
 
 func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, responseSize int, exportSynchronous bool) {
@@ -79,13 +81,13 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 	}
 
 	// Prometheus usage metrics, disabled by default
-	if m.promUsageInfo && reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
+	if m.promSchemaUsageEnabled && reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
 		opAttrs := []attribute.KeyValue{
 			rotel.WgOperationName.String(reqContext.operation.name),
 			rotel.WgOperationType.String(reqContext.operation.opType),
 		}
 
-		if reqContext.operation.sha256Hash != "" {
+		if m.promSchemaUsageIncludeOperationSha && reqContext.operation.sha256Hash != "" {
 			opAttrs = append(opAttrs, rotel.WgOperationSha256.String(reqContext.operation.sha256Hash))
 		}
 
@@ -104,14 +106,16 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 }
 
 type OperationMetricsOptions struct {
-	InFlightAddOption     otelmetric.AddOption
-	SliceAttributes       []attribute.KeyValue
-	RouterConfigVersion   string
-	RequestContentLength  int64
-	RouterMetrics         RouterMetrics
-	Logger                *zap.Logger
-	TrackUsageInfo        bool
-	PrometheusSchemaUsage bool
+	InFlightAddOption    otelmetric.AddOption
+	SliceAttributes      []attribute.KeyValue
+	RouterConfigVersion  string
+	RequestContentLength int64
+	RouterMetrics        RouterMetrics
+	Logger               *zap.Logger
+	TrackUsageInfo       bool
+
+	PrometheusSchemaUsageEnabled    bool
+	PrometheusSchemaUsageIncludeSha bool
 }
 
 // newOperationMetrics creates a new OperationMetrics struct and starts the operation metrics.
@@ -128,6 +132,8 @@ func newOperationMetrics(opts OperationMetricsOptions) *OperationMetrics {
 		routerMetrics:        opts.RouterMetrics,
 		logger:               opts.Logger,
 		trackUsageInfo:       opts.TrackUsageInfo,
-		promUsageInfo:        opts.PrometheusSchemaUsage,
+
+		promSchemaUsageEnabled:             opts.PrometheusSchemaUsageEnabled,
+		promSchemaUsageIncludeOperationSha: opts.PrometheusSchemaUsageIncludeSha,
 	}
 }

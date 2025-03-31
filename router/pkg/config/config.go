@@ -103,8 +103,7 @@ type Prometheus struct {
 }
 
 type PrometheusSchemaFieldUsage struct {
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-
+	Enabled             bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 	IncludeOperationSha bool `yaml:"include_operation_sha" envDefault:"false" env:"INCLUDE_OPERATION_SHA"`
 }
 
