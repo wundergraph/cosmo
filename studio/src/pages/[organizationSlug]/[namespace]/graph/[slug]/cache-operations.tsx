@@ -171,7 +171,7 @@ const CacheOperationsPage: NextPageWithLayout = () => {
             operation have priority over the top 100 operations computed by
             planning time.{" "}
             <Link
-              href={docsBaseURL + "/studio/cache-operations"}
+              href={docsBaseURL + "/concepts/cache-warmer"}
               className="text-primary"
               target="_blank"
               rel="noreferrer"
