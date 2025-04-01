@@ -1217,15 +1217,6 @@ message LeaveOrganizationResponse {
   Response response = 1;
 }
 
-message GetOrganizationSubscriptionRequest {
-  string organizationID = 1;
-}
-
-message GetOrganizationSubscriptionResponse {
-  Response response = 1;
-  bool isActive = 2;
-}
-
 message UpdateOrganizationDetailsRequest {
   string userID = 1;
   string organizationName = 2;
@@ -2648,8 +2639,6 @@ service PlatformService {
   rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse) {}
   // RestoreOrganization restore an organization pending deletion
   rpc RestoreOrganization(RestoreOrganizationRequest) returns (RestoreOrganizationResponse) {}
-  // GetOrganizationSubscription gets the active organization subscription information
-  rpc GetOrganizationSubscription(GetOrganizationSubscriptionRequest) returns (GetOrganizationSubscriptionResponse) {}
   // LeaveOrganization removes a member from the organization
   rpc LeaveOrganization(LeaveOrganizationRequest) returns (LeaveOrganizationResponse) {}
   // UpdateOrganizationDetails updates the name and slug of the organization

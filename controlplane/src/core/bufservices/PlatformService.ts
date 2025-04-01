@@ -100,7 +100,6 @@ import { updateOrganizationWebhookConfig } from './notification/updateOrganizati
 import { createOrganization } from './organization/createOrganization.js';
 import { deleteOrganization } from './organization/deleteOrganization.js';
 import { restoreOrganization } from './organization/restoreOrganization.js';
-import { getOrganizationSubscription } from './organization/getOrganizationSubscription.js';
 import { getAuditLogs } from './organization/getAuditLogs.js';
 import { getOrganizationMembers } from './organization/getOrganizationMembers.js';
 import { getPendingOrganizationMembers } from './organization/getPendingOrganizationMembers.js';
@@ -352,10 +351,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     restoreOrganization: (req, ctx) => {
       return restoreOrganization(opts, req, ctx);
-    },
-
-    getOrganizationSubscription: (req, ctx) => {
-      return getOrganizationSubscription(opts, req, ctx);
     },
 
     leaveOrganization: (req, ctx) => {
