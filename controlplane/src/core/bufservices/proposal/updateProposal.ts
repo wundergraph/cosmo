@@ -126,6 +126,20 @@ export function updateProposal(
         proposalSubgraphs: [],
       });
 
+      await auditLogRepo.addAuditLog({
+        organizationId: authContext.organizationId,
+        auditAction: 'proposal.updated',
+        action: 'updated',
+        actorId: authContext.userId,
+        auditableType: 'proposal',
+        auditableDisplayName: proposal.proposal.name,
+        actorDisplayName: authContext.userDisplayName,
+        apiKeyName: authContext.apiKeyName,
+        actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+        targetNamespaceId: federatedGraph.namespaceId,
+        targetNamespaceDisplayName: federatedGraph.namespace,
+      });
+
       orgWebhooks.send(
         {
           eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
@@ -170,6 +184,10 @@ export function updateProposal(
         checkUrl: '',
       };
     } else if (req.updateAction.case === 'updatedSubgraphs') {
+      const subgraphsOfFedGraph = await subgraphRepo.listByFederatedGraph({
+        federatedGraphTargetId: federatedGraph.targetId,
+      });
+
       const proposalSubgraphs: {
         subgraphId?: string;
         subgraphName: string;
@@ -183,6 +201,33 @@ export function updateProposal(
       // Process subgraphs if they are provided
       for (const proposalSubgraph of updatedSubgraphs) {
         const subgraph = await subgraphRepo.byName(proposalSubgraph.name, req.namespace);
+
+        if (subgraph) {
+          const isSubgraphPartOfFedGraph = subgraphsOfFedGraph.some((s) => s.name === proposalSubgraph.name);
+          // If the subgraph exists and is not part of the federated graph, return an error
+          if (!isSubgraphPartOfFedGraph) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Subgraph ${proposalSubgraph.name} is not part of the federated graph ${federatedGraph.name}`,
+              },
+              breakingChanges: [],
+              nonBreakingChanges: [],
+              compositionErrors: [],
+              checkId: '',
+              lintWarnings: [],
+              lintErrors: [],
+              graphPruneWarnings: [],
+              graphPruneErrors: [],
+              compositionWarnings: [],
+              operationUsageStats: [],
+              lintingSkipped: false,
+              graphPruningSkipped: false,
+              checkUrl: '',
+            };
+          }
+        }
+
         proposalSubgraphs.push({
           subgraphId: subgraph?.id,
           subgraphName: proposalSubgraph.name,

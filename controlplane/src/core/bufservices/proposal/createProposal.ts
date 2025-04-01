@@ -131,6 +131,10 @@ export function createProposal(
       };
     }
 
+    const subgraphsOfFedGraph = await subgraphRepo.listByFederatedGraph({
+      federatedGraphTargetId: federatedGraph.targetId,
+    });
+
     const proposalSubgraphs: {
       subgraphId?: string;
       subgraphName: string;
@@ -141,6 +145,33 @@ export function createProposal(
 
     for (const proposalSubgraph of req.subgraphs) {
       const subgraph = await subgraphRepo.byName(proposalSubgraph.name, req.namespace);
+
+      if (subgraph) {
+        const isSubgraphPartOfFedGraph = subgraphsOfFedGraph.some((s) => s.name === proposalSubgraph.name);
+        if (!isSubgraphPartOfFedGraph) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `Subgraph ${proposalSubgraph.name} is not part of the federated graph ${federatedGraph.name}`,
+            },
+            proposalId: '',
+            breakingChanges: [],
+            nonBreakingChanges: [],
+            compositionErrors: [],
+            checkId: '',
+            lintWarnings: [],
+            lintErrors: [],
+            graphPruneWarnings: [],
+            graphPruneErrors: [],
+            compositionWarnings: [],
+            operationUsageStats: [],
+            lintingSkipped: false,
+            graphPruningSkipped: false,
+            checkUrl: '',
+          };
+        }
+      }
+
       proposalSubgraphs.push({
         subgraphId: subgraph?.id,
         subgraphName: proposalSubgraph.name,
