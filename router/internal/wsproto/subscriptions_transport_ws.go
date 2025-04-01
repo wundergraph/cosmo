@@ -3,7 +3,6 @@ package wsproto
 import (
 	"encoding/json"
 	"fmt"
-
 	"github.com/tidwall/sjson"
 )
 
