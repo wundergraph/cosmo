@@ -212,25 +212,52 @@ func getCustomDynamicAttributeValue(
 	case ContextFieldRequestError:
 		return err != nil || reqContext.error != nil
 	case ContextFieldOperationName:
+		if reqContext.operation == nil {
+			return ""
+		}
 		return reqContext.operation.Name()
 	case ContextFieldOperationType:
+		if reqContext.operation == nil {
+			return ""
+		}
 		return reqContext.operation.Type()
 	case ContextFieldOperationPlanningTime:
+		if reqContext.operation == nil {
+			return ""
+		}
 		return reqContext.operation.planningTime
 	case ContextFieldOperationNormalizationTime:
+		if reqContext.operation == nil {
+			return ""
+		}
 		return reqContext.operation.normalizationTime
 	case ContextFieldOperationParsingTime:
+		if reqContext.operation == nil {
+			return ""
+		}
 		return reqContext.operation.parsingTime
 	case ContextFieldOperationValidationTime:
+		if reqContext.operation == nil {
+			return ""
+		}
 		return reqContext.operation.validationTime
 	case ContextFieldOperationSha256:
+		if reqContext.operation == nil {
+			return ""
+		}
 		return reqContext.operation.sha256Hash
 	case ContextFieldOperationHash:
+		if reqContext.operation == nil {
+			return ""
+		}
 		if reqContext.operation.hash != 0 {
 			return strconv.FormatUint(reqContext.operation.hash, 10)
 		}
 		return reqContext.operation.Hash()
 	case ContextFieldPersistedOperationSha256:
+		if reqContext.operation == nil {
+			return ""
+		}
 		return reqContext.operation.persistedID
 	case ContextFieldResponseErrorMessage:
 		if err != nil {
