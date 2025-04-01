@@ -20,12 +20,10 @@ import (
 	"github.com/gobwas/ws/wsutil"
 	"github.com/gorilla/websocket"
 	"github.com/tidwall/gjson"
+	"github.com/wundergraph/astjson"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
-	"golang.org/x/sync/semaphore"
-
-	"github.com/wundergraph/astjson"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -55,6 +53,7 @@ type WebsocketMiddlewareOptions struct {
 	Logger             *zap.Logger
 	Stats              statistics.EngineStatistics
 	ReadTimeout        time.Duration
+	WriteTimeout       time.Duration
 
 	EnableNetPoll         bool
 	NetPollTimeout        time.Duration
@@ -83,9 +82,9 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		logger:                    opts.Logger,
 		stats:                     opts.Stats,
 		readTimeout:               opts.ReadTimeout,
+		writeTimeout:              opts.WriteTimeout,
 		config:                    opts.WebSocketConfiguration,
 		clientHeader:              opts.ClientHeader,
-		handlerSem:                semaphore.NewWeighted(128),
 		attributes:                opts.Attributes,
 		disableVariablesRemapping: opts.DisableVariablesRemapping,
 		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
@@ -155,27 +154,49 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 // wsConnectionWrapper is a wrapper around websocket.Conn that allows
 // writing from multiple goroutines
 type wsConnectionWrapper struct {
-	conn net.Conn
-	mu   sync.Mutex
+	conn         net.Conn
+	mu           sync.Mutex
+	readTimeout  time.Duration
+	writeTimeout time.Duration
 }
 
-func newWSConnectionWrapper(conn net.Conn) *wsConnectionWrapper {
+func newWSConnectionWrapper(conn net.Conn, readTimeout, writeTimeout time.Duration) *wsConnectionWrapper {
 	return &wsConnectionWrapper{
-		conn: conn,
+		conn:         conn,
+		readTimeout:  readTimeout,
+		writeTimeout: writeTimeout,
 	}
 }
 
 func (c *wsConnectionWrapper) ReadJSON(v interface{}) error {
+
+	if c.readTimeout > 0 {
+		err := c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
+		if err != nil {
+			return err
+		}
+	}
+
 	text, err := wsutil.ReadClientText(c.conn)
 	if err != nil {
 		return err
 	}
+
 	return json.Unmarshal(text, v)
 }
 
 func (c *wsConnectionWrapper) WriteText(text string) error {
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	if c.writeTimeout > 0 {
+		err := c.conn.SetWriteDeadline(time.Now().Add(c.writeTimeout))
+		if err != nil {
+			return err
+		}
+	}
+
 	return wsutil.WriteServerText(c.conn, []byte(text))
 }
 
@@ -186,6 +207,14 @@ func (c *wsConnectionWrapper) WriteJSON(v interface{}) error {
 	if err != nil {
 		return err
 	}
+
+	if c.writeTimeout > 0 {
+		err := c.conn.SetWriteDeadline(time.Now().Add(c.writeTimeout))
+		if err != nil {
+			return err
+		}
+	}
+
 	return wsutil.WriteServerText(c.conn, data)
 }
 
@@ -211,13 +240,13 @@ type WebsocketHandler struct {
 	connections   map[int]*WebSocketConnectionHandler
 	connectionsMu sync.RWMutex
 
-	handlerSem    *semaphore.Weighted
 	connectionIDs atomic.Int64
 
 	stats      statistics.EngineStatistics
 	attributes []attribute.KeyValue
 
-	readTimeout time.Duration
+	readTimeout  time.Duration
+	writeTimeout time.Duration
 
 	absintheHandlerEnabled bool
 	absintheHandlerPath    string
@@ -284,7 +313,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	// After successful upgrade, we can't write to the response writer anymore
 	// because it's hijacked by the websocket connection
 
-	conn := newWSConnectionWrapper(c)
+	conn := newWSConnectionWrapper(c, h.readTimeout, h.writeTimeout)
 	protocol, err := wsproto.NewProtocol(subProtocol, conn)
 	if err != nil {
 		requestLogger.Error("Create websocket protocol", zap.Error(err))
@@ -342,7 +371,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 
 		requestLogger.Debug("Initializing websocket connection", zap.Error(err))
 
-		handler.Close()
+		handler.Close(false)
 		return
 	}
 
@@ -362,7 +391,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 				}
 				http.Error(handler.w, http.StatusText(statusCode), statusCode)
 				_ = handler.writeErrorMessage(requestID, err)
-				handler.Close()
+				handler.Close(false)
 				return
 			}
 		}
@@ -374,7 +403,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			if err != nil {
 				requestLogger.Error("Error parsing initial payload: %v", zap.Error(err))
 				_ = handler.writeErrorMessage(requestID, err)
-				handler.Close()
+				handler.Close(false)
 				return
 			}
 			jwtToken, ok := initialPayloadMap[fromInitialPayloadConfig.Key].(string)
@@ -382,7 +411,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 				err := fmt.Errorf("invalid JWT token in initial payload: JWT token is not a string")
 				requestLogger.Error(err.Error())
 				_ = handler.writeErrorMessage(requestID, err)
-				handler.Close()
+				handler.Close(false)
 				return
 			}
 			handler.request.Header.Set(fromInitialPayloadConfig.ExportToken.HeaderKey, jwtToken)
@@ -396,7 +425,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		err = h.addConnection(c, handler)
 		if err != nil {
 			requestLogger.Error("Adding connection to net poller", zap.Error(err))
-			handler.Close()
+			handler.Close(true)
 		}
 		return
 	}
@@ -410,20 +439,13 @@ func (h *WebsocketHandler) handleConnectionSync(handler *WebSocketConnectionHand
 	h.stats.ConnectionsInc()
 	defer h.stats.ConnectionsDec()
 	serverDone := h.ctx.Done()
-	defer handler.Close()
+	defer handler.Close(true)
 
 	for {
 		select {
 		case <-serverDone:
 			return
 		default:
-			// It's important to set the ReadDeadline
-			// Otherwise, the following "ReadMessage" call will block forever
-			err := handler.conn.conn.SetReadDeadline(time.Now().Add(h.readTimeout))
-			if err != nil {
-				h.logger.Debug("Setting read deadline", zap.Error(err))
-				return
-			}
 			msg, err := handler.protocol.ReadMessage()
 			if err != nil {
 				if isReadTimeout(err) {
@@ -464,7 +486,7 @@ func (h *WebsocketHandler) removeConnection(conn net.Conn, handler *WebSocketCon
 	if err != nil {
 		h.logger.Warn("Removing connection from net poller", zap.Error(err))
 	}
-	handler.Close()
+	handler.Close(true)
 }
 
 func socketFd(conn net.Conn) int {
@@ -525,6 +547,7 @@ func (h *WebsocketHandler) runPoller() {
 				h.connectionsMu.RUnlock()
 
 				if !exists {
+					h.logger.Debug("Connection not found", zap.Int("fd", fd))
 					continue
 				}
 
@@ -534,16 +557,9 @@ func (h *WebsocketHandler) runPoller() {
 					continue
 				}
 
-				err = handler.conn.conn.SetReadDeadline(time.Now().Add(h.readTimeout))
-				if err != nil {
-					h.logger.Debug("Setting read deadline", zap.Error(err))
-					h.removeConnection(conn, handler, fd)
-					continue
-				}
-
 				msg, err := handler.protocol.ReadMessage()
 				if err != nil {
-					h.logger.Debug("Client closed connection")
+					h.logger.Debug("Client closed connection", zap.Error(err))
 					h.removeConnection(conn, handler, fd)
 					continue
 				}
@@ -1036,7 +1052,6 @@ func (h *WebSocketConnectionHandler) handleComplete(msg *wsproto.Message) error 
 }
 
 func (h *WebsocketHandler) HandleMessage(handler *WebSocketConnectionHandler, msg *wsproto.Message) (err error) {
-
 	switch msg.Type {
 	case wsproto.MessageTypeTerminate:
 		return errClientTerminatedConnection
@@ -1051,10 +1066,6 @@ func (h *WebsocketHandler) HandleMessage(handler *WebSocketConnectionHandler, ms
 			h.logger.Warn("Handling subscription registration", zap.Error(err))
 			return handler.requestError(fmt.Errorf("error registering subscription id: %s", msg.ID))
 		}
-		if err := h.handlerSem.Acquire(handler.ctx, 1); err != nil {
-			return err
-		}
-		defer h.handlerSem.Release(1)
 		handler.executeSubscription(registration)
 	case wsproto.MessageTypeComplete:
 		err = handler.handleComplete(msg)
@@ -1148,13 +1159,16 @@ func (h *WebSocketConnectionHandler) Complete(rw *websocketResponseWriter) {
 	_ = rw.Flush()
 }
 
-func (h *WebSocketConnectionHandler) Close() {
-	// Remove any pending IDs associated with this connection
-	err := h.graphqlHandler.executor.Resolver.AsyncUnsubscribeClient(h.connectionID)
-	if err != nil {
-		h.logger.Debug("Unsubscribing client", zap.Error(err))
+func (h *WebSocketConnectionHandler) Close(unsubscribe bool) {
+	if unsubscribe {
+		// Remove any pending IDs associated with this connection
+		err := h.graphqlHandler.executor.Resolver.AsyncUnsubscribeClient(h.connectionID)
+		if err != nil {
+			h.logger.Debug("Unsubscribing client", zap.Error(err))
+		}
 	}
-	err = h.conn.Close()
+
+	err := h.conn.Close()
 	if err != nil {
 		h.logger.Debug("Closing websocket connection", zap.Error(err))
 	}

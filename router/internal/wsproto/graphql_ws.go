@@ -88,7 +88,12 @@ func (p *graphQLWSProtocol) ReadMessage() (*Message, error) {
 }
 
 func (p *graphQLWSProtocol) Pong(msg *Message) error {
-	return p.conn.WriteJSON(graphQLWSMessage{ID: msg.ID, Type: graphQLWSMessageTypePong, Payload: msg.Payload})
+	return p.conn.WriteJSON(
+		graphQLWSMessage{
+			ID:      msg.ID,
+			Type:    graphQLWSMessageTypePong,
+			Payload: msg.Payload,
+		})
 }
 
 func (p *graphQLWSProtocol) WriteGraphQLData(id string, data json.RawMessage, extensions json.RawMessage) error {
@@ -110,5 +115,7 @@ func (p *graphQLWSProtocol) WriteGraphQLErrors(id string, errors json.RawMessage
 }
 
 func (p *graphQLWSProtocol) Done(id string) error {
-	return p.conn.WriteJSON(graphQLWSMessage{ID: id, Type: graphQLWSMessageTypeComplete})
+	return p.conn.WriteJSON(
+		graphQLWSMessage{ID: id, Type: graphQLWSMessageTypeComplete},
+	)
 }

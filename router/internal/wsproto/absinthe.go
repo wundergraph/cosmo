@@ -183,7 +183,6 @@ func (p *absintheWSProtocol) WriteGraphQLData(id string, data json.RawMessage, e
 	if err != nil {
 		return err
 	}
-
 	return p.conn.WriteJSON(absintheMessage{
 		ID:       &id,
 		Channel:  "1",
