@@ -16,7 +16,7 @@ export default (opts: BaseCommandOptions) => {
   command.option(
     '--subgraph <subgraph>',
     'Specify a subgraph to check. Format: <subgraph-name>:<path-to-schema>. Can be specified multiple times.',
-    (value, previous) => {
+    (value: string, previous: string[]) => {
       previous.push(value);
       return previous;
     },
@@ -25,7 +25,7 @@ export default (opts: BaseCommandOptions) => {
   command.option(
     '--deleted-subgraph <name>',
     'Specify a subgraph to be deleted in the check. Can be specified multiple times.',
-    (value, previous) => {
+    (value: string, previous: string[]) => {
       previous.push(value);
       return previous;
     },
@@ -37,7 +37,7 @@ export default (opts: BaseCommandOptions) => {
   );
 
   command.action(async (options) => {
-    if (!options.subgraph.length && !options.deletedSubgraph.length) {
+    if (options.subgraph.length === 0 && options.deletedSubgraph.length === 0) {
       program.error(
         pc.red(
           pc.bold(
@@ -83,15 +83,17 @@ export default (opts: BaseCommandOptions) => {
         );
       }
 
-      try {
-        const schemaContent = await readFile(resolvedSchemaPath, 'utf8');
-        checkSubgraphs.push({
-          name: subgraphName,
-          schema: schemaContent,
-        });
-      } catch (error) {
-        program.error(pc.red(pc.bold(`Error reading schema file: ${error.message}`)));
+      const schemaBuffer = await readFile(resolvedSchemaPath);
+      const schema = new TextDecoder().decode(schemaBuffer);
+      if (schema.trim().length === 0) {
+        program.error(
+          pc.red(pc.bold(`The schema file '${pc.bold(resolvedSchemaPath)}' is empty. Please provide a valid schema.`)),
+        );
       }
+      checkSubgraphs.push({
+        name: subgraphName,
+        schema,
+      });
     }
 
     // Process subgraphs to delete

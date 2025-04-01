@@ -145,14 +145,10 @@ export const ProposalDetails = ({ proposal }: { proposal: Proposal }) => {
     getChecksOfProposal,
     {
       proposalId: id,
-      pagination: {
-        limit: limit > 50 ? 50 : limit,
-        offset: (pageNumber - 1) * limit,
-      },
-      dateRange: {
-        start: formatISO(startDate),
-        end: formatISO(endDate),
-      },
+      limit: limit > 50 ? 50 : limit,
+      offset: (pageNumber - 1) * limit,
+      startDate: formatISO(startDate),
+      endDate: formatISO(endDate),
     },
     {
       enabled: tab === "checks",
@@ -394,35 +390,8 @@ export const ProposalDetails = ({ proposal }: { proposal: Proposal }) => {
                       "Please try again"
                     }
                   />
-                ) : checksData?.checks.length === 0 ? (
-                  <EmptyState
-                    icon={<CommandLineIcon />}
-                    title="No checks found for this proposal"
-                    description={
-                      <>
-                        No checks have been run yet. Use the CLI tool to run one{" "}
-                        <a
-                          target="_blank"
-                          rel="noreferrer"
-                          href={docsBaseURL + "/cli/subgraphs/check"}
-                          className="text-primary"
-                        >
-                          Learn more.
-                        </a>
-                      </>
-                    }
-                    actions={
-                      <CLI
-                        command={
-                          !graphData?.graph?.supportsFederation
-                            ? `npx wgc monograph check ${graphData?.graph?.name} --namespace ${namespace} --schema <path-to-schema>`
-                            : `npx wgc subgraph check users --namespace ${namespace} --schema users.graphql`
-                        }
-                      />
-                    }
-                  />
                 ) : (
-                  <div className="flex h-full flex-col gap-y-3">
+                  <div className="flex h-full flex-col gap-y-3 px-4">
                     <TableWrapper>
                       <Table>
                         <TableHeader>
@@ -641,7 +610,7 @@ export const ProposalDetails = ({ proposal }: { proposal: Proposal }) => {
                     <Pagination
                       limit={limit}
                       noOfPages={Math.ceil(
-                        (checksData.checksCountBasedOnDateRange || 0) / limit,
+                        (checksData.totalChecksCount || 0) / limit,
                       )}
                       pageNumber={pageNumber}
                     />
@@ -668,45 +637,34 @@ const ProposalDetailsPage: NextPageWithLayout = () => {
     proposalId: id,
   });
 
-  if (isLoading) return <Loader fullscreen />;
+  let content: React.ReactNode;
 
-  if (
+  if (isLoading) {
+    content = <Loader fullscreen />;
+  } else if (
     error ||
     !data ||
     data?.response?.code !== EnumStatusCode.OK ||
     !data.proposal
-  )
-    return (
-      <GraphPageLayout
-        title={id}
-        subtitle="Details for this proposal"
-        breadcrumbs={[
-          <Link
-            key={0}
-            href={`/${organizationSlug}/${namespace}/graph/${slug}/proposals`}
-          >
-            Proposals
-          </Link>,
-        ]}
-        noPadding
-      >
-        <EmptyState
-          icon={<ExclamationTriangleIcon />}
-          title="Could not retrieve proposal details."
-          description={
-            data?.response?.details || error?.message || "Please try again"
-          }
-          actions={<Button onClick={() => refetch()}>Retry</Button>}
-        />
-      </GraphPageLayout>
+  ) {
+    content = (
+      <EmptyState
+        icon={<ExclamationTriangleIcon />}
+        title="Could not retrieve proposal details."
+        description={
+          data?.response?.details || error?.message || "Please try again"
+        }
+        actions={<Button onClick={() => refetch()}>Retry</Button>}
+      />
     );
-
-  const { proposal } = data;
+  } else if (data) {
+    content = <ProposalDetails proposal={data.proposal} />;
+  }
 
   return (
     <GraphPageLayout
-      title={proposal.name || id}
-      subtitle="Details for this schema change proposal"
+      title={id}
+      subtitle="A quick glance of the details for this proposal"
       breadcrumbs={[
         <Link
           key={0}
@@ -717,7 +675,7 @@ const ProposalDetailsPage: NextPageWithLayout = () => {
       ]}
       noPadding
     >
-      <ProposalDetails proposal={proposal} />
+      {content}
     </GraphPageLayout>
   );
 };

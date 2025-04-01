@@ -8,7 +8,8 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 
 export function getChecksOfProposal(
   opts: RouterOptions,
@@ -22,22 +23,7 @@ export function getChecksOfProposal(
     logger = enrichLogger(ctx, logger, authContext);
 
     const proposalRepo = new ProposalRepository(opts.db);
-
-    // Default pagination values
-    const limit = req.pagination?.limit || 10;
-    const offset = req.pagination?.offset || 0;
-
-    // Get date range if provided
-    let startDate: Date | undefined;
-    let endDate: Date | undefined;
-
-    if (req.dateRange?.start) {
-      startDate = new Date(req.dateRange.start);
-    }
-
-    if (req.dateRange?.end) {
-      endDate = new Date(req.dateRange.end);
-    }
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
     // Check if the proposal exists
     const proposal = await proposalRepo.ById(req.proposalId);
@@ -48,51 +34,62 @@ export function getChecksOfProposal(
           details: `Proposal with ID ${req.proposalId} not found`,
         },
         checks: [],
-        checksCountBasedOnDateRange: 0,
+        totalChecksCount: 0,
+      };
+    }
+
+    const breakingChangeRetention = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'breaking-change-retention',
+    });
+
+    const { dateRange } = validateDateRanges({
+      limit: breakingChangeRetention?.limit ?? 7,
+      dateRange: {
+        start: req.startDate,
+        end: req.endDate,
+      },
+    });
+
+    if (!dateRange) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: 'Invalid date range',
+        },
+        checks: [],
+        totalChecksCount: 0,
+      };
+    }
+
+    // check that the limit is less than the max option provided in the ui
+    if (req.limit > 50) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: 'Invalid limit',
+        },
+        checks: [],
         totalChecksCount: 0,
       };
     }
 
     // Get checks for the proposal
-    const { checks, totalCount, countBasedOnDateRange } = await proposalRepo.getChecksByProposalId(
-      req.proposalId,
-      limit,
-      offset,
-      startDate,
-      endDate,
-    );
+    const { checks, checksCount } = await proposalRepo.getChecksByProposalId({
+      proposalId: req.proposalId,
+      federatedGraphId: proposal.proposal.federatedGraphId,
+      limit: req.limit,
+      offset: req.offset,
+      startDate: dateRange?.start,
+      endDate: dateRange?.end,
+    });
 
     return {
       response: {
         code: EnumStatusCode.OK,
       },
-      checks: checks.map(
-        (check) =>
-          new SchemaCheck({
-            id: check.id,
-            targetID: check.targetID,
-            subgraphName: check.subgraphName || '',
-            timestamp: check.timestamp,
-            isComposable: check.isComposable,
-            isBreaking: check.isBreaking,
-            hasClientTraffic: check.hasClientTraffic,
-            isForcedSuccess: check.isForcedSuccess,
-            hasLintErrors: check.hasLintErrors,
-            hasGraphPruningErrors: check.hasGraphPruningErrors,
-            clientTrafficCheckSkipped: check.clientTrafficCheckSkipped,
-            lintSkipped: check.lintSkipped,
-            graphPruningSkipped: check.graphPruningSkipped,
-            checkedSubgraphs: check.checkedSubgraphs.map((subgraph: any) => ({
-              id: subgraph.id,
-              subgraphName: subgraph.subgraphName || '',
-              subgraphId: subgraph.subgraphId,
-              isDeleted: subgraph.isDeleted,
-              isNew: subgraph.isNew,
-            })),
-          }),
-      ),
-      checksCountBasedOnDateRange: countBasedOnDateRange,
-      totalChecksCount: totalCount,
+      checks,
+      totalChecksCount: checksCount,
     };
   });
 }

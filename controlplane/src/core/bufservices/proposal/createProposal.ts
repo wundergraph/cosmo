@@ -7,7 +7,7 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { GraphCompositionRepository } from '../../repositories/GraphCompositionRepository.js';
-import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
+import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { SchemaCheckRepository } from '../../repositories/SchemaCheckRepository.js';
@@ -34,6 +34,31 @@ export function createProposal(
     const proposalRepo = new ProposalRepository(opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+
+    req.namespace = req.namespace || DefaultNamespace;
+
+    if (!authContext.hasWriteAccess) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `The user does not have the permissions to perform this operation`,
+        },
+        proposalId: '',
+        breakingChanges: [],
+        nonBreakingChanges: [],
+        compositionErrors: [],
+        checkId: '',
+        lintWarnings: [],
+        lintErrors: [],
+        graphPruneWarnings: [],
+        graphPruneErrors: [],
+        compositionWarnings: [],
+        operationUsageStats: [],
+        lintingSkipped: false,
+        graphPruningSkipped: false,
+        checkUrl: '',
+      };
+    }
 
     const namespace = await namespaceRepo.byName(req.namespace);
     if (!namespace) {

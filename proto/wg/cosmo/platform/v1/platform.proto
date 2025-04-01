@@ -2682,15 +2682,16 @@ message GetProposalsOfFederatedGraphResponse {
 
 message GetChecksOfProposalRequest {
   string proposalId = 1;
-  Pagination pagination = 2;
-  DateRange dateRange = 3;
+  int32 limit = 2;
+  int32 offset = 3;
+  string startDate = 4;
+  string endDate = 5;
 }
 
 message GetChecksOfProposalResponse {
   Response response = 1;
   repeated SchemaCheck checks = 2;
-  int32 checksCountBasedOnDateRange = 3;
-  int32 totalChecksCount = 4;
+  int32 totalChecksCount = 3;
 }
 
 message UpdateProposalRequest {

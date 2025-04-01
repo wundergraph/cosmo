@@ -21171,14 +21171,24 @@ export class GetChecksOfProposalRequest extends Message<GetChecksOfProposalReque
   proposalId = "";
 
   /**
-   * @generated from field: wg.cosmo.platform.v1.Pagination pagination = 2;
+   * @generated from field: int32 limit = 2;
    */
-  pagination?: Pagination;
+  limit = 0;
 
   /**
-   * @generated from field: wg.cosmo.platform.v1.DateRange dateRange = 3;
+   * @generated from field: int32 offset = 3;
    */
-  dateRange?: DateRange;
+  offset = 0;
+
+  /**
+   * @generated from field: string startDate = 4;
+   */
+  startDate = "";
+
+  /**
+   * @generated from field: string endDate = 5;
+   */
+  endDate = "";
 
   constructor(data?: PartialMessage<GetChecksOfProposalRequest>) {
     super();
@@ -21189,8 +21199,10 @@ export class GetChecksOfProposalRequest extends Message<GetChecksOfProposalReque
   static readonly typeName = "wg.cosmo.platform.v1.GetChecksOfProposalRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "proposalId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "pagination", kind: "message", T: Pagination },
-    { no: 3, name: "dateRange", kind: "message", T: DateRange },
+    { no: 2, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "startDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "endDate", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChecksOfProposalRequest {
@@ -21225,12 +21237,7 @@ export class GetChecksOfProposalResponse extends Message<GetChecksOfProposalResp
   checks: SchemaCheck[] = [];
 
   /**
-   * @generated from field: int32 checksCountBasedOnDateRange = 3;
-   */
-  checksCountBasedOnDateRange = 0;
-
-  /**
-   * @generated from field: int32 totalChecksCount = 4;
+   * @generated from field: int32 totalChecksCount = 3;
    */
   totalChecksCount = 0;
 
@@ -21244,8 +21251,7 @@ export class GetChecksOfProposalResponse extends Message<GetChecksOfProposalResp
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "checks", kind: "message", T: SchemaCheck, repeated: true },
-    { no: 3, name: "checksCountBasedOnDateRange", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 4, name: "totalChecksCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "totalChecksCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChecksOfProposalResponse {

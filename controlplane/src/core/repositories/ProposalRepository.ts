@@ -1,9 +1,10 @@
-import { eq, and, desc, gte, lte, count, inArray } from 'drizzle-orm';
+import { and, desc, eq, gt, lt } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { ProposalState } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
-import { LintSeverityLevel, ProposalDTO, ProposalSubgraphDTO } from '../../types/index.js';
+import { GetChecksResponse, LintSeverityLevel, ProposalDTO, ProposalSubgraphDTO } from '../../types/index.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
+import { SchemaCheckRepository } from './SchemaCheckRepository.js';
 
 /**
  * Repository for organization related operations.
@@ -418,124 +419,100 @@ export class ProposalRepository {
     };
   }
 
-  public async getChecksByProposalId(
-    proposalId: string,
-    limit: number,
-    offset: number,
-    startDate?: Date,
-    endDate?: Date,
-  ): Promise<{ checks: any[]; totalCount: number; countBasedOnDateRange: number }> {
-    // Build the where condition
+  public async getChecksByProposalId({
+    proposalId,
+    federatedGraphId,
+    limit,
+    offset,
+    startDate,
+    endDate,
+  }: {
+    proposalId: string;
+    federatedGraphId: string;
+    limit: number;
+    offset: number;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<GetChecksResponse> {
     let whereCondition: any = eq(schema.schemaCheckProposals.proposalId, proposalId);
 
     if (startDate && endDate) {
       whereCondition = and(
         whereCondition,
-        gte(schema.schemaCheckProposals.createdAt, startDate),
-        lte(schema.schemaCheckProposals.createdAt, endDate),
+        gt(schema.schemaCheckProposals.createdAt, new Date(startDate)),
+        lt(schema.schemaCheckProposals.createdAt, new Date(endDate)),
       );
     }
 
-    const checkIdsQuery = this.db
+    const checksList = await this.db
+      .select({
+        id: schema.schemaChecks.id,
+        createdAt: schema.schemaChecks.createdAt,
+        isComposable: schema.schemaChecks.isComposable,
+        hasBreakingChanges: schema.schemaChecks.hasBreakingChanges,
+        hasClientTraffic: schema.schemaChecks.hasClientTraffic,
+        forcedSuccess: schema.schemaChecks.forcedSuccess,
+        hasLintErrors: schema.schemaChecks.hasLintErrors,
+        hasGraphPruningErrors: schema.schemaChecks.hasGraphPruningErrors,
+        clientTrafficCheckSkipped: schema.schemaChecks.clientTrafficCheckSkipped,
+        lintSkipped: schema.schemaChecks.lintSkipped,
+        graphPruningSkipped: schema.schemaChecks.graphPruningSkipped,
+        ghDetails: schema.schemaChecks.ghDetails,
+        isDeleted: schema.schemaChecks.isDeleted,
+      })
+      .from(schema.schemaCheckProposals)
+      .where(whereCondition)
+      .innerJoin(schema.schemaChecks, eq(schema.schemaCheckProposals.schemaCheckId, schema.schemaChecks.id))
+      .orderBy(desc(schema.schemaCheckProposals.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    // Get the total count of checks for this proposal
+    const checksCount = await this.db
       .select({
         schemaCheckId: schema.schemaCheckProposals.schemaCheckId,
       })
       .from(schema.schemaCheckProposals)
-      .where(whereCondition)
-      .orderBy(desc(schema.schemaCheckProposals.createdAt));
-
-    // Get the total count of checks for this proposal
-    const totalCount = await this.db
-      .select({
-        count: count(),
-      })
-      .from(schema.schemaCheckProposals)
-      .where(eq(schema.schemaCheckProposals.proposalId, proposalId));
-
-    // Get count based on date range
-    const countBasedOnDateRange = await this.db
-      .select({
-        count: count(),
-      })
-      .from(schema.schemaCheckProposals)
       .where(whereCondition);
 
-    // Get the paginated check IDs
-    const paginatedCheckIds = await checkIdsQuery.limit(limit).offset(offset);
-
-    // If no checks found, return empty result
-    if (paginatedCheckIds.length === 0) {
-      return {
-        checks: [],
-        totalCount: totalCount[0]?.count || 0,
-        countBasedOnDateRange: countBasedOnDateRange[0]?.count || 0,
-      };
-    }
-
-    const checkIds = paginatedCheckIds.map((c) => c.schemaCheckId);
-
-    // Get the details of these checks
-    const checksData = await this.db
-      .select({
-        check: {
-          id: schema.schemaChecks.id,
-          targetId: schema.schemaChecks.targetId,
-          createdAt: schema.schemaChecks.createdAt,
-          isComposable: schema.schemaChecks.isComposable,
-          hasBreakingChanges: schema.schemaChecks.hasBreakingChanges,
-          hasClientTraffic: schema.schemaChecks.hasClientTraffic,
-          forcedSuccess: schema.schemaChecks.forcedSuccess,
-          hasLintErrors: schema.schemaChecks.hasLintErrors,
-          hasGraphPruningErrors: schema.schemaChecks.hasGraphPruningErrors,
-          clientTrafficCheckSkipped: schema.schemaChecks.clientTrafficCheckSkipped,
-          lintSkipped: schema.schemaChecks.lintSkipped,
-          graphPruningSkipped: schema.schemaChecks.graphPruningSkipped,
-        },
-        target: {
-          name: schema.targets.name,
-        },
-      })
-      .from(schema.schemaChecks)
-      .leftJoin(schema.targets, eq(schema.schemaChecks.targetId, schema.targets.id))
-      .where(inArray(schema.schemaChecks.id, checkIds));
-
-    // Get checked subgraphs for each check
-    const checksList = await Promise.all(
-      checksData.map(async (check) => {
-        const checkedSubgraphs = await this.db
-          .select({
-            id: schema.schemaCheckSubgraphs.id,
-            subgraphName: schema.schemaCheckSubgraphs.subgraphName,
-            subgraphId: schema.schemaCheckSubgraphs.subgraphId,
-            isDeleted: schema.schemaCheckSubgraphs.isDeleted,
-            isNew: schema.schemaCheckSubgraphs.isNew,
-          })
-          .from(schema.schemaCheckSubgraphs)
-          .where(eq(schema.schemaCheckSubgraphs.schemaCheckId, check.check.id));
+    const schemaCheckRepo = new SchemaCheckRepository(this.db);
+    // Get all checkedSubgraphs for all checks in one go
+    const checksWithSubgraphs = await Promise.all(
+      checksList.map(async (c) => {
+        const checkedSubgraphs = await schemaCheckRepo.getCheckedSubgraphsForCheckIdAndFederatedGraphId({
+          checkId: c.id,
+          federatedGraphId,
+        });
 
         return {
-          id: check.check.id,
-          targetID: check.check.targetId,
-          subgraphName: check.target?.name,
-          timestamp: check.check.createdAt.toISOString(),
-          isComposable: check.check.isComposable,
-          isBreaking: check.check.hasBreakingChanges,
-          hasClientTraffic: check.check.hasClientTraffic,
-          isForcedSuccess: check.check.forcedSuccess,
-          hasLintErrors: check.check.hasLintErrors,
-          hasGraphPruningErrors: check.check.hasGraphPruningErrors,
-          clientTrafficCheckSkipped: check.check.clientTrafficCheckSkipped,
-          lintSkipped: check.check.lintSkipped,
-          graphPruningSkipped: check.check.graphPruningSkipped,
+          id: c.id,
+          timestamp: c.createdAt.toISOString(),
+          isBreaking: c.hasBreakingChanges ?? false,
+          isComposable: c.isComposable ?? false,
+          isDeleted: c.isDeleted ?? false,
+          hasClientTraffic: c.hasClientTraffic ?? false,
+          isForcedSuccess: c.forcedSuccess ?? false,
+          ghDetails: c.ghDetails
+            ? {
+                commitSha: c.ghDetails.commitSha,
+                ownerSlug: c.ghDetails.ownerSlug,
+                repositorySlug: c.ghDetails.repositorySlug,
+                checkRunId: c.ghDetails.checkRunId,
+              }
+            : undefined,
+          hasLintErrors: c.hasLintErrors ?? false,
+          hasGraphPruningErrors: c.hasGraphPruningErrors ?? false,
+          clientTrafficCheckSkipped: c.clientTrafficCheckSkipped ?? false,
+          lintSkipped: c.lintSkipped ?? false,
+          graphPruningSkipped: c.graphPruningSkipped ?? false,
           checkedSubgraphs,
         };
       }),
     );
 
     return {
-      checks: checksList,
-      totalCount: totalCount[0]?.count || 0,
-      countBasedOnDateRange: countBasedOnDateRange[0]?.count || 0,
+      checks: checksWithSubgraphs,
+      checksCount: checksCount.length,
     };
   }
 }

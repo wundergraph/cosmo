@@ -33,6 +33,8 @@ export function getProposal(
       };
     }
 
+    const latestCheck = await proposalRepo.getLatestCheckForProposal(proposal.proposal.id);
+
     return {
       response: {
         code: EnumStatusCode.OK,
@@ -48,6 +50,8 @@ export function getProposal(
           schemaSDL: subgraph.schemaSDL,
           isDeleted: subgraph.isDeleted,
         })),
+        latestCheckSuccess: latestCheck?.isSuccessful || false,
+        latestCheckId: latestCheck?.checkId || '',
       }),
     };
   });
