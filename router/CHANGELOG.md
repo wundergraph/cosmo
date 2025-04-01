@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.193.3](https://github.com/wundergraph/cosmo/compare/router@0.193.2...router@0.193.3) (2025-04-01)
+
+### Bug Fixes
+
+* **websocket:** improve write and read deadlines ([#1693](https://github.com/wundergraph/cosmo/issues/1693)) ([99a3a88](https://github.com/wundergraph/cosmo/commit/99a3a88da188d1c59a208254c4707c4881b7a479)) (@StarpTech)
+
 ## [0.193.2](https://github.com/wundergraph/cosmo/compare/router@0.193.1...router@0.193.2) (2025-04-01)
 
 ### Bug Fixes
