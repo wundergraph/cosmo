@@ -293,6 +293,7 @@
     "WebSocketClientPollTimeout": 1000000000,
     "WebSocketClientConnBufferSize": 128,
     "WebSocketClientReadTimeout": 5000000000,
+    "WebSocketClientWriteTimeout": 10000000000,
     "ExecutionPlanCacheSize": 1024,
     "MinifySubgraphOperations": true,
     "EnablePersistedOperationsCache": true,
