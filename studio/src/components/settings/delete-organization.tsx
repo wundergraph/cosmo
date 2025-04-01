@@ -3,10 +3,9 @@ import { SessionClientContext, UserContext } from "@/components/app-provider";
 import { z } from "zod";
 import { useZodForm } from "@/hooks/use-form";
 import { useToast } from "@/components/ui/use-toast";
-import { useMutation, useQuery } from "@connectrpc/connect-query";
+import { useMutation } from "@connectrpc/connect-query";
 import {
   deleteOrganization,
-  getOrganizationSubscription,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { Card, CardDescription, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -20,10 +19,11 @@ export const DeleteOrganization = () => {
   const sessionQueryClient = useContext(SessionClientContext);
   const [open, setOpen] = useState(false);
 
-  const {
-    data: subscription,
-    isLoading: isLoadingSubscription,
-  } = useQuery(getOrganizationSubscription);
+  const hasActiveSubscription = (
+    !!user?.currentOrganization?.billing?.plan &&
+    user?.currentOrganization?.billing?.plan !== 'developer'
+  );
+  const canDeleteOrganization = !hasActiveSubscription && user?.currentOrganization.roles.includes("admin");
 
   const regex = new RegExp(`^I want to delete my organization ${user?.currentOrganization.name}$`);
   const schema = z.object({
@@ -69,11 +69,6 @@ export const DeleteOrganization = () => {
       setOpen(false);
     },
   });
-
-  const canDeleteOrganization = !isLoadingSubscription && (
-    !subscription?.isActive &&
-    user?.currentOrganization.roles.includes("admin")
-  );
 
   const handleDeleteOrg = () => {
     if (!canDeleteOrganization) {
@@ -170,7 +165,7 @@ export const DeleteOrganization = () => {
           </DialogContent>
         </Dialog>
       </CardHeader>
-      {subscription?.isActive && (
+      {hasActiveSubscription && (
         <CardContent>
           An active subscription is associated with this organization. You must cancel the subscription before
           deleting the organization.
