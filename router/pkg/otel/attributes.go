@@ -52,7 +52,7 @@ const (
 	// Prometheus Schema Field Usage Attrs
 	WgOperationSha256        = attribute.Key("wg.operation.sha256")
 	WgGraphQLFieldName       = attribute.Key("wg.graphql.field.name")
-	WgGraphQLFieldParentType = attribute.Key("wg.graphql.field.parent_type")
+	WgGraphQLFieldParentType = attribute.Key("wg.graphql.parent_type")
 )
 
 const (
