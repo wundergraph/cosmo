@@ -590,7 +590,7 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	return err
+	return fmt.Errorf("shutdown graph mux: %w", err)
 }
 
 // buildGraphMux creates a new graph mux with the given feature flags and engine configuration.
@@ -1303,8 +1303,7 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	// Wait for all in-flight requests to finish.
 	// In the worst case, we wait until the context is done or all requests has timed out.
 	if err := s.wait(ctx); err != nil {
-		s.logger.Error("Failed to wait for in-flight requests to finish", zap.Error(err))
-		finalErr = errors.Join(finalErr, err)
+		finalErr = errors.Join(finalErr, fmt.Errorf("failed to wait for in-flight requests: %w", err))
 	}
 
 	s.logger.Debug("Shutdown of graph server resources",
@@ -1322,21 +1321,18 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 
 	if s.runtimeMetrics != nil {
 		if err := s.runtimeMetrics.Shutdown(); err != nil {
-			s.logger.Error("Failed to shutdown runtime metrics", zap.Error(err))
 			finalErr = errors.Join(finalErr, err)
 		}
 	}
 
 	if s.otlpEngineMetrics != nil {
 		if err := s.otlpEngineMetrics.Shutdown(); err != nil {
-			s.logger.Error("Failed to shutdown OTLP engine metrics", zap.Error(err))
 			finalErr = errors.Join(finalErr, err)
 		}
 	}
 
 	if s.prometheusEngineMetrics != nil {
 		if err := s.prometheusEngineMetrics.Shutdown(); err != nil {
-			s.logger.Error("Failed to shutdown Prometheus engine metrics", zap.Error(err))
 			finalErr = errors.Join(finalErr, err)
 		}
 	}
@@ -1348,7 +1344,6 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		for _, pubSub := range s.pubSubProviders.nats {
 			if p, ok := pubSub.(pubsub.Lifecycle); ok {
 				if err := p.Shutdown(ctx); err != nil {
-					s.logger.Error("Failed to shutdown Nats pubsub provider", zap.Error(err))
 					finalErr = errors.Join(finalErr, err)
 				}
 			}
@@ -1356,7 +1351,6 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		for _, pubSub := range s.pubSubProviders.kafka {
 			if p, ok := pubSub.(pubsub.Lifecycle); ok {
 				if err := p.Shutdown(ctx); err != nil {
-					s.logger.Error("Failed to shutdown Kafka pubsub provider", zap.Error(err))
 					finalErr = errors.Join(finalErr, err)
 				}
 			}
@@ -1369,7 +1363,6 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	defer s.graphMuxListLock.Unlock()
 	for _, mux := range s.graphMuxList {
 		if err := mux.Shutdown(ctx); err != nil {
-			s.logger.Error("Failed to shutdown graph mux", zap.Error(err))
 			finalErr = errors.Join(finalErr, err)
 		}
 	}

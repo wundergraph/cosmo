@@ -3,6 +3,7 @@ package metric
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -177,5 +178,5 @@ func (e *EngineMetrics) Shutdown() error {
 		}
 	}
 
-	return err
+	return fmt.Errorf("shutdown engine metrics: %w", err)
 }

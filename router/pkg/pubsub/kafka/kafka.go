@@ -209,7 +209,7 @@ func (p *kafkaPubSub) Publish(ctx context.Context, event pubsub_datasource.Kafka
 
 	if pErr != nil {
 		log.Error("publish error", zap.Error(pErr))
-		return pubsub.NewError(fmt.Sprintf("error publishing to Kafka topic %s", event.Topic), pErr)
+		return pubsub.NewError(fmt.Sprintf("publishing to Kafka topic %s", event.Topic), pErr)
 	}
 
 	return nil
@@ -219,7 +219,7 @@ func (p *kafkaPubSub) Shutdown(ctx context.Context) error {
 
 	err := p.writeClient.Flush(ctx)
 	if err != nil {
-		p.logger.Error("error flushing write client", zap.Error(err))
+		p.logger.Error("flushing write client", zap.Error(err))
 	}
 
 	p.writeClient.Close()
@@ -230,5 +230,5 @@ func (p *kafkaPubSub) Shutdown(ctx context.Context) error {
 	// Wait until all pollers are closed
 	p.closeWg.Wait()
 
-	return err
+	return fmt.Errorf("kafka pubsub shutdown: %w", err)
 }
