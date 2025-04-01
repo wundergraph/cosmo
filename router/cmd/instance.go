@@ -60,6 +60,10 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 		return nil, fmt.Errorf("could not setup authenticators: %w", err)
 	}
 
+	if cfg.Batching.Enabled && cfg.Batching.MaxConcurrent <= 0 {
+		return nil, fmt.Errorf("maxConcurrent must be greater than 0")
+	}
+
 	options := []core.Option{
 		core.WithListenerAddr(cfg.ListenAddr),
 		core.WithOverrideRoutingURL(cfg.OverrideRoutingURL),
@@ -88,6 +92,10 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 		core.WithAnonymization(&core.IPAnonymizationConfig{
 			Enabled: cfg.Compliance.AnonymizeIP.Enabled,
 			Method:  core.IPAnonymizationMethod(cfg.Compliance.AnonymizeIP.Method),
+		}),
+		core.WithBatching(&core.BatchingConfig{
+			Enabled:               cfg.Batching.Enabled,
+			MaxConcurrentRoutines: cfg.Batching.MaxConcurrent,
 		}),
 		core.WithClusterName(cfg.Cluster.Name),
 		core.WithInstanceID(cfg.InstanceID),

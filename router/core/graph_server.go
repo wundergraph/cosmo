@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/batch"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
-	otelmetric "go.opentelemetry.io/otel/metric"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	"net/http"
 	"net/url"
 	"strings"
@@ -26,10 +26,7 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	oteltrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -52,7 +49,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
-	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
 const (
@@ -228,6 +224,18 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		return nil, fmt.Errorf("failed to create gzip wrapper: %w", err)
 	}
 
+	if s.traceConfig.Enabled {
+		handler := BatchingNewHandler(BatchHandlerOpts{
+			traceConfig:         s.traceConfig,
+			healthCheckPath:     s.healthCheckPath,
+			readinessCheckPath:  s.readinessCheckPath,
+			livenessCheckPath:   s.livenessCheckPath,
+			compositePropagator: s.compositePropagator,
+			tracerProvider:      s.tracerProvider,
+		})
+		httpRouter.Use(handler)
+	}
+
 	/**
 	* A group where we can selectively apply middlewares to the graphql endpoint
 	 */
@@ -242,7 +250,12 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		}
 
 		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
-		cr.Handle(r.graphqlPath, batch.Batch()(multiGraphHandler))
+		if s.batchingConfig.Enabled {
+			handler := batch.Handler(s.batchingConfig.MaxConcurrentRoutines, multiGraphHandler)
+			cr.Handle(r.graphqlPath, handler)
+		} else {
+			cr.Handle(r.graphqlPath, multiGraphHandler)
+		}
 
 		if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled && r.webSocketConfiguration.AbsintheProtocol.Enabled {
 			// Mount the Absinthe protocol handler for WebSockets
@@ -267,6 +280,51 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	s.mux = httpRouter
 
 	return s, nil
+}
+
+func BatchingNewHandler(s BatchHandlerOpts) func(next http.Handler) http.Handler {
+	if s.traceConfig.Enabled {
+		spanStartOptions := []oteltrace.SpanStartOption{
+			oteltrace.WithAttributes(
+				otel.RouterServerAttribute,
+				otel.WgRouterRootSpan.Bool(true),
+			),
+		}
+
+		if s.traceConfig.WithNewRoot {
+			spanStartOptions = append(spanStartOptions, oteltrace.WithNewRoot())
+		}
+
+		middlewareOptions := []otelhttp.Option{
+			otelhttp.WithSpanOptions(spanStartOptions...),
+			otelhttp.WithFilter(rtrace.CommonRequestFilter),
+			otelhttp.WithFilter(rtrace.PrefixRequestFilter(
+				[]string{s.healthCheckPath, s.readinessCheckPath, s.livenessCheckPath}),
+			),
+			// Disable built-in metricStore through NoopMeterProvider
+			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
+			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
+			otelhttp.WithTracerProvider(s.tracerProvider),
+		}
+
+		if s.compositePropagator != nil {
+			middlewareOptions = append(middlewareOptions, otelhttp.WithPropagators(s.compositePropagator))
+		}
+
+		traceHandler := rtrace.NewMiddleware(
+			rtrace.WithTracePreHandler(
+				func(r *http.Request, w http.ResponseWriter) {
+					traceID := rtrace.GetTraceID(r.Context())
+					if s.traceConfig.ResponseTraceHeader.Enabled {
+						w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
+					}
+				}),
+			rtrace.WithOtelHttp(middlewareOptions...),
+		)
+
+		return traceHandler.Handler
+	}
+	return nil
 }
 
 func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig) (http.HandlerFunc, error) {
@@ -653,7 +711,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			rmetric.WithProcessStartTime(s.processStartTime),
 			rmetric.WithCardinalityLimit(rmetric.DefaultCardinalityLimit),
 		)
-		if err != nil {
+	if err != nil {
 			return nil, fmt.Errorf("failed to create metric handler: %w", err)
 		}
 

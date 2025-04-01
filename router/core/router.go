@@ -110,6 +110,11 @@ type (
 		CollectorEndpoint string
 	}
 
+	BatchingConfig struct {
+		Enabled               bool
+		MaxConcurrentRoutines uint
+	}
+
 	IPAnonymizationConfig struct {
 		Enabled bool
 		Method  IPAnonymizationMethod
@@ -201,6 +206,7 @@ type (
 		subgraphTransportOptions        *SubgraphTransportOptions
 		graphqlMetricsConfig            *GraphQLMetricsConfig
 		routerTrafficConfig             *config.RouterTrafficConfiguration
+		batchingConfig                  *BatchingConfig
 		fileUploadConfig                *config.FileUpload
 		accessController                *AccessController
 		retryOptions                    retrytransport.RetryOptions
@@ -1747,6 +1753,12 @@ func DefaultGraphQLMetricsConfig() *GraphQLMetricsConfig {
 func WithGraphQLMetrics(cfg *GraphQLMetricsConfig) Option {
 	return func(r *Router) {
 		r.graphqlMetricsConfig = cfg
+	}
+}
+
+func WithBatching(cfg *BatchingConfig) Option {
+	return func(r *Router) {
+		r.batchingConfig = cfg
 	}
 }
 
