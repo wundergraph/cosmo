@@ -220,8 +220,6 @@ export function checkSubgraphSchema(
       }
     }
 
-    
-
     const schemaCheckID = await schemaCheckRepo.create({
       proposedSubgraphSchemaSDL: '',
       trafficCheckSkipped: req.skipTrafficCheck,

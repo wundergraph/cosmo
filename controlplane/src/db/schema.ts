@@ -907,6 +907,32 @@ export const schemaCheckSubgraphsFederatedGraphs = pgTable(
   },
 );
 
+// This table is used to track the checks that are associated with a proposal
+// so the checks that are run when the proposal is created, updated.
+export const schemaCheckProposals = pgTable(
+  'schema_check_proposals', // scp
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    schemaCheckId: uuid('schema_check_id')
+      .notNull()
+      .references(() => schemaChecks.id, {
+        onDelete: 'cascade',
+      }),
+    proposalId: uuid('proposal_id')
+      .notNull()
+      .references(() => proposals.id, {
+        // cascade as delete proposal will not be allowed
+        onDelete: 'cascade',
+      }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => {
+    return {
+      uniqueCheckIdProposalId: uniqueIndex('scp_check_id_proposal_id_idx').on(t.schemaCheckId, t.proposalId),
+    };
+  },
+);
+
 export const schemaCheckChangeAction = pgTable(
   'schema_check_change_action', // scca
   {
@@ -2261,7 +2287,7 @@ export const proposalSubgraphs = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }),
   },
   (t) => ({
-    uniqueProposalSubgraph: unique('proposal_subgraph').on(t.proposalId, t.subgraphId),
+    uniqueProposalSubgraph: unique('proposal_subgraph').on(t.proposalId, t.subgraphName),
   }),
 );
 

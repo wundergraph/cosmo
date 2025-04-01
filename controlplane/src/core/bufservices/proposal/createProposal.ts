@@ -2,13 +2,21 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { CreateProposalRequest, CreateProposalResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { Composer } from '../../composition/composer.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
+import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
+import { GraphCompositionRepository } from '../../repositories/GraphCompositionRepository.js';
+import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
+import { SchemaCheckRepository } from '../../repositories/SchemaCheckRepository.js';
+import { SchemaGraphPruningRepository } from '../../repositories/SchemaGraphPruningRepository.js';
+import { SchemaLintRepository } from '../../repositories/SchemaLintRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
+import { SchemaUsageTrafficInspector } from '../../services/SchemaUsageTrafficInspector.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 
 export function createProposal(
   opts: RouterOptions,
@@ -35,6 +43,19 @@ export function createProposal(
           details: `Namespace ${req.namespace} not found`,
         },
         proposalId: '',
+        breakingChanges: [],
+        nonBreakingChanges: [],
+        compositionErrors: [],
+        checkId: '',
+        lintWarnings: [],
+        lintErrors: [],
+        graphPruneWarnings: [],
+        graphPruneErrors: [],
+        compositionWarnings: [],
+        operationUsageStats: [],
+        lintingSkipped: false,
+        graphPruningSkipped: false,
+        checkUrl: '',
       };
     }
 
@@ -46,6 +67,19 @@ export function createProposal(
           details: `Federated graph ${req.federatedGraphName} not found`,
         },
         proposalId: '',
+        breakingChanges: [],
+        nonBreakingChanges: [],
+        compositionErrors: [],
+        checkId: '',
+        lintWarnings: [],
+        lintErrors: [],
+        graphPruneWarnings: [],
+        graphPruneErrors: [],
+        compositionWarnings: [],
+        operationUsageStats: [],
+        lintingSkipped: false,
+        graphPruningSkipped: false,
+        checkUrl: '',
       };
     }
 
@@ -56,6 +90,19 @@ export function createProposal(
           details: `Proposals are not enabled for namespace ${req.namespace}`,
         },
         proposalId: '',
+        breakingChanges: [],
+        nonBreakingChanges: [],
+        compositionErrors: [],
+        checkId: '',
+        lintWarnings: [],
+        lintErrors: [],
+        graphPruneWarnings: [],
+        graphPruneErrors: [],
+        compositionWarnings: [],
+        operationUsageStats: [],
+        lintingSkipped: false,
+        graphPruningSkipped: false,
+        checkUrl: '',
       };
     }
 
@@ -64,6 +111,7 @@ export function createProposal(
       subgraphName: string;
       schemaSDL: string;
       isDeleted: boolean;
+      isNew: boolean;
     }[] = [];
 
     for (const proposalSubgraph of req.subgraphs) {
@@ -73,6 +121,7 @@ export function createProposal(
         subgraphName: proposalSubgraph.name,
         schemaSDL: proposalSubgraph.schemaSDL,
         isDeleted: proposalSubgraph.isDeleted,
+        isNew: !subgraph,
       });
     }
 
@@ -98,11 +147,74 @@ export function createProposal(
       targetNamespaceDisplayName: federatedGraph.namespace,
     });
 
+    const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+    const schemaLintRepo = new SchemaLintRepository(opts.db);
+    const schemaGraphPruningRepo = new SchemaGraphPruningRepository(opts.db);
+    const schemaCheckRepo = new SchemaCheckRepository(opts.db);
+    const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
+    const graphCompostionRepo = new GraphCompositionRepository(logger, opts.db);
+    const trafficInspector = new SchemaUsageTrafficInspector(opts.chClient!);
+    const composer = new Composer(
+      logger,
+      opts.db,
+      fedGraphRepo,
+      subgraphRepo,
+      contractRepo,
+      graphCompostionRepo,
+      opts.chClient,
+    );
+
+    const {
+      response,
+      breakingChanges,
+      nonBreakingChanges,
+      compositionErrors,
+      checkId,
+      lintWarnings,
+      lintErrors,
+      graphPruneWarnings,
+      graphPruneErrors,
+      compositionWarnings,
+      operationUsageStats,
+    } = await schemaCheckRepo.checkMultipleSchemas({
+      organizationId: authContext.organizationId,
+      orgRepo,
+      subgraphRepo,
+      fedGraphRepo,
+      schemaLintRepo,
+      schemaGraphPruningRepo,
+      proposalRepo,
+      trafficInspector,
+      composer,
+      subgraphs: req.subgraphs,
+      namespace,
+      logger,
+      chClient: opts.chClient,
+      skipProposalMatchCheck: true,
+    });
+
+    await schemaCheckRepo.createSchemaCheckProposal({
+      schemaCheckID: checkId,
+      proposalID: proposal.id,
+    });
+
     return {
-      response: {
-        code: EnumStatusCode.OK,
-      },
+      response,
       proposalId: proposal.id,
+      breakingChanges,
+      nonBreakingChanges,
+      compositionErrors,
+      checkId,
+      lintWarnings,
+      lintErrors,
+      graphPruneWarnings,
+      graphPruneErrors,
+      compositionWarnings,
+      operationUsageStats,
+      lintingSkipped: !namespace.enableLinting,
+      graphPruningSkipped: !namespace.enableGraphPruning,
+      checkUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/graph/$federatedGraphName/checks/${checkId}`,
     };
   });
 }

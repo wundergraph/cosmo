@@ -159,7 +159,8 @@ import { setGraphRouterCompatibilityVersion } from './graph/setGraphRouterCompat
 import { getOrganizationBySlug } from './organization/getOrganizationBySlug.js';
 import { checkSubgraphSchemas } from './check/checkSubgraphSchemas.js';
 import { getProposedSchemaOfCheckedSubgraph } from './check/getProposedSchemaOfCheckedSubgraph.js';
-import { getProposalsByFederatedGraph } from './proposal/getProposalsByFederatedGraph.js';
+import { getProposalsOfFederatedGraph } from './proposal/getProposalsOfFederatedGraph.js';
+import { getChecksOfProposal } from './proposal/getChecksOfProposal.js';
 import { updateProposal } from './proposal/updateProposal.js';
 import { createProposal } from './proposal/createProposal.js';
 import { getProposal } from './proposal/getProposal.js';
@@ -812,8 +813,12 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return setGraphRouterCompatibilityVersion(opts, req, ctx);
     },
 
-    getProposalsByFederatedGraph: (req, ctx) => {
-      return getProposalsByFederatedGraph(opts, req, ctx);
+    getProposalsOfFederatedGraph: (req, ctx) => {
+      return getProposalsOfFederatedGraph(opts, req, ctx);
+    },
+
+    getChecksOfProposal: (req, ctx) => {
+      return getChecksOfProposal(opts, req, ctx);
     },
 
     updateProposal: (req, ctx) => {

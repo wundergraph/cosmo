@@ -1,3 +1,9 @@
+import { useDateRangeQueryState } from "@/components/analytics/useAnalyticsQueryState";
+import {
+  getCheckBadge,
+  getCheckIcon,
+  isCheckSuccessful,
+} from "@/components/check-badge-icon";
 import { EmptyState } from "@/components/empty-state";
 import {
   GraphContext,
@@ -8,7 +14,9 @@ import { SDLViewerActions } from "@/components/schema/sdl-viewer";
 import { SDLViewerMonaco } from "@/components/schema/sdl-viewer-monaco";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CLI } from "@/components/ui/cli";
 import { Loader } from "@/components/ui/loader";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -18,34 +26,54 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableWrapper,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useToast } from "@/components/ui/use-toast";
+import { useSessionStorage } from "@/hooks/use-session-storage";
+import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
+import { createDateRange } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
-import { useQuery } from "@connectrpc/connect-query";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { useMutation, useQuery } from "@connectrpc/connect-query";
+import {
+  CommandLineIcon,
+  ExclamationTriangleIcon,
+  NoSymbolIcon,
+} from "@heroicons/react/24/outline";
 import {
   BoxIcon,
   Component2Icon,
+  GitHubLogoIcon,
   MinusIcon,
-  PlusIcon,
 } from "@radix-ui/react-icons";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { getProposal } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import {
+  getChecksOfProposal,
+  getProposal,
+  updateProposal,
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
   Proposal,
   ProposalSubgraph,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext } from "react";
-import { RxComponentInstance } from "react-icons/rx";
 
 const SubgraphDetails = ({ subgraphs }: { subgraphs: ProposalSubgraph[] }) => {
   const getIcon = (isDeleted: boolean) => {
@@ -93,8 +121,79 @@ export const ProposalDetails = ({ proposal }: { proposal: Proposal }) => {
   const id = router.query.proposalId as string;
   const tab = router.query.tab as string;
   const subgraph = router.query.subgraph as string;
+  const pageNumber = router.query.page
+    ? parseInt(router.query.page as string)
+    : 1;
+  const limit = Number.parseInt((router.query.pageSize as string) || "10");
+  const { toast } = useToast();
 
   const graphData = useContext(GraphContext);
+  const [, setRouteCache] = useSessionStorage("checks.route", router.asPath);
+
+  const {
+    dateRange: { start, end },
+    range,
+  } = useDateRangeQueryState();
+  const startDate = range ? createDateRange(range).start : start;
+  const endDate = range ? createDateRange(range).end : end;
+
+  const {
+    data: checksData,
+    isLoading: isChecksLoading,
+    error: checksError,
+  } = useQuery(
+    getChecksOfProposal,
+    {
+      proposalId: id,
+      pagination: {
+        limit: limit > 50 ? 50 : limit,
+        offset: (pageNumber - 1) * limit,
+      },
+      dateRange: {
+        start: formatISO(startDate),
+        end: formatISO(endDate),
+      },
+    },
+    {
+      enabled: tab === "checks",
+      placeholderData: (prev) => prev,
+    },
+  );
+
+  const { mutate, isPending } = useMutation(updateProposal, {
+    onSuccess: (data) => {
+      if (data.response?.code === EnumStatusCode.OK) {
+        toast({
+          description: "Proposal approved successfully.",
+          duration: 3000,
+        });
+        router.push(router.asPath); // Refresh the page
+      } else {
+        toast({
+          description: `Failed to approve proposal: ${data.response?.details}`,
+          duration: 3000,
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        description: `Failed to approve proposal: ${error.message}`,
+        duration: 3000,
+      });
+    },
+  });
+
+  const handleApproveProposal = () => {
+    mutate({
+      proposalName: proposal.name,
+      federatedGraphName: slug,
+      namespace,
+      updateAction: {
+        case: "state",
+        value: "APPROVED",
+      },
+    });
+  };
 
   const proposalSubgraph = proposal.subgraphs.find((s) => s.name === subgraph);
 
@@ -109,6 +208,7 @@ export const ProposalDetails = ({ proposal }: { proposal: Proposal }) => {
     createdByEmail,
     state,
     subgraphs,
+    latestCheckSuccess,
   } = proposal;
 
   return (
@@ -136,6 +236,16 @@ export const ProposalDetails = ({ proposal }: { proposal: Proposal }) => {
                 >
                   <span>{state}</span>
                 </Badge>
+                {state === "DRAFT" && latestCheckSuccess && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleApproveProposal}
+                    disabled={isPending}
+                  >
+                    {isPending ? "Approving..." : "Approve"}
+                  </Button>
+                )}
               </div>
             </dd>
           </div>
@@ -190,6 +300,11 @@ export const ProposalDetails = ({ proposal }: { proposal: Proposal }) => {
                 <TabsTrigger value="schemas" asChild>
                   <Link href={{ query: { ...router.query, tab: "schemas" } }}>
                     Schemas
+                  </Link>
+                </TabsTrigger>
+                <TabsTrigger value="checks" asChild>
+                  <Link href={{ query: { ...router.query, tab: "checks" } }}>
+                    Checks
                   </Link>
                 </TabsTrigger>
               </TabsList>
@@ -263,6 +378,274 @@ export const ProposalDetails = ({ proposal }: { proposal: Proposal }) => {
                       <SDLViewerMonaco schema={activeSubgraphSdl} />
                     </div>
                   )
+                )}
+              </TabsContent>
+              <TabsContent value="checks" className="relative w-full flex-1">
+                {isChecksLoading ? (
+                  <Loader />
+                ) : checksError ||
+                  checksData?.response?.code !== EnumStatusCode.OK ? (
+                  <EmptyState
+                    icon={<ExclamationTriangleIcon />}
+                    title="Could not retrieve checks for this proposal"
+                    description={
+                      checksData?.response?.details ||
+                      checksError?.message ||
+                      "Please try again"
+                    }
+                  />
+                ) : checksData?.checks.length === 0 ? (
+                  <EmptyState
+                    icon={<CommandLineIcon />}
+                    title="No checks found for this proposal"
+                    description={
+                      <>
+                        No checks have been run yet. Use the CLI tool to run one{" "}
+                        <a
+                          target="_blank"
+                          rel="noreferrer"
+                          href={docsBaseURL + "/cli/subgraphs/check"}
+                          className="text-primary"
+                        >
+                          Learn more.
+                        </a>
+                      </>
+                    }
+                    actions={
+                      <CLI
+                        command={
+                          !graphData?.graph?.supportsFederation
+                            ? `npx wgc monograph check ${graphData?.graph?.name} --namespace ${namespace} --schema <path-to-schema>`
+                            : `npx wgc subgraph check users --namespace ${namespace} --schema users.graphql`
+                        }
+                      />
+                    }
+                  />
+                ) : (
+                  <div className="flex h-full flex-col gap-y-3">
+                    <TableWrapper>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Check</TableHead>
+                            {graphData?.graph?.supportsFederation && (
+                              <TableHead>Subgraph</TableHead>
+                            )}
+                            <TableHead>Tasks</TableHead>
+                            <TableHead></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {checksData.checks.map(
+                            ({
+                              id,
+                              isComposable,
+                              isBreaking,
+                              hasClientTraffic,
+                              isForcedSuccess,
+                              subgraphName,
+                              timestamp,
+                              ghDetails,
+                              hasLintErrors,
+                              hasGraphPruningErrors,
+                              clientTrafficCheckSkipped,
+                              lintSkipped,
+                              graphPruningSkipped,
+                              checkedSubgraphs,
+                            }) => {
+                              const isSuccessful = isCheckSuccessful(
+                                isComposable,
+                                isBreaking,
+                                hasClientTraffic,
+                                hasLintErrors,
+                                hasGraphPruningErrors,
+                                clientTrafficCheckSkipped,
+                              );
+
+                              const path = `/${organizationSlug}/${namespace}/graph/${slug}/checks/${id}`;
+
+                              return (
+                                <TableRow
+                                  key={id}
+                                  className="group cursor-pointer hover:bg-secondary/30"
+                                  onClick={() => router.push(path)}
+                                >
+                                  <TableCell>
+                                    <div className="flex flex-row items-center gap-1">
+                                      <div className="w-20">
+                                        {getCheckBadge(
+                                          isSuccessful,
+                                          isForcedSuccess,
+                                        )}
+                                      </div>
+
+                                      <div className="flex flex-col items-start">
+                                        <Link
+                                          href={path}
+                                          className="font-medium text-foreground"
+                                        >
+                                          {id}
+                                        </Link>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <span className="text-xs text-muted-foreground">
+                                              {formatDistanceToNow(
+                                                new Date(timestamp),
+                                                {
+                                                  addSuffix: true,
+                                                },
+                                              )}
+                                            </span>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="bottom">
+                                            {formatDateTime(
+                                              new Date(timestamp),
+                                            )}
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                  {graphData?.graph?.supportsFederation && (
+                                    <TableCell>
+                                      {subgraphName ||
+                                        (checkedSubgraphs.length > 1
+                                          ? "Multiple Subgraphs"
+                                          : checkedSubgraphs.length > 0
+                                            ? checkedSubgraphs[0].subgraphName
+                                            : "Subgraph")}
+                                    </TableCell>
+                                  )}
+                                  <TableCell>
+                                    <div className="flex flex-wrap items-start gap-2">
+                                      <Badge
+                                        variant="outline"
+                                        className="gap-2 py-1.5"
+                                      >
+                                        {getCheckIcon(isComposable)}{" "}
+                                        <span>Composes</span>
+                                      </Badge>
+
+                                      <Badge
+                                        variant="outline"
+                                        className="gap-2 py-1.5"
+                                      >
+                                        {getCheckIcon(!isBreaking)}
+                                        <span>Breaking changes</span>
+                                      </Badge>
+                                      <Badge
+                                        variant="outline"
+                                        className={cn(
+                                          "gap-2 py-1.5",
+                                          clientTrafficCheckSkipped &&
+                                            "text-muted-foreground",
+                                        )}
+                                      >
+                                        {clientTrafficCheckSkipped ? (
+                                          <NoSymbolIcon className="h-4 w-4" />
+                                        ) : (
+                                          getCheckIcon(!hasClientTraffic)
+                                        )}
+                                        <span>Operations</span>
+                                      </Badge>
+                                      <Badge
+                                        variant="outline"
+                                        className={cn(
+                                          "gap-2 py-1.5",
+                                          lintSkipped &&
+                                            "text-muted-foreground",
+                                        )}
+                                      >
+                                        {lintSkipped ? (
+                                          <NoSymbolIcon className="h-4 w-4" />
+                                        ) : (
+                                          getCheckIcon(!hasLintErrors)
+                                        )}
+                                        <span>Lint Errors</span>
+                                      </Badge>
+                                      <Badge
+                                        variant="outline"
+                                        className={cn(
+                                          "gap-2 py-1.5",
+                                          graphPruningSkipped &&
+                                            "text-muted-foreground",
+                                        )}
+                                      >
+                                        {graphPruningSkipped ? (
+                                          <NoSymbolIcon className="h-4 w-4" />
+                                        ) : (
+                                          getCheckIcon(!hasGraphPruningErrors)
+                                        )}
+                                        <span className="flex-1 truncate">
+                                          Pruning Errors
+                                        </span>
+                                      </Badge>
+                                    </div>
+                                  </TableCell>
+
+                                  <TableCell className="text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                      {ghDetails ? (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              asChild
+                                              variant="ghost"
+                                              size="sm"
+                                              className="table-action"
+                                              onClick={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                            >
+                                              <Link
+                                                href={`https://github.com/${ghDetails.ownerSlug}/${ghDetails.repositorySlug}/commit/${ghDetails.commitSha}`}
+                                                className="inline-flex items-center gap-2 text-xs"
+                                                aria-label="View on GitHub"
+                                                target="_blank"
+                                              >
+                                                <GitHubLogoIcon />
+                                              </Link>
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            Commit{" "}
+                                            {ghDetails.commitSha.substring(
+                                              0,
+                                              7,
+                                            )}
+                                            <br />
+                                            <strong>View on GitHub</strong>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      ) : null}
+                                      <Button
+                                        asChild
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                          setRouteCache(router.asPath);
+                                        }}
+                                        className="table-action"
+                                      >
+                                        <Link href={path}>View</Link>
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            },
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableWrapper>
+                    <Pagination
+                      limit={limit}
+                      noOfPages={Math.ceil(
+                        (checksData.checksCountBasedOnDateRange || 0) / limit,
+                      )}
+                      pageNumber={pageNumber}
+                    />
+                  </div>
                 )}
               </TabsContent>
             </div>

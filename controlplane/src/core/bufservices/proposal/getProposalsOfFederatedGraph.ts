@@ -2,8 +2,8 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  GetProposalsByFederatedGraphRequest,
-  GetProposalsByFederatedGraphResponse,
+  GetProposalsOfFederatedGraphRequest,
+  GetProposalsOfFederatedGraphResponse,
   Proposal,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -12,14 +12,14 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
-export function getProposalsByFederatedGraph(
+export function getProposalsOfFederatedGraph(
   opts: RouterOptions,
-  req: GetProposalsByFederatedGraphRequest,
+  req: GetProposalsOfFederatedGraphRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetProposalsByFederatedGraphResponse>> {
+): Promise<PlainMessage<GetProposalsOfFederatedGraphResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetProposalsByFederatedGraphResponse>>(ctx, logger, async () => {
+  return handleError<PlainMessage<GetProposalsOfFederatedGraphResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -39,13 +39,25 @@ export function getProposalsByFederatedGraph(
       };
     }
 
-    const proposals = await proposalRepo.ByFederatedGraphId(federatedGraph.id);
+    const { proposals } = await proposalRepo.ByFederatedGraphId(federatedGraph.id);
+
+    // Get the latest check success for each proposal
+    const proposalsWithChecks = await Promise.all(
+      proposals.map(async (proposal) => {
+        const latestCheck = await proposalRepo.getLatestCheckForProposal(proposal.proposal.id);
+        return {
+          ...proposal,
+          latestCheckSuccess: latestCheck?.isSuccessful || false,
+          latestCheckId: latestCheck?.checkId || '',
+        };
+      }),
+    );
 
     return {
       response: {
         code: EnumStatusCode.OK,
       },
-      proposals: proposals.proposals.map(
+      proposals: proposalsWithChecks.map(
         (proposal) =>
           new Proposal({
             id: proposal.proposal.id,
@@ -53,11 +65,15 @@ export function getProposalsByFederatedGraph(
             createdAt: proposal.proposal.createdAt,
             createdByEmail: proposal.proposal.createdByEmail || '',
             state: proposal.proposal.state,
+            federatedGraphId: proposal.proposal.federatedGraphId,
+            federatedGraphName: req.federatedGraphName,
             subgraphs: proposal.proposalSubgraphs.map((subgraph) => ({
               name: subgraph.subgraphName,
               schemaSDL: subgraph.schemaSDL,
               isDeleted: subgraph.isDeleted,
             })),
+            latestCheckSuccess: proposal.latestCheckSuccess,
+            latestCheckId: proposal.latestCheckId,
           }),
       ),
     };

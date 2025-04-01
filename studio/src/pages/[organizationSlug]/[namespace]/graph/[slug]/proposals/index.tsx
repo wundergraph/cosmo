@@ -1,5 +1,6 @@
 import { useApplyParams } from "@/components/analytics/use-apply-params";
 import { useDateRangeQueryState } from "@/components/analytics/useAnalyticsQueryState";
+import { getCheckIcon } from "@/components/check-badge-icon";
 import {
   DatePickerWithRange,
   DateRangePickerChangeHandler,
@@ -34,13 +35,14 @@ import { createDateRange } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import {
+  ExclamationTriangleIcon
+} from "@heroicons/react/24/outline";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { getProposalsByFederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { getProposalsOfFederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { formatDistanceToNow, formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { MdOutlineChangeCircle } from "react-icons/md";
 
 const ProposalsPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -61,7 +63,7 @@ const ProposalsPage: NextPageWithLayout = () => {
   const endDate = range ? createDateRange(range).end : end;
 
   const { data, isLoading, error, refetch } = useQuery(
-    getProposalsByFederatedGraph,
+    getProposalsOfFederatedGraph,
     {
       federatedGraphName,
       namespace,
@@ -101,80 +103,109 @@ const ProposalsPage: NextPageWithLayout = () => {
               <TableHead>Name</TableHead>
               <TableHead>Created By</TableHead>
               <TableHead>State</TableHead>
+              <TableHead>Latest Check</TableHead>
               <TableHead className="text-center">Details</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedProposals.length !== 0 ? (
-              paginatedProposals.map(
-                ({ id, name, createdAt, createdByEmail, state, subgraphs }) => {
-                  const path = `${router.asPath.split("?")[0]}/${id}`;
-                  return (
-                    <TableRow
-                      key={id}
-                      className="group cursor-pointer hover:bg-secondary/30"
-                      onClick={() => router.push(path)}
-                    >
-                      <TableCell>
-                        <div className="flex flex-col items-start">
-                          <Link
-                            href={path}
-                            className="font-medium text-foreground"
-                          >
-                            {id}
-                          </Link>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="text-xs text-muted-foreground">
-                                {formatDistanceToNow(new Date(createdAt), {
-                                  addSuffix: true,
-                                })}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom">
-                              {formatDateTime(new Date(createdAt))}
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                      </TableCell>
-                      <TableCell>{name}</TableCell>
-                      <TableCell>{createdByEmail}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={cn("gap-2 py-1.5", {
-                            "border-success/20 bg-success/10 text-success hover:bg-success/20":
-                              state === "APPROVED",
-                            "border-primary/20 bg-primary/10 text-primary hover:bg-primary/20":
-                              state === "PENDING",
-                            "border-warning/20 bg-warning/10 text-warning hover:bg-warning/20":
-                              state === "DRAFT",
-                            "border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive/20":
-                              state === "REJECTED",
-                            "border-accent/20 bg-accent/10 text-accent hover:bg-accent/20":
-                              state === "EXPIRED",
-                          })}
+              paginatedProposals.map((proposal) => {
+                const {
+                  id,
+                  name,
+                  createdAt,
+                  createdByEmail,
+                  state,
+                  subgraphs,
+                } = proposal;
+                // These fields will be available after the RPC is updated
+                const latestCheckSuccess = (proposal as any).latestCheckSuccess;
+                const latestCheckId = (proposal as any).latestCheckId;
+
+                const path = `${router.asPath.split("?")[0]}/${id}`;
+                return (
+                  <TableRow
+                    key={id}
+                    className="group cursor-pointer hover:bg-secondary/30"
+                    onClick={() => router.push(path)}
+                  >
+                    <TableCell>
+                      <div className="flex flex-col items-start">
+                        <Link
+                          href={path}
+                          className="font-medium text-foreground"
                         >
-                          <span>{state}</span>
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Button
-                          asChild
-                          variant="ghost"
-                          size="sm"
-                          className="table-action"
+                          {id}
+                        </Link>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(createdAt), {
+                                addSuffix: true,
+                              })}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            {formatDateTime(new Date(createdAt))}
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TableCell>
+                    <TableCell>{name}</TableCell>
+                    <TableCell>{createdByEmail}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={cn("gap-2 py-1.5", {
+                          "border-success/20 bg-success/10 text-success hover:bg-success/20":
+                            state === "APPROVED",
+                          "border-primary/20 bg-primary/10 text-primary hover:bg-primary/20":
+                            state === "PENDING",
+                          "border-warning/20 bg-warning/10 text-warning hover:bg-warning/20":
+                            state === "DRAFT",
+                          "border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive/20":
+                            state === "REJECTED",
+                          "border-accent/20 bg-accent/10 text-accent hover:bg-accent/20":
+                            state === "EXPIRED",
+                        })}
+                      >
+                        <span>{state}</span>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {latestCheckId ? (
+                        <Link
+                          href={`/${router.query.organizationSlug}/${namespace}/graph/${federatedGraphName}/checks/${latestCheckId}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-2"
                         >
-                          <Link href={path}>View</Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                },
-              )
+                          {getCheckIcon(latestCheckSuccess)}
+                          <span>
+                            {latestCheckSuccess ? "Successful" : "Failed"}
+                          </span>
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          No checks run
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        asChild
+                        variant="ghost"
+                        size="sm"
+                        className="table-action"
+                      >
+                        <Link href={path}>View</Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   No proposals found.
                 </TableCell>
               </TableRow>

@@ -20378,9 +20378,9 @@ export class CheckSubgraphSchemasRequest extends Message<CheckSubgraphSchemasReq
   namespace = "";
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.CheckSubgraphSchemasRequest.CheckSubgraph subgraphs = 2;
+   * @generated from field: repeated wg.cosmo.platform.v1.ProposalSubgraph subgraphs = 2;
    */
-  subgraphs: CheckSubgraphSchemasRequest_CheckSubgraph[] = [];
+  subgraphs: ProposalSubgraph[] = [];
 
   /**
    * @generated from field: wg.cosmo.platform.v1.GitInfo gitInfo = 3;
@@ -20401,7 +20401,7 @@ export class CheckSubgraphSchemasRequest extends Message<CheckSubgraphSchemasReq
   static readonly typeName = "wg.cosmo.platform.v1.CheckSubgraphSchemasRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "subgraphs", kind: "message", T: CheckSubgraphSchemasRequest_CheckSubgraph, repeated: true },
+    { no: 2, name: "subgraphs", kind: "message", T: ProposalSubgraph, repeated: true },
     { no: 3, name: "gitInfo", kind: "message", T: GitInfo },
     { no: 4, name: "vcsContext", kind: "message", T: VCSContext, opt: true },
   ]);
@@ -20420,55 +20420,6 @@ export class CheckSubgraphSchemasRequest extends Message<CheckSubgraphSchemasReq
 
   static equals(a: CheckSubgraphSchemasRequest | PlainMessage<CheckSubgraphSchemasRequest> | undefined, b: CheckSubgraphSchemasRequest | PlainMessage<CheckSubgraphSchemasRequest> | undefined): boolean {
     return proto3.util.equals(CheckSubgraphSchemasRequest, a, b);
-  }
-}
-
-/**
- * @generated from message wg.cosmo.platform.v1.CheckSubgraphSchemasRequest.CheckSubgraph
- */
-export class CheckSubgraphSchemasRequest_CheckSubgraph extends Message<CheckSubgraphSchemasRequest_CheckSubgraph> {
-  /**
-   * @generated from field: string name = 1;
-   */
-  name = "";
-
-  /**
-   * @generated from field: string schema = 2;
-   */
-  schema = "";
-
-  /**
-   * @generated from field: optional bool delete = 3;
-   */
-  delete?: boolean;
-
-  constructor(data?: PartialMessage<CheckSubgraphSchemasRequest_CheckSubgraph>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.CheckSubgraphSchemasRequest.CheckSubgraph";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "delete", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemasRequest_CheckSubgraph {
-    return new CheckSubgraphSchemasRequest_CheckSubgraph().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CheckSubgraphSchemasRequest_CheckSubgraph {
-    return new CheckSubgraphSchemasRequest_CheckSubgraph().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CheckSubgraphSchemasRequest_CheckSubgraph {
-    return new CheckSubgraphSchemasRequest_CheckSubgraph().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: CheckSubgraphSchemasRequest_CheckSubgraph | PlainMessage<CheckSubgraphSchemasRequest_CheckSubgraph> | undefined, b: CheckSubgraphSchemasRequest_CheckSubgraph | PlainMessage<CheckSubgraphSchemasRequest_CheckSubgraph> | undefined): boolean {
-    return proto3.util.equals(CheckSubgraphSchemasRequest_CheckSubgraph, a, b);
   }
 }
 
@@ -20766,6 +20717,16 @@ export class Proposal extends Message<Proposal> {
    */
   subgraphs: ProposalSubgraph[] = [];
 
+  /**
+   * @generated from field: bool latestCheckSuccess = 9;
+   */
+  latestCheckSuccess = false;
+
+  /**
+   * @generated from field: string latestCheckId = 10;
+   */
+  latestCheckId = "";
+
   constructor(data?: PartialMessage<Proposal>) {
     super();
     proto3.util.initPartial(data, this);
@@ -20782,6 +20743,8 @@ export class Proposal extends Message<Proposal> {
     { no: 6, name: "federatedGraphId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 8, name: "subgraphs", kind: "message", T: ProposalSubgraph, repeated: true },
+    { no: 9, name: "latestCheckSuccess", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 10, name: "latestCheckId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Proposal {
@@ -20925,6 +20888,71 @@ export class CreateProposalResponse extends Message<CreateProposalResponse> {
    */
   proposalId = "";
 
+  /**
+   * @generated from field: string checkId = 3;
+   */
+  checkId = "";
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.SchemaChange breakingChanges = 4;
+   */
+  breakingChanges: SchemaChange[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.SchemaChange nonBreakingChanges = 5;
+   */
+  nonBreakingChanges: SchemaChange[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 6;
+   */
+  compositionErrors: CompositionError[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 7;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.LintIssue lintErrors = 8;
+   */
+  lintErrors: LintIssue[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.LintIssue lintWarnings = 9;
+   */
+  lintWarnings: LintIssue[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GraphPruningIssue graphPruneErrors = 10;
+   */
+  graphPruneErrors: GraphPruningIssue[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GraphPruningIssue graphPruneWarnings = 11;
+   */
+  graphPruneWarnings: GraphPruningIssue[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CheckOperationUsageStatsofSubgraph operationUsageStats = 12;
+   */
+  operationUsageStats: CheckOperationUsageStatsofSubgraph[] = [];
+
+  /**
+   * @generated from field: bool lintingSkipped = 13;
+   */
+  lintingSkipped = false;
+
+  /**
+   * @generated from field: bool graphPruningSkipped = 14;
+   */
+  graphPruningSkipped = false;
+
+  /**
+   * @generated from field: string checkUrl = 15;
+   */
+  checkUrl = "";
+
   constructor(data?: PartialMessage<CreateProposalResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -20935,6 +20963,19 @@ export class CreateProposalResponse extends Message<CreateProposalResponse> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "proposalId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "checkId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "breakingChanges", kind: "message", T: SchemaChange, repeated: true },
+    { no: 5, name: "nonBreakingChanges", kind: "message", T: SchemaChange, repeated: true },
+    { no: 6, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 7, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
+    { no: 8, name: "lintErrors", kind: "message", T: LintIssue, repeated: true },
+    { no: 9, name: "lintWarnings", kind: "message", T: LintIssue, repeated: true },
+    { no: 10, name: "graphPruneErrors", kind: "message", T: GraphPruningIssue, repeated: true },
+    { no: 11, name: "graphPruneWarnings", kind: "message", T: GraphPruningIssue, repeated: true },
+    { no: 12, name: "operationUsageStats", kind: "message", T: CheckOperationUsageStatsofSubgraph, repeated: true },
+    { no: 13, name: "lintingSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 14, name: "graphPruningSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 15, name: "checkUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateProposalResponse {
@@ -21035,9 +21076,9 @@ export class GetProposalResponse extends Message<GetProposalResponse> {
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.GetProposalsByFederatedGraphRequest
+ * @generated from message wg.cosmo.platform.v1.GetProposalsOfFederatedGraphRequest
  */
-export class GetProposalsByFederatedGraphRequest extends Message<GetProposalsByFederatedGraphRequest> {
+export class GetProposalsOfFederatedGraphRequest extends Message<GetProposalsOfFederatedGraphRequest> {
   /**
    * @generated from field: string federatedGraphName = 1;
    */
@@ -21048,39 +21089,39 @@ export class GetProposalsByFederatedGraphRequest extends Message<GetProposalsByF
    */
   namespace = "";
 
-  constructor(data?: PartialMessage<GetProposalsByFederatedGraphRequest>) {
+  constructor(data?: PartialMessage<GetProposalsOfFederatedGraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetProposalsByFederatedGraphRequest";
+  static readonly typeName = "wg.cosmo.platform.v1.GetProposalsOfFederatedGraphRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetProposalsByFederatedGraphRequest {
-    return new GetProposalsByFederatedGraphRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetProposalsOfFederatedGraphRequest {
+    return new GetProposalsOfFederatedGraphRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetProposalsByFederatedGraphRequest {
-    return new GetProposalsByFederatedGraphRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetProposalsOfFederatedGraphRequest {
+    return new GetProposalsOfFederatedGraphRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetProposalsByFederatedGraphRequest {
-    return new GetProposalsByFederatedGraphRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetProposalsOfFederatedGraphRequest {
+    return new GetProposalsOfFederatedGraphRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetProposalsByFederatedGraphRequest | PlainMessage<GetProposalsByFederatedGraphRequest> | undefined, b: GetProposalsByFederatedGraphRequest | PlainMessage<GetProposalsByFederatedGraphRequest> | undefined): boolean {
-    return proto3.util.equals(GetProposalsByFederatedGraphRequest, a, b);
+  static equals(a: GetProposalsOfFederatedGraphRequest | PlainMessage<GetProposalsOfFederatedGraphRequest> | undefined, b: GetProposalsOfFederatedGraphRequest | PlainMessage<GetProposalsOfFederatedGraphRequest> | undefined): boolean {
+    return proto3.util.equals(GetProposalsOfFederatedGraphRequest, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.GetProposalsByFederatedGraphResponse
+ * @generated from message wg.cosmo.platform.v1.GetProposalsOfFederatedGraphResponse
  */
-export class GetProposalsByFederatedGraphResponse extends Message<GetProposalsByFederatedGraphResponse> {
+export class GetProposalsOfFederatedGraphResponse extends Message<GetProposalsOfFederatedGraphResponse> {
   /**
    * @generated from field: wg.cosmo.platform.v1.Response response = 1;
    */
@@ -21091,32 +21132,136 @@ export class GetProposalsByFederatedGraphResponse extends Message<GetProposalsBy
    */
   proposals: Proposal[] = [];
 
-  constructor(data?: PartialMessage<GetProposalsByFederatedGraphResponse>) {
+  constructor(data?: PartialMessage<GetProposalsOfFederatedGraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetProposalsByFederatedGraphResponse";
+  static readonly typeName = "wg.cosmo.platform.v1.GetProposalsOfFederatedGraphResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "proposals", kind: "message", T: Proposal, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetProposalsByFederatedGraphResponse {
-    return new GetProposalsByFederatedGraphResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetProposalsOfFederatedGraphResponse {
+    return new GetProposalsOfFederatedGraphResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetProposalsByFederatedGraphResponse {
-    return new GetProposalsByFederatedGraphResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetProposalsOfFederatedGraphResponse {
+    return new GetProposalsOfFederatedGraphResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetProposalsByFederatedGraphResponse {
-    return new GetProposalsByFederatedGraphResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetProposalsOfFederatedGraphResponse {
+    return new GetProposalsOfFederatedGraphResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetProposalsByFederatedGraphResponse | PlainMessage<GetProposalsByFederatedGraphResponse> | undefined, b: GetProposalsByFederatedGraphResponse | PlainMessage<GetProposalsByFederatedGraphResponse> | undefined): boolean {
-    return proto3.util.equals(GetProposalsByFederatedGraphResponse, a, b);
+  static equals(a: GetProposalsOfFederatedGraphResponse | PlainMessage<GetProposalsOfFederatedGraphResponse> | undefined, b: GetProposalsOfFederatedGraphResponse | PlainMessage<GetProposalsOfFederatedGraphResponse> | undefined): boolean {
+    return proto3.util.equals(GetProposalsOfFederatedGraphResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetChecksOfProposalRequest
+ */
+export class GetChecksOfProposalRequest extends Message<GetChecksOfProposalRequest> {
+  /**
+   * @generated from field: string proposalId = 1;
+   */
+  proposalId = "";
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Pagination pagination = 2;
+   */
+  pagination?: Pagination;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.DateRange dateRange = 3;
+   */
+  dateRange?: DateRange;
+
+  constructor(data?: PartialMessage<GetChecksOfProposalRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetChecksOfProposalRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "proposalId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "pagination", kind: "message", T: Pagination },
+    { no: 3, name: "dateRange", kind: "message", T: DateRange },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChecksOfProposalRequest {
+    return new GetChecksOfProposalRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetChecksOfProposalRequest {
+    return new GetChecksOfProposalRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetChecksOfProposalRequest {
+    return new GetChecksOfProposalRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetChecksOfProposalRequest | PlainMessage<GetChecksOfProposalRequest> | undefined, b: GetChecksOfProposalRequest | PlainMessage<GetChecksOfProposalRequest> | undefined): boolean {
+    return proto3.util.equals(GetChecksOfProposalRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetChecksOfProposalResponse
+ */
+export class GetChecksOfProposalResponse extends Message<GetChecksOfProposalResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.SchemaCheck checks = 2;
+   */
+  checks: SchemaCheck[] = [];
+
+  /**
+   * @generated from field: int32 checksCountBasedOnDateRange = 3;
+   */
+  checksCountBasedOnDateRange = 0;
+
+  /**
+   * @generated from field: int32 totalChecksCount = 4;
+   */
+  totalChecksCount = 0;
+
+  constructor(data?: PartialMessage<GetChecksOfProposalResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetChecksOfProposalResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "checks", kind: "message", T: SchemaCheck, repeated: true },
+    { no: 3, name: "checksCountBasedOnDateRange", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "totalChecksCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChecksOfProposalResponse {
+    return new GetChecksOfProposalResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetChecksOfProposalResponse {
+    return new GetChecksOfProposalResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetChecksOfProposalResponse {
+    return new GetChecksOfProposalResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetChecksOfProposalResponse | PlainMessage<GetChecksOfProposalResponse> | undefined, b: GetChecksOfProposalResponse | PlainMessage<GetChecksOfProposalResponse> | undefined): boolean {
+    return proto3.util.equals(GetChecksOfProposalResponse, a, b);
   }
 }
 
@@ -21125,22 +21270,34 @@ export class GetProposalsByFederatedGraphResponse extends Message<GetProposalsBy
  */
 export class UpdateProposalRequest extends Message<UpdateProposalRequest> {
   /**
-   * @generated from field: string proposalId = 1;
+   * @generated from field: string proposalName = 1;
    */
-  proposalId = "";
+  proposalName = "";
 
   /**
-   * @generated from field: string state = 2;
+   * @generated from field: string federatedGraphName = 2;
    */
-  state = "";
+  federatedGraphName = "";
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.ProposalSubgraph updatedSubgraphs = 3;
+   * @generated from oneof wg.cosmo.platform.v1.UpdateProposalRequest.update_action
    */
-  updatedSubgraphs: ProposalSubgraph[] = [];
+  updateAction: {
+    /**
+     * @generated from field: string state = 3;
+     */
+    value: string;
+    case: "state";
+  } | {
+    /**
+     * @generated from field: wg.cosmo.platform.v1.UpdateProposalRequest.UpdateProposalSubgraphs updatedSubgraphs = 4;
+     */
+    value: UpdateProposalRequest_UpdateProposalSubgraphs;
+    case: "updatedSubgraphs";
+  } | { case: undefined; value?: undefined } = { case: undefined };
 
   /**
-   * @generated from field: string namespace = 4;
+   * @generated from field: string namespace = 5;
    */
   namespace = "";
 
@@ -21152,10 +21309,11 @@ export class UpdateProposalRequest extends Message<UpdateProposalRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.UpdateProposalRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "proposalId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "state", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "updatedSubgraphs", kind: "message", T: ProposalSubgraph, repeated: true },
-    { no: 4, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "proposalName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "state", kind: "scalar", T: 9 /* ScalarType.STRING */, oneof: "update_action" },
+    { no: 4, name: "updatedSubgraphs", kind: "message", T: UpdateProposalRequest_UpdateProposalSubgraphs, oneof: "update_action" },
+    { no: 5, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateProposalRequest {
@@ -21176,6 +21334,43 @@ export class UpdateProposalRequest extends Message<UpdateProposalRequest> {
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.UpdateProposalRequest.UpdateProposalSubgraphs
+ */
+export class UpdateProposalRequest_UpdateProposalSubgraphs extends Message<UpdateProposalRequest_UpdateProposalSubgraphs> {
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.ProposalSubgraph subgraphs = 1;
+   */
+  subgraphs: ProposalSubgraph[] = [];
+
+  constructor(data?: PartialMessage<UpdateProposalRequest_UpdateProposalSubgraphs>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateProposalRequest.UpdateProposalSubgraphs";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "subgraphs", kind: "message", T: ProposalSubgraph, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateProposalRequest_UpdateProposalSubgraphs {
+    return new UpdateProposalRequest_UpdateProposalSubgraphs().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateProposalRequest_UpdateProposalSubgraphs {
+    return new UpdateProposalRequest_UpdateProposalSubgraphs().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateProposalRequest_UpdateProposalSubgraphs {
+    return new UpdateProposalRequest_UpdateProposalSubgraphs().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateProposalRequest_UpdateProposalSubgraphs | PlainMessage<UpdateProposalRequest_UpdateProposalSubgraphs> | undefined, b: UpdateProposalRequest_UpdateProposalSubgraphs | PlainMessage<UpdateProposalRequest_UpdateProposalSubgraphs> | undefined): boolean {
+    return proto3.util.equals(UpdateProposalRequest_UpdateProposalSubgraphs, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.UpdateProposalResponse
  */
 export class UpdateProposalResponse extends Message<UpdateProposalResponse> {
@@ -21183,6 +21378,71 @@ export class UpdateProposalResponse extends Message<UpdateProposalResponse> {
    * @generated from field: wg.cosmo.platform.v1.Response response = 1;
    */
   response?: Response;
+
+  /**
+   * @generated from field: string checkId = 2;
+   */
+  checkId = "";
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.SchemaChange breakingChanges = 3;
+   */
+  breakingChanges: SchemaChange[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.SchemaChange nonBreakingChanges = 4;
+   */
+  nonBreakingChanges: SchemaChange[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 5;
+   */
+  compositionErrors: CompositionError[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 6;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.LintIssue lintErrors = 7;
+   */
+  lintErrors: LintIssue[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.LintIssue lintWarnings = 8;
+   */
+  lintWarnings: LintIssue[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GraphPruningIssue graphPruneErrors = 9;
+   */
+  graphPruneErrors: GraphPruningIssue[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GraphPruningIssue graphPruneWarnings = 10;
+   */
+  graphPruneWarnings: GraphPruningIssue[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CheckOperationUsageStatsofSubgraph operationUsageStats = 11;
+   */
+  operationUsageStats: CheckOperationUsageStatsofSubgraph[] = [];
+
+  /**
+   * @generated from field: bool lintingSkipped = 12;
+   */
+  lintingSkipped = false;
+
+  /**
+   * @generated from field: bool graphPruningSkipped = 13;
+   */
+  graphPruningSkipped = false;
+
+  /**
+   * @generated from field: string checkUrl = 14;
+   */
+  checkUrl = "";
 
   constructor(data?: PartialMessage<UpdateProposalResponse>) {
     super();
@@ -21193,6 +21453,19 @@ export class UpdateProposalResponse extends Message<UpdateProposalResponse> {
   static readonly typeName = "wg.cosmo.platform.v1.UpdateProposalResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "checkId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "breakingChanges", kind: "message", T: SchemaChange, repeated: true },
+    { no: 4, name: "nonBreakingChanges", kind: "message", T: SchemaChange, repeated: true },
+    { no: 5, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 6, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
+    { no: 7, name: "lintErrors", kind: "message", T: LintIssue, repeated: true },
+    { no: 8, name: "lintWarnings", kind: "message", T: LintIssue, repeated: true },
+    { no: 9, name: "graphPruneErrors", kind: "message", T: GraphPruningIssue, repeated: true },
+    { no: 10, name: "graphPruneWarnings", kind: "message", T: GraphPruningIssue, repeated: true },
+    { no: 11, name: "operationUsageStats", kind: "message", T: CheckOperationUsageStatsofSubgraph, repeated: true },
+    { no: 12, name: "lintingSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 13, name: "graphPruningSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 14, name: "checkUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateProposalResponse {

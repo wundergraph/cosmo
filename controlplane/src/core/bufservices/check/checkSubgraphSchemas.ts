@@ -1,41 +1,24 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
-import { buildASTSchema } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   CheckSubgraphSchemasRequest,
   CheckSubgraphSchemasResponse,
-  CheckOperationUsageStats,
-  CheckOperationUsageStatsofSubgraph,
-  CompositionError,
-  CompositionWarning,
-  GraphPruningIssue,
-  LintIssue,
-  SchemaChange,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { GraphQLSchema, parse } from 'graphql';
-import { FederatedGraphDTO, SchemaGraphPruningIssues, SchemaLintIssues } from '../../../types/index.js';
-import { CheckSubgraph, Composer } from '../../composition/composer.js';
-import { buildSchema } from '../../composition/composition.js';
-import { getDiffBetweenGraphs } from '../../composition/schemaCheck.js';
+import { Composer } from '../../composition/composer.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { GraphCompositionRepository } from '../../repositories/GraphCompositionRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { SchemaCheckRepository } from '../../repositories/SchemaCheckRepository.js';
 import { SchemaGraphPruningRepository } from '../../repositories/SchemaGraphPruningRepository.js';
 import { SchemaLintRepository } from '../../repositories/SchemaLintRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import {
-  collectOperationUsageStats,
-  InspectorOperationResult,
-  InspectorSchemaChange,
-  SchemaUsageTrafficInspector,
-} from '../../services/SchemaUsageTrafficInspector.js';
-import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError } from '../../util.js';
-import { ProposalRepository } from '../../repositories/ProposalRepository.js';
+import { SchemaUsageTrafficInspector } from '../../services/SchemaUsageTrafficInspector.js';
+import { enrichLogger, getLogger, handleError } from '../../util.js';
 
 export function checkSubgraphSchemas(
   opts: RouterOptions,
@@ -130,340 +113,6 @@ export function checkSubgraphSchemas(
       };
     }
 
-    const changeRetention = await orgRepo.getFeature({
-      organizationId: authContext.organizationId,
-      featureId: 'breaking-change-retention',
-    });
-
-    const limit = changeRetention?.limit ?? 7;
-
-    const schemaCheckID = await schemaCheckRepo.create({
-      proposedSubgraphSchemaSDL: '',
-      lintSkipped: !namespace.enableLinting,
-      graphPruningSkipped: !namespace.enableGraphPruning,
-      vcsContext: req.vcsContext,
-    });
-
-    const breakingChanges: SchemaChange[] = [];
-    const nonBreakingChanges: SchemaChange[] = [];
-    const lintWarnings: LintIssue[] = [];
-    const lintErrors: LintIssue[] = [];
-    const graphPruneWarnings: GraphPruningIssue[] = [];
-    const graphPruneErrors: GraphPruningIssue[] = [];
-    const inspectedOperations: InspectorOperationResult[] = [];
-    const compositionErrors: PlainMessage<CompositionError>[] = [];
-    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
-    const operationUsageStats: CheckOperationUsageStatsofSubgraph[] = [];
-
-    const federatedGraphs: FederatedGraphDTO[] = [];
-    const checkSubgraphs: Map<string, CheckSubgraph> = new Map();
-
-    for (const s of req.subgraphs) {
-      const subgraph = await subgraphRepo.byName(s.name, req.namespace);
-      // TODO: even if the subgraph is not found, we should still check the schema
-      if (!subgraph) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR_NOT_FOUND,
-            details: `Subgraph '${s.name}' not found`,
-          },
-          breakingChanges: [],
-          nonBreakingChanges: [],
-          compositionErrors: [],
-          checkId: '',
-          lintWarnings: [],
-          lintErrors: [],
-          graphPruneWarnings: [],
-          graphPruneErrors: [],
-          compositionWarnings: [],
-          operationUsageStats: [],
-          lintingSkipped: false,
-          graphPruningSkipped: false,
-          checkUrl: '',
-        };
-      }
-
-      if (subgraph.isFeatureSubgraph) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details:
-              `The subgraph "${s.name}" is a feature subgraph.` +
-              ` Feature subgraphs do not currently support check operations.`,
-          },
-          breakingChanges: [],
-          nonBreakingChanges: [],
-          compositionErrors: [],
-          checkId: '',
-          lintWarnings: [],
-          lintErrors: [],
-          graphPruneWarnings: [],
-          graphPruneErrors: [],
-          compositionWarnings: [],
-          operationUsageStats: [],
-          lintingSkipped: false,
-          graphPruningSkipped: false,
-          checkUrl: '',
-        };
-      }
-
-      const graphs = await fedGraphRepo.bySubgraphLabels({
-        labels: subgraph.labels,
-        namespaceId: namespace.id,
-        excludeContracts: true,
-      });
-
-      federatedGraphs.push(...graphs.filter((g) => !federatedGraphs.some((fg) => fg.id === g.id)));
-
-      const newSchemaSDL = s.delete ? '' : s.schema;
-      const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion(graphs);
-      let newGraphQLSchema: GraphQLSchema | undefined;
-      if (newSchemaSDL) {
-        try {
-          // Here we check if the schema is valid as a subgraph SDL
-          const result = buildSchema(newSchemaSDL, true, routerCompatibilityVersion);
-          if (!result.success) {
-            return {
-              response: {
-                code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA,
-                details: result.errors.map((e) => e.toString()).join('\n'),
-              },
-              breakingChanges: [],
-              nonBreakingChanges: [],
-              compositionErrors: [],
-              checkId: '',
-              lintWarnings: [],
-              lintErrors: [],
-              graphPruneWarnings: [],
-              graphPruneErrors: [],
-              compositionWarnings: [],
-              operationUsageStats: [],
-              lintingSkipped: false,
-              graphPruningSkipped: false,
-              checkUrl: '',
-            };
-          }
-          if (namespace.enableGraphPruning) {
-            const parsedSchema = parse(newSchemaSDL);
-            // this new GraphQL schema conatins the location info
-            newGraphQLSchema = buildASTSchema(parsedSchema, { assumeValid: true, assumeValidSDL: true });
-          }
-        } catch (e: any) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA,
-              details: e.message,
-            },
-            breakingChanges: [],
-            nonBreakingChanges: [],
-            compositionErrors: [],
-            checkId: '',
-            lintWarnings: [],
-            lintErrors: [],
-            graphPruneWarnings: [],
-            graphPruneErrors: [],
-            compositionWarnings: [],
-            operationUsageStats: [],
-            lintingSkipped: false,
-            graphPruningSkipped: false,
-            checkUrl: '',
-          };
-        }
-      }
-
-      const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL, routerCompatibilityVersion);
-      if (schemaChanges.kind === 'failure') {
-        logger.warn(`Error finding diff between graphs of the subgraph ${subgraph.name}: ${schemaChanges.error}`);
-        return {
-          response: {
-            code: schemaChanges.errorCode,
-            details: schemaChanges.errorMessage,
-          },
-          breakingChanges: [],
-          nonBreakingChanges: [],
-          compositionErrors: [],
-          checkId: schemaCheckID,
-          checkedFederatedGraphs: [],
-          lintWarnings: [],
-          lintErrors: [],
-          graphPruneWarnings: [],
-          graphPruneErrors: [],
-          compositionWarnings: [],
-          operationUsageStats: [],
-          lintingSkipped: false,
-          graphPruningSkipped: false,
-          checkUrl: '',
-        };
-      }
-
-      checkSubgraphs.set(s.name, {
-        subgraph,
-        newSchemaSDL,
-        newGraphQLSchema,
-        schemaChanges,
-        inspectorChanges: [],
-        storedBreakingChanges: [],
-        checkSubgraphId: '',
-        routerCompatibilityVersion,
-      });
-    }
-
-    let proposalMatchMessage: string | undefined;
-    for (const s of checkSubgraphs.values()) {
-      const { subgraph, newSchemaSDL, newGraphQLSchema, schemaChanges } = s;
-      if (namespace.enableProposals) {
-        const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
-        if (proposalConfig) {
-          const match = await proposalRepo.matchSchemaWithProposal({
-            subgraphId: subgraph.id,
-            schema: newSchemaSDL,
-            routerCompatibilityVersion: s.routerCompatibilityVersion,
-          });
-          if (!match) {
-            if (proposalConfig.checkSeverityLevel === 'warn') {
-              proposalMatchMessage += `The subgraph ${subgraph.name}'s schema does not match to this subgraph's schema in any approved proposal.\n`;
-            } else {
-              return {
-                response: {
-                  code: EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL,
-                  details: `The subgraph ${subgraph.name}'s schema does not match to this subgraph's schema in any approved proposal.`,
-                },
-                breakingChanges: [],
-                nonBreakingChanges: [],
-                compositionErrors: [],
-                checkId: '',
-                lintWarnings: [],
-                lintErrors: [],
-                graphPruneWarnings: [],
-                graphPruneErrors: [],
-                compositionWarnings: [],
-                operationUsageStats: [],
-                lintingSkipped: false,
-                graphPruningSkipped: false,
-                checkUrl: '',
-                proposalMatchMessage: `The subgraph ${subgraph.name}'s schema does not match to this subgraph's schema in any approved proposal.`,
-              };
-            }
-          }
-        }
-      }
-
-      const schemaCheckSubgraphId = await schemaCheckRepo.createSchemaCheckSubgraph({
-        data: {
-          schemaCheckId: schemaCheckID,
-          subgraphId: subgraph.id,
-          subgraphName: subgraph.name,
-          proposedSubgraphSchemaSDL: newSchemaSDL,
-          isDeleted: newSchemaSDL === '',
-          isNew: false,
-        },
-      });
-
-      await schemaCheckRepo.createSchemaCheckChanges({
-        changes: schemaChanges.nonBreakingChanges,
-        schemaCheckID,
-        schemaCheckSubgraphId,
-      });
-
-      const storedBreakingChanges = await schemaCheckRepo.createSchemaCheckChanges({
-        changes: schemaChanges.breakingChanges,
-        schemaCheckID,
-        schemaCheckSubgraphId,
-      });
-
-      let inspectorChanges: InspectorSchemaChange[] = [];
-      // For operations checks we only consider breaking changes
-      inspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
-        schemaChanges.breakingChanges,
-        storedBreakingChanges,
-      );
-
-      checkSubgraphs.set(subgraph.name, {
-        ...s,
-        inspectorChanges,
-        storedBreakingChanges,
-        checkSubgraphId: schemaCheckSubgraphId,
-      });
-
-      const lintIssues: SchemaLintIssues = await schemaLintRepo.performSchemaLintCheck({
-        schemaCheckID,
-        newSchemaSDL,
-        namespaceId: namespace.id,
-        isLintingEnabled: namespace.enableLinting,
-        schemaCheckSubgraphId,
-      });
-
-      const graphPruningIssues: SchemaGraphPruningIssues = await schemaGraphPruningRepo.performSchemaGraphPruningCheck({
-        newGraphQLSchema,
-        schemaCheckID,
-        subgraph,
-        namespaceID: namespace.id,
-        organizationID: authContext.organizationId,
-        isGraphPruningEnabled: namespace.enableGraphPruning,
-        schemaChanges,
-        chClient: opts.chClient,
-        fedGraphRepo,
-        subgraphRepo,
-        rangeInDays: limit,
-        schemaCheckSubgraphId,
-      });
-
-      breakingChanges.push(
-        ...schemaChanges.breakingChanges.map(
-          (c) =>
-            new SchemaChange({
-              ...c,
-              subgraphName: subgraph.name,
-            }),
-        ),
-      );
-      nonBreakingChanges.push(
-        ...schemaChanges.nonBreakingChanges.map(
-          (c) =>
-            new SchemaChange({
-              ...c,
-              subgraphName: subgraph.name,
-            }),
-        ),
-      );
-      lintErrors.push(
-        ...lintIssues.errors.map(
-          (e) =>
-            new LintIssue({
-              ...e,
-              subgraphName: subgraph.name,
-            }),
-        ),
-      );
-      lintWarnings.push(
-        ...lintIssues.warnings.map(
-          (w) =>
-            new LintIssue({
-              ...w,
-              subgraphName: subgraph.name,
-            }),
-        ),
-      );
-      graphPruneErrors.push(
-        ...graphPruningIssues.errors.map(
-          (e) =>
-            new GraphPruningIssue({
-              ...e,
-              subgraphName: subgraph.name,
-            }),
-        ),
-      );
-      graphPruneWarnings.push(
-        ...graphPruningIssues.warnings.map(
-          (w) =>
-            new GraphPruningIssue({
-              ...w,
-              subgraphName: subgraph.name,
-            }),
-        ),
-      );
-    }
-
     const composer = new Composer(
       logger,
       opts.db,
@@ -474,117 +123,43 @@ export function checkSubgraphSchemas(
       opts.chClient,
     );
 
-    const { composedGraphs, checkSubgraphsByFedGraph } = await composer.composeWithProposedSchemas({
-      inputSubgraphs: checkSubgraphs,
-      graphs: federatedGraphs,
-    });
-
-    await schemaCheckRepo.createSchemaCheckCompositions({
-      schemaCheckID,
-      compositions: composedGraphs,
-    });
-
-    let hasClientTraffic = false;
-
-    for (const composition of composedGraphs) {
-      const checkFederatedGraphId = await schemaCheckRepo.createCheckedFederatedGraph(
-        schemaCheckID,
-        composition.id,
-        limit,
-      );
-      const checkSubgraphsUsedForComposition = checkSubgraphsByFedGraph.get(composition.id);
-      if (checkSubgraphsUsedForComposition && checkSubgraphsUsedForComposition.length > 0) {
-        await schemaCheckRepo.createSchemaCheckSubgraphFederatedGraphs({
-          schemaCheckFederatedGraphId: checkFederatedGraphId,
-          checkSubgraphIds: checkSubgraphsUsedForComposition,
-        });
-      }
-
-      for (const error of composition.errors) {
-        compositionErrors.push({
-          message: error.message,
-          federatedGraphName: composition.name,
-          namespace: composition.namespace,
-          featureFlag: '',
-        });
-      }
-
-      for (const warning of composition.warnings) {
-        compositionWarnings.push({
-          message: warning.message,
-          federatedGraphName: composition.name,
-          namespace: composition.namespace,
-          featureFlag: '',
-        });
-      }
-
-      /*
-          We don't collect operation usage when
-          1. we have composition errors
-          2. when we don't have any inspectable changes.
-          3. When user wants to skip the traffic check altogether
-          That means any breaking change is really breaking
-          */
-      for (const checkSubgraph of checkSubgraphs.values()) {
-        if (composition.errors.length > 0 || checkSubgraph.inspectorChanges.length === 0) {
-          continue;
-        }
-
-        const result = await trafficInspector.inspect(checkSubgraph.inspectorChanges, {
-          daysToConsider: limit,
-          federatedGraphId: composition.id,
-          organizationId: authContext.organizationId,
-          subgraphId: checkSubgraph.subgraph.id,
-        });
-
-        if (result.size === 0) {
-          continue;
-        }
-
-        const overrideCheck = await schemaCheckRepo.checkClientTrafficAgainstOverrides({
-          changes: checkSubgraph.storedBreakingChanges,
-          inspectorResultsByChangeId: result,
-          namespaceId: namespace.id,
-        });
-
-        hasClientTraffic = overrideCheck.hasUnsafeClientTraffic;
-
-        // Store operation usage
-        await schemaCheckRepo.createOperationUsage(overrideCheck.result, composition.id);
-
-        // Collect all inspected operations for later aggregation
-        for (const resultElement of overrideCheck.result.values()) {
-          inspectedOperations.push(...resultElement);
-        }
-
-        operationUsageStats.push(
-          new CheckOperationUsageStatsofSubgraph({
-            operationUsageStats: new CheckOperationUsageStats({
-              ...collectOperationUsageStats(inspectedOperations),
-            }),
-            subgraphName: checkSubgraph.subgraph.name,
-          }),
-        );
-      }
-    }
-
-    // Update the overall schema check with the results
-    await schemaCheckRepo.update({
-      schemaCheckID,
-      hasClientTraffic,
-      hasBreakingChanges: breakingChanges.length > 0,
-      hasLintErrors: lintErrors.length > 0,
-      hasGraphPruningErrors: graphPruneErrors.length > 0,
-    });
-
-    return {
-      response: {
-        code: EnumStatusCode.OK,
-      },
+    const {
+      response,
       breakingChanges,
       nonBreakingChanges,
       compositionErrors,
-      checkId: schemaCheckID,
+      checkId,
+      lintWarnings,
+      lintErrors,
+      graphPruneWarnings,
+      graphPruneErrors,
+      compositionWarnings,
+      operationUsageStats,
+      proposalMatchMessage,
+    } = await schemaCheckRepo.checkMultipleSchemas({
+      organizationId: authContext.organizationId,
+      orgRepo,
+      subgraphRepo,
+      fedGraphRepo,
+      schemaLintRepo,
+      schemaGraphPruningRepo,
+      proposalRepo,
+      trafficInspector,
+      composer,
+      subgraphs: req.subgraphs,
+      namespace,
+      logger,
+      vcsContext: req.vcsContext,
+      chClient: opts.chClient,
+      skipProposalMatchCheck: false,
+    });
+
+    return {
+      response,
+      breakingChanges,
+      nonBreakingChanges,
+      compositionErrors,
+      checkId,
       lintWarnings,
       lintErrors,
       graphPruneWarnings,
@@ -593,7 +168,7 @@ export function checkSubgraphSchemas(
       operationUsageStats,
       lintingSkipped: !namespace.enableLinting,
       graphPruningSkipped: !namespace.enableGraphPruning,
-      checkUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/graph/$federatedGraphName/checks/${schemaCheckID}`,
+      checkUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/graph/$federatedGraphName/checks/${checkId}`,
       proposalMatchMessage,
     };
   });
