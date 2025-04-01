@@ -2285,6 +2285,7 @@ export const proposalSubgraphs = pgTable(
     isNew: boolean('is_new').default(false).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
+    isPublished: boolean('is_published').default(false).notNull(),
   },
   (t) => ({
     uniqueProposalSubgraph: unique('proposal_subgraph').on(t.proposalId, t.subgraphName),

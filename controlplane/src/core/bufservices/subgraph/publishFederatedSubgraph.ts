@@ -123,6 +123,12 @@ export function publishFederatedSubgraph(
     }
 
     let proposalMatchMessage: string | undefined;
+    let matchedEntity:
+      | {
+          proposalId: string;
+          proposalSubgraphId: string;
+        }
+      | undefined;
     if (namespace.enableProposals && subgraph) {
       const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
       if (proposalConfig) {
@@ -147,6 +153,7 @@ export function publishFederatedSubgraph(
             };
           }
         }
+        matchedEntity = match;
       }
     }
 
@@ -411,6 +418,15 @@ export function publishFederatedSubgraph(
         },
         authContext.userId,
       );
+    }
+
+    // if this subgraph is part of a proposal, mark the proposal subgraph as published 
+    // and if all proposal subgraphs are published, update the proposal state to PUBLISHED
+    if (matchedEntity) {
+      await proposalRepo.markProposalSubgraphAsPublished({
+        proposalSubgraphId: matchedEntity.proposalSubgraphId,
+        proposalId: matchedEntity.proposalId,
+      });
     }
 
     await auditLogRepo.addAuditLog({

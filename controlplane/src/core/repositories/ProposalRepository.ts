@@ -329,6 +329,7 @@ export class ProposalRepository {
     const proposalSubgraphs = await this.db
       .select({
         id: schema.proposalSubgraphs.id,
+        proposalId: schema.proposalSubgraphs.proposalId,
         proposedSchemaSDL: schema.proposalSubgraphs.schemaSDL,
       })
       .from(schema.proposalSubgraphs)
@@ -346,7 +347,7 @@ export class ProposalRepository {
     subgraphId: string;
     schema: string;
     routerCompatibilityVersion: string;
-  }) {
+  }): Promise<{ proposalId: string; proposalSubgraphId: string } | undefined> {
     const proposalSubgraphs = await this.getApprovedProposalSubgraphsBySubgraphId({ subgraphId });
 
     for (const proposalSubgraph of proposalSubgraphs) {
@@ -359,10 +360,13 @@ export class ProposalRepository {
         continue;
       }
       if (schemaChanges.changes.length === 0) {
-        return true;
+        return {
+          proposalId: proposalSubgraph.proposalId,
+          proposalSubgraphId: proposalSubgraph.id,
+        };
       }
     }
-    return false;
+    return undefined;
   }
 
   public async getLatestCheckForProposal(
@@ -514,5 +518,41 @@ export class ProposalRepository {
       checks: checksWithSubgraphs,
       checksCount: checksCount.length,
     };
+  }
+
+  public markProposalSubgraphAsPublished({
+    proposalSubgraphId,
+    proposalId,
+  }: {
+    proposalSubgraphId: string;
+    proposalId: string;
+  }) {
+    return this.db.transaction(async (tx) => {
+      await tx
+        .update(schema.proposalSubgraphs)
+        .set({ isPublished: true })
+        .where(
+          and(eq(schema.proposalSubgraphs.id, proposalSubgraphId), eq(schema.proposalSubgraphs.proposalId, proposalId)),
+        );
+
+      const proposalSubgraphs = await this.db
+        .select({
+          id: schema.proposalSubgraphs.id,
+          isPublished: schema.proposalSubgraphs.isPublished,
+        })
+        .from(schema.proposalSubgraphs)
+        .where(eq(schema.proposalSubgraphs.proposalId, proposalId));
+
+      // if all the proposalSubgraphs are published, update the proposal state to PUBLISHED
+      const allPublished = proposalSubgraphs.every((subgraph) => subgraph.isPublished);
+      if (allPublished) {
+        const proposalRepo = new ProposalRepository(tx);
+        await proposalRepo.updateProposal({
+          id: proposalId,
+          state: 'PUBLISHED',
+          proposalSubgraphs: [],
+        });
+      }
+    });
   }
 }
