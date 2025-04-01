@@ -154,35 +154,49 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 // wsConnectionWrapper is a wrapper around websocket.Conn that allows
 // writing from multiple goroutines
 type wsConnectionWrapper struct {
-	conn net.Conn
-	mu   sync.Mutex
+	conn         net.Conn
+	mu           sync.Mutex
+	readTimeout  time.Duration
+	writeTimeout time.Duration
 }
 
-func newWSConnectionWrapper(conn net.Conn) *wsConnectionWrapper {
+func newWSConnectionWrapper(conn net.Conn, readTimeout, writeTimeout time.Duration) *wsConnectionWrapper {
 	return &wsConnectionWrapper{
-		conn: conn,
+		conn:         conn,
+		readTimeout:  readTimeout,
+		writeTimeout: writeTimeout,
 	}
 }
 
-func (c *wsConnectionWrapper) SetReadDeadline(t time.Time) error {
-	return c.conn.SetReadDeadline(t)
-}
-
-func (c *wsConnectionWrapper) SetWriteDeadline(t time.Time) error {
-	return c.conn.SetWriteDeadline(t)
-}
-
 func (c *wsConnectionWrapper) ReadJSON(v interface{}) error {
+
+	if c.readTimeout > 0 {
+		err := c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
+		if err != nil {
+			return err
+		}
+	}
+
 	text, err := wsutil.ReadClientText(c.conn)
 	if err != nil {
 		return err
 	}
+
 	return json.Unmarshal(text, v)
 }
 
 func (c *wsConnectionWrapper) WriteText(text string) error {
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	if c.writeTimeout > 0 {
+		err := c.conn.SetWriteDeadline(time.Now().Add(c.writeTimeout))
+		if err != nil {
+			return err
+		}
+	}
+
 	return wsutil.WriteServerText(c.conn, []byte(text))
 }
 
@@ -193,6 +207,14 @@ func (c *wsConnectionWrapper) WriteJSON(v interface{}) error {
 	if err != nil {
 		return err
 	}
+
+	if c.writeTimeout > 0 {
+		err := c.conn.SetWriteDeadline(time.Now().Add(c.writeTimeout))
+		if err != nil {
+			return err
+		}
+	}
+
 	return wsutil.WriteServerText(c.conn, data)
 }
 
@@ -291,8 +313,8 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	// After successful upgrade, we can't write to the response writer anymore
 	// because it's hijacked by the websocket connection
 
-	conn := newWSConnectionWrapper(c)
-	protocol, err := wsproto.NewProtocol(subProtocol, conn, h.readTimeout, h.writeTimeout)
+	conn := newWSConnectionWrapper(c, h.readTimeout, h.writeTimeout)
+	protocol, err := wsproto.NewProtocol(subProtocol, conn)
 	if err != nil {
 		requestLogger.Error("Create websocket protocol", zap.Error(err))
 		_ = c.Close()

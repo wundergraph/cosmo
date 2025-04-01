@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/tidwall/sjson"
 	"math/big"
-	"time"
 )
 
 type absintheMessageEventType string
@@ -95,16 +94,12 @@ func (r *absintheMessage) UnmarshalJSON(data []byte) error {
 var _ Proto = (*absintheWSProtocol)(nil)
 
 type absintheWSProtocol struct {
-	conn         JSONConn
-	readTimeout  time.Duration
-	writeTimeout time.Duration
+	conn JSONConn
 }
 
-func newAbsintheWSProtocol(conn JSONConn, readTimeout, writeTimeout time.Duration) *absintheWSProtocol {
+func newAbsintheWSProtocol(conn JSONConn) *absintheWSProtocol {
 	return &absintheWSProtocol{
-		conn:         conn,
-		readTimeout:  readTimeout,
-		writeTimeout: writeTimeout,
+		conn: conn,
 	}
 }
 
@@ -113,18 +108,12 @@ func (p *absintheWSProtocol) Subprotocol() string {
 }
 
 func (p *absintheWSProtocol) Initialize() (json.RawMessage, error) {
-	if err := p.conn.SetReadDeadline(time.Now().Add(p.readTimeout)); err != nil {
-		return nil, err
-	}
 	var msg absintheMessage
 	if err := p.conn.ReadJSON(&msg); err != nil {
 		return nil, fmt.Errorf("error reading phx_join: %w", err)
 	}
 	if msg.Type != absintheMessageEventTypeJoin {
 		return nil, fmt.Errorf("first message should be %s, got %s", absintheMessageEventTypeJoin, msg.Type)
-	}
-	if err := p.conn.SetWriteDeadline(time.Now().Add(p.writeTimeout)); err != nil {
-		return nil, err
 	}
 	if err := p.conn.WriteJSON(absintheMessage{
 		ID:       msg.ID,
@@ -139,9 +128,6 @@ func (p *absintheWSProtocol) Initialize() (json.RawMessage, error) {
 }
 
 func (p *absintheWSProtocol) ReadMessage() (*Message, error) {
-	if err := p.conn.SetReadDeadline(time.Now().Add(p.readTimeout)); err != nil {
-		return nil, err
-	}
 	var msg absintheMessage
 	if err := p.conn.ReadJSON(&msg); err != nil {
 		return nil, err
@@ -179,9 +165,6 @@ func (p *absintheWSProtocol) ReadMessage() (*Message, error) {
 }
 
 func (p *absintheWSProtocol) Pong(msg *Message) error {
-	if err := p.conn.SetWriteDeadline(time.Now().Add(p.writeTimeout)); err != nil {
-		return err
-	}
 	return p.conn.WriteJSON(absintheMessage{
 		ID:       &msg.ID,
 		Channel:  "",
@@ -200,9 +183,6 @@ func (p *absintheWSProtocol) WriteGraphQLData(id string, data json.RawMessage, e
 	if err != nil {
 		return err
 	}
-	if err := p.conn.SetWriteDeadline(time.Now().Add(p.writeTimeout)); err != nil {
-		return err
-	}
 	return p.conn.WriteJSON(absintheMessage{
 		ID:       &id,
 		Channel:  "1",
@@ -213,9 +193,6 @@ func (p *absintheWSProtocol) WriteGraphQLData(id string, data json.RawMessage, e
 }
 
 func (p *absintheWSProtocol) WriteGraphQLErrors(id string, errors json.RawMessage, extensions json.RawMessage) error {
-	if err := p.conn.SetWriteDeadline(time.Now().Add(p.writeTimeout)); err != nil {
-		return err
-	}
 	return p.conn.WriteJSON(absintheMessage{
 		ID:       &id,
 		Channel:  "1",
@@ -226,9 +203,6 @@ func (p *absintheWSProtocol) WriteGraphQLErrors(id string, errors json.RawMessag
 }
 
 func (p *absintheWSProtocol) Done(id string) error {
-	if err := p.conn.SetWriteDeadline(time.Now().Add(p.writeTimeout)); err != nil {
-		return err
-	}
 	return p.conn.WriteJSON(absintheMessage{
 		ID:       &id,
 		Protocol: "__absinthe__:control",

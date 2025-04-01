@@ -4,12 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
-)
-
-const (
-	defaultReadTimeout  = 5 * time.Second
-	defaultWriteTimeout = 10 * time.Second
 )
 
 type Proto interface {
@@ -28,8 +22,6 @@ type Proto interface {
 type JSONConn interface {
 	ReadJSON(v interface{}) error
 	WriteJSON(v interface{}) error
-	SetReadDeadline(t time.Time) error
-	SetWriteDeadline(t time.Time) error
 }
 
 // MessageType indicates the type of the message received from the client
@@ -66,22 +58,14 @@ func IsSupportedSubprotocol(subProtocol string) bool {
 	return false
 }
 
-func NewProtocol(subProtocol string, conn JSONConn, readTimeout, writeTimeout time.Duration) (Proto, error) {
-
-	if readTimeout == 0 {
-		readTimeout = defaultReadTimeout
-	}
-	if writeTimeout == 0 {
-		writeTimeout = defaultWriteTimeout
-	}
-
+func NewProtocol(subProtocol string, conn JSONConn) (Proto, error) {
 	switch subProtocol {
 	case GraphQLWSSubprotocol:
-		return newGraphQLWSProtocol(conn, readTimeout, writeTimeout), nil
+		return newGraphQLWSProtocol(conn), nil
 	case SubscriptionsTransportWSSubprotocol:
-		return newSubscriptionsTransportWSProtocol(conn, readTimeout, writeTimeout), nil
+		return newSubscriptionsTransportWSProtocol(conn), nil
 	case AbsintheWSSubProtocol:
-		return newAbsintheWSProtocol(conn, readTimeout, writeTimeout), nil
+		return newAbsintheWSProtocol(conn), nil
 	}
 	return nil, fmt.Errorf("could not find a suitable websocket subprotocol, supported ones are: %s", strings.Join(Subprotocols(), ", "))
 }
