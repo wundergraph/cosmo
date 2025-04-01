@@ -9,12 +9,15 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/internal/versioninfo"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/profile"
+	"github.com/wundergraph/cosmo/router/pkg/watcher"
 
 	"go.uber.org/zap"
 )
@@ -30,6 +33,9 @@ var (
 )
 
 func Main() {
+	_ = godotenv.Load()
+	_ = godotenv.Load(".env.local")
+
 	// Parse flags before calling profile.Start(), since it may add flags
 	flag.Parse()
 
@@ -42,7 +48,33 @@ func Main() {
 		os.Exit(0)
 	}
 
-	result, err := config.LoadConfig(*configPathFlag, *overrideEnvFlag)
+	// We load this after flag parse so that "OVERRIDE_ENV" can be set by dotenv OR the flag
+	if *overrideEnvFlag != "" {
+		_ = godotenv.Overload(*overrideEnvFlag)
+	}
+
+	/*
+		Config path precedence:
+		1. Flag
+		2. Environment variable
+		3. Dotenv loaded environment variable
+		4. Default config file
+	*/
+
+	configPath := *configPathFlag
+
+	// If not set by flag or normal environment variable, check again for dotenv loaded envar
+	if configPath == "" {
+		configPath = os.Getenv("CONFIG_PATH")
+	}
+
+	// This is redundant with the check inside config.LoadConfig, but we need to have the path
+	// here as well to watch it.
+	if configPath == "" {
+		configPath = config.DefaultConfigPath
+	}
+
+	result, err := config.LoadConfig(configPath)
 	if err != nil {
 		log.Fatalf("Could not load config: %s", err)
 	}
@@ -79,51 +111,85 @@ func Main() {
 	)
 	defer stop()
 
-	if *configPathFlag != "" {
-		logger.Info(
-			"Config file path provided. Values in the config file have higher priority than environment variables",
-			zap.String("config_file", *configPathFlag),
-		)
-	} else if result.DefaultLoaded {
-		logger.Info("Found default config file. Values in the config file have higher priority than environment variables",
-			zap.String("config_file", config.DefaultConfigPath),
-		)
-	}
-
-	// Provide a way to cancel all running components of the router after graceful shutdown
-	// Don't use the parent context that is canceled by the signal handler
-	routerCtx, routerCancel := context.WithCancel(context.Background())
-	defer routerCancel()
-
-	router, err := NewRouter(routerCtx, Params{
-		Config: &result.Config,
-		Logger: logger,
-	})
-	if err != nil {
-		logger.Fatal("Could not create router", zap.Error(err))
-	}
-
-	if err = router.Start(routerCtx); err != nil {
-		logger.Fatal("Could not start router", zap.Error(err))
-	}
-
-	<-ctx.Done()
-
-	logger.Info("Graceful shutdown of router initiated", zap.String("shutdown_delay", result.Config.ShutdownDelay.String()))
-
-	// Enforce a maximum shutdown delay to avoid waiting forever
-	// Don't use the parent context that is canceled by the signal handler
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), result.Config.ShutdownDelay)
-	defer cancel()
-
-	if err = router.Shutdown(shutdownCtx); err != nil {
-		if errors.Is(err, context.DeadlineExceeded) {
-			logger.Warn("Router shutdown deadline exceeded. Consider increasing the shutdown delay")
+	if result.DefaultLoaded {
+		if configPath == config.DefaultConfigPath {
+			logger.Info("Found default config file. Values in the config file have higher priority than environment variables",
+				zap.String("config_file", config.DefaultConfigPath),
+			)
+		} else {
+			logger.Info(
+				"Config file path provided. Values in the config file have higher priority than environment variables",
+				zap.String("config_file", configPath),
+			)
 		}
-		logger.Fatal("Could not shutdown router gracefully", zap.Error(err))
-	} else {
-		logger.Info("Router shutdown successfully")
 	}
 
-	logger.Debug("Router exiting")
+	// TODO: Don't watch the default config file if it doesn't exist?
+	// TODO: Send SIGHUP? to router thing for graceful restarts
+	{
+		watchFunc, err := watcher.New(watcher.Options{
+			Interval: 10 * time.Second,
+			Logger:   logger.With(zap.String("watcher_label", "router_config")),
+			Path:     configPath,
+			Callback: func() {
+				logger.Info("Config file changed")
+			},
+		})
+		if err != nil {
+			logger.Error("Could not create watcher", zap.Error(err))
+			return
+		}
+
+		watcherCtx, watcherCancel := context.WithCancel(context.Background())
+		defer watcherCancel()
+
+		go func() {
+			if err := watchFunc(watcherCtx); err != nil {
+				if err != context.Canceled {
+					logger.Error("Error watching execution config", zap.Error(err))
+				}
+			}
+		}()
+	}
+
+	// Start the router
+	// TODO: do this in a loop with like sighup or something for graceful restarts
+	{
+		// Provide a way to cancel all running components of the router after graceful shutdown
+		// Don't use the parent context that is canceled by the signal handler
+		routerCtx, routerCancel := context.WithCancel(context.Background())
+		defer routerCancel()
+
+		router, err := NewRouter(routerCtx, Params{
+			Config: &result.Config,
+			Logger: logger,
+		})
+		if err != nil {
+			logger.Fatal("Could not create router", zap.Error(err))
+		}
+
+		if err = router.Start(routerCtx); err != nil {
+			logger.Fatal("Could not start router", zap.Error(err))
+		}
+
+		<-ctx.Done()
+
+		logger.Info("Graceful shutdown of router initiated", zap.String("shutdown_delay", result.Config.ShutdownDelay.String()))
+
+		// Enforce a maximum shutdown delay to avoid waiting forever
+		// Don't use the parent context that is canceled by the signal handler
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), result.Config.ShutdownDelay)
+		defer cancel()
+
+		if err = router.Shutdown(shutdownCtx); err != nil {
+			if errors.Is(err, context.DeadlineExceeded) {
+				logger.Warn("Router shutdown deadline exceeded. Consider increasing the shutdown delay")
+			}
+			logger.Fatal("Could not shutdown router gracefully", zap.Error(err))
+		} else {
+			logger.Info("Router shutdown successfully")
+		}
+
+		logger.Debug("Router exiting")
+	}
 }
