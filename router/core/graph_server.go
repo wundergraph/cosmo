@@ -251,7 +251,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
 		if s.batchingConfig.Enabled {
-			handler := batch.Handler(s.batchingConfig.MaxConcurrentRoutines, multiGraphHandler)
+			handler := batch.Handler(s.batchingConfig.MaxConcurrentRoutines, multiGraphHandler, r.tracerProvider)
 			cr.Handle(r.graphqlPath, handler)
 		} else {
 			cr.Handle(r.graphqlPath, multiGraphHandler)
@@ -846,58 +846,30 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	})
 
 	if s.traceConfig.Enabled {
-		spanStartOptions := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(
-				otel.RouterServerAttribute,
-				otel.WgRouterRootSpan.Bool(true),
-			),
+		f := func(h http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				reqContext := getRequestContext(r.Context())
+				traceID := rtrace.GetTraceID(r.Context())
+				requestLogger := reqContext.Logger().With(logging.WithTraceID(traceID))
+
+				reqContext.logger = requestLogger
+
+				span := oteltrace.SpanFromContext(r.Context())
+				span.SetAttributes(reqContext.telemetry.traceAttrs...)
+
+				// Set if the trace is sampled in the expression context
+				isSampled := span.SpanContext().IsSampled()
+				reqContext.expressionContext.Request.Trace.Sampled = isSampled
+
+				// Set the trace ID in the response header
+				if s.traceConfig.ResponseTraceHeader.Enabled {
+					w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
+				}
+
+				h.ServeHTTP(w, r)
+			})
 		}
-
-		if s.traceConfig.WithNewRoot {
-			spanStartOptions = append(spanStartOptions, oteltrace.WithNewRoot())
-		}
-
-		middlewareOptions := []otelhttp.Option{
-			otelhttp.WithSpanOptions(spanStartOptions...),
-			otelhttp.WithFilter(rtrace.CommonRequestFilter),
-			otelhttp.WithFilter(rtrace.PrefixRequestFilter(
-				[]string{s.healthCheckPath, s.readinessCheckPath, s.livenessCheckPath}),
-			),
-			// Disable built-in metricStore through NoopMeterProvider
-			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
-			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
-			otelhttp.WithTracerProvider(s.tracerProvider),
-		}
-
-		if s.compositePropagator != nil {
-			middlewareOptions = append(middlewareOptions, otelhttp.WithPropagators(s.compositePropagator))
-		}
-
-		traceHandler := rtrace.NewMiddleware(
-			rtrace.WithTracePreHandler(
-				func(r *http.Request, w http.ResponseWriter) {
-					reqContext := getRequestContext(r.Context())
-					traceID := rtrace.GetTraceID(r.Context())
-					requestLogger := reqContext.Logger().With(logging.WithTraceID(traceID))
-
-					reqContext.logger = requestLogger
-
-					span := oteltrace.SpanFromContext(r.Context())
-					span.SetAttributes(reqContext.telemetry.traceAttrs...)
-
-					// Set if the trace is sampled in the expression context
-					isSampled := span.SpanContext().IsSampled()
-					reqContext.expressionContext.Request.Trace.Sampled = isSampled
-
-					// Set the trace ID in the response header
-					if s.traceConfig.ResponseTraceHeader.Enabled {
-						w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
-					}
-				}),
-			rtrace.WithOtelHttp(middlewareOptions...),
-		)
-
-		httpRouter.Use(traceHandler.Handler)
+		httpRouter.Use(f)
 	}
 
 	var subgraphAccessLogger *requestlogger.SubgraphAccessLogger
