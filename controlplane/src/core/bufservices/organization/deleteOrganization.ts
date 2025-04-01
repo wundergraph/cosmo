@@ -11,6 +11,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
+import { delayForManualOrgDeletionInDays } from '../../constants.js';
 
 export function deleteOrganization(
   opts: RouterOptions,
@@ -97,7 +98,7 @@ export function deleteOrganization(
     const orgAdmins = organizationMembers.filter((m) => m.roles.includes('admin'));
 
     const now = new Date();
-    const oneMonthFromNow = addDays(now, 30);
+    const oneMonthFromNow = addDays(now, delayForManualOrgDeletionInDays);
 
     await orgRepo.queueOrganizationDeletion({
       organizationId: org.id,

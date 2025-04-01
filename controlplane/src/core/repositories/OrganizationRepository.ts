@@ -30,10 +30,9 @@ import { Feature, FeatureIds, OrganizationDTO, OrganizationMemberDTO, WebhooksCo
 import Keycloak from '../services/Keycloak.js';
 import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js';
 import { BlobStorage } from '../blobstorage/index.js';
+import { delayForManualOrgDeletionInDays } from '../constants.js';
 import { BillingRepository } from './BillingRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
-import { OidcRepository } from './OidcRepository.js';
-import { SubgraphRepository } from './SubgraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
 
 /**
@@ -890,8 +889,8 @@ export class OrganizationRepository {
       })
       .where(eq(schema.organizations.id, input.organizationId));
 
-    const oneMonthFromNow = addDays(now, 30);
-    const delay = Number(oneMonthFromNow) - Number(now);
+    const deleteAt = addDays(now, delayForManualOrgDeletionInDays);
+    const delay = Number(deleteAt) - Number(now);
 
     return input.deleteOrganizationQueue.addJob(
       {
