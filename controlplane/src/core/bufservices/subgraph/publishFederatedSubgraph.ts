@@ -138,7 +138,7 @@ export function publishFederatedSubgraph(
           routerCompatibilityVersion,
         });
         if (!match) {
-          if (proposalConfig.checkSeverityLevel === 'warn') {
+          if (proposalConfig.publishSeverityLevel === 'warn') {
             proposalMatchMessage = `The subgraph ${subgraph.name}'s schema does not match to this subgraph's schema in any approved proposal.`;
           } else {
             return {

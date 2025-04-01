@@ -520,39 +520,36 @@ export class ProposalRepository {
     };
   }
 
-  public markProposalSubgraphAsPublished({
+  public async markProposalSubgraphAsPublished({
     proposalSubgraphId,
     proposalId,
   }: {
     proposalSubgraphId: string;
     proposalId: string;
   }) {
-    return this.db.transaction(async (tx) => {
-      await tx
-        .update(schema.proposalSubgraphs)
-        .set({ isPublished: true })
-        .where(
-          and(eq(schema.proposalSubgraphs.id, proposalSubgraphId), eq(schema.proposalSubgraphs.proposalId, proposalId)),
-        );
+    await this.db
+      .update(schema.proposalSubgraphs)
+      .set({ isPublished: true })
+      .where(
+        and(eq(schema.proposalSubgraphs.id, proposalSubgraphId), eq(schema.proposalSubgraphs.proposalId, proposalId)),
+      );
 
-      const proposalSubgraphs = await this.db
-        .select({
-          id: schema.proposalSubgraphs.id,
-          isPublished: schema.proposalSubgraphs.isPublished,
-        })
-        .from(schema.proposalSubgraphs)
-        .where(eq(schema.proposalSubgraphs.proposalId, proposalId));
+    const proposalSubgraphs = await this.db
+      .select({
+        id: schema.proposalSubgraphs.id,
+        isPublished: schema.proposalSubgraphs.isPublished,
+      })
+      .from(schema.proposalSubgraphs)
+      .where(eq(schema.proposalSubgraphs.proposalId, proposalId));
 
-      // if all the proposalSubgraphs are published, update the proposal state to PUBLISHED
-      const allPublished = proposalSubgraphs.every((subgraph) => subgraph.isPublished);
-      if (allPublished) {
-        const proposalRepo = new ProposalRepository(tx);
-        await proposalRepo.updateProposal({
-          id: proposalId,
-          state: 'PUBLISHED',
-          proposalSubgraphs: [],
-        });
-      }
-    });
+    // if all the proposalSubgraphs are published, update the proposal state to PUBLISHED
+    const allPublished = proposalSubgraphs.every((subgraph) => subgraph.isPublished);
+    if (allPublished) {
+      await this.updateProposal({
+        id: proposalId,
+        state: 'PUBLISHED',
+        proposalSubgraphs: [],
+      });
+    }
   }
 }
