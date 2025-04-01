@@ -57,6 +57,7 @@ The struct field tags define:
 - `envDefault`: Default value for the field
 - `env`: Environment variable name for this option
 - `omitempty`: Makes the field optional in the YAML config
+- `envPrefix`: Can be used in a field that is a complex type to set a prefix to all environment variables used in it
 
 ## 2. Update `pkg/config/config.schema.json`
 
