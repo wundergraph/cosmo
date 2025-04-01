@@ -2884,7 +2884,7 @@
         },
         "expression": {
           "type": "string",
-          "description": "The Expr Lang expression to evaluate. The expression must return a string value."
+          "description": "The template expression to evaluate. The expression must return a string value."
         },
         "value_from": {
           "type": "object",
