@@ -119,18 +119,21 @@ export const DeleteOrganization = () => {
             <DialogHeader>
               <DialogTitle className="leading-6">
                 <span className="text-destructive">Permanently</span> delete the organization{" "}
-                &quot;{user?.currentOrganization?.name}&quot;
+                &quot;{user?.currentOrganization?.name}&quot;?
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit(handleDeleteOrg)} className="mt-2 space-y-3">
               <div>
-                Deleting the organization &quot;<strong>{user?.currentOrganization?.name}</strong>&quot; is a{" "}
-                <span className="text-destructive">permanent</span> action that cannot be undone.
+                <span className="font-bold">Deleting</span> the organization{" "}
+                &quot;<strong>{user?.currentOrganization?.name}</strong>&quot; is a{" "}
+                <span className="text-destructive font-bold">permanent action</span> that{" "}
+                <span className="font-bold">cannot be undone</span>.
               </div>
 
               <div>
-                Deleting the organization will also delete any graphs, subgraphs, feature flags, members, API keys{" "}
-                tied to the organization as well as any other related data.
+                Deleting the organization will also delete{" "}
+                <span className="text-destructive font-bold">all related data</span>, including graphs, subgraphs,{" "}
+                feature flags, members and API keys.
               </div>
 
               <div className="flex flex-col gap-y-3">
@@ -139,7 +142,7 @@ export const DeleteOrganization = () => {
                   <span className="rounded-md border px-1 font-bold focus:outline-none bg-secondary text-secondary-foreground">
                     I want to delete the organization {user?.currentOrganization.name}
                   </span>&quot;
-                  in the box below.
+                  in the box below:
                 </span>
                 <Input
                   type="text"
