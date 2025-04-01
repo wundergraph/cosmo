@@ -25,6 +25,7 @@ This document outlines the conventions used in Cosmo's configuration schema.
 - Sizes are specified using string format with units (e.g., "100MB")
 - Time durations use string format with units (e.g., "1s", "1m", "1h")
 - Default values are specified in `pkg/config/config.go` via struct tags.
+- Take care that when you define a default value on a value in a slice or map, the `envDefault` will only be populated if the index/key comes from an environment variable, not from YAML configuration
 
 ## Documentation
 
