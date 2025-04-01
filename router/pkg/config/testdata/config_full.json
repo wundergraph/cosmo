@@ -619,6 +619,12 @@
           "HeaderKey": "Authorization"
         }
       }
+    },
+    "SetClientInfoFromInitialPayload": {
+      "Enabled": true,
+      "ExportToClientRequestHeaders": true,
+      "ClientNameHeaderName": "graphql-client-name",
+      "ClientVersionHeaderName": "graphql-client-version"
     }
   },
   "SubgraphErrorPropagation": {

@@ -1019,6 +1019,12 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					Key:     "Authorization",
 				},
 			},
+			SetClientInfoFromInitialPayload: config.WebSocketSetClientInfoFromInitialPayloadConfiguration{
+				Enabled:                      true,
+				ExportToClientRequestHeaders: true,
+				ClientNameHeaderName:         "graphql-client-name",
+				ClientVersionHeaderName:      "graphql-client-version",
+			},
 		}
 		if testConfig.ModifyWebsocketConfiguration != nil {
 			testConfig.ModifyWebsocketConfiguration(wsConfig)

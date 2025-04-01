@@ -531,6 +531,32 @@
               }
             }
           }
+        },
+        "set_client_info_from_initial_payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "This configuration indicates if the Router should set the client info from the initial payload of the WebSocket Connection. The default value is 'false'.",
+              "default": false
+            },
+            "export_to_client_request_headers": {
+              "type": "boolean",
+              "description": "This configuration indicates if the Router should export the client info to the client request headers. The default value is 'false'.",
+              "default": false
+            },
+            "client_name_header_name": {
+              "type": "string",
+              "description": "The name of the header property that will have the client name. The default value is 'graphql-client-name'.",
+              "default": "graphql-client-name"
+            },
+            "client_version_header_name": {
+              "type": "string",
+              "description": "The name of the header property that will have the client version. The default value is 'graphql-client-version'.",
+              "default": "graphql-client-version"
+            }
+          }
         }
       }
     },
