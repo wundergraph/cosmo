@@ -25,7 +25,7 @@ export const DeleteOrganization = () => {
     isLoading: isLoadingSubscription,
   } = useQuery(getOrganizationSubscription);
 
-  const regex = new RegExp(`^${user?.currentOrganization.name}$`);
+  const regex = new RegExp(`^I want to delete my organization ${user?.currentOrganization.name}$`);
   const schema = z.object({
     organizationName: z.string().regex(regex, {
       message: "Please enter the organization name as requested.",
@@ -38,6 +38,7 @@ export const DeleteOrganization = () => {
     register,
     handleSubmit,
     formState: { errors, isValid },
+    reset,
   } = useZodForm<DeleteOrgInput>({
     schema,
     mode: "onChange",
@@ -84,6 +85,13 @@ export const DeleteOrganization = () => {
     });
   };
 
+  const onOpenChange = (v: boolean) => {
+    setOpen(v);
+    if (!v) {
+      reset();
+    }
+  };
+
   return (
     <Card className="border-destructive">
       <CardHeader className="gap-y-6 md:flex-row">
@@ -95,7 +103,7 @@ export const DeleteOrganization = () => {
         </div>
         <Dialog
           open={canDeleteOrganization && open}
-          onOpenChange={setOpen}
+          onOpenChange={onOpenChange}
         >
           <DialogTrigger
             className={cn({
@@ -131,7 +139,8 @@ export const DeleteOrganization = () => {
 
               <div className="flex flex-col gap-y-3">
                 <span>
-                  To confirm, enter &quot;{user?.currentOrganization.name}&quot; in the box below.
+                  To confirm, enter &quot;I want to delete my organization {user?.currentOrganization.name}&quot;
+                  in the box below.
                 </span>
                 <Input
                   type="text"
@@ -144,7 +153,7 @@ export const DeleteOrganization = () => {
                   </span>
                 )}
                 <div className="mt-2 flex justify-end gap-x-4">
-                  <Button variant="outline" onClick={() => setOpen(false)}>
+                  <Button variant="outline" onClick={() => onOpenChange(false)}>
                     Cancel
                   </Button>
                   <Button
