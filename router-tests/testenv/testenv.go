@@ -1020,10 +1020,14 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 				},
 			},
 			SetClientInfoFromInitialPayload: config.WebSocketSetClientInfoFromInitialPayloadConfiguration{
-				Enabled:                      true,
-				ExportToClientRequestHeaders: true,
-				ClientNameHeaderName:         "graphql-client-name",
-				ClientVersionHeaderName:      "graphql-client-version",
+				Enabled:            true,
+				ClientNameField:    "graphql-client-name",
+				ClientVersionField: "graphql-client-version",
+				ForwardToRequestHeaders: config.ForwardToRequestHeadersConfiguration{
+					Enabled:                   true,
+					ClientNameTargetHeader:    "graphql-client-name",
+					ClientVersionTargetHeader: "graphql-client-version",
+				},
 			},
 		}
 		if testConfig.ModifyWebsocketConfiguration != nil {

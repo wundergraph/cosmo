@@ -1089,18 +1089,18 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 		}
 
 		// Update client name if present
-		if clientName, ok := initialPayloadMap["graphql-client-name"].(string); ok {
+		if clientName, ok := initialPayloadMap[h.setClientInfoFromInitialPayload.ClientNameField].(string); ok {
 			h.clientInfo.Name = clientName
-			if h.setClientInfoFromInitialPayload.ExportToClientRequestHeaders {
-				h.request.Header.Set(h.setClientInfoFromInitialPayload.ClientNameHeaderName, clientName)
+			if h.setClientInfoFromInitialPayload.ForwardToRequestHeaders.Enabled {
+				h.request.Header.Set(h.setClientInfoFromInitialPayload.ForwardToRequestHeaders.ClientNameTargetHeader, clientName)
 			}
 		}
 
 		// Update client version if present
-		if clientVersion, ok := initialPayloadMap["graphql-client-version"].(string); ok {
+		if clientVersion, ok := initialPayloadMap[h.setClientInfoFromInitialPayload.ClientVersionField].(string); ok {
 			h.clientInfo.Version = clientVersion
-			if h.setClientInfoFromInitialPayload.ExportToClientRequestHeaders {
-				h.request.Header.Set(h.setClientInfoFromInitialPayload.ClientVersionHeaderName, clientVersion)
+			if h.setClientInfoFromInitialPayload.ForwardToRequestHeaders.Enabled {
+				h.request.Header.Set(h.setClientInfoFromInitialPayload.ForwardToRequestHeaders.ClientVersionTargetHeader, clientVersion)
 			}
 		}
 

@@ -622,9 +622,13 @@
     },
     "SetClientInfoFromInitialPayload": {
       "Enabled": true,
-      "ExportToClientRequestHeaders": true,
-      "ClientNameHeaderName": "graphql-client-name",
-      "ClientVersionHeaderName": "graphql-client-version"
+      "ClientNameField": "graphql-client-name",
+      "ClientVersionField": "graphql-client-version",
+      "ForwardToRequestHeaders": {
+        "Enabled": true,
+        "ClientNameTargetHeader": "graphql-client-name",
+        "ClientVersionTargetHeader": "graphql-client-version"
+      }
     }
   },
   "SubgraphErrorPropagation": {

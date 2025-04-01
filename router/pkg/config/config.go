@@ -584,12 +584,21 @@ type WebSocketConfiguration struct {
 type WebSocketSetClientInfoFromInitialPayloadConfiguration struct {
 	// Enabled true if the Router should set the client info from the initial payload of a Subscription Request to the Subgraph
 	Enabled bool `yaml:"enabled" envDefault:"true" env:"WEBSOCKETS_SET_CLIENT_INFO_FROM_INITIAL_PAYLOAD_ENABLED"`
-	// ExportToClientRequestHeaders true if the Router should export the client info to the client request headers
-	ExportToClientRequestHeaders bool `yaml:"export_to_client_request_headers" envDefault:"true" env:"WEBSOCKETS_SET_CLIENT_INFO_FROM_INITIAL_PAYLOAD_EXPORT_TO_CLIENT_REQUEST_HEADERS"`
-	// ClientNameHeaderName is the name of the header where the client name should be exported to
-	ClientNameHeaderName string `yaml:"client_name_header_name" envDefault:"graphql-client-name" env:"WEBSOCKETS_SET_CLIENT_INFO_FROM_INITIAL_PAYLOAD_CLIENT_NAME_HEADER_NAME"`
-	// ClientVersionHeaderName is the name of the header where the client version should be exported to
-	ClientVersionHeaderName string `yaml:"client_version_header_name" envDefault:"graphql-client-version" env:"WEBSOCKETS_SET_CLIENT_INFO_FROM_INITIAL_PAYLOAD_CLIENT_VERSION_HEADER_NAME"`
+	// ClientNameField is the name of the field in the initial payload that will have the client name
+	ClientNameField string `yaml:"client_name_field" envDefault:"graphql-client-name" env:"WEBSOCKETS_SET_CLIENT_INFO_FROM_INITIAL_PAYLOAD_CLIENT_NAME_FIELD"`
+	// ClientVersionField is the name of the field in the initial payload that will have the client version
+	ClientVersionField string `yaml:"client_version_field" envDefault:"graphql-client-version" env:"WEBSOCKETS_SET_CLIENT_INFO_FROM_INITIAL_PAYLOAD_CLIENT_VERSION_FIELD"`
+	// ForwardToRequestHeaders configuration for the WebSocket Connection
+	ForwardToRequestHeaders ForwardToRequestHeadersConfiguration `yaml:"forward_to_request_headers"`
+}
+
+type ForwardToRequestHeadersConfiguration struct {
+	// Enabled true if the Router should forward the client info to the request headers
+	Enabled bool `yaml:"enabled" envDefault:"true" env:"WEBSOCKETS_SET_CLIENT_INFO_FROM_INITIAL_PAYLOAD_FORWARD_TO_REQUEST_HEADERS_ENABLED"`
+	// ClientNameTargetHeader is the name of the header where the client name should be forwarded to
+	ClientNameTargetHeader string `yaml:"client_name_target_header" envDefault:"graphql-client-name" env:"WEBSOCKETS_SET_CLIENT_INFO_FROM_INITIAL_PAYLOAD_CLIENT_NAME_TARGET_HEADER"`
+	// ClientVersionTargetHeader is the name of the header where the client version should be forwarded to
+	ClientVersionTargetHeader string `yaml:"client_version_target_header" envDefault:"graphql-client-version" env:"WEBSOCKETS_SET_CLIENT_INFO_FROM_INITIAL_PAYLOAD_CLIENT_VERSION_TARGET_HEADER"`
 }
 
 type ForwardUpgradeHeadersConfiguration struct {
