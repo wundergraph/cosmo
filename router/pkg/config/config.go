@@ -7,7 +7,6 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/goccy/go-yaml"
-	"github.com/joho/godotenv"
 
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
@@ -983,16 +982,20 @@ type PlaygroundConfig struct {
 }
 
 type LoadResult struct {
-	Config        Config
+	Config Config
+
+	// This is set to true unless the config had default path and did not exist.
+	// The name is confusing, and should probably just be "Loaded", as it is true
+	// even if the config is loaded from a non-default path.
+	//
+	// It's also only used in tests and for a single log message, so we could probably
+	// remove it entirely.
 	DefaultLoaded bool
 }
 
-func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) {
-	_ = godotenv.Load(".env.local")
-	_ = godotenv.Load()
-
-	if envOverride != "" {
-		_ = godotenv.Overload(envOverride)
+func LoadConfig(configFilePath string) (*LoadResult, error) {
+	if configFilePath == "" {
+		configFilePath = DefaultConfigPath
 	}
 
 	cfg := &LoadResult{
@@ -1008,20 +1011,10 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 	}
 
 	// Read the custom config file
-
 	var configFileBytes []byte
-
-	if configFilePath == "" {
-		configFilePath = os.Getenv("CONFIG_PATH")
-		if configFilePath == "" {
-			configFilePath = DefaultConfigPath
-		}
-	}
-
-	isDefaultConfigPath := configFilePath == DefaultConfigPath
 	configFileBytes, err = os.ReadFile(configFilePath)
 	if err != nil {
-		if isDefaultConfigPath {
+		if configFilePath == DefaultConfigPath {
 			cfg.DefaultLoaded = false
 		} else {
 			return nil, fmt.Errorf("could not read custom config file %s: %w", configFilePath, err)
