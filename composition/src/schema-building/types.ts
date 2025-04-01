@@ -278,15 +278,26 @@ export type EntityInterfaceSubgraphData = {
 
 export type FieldAuthorizationData = {
   fieldName: string;
+  inheritedData: InheritedAuthorizationData;
+  originalData: OriginalAuthorizationData;
+};
+
+export type InheritedAuthorizationData = {
+  requiredScopes: Array<Set<string>>;
+  requiredScopesByOR: Array<Set<string>>;
   requiresAuthentication: boolean;
-  requiredScopes: Set<string>[];
+};
+
+export type OriginalAuthorizationData = {
+  requiredScopes: Array<Set<string>>;
+  requiresAuthentication: boolean;
 };
 
 export type AuthorizationData = {
-  fieldAuthorizationDataByFieldName: Map<string, FieldAuthorizationData>;
-  hasParentLevelAuthorization: boolean;
+  fieldAuthDataByFieldName: Map<string, FieldAuthorizationData>;
+  requiredScopes: Array<Set<string>>;
+  requiredScopesByOR: Array<Set<string>>;
   requiresAuthentication: boolean;
-  requiredScopes: Set<string>[];
   typeName: string;
 };
 
