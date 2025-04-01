@@ -38,21 +38,20 @@ export function normalizeURL(url: string): string {
     throw new Error('Invalid URL');
   }
 
-  const parsedUrl = new URL(urlToParse);
-  if (!parsedUrl.origin || parsedUrl.origin === 'null') {
-    throw new Error('Invalid URL');
+  const indexOfQuery = urlToParse.indexOf('?');
+  const indexOfFragment = urlToParse.indexOf('#');
+
+  let urlBeforeQueryAndFragment = urlToParse;
+  if (indexOfQuery > 0) {
+    urlBeforeQueryAndFragment = urlBeforeQueryAndFragment.slice(
+      0,
+      indexOfFragment > 0 ? Math.min(indexOfQuery, indexOfFragment) : indexOfQuery,
+    );
+  } else if (indexOfFragment > 0) {
+    urlBeforeQueryAndFragment = urlBeforeQueryAndFragment.slice(0, indexOfFragment);
   }
 
-  parsedUrl.search = '';
-  parsedUrl.hash = '';
-
-  let path = parsedUrl.pathname;
-  const hasTrailingSlash = /^([^#?]*\/)(?:\?.*)?(?:#.*)?$/.test(urlToParse);
-  if (!hasTrailingSlash && path.endsWith('/')) {
-    path = path.slice(0, -1);
-  }
-
-  return `${parsedUrl.origin}${path}`;
+  return urlBeforeQueryAndFragment;
 }
 
 export function isValidUrl(url: string) {
