@@ -41,13 +41,13 @@ First, add the new option to the appropriate struct in `pkg/config/config.go`:
 
 ```go
 type YourFeatureConfig struct {
-    Enabled bool   `yaml:"enabled" envDefault:"false" env:"YOUR_FEATURE_ENABLED"`
-    Timeout string `yaml:"timeout" envDefault:"30s" env:"YOUR_FEATURE_TIMEOUT"`
+    Enabled bool   `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+    Timeout string `yaml:"timeout" envDefault:"30s" env:"TIMEOUT"`
 }
 
 type Config struct {
     // ... existing fields
-    YourFeature YourFeatureConfig `yaml:"your_feature,omitempty"`
+    YourFeature YourFeatureConfig `yaml:"your_feature,omitempty" envPrefix:"YOUR_FEATURE_"`
 }
 ```
 
