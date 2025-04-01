@@ -977,14 +977,20 @@ func (h *PreHandler) getErrorCodes(err error) []string {
 	var reportErr *reportError
 	if errors.As(err, &reportErr) {
 		for _, extError := range reportErr.Report().ExternalErrors {
-			errorCodes = append(errorCodes, extError.ExtensionCode)
+			if extError.ExtensionCode != "" {
+				errorCodes = append(errorCodes, extError.ExtensionCode)
+			}
 		}
 	}
 
-	// If the Validate function was called was !skipLoader it would be reported as a httpGraphqlError
+	// If "skipLoader" was passed as false to the Validate function, an httpGraphqlError with
+	// an extension code could be returned
 	var httpGqlError *httpGraphqlError
 	if errors.As(err, &httpGqlError) {
-		errorCodes = append(errorCodes, httpGqlError.ExtensionCode())
+		extensionCode := httpGqlError.ExtensionCode()
+		if extensionCode != "" {
+			errorCodes = append(errorCodes, extensionCode)
+		}
 	}
 
 	return errorCodes
