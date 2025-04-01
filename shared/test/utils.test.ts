@@ -37,11 +37,11 @@ describe('normalizeURL', () => {
     },
     {
       input: 'localhost:3000',
-      expected: 'http://localhost:3000',
+      expected: 'localhost:3000',
     },
     {
-      input: '//localhost:3000',
-      expected: 'http://localhost:3000',
+      input: 'localhost:3000/test',
+      expected: 'localhost:3000/test',
     },
     {
       input: 'http://example.com',
@@ -61,6 +61,7 @@ describe('normalizeURL', () => {
 
   test.each([
     'invalid url',
+    '//localhost:3000',
     '/?',
     '/############'
   ])('should throw for invalid url: %s', (input) => {

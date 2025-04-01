@@ -28,20 +28,14 @@ export function normalizeURL(url: string): string {
     return url;
   }
 
-  let urlToParse = url;
-  const hasProtocol = urlToParse.includes('://');
-  if (!hasProtocol) {
-    urlToParse = urlToParse.startsWith('//') ? `http:${urlToParse}` : `http://${urlToParse}`;
-  }
-
-  if (!URL.canParse(urlToParse)) {
+  if (!URL.canParse(url)) {
     throw new Error('Invalid URL');
   }
 
-  const indexOfQuery = urlToParse.indexOf('?');
-  const indexOfFragment = urlToParse.indexOf('#');
+  const indexOfQuery = url.indexOf('?');
+  const indexOfFragment = url.indexOf('#');
 
-  let urlBeforeQueryAndFragment = urlToParse;
+  let urlBeforeQueryAndFragment = url;
   if (indexOfQuery > 0) {
     urlBeforeQueryAndFragment = urlBeforeQueryAndFragment.slice(
       0,
