@@ -92,6 +92,7 @@ Make sure that:
 2. You provide descriptive comments/descriptions for each field
 3. Default values are added in the `pkg/config/config.go` struct env tags
 4. Follow the existing conventions for similar configuration options
+5. Add your config option to `fixtures/full.yaml`, if possible
 
 ## 3. Writing Tests
 
