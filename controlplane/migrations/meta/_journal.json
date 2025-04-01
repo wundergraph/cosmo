@@ -806,13 +806,6 @@
       "when": 1742231470871,
       "tag": "0114_volatile_norrin_radd",
       "breakpoints": true
-    },
-    {
-      "idx": 115,
-      "version": "7",
-      "when": 1743073591587,
-      "tag": "0115_first_giant_girl",
-      "breakpoints": true
     }
   ]
 }
