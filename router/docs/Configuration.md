@@ -54,11 +54,13 @@ type Config struct {
 ```
 
 The struct field tags define:
-- `yaml`: The field name in YAML configuration
-- `envDefault`: Default value for the field
+- `yaml:_`: The field name in YAML configuration
+- `yaml:omitempty`: Omits the field from Marshalling if it is the type's zero value
 - `env`: Environment variable name for this option
-- `omitempty`: Makes the field optional in the YAML config
-- `envPrefix`: Can be used in a field that is a complex type to set a prefix to all environment variables used in it
+- `envDefault`: Default value for the field
+- `envPrefix`: Sets a prefix for all `env` tags on children, only works on structs, slices, etc
+
+For more details and full tags reference, see the documentation for [caarlos0/env](https://github.com/caarlos0/env/?tab=readme-ov-file#tags) and `[goccy/go-yaml](https://github.com/goccy/go-yaml?tab=readme-ov-file#synopsis)
 
 ## 2. Update `pkg/config/config.schema.json`
 
