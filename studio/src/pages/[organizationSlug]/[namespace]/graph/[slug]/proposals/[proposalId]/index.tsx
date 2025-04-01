@@ -233,7 +233,7 @@ export const ProposalDetails = ({
             </dd>
           </div>
 
-          <div className="flex-start flex max-w-[250px] flex-1 flex-col gap-2 ">
+          <div className="flex-start flex max-w-[250px] flex-1 flex-col gap-2 pl-4">
             <dt className="text-sm text-muted-foreground">Proposal Name</dt>
             <dd className="whitespace-nowrap text-sm">{name}</dd>
           </div>
