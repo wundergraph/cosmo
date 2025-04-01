@@ -5,7 +5,7 @@ The router is the component that understands the GraphQL Federation protocol. It
 ## Getting Started
 
 - [Profiling](./docs/Profiling.md)
-- [Contributing](./docs/Configuration.md)
+- [Configuration](./docs/Configuration.md)
 
 ### Prerequisites
 
