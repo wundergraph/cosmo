@@ -1,6 +1,5 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Command, program } from 'commander';
 import ora from 'ora';
 import { resolve } from 'pathe';
@@ -18,10 +17,6 @@ export default (opts: BaseCommandOptions) => {
     'The name of the federated graph this proposal is for.',
   );
   command.option('-n, --namespace [string]', 'The namespace of the federated graph.');
-  command.option(
-    '--state <state>',
-    'Set the state of the proposal. Valid values: "DRAFT", "OPEN", "APPROVED", "CLOSED".',
-  );
   command.option(
     '--subgraph <subgraph>',
     'Specify a subgraph to update in the proposal. Format: <subgraph-name>=<path-to-schema>. Can be specified multiple times.',
@@ -48,20 +43,10 @@ export default (opts: BaseCommandOptions) => {
       );
     }
 
-    if (!options.state && options.subgraph.length === 0 && options.deletedSubgraph.length === 0) {
+    if (options.subgraph.length === 0 && options.deletedSubgraph.length === 0) {
       program.error(
-        pc.red(
-          pc.bold('Please provide at least one of: --state, --subgraph, or --deleted-subgraph to update the proposal.'),
-        ),
+        pc.red(pc.bold('Please provide at least one of: --subgraph, or --deleted-subgraph to update the proposal.')),
       );
-    }
-
-    // Validate state if provided
-    if (options.state) {
-      const validStates = ['DRAFT', 'OPEN', 'APPROVED', 'CLOSED'];
-      if (!validStates.includes(options.state)) {
-        program.error(pc.red(pc.bold(`Invalid state: ${options.state}. Valid states are: ${validStates.join(', ')}.`)));
-      }
     }
 
     const updatedSubgraphs = [];
@@ -121,7 +106,6 @@ export default (opts: BaseCommandOptions) => {
           proposalName: name,
           federatedGraphName: options.federationGraph,
           namespace: options.namespace,
-          ...(options.state ? { state: options.state } : {}),
           ...(updatedSubgraphs.length > 0 ? { updatedSubgraphs: { subgraphs: updatedSubgraphs } } : {}),
         },
         {
