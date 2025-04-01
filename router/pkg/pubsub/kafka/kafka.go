@@ -209,7 +209,7 @@ func (p *kafkaPubSub) Publish(ctx context.Context, event pubsub_datasource.Kafka
 
 	if pErr != nil {
 		log.Error("publish error", zap.Error(pErr))
-		return pubsub.NewError(fmt.Sprintf("publishing to Kafka topic %s", event.Topic), pErr)
+		return pubsub.NewError(fmt.Sprintf("error publishing to Kafka topic %s", event.Topic), pErr)
 	}
 
 	return nil

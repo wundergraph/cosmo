@@ -218,7 +218,7 @@ func (p *natsPubSub) Publish(_ context.Context, event pubsub_datasource.NatsPubl
 	err := p.conn.Publish(event.Subject, event.Data)
 	if err != nil {
 		log.Error("publish error", zap.Error(err))
-		return pubsub.NewError(fmt.Sprintf("publishing to NATS subject %s", event.Subject), err)
+		return pubsub.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
 	}
 
 	return nil
@@ -236,7 +236,7 @@ func (p *natsPubSub) Request(ctx context.Context, event pubsub_datasource.NatsPu
 	msg, err := p.conn.RequestWithContext(ctx, event.Subject, event.Data)
 	if err != nil {
 		log.Error("request error", zap.Error(err))
-		return pubsub.NewError(fmt.Sprintf("requesting from NATS subject %s", event.Subject), err)
+		return pubsub.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)
 	}
 
 	_, err = w.Write(msg.Data)
