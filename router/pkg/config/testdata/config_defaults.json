@@ -337,14 +337,14 @@
         }
       }
     },
-    "SetClientInfoFromInitialPayload": {
+    "ClientInfoFromInitialPayload": {
       "Enabled": true,
-      "ClientNameField": "graphql-client-name",
-      "ClientVersionField": "graphql-client-version",
+      "NameField": "graphql-client-name",
+      "VersionField": "graphql-client-version",
       "ForwardToRequestHeaders": {
         "Enabled": true,
-        "ClientNameTargetHeader": "graphql-client-name",
-        "ClientVersionTargetHeader": "graphql-client-version"
+        "NameTargetHeader": "graphql-client-name",
+        "VersionTargetHeader": "graphql-client-version"
       }
     }
   },
