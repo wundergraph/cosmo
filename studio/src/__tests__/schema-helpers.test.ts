@@ -5,6 +5,7 @@ import {
   getAuthenticatedTypes,
   getTypeCounts,
   parseSchema,
+  getParsedTypes,
 } from "../lib/schema-helpers";
 import { parse } from "graphql";
 
@@ -38,7 +39,7 @@ type Employee {
   fullName: String! @deprecated(reason: "Please use first and last name instead")
 }
 
-enum Role {
+enum Role @authenticated {
   DEFAULT
 }
 
@@ -55,8 +56,10 @@ test("return the correct types with deprecated fields or args", () => {
 
   expect(result).not.toBeNull();
 
-  const deprecated = getDeprecatedTypes(result!.ast);
+  const parsedTypes = getParsedTypes(result!.doc);
+  const [totalDeprecatedNodesCount, deprecated] = getDeprecatedTypes(parsedTypes);
 
+  expect(totalDeprecatedNodesCount).toEqual(2);
   expect(deprecated.length).toEqual(2);
   expect(deprecated[0].fields?.length).toEqual(1);
   expect(deprecated[0].fields?.[0]?.name).toEqual("teammates");
@@ -69,14 +72,18 @@ test("that authentication types are read correctly", async () => {
 
   expect(result).not.toBeNull();
 
-  const authenticated = getAuthenticatedTypes(result!.doc);
-  expect(authenticated.length).toEqual(2);
-  expect(authenticated[0].fields?.length).toEqual(1);
-  expect(authenticated[0].fields?.[0]?.name).toEqual("firstName");
-  expect(authenticated[1].fields?.length).toEqual(2);
-  expect(authenticated[1].fields?.[0]?.name).toEqual("role");
-  expect(authenticated[1].fields?.[1]?.name).toEqual("email");
-  expect(authenticated[1].fields?.[1]?.requiresScopes).toStrictEqual([["read:profile", "read:email"], ["read:all"]]);
+  const parsedTypes = getParsedTypes(result!.doc);
+  const [totalAuthenticatedNodesCount, authenticatedTypes] = getAuthenticatedTypes(parsedTypes);
+
+  expect(totalAuthenticatedNodesCount).toEqual(4);
+  expect(authenticatedTypes.length).toEqual(3);
+  expect(authenticatedTypes[0].fields?.length).toEqual(1);
+  expect(authenticatedTypes[0].fields?.[0]?.name).toEqual("firstName");
+  expect(authenticatedTypes[1].name).toEqual("Role");
+  expect(authenticatedTypes[2].fields?.length).toEqual(2);
+  expect(authenticatedTypes[2].fields?.[0]?.name).toEqual("role");
+  expect(authenticatedTypes[2].fields?.[1]?.name).toEqual("email");
+  expect(authenticatedTypes[2].fields?.[1]?.requiresScopes).toStrictEqual([["read:profile", "read:email"], ["read:all"]]);
 });
 
 test("returns correct type counts", () => {

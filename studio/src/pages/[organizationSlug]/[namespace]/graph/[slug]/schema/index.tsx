@@ -67,7 +67,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
-import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useUser } from "@/hooks/use-user";
 import { useChartData } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
@@ -77,6 +76,8 @@ import {
   GraphQLTypeDefinition,
   ParsedGraphQLField,
   TypeMatch,
+  getParsedTypes,
+  extractDirectives,
   getAuthenticatedTypes,
   getCategoryDescription,
   getCategoryForType,
@@ -99,13 +100,12 @@ import {
   LockClosedIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import { MagnifyingGlassIcon, PlusIcon } from "@radix-ui/react-icons";
+import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getFederatedGraphSDLByName,
   getFieldUsage,
-  getOrganizationMembers,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { sentenceCase } from "change-case";
 import { CommandLoading, useCommandState } from "cmdk";
@@ -124,7 +124,7 @@ import {
   useState,
 } from "react";
 import { MdOutlineFeaturedPlayList } from "react-icons/md";
-import { PiChat, PiGraphLight } from "react-icons/pi";
+import { PiGraphLight } from "react-icons/pi";
 import { Line, LineChart, ResponsiveContainer } from "recharts";
 import { useDebounce } from "use-debounce";
 
@@ -392,7 +392,11 @@ const Fields = (props: {
                             </p>
                           )}
                           <DeprecatedBadge reason={field.deprecationReason} />
-                          <AuthenticatedBadge field={field} />
+                          <AuthenticatedBadge
+                            isType={false}
+                            authenticated={field.authenticated}
+                            requiresScopes={field.requiresScopes}
+                          />
                         </div>
                       )}
                       {field.args && (
@@ -478,12 +482,15 @@ const Type = (props: {
   name: string;
   category: GraphQLTypeCategory;
   description: string;
+  authenticated?: boolean;
+  requiresScopes?: string[][];
   interfaces?: string[];
   fields?: ParsedGraphQLField[];
   startLineNo?: number;
   endLineNo?: number;
 }) => {
   const router = useRouter();
+  const isAuthenticatedType = props.authenticated || !!props.requiresScopes?.length;
 
   return (
     <div className="flex h-full flex-col">
@@ -491,7 +498,18 @@ const Type = (props: {
         <div className="flex flex-col">
           <div className="flex items-center gap-x-4">
             <div className="flex flex-wrap items-center gap-x-2 text-lg font-semibold tracking-tight">
-              <h3>{props.name}</h3>
+              <h3 className="flex items-center justify-start gap-x-1">
+                {isAuthenticatedType && (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <LockClosedIcon className="size-4" />
+                    </TooltipTrigger>
+                    <TooltipContent>Authenticated</TooltipContent>
+                  </Tooltip>
+                )}
+
+                {props.name}
+              </h3>
               {props.interfaces && props.interfaces.length > 0 && (
                 <div className="font-normal text-muted-foreground">
                   implements
@@ -521,6 +539,8 @@ const Type = (props: {
                 {props.category}
               </Link>
             </Badge>
+
+            {props.requiresScopes?.length && <AuthenticatedScopes isType scopes={props.requiresScopes} />}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             {props.description || getRootDescription(props.name) || (
@@ -645,6 +665,7 @@ const TypeWrapper = ({
               >
                 {items.map((virtualRow) => {
                   const l = list[virtualRow.index];
+                  const directives = extractDirectives(l.astNode);
                   return (
                     <TableRow
                       className="group absolute flex w-full py-1 even:bg-secondary/20 hover:bg-secondary/40"
@@ -660,6 +681,11 @@ const TypeWrapper = ({
                       </TableCell>
                       <TableCell className="my-1.5 w-5/12 text-muted-foreground group-hover:text-current">
                         {l.description || "-"}
+                        <AuthenticatedBadge
+                          isType
+                          authenticated={directives.authenticated}
+                          requiresScopes={directives.requiresScopes}
+                        />
                       </TableCell>
                       <TableCell className="w-3/12 flex-shrink-0 text-right align-top">
                         <Button
@@ -702,6 +728,8 @@ const TypeWrapper = ({
         name={type.name}
         category={type.category}
         description={type.description}
+        authenticated={type.authenticated}
+        requiresScopes={type.requiresScopes}
         interfaces={type.interfaces}
         fields={type.fields}
         startLineNo={type.loc?.startToken.line}
@@ -712,7 +740,7 @@ const TypeWrapper = ({
 };
 
 const DeprecatedBadge = ({ reason }: { reason: string | undefined | null }) => {
-  if (!reason) {
+  if (reason == null) {
     return null;
   }
 
@@ -721,14 +749,18 @@ const DeprecatedBadge = ({ reason }: { reason: string | undefined | null }) => {
       <span className="flex items-center gap-x-1 font-semibold">
         <ExclamationTriangleIcon className="h-3 w-3 flex-shrink-0" />
         Deprecated
-      </span>{" "}
+      </span>
       {reason}
     </p>
   );
 };
 
-const AuthenticatedBadge = ({ field }: { field: ParsedGraphQLField }) => {
-  if (!field.authenticated && !field.requiresScopes) {
+const AuthenticatedBadge = ({ isType, authenticated, requiresScopes }: {
+  isType: boolean;
+  authenticated?: boolean;
+  requiresScopes?: string[][];
+}) => {
+  if (!authenticated && !requiresScopes?.length) {
     return null;
   }
 
@@ -738,53 +770,54 @@ const AuthenticatedBadge = ({ field }: { field: ParsedGraphQLField }) => {
         <LockClosedIcon className="h-3 w-3 flex-shrink-0" />
         Authenticated
       </span>
-      {field.requiresScopes && (
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="link" size="sm" className="h-auto p-0">
-              View scopes
-            </Button>
-          </PopoverTrigger>
-          <AuthenticatedScopes scopes={field.requiresScopes} />
-        </Popover>
-      )}
+      {!!requiresScopes?.length && <AuthenticatedScopes isType={isType} scopes={requiresScopes} />}
     </p>
   );
 };
 
-const AuthenticatedScopes = ({ scopes }: { scopes: string[][] }) => {
+const AuthenticatedScopes = ({ isType, scopes }: {
+  isType: boolean;
+  scopes: string[][];
+}) => {
   return (
-    <PopoverContent className="px-0">
-      <div className="mb-3 border-b border-border px-4 pb-3">
-        The following scope(s) are required to access this field:
-      </div>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="link" size="sm" className="h-auto p-0">
+          View required scopes
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="px-0">
+        <div className="mb-3 border-b border-border px-4 pb-3">
+          The following scope(s) are required to access this {isType ? "type" : "field"}:
+        </div>
 
-      {scopes
-        .filter((s) => s.length > 0)
-        .map((s, i) => (
-          <div key={`scope-list-${i}`}>
-            {i > 0 && (
-              <div className="relative flex items-center py-2 text-xs">
-                <div className="flex-grow border-t border-border"></div>
-                <span className="mx-4 flex-shrink text-muted-foreground">
-                  OR
-                </span>
-                <div className="flex-grow border-t border-border"></div>
-              </div>
-            )}
-            <div className="px-4 text-sm">
-              {s.length === 1 ? (
-                s[0]
-              ) : (
-                <>
-                  {s.slice(0, -1).join(", ")}{" "}
-                  <span className="font-semibold">AND</span> {s[s.length - 1]}
-                </>
+        {scopes
+          .filter((s) => s.length > 0)
+          .map((s, i) => (
+            <div key={`scope-list-${i}`}>
+              {i > 0 && (
+                <div className="relative flex items-center py-2 text-xs">
+                  <div className="flex-grow border-t border-border"></div>
+                  <span className="mx-4 flex-shrink text-muted-foreground">
+                    OR
+                  </span>
+                  <div className="flex-grow border-t border-border"></div>
+                </div>
               )}
+              <div className="px-4 text-sm">
+                {s.length === 1 ? (
+                  s[0]
+                ) : (
+                  <>
+                    {s.slice(0, -1).join(", ")}{" "}
+                    <span className="font-semibold">AND</span> {s[s.length - 1]}
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-    </PopoverContent>
+          ))}
+      </PopoverContent>
+    </Popover>
   );
 };
 
@@ -802,7 +835,8 @@ const SearchDescription = ({
   }
 
   const [category, index, _] = activeValue?.split("-");
-  const type = results.types[Number(index)]?.type;
+  const matchingType = results.types[Number(index)];
+  const type = matchingType?.type;
 
   const [fieldIndex] = activeValue?.split(".")?.map((v) => v.trim());
   const field = results.fields[Number(fieldIndex)]?.field;
@@ -818,6 +852,11 @@ const SearchDescription = ({
               <span className="italic">No description provided</span>
             )}
           </p>
+          <AuthenticatedBadge
+            isType
+            authenticated={matchingType?.authenticated}
+            requiresScopes={matchingType?.requiresScopes}
+          />
         </>
       ) : field ? (
         <div>
@@ -828,7 +867,13 @@ const SearchDescription = ({
               )}
             </p>
             <DeprecatedBadge reason={field.deprecationReason} />
-            {parsedField && <AuthenticatedBadge field={parsedField} />}
+            {parsedField && (
+              <AuthenticatedBadge
+                isType={false}
+                authenticated={parsedField.authenticated}
+                requiresScopes={parsedField.requiresScopes}
+              />
+            )}
           </div>
         </div>
       ) : (
@@ -1295,6 +1340,8 @@ const TypesList = ({
               name={type.name}
               category={type.category}
               description={type.description}
+              authenticated={type.authenticated}
+              requiresScopes={type.requiresScopes}
               interfaces={type.interfaces}
               fields={type.fields}
               startLineNo={type.loc?.startToken.line}
@@ -1363,27 +1410,11 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     schemaType === "router" ? data?.sdl : data?.clientSchema || data?.sdl;
 
   const { ast, doc, isParsing } = useParseSchema(schema);
-  const typeCounts = useMemo(
-    () => (ast ? getTypeCounts(ast) : undefined),
-    [ast],
-  );
-  const deprecatedTypes = useMemo(
-    () => (ast ? getDeprecatedTypes(ast) : []),
-    [ast],
-  );
-  const authenticatedTypes = useMemo(
-    () => (doc ? getAuthenticatedTypes(doc) : []),
-    [doc],
-  );
+  const parsedTypes = useMemo(() => (doc ? getParsedTypes(doc) : []), [doc]);
 
-  const deprecatedTypesCount = deprecatedTypes.reduce(
-    (accu, type) => accu + (type.fields?.length ?? 0),
-    0,
-  );
-  const authenticatedTypesCount = authenticatedTypes.reduce(
-    (accu, type) => accu + (type.fields?.length ?? 0),
-    0,
-  );
+  const typeCounts = useMemo(() => (ast ? getTypeCounts(ast) : undefined), [ast],);
+  const [deprecatedTypesCount, deprecatedTypes] = useMemo(() => getDeprecatedTypes(parsedTypes), [parsedTypes]);
+  const [authenticatedTypesCount, authenticatedTypes] = useMemo(() => getAuthenticatedTypes(parsedTypes), [parsedTypes]);
 
   const isLoadingAST = isLoading || isParsing;
 
