@@ -273,5 +273,9 @@ func (p *natsPubSub) Shutdown(ctx context.Context) error {
 	// Wait for all subscriptions to be closed
 	p.closeWg.Wait()
 
-	return fmt.Errorf("nats pubsub shutdown: %w", err)
+	if err != nil {
+		return fmt.Errorf("nats pubsub shutdown: %w", err)
+	}
+
+	return nil
 }
