@@ -387,30 +387,11 @@ func (h *HeaderPropagation) applyResponseRuleKeyValue(res *http.Response, propag
 	}
 }
 
-func (h *HeaderPropagation) applyRequestRuleExpression(ctx RequestContext, request *http.Request, rule *config.RequestHeaderRule) error {
-	program, ok := h.compiledRules[rule.Expression]
-	if !ok {
-		return fmt.Errorf("expression %s not found", rule.Expression)
-	}
-	if reqCtx := getRequestContext(ctx.Request().Context()); reqCtx != nil {
-		value, err := expr.ResolveStringExpression(program, reqCtx.expressionContext)
-		if err != nil {
-			return fmt.Errorf("error resolving expression %q for header rule %+v: %w", rule.Expression, rule, err)
-		}
-		if value != "" {
-			request.Header.Set(rule.Name, value)
-		}
-	} else {
-		return fmt.Errorf("invalid context type %T", ctx)
-	}
-
-	return nil
-}
-
 func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.Request, rule *config.RequestHeaderRule) {
 	if rule.Operation == config.HeaderRuleOperationSet {
+		reqCtx := getRequestContext(request.Context())
 		if rule.ValueFrom != nil && rule.ValueFrom.ContextField != "" {
-			val := getCustomDynamicAttributeValue(rule.ValueFrom, getRequestContext(request.Context()), nil)
+			val := getCustomDynamicAttributeValue(rule.ValueFrom, reqCtx, nil)
 			value := fmt.Sprintf("%v", val)
 			if value != "" {
 				request.Header.Set(rule.Name, value)
@@ -419,8 +400,11 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 		}
 
 		if rule.Expression != "" {
-			if err := h.applyRequestRuleExpression(ctx, request, rule); err != nil {
+			value, err := h.getRequestRuleExpressionValue(rule, reqCtx)
+			if err != nil {
 				ctx.Logger().Warn("error applying expression for header rule", zap.String("rule", rule.Name), zap.Error(err))
+			} else {
+				request.Header.Set(rule.Name, value)
 			}
 			return
 		}
@@ -601,6 +585,23 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	if !expiresHeader.IsZero() && !restrictivePolicy.RespExpiresHeader.IsZero() {
 		propagation.header.Set(expiresKey, restrictivePolicy.RespExpiresHeader.Format(http.TimeFormat))
 	}
+}
+
+func (h *HeaderPropagation) getRequestRuleExpressionValue(rule *config.RequestHeaderRule, reqCtx *requestContext) (value string, err error) {
+	program, ok := h.compiledRules[rule.Expression]
+	if !ok {
+		return "", fmt.Errorf("expression %s not found", rule.Expression)
+	}
+	if reqCtx != nil {
+		value, err = expr.ResolveStringExpression(program, reqCtx.expressionContext)
+		if err != nil {
+			return "", fmt.Errorf("error resolving expression %q for header rule %+v: %w", rule.Expression, rule, err)
+		}
+	} else {
+		return "", fmt.Errorf("invalid context")
+	}
+
+	return
 }
 
 func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirective.Object, string) {

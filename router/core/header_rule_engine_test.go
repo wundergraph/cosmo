@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -1005,7 +1006,8 @@ func TestExpression(t *testing.T) {
 
 		rr := httptest.NewRecorder()
 
-		clientReq, err := http.NewRequest("POST", "http://localhost", nil)
+		clientCtx := withRequestContext(context.Background(), &requestContext{})
+		clientReq, err := http.NewRequestWithContext(clientCtx, "POST", "http://localhost", nil)
 		require.NoError(t, err)
 
 		updatedClientReq, _ := ht.OnOriginRequest(clientReq, &requestContext{
@@ -1036,17 +1038,19 @@ func TestExpression(t *testing.T) {
 
 		rr := httptest.NewRecorder()
 
-		clientReq, err := http.NewRequest("POST", "http://localhost", nil)
+		reqCtx := &requestContext{}
+		clientCtx := withRequestContext(context.Background(), reqCtx)
+		clientReq, err := http.NewRequestWithContext(clientCtx, "POST", "http://localhost", nil)
 		require.NoError(t, err)
 		clientReq.Header.Set("X-Other-Header", "Other-Value")
+		reqCtx.expressionContext = expr.Context{Request: expr.LoadRequest(clientReq)}
 
 		updatedClientReq, _ := ht.OnOriginRequest(clientReq, &requestContext{
-			logger:            zap.NewNop(),
-			responseWriter:    rr,
-			request:           clientReq,
-			operation:         &operationContext{},
-			subgraphResolver:  NewSubgraphResolver([]Subgraph{}),
-			expressionContext: expr.Context{Request: expr.LoadRequest(clientReq)},
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			request:          clientReq,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver([]Subgraph{}),
 		})
 
 		assert.Equal(t, "Other-Value", updatedClientReq.Header.Get("X-Test-Header"))
