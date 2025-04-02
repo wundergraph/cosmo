@@ -981,6 +981,16 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					Key:     "Authorization",
 				},
 			},
+			ClientInfoFromInitialPayload: config.WebSocketClientInfoFromInitialPayloadConfiguration{
+				Enabled:      true,
+				NameField:    "graphql-client-name",
+				VersionField: "graphql-client-version",
+				ForwardToRequestHeaders: config.ForwardToRequestHeadersConfiguration{
+					Enabled:             true,
+					NameTargetHeader:    "graphql-client-name",
+					VersionTargetHeader: "graphql-client-version",
+				},
+			},
 		}
 		if testConfig.ModifyWebsocketConfiguration != nil {
 			testConfig.ModifyWebsocketConfiguration(wsConfig)

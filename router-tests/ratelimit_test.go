@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -674,6 +675,13 @@ func TestRateLimit(t *testing.T) {
 		})
 	})
 	t.Run("Cluster Mode", func(t *testing.T) {
+
+		if _, set := os.LookupEnv("SKIP_REDIS_CLUSTER_TESTS"); set {
+			t.Skip("skipping redis cluster tests")
+		}
+
+		t.Parallel()
+
 		var (
 			clusterUrlSlice     = []string{"redis://cosmo:test@localhost:7001", "redis://cosmo:test@localhost:7002", "redis://cosmo:test@localhost:7003"}
 			noSchemeClusterUrls = []string{"localhost:7001", "localhost:7002", "localhost:7003"}
