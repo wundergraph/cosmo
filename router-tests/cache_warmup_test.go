@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -790,10 +790,7 @@ func TestCacheWarmup(t *testing.T) {
 			})
 		})
 	})
-}
 
-// Is set as Flaky so that when running the tests it will be run separately and retried if it fails
-func TestFlakyCacheWarmupMetrics(t *testing.T) {
 	t.Run("should emit planning times metrics during warmup", func(t *testing.T) {
 		t.Parallel()
 
@@ -896,17 +893,36 @@ func TestFlakyCacheWarmupMetrics(t *testing.T) {
 			// One when warming up the operation and one when executing the operation
 			require.Len(t, m.Data.(metricdata.Histogram[float64]).DataPoints, 2)
 
+			// Find data-points by matching their cache hit attribute
+			warmupDataPoint := findDataPoint(t, m.Data.(metricdata.Histogram[float64]).DataPoints, false)
+			executionDataPoint := findDataPoint(t, m.Data.(metricdata.Histogram[float64]).DataPoints, true)
+
 			// Warming up the operation
-			require.Equal(t, m.Data.(metricdata.Histogram[float64]).DataPoints[0].Count, uint64(1))
+			require.Equal(t, uint64(1), warmupDataPoint.Count)
 
 			// Executing the operation. Is exported as an aggregated value
-			require.Equal(t, m.Data.(metricdata.Histogram[float64]).DataPoints[1].Count, uint64(2))
+			require.Equal(t, uint64(2), executionDataPoint.Count)
 
 			// Ensure we collected non-zero planning times
-			require.Greater(t, m.Data.(metricdata.Histogram[float64]).DataPoints[0].Sum, float64(0))
-			require.Greater(t, m.Data.(metricdata.Histogram[float64]).DataPoints[1].Sum, float64(0))
+			require.Greater(t, warmupDataPoint.Sum, float64(0))
+			require.Greater(t, executionDataPoint.Sum, float64(0))
 
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, m, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
+}
+
+// findDataPoint finds a data point in a slice of histogram data points by matching
+// the value of WgEnginePlanCacheHit attribute
+func findDataPoint(t *testing.T, dataPoints []metricdata.HistogramDataPoint[float64], cacheHit bool) metricdata.HistogramDataPoint[float64] {
+	t.Helper()
+	for _, dp := range dataPoints {
+		// Get the value of the WgEnginePlanCacheHit attribute
+		val, found := dp.Attributes.Value(otel.WgEnginePlanCacheHit)
+		if found && val.AsBool() == cacheHit {
+			return dp
+		}
+	}
+	t.Fatalf("Could not find data point with WgEnginePlanCacheHit=%v", cacheHit)
+	return metricdata.HistogramDataPoint[float64]{}
 }

@@ -10,7 +10,6 @@ import (
 )
 
 type EngineStatistics interface {
-	Subscribe(ctx context.Context) chan *UsageReport
 	GetReport() *UsageReport
 	SubscriptionUpdateSent()
 	ConnectionsInc()
@@ -30,8 +29,6 @@ type EngineStats struct {
 	subscriptions atomic.Uint64
 	messagesSent  atomic.Uint64
 	triggers      atomic.Uint64
-	update        chan struct{}
-	subscribers   map[context.Context]chan *UsageReport
 }
 
 type UsageReport struct {
@@ -41,26 +38,18 @@ type UsageReport struct {
 	Triggers      uint64
 }
 
+// NewEngineStats creates a new EngineStats instance. If reportStats is true, the stats will be reported every 5 seconds.
 func NewEngineStats(ctx context.Context, logger *zap.Logger, reportStats bool) *EngineStats {
 	stats := &EngineStats{
 		ctx:         ctx,
 		logger:      logger,
-		update:      make(chan struct{}),
 		mu:          sync.Mutex{},
 		reportStats: reportStats,
-		subscribers: map[context.Context]chan *UsageReport{},
 	}
-	go stats.run(ctx)
+	if reportStats {
+		go stats.runReporter(ctx)
+	}
 	return stats
-}
-
-func (s *EngineStats) Subscribe(ctx context.Context) chan *UsageReport {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	sub := make(chan *UsageReport)
-	s.subscribers[ctx] = sub
-	return sub
 }
 
 func (s *EngineStats) GetReport() *UsageReport {
@@ -73,33 +62,16 @@ func (s *EngineStats) GetReport() *UsageReport {
 	return report
 }
 
-func (s *EngineStats) run(ctx context.Context) {
+func (s *EngineStats) runReporter(ctx context.Context) {
 	tickReport := time.NewTicker(time.Second * 5)
-	if !s.reportStats {
-		tickReport.Stop()
-	}
-
 	defer tickReport.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-tickReport.C:
 			s.reportConnections()
-		case <-s.update:
-			s.mu.Lock()
-			report := s.GetReport()
-			for ctx, subscriber := range s.subscribers {
-				select {
-				case subscriber <- report:
-				case <-ctx.Done():
-					delete(s.subscribers, ctx)
-					continue
-				case <-s.ctx.Done():
-					continue
-				}
-			}
-			s.mu.Unlock()
 		}
 	}
 }
@@ -112,43 +84,32 @@ func (s *EngineStats) reportConnections() {
 	)
 }
 
-func (s *EngineStats) publish() {
-	s.update <- struct{}{}
-}
-
 func (s *EngineStats) SubscriptionUpdateSent() {
 	s.messagesSent.Inc()
-	s.publish()
 }
 
 func (s *EngineStats) ConnectionsInc() {
 	s.connections.Inc()
-	s.publish()
 }
 
 func (s *EngineStats) ConnectionsDec() {
 	s.connections.Dec()
-	s.publish()
 }
 
 func (s *EngineStats) SubscriptionCountInc(count int) {
 	s.subscriptions.Add(uint64(count))
-	s.publish()
 }
 
 func (s *EngineStats) SubscriptionCountDec(count int) {
 	s.subscriptions.Sub(uint64(count))
-	s.publish()
 }
 
 func (s *EngineStats) TriggerCountInc(count int) {
 	s.triggers.Add(uint64(count))
-	s.publish()
 }
 
 func (s *EngineStats) TriggerCountDec(count int) {
 	s.triggers.Sub(uint64(count))
-	s.publish()
 }
 
 type NoopEngineStats struct{}
