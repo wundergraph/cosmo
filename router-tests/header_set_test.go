@@ -305,4 +305,84 @@ func TestHeaderSetWithExpression(t *testing.T) {
 
 		require.Error(t, err)
 	})
+
+	t.Run("subgraph request rule set header with operation name", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: global(customHeader, `request.operation.name`),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Header: http.Header{
+					"X-Source-Header": []string{"source-value"},
+				},
+				Query: fmt.Sprintf(`query TestOperationName { headerValue(name:"%s") }`, customHeader),
+			})
+			assert.Equal(t, `{"data":{"headerValue":"TestOperationName"}}`, res.Body)
+		})
+	})
+
+	t.Run("subgraph request rule set header with operation type", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: global(customHeader, `request.operation.type`),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Header: http.Header{
+					"X-Source-Header": []string{"source-value"},
+				},
+				Query: fmt.Sprintf(`query TestOperationName { headerValue(name:"%s") }`, customHeader),
+			})
+			assert.Equal(t, `{"data":{"headerValue":"query"}}`, res.Body)
+		})
+	})
+
+	t.Run("subgraph request rule set header with operation hash", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: global(customHeader, `request.operation.hash`),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			query := fmt.Sprintf(`query TestOperationName { headerValue(name:"%s") }`, customHeader)
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Header: http.Header{
+					"X-Source-Header": []string{"source-value"},
+				},
+				Query: query,
+			})
+			assert.Equal(t, `{"data":{"headerValue":"16682066937949733641"}}`, res.Body)
+		})
+	})
+
+	t.Run("subgraph request rule set header with client name and version", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: global(customHeader, `request.client.name + " " + request.client.version`),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			query := fmt.Sprintf(`query TestOperationName { headerValue(name:"%s") }`, customHeader)
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Header: http.Header{
+					"graphql-client-name":    []string{"test-client"},
+					"graphql-client-version": []string{"1.0.0"},
+				},
+				Query: query,
+			})
+			assert.Equal(t, `{"data":{"headerValue":"test-client 1.0.0"}}`, res.Body)
+		})
+	})
+
+	t.Run("subgraph request rule set header with client name and version", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: global(customHeader, `request.client.name + " " + request.client.version`),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			query := fmt.Sprintf(`query TestOperationName { headerValue(name:"%s") }`, customHeader)
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Header: http.Header{
+					"graphql-client-name":    []string{"test-client"},
+					"graphql-client-version": []string{"1.0.0"},
+				},
+				Query: query,
+			})
+			assert.Equal(t, `{"data":{"headerValue":"test-client 1.0.0"}}`, res.Body)
+		})
+	})
 }

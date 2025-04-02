@@ -231,17 +231,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			clientInfo: clientInfo,
 		}
 
-		requestContext.expressionContext.Request.Operation = expr.Operation{
-			Name: requestContext.operation.name,
-			Type: requestContext.operation.opType,
-			Hash: strconv.FormatUint(requestContext.operation.hash, 10),
-		}
-
-		requestContext.expressionContext.Request.Client = expr.Client{
-			Name:    requestContext.operation.clientInfo.Name,
-			Version: requestContext.operation.clientInfo.Version,
-		}
-
 		defer func() {
 			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldGraphQLErrorServices, requestContext.graphQLErrorServices)
 			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldOperationServices, requestContext.dataSourceNames)
@@ -614,6 +603,28 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	requestContext.operation.name = operationKit.parsedOperation.Request.OperationName
 	requestContext.operation.opType = operationKit.parsedOperation.Type
 
+	requestContext.expressionContext.Request.Operation = expr.Operation{
+		Name: requestContext.operation.name,
+		Type: requestContext.operation.opType,
+	}
+
+	clientName := requestContext.operation.clientInfo.Name
+	if clientName == "unknown" {
+		clientName = ""
+	}
+
+	clientVersion := requestContext.operation.clientInfo.Version
+	if clientVersion == "missing" {
+		clientVersion = ""
+	}
+
+	if clientName != "" || clientVersion != "" {
+		requestContext.expressionContext.Request.Client = expr.Client{
+			Name:    clientName,
+			Version: clientVersion,
+		}
+	}
+
 	attributesAfterParse := []attribute.KeyValue{
 		otel.WgOperationName.String(operationKit.parsedOperation.Request.OperationName),
 		otel.WgOperationType.String(operationKit.parsedOperation.Type),
@@ -755,6 +766,12 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	requestContext.operation.hash = operationKit.parsedOperation.ID
 	requestContext.operation.internalHash = operationKit.parsedOperation.InternalID
 	requestContext.operation.remapVariables = operationKit.parsedOperation.RemapVariables
+
+	operationHash := ""
+	if requestContext.operation.hash != 0 {
+		operationHash = strconv.FormatUint(requestContext.operation.hash, 10)
+	}
+	requestContext.expressionContext.Request.Operation.Hash = operationHash
 
 	if !h.disableVariablesRemapping && len(uploadsMapping) > 0 {
 		// after variables remapping we need to update the file uploads path because variables relative path has changed
