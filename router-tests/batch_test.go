@@ -147,7 +147,7 @@ func TestBatch(t *testing.T) {
 				})
 				require.NoError(t, err)
 				require.Equal(t, http.StatusOK, res.Response.StatusCode)
-				entries := getBatchedEntriesForLength(t, res.Body, 2)
+				entries := getBatchedEntriesForLength(t, res.Body, 7)
 				expected1 := `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
 				expected2 := `{"data":{"employees":[{"isAvailable":false},{"isAvailable":false},{"isAvailable":false},{"isAvailable":false},{"isAvailable":false},{"isAvailable":false},{"isAvailable":false},{"isAvailable":false},{"isAvailable":false},{"isAvailable":false}]}}`
 				require.Equal(t, expected1, entries[0])
