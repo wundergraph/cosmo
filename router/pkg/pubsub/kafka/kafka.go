@@ -230,5 +230,9 @@ func (p *kafkaPubSub) Shutdown(ctx context.Context) error {
 	// Wait until all pollers are closed
 	p.closeWg.Wait()
 
-	return fmt.Errorf("kafka pubsub shutdown: %w", err)
+	if err != nil {
+		return fmt.Errorf("kafka pubsub shutdown: %w", err)
+	}
+
+	return nil
 }
