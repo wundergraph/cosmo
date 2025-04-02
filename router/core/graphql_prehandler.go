@@ -231,6 +231,17 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			clientInfo: clientInfo,
 		}
 
+		requestContext.expressionContext.Request.Operation = expr.Operation{
+			Name: requestContext.operation.name,
+			Type: requestContext.operation.opType,
+			Hash: strconv.FormatUint(requestContext.operation.hash, 10),
+		}
+
+		requestContext.expressionContext.Request.Client = expr.Client{
+			Name:    requestContext.operation.clientInfo.Name,
+			Version: requestContext.operation.clientInfo.Version,
+		}
+
 		defer func() {
 			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldGraphQLErrorServices, requestContext.graphQLErrorServices)
 			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldOperationServices, requestContext.dataSourceNames)

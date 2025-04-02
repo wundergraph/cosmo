@@ -262,7 +262,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 			Extensions:    s,
 		},
 		Client: &ClientInfo{
-			Name: operation.GetClient().GetName(),
+			Name:    operation.GetClient().GetName(),
 			Version: operation.GetClient().GetVersion(),
 		},
 	}
