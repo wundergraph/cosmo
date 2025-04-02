@@ -5,7 +5,7 @@ The router is set up with pprof, so users can run the router with `pprof` runnin
 > **We recommend that before adding a new feature, users should profile it to make sure that there aren't any surprise resource drains from the feature.**  
 
 ## Running the router with pprof
-To run the router with pprof, follow the steps in [Contributing.md](../CONTRIBUTING.md) (Local Development) to set up a local development environment, aside from running `make start-router`.
+To run the router with pprof, follow the steps in [Contributing.md](../../CONTRIBUTING.md) (Local Development) to set up a local development environment, aside from running `make start-router`.
 
 In the `router` directory, run the following command:
 ```shell

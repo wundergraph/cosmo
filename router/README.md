@@ -4,6 +4,9 @@ The router is the component that understands the GraphQL Federation protocol. It
 
 ## Getting Started
 
+- [Profiling](./docs/Profiling.md)
+- [Configuration](./docs/Configuration.md)
+
 ### Prerequisites
 
 - [Go 1.21](https://golang.org/doc/install)
