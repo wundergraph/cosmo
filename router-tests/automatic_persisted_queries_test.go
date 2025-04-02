@@ -3,13 +3,15 @@ package integration
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"net/http"
-	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -366,6 +368,11 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 		})
 
 		t.Run("works with cluster mode", func(t *testing.T) {
+
+			if _, set := os.LookupEnv("SKIP_REDIS_CLUSTER_TESTS"); set {
+				t.Skip("skipping redis cluster tests")
+			}
+
 			t.Parallel()
 			clusterUrls := []string{"redis://cosmo:test@localhost:7002", "redis://cosmo:test@localhost:7001"}
 			noSchemeClusterUrls := []string{"localhost:7002", "localhost:7001"}
