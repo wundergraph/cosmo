@@ -12,9 +12,6 @@ import (
 	"net/http"
 )
 
-// IsBatchedRequestKey is a context key used to identify batched requests.
-type IsBatchedRequestKey struct{}
-
 func Handler(routineLimit uint, handlerSent http.Handler, tracerProvider *sdktrace.TracerProvider) http.Handler {
 	tracer := tracerProvider.Tracer(
 		"wundergraph/cosmo/router/internal/batch",
@@ -59,6 +56,7 @@ func Handler(routineLimit uint, handlerSent http.Handler, tracerProvider *sdktra
 
 				defer span.End()
 
+				// TODO: Check if we should pass the spanCtx, or r.Context() to the new request
 				// Create a new request for the single operation.
 				rCopy := r.Clone(spanCtx)
 				// Reset the route context to avoid sharing mutable state.
@@ -80,6 +78,7 @@ func Handler(routineLimit uint, handlerSent http.Handler, tracerProvider *sdktra
 			sem <- struct{}{}
 		}
 
+		// TODO: Check if we actually need to manually drain this, is it GCd?
 		// Drain and close the semaphore.
 		for len(sem) > 0 {
 			<-sem
