@@ -1842,6 +1842,106 @@ func TestWebSockets(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
+
+	t.Run("initial payload with graphql-client-name and graphql-client-version", func(t *testing.T) {
+		t.Parallel()
+
+		headerRules := config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{
+						Operation: config.HeaderRuleOperationPropagate,
+						Named:     "graphql-client-name",
+					},
+					{
+						Operation: config.HeaderRuleOperationPropagate,
+						Named:     "graphql-client-version",
+					},
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalMiddleware: func(next http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						require.Equal(t, "test-client", r.Header.Get("graphql-client-name"))
+						require.Equal(t, "1.0.0", r.Header.Get("graphql-client-version"))
+						next.ServeHTTP(w, r)
+					})
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(headerRules),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"graphql-client-name": "test-client", "graphql-client-version": "1.0.0"}`))
+			err := testenv.DeflakeWSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp } }"}`),
+			})
+			require.NoError(t, err)
+			var res testenv.WebSocketMessage
+			err = testenv.DeflakeWSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+
+	t.Run("initial payload without graphql-client-name and graphql-client-version", func(t *testing.T) {
+		t.Parallel()
+
+		headerRules := config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{
+						Operation: config.HeaderRuleOperationPropagate,
+						Named:     "graphql-client-name",
+					},
+					{
+						Operation: config.HeaderRuleOperationPropagate,
+						Named:     "graphql-client-version",
+					},
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalMiddleware: func(next http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						require.Equal(t, "", r.Header.Get("graphql-client-name"))
+						require.Equal(t, "", r.Header.Get("graphql-client-version"))
+						next.ServeHTTP(w, r)
+					})
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(headerRules),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := testenv.DeflakeWSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp } }"}`),
+			})
+			require.NoError(t, err)
+			var res testenv.WebSocketMessage
+			err = testenv.DeflakeWSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
 }
 
 func TestFlakyWebSockets(t *testing.T) {
