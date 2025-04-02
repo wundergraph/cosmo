@@ -266,7 +266,7 @@ func TestBatch(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, res.Response.StatusCode)
-			
+
 			entries := getBatchedEntriesForLength(t, res.Body, 3)
 			fmt.Println(entries[1])
 			expected1 := `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`

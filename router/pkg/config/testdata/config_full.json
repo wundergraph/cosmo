@@ -344,6 +344,10 @@
       ]
     }
   },
+  "Batching": {
+    "Enabled": false,
+    "MaxConcurrent": 10
+  },
   "ListenAddr": "localhost:3002",
   "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
   "PlaygroundConfig": {

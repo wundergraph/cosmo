@@ -1,21 +1,18 @@
 import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client/core';
 import { gql } from '@apollo/client/core';
+import {BatchHttpLink} from "@apollo/client/link/batch-http";
 
 const serverUrl = process.env.ROUTER_URL || 'http://localhost:3002/graphql';
 
 describe('Apollo Client Tests', () => {
-  let client: ApolloClient<any>;
-
-  beforeEach(() => {
-    client = new ApolloClient({
+  it('should handle failing query', async () => {
+    const client = new ApolloClient({
       link: createHttpLink({
         uri: serverUrl,
       }),
       cache: new InMemoryCache(),
     });
-  });
 
-  it('should handle failing query', async () => {
     const query = gql`
       query QueryFailure {
         employees {
@@ -33,6 +30,13 @@ describe('Apollo Client Tests', () => {
   });
 
   it('should handle successful query', async () => {
+    const client = new ApolloClient({
+      link: createHttpLink({
+        uri: serverUrl,
+      }),
+      cache: new InMemoryCache(),
+    });
+
     const query = gql`
       query QuerySuccess {
         employees {
@@ -50,4 +54,43 @@ describe('Apollo Client Tests', () => {
     expect(result.data?.employees[0]).toHaveProperty('id');
     expect(result.data?.employees[0]).toHaveProperty('isAvailable');
   });
-}); 
+
+  it('should handle batched successful queries', async () => {
+    const client = new ApolloClient({
+      link: new BatchHttpLink({
+        uri: serverUrl,
+        batchMax: 100,
+        batchInterval: 700
+      }),
+      cache: new InMemoryCache(),
+    });
+
+    const query1 = gql`
+      query QuerySuccess {
+        employees {
+          id
+        }
+      }
+    `;
+
+    const query2= gql`query QuerySuccess {
+      employees {
+        isAvailable
+      }
+    }`;
+
+    const query3= gql`query QuerySuccess {
+      employees {
+        test: isAvailable
+      }
+    }`;
+
+    const req1 = client.query({ query: query1 })
+    const req2 = client.query({ query: query2 })
+    const req3 = client.query({ query: query3 })
+
+    const response = await Promise.all([req1, req2, req3]);
+
+    console.log(JSON.stringify(response, null, 2));
+  });
+});

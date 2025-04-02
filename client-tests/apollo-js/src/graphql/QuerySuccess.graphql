@@ -1,6 +1,0 @@
-query QuerySuccess {
-  employees {
-    id
-    isAvailable
-  }
-} 
