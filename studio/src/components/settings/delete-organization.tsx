@@ -118,21 +118,17 @@ export const DeleteOrganization = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="leading-6">
-                <span className="text-destructive">Permanently</span> delete the organization{" "}
-                &quot;{user?.currentOrganization?.name}&quot;?
+                Permanently delete the organization &quot;{user?.currentOrganization?.name}&quot;?
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit(handleDeleteOrg)} className="mt-2 space-y-3">
               <div>
-                <span className="font-bold">Deleting</span> the organization{" "}
-                &quot;<strong>{user?.currentOrganization?.name}</strong>&quot; is a{" "}
-                <span className="text-destructive font-bold">permanent action</span> that{" "}
-                <span className="font-bold">cannot be undone</span>.
+                Deleting the organization &quot;{user?.currentOrganization?.name}&quot; is a{" "}
+                permanent action that cannot be undone.
               </div>
 
               <div>
-                Deleting the organization will also delete{" "}
-                <span className="text-destructive font-bold">all related data</span>, including graphs, subgraphs,{" "}
+                Deleting the organization will also delete all related data, including graphs, subgraphs,{" "}
                 feature flags, members and API keys.
               </div>
 
