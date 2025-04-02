@@ -63,7 +63,7 @@ func Main() {
 
 	configPath := *configPathFlag
 
-	// If not set by flag or normal environment variable, check again for dotenv loaded envar
+	// If not set by flag or normal environment variable, check again for dotenv override loaded envar
 	if configPath == "" {
 		configPath = os.Getenv("CONFIG_PATH")
 	}
@@ -84,7 +84,9 @@ func Main() {
 		log.Fatalf("Could not parse log level: %s", err)
 	}
 
-	logger := logging.New(!result.Config.JSONLog, result.Config.DevelopmentMode, logLevel).
+	logLevelAtomic := zap.NewAtomicLevelAt(logLevel)
+
+	logger := logging.New(!result.Config.JSONLog, result.Config.DevelopmentMode, logLevelAtomic).
 		With(
 			zap.String("service", "@wundergraph/router"),
 			zap.String("service_version", core.Version),
@@ -103,7 +105,6 @@ func Main() {
 
 	// Handling shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt,
-		syscall.SIGHUP,  // process is detached from terminal
 		syscall.SIGTERM, // default for kill
 		syscall.SIGKILL,
 		syscall.SIGQUIT, // ctrl + \
@@ -124,15 +125,38 @@ func Main() {
 		}
 	}
 
+	reloadChan := make(chan os.Signal, 1)
+
+	signal.Notify(reloadChan, syscall.SIGHUP)
+
 	// TODO: Don't watch the default config file if it doesn't exist?
-	// TODO: Send SIGHUP? to router thing for graceful restarts
 	{
 		watchFunc, err := watcher.New(watcher.Options{
 			Interval: 10 * time.Second,
 			Logger:   logger.With(zap.String("watcher_label", "router_config")),
 			Path:     configPath,
 			Callback: func() {
-				logger.Info("Config file changed")
+				newConfig, err := config.LoadConfig(configPath)
+				if err != nil {
+					logger.Error("Could not load config", zap.Error(err))
+					return
+				}
+
+				result = newConfig
+
+				logLevel, err := logging.ZapLogLevelFromString(result.Config.LogLevel)
+				if err != nil {
+					logger.Error("Could not parse log level", zap.Error(err))
+					return
+				}
+
+				// Update the log level atom
+				logLevelAtomic.SetLevel(logLevel)
+
+				logger.Debug("Configuration changed, triggering reload")
+
+				// Just a hack to make channel code simpler
+				reloadChan <- syscall.SIGHUP
 			},
 		})
 		if err != nil {
@@ -150,31 +174,39 @@ func Main() {
 				}
 			}
 		}()
+
+		logger.Info("Watching router config file", zap.String("config_file", configPath))
 	}
 
 	// Start the router
-	// TODO: do this in a loop with like sighup or something for graceful restarts
-	{
+	for {
 		// Provide a way to cancel all running components of the router after graceful shutdown
 		// Don't use the parent context that is canceled by the signal handler
 		routerCtx, routerCancel := context.WithCancel(context.Background())
 		defer routerCancel()
 
+		// TODO: Test if this actually allows router failure and recovery
 		router, err := NewRouter(routerCtx, Params{
 			Config: &result.Config,
 			Logger: logger,
 		})
 		if err != nil {
-			logger.Fatal("Could not create router", zap.Error(err))
+			logger.Error("Could not create router", zap.Error(err))
 		}
 
 		if err = router.Start(routerCtx); err != nil {
-			logger.Fatal("Could not start router", zap.Error(err))
+			logger.Error("Could not start router", zap.Error(err))
 		}
 
-		<-ctx.Done()
+		shutdown := false
 
-		logger.Info("Graceful shutdown of router initiated", zap.String("shutdown_delay", result.Config.ShutdownDelay.String()))
+		select {
+		case <-ctx.Done():
+			logger.Info("Graceful shutdown of router initiated", zap.String("shutdown_delay", result.Config.ShutdownDelay.String()))
+			shutdown = true
+		case <-reloadChan:
+			logger.Info("Reload channel triggered")
+		}
 
 		// Enforce a maximum shutdown delay to avoid waiting forever
 		// Don't use the parent context that is canceled by the signal handler
@@ -185,11 +217,15 @@ func Main() {
 			if errors.Is(err, context.DeadlineExceeded) {
 				logger.Warn("Router shutdown deadline exceeded. Consider increasing the shutdown delay")
 			}
-			logger.Fatal("Could not shutdown router gracefully", zap.Error(err))
+			logger.Error("Could not shutdown router gracefully", zap.Error(err))
 		} else {
 			logger.Info("Router shutdown successfully")
 		}
 
 		logger.Debug("Router exiting")
+
+		if shutdown {
+			return
+		}
 	}
 }
