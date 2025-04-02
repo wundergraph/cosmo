@@ -242,6 +242,10 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		httpRouter.Use(handler)
 	}
 
+	if s.batchingConfig.Enabled && s.batchingConfig.MaxConcurrentRoutines <= 0 {
+		return nil, fmt.Errorf("maxConcurrent must be greater than 0")
+	}
+
 	/**
 	* A group where we can selectively apply middlewares to the graphql endpoint
 	 */

@@ -294,6 +294,7 @@ type Config struct {
 	ModifyEventsConfiguration          func(cfg *config.EventsConfiguration)
 	EnableRuntimeMetrics               bool
 	EnableNats                         bool
+	BatchingConfig                     config.BatchingConfig
 	EnableKafka                        bool
 	SubgraphAccessLogsEnabled          bool
 	SubgraphAccessLogFields            []config.CustomAttribute
@@ -749,7 +750,8 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			RewritePaths:           true,
 			AllowedExtensionFields: []string{"code"},
 		},
-		CacheControl:              testConfig.CacheControlPolicy,
+		CacheControl: testConfig.CacheControlPolicy,
+		//Batching:                  testConfig.BatchingConfig,
 		AutomaticPersistedQueries: testConfig.ApqConfig,
 	}
 
@@ -848,6 +850,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithAutomatedPersistedQueriesConfig(cfg.AutomaticPersistedQueries),
 		core.WithCDN(cfg.CDN),
 		core.WithListenerAddr(listenerAddr),
+		core.WithBatching(&core.BatchingConfig{
+			Enabled:               testConfig.BatchingConfig.Enabled,
+			MaxConcurrentRoutines: testConfig.BatchingConfig.MaxConcurrent,
+		}),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithInstanceID("test-instance"),
@@ -1303,6 +1309,21 @@ func (e *Environment) MakeGraphQLRequestWithContext(ctx context.Context, request
 		}
 	}
 
+	req.Header.Set("Accept-Encoding", "identity")
+	return e.MakeGraphQLRequestRaw(req)
+}
+
+func (e *Environment) MakeGraphQLBatchedRequestRequest(request []GraphQLRequest) (*TestResponse, error) {
+	return e.MakeGraphQLBatchedRequestRequestWithContext(e.Context, request)
+}
+
+func (e *Environment) MakeGraphQLBatchedRequestRequestWithContext(ctx context.Context, request []GraphQLRequest) (*TestResponse, error) {
+	data, err := json.Marshal(request)
+	require.NoError(e.t, err)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.GraphQLRequestURL(), bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Set("Accept-Encoding", "identity")
 	return e.MakeGraphQLRequestRaw(req)
 }
