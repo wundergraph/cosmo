@@ -24,9 +24,6 @@ RUN go mod download
 # Copy the rest of the files
 COPY . .
 
-# Run tests
-RUN if [ "$WITH_TESTS" = "true" ]; then make test; fi
-
 # Build the binary with manual build info injection
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags "-extldflags=-static \

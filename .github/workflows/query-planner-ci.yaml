@@ -6,10 +6,7 @@ on:
       - 'cli/**/*'
       - 'connect/**/*'
       - '.github/workflows/cli-ci.yaml'
-      - 'composition-go/**/*'
-      - 'demo/**/*'
       - 'router/**/*'
-      - 'router-tests/**/*'
       - 'connect/**/*'
       - '.github/workflows/router-ci.yaml'
 permissions:

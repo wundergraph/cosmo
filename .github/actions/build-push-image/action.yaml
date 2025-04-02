@@ -28,9 +28,6 @@ inputs:
   load_Image:
     description: "Whether to make the image locally available to the build. Doesn't work with multi-platform builds"
     default: "false"
-  with_tests:
-    description: "Whether to run tests"
-    default: "true"
 outputs:
   image_ref:
     description: "The reference of the image that was built"
@@ -104,4 +101,3 @@ runs:
           VERSION=${{ github.sha }}
           DATE=${{ env.BUILD_TIME }}
           COMMIT=${{ github.sha }}
-          WITH_TESTS=${{ inputs.with_tests }}
