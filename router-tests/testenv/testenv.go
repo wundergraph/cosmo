@@ -750,8 +750,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			RewritePaths:           true,
 			AllowedExtensionFields: []string{"code"},
 		},
-		CacheControl: testConfig.CacheControlPolicy,
-		//Batching:                  testConfig.BatchingConfig,
+		CacheControl:              testConfig.CacheControlPolicy,
 		AutomaticPersistedQueries: testConfig.ApqConfig,
 	}
 
@@ -853,6 +852,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithBatching(&core.BatchingConfig{
 			Enabled:               testConfig.BatchingConfig.Enabled,
 			MaxConcurrentRoutines: testConfig.BatchingConfig.MaxConcurrent,
+			MaxEntriesPerBatch:    testConfig.BatchingConfig.MaxEntriesPerBatch,
 		}),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithTLSConfig(testConfig.TLSConfig),

@@ -68,6 +68,48 @@ func TestBatch(t *testing.T) {
 		)
 	})
 
+	t.Run("send batch request over max allowed count", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t,
+			&testenv.Config{
+				BatchingConfig: config.BatchingConfig{
+					Enabled:            true,
+					MaxConcurrent:      10,
+					MaxEntriesPerBatch: 5,
+				},
+			},
+			func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLBatchedRequestRequest([]testenv.GraphQLRequest{
+					{
+						Query: `query employees { employees { id } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+				})
+				require.NoError(t, err)
+				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+				require.Equal(t, "unable to process request", res.Body)
+			},
+		)
+	})
+
 	t.Run("attempt to start server with invalid max concurrent", func(t *testing.T) {
 		err := testenv.RunWithError(t, &testenv.Config{
 			BatchingConfig: config.BatchingConfig{

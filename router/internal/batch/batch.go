@@ -12,7 +12,9 @@ import (
 	"net/http"
 )
 
-func Handler(routineLimit uint, handlerSent http.Handler, tracerProvider *sdktrace.TracerProvider) http.Handler {
+const unlimitedBatchEntries = 0
+
+func Handler(maxEntriesPerBatch, maxRoutines int, handlerSent http.Handler, tracerProvider *sdktrace.TracerProvider) http.Handler {
 	tracer := tracerProvider.Tracer(
 		"wundergraph/cosmo/router/internal/batch",
 		trace.WithInstrumentationVersion("0.0.1"),
@@ -36,17 +38,26 @@ func Handler(routineLimit uint, handlerSent http.Handler, tracerProvider *sdktra
 			return
 		}
 
+		batchOperationsLength := len(batchOperations)
+
+		// When a max batch limit has been specified
+		if maxEntriesPerBatch != unlimitedBatchEntries && batchOperationsLength > maxEntriesPerBatch {
+			http.Error(w, fmt.Sprintf("unable to process request"), http.StatusBadRequest)
+			return
+		}
+
 		// Store the batch in the request context.
 		r = r.WithContext(context.WithValue(r.Context(), IsBatchedRequestKey{}, true))
 
 		// We have a batched request.
-		responses := make([]json.RawMessage, len(batchOperations))
+		responses := make([]json.RawMessage, batchOperationsLength)
 
-		sem := make(chan struct{}, routineLimit)
+		sem := make(chan struct{}, maxRoutines)
 		// Process each operation in parallel.
 		// TODO: Verify we do not need to assign i and singleOp to new variables as of go 1.23
 		for i, singleOp := range batchOperations {
 			sem <- struct{}{}
+
 			go func() {
 				defer func() {
 					<-sem
@@ -74,7 +85,7 @@ func Handler(routineLimit uint, handlerSent http.Handler, tracerProvider *sdktra
 		}
 
 		// Wait for all operations to be completed by blocking.
-		for n := routineLimit; n > 0; n-- {
+		for n := maxRoutines; n > 0; n-- {
 			sem <- struct{}{}
 		}
 

@@ -112,7 +112,8 @@ type (
 
 	BatchingConfig struct {
 		Enabled               bool
-		MaxConcurrentRoutines uint
+		MaxConcurrentRoutines int
+		MaxEntriesPerBatch    int
 	}
 
 	IPAnonymizationConfig struct {

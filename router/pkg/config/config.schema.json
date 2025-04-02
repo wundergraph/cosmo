@@ -616,6 +616,11 @@
           "type": "integer",
           "description": "The maximum number of batches that can be processed concurrently",
           "default": 10
+        },
+        "max_entries_per_batch": {
+          "type": "integer",
+          "description": "The maximum number of entries allowed in a batch, if 0 the batch size is unlimited",
+          "default": 100
         }
       }
     },

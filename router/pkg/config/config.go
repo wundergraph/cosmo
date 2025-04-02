@@ -753,8 +753,9 @@ type AccessLogsConfig struct {
 }
 
 type BatchingConfig struct {
-	Enabled       bool `yaml:"enabled" env:"BATCHING_ENABLED" envDefault:"false"`
-	MaxConcurrent uint `yaml:"max_concurrent" env:"BATCHING_MAX_CONCURRENT" envDefault:"10"`
+	Enabled            bool `yaml:"enabled" env:"BATCHING_ENABLED" envDefault:"false"`
+	MaxConcurrent      int  `yaml:"max_concurrent" env:"BATCHING_MAX_CONCURRENT" envDefault:"10"`
+	MaxEntriesPerBatch int  `yaml:"max_entries_per_batch" env:"BATCHING_MAX_ENTRIES" envDefault:"100"`
 }
 
 type AccessLogsBufferConfig struct {

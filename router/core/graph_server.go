@@ -231,7 +231,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	}
 
 	if s.traceConfig.Enabled {
-		handler := BatchingNewHandler(BatchHandlerOpts{
+		handler := NewTracingHandler(TracingHandlerOpts{
 			traceConfig:         s.traceConfig,
 			healthCheckPath:     s.healthCheckPath,
 			readinessCheckPath:  s.readinessCheckPath,
@@ -261,7 +261,12 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
 		if s.batchingConfig.Enabled {
-			handler := batch.Handler(s.batchingConfig.MaxConcurrentRoutines, multiGraphHandler, r.tracerProvider)
+			handler := batch.Handler(
+				s.batchingConfig.MaxEntriesPerBatch,
+				s.batchingConfig.MaxConcurrentRoutines,
+				multiGraphHandler,
+				r.tracerProvider,
+			)
 			cr.Handle(r.graphqlPath, handler)
 		} else {
 			cr.Handle(r.graphqlPath, multiGraphHandler)
@@ -292,7 +297,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	return s, nil
 }
 
-type BatchHandlerOpts struct {
+type TracingHandlerOpts struct {
 	traceConfig         *rtrace.Config
 	healthCheckPath     string
 	readinessCheckPath  string
@@ -301,7 +306,7 @@ type BatchHandlerOpts struct {
 	tracerProvider      *sdktrace.TracerProvider
 }
 
-func BatchingNewHandler(s BatchHandlerOpts) func(next http.Handler) http.Handler {
+func NewTracingHandler(s TracingHandlerOpts) func(next http.Handler) http.Handler {
 	if s.traceConfig.Enabled {
 		spanStartOptions := []oteltrace.SpanStartOption{
 			oteltrace.WithAttributes(
