@@ -7,6 +7,12 @@ import (
 	"fmt"
 	"github.com/wundergraph/cosmo/router/internal/batch"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	otelmetric "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
 	"net/http"
 	"net/url"
@@ -280,6 +286,15 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	s.mux = httpRouter
 
 	return s, nil
+}
+
+type BatchHandlerOpts struct {
+	traceConfig         *rtrace.Config
+	healthCheckPath     string
+	readinessCheckPath  string
+	livenessCheckPath   string
+	compositePropagator propagation.TextMapPropagator
+	tracerProvider      *sdktrace.TracerProvider
 }
 
 func BatchingNewHandler(s BatchHandlerOpts) func(next http.Handler) http.Handler {
@@ -711,7 +726,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			rmetric.WithProcessStartTime(s.processStartTime),
 			rmetric.WithCardinalityLimit(rmetric.DefaultCardinalityLimit),
 		)
-	if err != nil {
+		if err != nil {
 			return nil, fmt.Errorf("failed to create metric handler: %w", err)
 		}
 
