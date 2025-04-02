@@ -614,7 +614,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		if requestContext.operation.opType != "query" {
 			return &httpGraphqlError{
 				message:    "Batched requests can only contain queries",
-				statusCode: http.StatusBadRequest,
+				statusCode: http.StatusOK,
 			}
 		}
 	}
