@@ -42,7 +42,7 @@ func Handler(maxEntriesPerBatch, maxRoutines int, handlerSent http.Handler, trac
 
 		// When a max batch limit has been specified
 		if maxEntriesPerBatch != unlimitedBatchEntries && batchOperationsLength > maxEntriesPerBatch {
-			http.Error(w, fmt.Sprintf("unable to process request"), http.StatusBadRequest)
+			http.Error(w, "unable to process request", http.StatusBadRequest)
 			return
 		}
 
