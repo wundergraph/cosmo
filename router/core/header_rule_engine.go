@@ -403,7 +403,7 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 			value, err := h.getRequestRuleExpressionValue(rule, reqCtx)
 			if err != nil {
 				ctx.Logger().Warn("error applying expression for header rule", zap.String("rule", rule.Name), zap.Error(err))
-			} else {
+			} else if value != "" {
 				request.Header.Set(rule.Name, value)
 			}
 			return
