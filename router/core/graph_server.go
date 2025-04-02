@@ -590,7 +590,11 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	return fmt.Errorf("shutdown graph mux: %w", err)
+	if err != nil {
+		return fmt.Errorf("shutdown graph mux: %w", err)
+	}
+
+	return nil
 }
 
 // buildGraphMux creates a new graph mux with the given feature flags and engine configuration.

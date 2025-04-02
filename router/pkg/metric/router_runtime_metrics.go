@@ -313,7 +313,11 @@ func (r *RuntimeMetrics) Shutdown() error {
 		}
 	}
 
-	return fmt.Errorf("shutdown runtime metrics: %w", err)
+	if err != nil {
+		return fmt.Errorf("shutdown runtime metrics: %w", err)
+	}
+
+	return nil
 }
 
 func computeGCPauses(

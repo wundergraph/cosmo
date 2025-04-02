@@ -178,5 +178,9 @@ func (e *EngineMetrics) Shutdown() error {
 		}
 	}
 
-	return fmt.Errorf("shutdown engine metrics: %w", err)
+	if err != nil {
+		return fmt.Errorf("shutdown engine metrics: %w", err)
+	}
+
+	return nil
 }
