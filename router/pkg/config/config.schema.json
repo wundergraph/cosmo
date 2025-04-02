@@ -531,6 +531,48 @@
               }
             }
           }
+        },
+        "client_info_from_initial_payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "This configuration indicates if the Router should set the client info from the initial payload of the WebSocket Connection. The default value is 'false'.",
+              "default": true
+            },
+            "name_field": {
+              "type": "string",
+              "description": "The name of the field in the initial payload that will have the client name. The default value is 'graphql-client-name'.",
+              "default": "graphql-client-name"
+            },
+            "version_field": {
+              "type": "string",
+              "description": "The name of the field in the initial payload that will have the client version. The default value is 'graphql-client-version'.",
+              "default": "graphql-client-version"
+            },
+            "forward_to_request_headers": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "This configuration indicates if the Router should forward the client info to the request headers. The default value is 'false'.",
+                  "default": true
+                },
+                "name_target_header": {
+                  "type": "string",
+                  "description": "The name of the header property that will have the client name. The default value is 'graphql-client-name'.",
+                  "default": "graphql-client-name"
+                },
+                "version_target_header": {
+                  "type": "string",
+                  "description": "The name of the header property that will have the client version. The default value is 'graphql-client-version'.",
+                  "default": "graphql-client-version"
+                }
+              }
+            }
+          }
         }
       }
     },

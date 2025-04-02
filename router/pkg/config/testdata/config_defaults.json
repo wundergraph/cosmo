@@ -336,6 +336,16 @@
           "HeaderKey": "Authorization"
         }
       }
+    },
+    "ClientInfoFromInitialPayload": {
+      "Enabled": true,
+      "NameField": "graphql-client-name",
+      "VersionField": "graphql-client-version",
+      "ForwardToRequestHeaders": {
+        "Enabled": true,
+        "NameTargetHeader": "graphql-client-name",
+        "VersionTargetHeader": "graphql-client-version"
+      }
     }
   },
   "SubgraphErrorPropagation": {
