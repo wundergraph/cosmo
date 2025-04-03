@@ -67,6 +67,26 @@ poll_interval: "${TEST_POLL_INTERVAL}"
 	require.Equal(t, time.Second*20, cfg.Config.PollInterval)
 }
 
+func TestLoadWatchCfgFromEnvars(t *testing.T) {
+	t.Setenv("WATCH_CONFIG_ENABLED", "true")
+	t.Setenv("WATCH_CONFIG_INTERVAL", "30s")
+	t.Setenv("WATCH_CONFIG_STARTUP_DELAY_ENABLED", "true")
+	t.Setenv("WATCH_CONFIG_STARTUP_DELAY_MAXIMUM", "20s")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+`)
+
+	cfg, err := LoadConfig(f)
+
+	require.NoError(t, err)
+
+	require.True(t, cfg.Config.WatchConfig.Enabled)
+	require.True(t, cfg.Config.WatchConfig.StartupDelay.Enabled)
+	require.Equal(t, time.Second*30, cfg.Config.WatchConfig.Interval)
+	require.Equal(t, time.Second*20, cfg.Config.WatchConfig.StartupDelay.Maximum)
+}
+
 func TestConfigHasPrecedence(t *testing.T) {
 	t.Setenv("POLL_INTERVAL", "22s")
 
