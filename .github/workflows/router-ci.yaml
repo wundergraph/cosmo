@@ -138,6 +138,11 @@ jobs:
     services:
       nats:
         image: ghcr.io/wundergraph/cosmo/nats:2.11.0
+        options: >-
+          --health-cmd "curl -f http://localhost:8222/healthz"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
         ports:
           - 4222:4222
           - 8222:8222
