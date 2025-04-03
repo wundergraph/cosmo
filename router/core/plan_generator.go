@@ -68,9 +68,19 @@ func (pl *Planner) PlanOperation(operationFilePath string) (string, error) {
 		return "", fmt.Errorf("failed to parse operation: %w", err)
 	}
 
+	operationName := findOperationName(operation)
+	if operationName == nil {
+		return "", errors.New("operation name not found")
+	}
+
 	err = pl.validateOperation(operation)
 	if err != nil {
 		return "", &PlannerOperationValidationError{err: err}
+	}
+
+	err = pl.normalizeOperation(operation, operationName)
+	if err != nil {
+		return "", fmt.Errorf("failed to normalize operation: %w", err)
 	}
 
 	rawPlan, err := pl.planOperation(operation)
@@ -82,12 +92,45 @@ func (pl *Planner) PlanOperation(operationFilePath string) (string, error) {
 }
 
 func (pl *Planner) PlanParsedOperation(operation *ast.Document) (*resolve.FetchTreeQueryPlanNode, error) {
+	operationName := findOperationName(operation)
+	if operationName == nil {
+		return nil, errors.New("operation name not found")
+	}
+
+	err := pl.normalizeOperation(operation, operationName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to normalize operation: %w", err)
+	}
+
+	err = pl.validateOperation(operation)
+	if err != nil {
+		return nil, &PlannerOperationValidationError{err: err}
+	}
+
 	rawPlan, err := pl.planOperation(operation)
 	if err != nil {
 		return nil, fmt.Errorf("failed to plan operation: %w", err)
 	}
 
 	return rawPlan, nil
+}
+
+func (pl *Planner) normalizeOperation(operation *ast.Document, operationName []byte) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic during operation normalization: %v", r)
+		}
+	}()
+
+	report := operationreport.Report{}
+
+	astnormalization.NormalizeNamedOperation(operation, pl.definition, operationName, &report)
+
+	if report.HasErrors() {
+		return report
+	}
+
+	return nil
 }
 
 func (pl *Planner) planOperation(operation *ast.Document) (planNode *resolve.FetchTreeQueryPlanNode, err error) {
@@ -99,20 +142,11 @@ func (pl *Planner) planOperation(operation *ast.Document) (planNode *resolve.Fet
 
 	report := operationreport.Report{}
 
-	var operationName []byte
-
-	for i := range operation.RootNodes {
-		if operation.RootNodes[i].Kind == ast.NodeKindOperationDefinition {
-			operationName = operation.OperationDefinitionNameBytes(operation.RootNodes[i].Ref)
-			break
-		}
-	}
+	operationName := findOperationName(operation)
 
 	if operationName == nil {
 		return nil, errors.New("operation name not found")
 	}
-
-	astnormalization.NormalizeNamedOperation(operation, pl.definition, operationName, &report)
 
 	// create and postprocess the plan
 	preparedPlan := pl.planner.Plan(operation, pl.definition, string(operationName), &report, plan.IncludeQueryPlanInResponse())
@@ -320,4 +354,13 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 
 func (pg *PlanGenerator) GetPlanConfiguration() *plan.Configuration {
 	return pg.planConfiguration
+}
+
+func findOperationName(operation *ast.Document) (operationName []byte) {
+	for i := range operation.RootNodes {
+		if operation.RootNodes[i].Kind == ast.NodeKindOperationDefinition {
+			return operation.OperationDefinitionNameBytes(operation.RootNodes[i].Ref)
+		}
+	}
+	return nil
 }
