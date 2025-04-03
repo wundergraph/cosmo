@@ -10,7 +10,6 @@ import {
   DEFAULT_ROUTER_URL,
   DEFAULT_SUBGRAPH_URL_ONE,
   DEFAULT_SUBGRAPH_URL_TWO,
-  DEFAULT_SUBGRAPH_URL_THREE,
   SetupTest,
 } from '../test-util.js';
 
@@ -1173,6 +1172,115 @@ describe('Update proposal tests', () => {
     });
 
     expect(deleteSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Verify proposal state is now PUBLISHED
+    proposalResponse = await client.getProposal({
+      proposalId: createProposalResponse.proposalId,
+    });
+    expect(proposalResponse.proposal?.state).toBe('PUBLISHED');
+
+    await server.close();
+  });
+
+  test('should change proposal state to PUBLISHED when a newly added subgraph is published', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+    });
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Setup a federated graph with one existing subgraph
+    const existingSubgraphName = genID('existing-subgraph');
+    const newSubgraphName = genID('new-subgraph'); // This subgraph doesn't exist yet
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName = genID('proposal');
+
+    const existingSubgraphSchemaSDL = `
+      type Query {
+        users: [User!]!
+      }
+      
+      type User {
+        id: ID!
+        name: String!
+      }
+    `;
+
+    // Create and publish the existing subgraph
+    await createThenPublishSubgraph(
+      client,
+      existingSubgraphName,
+      DEFAULT_NAMESPACE,
+      existingSubgraphSchemaSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Define the schema for the new subgraph that doesn't exist yet
+    const newSubgraphSchemaSDL = `
+      type Query {
+        products: [Product!]!
+      }
+      
+      type Product {
+        id: ID!
+        name: String!
+        price: Float!
+      }
+    `;
+
+    // Create a proposal that includes the new subgraph
+    const createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      subgraphs: [
+        {
+          name: newSubgraphName,
+          schemaSDL: newSubgraphSchemaSDL,
+          isDeleted: false,
+        },
+      ],
+      didHubCreate: false,
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Approve the proposal
+    await client.updateProposal({
+      proposalName,
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      updateAction: {
+        case: 'state',
+        value: 'APPROVED',
+      },
+    });
+
+    // Verify proposal is in APPROVED state
+    let proposalResponse = await client.getProposal({
+      proposalId: createProposalResponse.proposalId,
+    });
+    expect(proposalResponse.proposal?.state).toBe('APPROVED');
+
+    // Publish the new subgraph
+    const publishSubgraphResponse = await client.publishFederatedSubgraph({
+      name: newSubgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      schema: newSubgraphSchemaSDL,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      labels: [label],
+    });
+
+    expect(publishSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(publishSubgraphResponse.proposalMatchMessage).toBeUndefined();
 
     // Verify proposal state is now PUBLISHED
     proposalResponse = await client.getProposal({

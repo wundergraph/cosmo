@@ -129,28 +129,30 @@ export function publishFederatedSubgraph(
           proposalSubgraphId: string;
         }
       | undefined;
-    if (namespace.enableProposals && subgraph) {
+    if (namespace.enableProposals) {
       const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
       if (proposalConfig) {
         const match = await proposalRepo.matchSchemaWithProposal({
-          subgraphId: subgraph.id,
+          subgraphName: req.name,
+          namespaceId: namespace.id,
           schemaSDL: subgraphSchemaSDL,
           routerCompatibilityVersion,
           isDeleted: false,
         });
         if (!match) {
+          const message = `The subgraph ${req.name}'s schema does not match to this subgraph's schema in any approved proposal.`;
           if (proposalConfig.publishSeverityLevel === 'warn') {
-            proposalMatchMessage = `The subgraph ${subgraph.name}'s schema does not match to this subgraph's schema in any approved proposal.`;
+            proposalMatchMessage = message;
           } else {
             return {
               response: {
                 code: EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL,
-                details: `The subgraph ${subgraph.name}'s schema does not match to this subgraph's schema in any approved proposal.`,
+                details: message,
               },
               compositionErrors: [],
               deploymentErrors: [],
               compositionWarnings: [],
-              proposalMatchMessage: `The subgraph ${subgraph.name}'s schema does not match to this subgraph's schema in any approved proposal.`,
+              proposalMatchMessage: message,
             };
           }
         }
@@ -421,7 +423,7 @@ export function publishFederatedSubgraph(
       );
     }
 
-    // if this subgraph is part of a proposal, mark the proposal subgraph as published 
+    // if this subgraph is part of a proposal, mark the proposal subgraph as published
     // and if all proposal subgraphs are published, update the proposal state to PUBLISHED
     if (matchedEntity) {
       await proposalRepo.markProposalSubgraphAsPublished({

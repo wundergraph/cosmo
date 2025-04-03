@@ -317,7 +317,13 @@ export class ProposalRepository {
     return proposalConfig[0];
   }
 
-  public async getApprovedProposalSubgraphsBySubgraphId({ subgraphId }: { subgraphId: string }) {
+  public async getApprovedProposalSubgraphsBySubgraphId({
+    subgraphName,
+    namespaceId,
+  }: {
+    subgraphName: string;
+    namespaceId: string;
+  }) {
     const proposalSubgraphs = await this.db
       .select({
         id: schema.proposalSubgraphs.id,
@@ -328,25 +334,38 @@ export class ProposalRepository {
       })
       .from(schema.proposalSubgraphs)
       .innerJoin(schema.proposals, eq(schema.proposalSubgraphs.proposalId, schema.proposals.id))
-      .where(and(eq(schema.proposalSubgraphs.subgraphId, subgraphId), eq(schema.proposals.state, 'APPROVED')));
+      .innerJoin(schema.federatedGraphs, eq(schema.proposals.federatedGraphId, schema.federatedGraphs.id))
+      .innerJoin(schema.targets, eq(schema.federatedGraphs.targetId, schema.targets.id))
+      .where(
+        and(
+          eq(schema.proposalSubgraphs.subgraphName, subgraphName),
+          eq(schema.proposals.state, 'APPROVED'),
+          eq(schema.targets.namespaceId, namespaceId),
+        ),
+      );
 
     return proposalSubgraphs;
   }
 
   public async matchSchemaWithProposal({
-    subgraphId,
+    subgraphName,
+    namespaceId,
     schemaCheckId,
     schemaSDL,
     routerCompatibilityVersion,
     isDeleted,
   }: {
-    subgraphId: string;
+    subgraphName: string;
+    namespaceId: string;
     schemaCheckId?: string;
     schemaSDL: string;
     routerCompatibilityVersion: string;
     isDeleted: boolean;
   }): Promise<{ proposalId: string; proposalSubgraphId: string } | undefined> {
-    const proposalSubgraphs = await this.getApprovedProposalSubgraphsBySubgraphId({ subgraphId });
+    const proposalSubgraphs = await this.getApprovedProposalSubgraphsBySubgraphId({
+      subgraphName,
+      namespaceId,
+    });
 
     for (const proposalSubgraph of proposalSubgraphs) {
       if (proposalSubgraph.isDeleted && isDeleted) {

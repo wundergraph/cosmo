@@ -718,9 +718,10 @@ export class SchemaCheckRepository {
       if (namespace.enableProposals && !skipProposalMatchCheck) {
         const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
         // currently matching only with the subgraph that is already present in the namespace
-        if (proposalConfig && subgraph) {
+        if (proposalConfig) {
           const match = await proposalRepo.matchSchemaWithProposal({
-            subgraphId: subgraph.id,
+            subgraphName,
+            namespaceId: namespace.id,
             schemaSDL: newSchemaSDL,
             routerCompatibilityVersion,
             schemaCheckId: schemaCheckID,
@@ -734,12 +735,12 @@ export class SchemaCheckRepository {
 
           if (!match) {
             if (proposalConfig.checkSeverityLevel === 'warn') {
-              proposalMatchMessage += `The subgraph ${subgraph.name}'s schema does not match to this subgraph's schema in any approved proposal.\n`;
+              proposalMatchMessage += `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.\n`;
             } else {
               return {
                 response: {
                   code: EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL,
-                  details: `The subgraph ${subgraph.name}'s schema does not match to this subgraph's schema in any approved proposal.`,
+                  details: `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`,
                 },
                 breakingChanges: [],
                 nonBreakingChanges: [],
@@ -751,7 +752,7 @@ export class SchemaCheckRepository {
                 graphPruneErrors: [],
                 compositionWarnings: [],
                 operationUsageStats: [],
-                proposalMatchMessage: `The subgraph ${subgraph.name}'s schema does not match to this subgraph's schema in any approved proposal.`,
+                proposalMatchMessage: `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`,
               };
             }
           }

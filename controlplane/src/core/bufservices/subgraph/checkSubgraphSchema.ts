@@ -244,7 +244,8 @@ export function checkSubgraphSchema(
       const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
       if (proposalConfig) {
         const match = await proposalRepo.matchSchemaWithProposal({
-          subgraphId: subgraph.id,
+          subgraphName: subgraph.name,
+          namespaceId: namespace.id,
           schemaSDL: newSchemaSDL,
           routerCompatibilityVersion,
           schemaCheckId: schemaCheckID,

@@ -96,7 +96,7 @@ export function deleteFederatedSubgraph(
           proposalSubgraphId: string;
         }
       | undefined;
-    if (namespace.enableProposals && subgraph) {
+    if (namespace.enableProposals) {
       const federatedGraphs = await fedGraphRepo.bySubgraphLabels({
         labels: subgraph.labels,
         namespaceId: namespace.id,
@@ -104,7 +104,8 @@ export function deleteFederatedSubgraph(
       const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
       if (proposalConfig) {
         const match = await proposalRepo.matchSchemaWithProposal({
-          subgraphId: subgraph.id,
+          subgraphName: subgraph.name,
+          namespaceId: namespace.id,
           schemaSDL: '',
           routerCompatibilityVersion: getFederatedGraphRouterCompatibilityVersion(federatedGraphs),
           isDeleted: true,

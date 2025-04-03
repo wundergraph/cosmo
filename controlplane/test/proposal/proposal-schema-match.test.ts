@@ -58,13 +58,14 @@ async function createTestProposal(
     proposalName: string;
     subgraphName: string;
     updatedSubgraphSDL: string;
+    namespace?: string;
   },
 ) {
-  const { federatedGraphName, proposalName, subgraphName, updatedSubgraphSDL } = options;
+  const { federatedGraphName, proposalName, subgraphName, updatedSubgraphSDL, namespace = DEFAULT_NAMESPACE } = options;
 
   const createProposalResponse = await client.createProposal({
     federatedGraphName,
-    namespace: DEFAULT_NAMESPACE,
+    namespace,
     name: proposalName,
     subgraphs: [
       {
@@ -86,13 +87,14 @@ async function createTestProposalWithDeletedSubgraph(
     federatedGraphName: string;
     proposalName: string;
     subgraphName: string;
+    namespace?: string;
   },
 ) {
-  const { federatedGraphName, proposalName, subgraphName } = options;
+  const { federatedGraphName, proposalName, subgraphName, namespace = DEFAULT_NAMESPACE } = options;
 
   const createProposalResponse = await client.createProposal({
     federatedGraphName,
-    namespace: DEFAULT_NAMESPACE,
+    namespace,
     name: proposalName,
     subgraphs: [
       {
@@ -1156,6 +1158,351 @@ describe('Proposal schema matching tests', () => {
     expect(checkResponse3.response?.code).toBe(EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL);
     expect(checkResponse3.response?.details).toBe(
       `The subgraph ${subgraphName} is not proposed to be deleted in any of the approved proposals.`,
+    );
+
+    await server.close();
+  });
+
+  test('should verify proposal schema matching is namespace-specific', async () => {
+    // This test verifies that proposal schema matching works correctly across namespaces.
+    // Specifically, it tests that a schema approved in one namespace won't be considered
+    // valid in another namespace, even with identical graph and subgraph names.
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+    });
+
+    // Create two namespaces for testing isolation between them
+    const namespace1 = DEFAULT_NAMESPACE;
+    const namespace2 = 'test';
+
+    // Create namespace2 (namespace1 is the default already created)
+    const createNamespaceResponse = await client.createNamespace({
+      name: namespace2,
+    });
+    expect(createNamespaceResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Setup the same federated graph and subgraph in both namespaces
+    const subgraphName = genID('subgraph');
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName1 = genID('proposal1');
+    const proposalName2 = genID('proposal2');
+
+    const baseSchemaSDL = `
+      type Query {
+        hello: String!
+      }
+    `;
+
+    // Create and publish subgraph in namespace 1
+    await createThenPublishSubgraph(client, subgraphName, namespace1, baseSchemaSDL, [label], DEFAULT_SUBGRAPH_URL_ONE);
+
+    // Create federated graph in namespace 1
+    await createFederatedGraph(client, fedGraphName, namespace1, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Create and publish the same subgraph in namespace 2
+    await createThenPublishSubgraph(client, subgraphName, namespace2, baseSchemaSDL, [label], DEFAULT_SUBGRAPH_URL_ONE);
+
+    // Create the same federated graph in namespace 2
+    await createFederatedGraph(client, fedGraphName, namespace2, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Enable proposals for both namespaces
+    const enableResponse1 = await enableProposalsForNamespace(client, namespace1);
+    expect(enableResponse1.response?.code).toBe(EnumStatusCode.OK);
+
+    const enableResponse2 = await enableProposalsForNamespace(client, namespace2);
+    expect(enableResponse2.response?.code).toBe(EnumStatusCode.OK);
+
+    // Set proposal check severity to error for both namespaces
+    const severityResponse1 = await setProposalSeverity(client, namespace1, 'error', 'error');
+    expect(severityResponse1.response.response?.code).toBe(EnumStatusCode.OK);
+
+    const severityResponse2 = await setProposalSeverity(client, namespace2, 'error', 'error');
+    expect(severityResponse2.response.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create different proposals in each namespace
+    const updatedSDLNamespace1 = `
+      type Query {
+        hello: String!
+        namespace1Field: Int!
+      }
+    `;
+
+    const updatedSDLNamespace2 = `
+      type Query {
+        hello: String!
+        namespace2Field: Boolean!
+      }
+    `;
+
+    // Create and approve proposal in namespace 1
+    const createProposalResponse1 = await createTestProposal(client, {
+      federatedGraphName: fedGraphName,
+      proposalName: proposalName1,
+      subgraphName,
+      updatedSubgraphSDL: updatedSDLNamespace1,
+      namespace: namespace1,
+    });
+    expect(createProposalResponse1.response?.code).toBe(EnumStatusCode.OK);
+
+    const approveProposalResponse1 = await client.updateProposal({
+      proposalName: proposalName1,
+      federatedGraphName: fedGraphName,
+      namespace: namespace1,
+      updateAction: {
+        case: 'state',
+        value: 'APPROVED',
+      },
+    });
+    expect(approveProposalResponse1.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create and approve proposal in namespace 2
+    const createProposalResponse2 = await createTestProposal(client, {
+      federatedGraphName: fedGraphName,
+      proposalName: proposalName2,
+      subgraphName,
+      updatedSubgraphSDL: updatedSDLNamespace2,
+      namespace: namespace2,
+    });
+    expect(createProposalResponse2.response?.code).toBe(EnumStatusCode.OK);
+
+    const approveProposalResponse2 = await client.updateProposal({
+      proposalName: proposalName2,
+      federatedGraphName: fedGraphName,
+      namespace: namespace2,
+      updateAction: {
+        case: 'state',
+        value: 'APPROVED',
+      },
+    });
+    expect(approveProposalResponse2.response?.code).toBe(EnumStatusCode.OK);
+
+    // Check in namespace 1 with schema from namespace 1 - should succeed
+    const checkResponse1 = await client.checkSubgraphSchema({
+      subgraphName,
+      namespace: namespace1,
+      schema: Uint8Array.from(Buffer.from(updatedSDLNamespace1)),
+    });
+    expect(checkResponse1.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkResponse1.proposalMatchMessage).toBeUndefined();
+
+    // Check in namespace 1 with schema from namespace 2 - should fail
+    const checkResponse2 = await client.checkSubgraphSchema({
+      subgraphName,
+      namespace: namespace1,
+      schema: Uint8Array.from(Buffer.from(updatedSDLNamespace2)),
+    });
+    expect(checkResponse2.response?.code).toBe(EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL);
+    expect(checkResponse2.response?.details).toBe(
+      `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`,
+    );
+
+    // Check in namespace 2 with schema from namespace 2 - should succeed
+    const checkResponse3 = await client.checkSubgraphSchema({
+      subgraphName,
+      namespace: namespace2,
+      schema: Uint8Array.from(Buffer.from(updatedSDLNamespace2)),
+    });
+    expect(checkResponse3.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkResponse3.proposalMatchMessage).toBeUndefined();
+
+    // Check in namespace 2 with schema from namespace 1 - should fail
+    const checkResponse4 = await client.checkSubgraphSchema({
+      subgraphName,
+      namespace: namespace2,
+      schema: Uint8Array.from(Buffer.from(updatedSDLNamespace1)),
+    });
+    expect(checkResponse4.response?.code).toBe(EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL);
+    expect(checkResponse4.response?.details).toBe(
+      `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`,
+    );
+
+    // Similar test with publish operation
+    // Publish in namespace 1 with namespace 2's schema - should fail
+    const publishResponse1 = await client.publishFederatedSubgraph({
+      name: subgraphName,
+      namespace: namespace1,
+      schema: updatedSDLNamespace2,
+    });
+    expect(publishResponse1.response?.code).toBe(EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL);
+    expect(publishResponse1.response?.details).toBe(
+      `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`,
+    );
+
+    // Publish in namespace 2 with namespace 1's schema - should fail
+    const publishResponse2 = await client.publishFederatedSubgraph({
+      name: subgraphName,
+      namespace: namespace2,
+      schema: updatedSDLNamespace1,
+    });
+    expect(publishResponse2.response?.code).toBe(EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL);
+    expect(publishResponse2.response?.details).toBe(
+      `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`,
+    );
+
+    // Publish with correct schema in their respective namespaces - should succeed
+    const publishResponse3 = await client.publishFederatedSubgraph({
+      name: subgraphName,
+      namespace: namespace1,
+      schema: updatedSDLNamespace1,
+    });
+    expect(publishResponse3.response?.code).toBe(EnumStatusCode.OK);
+    expect(publishResponse3.proposalMatchMessage).toBeUndefined();
+
+    const publishResponse4 = await client.publishFederatedSubgraph({
+      name: subgraphName,
+      namespace: namespace2,
+      schema: updatedSDLNamespace2,
+    });
+    expect(publishResponse4.response?.code).toBe(EnumStatusCode.OK);
+    expect(publishResponse4.proposalMatchMessage).toBeUndefined();
+
+    await server.close();
+  });
+
+  test('should match publishing a new subgraph with an approved proposal for a new subgraph', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+    });
+
+    // Setup a federated graph with a single subgraph
+    const existingSubgraphName = genID('existing-subgraph');
+    const newSubgraphName = genID('new-subgraph'); // This subgraph doesn't exist yet
+    const newSubgraphName2 = genID('new-subgraph2'); // This subgraph doesn't exist yet
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName = genID('proposal');
+
+    const existingSubgraphSDL = `
+      type Query {
+        existingField: String!
+      }
+    `;
+
+    await createThenPublishSubgraph(
+      client,
+      existingSubgraphName,
+      DEFAULT_NAMESPACE,
+      existingSubgraphSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Set proposal publish severity to error
+    const { response } = await setProposalSeverity(client, DEFAULT_NAMESPACE, 'warn', 'error');
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create a proposal with a new subgraph (not yet existing)
+    const newSubgraphSDL = `
+      type Query {
+        newField: String!
+      }
+    `;
+
+    // Create a proposal for the new subgraph
+    const createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      subgraphs: [
+        {
+          name: newSubgraphName,
+          schemaSDL: newSubgraphSDL,
+          isDeleted: false,
+        },
+      ],
+      didHubCreate: false,
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Approve the proposal
+    const updateProposalResponse = await client.updateProposal({
+      proposalName,
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      updateAction: {
+        case: 'state',
+        value: 'APPROVED',
+      },
+    });
+
+    expect(updateProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Try to publish the new subgraph with a schema that doesn't match the proposal
+    const nonMatchingSchema = `
+      type Query {
+        differentField: Int!
+      }
+    `;
+
+    // First create the subgraph before publishing
+    await client.createFederatedSubgraph({
+      name: newSubgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      labels: [label],
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+    });
+
+    const publishResponse1 = await client.publishFederatedSubgraph({
+      name: newSubgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      schema: nonMatchingSchema,
+    });
+
+    // Should fail because the schema doesn't match the approved proposal
+    expect(publishResponse1.response?.code).toBe(EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL);
+    expect(publishResponse1.response?.details).toBe(
+      `The subgraph ${newSubgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`,
+    );
+
+    // Publish with schema matching the proposal - should succeed
+    const publishResponse2 = await client.publishFederatedSubgraph({
+      name: newSubgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      schema: newSubgraphSDL,
+    });
+
+    expect(publishResponse2.response?.code).toBe(EnumStatusCode.OK);
+    expect(publishResponse2.proposalMatchMessage).toBeUndefined();
+
+    // Check that the new subgraph was correctly added to the federated graph
+    const getFedGraphResponse = await client.getFederatedGraphByName({
+      name: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+
+    expect(getFedGraphResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getFedGraphResponse.subgraphs?.length).toBe(2);
+    expect(getFedGraphResponse.subgraphs?.some((sg) => sg.name === newSubgraphName)).toBe(true);
+
+    await client.createFederatedSubgraph({
+      name: newSubgraphName2,
+      namespace: DEFAULT_NAMESPACE,
+      labels: [label],
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+    });
+
+    const publishResponse3 = await client.publishFederatedSubgraph({
+      name: newSubgraphName2,
+      namespace: DEFAULT_NAMESPACE,
+      schema: newSubgraphSDL,
+    });
+
+    // Should fail because the subgraph with newSubgraphName2 doesn't exist yet in the proposal
+    expect(publishResponse3.response?.code).toBe(EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL);
+    expect(publishResponse3.response?.details).toBe(
+      `The subgraph ${newSubgraphName2}'s schema does not match to this subgraph's schema in any approved proposal.`,
     );
 
     await server.close();
