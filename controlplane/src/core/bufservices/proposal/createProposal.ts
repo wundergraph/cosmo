@@ -248,6 +248,7 @@ export function createProposal(
       logger,
       chClient: opts.chClient,
       skipProposalMatchCheck: true,
+      federatedGraph,
     });
 
     await schemaCheckRepo.createSchemaCheckProposal({

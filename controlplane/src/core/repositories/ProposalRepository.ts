@@ -488,8 +488,8 @@ export class ProposalRepository {
       .innerJoin(schema.schemaChecks, eq(schema.schemaCheckProposals.schemaCheckId, schema.schemaChecks.id))
       .where(whereCondition)
       .orderBy(desc(schema.schemaCheckProposals.createdAt))
-      // .limit(limit)
-      // .offset(offset);
+      .limit(limit)
+      .offset(offset);
 
     // Get the total count of checks for this proposal
     const checksCount = await this.db

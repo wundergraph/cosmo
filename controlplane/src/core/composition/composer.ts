@@ -191,7 +191,7 @@ export class RouterConfigUploadError extends Error {
 export type ComposeDeploymentError = RouterConfigUploadError | AdmissionError | Error;
 
 export type CheckSubgraph = {
-  subgraph: SubgraphDTO;
+  subgraph?: SubgraphDTO;
   checkSubgraphId: string;
   newSchemaSDL: string;
   newGraphQLSchema?: GraphQLSchema;

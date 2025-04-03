@@ -12,7 +12,7 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('update');
   command.description('Updates an existing proposal for a federated graph.');
   command.argument('<name>', 'The name of the proposal to update.');
-  command.option(
+  command.requiredOption(
     '-f, --federation-graph <federatedGraphName>',
     'The name of the federated graph this proposal is for.',
   );
@@ -37,12 +37,6 @@ export default (opts: BaseCommandOptions) => {
   );
 
   command.action(async (name, options) => {
-    if (!options.federationGraph) {
-      program.error(
-        pc.red(pc.bold('Please provide a federated graph name using the -f or --federation-graph option.')),
-      );
-    }
-
     if (options.subgraph.length === 0 && options.deletedSubgraph.length === 0) {
       program.error(
         pc.red(pc.bold('Please provide at least one of: --subgraph, or --deleted-subgraph to update the proposal.')),
