@@ -255,26 +255,18 @@ export class ProposalRepository {
         .where(eq(schema.proposals.id, id))
         .returning();
     } else {
-      for (const subgraph of proposalSubgraphs) {
-        await this.db
-          .insert(schema.proposalSubgraphs)
-          .values({
-            proposalId: id,
-            subgraphId: subgraph.subgraphId,
-            subgraphName: subgraph.subgraphName,
-            schemaSDL: subgraph.schemaSDL || null,
-            isDeleted: subgraph.isDeleted,
-            isNew: subgraph.isNew,
-          })
-          .onConflictDoUpdate({
-            target: [schema.proposalSubgraphs.proposalId, schema.proposalSubgraphs.subgraphName],
-            set: {
-              schemaSDL: subgraph.schemaSDL || null,
-              isDeleted: subgraph.isDeleted,
-              isNew: subgraph.isNew,
-            },
-          });
-      }
+      await this.db.delete(schema.proposalSubgraphs).where(eq(schema.proposalSubgraphs.proposalId, id));
+
+      await this.db.insert(schema.proposalSubgraphs).values(
+        proposalSubgraphs.map((subgraph) => ({
+          proposalId: id,
+          subgraphId: subgraph.subgraphId,
+          subgraphName: subgraph.subgraphName,
+          schemaSDL: subgraph.schemaSDL || null,
+          isDeleted: subgraph.isDeleted,
+          isNew: subgraph.isNew,
+        })),
+      );
     }
   }
 

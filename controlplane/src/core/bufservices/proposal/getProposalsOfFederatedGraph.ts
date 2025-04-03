@@ -24,7 +24,6 @@ export function getProposalsOfFederatedGraph(
     logger = enrichLogger(ctx, logger, authContext);
 
     const federatedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-    const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const proposalRepo = new ProposalRepository(opts.db);
 
     const federatedGraph = await federatedGraphRepo.byName(req.federatedGraphName, req.namespace);

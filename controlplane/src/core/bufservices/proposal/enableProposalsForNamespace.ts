@@ -44,7 +44,7 @@ export function enableProposalsForNamespace(
       return {
         response: {
           code: EnumStatusCode.ERR_UPGRADE_PLAN,
-          details: `Upgrade to a enterprise plan to enable proposals.`,
+          details: `Upgrade to a scale plan to enable proposals.`,
         },
       };
     }

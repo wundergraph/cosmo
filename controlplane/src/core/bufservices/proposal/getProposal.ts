@@ -9,6 +9,7 @@ import {
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 
 export function getProposal(
   opts: RouterOptions,
@@ -21,6 +22,7 @@ export function getProposal(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
+    const federatedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const proposalRepo = new ProposalRepository(opts.db);
 
     const proposal = await proposalRepo.ById(req.proposalId);
@@ -29,6 +31,16 @@ export function getProposal(
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: `Proposal ${req.proposalId} not found`,
+        },
+      };
+    }
+
+    const federatedGraph = await federatedGraphRepo.byId(proposal.proposal.federatedGraphId);
+    if (!federatedGraph) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Federated graph ${proposal.proposal.federatedGraphId} not found`,
         },
       };
     }
@@ -45,6 +57,8 @@ export function getProposal(
         createdAt: proposal.proposal.createdAt,
         createdByEmail: proposal.proposal.createdByEmail || '',
         state: proposal.proposal.state,
+        federatedGraphId: proposal.proposal.federatedGraphId,
+        federatedGraphName: federatedGraph.name,
         subgraphs: proposal.proposalSubgraphs.map((subgraph) => ({
           name: subgraph.subgraphName,
           schemaSDL: subgraph.schemaSDL,
