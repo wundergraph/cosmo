@@ -545,7 +545,7 @@ const Type = (props: {
 
             {props.requiresScopes?.length && (
               <AuthenticatedScopes isType scopes={props.requiresScopes} asChild>
-                <button type="button" className={badgeVariants({ className: "w-max" })}>scopes</button>
+                <button type="button" className={badgeVariants({ className: "w-max" })}>View scopes</button>
               </AuthenticatedScopes>
             )}
           </div>
@@ -800,7 +800,7 @@ const AuthenticatedScopes = ({
           ? children
           : (
             <Button variant="link" size="sm" className="h-auto p-0">
-              View required scopes
+              View scopes
             </Button>
           )}
       </PopoverTrigger>
