@@ -201,6 +201,8 @@ func Main() {
 
 	// Start the router
 	for {
+		logger.Debug("Starting router")
+
 		// Provide a way to cancel all running components of the router after graceful shutdown
 		// Don't use the parent context that is canceled by the signal handler
 		routerCtx, routerCancel := context.WithCancel(context.Background())
@@ -243,9 +245,9 @@ func Main() {
 			logger.Info("Router shutdown successfully")
 		}
 
-		logger.Debug("Router exiting")
-
 		if shutdown {
+			logger.Debug("Router exiting")
+
 			return
 		}
 	}
