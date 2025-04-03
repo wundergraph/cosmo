@@ -1248,22 +1248,18 @@ func (r *Router) Start(ctx context.Context) error {
 	return nil
 }
 
-type ConcSafeErrorJoiner struct {
+type concSafeErrorJoiner struct {
 	err error
 	mu  sync.Mutex
 }
 
-func (e *ConcSafeErrorJoiner) Append(err error) {
+func (e *concSafeErrorJoiner) Append(err error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.err = errors.Join(e.err, err)
 }
 
-func (e *ConcSafeErrorJoiner) Error() string {
-	return e.Error()
-}
-
-func (e *ConcSafeErrorJoiner) ErrOrNil() error {
+func (e *concSafeErrorJoiner) ErrOrNil() error {
 	if e.err == nil {
 		return nil
 	}
@@ -1273,7 +1269,7 @@ func (e *ConcSafeErrorJoiner) ErrOrNil() error {
 // Shutdown gracefully shuts down the router. It blocks until the server is shutdown.
 // If the router is already shutdown, the method returns immediately without error.
 func (r *Router) Shutdown(ctx context.Context) error {
-	var err ConcSafeErrorJoiner
+	var err concSafeErrorJoiner
 
 	if !r.shutdown.CompareAndSwap(false, true) {
 		return nil
