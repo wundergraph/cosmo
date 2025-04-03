@@ -3,13 +3,12 @@ import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   GetChecksOfProposalRequest,
-  GetChecksOfProposalResponse,
-  SchemaCheck,
+  GetChecksOfProposalResponse
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
-import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 
 export function getChecksOfProposal(
   opts: RouterOptions,

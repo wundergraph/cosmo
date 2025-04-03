@@ -134,7 +134,7 @@ export function publishFederatedSubgraph(
       if (proposalConfig) {
         const match = await proposalRepo.matchSchemaWithProposal({
           subgraphId: subgraph.id,
-          schema: subgraphSchemaSDL,
+          schemaSDL: subgraphSchemaSDL,
           routerCompatibilityVersion,
         });
         if (!match) {

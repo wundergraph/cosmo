@@ -128,7 +128,6 @@ export const ProposalDetails = ({
   const { toast } = useToast();
 
   const graphData = useContext(GraphContext);
-  const [, setRouteCache] = useSessionStorage("checks.route", router.asPath);
 
   const {
     dateRange: { start, end },
@@ -147,8 +146,6 @@ export const ProposalDetails = ({
       proposalId: id,
       limit: limit > 50 ? 50 : limit,
       offset: (pageNumber - 1) * limit,
-      startDate: formatISO(startDate),
-      endDate: formatISO(endDate),
     },
     {
       enabled: tab === "checks",
@@ -565,9 +562,6 @@ export const ProposalDetails = ({
                                         asChild
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => {
-                                          setRouteCache(router.asPath);
-                                        }}
                                         className="table-action"
                                       >
                                         <Link href={path}>View</Link>

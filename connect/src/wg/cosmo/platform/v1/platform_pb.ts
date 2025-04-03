@@ -3667,6 +3667,11 @@ export class SchemaCheck extends Message<SchemaCheck> {
    */
   checkedSubgraphs: SchemaCheck_CheckedSubgraph[] = [];
 
+  /**
+   * @generated from field: optional string proposalMatch = 18;
+   */
+  proposalMatch?: string;
+
   constructor(data?: PartialMessage<SchemaCheck>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3692,6 +3697,7 @@ export class SchemaCheck extends Message<SchemaCheck> {
     { no: 15, name: "graph_pruning_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 16, name: "vcsContext", kind: "message", T: VCSContext, opt: true },
     { no: 17, name: "checkedSubgraphs", kind: "message", T: SchemaCheck_CheckedSubgraph, repeated: true },
+    { no: 18, name: "proposalMatch", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck {
@@ -4026,6 +4032,26 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
    */
   compositionWarnings: string[] = [];
 
+  /**
+   * @generated from field: optional string proposalId = 12;
+   */
+  proposalId?: string;
+
+  /**
+   * @generated from field: optional string proposalName = 13;
+   */
+  proposalName?: string;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GetCheckSummaryResponse.ProposalSchemaMatch proposalMatches = 14;
+   */
+  proposalMatches: GetCheckSummaryResponse_ProposalSchemaMatch[] = [];
+
+  /**
+   * @generated from field: bool isProposalsEnabled = 15;
+   */
+  isProposalsEnabled = false;
+
   constructor(data?: PartialMessage<GetCheckSummaryResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4044,6 +4070,10 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
     { no: 9, name: "lintIssues", kind: "message", T: LintIssue, repeated: true },
     { no: 10, name: "graphPruningIssues", kind: "message", T: GraphPruningIssue, repeated: true },
     { no: 11, name: "compositionWarnings", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 12, name: "proposalId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 13, name: "proposalName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 14, name: "proposalMatches", kind: "message", T: GetCheckSummaryResponse_ProposalSchemaMatch, repeated: true },
+    { no: 15, name: "isProposalsEnabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryResponse {
@@ -4115,6 +4145,55 @@ export class GetCheckSummaryResponse_AffectedGraph extends Message<GetCheckSumma
 
   static equals(a: GetCheckSummaryResponse_AffectedGraph | PlainMessage<GetCheckSummaryResponse_AffectedGraph> | undefined, b: GetCheckSummaryResponse_AffectedGraph | PlainMessage<GetCheckSummaryResponse_AffectedGraph> | undefined): boolean {
     return proto3.util.equals(GetCheckSummaryResponse_AffectedGraph, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetCheckSummaryResponse.ProposalSchemaMatch
+ */
+export class GetCheckSummaryResponse_ProposalSchemaMatch extends Message<GetCheckSummaryResponse_ProposalSchemaMatch> {
+  /**
+   * @generated from field: string proposalId = 1;
+   */
+  proposalId = "";
+
+  /**
+   * @generated from field: string proposalName = 2;
+   */
+  proposalName = "";
+
+  /**
+   * @generated from field: bool proposalMatch = 3;
+   */
+  proposalMatch = false;
+
+  constructor(data?: PartialMessage<GetCheckSummaryResponse_ProposalSchemaMatch>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetCheckSummaryResponse.ProposalSchemaMatch";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "proposalId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "proposalName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "proposalMatch", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryResponse_ProposalSchemaMatch {
+    return new GetCheckSummaryResponse_ProposalSchemaMatch().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCheckSummaryResponse_ProposalSchemaMatch {
+    return new GetCheckSummaryResponse_ProposalSchemaMatch().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCheckSummaryResponse_ProposalSchemaMatch {
+    return new GetCheckSummaryResponse_ProposalSchemaMatch().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCheckSummaryResponse_ProposalSchemaMatch | PlainMessage<GetCheckSummaryResponse_ProposalSchemaMatch> | undefined, b: GetCheckSummaryResponse_ProposalSchemaMatch | PlainMessage<GetCheckSummaryResponse_ProposalSchemaMatch> | undefined): boolean {
+    return proto3.util.equals(GetCheckSummaryResponse_ProposalSchemaMatch, a, b);
   }
 }
 

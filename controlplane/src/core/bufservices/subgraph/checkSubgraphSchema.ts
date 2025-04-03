@@ -245,8 +245,13 @@ export function checkSubgraphSchema(
       if (proposalConfig) {
         const match = await proposalRepo.matchSchemaWithProposal({
           subgraphId: subgraph.id,
-          schema: newSchemaSDL,
+          schemaSDL: newSchemaSDL,
           routerCompatibilityVersion,
+          schemaCheckId: schemaCheckID,
+        });
+        await schemaCheckRepo.update({
+          schemaCheckID,
+          proposalMatch: match ? 'success' : proposalConfig.checkSeverityLevel === 'warn' ? 'warn' : 'error',
         });
         if (!match) {
           if (proposalConfig.checkSeverityLevel === 'warn') {

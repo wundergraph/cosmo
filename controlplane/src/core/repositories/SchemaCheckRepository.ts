@@ -18,7 +18,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema, parse } from 'graphql';
 import _ from 'lodash';
 import pLimit from 'p-limit';
-import { NewSchemaChangeOperationUsage } from '../../db/models.js';
+import { NewSchemaChangeOperationUsage, ProposalMatch } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
   schemaCheckChangeAction,
@@ -95,6 +95,7 @@ export class SchemaCheckRepository {
     hasBreakingChanges?: boolean;
     hasLintErrors?: boolean;
     hasGraphPruningErrors?: boolean;
+    proposalMatch?: ProposalMatch;
   }): Promise<string | undefined> {
     const updatedSchemaCheck = await this.db
       .update(schemaChecks)
@@ -104,6 +105,7 @@ export class SchemaCheckRepository {
         hasClientTraffic: data.hasClientTraffic,
         hasLintErrors: data.hasLintErrors,
         hasGraphPruningErrors: data.hasGraphPruningErrors,
+        proposalMatch: data.proposalMatch,
       })
       .where(eq(schemaChecks.id, data.schemaCheckID))
       .returning()
@@ -727,9 +729,16 @@ export class SchemaCheckRepository {
         if (proposalConfig) {
           const match = await proposalRepo.matchSchemaWithProposal({
             subgraphId: subgraph.id,
-            schema: newSchemaSDL,
+            schemaSDL: newSchemaSDL,
             routerCompatibilityVersion,
+            schemaCheckId: schemaCheckID,
           });
+          
+          await this.update({
+            schemaCheckID,
+            proposalMatch: match ? 'success' : proposalConfig.checkSeverityLevel === 'warn' ? 'warn' : 'error',
+          });
+
           if (!match) {
             if (proposalConfig.checkSeverityLevel === 'warn') {
               proposalMatchMessage += `The subgraph ${subgraph.name}'s schema does not match to this subgraph's schema in any approved proposal.\n`;

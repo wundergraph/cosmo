@@ -746,6 +746,8 @@ export const schemaVersionRelations = relations(schemaVersion, ({ many, one }) =
   }),
 }));
 
+export const proposalMatchEnum = pgEnum('proposal_match', ['success', 'warn', 'error'] as const);
+
 export const schemaChecks = pgTable(
   'schema_checks', // sc
   {
@@ -759,6 +761,7 @@ export const schemaChecks = pgTable(
     hasLintErrors: boolean('has_lint_errors').default(false),
     hasGraphPruningErrors: boolean('has_graph_pruning_errors').default(false),
     hasClientTraffic: boolean('has_client_traffic').default(false),
+    proposalMatch: proposalMatchEnum('proposal_match'),
     clientTrafficCheckSkipped: boolean('client_traffic_check_skipped').default(false),
     lintSkipped: boolean('lint_skipped'),
     graphPruningSkipped: boolean('graph_pruning_skipped'),
@@ -2295,4 +2298,40 @@ export const proposalSubgraphs = pgTable(
 export const proposalSubgraphsRelations = relations(proposalSubgraphs, ({ one }) => ({
   proposal: one(proposals, { fields: [proposalSubgraphs.proposalId], references: [proposals.id] }),
   subgraph: one(subgraphs, { fields: [proposalSubgraphs.subgraphId], references: [subgraphs.id] }),
+}));
+
+export const schemaCheckProposalMatch = pgTable(
+  'schema_check_proposal_match', // scpm
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    schemaCheckId: uuid('schema_check_id')
+      .notNull()
+      .references(() => schemaChecks.id, {
+        onDelete: 'cascade',
+      }),
+    proposalId: uuid('proposal_id')
+      .notNull()
+      .references(() => proposals.id, {
+        onDelete: 'cascade',
+      }),
+    proposalMatch: boolean('proposal_match').notNull(),
+  },
+  (t) => {
+    return {
+      schemaCheckIdIndex: index('scpm_schema_check_id_idx').on(t.schemaCheckId),
+      proposalIdIndex: index('scpm_proposal_id_idx').on(t.proposalId),
+      uniqueSchemaCheckProposalMatch: unique('unique_schema_check_proposal_match').on(t.schemaCheckId, t.proposalId),
+    };
+  },
+);
+
+export const schemaCheckProposalMatchRelations = relations(schemaCheckProposalMatch, ({ one }) => ({
+  check: one(schemaChecks, {
+    fields: [schemaCheckProposalMatch.schemaCheckId],
+    references: [schemaChecks.id],
+  }),
+  proposal: one(proposals, {
+    fields: [schemaCheckProposalMatch.proposalId],
+    references: [proposals.id],
+  }),
 }));

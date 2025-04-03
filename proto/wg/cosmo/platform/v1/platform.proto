@@ -487,6 +487,7 @@ message SchemaCheck {
   bool graph_pruning_skipped = 15;
   optional VCSContext vcsContext = 16;
   repeated CheckedSubgraph checkedSubgraphs = 17;
+  optional string proposalMatch = 18;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -515,6 +516,12 @@ message GetCheckSummaryResponse {
     bool isCheckSuccessful = 4;
   }
 
+  message ProposalSchemaMatch {
+    string proposalId = 1;
+    string proposalName = 2;
+    bool proposalMatch = 3;
+  }
+
   Response response = 1;
   SchemaCheck check = 2;
   repeated AffectedGraph affected_graphs = 3;
@@ -525,6 +532,10 @@ message GetCheckSummaryResponse {
   repeated LintIssue lintIssues = 9;
   repeated GraphPruningIssue graphPruningIssues = 10;
   repeated string compositionWarnings = 11;
+  optional string proposalId = 12;
+  optional string proposalName = 13;
+  repeated ProposalSchemaMatch proposalMatches = 14;
+  bool isProposalsEnabled = 15;
 }
 
 message GetCheckOperationsRequest {

@@ -8,6 +8,7 @@ import { ChangesTable } from "@/components/checks/changes-table";
 import { GraphPruningIssuesTable } from "@/components/checks/graph-pruning-issues-table";
 import { LintIssuesTable } from "@/components/checks/lint-issues-table";
 import { CheckOperations } from "@/components/checks/operations";
+import { ProposalMatchesTable } from "@/components/checks/proposal-matches-table";
 import { EmptyState } from "@/components/empty-state";
 import { InfoTooltip } from "@/components/info-tooltip";
 import {
@@ -69,6 +70,7 @@ import {
   Component2Icon,
   CrossCircledIcon,
   CubeIcon,
+  LightningBoltIcon,
   ReaderIcon,
   UpdateIcon,
 } from "@radix-ui/react-icons";
@@ -458,20 +460,20 @@ const CheckDetails = ({
   const reason = !data.check.isComposable
     ? "Composition errors were found"
     : data.check.isBreaking && data.check?.clientTrafficCheckSkipped
-    ? "Breaking changes were detected"
-    : data.check.isBreaking && data.check.hasClientTraffic
-    ? "Operations were affected by breaking changes"
-    : data.check.isBreaking && !data.check.hasClientTraffic
-    ? "No operations were affected by breaking changes"
-    : "All tasks were successful";
+      ? "Breaking changes were detected"
+      : data.check.isBreaking && data.check.hasClientTraffic
+        ? "Operations were affected by breaking changes"
+        : data.check.isBreaking && !data.check.hasClientTraffic
+          ? "No operations were affected by breaking changes"
+          : "All tasks were successful";
 
   const subgraphName =
     data.check.subgraphName ||
     (data.check.checkedSubgraphs.length > 1
       ? "Multiple Subgraphs"
       : data.check.checkedSubgraphs.length > 0
-      ? data.check.checkedSubgraphs[0].subgraphName
-      : "Subgraph");
+        ? data.check.checkedSubgraphs[0].subgraphName
+        : "Subgraph");
 
   const setTab = (tab: string) => {
     const query: Record<string, any> = {
@@ -914,6 +916,20 @@ const CheckDetails = ({
                     ) : null}
                   </Link>
                 </TabsTrigger>
+                <TabsTrigger
+                  value="proposalMatches"
+                  className="flex items-center gap-x-2"
+                  asChild
+                >
+                  <Link
+                    href={{
+                      query: { ...router.query, tab: "proposalMatches" },
+                    }}
+                  >
+                    <LightningBoltIcon className="flex-shrink-0" />
+                    Proposal Matches
+                  </Link>
+                </TabsTrigger>
                 {!data.check.isDeleted && (
                   <TabsTrigger
                     value="schema"
@@ -1098,6 +1114,17 @@ const CheckDetails = ({
                   caption={`${data.graphPruningIssues.length} issues found`}
                   isGraphPruningEnabled={!data.check?.graphPruningSkipped}
                   hasGraphPruningErrors={data.check.hasGraphPruningErrors}
+                />
+              </TabsContent>
+              <TabsContent
+                value="proposalMatches"
+                className="w-full space-y-4 px-4 lg:px-6"
+              >
+                <ProposalMatchesTable
+                  proposalMatches={data.proposalMatches}
+                  caption={`${data.proposalMatches.length} matches found`}
+                  isProposalsEnabled={data.isProposalsEnabled}
+                  proposalMatch={!!data.check.proposalMatch}
                 />
               </TabsContent>
               <TabsContent value="schema" className="relative w-full flex-1">

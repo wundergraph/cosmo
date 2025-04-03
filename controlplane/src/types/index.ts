@@ -1,6 +1,6 @@
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
-import { GraphPruningRuleEnum, LintRuleEnum } from '../db/models.js';
+import { GraphPruningRuleEnum, LintRuleEnum, ProposalMatch } from '../db/models.js';
 
 export type FeatureIds =
   | 'users'
@@ -181,6 +181,7 @@ export interface SchemaCheckDTO {
     branch: string;
   };
   checkedSubgraphs: CheckedSubgraphDTO[];
+  proposalMatch?: ProposalMatch;
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {

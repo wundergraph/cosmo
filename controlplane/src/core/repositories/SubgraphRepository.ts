@@ -900,6 +900,7 @@ export class SubgraphRepository {
         lintSkipped: schemaChecks.lintSkipped,
         graphPruningSkipped: schemaChecks.graphPruningSkipped,
         vcsContext: schemaChecks.vcsContext,
+        proposalMatch: schemaChecks.proposalMatch,
       })
       .from(schemaChecks)
       .where(
@@ -947,6 +948,7 @@ export class SubgraphRepository {
           lintSkipped: c.lintSkipped ?? false,
           graphPruningSkipped: c.graphPruningSkipped ?? false,
           checkedSubgraphs,
+          proposalMatch: c.proposalMatch || undefined,
         };
       }),
     );
@@ -1082,6 +1084,7 @@ export class SubgraphRepository {
           }
         : undefined,
       checkedSubgraphs,
+      proposalMatch: check.proposalMatch || undefined,
     };
   }
 

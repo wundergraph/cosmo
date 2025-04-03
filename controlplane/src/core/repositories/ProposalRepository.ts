@@ -341,11 +341,13 @@ export class ProposalRepository {
 
   public async matchSchemaWithProposal({
     subgraphId,
-    schema,
+    schemaCheckId,
+    schemaSDL,
     routerCompatibilityVersion,
   }: {
     subgraphId: string;
-    schema: string;
+    schemaCheckId?: string;
+    schemaSDL: string;
     routerCompatibilityVersion: string;
   }): Promise<{ proposalId: string; proposalSubgraphId: string } | undefined> {
     const proposalSubgraphs = await this.getApprovedProposalSubgraphsBySubgraphId({ subgraphId });
@@ -355,10 +357,27 @@ export class ProposalRepository {
         continue;
       }
       const proposedSchema = proposalSubgraph.proposedSchemaSDL;
-      const schemaChanges = await getDiffBetweenGraphs(schema, proposedSchema, routerCompatibilityVersion);
+      const schemaChanges = await getDiffBetweenGraphs(schemaSDL, proposedSchema, routerCompatibilityVersion);
       if (schemaChanges.kind === 'failure') {
         continue;
       }
+
+      if (schemaCheckId) {
+        await this.db
+          .insert(schema.schemaCheckProposalMatch)
+          .values({
+            proposalId: proposalSubgraph.proposalId,
+            proposalMatch: schemaChanges.changes.length === 0,
+            schemaCheckId,
+          })
+          .onConflictDoUpdate({
+            target: [schema.schemaCheckProposalMatch.schemaCheckId, schema.schemaCheckProposalMatch.proposalId],
+            set: {
+              proposalMatch: schemaChanges.changes.length === 0,
+            },
+          });
+      }
+
       if (schemaChanges.changes.length === 0) {
         return {
           proposalId: proposalSubgraph.proposalId,
@@ -463,13 +482,14 @@ export class ProposalRepository {
         graphPruningSkipped: schema.schemaChecks.graphPruningSkipped,
         ghDetails: schema.schemaChecks.ghDetails,
         isDeleted: schema.schemaChecks.isDeleted,
+        proposalMatch: schema.schemaChecks.proposalMatch,
       })
       .from(schema.schemaCheckProposals)
-      .where(whereCondition)
       .innerJoin(schema.schemaChecks, eq(schema.schemaCheckProposals.schemaCheckId, schema.schemaChecks.id))
+      .where(whereCondition)
       .orderBy(desc(schema.schemaCheckProposals.createdAt))
-      .limit(limit)
-      .offset(offset);
+      // .limit(limit)
+      // .offset(offset);
 
     // Get the total count of checks for this proposal
     const checksCount = await this.db
@@ -510,6 +530,7 @@ export class ProposalRepository {
           lintSkipped: c.lintSkipped ?? false,
           graphPruningSkipped: c.graphPruningSkipped ?? false,
           checkedSubgraphs,
+          proposalMatch: c.proposalMatch || undefined,
         };
       }),
     );
@@ -551,5 +572,50 @@ export class ProposalRepository {
         proposalSubgraphs: [],
       });
     }
+  }
+
+  public async getProposalByCheckId({ checkId }: { checkId: string }) {
+    const proposal = await this.db
+      .select({
+        proposalId: schema.proposals.id,
+        proposalName: schema.proposals.name,
+      })
+      .from(schema.schemaCheckProposals)
+      .innerJoin(schema.proposals, eq(schema.schemaCheckProposals.proposalId, schema.proposals.id))
+      .where(eq(schema.schemaCheckProposals.schemaCheckId, checkId));
+
+    if (proposal.length === 0) {
+      return undefined;
+    }
+
+    return {
+      proposalId: proposal[0].proposalId,
+      proposalName: proposal[0].proposalName,
+    };
+  }
+
+  public async getProposalSchemaMatchesOfCheck({
+    checkId,
+    federatedGraphId,
+  }: {
+    checkId: string;
+    federatedGraphId: string;
+  }) {
+    const proposalMatches = await this.db
+      .select({
+        proposalId: schema.schemaCheckProposalMatch.proposalId,
+        proposalName: schema.proposals.name,
+        proposalMatch: schema.schemaCheckProposalMatch.proposalMatch,
+      })
+      .from(schema.schemaCheckProposalMatch)
+      .innerJoin(schema.proposals, eq(schema.schemaCheckProposalMatch.proposalId, schema.proposals.id))
+      .where(
+        and(
+          eq(schema.schemaCheckProposalMatch.schemaCheckId, checkId),
+          eq(schema.proposals.federatedGraphId, federatedGraphId),
+        ),
+      );
+
+    return proposalMatches;
   }
 }
