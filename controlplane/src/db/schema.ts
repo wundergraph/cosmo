@@ -1102,6 +1102,8 @@ export const organizations = pgTable(
     isDeactivated: boolean('is_deactivated').default(false),
     deactivationReason: text('deactivation_reason'),
     deactivatedAt: timestamp('deactivated_at', { withTimezone: true }),
+    queuedForDeletionAt: timestamp('queued_for_deletion_at', { withTimezone: true }),
+    queuedForDeletionBy: text('queued_for_deletion_by'), // display name in case the member is removed
   },
   (t) => {
     return {
