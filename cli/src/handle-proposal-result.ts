@@ -32,18 +32,10 @@ type ProposalResponse = {
  * Displays schema changes, composition errors, and other issues.
  */
 export const handleProposalResult = (
-  resp: CreateProposalResponse | UpdateProposalResponse | Error,
+  resp: CreateProposalResponse | UpdateProposalResponse,
   proposalName: string,
   isCreate = false,
 ): { success: boolean; message?: string } => {
-  // Handle network errors or other unexpected issues
-  if (resp instanceof Error) {
-    return {
-      success: false,
-      message: pc.red(`Failed to ${isCreate ? 'create' : 'update'} proposal: ${resp.message}`),
-    };
-  }
-
   const changesTable = new Table({
     head: [pc.bold(pc.white('CHANGE')), pc.bold(pc.white('TYPE')), pc.bold(pc.white('DESCRIPTION'))],
     wordWrap: true,
@@ -112,7 +104,9 @@ export const handleProposalResult = (
 
     success = true;
 
-    successMessage = isCreate && 'proposalId' in resp ? pc.green(`\nProposal '${proposalName}' was created successfully with ID: ${resp.proposalId}`) : pc.green(`\nProposal '${proposalName}' was updated successfully.`);
+    successMessage = isCreate
+      ? pc.green(`\nProposal '${proposalName}' was created successfully.`)
+      : pc.green(`\nProposal '${proposalName}' was updated successfully.`);
 
     return { success: true, message: successMessage };
   }
@@ -220,7 +214,9 @@ export const handleProposalResult = (
       '\n' + logSymbols.success + pc.green(` Schema check passed. ${finalStatement}`) + '\n\n' + studioCheckUrl + '\n',
     );
 
-    successMessage = isCreate && 'proposalId' in resp ? pc.green(`\nProposal '${proposalName}' was created successfully with ID: ${resp.proposalId}`) : pc.green(`\nProposal '${proposalName}' was updated successfully.`);
+    successMessage = isCreate
+      ? pc.green(`\nProposal '${proposalName}' was created successfully.`)
+      : pc.green(`\nProposal '${proposalName}' was updated successfully.`);
 
     return { success: true, message: successMessage };
   } else {

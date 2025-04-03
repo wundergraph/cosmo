@@ -98,23 +98,18 @@ export default (opts: BaseCommandOptions) => {
 
     const spinner = ora('Creating proposal...').start();
 
-    let resp;
-    try {
-      resp = await opts.client.platform.createProposal(
-        {
-          federatedGraphName: options.federationGraph,
-          namespace: options.namespace,
-          name,
-          subgraphs,
-          didHubCreate: false,
-        },
-        {
-          headers: getBaseHeaders(),
-        },
-      );
-    } catch (error: unknown) {
-      resp = error instanceof Error ? error : new Error(String(error));
-    }
+    const resp = await opts.client.platform.createProposal(
+      {
+        federatedGraphName: options.federationGraph,
+        namespace: options.namespace,
+        name,
+        subgraphs,
+        didHubCreate: false,
+      },
+      {
+        headers: getBaseHeaders(),
+      },
+    );
 
     spinner.stop();
 
