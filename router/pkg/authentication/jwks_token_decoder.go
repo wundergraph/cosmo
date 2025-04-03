@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/MicahParks/jwkset"
@@ -51,10 +50,6 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 
 	for _, c := range configs {
 		l := logger.With(zap.String("url", c.URL))
-		ur, err := url.ParseRequestURI(c.URL)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse given URL %q: %w", c.URL, err)
-		}
 
 		jwksetHTTPStorageOptions := jwkset.HTTPClientStorageOptions{
 			Client:             newOIDCDiscoveryClient(httpclient.NewRetryableHTTPClient(l)),
@@ -69,12 +64,12 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			Storage:         NewValidationStore(logger, nil, c.AllowedAlgorithms),
 		}
 
-		store, err := jwkset.NewStorageFromHTTP(ur, jwksetHTTPStorageOptions)
+		store, err := jwkset.NewStorageFromHTTP(c.URL, jwksetHTTPStorageOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create HTTP client storage for JWK provider: %w", err)
 		}
 
-		remoteJWKSets[ur.String()] = store
+		remoteJWKSets[c.URL] = store
 	}
 
 	jwksetHTTPClientOptions := jwkset.HTTPClientOptions{

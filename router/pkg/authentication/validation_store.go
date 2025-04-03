@@ -102,6 +102,17 @@ func (v *validationStore) KeyReadAll(ctx context.Context) ([]jwkset.JWK, error) 
 	return filter, nil
 }
 
+func (v *validationStore) KeyReplaceAll(ctx context.Context, given []jwkset.JWK) error {
+	filtered := make([]jwkset.JWK, 0)
+	for _, k := range given {
+		m := k.Marshal()
+		if _, ok := v.algs[m.ALG.String()]; ok {
+			filtered = append(filtered, k)
+		}
+	}
+	return v.inner.KeyReplaceAll(ctx, filtered)
+}
+
 func (v *validationStore) KeyWrite(ctx context.Context, jwk jwkset.JWK) error {
 	jwkMarshal := jwk.Marshal()
 	if _, ok := v.algs[jwkMarshal.ALG.String()]; !ok {
