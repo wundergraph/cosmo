@@ -5,6 +5,12 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto/v2"
 	"github.com/go-chi/chi/v5"
@@ -24,11 +30,6 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/exp/maps"
-	"net/http"
-	"net/url"
-	"strings"
-	"sync"
-	"time"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
@@ -945,20 +946,21 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	operationProcessor := NewOperationProcessor(OperationProcessorOptions{
-		Executor:                            executor,
-		MaxOperationSizeInBytes:             int64(s.routerTrafficConfig.MaxRequestBodyBytes),
-		PersistedOperationClient:            s.persistedOperationClient,
-		AutomaticPersistedOperationCacheTtl: s.automaticPersistedQueriesConfig.Cache.TTL,
-		EnablePersistedOperationsCache:      s.engineExecutionConfiguration.EnablePersistedOperationsCache,
-		PersistedOpsNormalizationCache:      gm.persistedOperationCache,
-		NormalizationCache:                  gm.normalizationCache,
-		ValidationCache:                     gm.validationCache,
-		QueryDepthCache:                     gm.complexityCalculationCache,
-		OperationHashCache:                  gm.operationHashCache,
-		ParseKitPoolSize:                    s.engineExecutionConfiguration.ParseKitPoolSize,
-		IntrospectionEnabled:                s.Config.introspection,
-		ApolloCompatibilityFlags:            s.apolloCompatibilityFlags,
-		ApolloRouterCompatibilityFlags:      s.apolloRouterCompatibilityFlags,
+		Executor:                                         executor,
+		MaxOperationSizeInBytes:                          int64(s.routerTrafficConfig.MaxRequestBodyBytes),
+		PersistedOperationClient:                         s.persistedOperationClient,
+		AutomaticPersistedOperationCacheTtl:              s.automaticPersistedQueriesConfig.Cache.TTL,
+		EnablePersistedOperationsCache:                   s.engineExecutionConfiguration.EnablePersistedOperationsCache,
+		PersistedOpsNormalizationCache:                   gm.persistedOperationCache,
+		NormalizationCache:                               gm.normalizationCache,
+		ValidationCache:                                  gm.validationCache,
+		QueryDepthCache:                                  gm.complexityCalculationCache,
+		OperationHashCache:                               gm.operationHashCache,
+		ParseKitPoolSize:                                 s.engineExecutionConfiguration.ParseKitPoolSize,
+		IntrospectionEnabled:                             s.Config.introspection,
+		ApolloCompatibilityFlags:                         s.apolloCompatibilityFlags,
+		ApolloRouterCompatibilityFlags:                   s.apolloRouterCompatibilityFlags,
+		DisableExposingVariablesContentOnValidationError: s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
