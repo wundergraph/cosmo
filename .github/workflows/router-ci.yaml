@@ -137,7 +137,7 @@ jobs:
     timeout-minutes: 30
     services:
       nats:
-        image: ghcr.io/wundergraph/cosmo/nats:2.11.0
+        image: ghcr.io/wundergraph/cosmo/nats:2.11.0-alpine
         options: >-
           --health-cmd "curl -f http://localhost:8222/healthz"
           --health-interval 10s
