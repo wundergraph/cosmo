@@ -136,8 +136,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services:
+      nats:
+        image: ghcr.io/wundergraph/cosmo/nats:2.11.0
+        ports:
+          - 4222:4222
+          - 8222:8222
+          - 6222:6222
       redis:
-        # Docker Hub image
         image: redis:7
         # Set health checks to wait until redis has started
         options: >-

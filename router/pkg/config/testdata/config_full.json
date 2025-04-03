@@ -578,6 +578,7 @@
     "WebSocketClientPollTimeout": 1000000000,
     "WebSocketClientConnBufferSize": 128,
     "WebSocketClientReadTimeout": 5000000000,
+    "WebSocketClientWriteTimeout": 10000000000,
     "ExecutionPlanCacheSize": 1024,
     "MinifySubgraphOperations": true,
     "EnablePersistedOperationsCache": true,
@@ -587,6 +588,7 @@
     "ParseKitPoolSize": 16,
     "EnableValidationCache": true,
     "ValidationCacheSize": 1024,
+    "DisableExposingVariablesContentOnValidationError": false,
     "ResolverMaxRecyclableParserSize": 4096,
     "EnableSubgraphFetchOperationName": true,
     "DisableVariablesRemapping": false,
@@ -619,6 +621,16 @@
           "Enabled": true,
           "HeaderKey": "Authorization"
         }
+      }
+    },
+    "ClientInfoFromInitialPayload": {
+      "Enabled": true,
+      "NameField": "graphql-client-name",
+      "VersionField": "graphql-client-version",
+      "ForwardToRequestHeaders": {
+        "Enabled": true,
+        "NameTargetHeader": "graphql-client-name",
+        "VersionTargetHeader": "graphql-client-version"
       }
     }
   },

@@ -19,26 +19,33 @@ export function joinLabel({ key, value }: { key: string; value: string }) {
 }
 
 /**
- * Normalize the URL by removing the trailing slash, fragments and query parameters.
+ * Normalize the URL by removing the fragments and query parameters.
  * Only the protocol, hostname, port and path are preserved.
  * @param url
  */
 export function normalizeURL(url: string): string {
-  // return empty
   if (!url) {
     return url;
   }
 
-  const parsedUrl = new URL(url);
-  let path = parsedUrl.pathname;
-
-  // Remove the trailing slash if present
-  if (path.endsWith('/')) {
-    path = path.slice(0, -1);
+  if (!URL.canParse(url)) {
+    throw new Error('Invalid URL');
   }
 
-  const port = parsedUrl.port ? `:${parsedUrl.port}` : '';
-  return `${parsedUrl.protocol}//${parsedUrl.hostname}${port}${path}`;
+  const indexOfQuery = url.indexOf('?');
+  const indexOfFragment = url.indexOf('#');
+
+  let urlBeforeQueryAndFragment = url;
+  if (indexOfQuery > 0) {
+    urlBeforeQueryAndFragment = urlBeforeQueryAndFragment.slice(
+      0,
+      indexOfFragment > 0 ? Math.min(indexOfQuery, indexOfFragment) : indexOfQuery,
+    );
+  } else if (indexOfFragment > 0) {
+    urlBeforeQueryAndFragment = urlBeforeQueryAndFragment.slice(0, indexOfFragment);
+  }
+
+  return urlBeforeQueryAndFragment;
 }
 
 export function isValidUrl(url: string) {
