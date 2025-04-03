@@ -2274,6 +2274,11 @@ export class DeleteFederatedSubgraphResponse extends Message<DeleteFederatedSubg
    */
   compositionWarnings: CompositionWarning[] = [];
 
+  /**
+   * @generated from field: optional string proposalMatchMessage = 5;
+   */
+  proposalMatchMessage?: string;
+
   constructor(data?: PartialMessage<DeleteFederatedSubgraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2286,6 +2291,7 @@ export class DeleteFederatedSubgraphResponse extends Message<DeleteFederatedSubg
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
     { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
+    { no: 5, name: "proposalMatchMessage", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteFederatedSubgraphResponse {

@@ -323,6 +323,8 @@ export class ProposalRepository {
         id: schema.proposalSubgraphs.id,
         proposalId: schema.proposalSubgraphs.proposalId,
         proposedSchemaSDL: schema.proposalSubgraphs.schemaSDL,
+        isDeleted: schema.proposalSubgraphs.isDeleted,
+        isNew: schema.proposalSubgraphs.isNew,
       })
       .from(schema.proposalSubgraphs)
       .innerJoin(schema.proposals, eq(schema.proposalSubgraphs.proposalId, schema.proposals.id))
@@ -336,15 +338,39 @@ export class ProposalRepository {
     schemaCheckId,
     schemaSDL,
     routerCompatibilityVersion,
+    isDeleted,
   }: {
     subgraphId: string;
     schemaCheckId?: string;
     schemaSDL: string;
     routerCompatibilityVersion: string;
+    isDeleted: boolean;
   }): Promise<{ proposalId: string; proposalSubgraphId: string } | undefined> {
     const proposalSubgraphs = await this.getApprovedProposalSubgraphsBySubgraphId({ subgraphId });
 
     for (const proposalSubgraph of proposalSubgraphs) {
+      if (proposalSubgraph.isDeleted && isDeleted) {
+        if (schemaCheckId) {
+          await this.db
+            .insert(schema.schemaCheckProposalMatch)
+            .values({
+              proposalId: proposalSubgraph.proposalId,
+              proposalMatch: true,
+              schemaCheckId,
+            })
+            .onConflictDoUpdate({
+              target: [schema.schemaCheckProposalMatch.schemaCheckId, schema.schemaCheckProposalMatch.proposalId],
+              set: {
+                proposalMatch: true,
+              },
+            });
+        }
+        return {
+          proposalId: proposalSubgraph.proposalId,
+          proposalSubgraphId: proposalSubgraph.id,
+        };
+      }
+
       if (!proposalSubgraph.proposedSchemaSDL) {
         continue;
       }

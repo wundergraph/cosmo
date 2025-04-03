@@ -248,19 +248,23 @@ export function checkSubgraphSchema(
           schemaSDL: newSchemaSDL,
           routerCompatibilityVersion,
           schemaCheckId: schemaCheckID,
+          isDeleted: !!req.delete,
         });
         await schemaCheckRepo.update({
           schemaCheckID,
           proposalMatch: match ? 'success' : proposalConfig.checkSeverityLevel === 'warn' ? 'warn' : 'error',
         });
         if (!match) {
+          const message = req.delete
+            ? `The subgraph ${req.subgraphName} is not proposed to be deleted in any of the approved proposals.`
+            : `The subgraph ${req.subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`;
           if (proposalConfig.checkSeverityLevel === 'warn') {
-            proposalMatchMessage = `The subgraph ${req.subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`;
+            proposalMatchMessage = message;
           } else {
             return {
               response: {
                 code: EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL,
-                details: `The subgraph ${req.subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`,
+                details: message,
               },
               breakingChanges: [],
               nonBreakingChanges: [],
@@ -272,7 +276,7 @@ export function checkSubgraphSchema(
               graphPruneWarnings: [],
               graphPruneErrors: [],
               compositionWarnings: [],
-              proposalMatchMessage: `The subgraph ${req.subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`,
+              proposalMatchMessage: message,
             };
           }
         }

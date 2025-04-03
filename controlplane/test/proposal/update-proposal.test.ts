@@ -883,4 +883,303 @@ describe('Update proposal tests', () => {
 
     await server.close();
   });
+
+  test('should change proposal state to PUBLISHED when all subgraphs have their schema published', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+    });
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Setup a federated graph with two subgraphs
+    const subgraph1Name = genID('subgraph1');
+    const subgraph2Name = genID('subgraph2');
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName = genID('proposal');
+
+    const subgraph1SchemaSDL = `
+      type Query {
+        users: [User!]!
+      }
+      
+      type User {
+        id: ID!
+        name: String!
+      }
+    `;
+
+    const subgraph2SchemaSDL = `
+      type Query {
+        posts: [Post!]!
+      }
+      
+      type Post {
+        id: ID!
+        title: String!
+      }
+    `;
+
+    await createThenPublishSubgraph(
+      client,
+      subgraph1Name,
+      DEFAULT_NAMESPACE,
+      subgraph1SchemaSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createThenPublishSubgraph(
+      client,
+      subgraph2Name,
+      DEFAULT_NAMESPACE,
+      subgraph2SchemaSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_TWO,
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Create a proposal that updates both subgraphs
+    const updatedSubgraph1SDL = `
+      type Query {
+        users: [User!]!
+        user(id: ID!): User
+      }
+      
+      type User {
+        id: ID!
+        name: String!
+        email: String!
+      }
+    `;
+
+    const updatedSubgraph2SDL = `
+      type Query {
+        posts: [Post!]!
+        post(id: ID!): Post
+      }
+      
+      type Post {
+        id: ID!
+        title: String!
+        content: String!
+      }
+    `;
+
+    // Create proposal
+    const createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      subgraphs: [
+        {
+          name: subgraph1Name,
+          schemaSDL: updatedSubgraph1SDL,
+          isDeleted: false,
+        },
+        {
+          name: subgraph2Name,
+          schemaSDL: updatedSubgraph2SDL,
+          isDeleted: false,
+        },
+      ],
+      didHubCreate: false,
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Approve the proposal
+    await client.updateProposal({
+      proposalName,
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      updateAction: {
+        case: 'state',
+        value: 'APPROVED',
+      },
+    });
+
+    // Verify proposal is in APPROVED state
+    let proposalResponse = await client.getProposal({
+      proposalId: createProposalResponse.proposalId,
+    });
+    expect(proposalResponse.proposal?.state).toBe('APPROVED');
+
+    // Publish first subgraph schema (simulating the actual publishing)
+    await client.publishFederatedSubgraph({
+      name: subgraph1Name,
+      namespace: DEFAULT_NAMESPACE,
+      schema: updatedSubgraph1SDL,
+    });
+
+    // Check if proposal state is still APPROVED (not all subgraphs are published)
+    proposalResponse = await client.getProposal({
+      proposalId: createProposalResponse.proposalId,
+    });
+    expect(proposalResponse.proposal?.state).toBe('APPROVED');
+
+    // Publish second subgraph schema
+    await client.publishFederatedSubgraph({
+      name: subgraph2Name,
+      namespace: DEFAULT_NAMESPACE,
+      schema: updatedSubgraph2SDL,
+    });
+
+    // Verify proposal state is now PUBLISHED
+    proposalResponse = await client.getProposal({
+      proposalId: createProposalResponse.proposalId,
+    });
+    expect(proposalResponse.proposal?.state).toBe('PUBLISHED');
+
+    await server.close();
+  });
+
+  test('should change proposal state to PUBLISHED when a subgraph proposed for deletion is deleted', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+    });
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Setup a federated graph with two subgraphs
+    const subgraph1Name = genID('subgraph1');
+    const subgraph2Name = genID('subgraph2');
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName = genID('proposal');
+
+    const subgraph1SchemaSDL = `
+      type Query {
+        users: [User!]!
+      }
+      
+      type User {
+        id: ID!
+        name: String!
+      }
+    `;
+
+    const subgraph2SchemaSDL = `
+      type Query {
+        posts: [Post!]!
+      }
+      
+      type Post {
+        id: ID!
+        title: String!
+      }
+    `;
+
+    // Create and publish both subgraphs
+    await createThenPublishSubgraph(
+      client,
+      subgraph1Name,
+      DEFAULT_NAMESPACE,
+      subgraph1SchemaSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createThenPublishSubgraph(
+      client,
+      subgraph2Name,
+      DEFAULT_NAMESPACE,
+      subgraph2SchemaSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_TWO,
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Create a proposal that modifies subgraph1 and deletes subgraph2
+    const updatedSubgraph1SDL = `
+      type Query {
+        users: [User!]!
+        user(id: ID!): User
+      }
+      
+      type User {
+        id: ID!
+        name: String!
+        email: String!
+      }
+    `;
+
+    // Create proposal with one subgraph update and one subgraph deletion
+    const createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      subgraphs: [
+        {
+          name: subgraph1Name,
+          schemaSDL: updatedSubgraph1SDL,
+          isDeleted: false,
+        },
+        {
+          name: subgraph2Name,
+          schemaSDL: subgraph2SchemaSDL,
+          isDeleted: true, // Mark this subgraph for deletion
+        },
+      ],
+      didHubCreate: false,
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Approve the proposal
+    await client.updateProposal({
+      proposalName,
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      updateAction: {
+        case: 'state',
+        value: 'APPROVED',
+      },
+    });
+
+    // Verify proposal is in APPROVED state
+    let proposalResponse = await client.getProposal({
+      proposalId: createProposalResponse.proposalId,
+    });
+    expect(proposalResponse.proposal?.state).toBe('APPROVED');
+
+    // Publish first subgraph schema with updates
+    await client.publishFederatedSubgraph({
+      name: subgraph1Name,
+      namespace: DEFAULT_NAMESPACE,
+      schema: updatedSubgraph1SDL,
+    });
+
+    // Check if proposal state is still APPROVED (not all subgraphs are processed)
+    proposalResponse = await client.getProposal({
+      proposalId: createProposalResponse.proposalId,
+    });
+    expect(proposalResponse.proposal?.state).toBe('APPROVED');
+
+    // Delete the second subgraph
+    const deleteSubgraphResponse = await client.deleteFederatedSubgraph({
+      subgraphName: subgraph2Name,
+      namespace: DEFAULT_NAMESPACE,
+    });
+
+    expect(deleteSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Verify proposal state is now PUBLISHED
+    proposalResponse = await client.getProposal({
+      proposalId: createProposalResponse.proposalId,
+    });
+    expect(proposalResponse.proposal?.state).toBe('PUBLISHED');
+
+    await server.close();
+  });
 });

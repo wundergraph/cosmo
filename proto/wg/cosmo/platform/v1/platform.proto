@@ -270,10 +270,10 @@ message FixSubgraphSchemaResponse {
 }
 
 message CreateFederatedGraphResponse {
-    Response response = 1;
-    repeated CompositionError compositionErrors = 2;
-    repeated DeploymentError deploymentErrors = 3;
-    repeated CompositionWarning compositionWarnings = 4;
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
+  repeated CompositionWarning compositionWarnings = 4;
 }
 
 message CreateFederatedSubgraphResponse {
@@ -285,6 +285,7 @@ message DeleteFederatedSubgraphResponse {
   repeated CompositionError compositionErrors = 2;
   repeated DeploymentError deploymentErrors = 3;
   repeated CompositionWarning compositionWarnings = 4;
+  optional string proposalMatchMessage = 5;
 }
 
 message DeleteFederatedGraphResponse {

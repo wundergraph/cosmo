@@ -724,6 +724,7 @@ export class SchemaCheckRepository {
             schemaSDL: newSchemaSDL,
             routerCompatibilityVersion,
             schemaCheckId: schemaCheckID,
+            isDeleted: newSchemaSDL === '',
           });
 
           await this.update({

@@ -136,6 +136,7 @@ export function publishFederatedSubgraph(
           subgraphId: subgraph.id,
           schemaSDL: subgraphSchemaSDL,
           routerCompatibilityVersion,
+          isDeleted: false,
         });
         if (!match) {
           if (proposalConfig.publishSeverityLevel === 'warn') {
