@@ -97,16 +97,17 @@ type OperationProcessorOptions struct {
 	PersistedOperationClient            persistedoperation.SaveClient
 	AutomaticPersistedOperationCacheTtl int
 
-	EnablePersistedOperationsCache bool
-	PersistedOpsNormalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
-	NormalizationCache             *ristretto.Cache[uint64, NormalizationCacheEntry]
-	QueryDepthCache                *ristretto.Cache[uint64, ComplexityCacheEntry]
-	ValidationCache                *ristretto.Cache[uint64, bool]
-	OperationHashCache             *ristretto.Cache[uint64, string]
-	ParseKitPoolSize               int
-	IntrospectionEnabled           bool
-	ApolloCompatibilityFlags       config.ApolloCompatibilityFlags
-	ApolloRouterCompatibilityFlags config.ApolloRouterCompatibilityFlags
+	EnablePersistedOperationsCache                   bool
+	PersistedOpsNormalizationCache                   *ristretto.Cache[uint64, NormalizationCacheEntry]
+	NormalizationCache                               *ristretto.Cache[uint64, NormalizationCacheEntry]
+	QueryDepthCache                                  *ristretto.Cache[uint64, ComplexityCacheEntry]
+	ValidationCache                                  *ristretto.Cache[uint64, bool]
+	OperationHashCache                               *ristretto.Cache[uint64, string]
+	ParseKitPoolSize                                 int
+	IntrospectionEnabled                             bool
+	ApolloCompatibilityFlags                         config.ApolloCompatibilityFlags
+	ApolloRouterCompatibilityFlags                   config.ApolloRouterCompatibilityFlags
+	DisableExposingVariablesContentOnValidationError bool
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -1151,8 +1152,9 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 }
 
 type parseKitOptions struct {
-	apolloCompatibilityFlags       config.ApolloCompatibilityFlags
-	apolloRouterCompatibilityFlags config.ApolloRouterCompatibilityFlags
+	apolloCompatibilityFlags                         config.ApolloCompatibilityFlags
+	apolloRouterCompatibilityFlags                   config.ApolloRouterCompatibilityFlags
+	disableExposingVariablesContentOnValidationError bool
 }
 
 func createParseKit(i int, options *parseKitOptions) *parseKit {
@@ -1179,6 +1181,7 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 			ApolloRouterCompatibilityFlags: apollocompatibility.ApolloRouterFlags{
 				ReplaceInvalidVarError: options.apolloRouterCompatibilityFlags.ReplaceInvalidVarErrors.Enabled,
 			},
+			DisableExposingVariablesContent: options.disableExposingVariablesContentOnValidationError,
 		}),
 		operationValidator: astvalidation.DefaultOperationValidator(astvalidation.WithApolloCompatibilityFlags(
 			apollocompatibility.Flags{
@@ -1200,8 +1203,9 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		parseKitSemaphore:        make(chan int, opts.ParseKitPoolSize),
 		introspectionEnabled:     opts.IntrospectionEnabled,
 		parseKitOptions: &parseKitOptions{
-			apolloCompatibilityFlags:       opts.ApolloCompatibilityFlags,
-			apolloRouterCompatibilityFlags: opts.ApolloRouterCompatibilityFlags,
+			apolloCompatibilityFlags:                         opts.ApolloCompatibilityFlags,
+			apolloRouterCompatibilityFlags:                   opts.ApolloRouterCompatibilityFlags,
+			disableExposingVariablesContentOnValidationError: opts.DisableExposingVariablesContentOnValidationError,
 		},
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {

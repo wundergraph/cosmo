@@ -303,6 +303,7 @@
     "ParseKitPoolSize": 16,
     "EnableValidationCache": true,
     "ValidationCacheSize": 1024,
+    "DisableExposingVariablesContentOnValidationError": false,
     "ResolverMaxRecyclableParserSize": 32768,
     "EnableSubgraphFetchOperationName": false,
     "DisableVariablesRemapping": false,
