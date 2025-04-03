@@ -99,22 +99,17 @@ export default (opts: BaseCommandOptions) => {
 
     const spinner = ora(`Updating proposal: ${name}...`).start();
 
-    let resp;
-    try {
-      resp = await opts.client.platform.updateProposal(
-        {
-          proposalName: name,
-          federatedGraphName: options.federationGraph,
-          namespace: options.namespace,
-          ...(updatedSubgraphs.length > 0 ? { updatedSubgraphs: { subgraphs: updatedSubgraphs } } : {}),
-        },
-        {
-          headers: getBaseHeaders(),
-        },
-      );
-    } catch (error: unknown) {
-      resp = error instanceof Error ? error : new Error(String(error));
-    }
+    const resp = await opts.client.platform.updateProposal(
+      {
+        proposalName: name,
+        federatedGraphName: options.federationGraph,
+        namespace: options.namespace,
+        ...(updatedSubgraphs.length > 0 ? { updatedSubgraphs: { subgraphs: updatedSubgraphs } } : {}),
+      },
+      {
+        headers: getBaseHeaders(),
+      },
+    );
 
     spinner.stop();
 
