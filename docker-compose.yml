@@ -11,7 +11,7 @@ services:
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
       - postgres:/data/postgres
     ports:
-      - '5432:5432'
+      - "5432:5432"
     restart: unless-stopped
     networks:
       - primary
@@ -24,9 +24,9 @@ services:
       context: keycloak
       dockerfile: Dockerfile
     environment:
-      KEYCLOAK_EXTRA_ARGS: '--import-realm --optimized'
-      KEYCLOAK_ENABLE_HEALTH_ENDPOINTS: 'true'
-      KEYCLOAK_ENABLE_STATISTICS: 'true'
+      KEYCLOAK_EXTRA_ARGS: "--import-realm --optimized"
+      KEYCLOAK_ENABLE_HEALTH_ENDPOINTS: "true"
+      KEYCLOAK_ENABLE_STATISTICS: "true"
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-changeme}
       KEYCLOAK_DATABASE_PORT: ${POSTGRES_PORT:-5432}
@@ -35,7 +35,7 @@ services:
       KEYCLOAK_DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
       KEYCLOAK_DATABASE_USER: ${POSTGRES_USER:-postgres}
     ports:
-      - '8080:8080'
+      - "8080:8080"
     volumes:
       - ./docker/keycloak/realm.json:/opt/bitnami/keycloak/data/import/realm.json:ro
     restart: unless-stopped
@@ -50,9 +50,9 @@ services:
   jaeger:
     image: jaegertracing/all-in-one:latest
     ports:
-      - '16686:16686'
-      - '14268:14268'
-      - '4319:4318'
+      - "16686:16686"
+      - "14268:14268"
+      - "4319:4318"
     environment:
       - COLLECTOR_OTLP_ENABLED=true
       - LOG_LEVEL=debug
@@ -78,16 +78,16 @@ services:
       - ./docker/prometheus/web.yml:/etc/prometheus/web.yml
     extra_hosts:
       # https://medium.com/@TimvanBaarsen/how-to-connect-to-the-docker-host-from-inside-a-docker-container-112b4c71bc66
-      - 'host.docker.internal:host-gateway'
+      - "host.docker.internal:host-gateway"
     ports:
-      - '9090:9090'
+      - "9090:9090"
     profiles:
       - debug
 
   grafana:
     image: grafana/grafana:11.3.1
     ports:
-      - '9300:3000'
+      - "9300:3000"
     volumes:
       - grafana-storage:/var/lib/grafana
       - ./docker/grafana/provisioning:/etc/grafana/provisioning
@@ -109,11 +109,11 @@ services:
       context: graphqlmetrics
       dockerfile: Dockerfile
     environment:
-      CLICKHOUSE_DSN: 'clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}'
+      CLICKHOUSE_DSN: "clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}"
       INGEST_JWT_SECRET: ${INGEST_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
-      LISTEN_ADDR: '0.0.0.0:4005'
+      LISTEN_ADDR: "0.0.0.0:4005"
     ports:
-      - '4005:4005'
+      - "4005:4005"
     restart: unless-stopped
     depends_on:
       - clickhouse
@@ -128,14 +128,14 @@ services:
       context: otelcollector
       dockerfile: Dockerfile
     environment:
-      CLICKHOUSE_ENDPOINT: 'clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}?dial_timeout=15s&compress=lz4'
+      CLICKHOUSE_ENDPOINT: "clickhouse://${CLICKHOUSE_USER:-default}:${CLICKHOUSE_PASSWORD:-changeme}@clickhouse:9000/${CLICKHOUSE_DATABASE:-cosmo}?dial_timeout=15s&compress=lz4"
       OTEL_INGEST_JWT_SECRET: ${OTEL_INGEST_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
       PROMETHEUS_LISTEN_ADDR: ${PROMETHEUS_LISTEN_ADDR:-127.0.0.1:8088}
       PROMETHEUS_LEVEL: ${PROMETHEUS_LEVEL:-none}
     ports:
-      - '4317:4317' # otlpgrpc
-      - '4318:4318' # otlphttp
-      - '8089:8088' # prometheus metrics
+      - "4317:4317" # otlpgrpc
+      - "4318:4318" # otlphttp
+      - "8089:8088" # prometheus metrics
     restart: unless-stopped
     depends_on:
       - clickhouse
@@ -152,9 +152,9 @@ services:
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-changeme}
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: ${CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT:-1}
     ports:
-      - '8123:8123'
-      - '9000:9000'
-      - '9440:9440'
+      - "8123:8123"
+      - "9000:9000"
+      - "9440:9440"
     volumes:
       - clickhouse:/var/lib/clickhouse
       - ./docker/clickhouse/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
@@ -170,8 +170,8 @@ services:
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-changeme}
       - MINIO_DEFAULT_BUCKETS=cosmo
     ports:
-      - '10000:9000'
-      - '10001:9001'
+      - "10000:9000"
+      - "10001:9001"
     volumes:
       - minio:/bitnami/minio/data
     networks:
@@ -195,7 +195,7 @@ services:
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
     ports:
-      - '11000:11000'
+      - "11000:11000"
     networks:
       - primary
     profiles:
@@ -204,12 +204,17 @@ services:
   nats:
     image: ghcr.io/wundergraph/cosmo/nats:${DC_NATS_VERSION:-2.11.0}
     build:
-      context: .
-      dockerfile: docker/nats/Dockerfile
+      context: docker/nats
+      dockerfile: Dockerfile
     ports:
-      - '4222:4222'
-      - '8222:8222'
-      - '6222:6222'
+      - "4222:4222"
+      - "8222:8222"
+      - "6222:6222"
+    healthcheck:
+      test: "curl -f http://localhost:8222/healthz"
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - primary
     profiles:
@@ -219,7 +224,7 @@ services:
   redis:
     image: redis:${DC_REDIS_VERSION:-7.2.4}-alpine
     ports:
-      - '6379:6379'
+      - "6379:6379"
     command: redis-server /usr/local/etc/redis/redis.conf
     volumes:
       - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
@@ -232,7 +237,7 @@ services:
   redis-slave:
     image: redis:${DC_REDIS_VERSION:-7.2.4}-alpine
     ports:
-      - '6380:6379'
+      - "6380:6379"
     command: redis-server /usr/local/etc/redis/redis.conf
     depends_on:
       - redis
@@ -301,7 +306,7 @@ services:
   kafka:
     image: bitnami/kafka:3.7.0
     ports:
-      - '9092:9092'
+      - "9092:9092"
     environment:
       KAFKA_ENABLE_KRAFT: yes
       KAFKA_CFG_PROCESS_ROLES: controller,broker
