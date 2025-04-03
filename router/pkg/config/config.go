@@ -973,6 +973,19 @@ type Config struct {
 	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
 	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
 	ClientHeader                   ClientHeader                    `yaml:"client_header"`
+
+	WatchConfig WatchConfig `yaml:"watch_config" envPrefix:"WATCH_CONFIG_"`
+}
+
+type WatchConfig struct {
+	Enabled      bool                    `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Interval     time.Duration           `yaml:"interval" envDefault:"10s" env:"INTERVAL"`
+	StartupDelay WatchConfigStartupDelay `yaml:"startup_delay" envPrefix:"STARTUP_DELAY_"`
+}
+
+type WatchConfigStartupDelay struct {
+	Enabled bool          `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Maximum time.Duration `yaml:"maximum" envDefault:"10s" env:"MAXIMUM"`
 }
 
 type PlaygroundConfig struct {
@@ -997,7 +1010,6 @@ func LoadConfig(configFilePath string) (*LoadResult, error) {
 	if configFilePath == "" {
 		configFilePath = DefaultConfigPath
 	}
-
 	cfg := &LoadResult{
 		Config:        Config{},
 		DefaultLoaded: true,

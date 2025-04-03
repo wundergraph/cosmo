@@ -13,6 +13,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/internal/timex"
 	"github.com/wundergraph/cosmo/router/internal/versioninfo"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
@@ -129,10 +130,21 @@ func Main() {
 
 	signal.Notify(reloadChan, syscall.SIGHUP)
 
-	// TODO: Don't watch the default config file if it doesn't exist?
-	{
+	// Setup config file watcher if enabled
+	if result.Config.WatchConfig.Enabled {
+		startupDelay := 0 * time.Second
+
+		// Apply startup delay if configured
+		if result.Config.WatchConfig.StartupDelay.Enabled {
+			startupDelay = timex.RandomDuration(result.Config.WatchConfig.StartupDelay.Maximum)
+
+			logger.Info("Using startup delay before initializing config watcher",
+				zap.Duration("delay", startupDelay),
+			)
+		}
+
 		watchFunc, err := watcher.New(watcher.Options{
-			Interval: 10 * time.Second,
+			Interval: result.Config.WatchConfig.Interval,
 			Logger:   logger.With(zap.String("watcher_label", "router_config")),
 			Path:     configPath,
 			Callback: func() {
@@ -168,6 +180,10 @@ func Main() {
 		defer watcherCancel()
 
 		go func() {
+			// Sleep for startupDelay to prevent synchronized reloads across
+			// different instances of the router
+			time.Sleep(startupDelay)
+
 			if err := watchFunc(watcherCtx); err != nil {
 				if err != context.Canceled {
 					logger.Error("Error watching execution config", zap.Error(err))
@@ -175,7 +191,12 @@ func Main() {
 			}
 		}()
 
-		logger.Info("Watching router config file", zap.String("config_file", configPath))
+		logger.Info("Watching router config file",
+			zap.String("config_file", configPath),
+			zap.Duration("watch_interval", result.Config.WatchConfig.Interval),
+		)
+	} else {
+		logger.Info("Config file watching is disabled, you can still trigger reloads by sending SIGHUP to the router process")
 	}
 
 	// Start the router
