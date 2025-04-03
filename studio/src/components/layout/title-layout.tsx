@@ -26,13 +26,14 @@ export const TitleLayout = ({
 
   const [isStarBannerDisabled] = useLocalStorage("disableStarBanner", "false");
   const isOrganizationDeactivated = !!org?.deactivation;
-  const isBannerDisplayed = isOrganizationDeactivated || !isStarBannerDisabled;
+  const isOrganizationPendingDeletion = !!org?.deletion;
+  const isBannerDisplayed = isOrganizationDeactivated || isOrganizationPendingDeletion || !isStarBannerDisabled;
 
   return (
     <div
       className={cn("flex flex-col", {
-        "h-[calc(100vh_-_136px)] lg:h-[calc(100vh_-_32px)]": isBannerDisplayed,
-        "h-[calc(100vh_-_104px)] lg:h-screen": !isBannerDisplayed,
+        "h-[calc(100vh_-_140px)] lg:h-[calc(100vh_-_36px)]": isBannerDisplayed,
+        "h-[calc(100vh_-_108px)] lg:h-screen": !isBannerDisplayed,
       })}
     >
       <div className="flex w-full flex-wrap items-center justify-between gap-4 border-b bg-background py-4">

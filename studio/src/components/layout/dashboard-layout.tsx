@@ -84,19 +84,30 @@ export const StarBanner = ({
 export const OrganizationBanner = () => {
   const org = useCurrentOrganization();
 
-  if (!org?.deactivation) {
+  if (!org?.deactivation && !org?.deletion) {
     return null;
   }
 
   return (
-    <div className="flex w-full bg-gradient-to-r from-destructive to-pink-400 text-xs lg:justify-center xl:text-sm">
-      <p className="flex items-center gap-x-2 px-4 py-1.5">
+    <div className="flex w-full bg-destructive text-xs lg:justify-center xl:text-sm">
+      <p className="flex items-center gap-x-2 px-4 py-2">
         <ExclamationTriangleIcon className="flex-shrink-0" />
         <span className="flex gap-x-1 font-bold text-gray-950 dark:text-primary-foreground">
-          Your organization is deactivated and is in read-only mode.{" "}
-          {org.deactivation.reason ? `${org.deactivation.reason}.` : ""} It will
-          be permanently deleted on{" "}
-          {formatDateTime(addDays(new Date(org.deactivation.initiatedAt), 30))}
+          {org.deactivation
+            ? (
+              <>
+                Your organization is deactivated and is in read-only mode.{" "}
+                {org.deactivation.reason ? `${org.deactivation.reason}.` : ""} It will
+                be permanently deleted on{" "}
+                {formatDateTime(addDays(new Date(org.deactivation.initiatedAt), 30))}
+              </>
+            )
+            : (
+              <>
+                Your organization is queued for deletion. It will be permanently deleted on{" "}
+                {formatDateTime(addDays(new Date(org.deletion!.queuedAt), 3))}
+              </>
+            )}
         </span>
       </p>
     </div>
@@ -118,8 +129,9 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   }, [isStarBannerDisabledOnClient]);
 
   const isOrganizationDeactivated = !!user?.currentOrganization.deactivation;
+  const isOrganizationPendingDeletion = !!user?.currentOrganization?.deletion;
 
-  const isBannerDisplayed = isOrganizationDeactivated || !isStarBannerDisabled;
+  const isBannerDisplayed = isOrganizationDeactivated || isOrganizationPendingDeletion || !isStarBannerDisabled;
 
   const plans = useQuery(
     getBillingPlans,
@@ -236,7 +248,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   return (
     <div className="2xl:flex 2xl:flex-1 2xl:flex-col 2xl:items-center">
       <StarBanner
-        isDisabled={isStarBannerDisabled && !isOrganizationDeactivated}
+        isDisabled={isStarBannerDisabled}
         setDisableStarBanner={setDisableStarBanner}
       />
       <OrganizationBanner />
@@ -244,7 +256,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         className={cn(
           "flex w-full flex-1 flex-col bg-background font-sans antialiased lg:grid lg:grid-cols-[auto_minmax(10px,1fr)] lg:divide-x",
           {
-            "min-h-[calc(100vh-32px)]": isBannerDisplayed,
+            "min-h-[calc(100vh-36px)]": isBannerDisplayed,
             "min-h-screen": !isBannerDisplayed,
           },
         )}

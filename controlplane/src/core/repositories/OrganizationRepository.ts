@@ -30,10 +30,9 @@ import { Feature, FeatureIds, OrganizationDTO, OrganizationMemberDTO, WebhooksCo
 import Keycloak from '../services/Keycloak.js';
 import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js';
 import { BlobStorage } from '../blobstorage/index.js';
+import { delayForManualOrgDeletionInDays } from '../constants.js';
 import { BillingRepository } from './BillingRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
-import { OidcRepository } from './OidcRepository.js';
-import { SubgraphRepository } from './SubgraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
 
 /**
@@ -112,6 +111,8 @@ export class OrganizationRepository {
         isDeactivated: organizations.isDeactivated,
         deactivationReason: organizations.deactivationReason,
         deactivatedAt: organizations.deactivatedAt,
+        queuedForDeletionAt: organizations.queuedForDeletionAt,
+        queuedForDeletionBy: organizations.queuedForDeletionBy,
       })
       .from(organizations)
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
@@ -148,6 +149,12 @@ export class OrganizationRepository {
             initiatedAt: org[0].deactivatedAt?.toISOString() ?? '',
           }
         : undefined,
+      deletion: org[0].queuedForDeletionAt
+        ? {
+            queuedAt: org[0].queuedForDeletionAt?.toISOString() ?? '',
+            queuedBy: org[0].queuedForDeletionBy || undefined,
+          }
+        : undefined,
     };
   }
 
@@ -168,6 +175,8 @@ export class OrganizationRepository {
         isDeactivated: organizations.isDeactivated,
         deactivationReason: organizations.deactivationReason,
         deactivatedAt: organizations.deactivatedAt,
+        queuedForDeletionAt: organizations.queuedForDeletionAt,
+        queuedForDeletionBy: organizations.queuedForDeletionBy,
       })
       .from(organizations)
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
@@ -202,6 +211,12 @@ export class OrganizationRepository {
         ? {
             reason: org[0].deactivationReason || undefined,
             initiatedAt: org[0].deactivatedAt?.toISOString() ?? '',
+          }
+        : undefined,
+      deletion: org[0].queuedForDeletionAt
+        ? {
+            queuedAt: org[0].queuedForDeletionAt?.toISOString() ?? '',
+            queuedBy: org[0].queuedForDeletionBy || undefined,
           }
         : undefined,
     };
@@ -244,6 +259,8 @@ export class OrganizationRepository {
         isDeactivated: organizations.isDeactivated,
         deactivationReason: organizations.deactivationReason,
         deactivatedAt: organizations.deactivatedAt,
+        queuedForDeletionAt: organizations.queuedForDeletionAt,
+        queuedForDeletionBy: organizations.queuedForDeletionBy,
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
@@ -284,6 +301,12 @@ export class OrganizationRepository {
             ? {
                 reason: org.deactivationReason || undefined,
                 initiatedAt: org.deactivatedAt?.toISOString() ?? '',
+              }
+            : undefined,
+          deletion: org.queuedForDeletionAt
+            ? {
+                queuedAt: org.queuedForDeletionAt?.toISOString() ?? '',
+                queuedBy: org.queuedForDeletionBy || undefined,
               }
             : undefined,
         };
@@ -850,6 +873,51 @@ export class OrganizationRepository {
     }
 
     return result[0];
+  }
+
+  public queueOrganizationDeletion(input: {
+    organizationId: string;
+    queuedBy?: string;
+    deleteOrganizationQueue: DeleteOrganizationQueue;
+  }) {
+    return this.db.transaction(async (tx) => {
+      const now = new Date();
+      await tx
+        .update(schema.organizations)
+        .set({
+          queuedForDeletionAt: now,
+          queuedForDeletionBy: input.queuedBy,
+        })
+        .where(eq(schema.organizations.id, input.organizationId));
+
+      const deleteAt = addDays(now, delayForManualOrgDeletionInDays);
+      const delay = Number(deleteAt) - Number(now);
+
+      return await input.deleteOrganizationQueue.addJob(
+        {
+          organizationId: input.organizationId,
+        },
+        {
+          delay,
+        },
+      );
+    });
+  }
+
+  public restoreOrganization(input: { organizationId: string; deleteOrganizationQueue: DeleteOrganizationQueue }) {
+    return this.db.transaction(async (tx) => {
+      await tx
+        .update(schema.organizations)
+        .set({
+          queuedForDeletionAt: null,
+          queuedForDeletionBy: null,
+        })
+        .where(eq(schema.organizations.id, input.organizationId));
+
+      await input.deleteOrganizationQueue.removeJob({
+        organizationId: input.organizationId,
+      });
+    });
   }
 
   /**

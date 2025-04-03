@@ -68,6 +68,10 @@ export interface Organization {
     reason?: string;
     initiatedAt: string;
   };
+  deletion?: {
+    queuedAt: string;
+    queuedBy?: string;
+  }
 }
 
 export interface Session {
