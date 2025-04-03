@@ -603,6 +603,27 @@
         }
       }
     },
+    "batching": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the batching. The batching is used to batch an incoming query array in a request. The default value is false.",
+          "default": false
+        },
+        "max_concurrent": {
+          "type": "integer",
+          "description": "The maximum number of batches that can be processed concurrently",
+          "default": 10
+        },
+        "max_entries_per_batch": {
+          "type": "integer",
+          "description": "The maximum number of entries allowed in a batch, if 0 the batch size is unlimited",
+          "default": 100
+        }
+      }
+    },
     "access_logs": {
       "type": "object",
       "additionalProperties": false,

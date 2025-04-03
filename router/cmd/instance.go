@@ -89,6 +89,11 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 			Enabled: cfg.Compliance.AnonymizeIP.Enabled,
 			Method:  core.IPAnonymizationMethod(cfg.Compliance.AnonymizeIP.Method),
 		}),
+		core.WithBatching(&core.BatchingConfig{
+			Enabled:               cfg.Batching.Enabled,
+			MaxConcurrentRoutines: cfg.Batching.MaxConcurrent,
+			MaxEntriesPerBatch:    cfg.Batching.MaxEntriesPerBatch,
+		}),
 		core.WithClusterName(cfg.Cluster.Name),
 		core.WithInstanceID(cfg.InstanceID),
 		core.WithReadinessCheckPath(cfg.ReadinessCheckPath),

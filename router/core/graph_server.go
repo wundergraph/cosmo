@@ -5,32 +5,38 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/cloudflare/backoff"
-	"github.com/dgraph-io/ristretto/v2"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/klauspost/compress/gzhttp"
-	"github.com/klauspost/compress/gzip"
-	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
-	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/internal/batch"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
-	"go.uber.org/atomic"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"golang.org/x/exp/maps"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/klauspost/compress/gzhttp"
+	"github.com/klauspost/compress/gzip"
+
+	"github.com/cloudflare/backoff"
+	"github.com/dgraph-io/ristretto/v2"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
+	"go.opentelemetry.io/otel/attribute"
+	"go.uber.org/atomic"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"golang.org/x/exp/maps"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -41,7 +47,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
-	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
@@ -50,7 +55,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
-	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
 const (
@@ -226,6 +230,22 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		return nil, fmt.Errorf("failed to create gzip wrapper: %w", err)
 	}
 
+	if s.traceConfig.Enabled {
+		handler := NewTracingHandler(TracingHandlerOpts{
+			traceConfig:         s.traceConfig,
+			healthCheckPath:     s.healthCheckPath,
+			readinessCheckPath:  s.readinessCheckPath,
+			livenessCheckPath:   s.livenessCheckPath,
+			compositePropagator: s.compositePropagator,
+			tracerProvider:      s.tracerProvider,
+		})
+		httpRouter.Use(handler)
+	}
+
+	if s.batchingConfig.Enabled && s.batchingConfig.MaxConcurrentRoutines <= 0 {
+		return nil, fmt.Errorf("maxConcurrent must be greater than 0")
+	}
+
 	/**
 	* A group where we can selectively apply middlewares to the graphql endpoint
 	 */
@@ -240,7 +260,17 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		}
 
 		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
-		cr.Handle(r.graphqlPath, multiGraphHandler)
+		if s.batchingConfig.Enabled {
+			handler := batch.Handler(
+				s.batchingConfig.MaxEntriesPerBatch,
+				s.batchingConfig.MaxConcurrentRoutines,
+				multiGraphHandler,
+				r.tracerProvider,
+			)
+			cr.Handle(r.graphqlPath, handler)
+		} else {
+			cr.Handle(r.graphqlPath, multiGraphHandler)
+		}
 
 		if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled && r.webSocketConfiguration.AbsintheProtocol.Enabled {
 			// Mount the Absinthe protocol handler for WebSockets
@@ -267,6 +297,60 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	return s, nil
 }
 
+type TracingHandlerOpts struct {
+	traceConfig         *rtrace.Config
+	healthCheckPath     string
+	readinessCheckPath  string
+	livenessCheckPath   string
+	compositePropagator propagation.TextMapPropagator
+	tracerProvider      *sdktrace.TracerProvider
+}
+
+func NewTracingHandler(s TracingHandlerOpts) func(next http.Handler) http.Handler {
+	if s.traceConfig.Enabled {
+		spanStartOptions := []oteltrace.SpanStartOption{
+			oteltrace.WithAttributes(
+				otel.RouterServerAttribute,
+				otel.WgRouterRootSpan.Bool(true),
+			),
+		}
+
+		if s.traceConfig.WithNewRoot {
+			spanStartOptions = append(spanStartOptions, oteltrace.WithNewRoot())
+		}
+
+		middlewareOptions := []otelhttp.Option{
+			otelhttp.WithSpanOptions(spanStartOptions...),
+			otelhttp.WithFilter(rtrace.CommonRequestFilter),
+			otelhttp.WithFilter(rtrace.PrefixRequestFilter(
+				[]string{s.healthCheckPath, s.readinessCheckPath, s.livenessCheckPath}),
+			),
+			// Disable built-in metricStore through NoopMeterProvider
+			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
+			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
+			otelhttp.WithTracerProvider(s.tracerProvider),
+		}
+
+		if s.compositePropagator != nil {
+			middlewareOptions = append(middlewareOptions, otelhttp.WithPropagators(s.compositePropagator))
+		}
+
+		traceHandler := rtrace.NewMiddleware(
+			rtrace.WithTracePreHandler(
+				func(r *http.Request, w http.ResponseWriter) {
+					traceID := rtrace.GetTraceID(r.Context())
+					if s.traceConfig.ResponseTraceHeader.Enabled {
+						w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
+					}
+				}),
+			rtrace.WithOtelHttp(middlewareOptions...),
+		)
+
+		return traceHandler.Handler
+	}
+	return nil
+}
+
 func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig) (http.HandlerFunc, error) {
 	if len(featureFlagConfigs) == 0 {
 		return baseMux.ServeHTTP, nil
@@ -274,7 +358,7 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 
 	featureFlagToMux := make(map[string]*chi.Mux, len(featureFlagConfigs))
 
-	// Build all the muxes for the feature flags in serial to avoid any race conditions
+	// Build all the muxes for the feature flags in serial to avoid any race conditions.
 	for featureFlagName, executionConfig := range featureFlagConfigs {
 		gm, err := s.buildGraphMux(ctx,
 			featureFlagName,
@@ -295,20 +379,20 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 
 		ff := strings.TrimSpace(r.Header.Get(featureFlagHeader))
 		if ff == "" {
-			cookie, err := r.Cookie(featureFlagCookie)
-			if err == nil && cookie != nil {
+			if cookie, err := r.Cookie(featureFlagCookie); err == nil && cookie != nil {
 				ff = strings.TrimSpace(cookie.Value)
 			}
 		}
 
+		var muxHandler http.HandlerFunc
 		if mux, ok := featureFlagToMux[ff]; ok {
 			w.Header().Set(featureFlagHeader, ff)
-			mux.ServeHTTP(w, r)
-			return
+			muxHandler = mux.ServeHTTP
+		} else {
+			muxHandler = baseMux.ServeHTTP
 		}
 
-		// Fall back to the base composition
-		baseMux.ServeHTTP(w, r)
+		muxHandler(w, r)
 	}, nil
 }
 
@@ -786,58 +870,30 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	})
 
 	if s.traceConfig.Enabled {
-		spanStartOptions := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(
-				otel.RouterServerAttribute,
-				otel.WgRouterRootSpan.Bool(true),
-			),
+		f := func(h http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				reqContext := getRequestContext(r.Context())
+				traceID := rtrace.GetTraceID(r.Context())
+				requestLogger := reqContext.Logger().With(logging.WithTraceID(traceID))
+
+				reqContext.logger = requestLogger
+
+				span := oteltrace.SpanFromContext(r.Context())
+				span.SetAttributes(reqContext.telemetry.traceAttrs...)
+
+				// Set if the trace is sampled in the expression context
+				isSampled := span.SpanContext().IsSampled()
+				reqContext.expressionContext.Request.Trace.Sampled = isSampled
+
+				// Set the trace ID in the response header
+				if s.traceConfig.ResponseTraceHeader.Enabled {
+					w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
+				}
+
+				h.ServeHTTP(w, r)
+			})
 		}
-
-		if s.traceConfig.WithNewRoot {
-			spanStartOptions = append(spanStartOptions, oteltrace.WithNewRoot())
-		}
-
-		middlewareOptions := []otelhttp.Option{
-			otelhttp.WithSpanOptions(spanStartOptions...),
-			otelhttp.WithFilter(rtrace.CommonRequestFilter),
-			otelhttp.WithFilter(rtrace.PrefixRequestFilter(
-				[]string{s.healthCheckPath, s.readinessCheckPath, s.livenessCheckPath}),
-			),
-			// Disable built-in metricStore through NoopMeterProvider
-			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
-			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
-			otelhttp.WithTracerProvider(s.tracerProvider),
-		}
-
-		if s.compositePropagator != nil {
-			middlewareOptions = append(middlewareOptions, otelhttp.WithPropagators(s.compositePropagator))
-		}
-
-		traceHandler := rtrace.NewMiddleware(
-			rtrace.WithTracePreHandler(
-				func(r *http.Request, w http.ResponseWriter) {
-					reqContext := getRequestContext(r.Context())
-					traceID := rtrace.GetTraceID(r.Context())
-					requestLogger := reqContext.Logger().With(logging.WithTraceID(traceID))
-
-					reqContext.logger = requestLogger
-
-					span := oteltrace.SpanFromContext(r.Context())
-					span.SetAttributes(reqContext.telemetry.traceAttrs...)
-
-					// Set if the trace is sampled in the expression context
-					isSampled := span.SpanContext().IsSampled()
-					reqContext.expressionContext.Request.Trace.Sampled = isSampled
-
-					// Set the trace ID in the response header
-					if s.traceConfig.ResponseTraceHeader.Enabled {
-						w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
-					}
-				}),
-			rtrace.WithOtelHttp(middlewareOptions...),
-		)
-
-		httpRouter.Use(traceHandler.Handler)
+		httpRouter.Use(f)
 	}
 
 	var subgraphAccessLogger *requestlogger.SubgraphAccessLogger
