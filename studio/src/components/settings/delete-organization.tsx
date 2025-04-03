@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 
 export const DeleteOrganization = () => {
   const user = useContext(UserContext);
@@ -170,8 +172,14 @@ export const DeleteOrganization = () => {
       </CardHeader>
       {hasActiveSubscription && (
         <CardContent>
-          An active subscription is associated with this organization. You must cancel the subscription before
-          deleting the organization.
+          <Alert>
+            <ExclamationTriangleIcon className="h-4 w-4" />
+            <AlertTitle>Active subscription</AlertTitle>
+            <AlertDescription>
+              An active subscription is associated with this organization. You
+              must cancel the subscription before deleting the organization.
+            </AlertDescription>
+          </Alert>
         </CardContent>
       )}
     </Card>
