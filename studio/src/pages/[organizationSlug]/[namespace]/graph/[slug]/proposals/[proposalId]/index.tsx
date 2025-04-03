@@ -548,21 +548,35 @@ export const ProposalDetails = ({
             </div>
           </Tabs>
         </div>
-        {state === "DRAFT" && latestCheckSuccess && (
+        {state === "DRAFT" && (
           <div className="border-t px-4 py-4 lg:px-8">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-medium">Ready for Approval</h3>
-                <p className="text-sm text-muted-foreground">
-                  All checks have passed. You can approve this proposal now.
-                </p>
+                {latestCheckSuccess ? (
+                  <>
+                    <h3 className="text-sm font-medium">Ready for Approval</h3>
+                    <p className="text-sm text-muted-foreground">
+                      All checks have passed. You can approve this proposal now.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-sm font-medium">
+                      Some checks were not successful
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Please fix the issues to be able to approve the proposal.
+                    </p>
+                  </>
+                )}
               </div>
               <Button
                 onClick={handleApproveProposal}
-                disabled={isPending}
+                disabled={isPending || latestCheckSuccess}
+                isLoading={isPending}
                 className="ml-4"
               >
-                {isPending ? "Approving..." : "Approve Proposal"}
+                 Approve Proposal
               </Button>
             </div>
           </div>
