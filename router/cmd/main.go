@@ -148,23 +148,6 @@ func Main() {
 			Logger:   logger.With(zap.String("watcher_label", "router_config")),
 			Path:     configPath,
 			Callback: func() {
-				newConfig, err := config.LoadConfig(configPath)
-				if err != nil {
-					logger.Error("Could not load config", zap.Error(err))
-					return
-				}
-
-				result = newConfig
-
-				logLevel, err := logging.ZapLogLevelFromString(result.Config.LogLevel)
-				if err != nil {
-					logger.Error("Could not parse log level", zap.Error(err))
-					return
-				}
-
-				// Update the log level atom
-				logLevelAtomic.SetLevel(logLevel)
-
 				logger.Debug("Configuration changed, triggering reload")
 
 				// Just a hack to make channel code simpler
@@ -247,8 +230,24 @@ func Main() {
 
 		if shutdown {
 			logger.Debug("Router exiting")
-
 			return
 		}
+
+		newConfig, err := config.LoadConfig(configPath)
+		if err != nil {
+			logger.Error("Could not load config", zap.Error(err))
+			continue
+		}
+
+		result = newConfig
+
+		logLevel, err := logging.ZapLogLevelFromString(result.Config.LogLevel)
+		if err != nil {
+			logger.Error("Could not parse log level", zap.Error(err))
+			continue
+		}
+
+		// Update the log level atom
+		logLevelAtomic.SetLevel(logLevel)
 	}
 }
