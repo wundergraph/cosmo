@@ -67,6 +67,10 @@ const ProposalsPage: NextPageWithLayout = () => {
     {
       federatedGraphName,
       namespace,
+      startDate: formatISO(startDate),
+      endDate: formatISO(endDate),
+      limit,
+      offset: (pageNumber - 1) * limit,
     },
     {
       placeholderData: (prev) => prev,

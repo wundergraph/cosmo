@@ -176,9 +176,29 @@ export class ProposalRepository {
     };
   }
 
-  public async ByFederatedGraphId(
-    federatedGraphId: string,
-  ): Promise<{ proposals: { proposal: ProposalDTO; proposalSubgraphs: ProposalSubgraphDTO[] }[] }> {
+  public async ByFederatedGraphId({
+    federatedGraphId,
+    startDate,
+    endDate,
+    limit,
+    offset,
+  }: {
+    federatedGraphId: string;
+    startDate?: string;
+    endDate?: string;
+    limit: number;
+    offset: number;
+  }): Promise<{ proposals: { proposal: ProposalDTO; proposalSubgraphs: ProposalSubgraphDTO[] }[] }> {
+    let whereCondition: any = eq(schema.proposals.federatedGraphId, federatedGraphId);
+
+    if (startDate && endDate) {
+      whereCondition = and(
+        whereCondition,
+        gt(schema.proposals.createdAt, new Date(startDate)),
+        lt(schema.proposals.createdAt, new Date(endDate)),
+      );
+    }
+
     const proposalsWithSubgraphs: { proposal: ProposalDTO; proposalSubgraphs: ProposalSubgraphDTO[] }[] = [];
     const proposals = await this.db
       .select({
@@ -192,7 +212,10 @@ export class ProposalRepository {
       })
       .from(schema.proposals)
       .leftJoin(schema.users, eq(schema.proposals.createdById, schema.users.id))
-      .where(eq(schema.proposals.federatedGraphId, federatedGraphId));
+      .where(whereCondition)
+      .orderBy(desc(schema.proposals.createdAt))
+      .limit(limit)
+      .offset(offset);
 
     if (proposals.length === 0) {
       return {

@@ -8,9 +8,9 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
-import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 
 export function getProposalsOfFederatedGraph(
   opts: RouterOptions,
@@ -25,9 +25,9 @@ export function getProposalsOfFederatedGraph(
 
     const federatedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const proposalRepo = new ProposalRepository(opts.db);
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
     const federatedGraph = await federatedGraphRepo.byName(req.federatedGraphName, req.namespace);
-
     if (!federatedGraph) {
       return {
         response: {
@@ -38,7 +38,47 @@ export function getProposalsOfFederatedGraph(
       };
     }
 
-    const { proposals } = await proposalRepo.ByFederatedGraphId(federatedGraph.id);
+    const breakingChangeRetention = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'breaking-change-retention',
+    });
+
+    const { dateRange } = validateDateRanges({
+      limit: breakingChangeRetention?.limit ?? 7,
+      dateRange: {
+        start: req.startDate,
+        end: req.endDate,
+      },
+    });
+
+    if (!dateRange) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: 'Invalid date range',
+        },
+        proposals: [],
+      };
+    }
+
+    // check that the limit is less than the max option provided in the ui
+    if (req.limit > 50) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: 'Invalid limit',
+        },
+        proposals: [],
+      };
+    }
+
+    const { proposals } = await proposalRepo.ByFederatedGraphId({
+      federatedGraphId: federatedGraph.id,
+      startDate: dateRange.start,
+      endDate: dateRange.end,
+      limit: req.limit,
+      offset: req.offset,
+    });
 
     // Get the latest check success for each proposal
     const proposalsWithChecks = await Promise.all(
