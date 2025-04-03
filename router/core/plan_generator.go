@@ -73,14 +73,14 @@ func (pl *Planner) PlanOperation(operationFilePath string) (string, error) {
 		return "", errors.New("operation name not found")
 	}
 
-	err = pl.validateOperation(operation)
-	if err != nil {
-		return "", &PlannerOperationValidationError{err: err}
-	}
-
 	err = pl.normalizeOperation(operation, operationName)
 	if err != nil {
 		return "", fmt.Errorf("failed to normalize operation: %w", err)
+	}
+
+	err = pl.validateOperation(operation)
+	if err != nil {
+		return "", &PlannerOperationValidationError{err: err}
 	}
 
 	rawPlan, err := pl.planOperation(operation)
