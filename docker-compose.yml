@@ -251,8 +251,8 @@ services:
     networks:
       - primary
     ports:
-      - "7001:6379"
-      - "16371:16379"
+      - '7001:6379'
+      - '16371:16379'
     volumes:
       - ./docker/redis/redis-cluster.conf:/usr/local/etc/redis/redis.conf
     profiles:
@@ -264,8 +264,8 @@ services:
     networks:
       - primary
     ports:
-      - "7002:6379"
-      - "16372:16379"
+      - '7002:6379'
+      - '16372:16379'
     volumes:
       - ./docker/redis/redis-cluster.conf:/usr/local/etc/redis/redis.conf
     profiles:
@@ -277,8 +277,8 @@ services:
     networks:
       - primary
     ports:
-      - "7003:6379"
-      - "16373:16379"
+      - '7003:6379'
+      - '16373:16379'
     volumes:
       - ./docker/redis/redis-cluster.conf:/usr/local/etc/redis/redis.conf
     profiles:
