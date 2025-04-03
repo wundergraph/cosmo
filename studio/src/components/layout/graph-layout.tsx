@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
 import {
   ChartBarIcon,
+  ClipboardIcon,
   ExclamationTriangleIcon,
   ServerStackIcon,
 } from "@heroicons/react/24/outline";
@@ -188,7 +189,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         title: "Proposals",
         href: basePath + "/proposals",
         matchExact: false,
-        icon: <PiBracketsCurlyBold className="h-4 w-4" />,
+        icon: <ClipboardIcon className="h-4 w-4" />,
       },
     ];
   }, [organizationSlug, namespace, slug]);
@@ -275,17 +276,20 @@ export const GraphSelect = () => {
 
   const sortedGraphs = sortFederatedGraphs(data?.graphs ?? []);
 
-  const groupedGraphs = sortedGraphs.reduce<Record<string, FederatedGraph[]>>((result, graph) => {
-    const { namespace, name } = graph;
+  const groupedGraphs = sortedGraphs.reduce<Record<string, FederatedGraph[]>>(
+    (result, graph) => {
+      const { namespace, name } = graph;
 
-    if (!result[namespace]) {
-      result[namespace] = [];
-    }
+      if (!result[namespace]) {
+        result[namespace] = [];
+      }
 
-    result[namespace].push(graph);
+      result[namespace].push(graph);
 
-    return result;
-  }, {});
+      return result;
+    },
+    {},
+  );
 
   if (router.pathname.split("/")[3] !== "graph") {
     return null;

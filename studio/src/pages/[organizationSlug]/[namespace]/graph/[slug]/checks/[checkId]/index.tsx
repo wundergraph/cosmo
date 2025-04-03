@@ -67,6 +67,7 @@ import {
 import {
   ArrowLeftIcon,
   CheckCircledIcon,
+  ClipboardIcon,
   Component2Icon,
   CrossCircledIcon,
   CubeIcon,
@@ -523,6 +524,23 @@ const CheckDetails = ({
                   <div className="flex items-center gap-x-1">
                     <CubeIcon />
                     {subgraphName}
+                  </div>
+                </Link>
+              </dd>
+            </div>
+          )}
+
+          {data.proposalId && data.proposalName && (
+            <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1 ">
+              <dt className="text-sm text-muted-foreground">Proposal</dt>
+              <dd className="whitespace-nowrap text-sm">
+                <Link
+                  key={data.proposalId}
+                  href={`/${organizationSlug}/${namespace}/graph/${slug}/proposals/${data.proposalId}`}
+                >
+                  <div className="flex items-center gap-x-1">
+                    <ClipboardIcon />
+                    {data.proposalName}
                   </div>
                 </Link>
               </dd>
