@@ -224,7 +224,7 @@ export const ProposalDetails = ({
               <TabsList>
                 <TabsTrigger value="schemas" asChild>
                   <Link href={{ query: { ...router.query, tab: "schemas" } }}>
-                    Schemas
+                    Proposed Schemas
                   </Link>
                 </TabsTrigger>
                 <TabsTrigger value="checks" asChild>
