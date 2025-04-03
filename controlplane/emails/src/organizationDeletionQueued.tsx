@@ -22,7 +22,7 @@ export const OrganizationQueuedForDeletionEmail = () => {
         <Body className="bg-white my-auto mx-auto font-sans px-2">
           <Preview>Organization Queued for Deletion</Preview>
           <MainContainer>
-            <Heading className="text-black text-[24px] font-normal text-center p-0 my-[30px] mx-0">
+            <Heading className="text-black text-[24px] font-bold text-center p-0 my-[30px] mx-0">
               Organization Queued for Deletion
             </Heading>
             <Text className="text-black text-[16px]">
