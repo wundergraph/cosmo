@@ -65,17 +65,17 @@ func NewPlanner(planConfiguration *plan.Configuration, definition *ast.Document,
 func (pl *Planner) PlanOperation(operationFilePath string) (string, error) {
 	operation, err := pl.parseOperation(operationFilePath)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse operation: %w", err)
+		return "", &PlannerOperationValidationError{err: err}
 	}
 
 	operationName := findOperationName(operation)
 	if operationName == nil {
-		return "", errors.New("operation name not found")
+		return "", &PlannerOperationValidationError{err: errors.New("operation name not found")}
 	}
 
 	err = pl.normalizeOperation(operation, operationName)
 	if err != nil {
-		return "", fmt.Errorf("failed to normalize operation: %w", err)
+		return "", &PlannerOperationValidationError{err: err}
 	}
 
 	err = pl.validateOperation(operation)
