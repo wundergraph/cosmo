@@ -219,7 +219,7 @@ func (p *kafkaPubSub) Shutdown(ctx context.Context) error {
 
 	err := p.writeClient.Flush(ctx)
 	if err != nil {
-		p.logger.Error("error flushing write client", zap.Error(err))
+		p.logger.Error("flushing write client", zap.Error(err))
 	}
 
 	p.writeClient.Close()
@@ -230,5 +230,9 @@ func (p *kafkaPubSub) Shutdown(ctx context.Context) error {
 	// Wait until all pollers are closed
 	p.closeWg.Wait()
 
-	return err
+	if err != nil {
+		return fmt.Errorf("kafka pubsub shutdown: %w", err)
+	}
+
+	return nil
 }
