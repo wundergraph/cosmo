@@ -862,6 +862,13 @@
       "when": 1743626450598,
       "tag": "0122_condemned_vengeance",
       "breakpoints": true
+    },
+    {
+      "idx": 123,
+      "version": "7",
+      "when": 1743699470186,
+      "tag": "0123_safe_red_wolf",
+      "breakpoints": true
     }
   ]
 }
