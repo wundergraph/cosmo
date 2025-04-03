@@ -9135,11 +9135,6 @@ export class DeleteOrganizationResponse extends Message<DeleteOrganizationRespon
  * @generated from message wg.cosmo.platform.v1.RestoreOrganizationRequest
  */
 export class RestoreOrganizationRequest extends Message<RestoreOrganizationRequest> {
-  /**
-   * @generated from field: string userID = 1;
-   */
-  userID = "";
-
   constructor(data?: PartialMessage<RestoreOrganizationRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -9148,7 +9143,6 @@ export class RestoreOrganizationRequest extends Message<RestoreOrganizationReque
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.RestoreOrganizationRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "userID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RestoreOrganizationRequest {

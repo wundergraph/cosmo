@@ -34,22 +34,8 @@ export function restoreOrganization(
       };
     }
 
-    const orgMember = await orgRepo.getOrganizationMember({
-      organizationID: authContext.organizationId,
-      userID: authContext.userId || req.userID,
-    });
-
-    if (!orgMember) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'User is not a part of this organization.',
-        },
-      };
-    }
-
     // Ensure that the user is an admin of the organization
-    if (!orgMember.roles.includes('admin')) {
+    if (!authContext.isAdmin) {
       return {
         response: {
           code: EnumStatusCode.ERROR_NOT_AUTHORIZED,
@@ -59,9 +45,9 @@ export function restoreOrganization(
     }
 
     // Remove the queued organization deletion job
-    await orgRepo.restoreOrganization({ organizationId: org.id });
-    await opts.queues.deleteOrganizationQueue.removeJob({
+    await orgRepo.restoreOrganization({
       organizationId: org.id,
+      deleteOrganizationQueue: opts.queues.deleteOrganizationQueue,
     });
 
     await auditLogRepo.addAuditLog({

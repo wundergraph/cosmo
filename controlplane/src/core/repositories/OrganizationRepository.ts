@@ -875,41 +875,49 @@ export class OrganizationRepository {
     return result[0];
   }
 
-  public async queueOrganizationDeletion(input: {
+  public queueOrganizationDeletion(input: {
     organizationId: string;
     queuedBy?: string;
     deleteOrganizationQueue: DeleteOrganizationQueue;
   }) {
-    const now = new Date();
-    await this.db
-      .update(schema.organizations)
-      .set({
-        queuedForDeletionAt: now,
-        queuedForDeletionBy: input.queuedBy,
-      })
-      .where(eq(schema.organizations.id, input.organizationId));
+    return this.db.transaction(async (tx) => {
+      const now = new Date();
+      await tx
+        .update(schema.organizations)
+        .set({
+          queuedForDeletionAt: now,
+          queuedForDeletionBy: input.queuedBy,
+        })
+        .where(eq(schema.organizations.id, input.organizationId));
 
-    const deleteAt = addDays(now, delayForManualOrgDeletionInDays);
-    const delay = Number(deleteAt) - Number(now);
+      const deleteAt = addDays(now, delayForManualOrgDeletionInDays);
+      const delay = Number(deleteAt) - Number(now);
 
-    return input.deleteOrganizationQueue.addJob(
-      {
-        organizationId: input.organizationId,
-      },
-      {
-        delay,
-      },
-    );
+      return await input.deleteOrganizationQueue.addJob(
+        {
+          organizationId: input.organizationId,
+        },
+        {
+          delay,
+        },
+      );
+    });
   }
 
-  public restoreOrganization(input: { organizationId: string }) {
-    return this.db
-      .update(schema.organizations)
-      .set({
-        queuedForDeletionAt: null,
-        queuedForDeletionBy: null,
-      })
-      .where(eq(schema.organizations.id, input.organizationId));
+  public restoreOrganization(input: { organizationId: string; deleteOrganizationQueue: DeleteOrganizationQueue }) {
+    return this.db.transaction(async (tx) => {
+      await tx
+        .update(schema.organizations)
+        .set({
+          queuedForDeletionAt: null,
+          queuedForDeletionBy: null,
+        })
+        .where(eq(schema.organizations.id, input.organizationId));
+
+      await input.deleteOrganizationQueue.removeJob({
+        organizationId: input.organizationId,
+      });
+    });
   }
 
   /**

@@ -1201,9 +1201,7 @@ message DeleteOrganizationResponse {
   Response response = 1;
 }
 
-message RestoreOrganizationRequest {
-  string userID = 1;
-}
+message RestoreOrganizationRequest {}
 
 message RestoreOrganizationResponse {
   Response response = 1;
