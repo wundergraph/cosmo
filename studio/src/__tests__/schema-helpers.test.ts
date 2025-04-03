@@ -12,7 +12,7 @@ import { parse } from "graphql";
 const schema = `
 type Query {
   employees: [Employee!]!
-  teammates(team: Department! @deprecated): [Employee!]!
+  teammates(team: Department! @deprecated(reason: "test")): [Employee!]!
   findID(criteria: Criteria!): Int!
 }
 
@@ -65,6 +65,7 @@ test("return the correct types with deprecated fields or args", () => {
   expect(deprecated[0].fields?.[0]?.name).toEqual("teammates");
   expect(deprecated[1].fields?.length).toEqual(1);
   expect(deprecated[1].fields?.[0]?.name).toEqual("fullName");
+  expect(deprecated[1].fields?.[0]?.deprecationReason).toEqual("Please use first and last name instead");
 });
 
 test("that authentication types are read correctly", async () => {

@@ -13,7 +13,7 @@ import {
 } from "@/components/layout/graph-layout";
 import { EmptySchema } from "@/components/schema/empty-schema-state";
 import { SchemaToolbar } from "@/components/schema/toolbar";
-import { Badge } from "@/components/ui/badge";
+import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   CommandDialog,
@@ -66,6 +66,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { TooltipPortal } from "@radix-ui/react-tooltip";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { useUser } from "@/hooks/use-user";
 import { useChartData } from "@/lib/insights-helpers";
@@ -423,16 +424,18 @@ const Fields = (props: {
                                       {arg.name}
                                     </Badge>
                                   </TooltipTrigger>
-                                  <TooltipContent>
-                                    <div className="flex w-96 flex-col gap-y-4">
-                                      {arg.description && (
-                                        <p>{arg.description}</p>
-                                      )}
-                                      <DeprecatedBadge
-                                        reason={arg.deprecationReason}
-                                      />
-                                    </div>
-                                  </TooltipContent>
+                                  <TooltipPortal>
+                                    <TooltipContent>
+                                      <div className="flex w-96 flex-col gap-y-4">
+                                        {arg.description && (
+                                          <p>{arg.description}</p>
+                                        )}
+                                        <DeprecatedBadge
+                                          reason={arg.deprecationReason}
+                                        />
+                                      </div>
+                                    </TooltipContent>
+                                  </TooltipPortal>
                                 </Tooltip>
 
                                 <TypeLink name={`: ${arg.type}`} />
@@ -540,7 +543,11 @@ const Type = (props: {
               </Link>
             </Badge>
 
-            {props.requiresScopes?.length && <AuthenticatedScopes isType scopes={props.requiresScopes} />}
+            {props.requiresScopes?.length && (
+              <AuthenticatedScopes isType scopes={props.requiresScopes} asChild>
+                <button type="button" className={badgeVariants({ className: "w-max" })}>scopes</button>
+              </AuthenticatedScopes>
+            )}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             {props.description || getRootDescription(props.name) || (
@@ -775,16 +782,27 @@ const AuthenticatedBadge = ({ isType, authenticated, requiresScopes }: {
   );
 };
 
-const AuthenticatedScopes = ({ isType, scopes }: {
+const AuthenticatedScopes = ({
+  isType,
+  scopes,
+  asChild = true,
+  children,
+}: {
   isType: boolean;
   scopes: string[][];
+  asChild?: boolean;
+  children?: React.ReactNode;
 }) => {
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="link" size="sm" className="h-auto p-0">
-          View required scopes
-        </Button>
+      <PopoverTrigger asChild={asChild}>
+        {children
+          ? children
+          : (
+            <Button variant="link" size="sm" className="h-auto p-0">
+              View required scopes
+            </Button>
+          )}
       </PopoverTrigger>
       <PopoverContent className="px-0">
         <div className="mb-3 border-b border-border px-4 pb-3">
@@ -1332,10 +1350,10 @@ const TypesList = ({
   }
 
   return (
-    <div className="flex h-full flex-col gap-y-12 divide-y">
+    <div className="flex flex-col gap-y-12 divide-y">
       {types.map((type) => {
         return (
-          <div key={type.name} className="h-2/3 pt-12 first:pt-2">
+          <div key={type.name} className="pt-12 first:pt-2">
             <Type
               name={type.name}
               category={type.category}

@@ -25,6 +25,8 @@ import {
   isScalarType,
   parse,
   visit,
+  getArgumentValues,
+  GraphQLDeprecatedDirective,
 } from 'graphql';
 import babelPlugin from "prettier/plugins/babel";
 import estreePlugin from "prettier/plugins/estree";
@@ -584,7 +586,7 @@ const parseField = (
     args: field.arguments?.map((arg) => ({
       name: arg.name.value,
       description: arg.description?.value || "",
-      defaultValue: "",
+      defaultValue: arg.defaultValue,
       type: getTypeName(arg.type),
       deprecationReason: extractDirectives(arg).deprecationReason,
       loc: arg.loc,
@@ -628,12 +630,8 @@ export const extractDirectives = (node: ASTNode | undefined | null): ExtractedDi
   for (const directive of node.directives) {
     switch (directive.name.value) {
       case "deprecated":
-        result.deprecationReason = '';
-
-        const reasonArg = directive.arguments?.[0];
-        if (reasonArg && reasonArg?.name.value === "reason" && reasonArg?.value.kind === Kind.STRING) {
-          result.deprecationReason = reasonArg.value.value;
-        }
+        const deprecatedDirValues = getArgumentValues(GraphQLDeprecatedDirective, directive);
+        result.deprecationReason = (deprecatedDirValues.reason ?? "") as string;
         break;
       case "authenticated":
         result.authenticated = true;
@@ -648,7 +646,7 @@ export const extractDirectives = (node: ASTNode | undefined | null): ExtractedDi
         }
 
         break;
-      default:
+      case "tags":
         const nameArg = directive.arguments?.[0];
         if (nameArg?.name.value === "name" && nameArg?.value.kind === Kind.STRING) {
           result.tags.push(nameArg.value.value);
