@@ -10,7 +10,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { GraphQLSchema, parse } from 'graphql';
 import { SchemaGraphPruningIssues, SchemaLintIssues } from '../../../types/index.js';
-import { Composer } from '../../composition/composer.js';
+import { CheckSubgraph, Composer } from '../../composition/composer.js';
 import { buildSchema } from '../../composition/composition.js';
 import { getDiffBetweenGraphs } from '../../composition/schemaCheck.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
@@ -162,7 +162,11 @@ export function checkSubgraphSchema(
       };
     }
 
-    const federatedGraphs = await fedGraphRepo.bySubgraphLabels({ labels: subgraph.labels, namespaceId: namespace.id });
+    const federatedGraphs = await fedGraphRepo.bySubgraphLabels({
+      labels: subgraph.labels,
+      namespaceId: namespace.id,
+      excludeContracts: true,
+    });
     /*
      * If there are any federated graphs for which the subgraph is a constituent, the subgraph will be validated
      * against the first router compatibility version encountered.
@@ -220,13 +224,22 @@ export function checkSubgraphSchema(
     }
 
     const schemaCheckID = await schemaCheckRepo.create({
-      targetId: subgraph.targetId,
-      isDeleted: !!req.delete,
-      proposedSubgraphSchemaSDL: newSchemaSDL,
+      proposedSubgraphSchemaSDL: '',
       trafficCheckSkipped: req.skipTrafficCheck,
       lintSkipped: !namespace.enableLinting,
       graphPruningSkipped: !namespace.enableGraphPruning,
       vcsContext: req.vcsContext,
+    });
+
+    const schemaCheckSubgraphId = await schemaCheckRepo.createSchemaCheckSubgraph({
+      data: {
+        schemaCheckId: schemaCheckID,
+        subgraphId: subgraph.id,
+        subgraphName: subgraph.name,
+        proposedSubgraphSchemaSDL: newSchemaSDL,
+        isDeleted: !!req.delete,
+        isNew: false,
+      },
     });
 
     const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL, routerCompatibilityVersion);
@@ -255,11 +268,13 @@ export function checkSubgraphSchema(
     await schemaCheckRepo.createSchemaCheckChanges({
       changes: schemaChanges.nonBreakingChanges,
       schemaCheckID,
+      schemaCheckSubgraphId,
     });
 
     const storedBreakingChanges = await schemaCheckRepo.createSchemaCheckChanges({
       changes: schemaChanges.breakingChanges,
       schemaCheckID,
+      schemaCheckSubgraphId,
     });
 
     const composer = new Composer(
@@ -272,13 +287,25 @@ export function checkSubgraphSchema(
       opts.chClient,
     );
 
-    const result = req.delete
-      ? await composer.composeWithDeletedSubgraph(subgraph.labels, subgraph.name, subgraph.namespaceId)
-      : await composer.composeWithProposedSDL(subgraph.labels, subgraph.name, subgraph.namespaceId, newSchemaSDL);
+    const checkSubgraphs = new Map<string, CheckSubgraph>();
+    checkSubgraphs.set(subgraph.name, {
+      subgraph,
+      checkSubgraphId: schemaCheckSubgraphId,
+      newSchemaSDL,
+      newGraphQLSchema,
+      schemaChanges,
+      storedBreakingChanges,
+      inspectorChanges: [],
+    });
+
+    const { composedGraphs } = await composer.composeWithProposedSchemas({
+      inputSubgraphs: checkSubgraphs,
+      graphs: federatedGraphs,
+    });
 
     await schemaCheckRepo.createSchemaCheckCompositions({
       schemaCheckID,
-      compositions: result.compositions,
+      compositions: composedGraphs,
     });
 
     let hasClientTraffic = false;
@@ -304,23 +331,31 @@ export function checkSubgraphSchema(
     let limit = changeRetention?.limit ?? 7;
     limit = clamp(namespace?.checksTimeframeInDays ?? limit, 1, limit);
 
-    for (const composition of result.compositions) {
-      await schemaCheckRepo.createCheckedFederatedGraph(schemaCheckID, composition.id, limit);
+    for (const composedGraph of composedGraphs) {
+      const checkFederatedGraphId = await schemaCheckRepo.createCheckedFederatedGraph(
+        schemaCheckID,
+        composedGraph.id,
+        limit,
+      );
+      await schemaCheckRepo.createSchemaCheckSubgraphFederatedGraphs({
+        schemaCheckFederatedGraphId: checkFederatedGraphId,
+        checkSubgraphIds: [schemaCheckSubgraphId],
+      });
 
-      for (const error of composition.errors) {
+      for (const error of composedGraph.errors) {
         compositionErrors.push({
           message: error.message,
-          federatedGraphName: composition.name,
-          namespace: composition.namespace,
+          federatedGraphName: composedGraph.name,
+          namespace: composedGraph.namespace,
           featureFlag: '',
         });
       }
 
-      for (const warning of composition.warnings) {
+      for (const warning of composedGraph.warnings) {
         compositionWarnings.push({
           message: warning.message,
-          federatedGraphName: composition.name,
-          namespace: composition.namespace,
+          federatedGraphName: composedGraph.name,
+          namespace: composedGraph.namespace,
           featureFlag: '',
         });
       }
@@ -332,13 +367,13 @@ export function checkSubgraphSchema(
           3. When user wants to skip the traffic check altogether
           That means any breaking change is really breaking
           */
-      if (composition.errors.length > 0 || inspectorChanges.length === 0 || req.skipTrafficCheck) {
+      if (composedGraph.errors.length > 0 || inspectorChanges.length === 0 || req.skipTrafficCheck) {
         continue;
       }
 
       const result = await trafficInspector.inspect(inspectorChanges, {
         daysToConsider: limit,
-        federatedGraphId: composition.id,
+        federatedGraphId: composedGraph.id,
         organizationId: authContext.organizationId,
         subgraphId: subgraph.id,
       });
@@ -356,7 +391,7 @@ export function checkSubgraphSchema(
       hasClientTraffic = overrideCheck.hasUnsafeClientTraffic;
 
       // Store operation usage
-      await schemaCheckRepo.createOperationUsage(overrideCheck.result, composition.id);
+      await schemaCheckRepo.createOperationUsage(overrideCheck.result, composedGraph.id);
 
       // Collect all inspected operations for later aggregation
       for (const resultElement of overrideCheck.result.values()) {
@@ -369,6 +404,7 @@ export function checkSubgraphSchema(
       newSchemaSDL,
       namespaceId: namespace.id,
       isLintingEnabled: namespace.enableLinting,
+      schemaCheckSubgraphId,
     });
 
     const graphPruningIssues: SchemaGraphPruningIssues = await schemaGraphPruningRepo.performSchemaGraphPruningCheck({
@@ -383,6 +419,7 @@ export function checkSubgraphSchema(
       fedGraphRepo,
       subgraphRepo,
       rangeInDays: limit,
+      schemaCheckSubgraphId,
     });
 
     // Update the overall schema check with the results
@@ -407,7 +444,7 @@ export function checkSubgraphSchema(
           subgraphName: subgraph.name,
           organizationSlug: org.slug,
           webBaseUrl: opts.webBaseUrl,
-          composedGraphs: result.compositions.map((c) => c.name),
+          composedGraphs: composedGraphs.map((c) => c.name),
         });
       } catch (e) {
         logger.warn(e, 'Error creating commit check');
@@ -423,7 +460,7 @@ export function checkSubgraphSchema(
       operationUsageStats: collectOperationUsageStats(inspectedOperations),
       compositionErrors,
       checkId: schemaCheckID,
-      checkedFederatedGraphs: result.compositions.map((c) => ({
+      checkedFederatedGraphs: composedGraphs.map((c) => ({
         id: c.id,
         name: c.name,
         namespace: c.namespace,
