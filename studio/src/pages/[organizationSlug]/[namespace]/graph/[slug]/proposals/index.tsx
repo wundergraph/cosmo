@@ -159,14 +159,12 @@ const ProposalsPage: NextPageWithLayout = () => {
                         className={cn("gap-2 py-1.5", {
                           "border-success/20 bg-success/10 text-success hover:bg-success/20":
                             state === "APPROVED",
-                          "border-primary/20 bg-primary/10 text-primary hover:bg-primary/20":
-                            state === "PENDING",
                           "border-warning/20 bg-warning/10 text-warning hover:bg-warning/20":
                             state === "DRAFT",
                           "border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive/20":
-                            state === "REJECTED",
-                          "border-accent/20 bg-accent/10 text-accent hover:bg-accent/20":
-                            state === "EXPIRED",
+                            state === "CLOSED",
+                          "border-purple-400/20 bg-purple-400/10 text-purple-400 hover:bg-purple-400/20":
+                            state === "PUBLISHED",
                         })}
                       >
                         <span>{state}</span>

@@ -213,15 +213,16 @@ export const ProposalDetails = ({
             <dd>
               <div className="flex items-center gap-x-2">
                 <Badge
-                  variant={
-                    state === "APPROVED" || state === "PUBLISHED"
-                      ? "default"
-                      : state === "DRAFT"
-                        ? "secondary"
-                        : "outline"
-                  }
+                  variant="outline"
                   className={cn("gap-2 py-1.5", {
-                    "bg-green-600": state === "PUBLISHED",
+                    "border-success/20 bg-success/10 text-success hover:bg-success/20":
+                      state === "APPROVED",
+                    "border-warning/20 bg-warning/10 text-warning hover:bg-warning/20":
+                      state === "DRAFT",
+                    "border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive/20":
+                      state === "CLOSED",
+                    "border-purple-400/20 bg-purple-400/10 text-purple-400 hover:bg-purple-400/20":
+                      state === "PUBLISHED",
                   })}
                 >
                   <span>{state}</span>
