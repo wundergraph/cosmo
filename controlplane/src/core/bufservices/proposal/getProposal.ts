@@ -4,12 +4,13 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import {
   GetProposalRequest,
   GetProposalResponse,
-  Proposal,
+  Proposal
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
+import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 
 export function getProposal(
   opts: RouterOptions,
@@ -23,6 +24,7 @@ export function getProposal(
     logger = enrichLogger(ctx, logger, authContext);
 
     const federatedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+    const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const proposalRepo = new ProposalRepository(opts.db);
 
     const proposal = await proposalRepo.ById(req.proposalId);
@@ -32,6 +34,7 @@ export function getProposal(
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: `Proposal ${req.proposalId} not found`,
         },
+        currentSubgraphs: [],
       };
     }
 
@@ -42,10 +45,28 @@ export function getProposal(
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: `Federated graph ${proposal.proposal.federatedGraphId} not found`,
         },
+        currentSubgraphs: [],
       };
     }
 
     const latestCheck = await proposalRepo.getLatestCheckForProposal(proposal.proposal.id);
+
+    const currentSubgraphs = [];
+    for (const subgraph of proposal.proposalSubgraphs) {
+      if (!subgraph.currentSchemaVersionId) {
+        continue;
+      }
+      const schemaSDL = await subgraphRepo.getSDLBySchemaVersionId({
+        schemaVersionId: subgraph.currentSchemaVersionId,
+      });
+      if (!schemaSDL) {
+        continue;
+      }
+      currentSubgraphs.push({
+        name: subgraph.subgraphName,
+        schemaSDL,
+      });
+    }
 
     return {
       response: {
@@ -67,6 +88,7 @@ export function getProposal(
         latestCheckSuccess: latestCheck?.isSuccessful || false,
         latestCheckId: latestCheck?.checkId || '',
       }),
+      currentSubgraphs,
     };
   });
 }

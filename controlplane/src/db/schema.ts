@@ -2288,6 +2288,10 @@ export const proposalSubgraphs = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }),
     isPublished: boolean('is_published').default(false).notNull(),
+    // This is the schema version that is currently being used by the subgraph when the proposal was created
+    currentSchemaVersionId: uuid('current_schema_version_id').references(() => schemaVersion.id, {
+      onDelete: 'set null',
+    }),
   },
   (t) => ({
     uniqueProposalSubgraph: unique('proposal_subgraph').on(t.proposalId, t.subgraphName),

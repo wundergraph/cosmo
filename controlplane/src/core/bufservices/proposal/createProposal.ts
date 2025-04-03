@@ -141,6 +141,7 @@ export function createProposal(
       schemaSDL: string;
       isDeleted: boolean;
       isNew: boolean;
+      currentSchemaVersionId?: string;
     }[] = [];
 
     for (const proposalSubgraph of req.subgraphs) {
@@ -178,6 +179,7 @@ export function createProposal(
         schemaSDL: proposalSubgraph.schemaSDL,
         isDeleted: proposalSubgraph.isDeleted,
         isNew: !subgraph,
+        currentSchemaVersionId: subgraph?.schemaVersionId,
       });
     }
 

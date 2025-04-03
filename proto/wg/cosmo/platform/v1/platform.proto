@@ -2678,8 +2678,14 @@ message GetProposalRequest {
 }
 
 message GetProposalResponse {
+  message CurrentSubgraph {
+    string name = 1;
+    string schemaSDL = 2;
+  }
+
   Response response = 1;
   Proposal proposal = 2;
+  repeated CurrentSubgraph currentSubgraphs = 3;
 }
 
 message GetProposalsOfFederatedGraphRequest {

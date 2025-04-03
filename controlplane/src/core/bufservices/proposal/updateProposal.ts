@@ -194,6 +194,7 @@ export function updateProposal(
         schemaSDL: string;
         isDeleted: boolean;
         isNew: boolean;
+        currentSchemaVersionId?: string;
       }[] = [];
 
       const updatedSubgraphs = req.updateAction.value.subgraphs;
@@ -234,6 +235,7 @@ export function updateProposal(
           schemaSDL: proposalSubgraph.schemaSDL,
           isDeleted: proposalSubgraph.isDeleted,
           isNew: !subgraph,
+          currentSchemaVersionId: subgraph?.schemaVersionId,
         });
       }
 

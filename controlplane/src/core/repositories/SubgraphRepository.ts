@@ -1265,6 +1265,23 @@ export class SubgraphRepository {
     };
   }
 
+  public async getSDLBySchemaVersionId(data: { schemaVersionId: string }) {
+    const latestValidVersion = await this.db
+      .select({
+        schemaSDL: schemaVersion.schemaSDL,
+      })
+      .from(schemaVersion)
+      .innerJoin(targets, eq(schemaVersion.targetId, targets.id))
+      .where(and(eq(targets.organizationId, this.organizationId), eq(schemaVersion.id, data.schemaVersionId)))
+      .execute();
+
+    if (latestValidVersion.length === 0) {
+      return undefined;
+    }
+
+    return latestValidVersion[0].schemaSDL;
+  }
+
   public async getAccessibleSubgraphs(userId: string): Promise<SubgraphDTO[]> {
     const graphs = await this.db
       .selectDistinctOn([targets.id], { targetId: targets.id, name: targets.name })

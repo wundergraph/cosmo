@@ -28,6 +28,7 @@ export class ProposalRepository {
       schemaSDL: string;
       isDeleted: boolean;
       isNew: boolean;
+      currentSchemaVersionId?: string;
     }[];
     didHubCreate: boolean;
   }): Promise<ProposalDTO> {
@@ -50,6 +51,7 @@ export class ProposalRepository {
         schemaSDL: subgraph.schemaSDL || null,
         isDeleted: subgraph.isDeleted,
         isNew: subgraph.isNew,
+        currentSchemaVersionId: subgraph.currentSchemaVersionId,
       })),
     );
 
@@ -87,6 +89,7 @@ export class ProposalRepository {
         subgraphName: schema.proposalSubgraphs.subgraphName,
         schemaSDL: schema.proposalSubgraphs.schemaSDL,
         isDeleted: schema.proposalSubgraphs.isDeleted,
+        currentSchemaVersionId: schema.proposalSubgraphs.currentSchemaVersionId,
       })
       .from(schema.proposalSubgraphs)
       .where(eq(schema.proposalSubgraphs.proposalId, id));
@@ -110,6 +113,7 @@ export class ProposalRepository {
         subgraphName: subgraph.subgraphName,
         schemaSDL: subgraph.schemaSDL || '',
         isDeleted: subgraph.isDeleted,
+        currentSchemaVersionId: subgraph.currentSchemaVersionId || undefined,
       })),
     };
   }
@@ -146,6 +150,7 @@ export class ProposalRepository {
         subgraphName: schema.proposalSubgraphs.subgraphName,
         schemaSDL: schema.proposalSubgraphs.schemaSDL,
         isDeleted: schema.proposalSubgraphs.isDeleted,
+        currentSchemaVersionId: schema.proposalSubgraphs.currentSchemaVersionId,
       })
       .from(schema.proposalSubgraphs)
       .where(eq(schema.proposalSubgraphs.proposalId, proposal[0].id));
@@ -166,6 +171,7 @@ export class ProposalRepository {
         subgraphName: subgraph.subgraphName,
         schemaSDL: subgraph.schemaSDL || '',
         isDeleted: subgraph.isDeleted,
+        currentSchemaVersionId: subgraph.currentSchemaVersionId || undefined,
       })),
     };
   }
@@ -244,6 +250,7 @@ export class ProposalRepository {
       schemaSDL: string;
       isDeleted: boolean;
       isNew: boolean;
+      currentSchemaVersionId?: string;
     }[];
   }) {
     if (state) {
@@ -265,6 +272,7 @@ export class ProposalRepository {
           schemaSDL: subgraph.schemaSDL || null,
           isDeleted: subgraph.isDeleted,
           isNew: subgraph.isNew,
+          currentSchemaVersionId: subgraph.currentSchemaVersionId,
         })),
       );
     }

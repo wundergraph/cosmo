@@ -1,4 +1,3 @@
-import { useDateRangeQueryState } from "@/components/analytics/useAnalyticsQueryState";
 import {
   getCheckBadge,
   getCheckIcon,
@@ -25,7 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -42,9 +40,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
-import { useSessionStorage } from "@/hooks/use-session-storage";
 import { formatDateTime } from "@/lib/format-date";
-import { createDateRange } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "@connectrpc/connect-query";
@@ -52,12 +48,7 @@ import {
   ExclamationTriangleIcon,
   NoSymbolIcon,
 } from "@heroicons/react/24/outline";
-import {
-  BoxIcon,
-  Component2Icon,
-  GitHubLogoIcon,
-  MinusIcon,
-} from "@radix-ui/react-icons";
+import { Component2Icon, GitHubLogoIcon } from "@radix-ui/react-icons";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getChecksOfProposal,
@@ -65,53 +56,21 @@ import {
   updateProposal,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
+  GetProposalResponse_CurrentSubgraph,
   Proposal,
-  ProposalSubgraph,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { formatDistanceToNow, formatISO } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext } from "react";
 
-// const SubgraphDetails = ({ subgraphs }: { subgraphs: ProposalSubgraph[] }) => {
-//   const getIcon = (isDeleted: boolean) => {
-//     if (isDeleted) {
-//       return <MinusIcon className="h-3 w-3 flex-shrink-0" />;
-//     }
-//     return <BoxIcon className="h-3 w-3 flex-shrink-0" />;
-//   };
-
-//   return subgraphs
-//     .sort((a, b) => {
-//       // Sort by deleted status first, then by name
-//       if (a.isDeleted !== b.isDeleted) {
-//         return a.isDeleted ? 1 : -1;
-//       }
-//       return a.name.localeCompare(b.name);
-//     })
-//     .map((subgraph) => {
-//       return (
-//         <div
-//           className={cn("flex flex-col gap-y-1", {
-//             "text-destructive": subgraph.isDeleted,
-//           })}
-//           key={subgraph.name}
-//         >
-//           <div className="flex items-start gap-x-1.5 text-sm">
-//             <div className="mt-1">{getIcon(subgraph.isDeleted)}</div>
-//             <span>{subgraph.name}</span>
-//             {subgraph.isDeleted && <span>(deleted)</span>}
-//           </div>
-//         </div>
-//       );
-//     });
-// };
-
 export const ProposalDetails = ({
   proposal,
+  currentSubgraphs,
   refetch,
 }: {
   proposal: Proposal;
+  currentSubgraphs: GetProposalResponse_CurrentSubgraph[];
   refetch: () => void;
 }) => {
   const router = useRouter();
@@ -128,13 +87,6 @@ export const ProposalDetails = ({
   const { toast } = useToast();
 
   const graphData = useContext(GraphContext);
-
-  const {
-    dateRange: { start, end },
-    range,
-  } = useDateRangeQueryState();
-  const startDate = range ? createDateRange(range).start : start;
-  const endDate = range ? createDateRange(range).end : end;
 
   const {
     data: checksData,
@@ -194,8 +146,12 @@ export const ProposalDetails = ({
   const activeSubgraphName = activeSubgraph?.name;
   const activeSubgraphSdl = activeSubgraph?.schemaSDL;
 
+  const currentSubgraph = currentSubgraphs.find(
+    (subgraph) => subgraph.name === activeSubgraphName,
+  );
+  const currentSubgraphSdl = currentSubgraph?.schemaSDL || "";
+
   const {
-    id: proposalId,
     name,
     createdAt,
     createdByEmail,
@@ -343,7 +299,10 @@ export const ProposalDetails = ({
                           />
                         </div>
                       </div>
-                      <SDLViewerMonaco schema={activeSubgraphSdl} />
+                      <SDLViewerMonaco
+                        schema={currentSubgraphSdl}
+                        newSchema={activeSubgraphSdl}
+                      />
                     </div>
                   )
                 )}
@@ -646,7 +605,13 @@ const ProposalDetailsPage: NextPageWithLayout = () => {
       />
     );
   } else if (data) {
-    content = <ProposalDetails proposal={data.proposal} refetch={refetch} />;
+    content = (
+      <ProposalDetails
+        proposal={data.proposal}
+        refetch={refetch}
+        currentSubgraphs={data.currentSubgraphs}
+      />
+    );
   }
 
   return (

@@ -21131,6 +21131,11 @@ export class GetProposalResponse extends Message<GetProposalResponse> {
    */
   proposal?: Proposal;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GetProposalResponse.CurrentSubgraph currentSubgraphs = 3;
+   */
+  currentSubgraphs: GetProposalResponse_CurrentSubgraph[] = [];
+
   constructor(data?: PartialMessage<GetProposalResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -21141,6 +21146,7 @@ export class GetProposalResponse extends Message<GetProposalResponse> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "proposal", kind: "message", T: Proposal },
+    { no: 3, name: "currentSubgraphs", kind: "message", T: GetProposalResponse_CurrentSubgraph, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetProposalResponse {
@@ -21157,6 +21163,49 @@ export class GetProposalResponse extends Message<GetProposalResponse> {
 
   static equals(a: GetProposalResponse | PlainMessage<GetProposalResponse> | undefined, b: GetProposalResponse | PlainMessage<GetProposalResponse> | undefined): boolean {
     return proto3.util.equals(GetProposalResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetProposalResponse.CurrentSubgraph
+ */
+export class GetProposalResponse_CurrentSubgraph extends Message<GetProposalResponse_CurrentSubgraph> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string schemaSDL = 2;
+   */
+  schemaSDL = "";
+
+  constructor(data?: PartialMessage<GetProposalResponse_CurrentSubgraph>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetProposalResponse.CurrentSubgraph";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "schemaSDL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetProposalResponse_CurrentSubgraph {
+    return new GetProposalResponse_CurrentSubgraph().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetProposalResponse_CurrentSubgraph {
+    return new GetProposalResponse_CurrentSubgraph().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetProposalResponse_CurrentSubgraph {
+    return new GetProposalResponse_CurrentSubgraph().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetProposalResponse_CurrentSubgraph | PlainMessage<GetProposalResponse_CurrentSubgraph> | undefined, b: GetProposalResponse_CurrentSubgraph | PlainMessage<GetProposalResponse_CurrentSubgraph> | undefined): boolean {
+    return proto3.util.equals(GetProposalResponse_CurrentSubgraph, a, b);
   }
 }
 

@@ -79,7 +79,11 @@ export const handleProposalResult = (
     studioCheckUrl = `${pc.bold('Open in studio')}: ${resp.checkUrl}`;
   }
 
-  if (resp.response?.code !== EnumStatusCode.OK) {
+  if (resp.response?.code === EnumStatusCode.OK) {
+    successMessage = isCreate
+      ? pc.green(`Proposal '${proposalName}' was created successfully.`)
+      : pc.green(`Proposal '${proposalName}' was updated successfully.`);
+  } else {
     return {
       success: false,
       message: resp.response?.details
@@ -103,10 +107,6 @@ export const handleProposalResult = (
     );
 
     success = true;
-
-    successMessage = isCreate
-      ? pc.green(`\nProposal '${proposalName}' was created successfully.`)
-      : pc.green(`\nProposal '${proposalName}' was updated successfully.`);
 
     return { success: true, message: successMessage };
   }
@@ -211,12 +211,13 @@ export const handleProposalResult = (
 
   if (success) {
     console.log(
-      '\n' + logSymbols.success + pc.green(` Schema check passed. ${finalStatement}`) + '\n\n' + studioCheckUrl + '\n',
+      '\n' +
+        logSymbols.success +
+        pc.green(` Schema check with the proposed schemas passed. ${finalStatement}`) +
+        '\n\n' +
+        studioCheckUrl +
+        '\n',
     );
-
-    successMessage = isCreate
-      ? pc.green(`\nProposal '${proposalName}' was created successfully.`)
-      : pc.green(`\nProposal '${proposalName}' was updated successfully.`);
 
     return { success: true, message: successMessage };
   } else {
@@ -224,11 +225,10 @@ export const handleProposalResult = (
       '\n' +
         logSymbols.error +
         pc.red(
-          ` Schema check failed. ${finalStatement}\nSee https://cosmo-docs.wundergraph.com/studio/schema-checks for more information on resolving schema check errors.\n${studioCheckUrl}\n`,
-        ) +
-        '\n',
+          ` Schema check with the proposed schemas failed. ${finalStatement}\nSee https://cosmo-docs.wundergraph.com/studio/schema-checks for more information on resolving schema check errors.\n${studioCheckUrl}\n`,
+        ),
     );
 
-    return { success: false };
+    return { success: true, message: successMessage };
   }
 };

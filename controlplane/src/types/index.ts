@@ -730,4 +730,5 @@ export interface ProposalSubgraphDTO {
   subgraphId?: string;
   schemaSDL: string;
   isDeleted: boolean;
+  currentSchemaVersionId?: string;
 }
