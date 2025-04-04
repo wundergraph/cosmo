@@ -1,9 +1,10 @@
 package core
 
 import (
+	"strconv"
+
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
-	"strconv"
 
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
@@ -27,6 +28,9 @@ type routerMetrics struct {
 	routerConfigVersion string
 	logger              *zap.Logger
 	exportEnabled       bool
+
+	promSchemaUsageEnabled             bool
+	promSchemaUsageIncludeOperationSha bool
 }
 
 type routerMetricsConfig struct {
@@ -35,6 +39,9 @@ type routerMetricsConfig struct {
 	routerConfigVersion string
 	logger              *zap.Logger
 	exportEnabled       bool
+
+	promSchemaUsageEnabled             bool
+	promSchemaUsageIncludeOperationSha bool
 }
 
 func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
@@ -44,6 +51,9 @@ func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
 		routerConfigVersion: cfg.routerConfigVersion,
 		logger:              cfg.logger,
 		exportEnabled:       cfg.exportEnabled,
+
+		promSchemaUsageEnabled:             cfg.promSchemaUsageEnabled,
+		promSchemaUsageIncludeOperationSha: cfg.promSchemaUsageIncludeOperationSha,
 	}
 }
 
@@ -59,6 +69,9 @@ func (m *routerMetrics) StartOperation(logger *zap.Logger, requestContentLength 
 		TrackUsageInfo:       m.exportEnabled,
 		InFlightAddOption:    inFlightAddOption,
 		SliceAttributes:      sliceAttr,
+
+		PrometheusSchemaUsageEnabled:    m.promSchemaUsageEnabled,
+		PrometheusSchemaUsageIncludeSha: m.promSchemaUsageIncludeOperationSha,
 	})
 	return metrics
 }

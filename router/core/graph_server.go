@@ -459,8 +459,19 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			}
 		}
 	} else if srv.persistedOperationsConfig.Safelist.Enabled || srv.persistedOperationsConfig.LogUnknown {
+		// THIS IS A BUG!! Tests in router-tests/safelist_test.go rely on the buggy functionality
+		// and maybe code related to safelist feature does as well. This doesn't get executed if either of the above
+		// two top-level conditions are met, which is the non-emptyness of the array/config, not the presence of the
+		// condition that enables computing sha256.
+
 		// In these case, we'll want to compute the sha256 for every operation, in order to check that the operation
 		// is present in the Persisted Operation cache
+		computeSha256 = true
+	}
+
+	// This could be folded into the above checks, but it's separated out to isolate it from the bug
+	if srv.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled && srv.metricConfig.Prometheus.PromSchemaFieldUsage.IncludeOperationSha {
+		// Prometheus schema field usage metrics use sha256, so we need to ensure it is computed
 		computeSha256 = true
 	}
 
@@ -684,6 +695,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		exportEnabled:       s.graphqlMetricsConfig.Enabled,
 		routerConfigVersion: routerConfigVersion,
 		logger:              s.logger,
+
+		promSchemaUsageEnabled:             s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
+		promSchemaUsageIncludeOperationSha: s.metricConfig.Prometheus.PromSchemaFieldUsage.IncludeOperationSha,
 	})
 
 	baseLogFields := []zapcore.Field{
@@ -905,7 +919,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		baseURL:        s.baseURL,
 		transport:      s.executionTransport,
 		logger:         s.logger,
-		trackUsageInfo: s.graphqlMetricsConfig.Enabled,
+		trackUsageInfo: s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
 		transportOptions: &TransportOptions{
 			Proxy:                    s.executionTransportProxy,
 			SubgraphTransportOptions: s.subgraphTransportOptions,
@@ -1111,7 +1125,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		AlwaysSkipLoader:            s.engineExecutionConfiguration.Debug.AlwaysSkipLoader,
 		QueryPlansEnabled:           s.Config.queryPlansEnabled,
 		QueryPlansLoggingEnabled:    s.engineExecutionConfiguration.Debug.PrintQueryPlans,
-		TrackSchemaUsageInfo:        s.graphqlMetricsConfig.Enabled,
+		TrackSchemaUsageInfo:        s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
 		ClientHeader:                s.clientHeader,
 		ComputeOperationSha256:      computeSha256,
 		ApolloCompatibilityFlags:    &s.apolloCompatibilityFlags,
