@@ -1,18 +1,35 @@
 import {
-  externalInterfaceFieldsWarning, FieldSetDirective,
+  externalInterfaceFieldsWarning,
   invalidOverrideTargetSubgraphNameWarning,
-  NOT_APPLICABLE, nonExternalConditionalFieldWarning,
+  nonExternalConditionalFieldWarning, REQUIRES,
 } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { parse } from 'graphql/index.js';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { composeSubgraphs } from '../src/core/composition/composition.js';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
-describe('Composition warning tests', (ctx) => {
+
+vi.mock('../src/core/clickhouse/index.js', () => {
+  const ClickHouseClient = vi.fn();
+  ClickHouseClient.prototype.queryPromise = vi.fn();
+
+  return { ClickHouseClient };
+});
+
+describe('Composition warning tests', () => {
+  let chClient: ClickHouseClient;
+
+  beforeEach(() => {
+    chClient = new ClickHouseClient();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -22,7 +39,7 @@ describe('Composition warning tests', (ctx) => {
   });
 
   test(`that a warning is returned if the target subgraph of an override does not exist`, async () => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const federatedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
@@ -58,7 +75,7 @@ describe('Composition warning tests', (ctx) => {
   });
 
   test('that an warning is returned if a V1 interface extension field is declared @external', async () => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const federatedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
@@ -103,7 +120,7 @@ describe('Composition warning tests', (ctx) => {
   });
 
   test('that an warning is returned if a non-external v1 fields are a part of a @requires field set', async () => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const federatedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
@@ -154,7 +171,7 @@ describe('Composition warning tests', (ctx) => {
     });
     expect(publishFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
 
-     resp = await client.createFederatedSubgraph({
+    resp = await client.createFederatedSubgraph({
       name: 'products',
       namespace: 'default',
       labels: [label],
@@ -162,7 +179,7 @@ describe('Composition warning tests', (ctx) => {
     });
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-     publishFederatedSubgraphResp = await client.publishFederatedSubgraph({
+    publishFederatedSubgraphResp = await client.publishFederatedSubgraph({
       name: 'products',
       namespace: 'default',
       schema: `
@@ -191,7 +208,7 @@ describe('Composition warning tests', (ctx) => {
         'products',
         'NestedObject.name',
         'object { nestedObject { name } }',
-        FieldSetDirective.REQUIRES,
+        REQUIRES,
       ).message,
     );
 

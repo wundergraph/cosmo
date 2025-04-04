@@ -140,6 +140,7 @@ export function updateFeatureFlag(
       actorId: authContext.userId,
       auditableType: 'feature_flag',
       auditableDisplayName: featureFlagDTO.name,
+      apiKeyName: authContext.apiKeyName,
       actorDisplayName: authContext.userDisplayName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       targetNamespaceId: namespace.id,
@@ -174,6 +175,7 @@ export function updateFeatureFlag(
           cdnBaseUrl: opts.cdnBaseUrl,
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
+        chClient: opts.chClient!,
       });
 
       compositionErrors.push(...composition.compositionErrors);

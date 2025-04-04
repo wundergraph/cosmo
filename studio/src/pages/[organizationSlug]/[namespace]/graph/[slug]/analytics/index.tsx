@@ -2,6 +2,7 @@ import { AnalyticsSelectedFilters } from "@/components/analytics/filters";
 import {
   ErrorMetricsCard,
   ErrorRateOverTimeCard,
+  LatencyDistributionCard,
   LatencyMetricsCard,
   MetricsFilters,
   RequestMetricsCard,
@@ -151,6 +152,7 @@ const OverviewToolbar = ({
 
 const AnalyticsPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
+  const syncId = `${graphContext?.graph?.namespace}-${graphContext?.graph?.name}`;
 
   const { filters, range, dateRange, refreshInterval } =
     useAnalyticsQueryState();
@@ -197,12 +199,13 @@ const AnalyticsPage: NextPageWithLayout = () => {
     <div className="w-full space-y-4">
       <OverviewToolbar filters={data?.filters} />
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3">
-        <RequestMetricsCard data={data?.requests} />
-        <LatencyMetricsCard data={data?.latency} />
-        <ErrorMetricsCard data={data?.errors} />
+        <RequestMetricsCard data={data?.requests} syncId={syncId} />
+        <LatencyMetricsCard data={data?.latency} syncId={syncId} />
+        <ErrorMetricsCard data={data?.errors} syncId={syncId} />
       </div>
 
-      <ErrorRateOverTimeCard />
+      <ErrorRateOverTimeCard syncId={syncId} />
+      <LatencyDistributionCard series={data?.latency?.series ?? []} syncId={syncId} />
     </div>
   );
 };

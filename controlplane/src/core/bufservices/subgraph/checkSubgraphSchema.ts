@@ -25,12 +25,18 @@ import { SchemaLintRepository } from '../../repositories/SchemaLintRepository.js
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import {
+  collectOperationUsageStats,
   InspectorOperationResult,
   InspectorSchemaChange,
   SchemaUsageTrafficInspector,
-  collectOperationUsageStats,
 } from '../../services/SchemaUsageTrafficInspector.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import {
+  enrichLogger,
+  getFederatedGraphRouterCompatibilityVersion,
+  getLogger,
+  handleError,
+  clamp,
+} from '../../util.js';
 
 export function checkSubgraphSchema(
   opts: RouterOptions,
@@ -156,18 +162,25 @@ export function checkSubgraphSchema(
       };
     }
 
+    const federatedGraphs = await fedGraphRepo.bySubgraphLabels({ labels: subgraph.labels, namespaceId: namespace.id });
+    /*
+     * If there are any federated graphs for which the subgraph is a constituent, the subgraph will be validated
+     * against the first router compatibility version encountered.
+     * If no federated graphs have yet been created, the subgraph will be validated against the latest router
+     * compatibility version.
+     */
+    const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion(federatedGraphs);
     const newSchemaSDL = req.delete ? '' : new TextDecoder().decode(req.schema);
     let newGraphQLSchema: GraphQLSchema | undefined;
-
     if (newSchemaSDL) {
       try {
         // Here we check if the schema is valid as a subgraph SDL
-        const { errors } = buildSchema(newSchemaSDL);
-        if (errors && errors.length > 0) {
+        const result = buildSchema(newSchemaSDL, true, routerCompatibilityVersion);
+        if (!result.success) {
           return {
             response: {
               code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA,
-              details: errors.map((e) => e.toString()).join('\n'),
+              details: result.errors.map((e) => e.toString()).join('\n'),
             },
             breakingChanges: [],
             nonBreakingChanges: [],
@@ -216,7 +229,7 @@ export function checkSubgraphSchema(
       vcsContext: req.vcsContext,
     });
 
-    const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL);
+    const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL, routerCompatibilityVersion);
     if (schemaChanges.kind === 'failure') {
       logger.warn(`Error finding diff between graphs: ${schemaChanges.error}`);
       return {
@@ -249,7 +262,15 @@ export function checkSubgraphSchema(
       schemaCheckID,
     });
 
-    const composer = new Composer(logger, opts.db, fedGraphRepo, subgraphRepo, contractRepo, graphCompostionRepo);
+    const composer = new Composer(
+      logger,
+      opts.db,
+      fedGraphRepo,
+      subgraphRepo,
+      contractRepo,
+      graphCompostionRepo,
+      opts.chClient,
+    );
 
     const result = req.delete
       ? await composer.composeWithDeletedSubgraph(subgraph.labels, subgraph.name, subgraph.namespaceId)
@@ -280,7 +301,8 @@ export function checkSubgraphSchema(
       featureId: 'breaking-change-retention',
     });
 
-    const limit = changeRetention?.limit ?? 7;
+    let limit = changeRetention?.limit ?? 7;
+    limit = clamp(namespace?.checksTimeframeInDays ?? limit, 1, limit);
 
     for (const composition of result.compositions) {
       await schemaCheckRepo.createCheckedFederatedGraph(schemaCheckID, composition.id, limit);
@@ -303,10 +325,10 @@ export function checkSubgraphSchema(
         });
       }
 
-      /* 
-          We don't collect operation usage when 
+      /*
+          We don't collect operation usage when
           1. we have composition errors
-          2. when we don't have any inspectable changes. 
+          2. when we don't have any inspectable changes.
           3. When user wants to skip the traffic check altogether
           That means any breaking change is really breaking
           */
@@ -318,6 +340,7 @@ export function checkSubgraphSchema(
         daysToConsider: limit,
         federatedGraphId: composition.id,
         organizationId: authContext.organizationId,
+        subgraphId: subgraph.id,
       });
 
       if (result.size === 0) {

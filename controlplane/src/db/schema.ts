@@ -39,6 +39,10 @@ export const federatedGraphs = pgTable(
     admissionWebhookURL: text('admission_webhook_url'),
     admissionWebhookSecret: text('admission_webhook_secret'),
     supportsFederation: boolean('supports_federation').default(true).notNull(),
+    /* The version that composition returns to determine whether the router execution configuration is compatible
+     * with a specific router version.
+     */
+    routerCompatibilityVersion: text('router_compatibility_version').notNull().default('1'),
   },
   (t) => ({
     targetIdIndex: index('fgs_target_id_idx').on(t.targetId),
@@ -467,8 +471,6 @@ export const namespaces = pgTable(
     createdBy: uuid('created_by').references(() => users.id, {
       onDelete: 'set null',
     }),
-    enableLinting: boolean('enable_linting').default(false).notNull(),
-    enableGraphPruning: boolean('enable_graph_pruning').default(false).notNull(),
   },
   (t) => {
     return {
@@ -478,6 +480,33 @@ export const namespaces = pgTable(
     };
   },
 );
+
+export const namespaceConfig = pgTable(
+  'namespace_config',
+  {
+    namespaceId: uuid('namespace_id')
+      .notNull()
+      .references(() => namespaces.id, {
+        onDelete: 'cascade',
+      }),
+    enableLinting: boolean('enable_linting').default(false).notNull(),
+    enableGraphPruning: boolean('enable_graph_pruning').default(false).notNull(),
+    enableCacheWarming: boolean('enable_cache_warming').default(false).notNull(),
+    checksTimeframeInDays: integer('checks_timeframe_in_days'),
+  },
+  (t) => {
+    return {
+      uniqueNamespace: unique('unique_namespace').on(t.namespaceId),
+    };
+  },
+);
+
+export const namespaceConfigRelations = relations(namespaceConfig, ({ one }) => ({
+  namespace: one(namespaces, {
+    fields: [namespaceConfig.namespaceId],
+    references: [namespaces.id],
+  }),
+}));
 
 export const targetTypeEnum = pgEnum('target_type', ['federated', 'subgraph'] as const);
 
@@ -568,8 +597,9 @@ export const targetsRelations = relations(targets, ({ one, many }) => ({
   }),
 }));
 
-export const namespacesRelations = relations(namespaces, ({ many }) => ({
+export const namespacesRelations = relations(namespaces, ({ many, one }) => ({
   targets: many(targets),
+  namespaceConfig: one(namespaceConfig),
 }));
 
 // Do not cascade delete on deletion of target. The registry should be untouched unless organization is deleted.
@@ -599,7 +629,7 @@ export const schemaVersion = pgTable(
   },
 );
 
-// https://github.com/kamilkisiela/graphql-inspector/blob/f3b9ed7e277f1a4928da7d0fdc212685ff77752a/packages/core/src/diff/changes/change.ts
+// https://github.com/kamilkisiela/graphql-inspector/blob/master/packages/core/src/diff/changes/change.ts
 export const schemaChangeTypeEnum = pgEnum('schema_change_type', [
   'FIELD_ARGUMENT_DESCRIPTION_CHANGED',
   'FIELD_ARGUMENT_DEFAULT_CHANGED',
@@ -653,6 +683,30 @@ export const schemaChangeTypeEnum = pgEnum('schema_change_type', [
   'TYPE_DESCRIPTION_ADDED',
   'UNION_MEMBER_REMOVED',
   'UNION_MEMBER_ADDED',
+  'DIRECTIVE_USAGE_UNION_MEMBER_ADDED',
+  'DIRECTIVE_USAGE_UNION_MEMBER_REMOVED',
+  'DIRECTIVE_USAGE_ENUM_ADDED',
+  'DIRECTIVE_USAGE_ENUM_REMOVED',
+  'DIRECTIVE_USAGE_ENUM_VALUE_ADDED',
+  'DIRECTIVE_USAGE_ENUM_VALUE_REMOVED',
+  'DIRECTIVE_USAGE_INPUT_OBJECT_ADDED',
+  'DIRECTIVE_USAGE_INPUT_OBJECT_REMOVED',
+  'DIRECTIVE_USAGE_FIELD_ADDED',
+  'DIRECTIVE_USAGE_FIELD_REMOVED',
+  'DIRECTIVE_USAGE_SCALAR_ADDED',
+  'DIRECTIVE_USAGE_SCALAR_REMOVED',
+  'DIRECTIVE_USAGE_OBJECT_ADDED',
+  'DIRECTIVE_USAGE_OBJECT_REMOVED',
+  'DIRECTIVE_USAGE_INTERFACE_ADDED',
+  'DIRECTIVE_USAGE_INTERFACE_REMOVED',
+  'DIRECTIVE_USAGE_ARGUMENT_DEFINITION_ADDED',
+  'DIRECTIVE_USAGE_ARGUMENT_DEFINITION_REMOVED',
+  'DIRECTIVE_USAGE_SCHEMA_ADDED',
+  'DIRECTIVE_USAGE_SCHEMA_REMOVED',
+  'DIRECTIVE_USAGE_FIELD_DEFINITION_ADDED',
+  'DIRECTIVE_USAGE_FIELD_DEFINITION_REMOVED',
+  'DIRECTIVE_USAGE_INPUT_FIELD_DEFINITION_ADDED',
+  'DIRECTIVE_USAGE_INPUT_FIELD_DEFINITION_REMOVED',
 ] as const);
 
 export const schemaVersionChangeAction = pgTable(
@@ -1048,6 +1102,8 @@ export const organizations = pgTable(
     isDeactivated: boolean('is_deactivated').default(false),
     deactivationReason: text('deactivation_reason'),
     deactivatedAt: timestamp('deactivated_at', { withTimezone: true }),
+    queuedForDeletionAt: timestamp('queued_for_deletion_at', { withTimezone: true }),
+    queuedForDeletionBy: text('queued_for_deletion_by'), // display name in case the member is removed
   },
   (t) => {
     return {
@@ -1533,6 +1589,8 @@ export const auditLogs = pgTable(
     actorDisplayName: text('actor_display_name'), // human-readable name of the actor e.g. user name, email
     actorType: text('actor_type').$type<AuditActorType>(), // user, system, api_key
 
+    apiKeyName: text('api_key_name'), // the name of the api key used to perform the operation. Will only have a value when the actor type is api_key
+
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => {
@@ -1569,6 +1627,7 @@ export const graphCompositions = pgTable(
     }),
     createdByEmail: text('created_by_email'),
     isFeatureFlagComposition: boolean('is_feature_flag_composition').default(false).notNull(),
+    routerCompatibilityVersion: text('router_compatibility_version').notNull().default('1'),
   },
   (t) => {
     return {
@@ -1680,78 +1739,6 @@ export const subgraphMembers = pgTable(
     };
   },
 );
-
-export const discussions = pgTable(
-  'discussions', // dis
-  {
-    id: uuid('id').notNull().primaryKey().defaultRandom(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    targetId: uuid('target_id')
-      .references(() => targets.id, {
-        onDelete: 'cascade',
-      })
-      .notNull(),
-    schemaVersionId: uuid('schema_version_id')
-      .notNull()
-      .references(() => schemaVersion.id, {
-        onDelete: 'cascade',
-      }),
-    referenceLine: integer('reference_line').notNull(),
-    isResolved: boolean('is_resolved').default(false).notNull(),
-  },
-  (t) => {
-    return {
-      targetIdIndex: index('dis_target_id_idx').on(t.targetId),
-      schemaVersionIdIndex: index('dis_schema_version_id_idx').on(t.schemaVersionId),
-    };
-  },
-);
-
-export const discussionThread = pgTable(
-  'discussion_thread', // dist
-  {
-    id: uuid('id').notNull().primaryKey().defaultRandom(),
-    discussionId: uuid('discussion_id')
-      .notNull()
-      .references(() => discussions.id, {
-        onDelete: 'cascade',
-      }),
-    contentMarkdown: text('content_markdown'),
-    contentJson: json('content_json').$type<JSONContent>(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }),
-    createdById: uuid('created_by_id').references(() => users.id, {
-      onDelete: 'set null',
-    }),
-    isDeleted: boolean('is_deleted').default(false).notNull(),
-  },
-  (t) => {
-    return {
-      discussionIdIndex: index('dist_discussion_id_idx').on(t.discussionId),
-      createdByIdIndex: index('dist_created_by_id_idx').on(t.createdById),
-    };
-  },
-);
-
-export const discussionRelations = relations(discussions, ({ one, many }) => ({
-  target: one(targets, {
-    fields: [discussions.targetId],
-    references: [targets.id],
-  }),
-  schemaVersion: one(schemaVersion),
-  thread: many(discussionThread),
-}));
-
-export const discussionThreadRelations = relations(discussionThread, ({ one }) => ({
-  createdBy: one(users, {
-    fields: [discussionThread.createdById],
-    references: [users.id],
-  }),
-  discussion: one(discussions, {
-    fields: [discussionThread.discussionId],
-    references: [discussions.id],
-  }),
-}));
 
 export const lintRulesEnum = pgEnum('lint_rules', [
   'FIELD_NAMES_SHOULD_BE_CAMEL_CASE',
@@ -1995,3 +1982,61 @@ export const playgroundScripts = pgTable(
     };
   },
 );
+
+export const cacheWarmerOperations = pgTable(
+  'cache_warmer_operations', // cwo
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, { onDelete: 'cascade' }),
+    operationContent: text('operation_content'),
+    operationHash: text('operation_hash'),
+    operationPersistedID: text('operation_persisted_id'),
+    operationName: text('operation_name'),
+    clientName: text('client_name'),
+    clientVersion: text('client_version'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    planningTime: real('planning_time'),
+    // is true if the operation is added by the user
+    isManuallyAdded: boolean('is_manually_added').default(false).notNull(),
+    createdById: uuid('created_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (t) => {
+    return {
+      organizationIdIndex: index('cwo_organization_id_idx').on(t.organizationId),
+      federatedGraphId: index('cwo_federated_graph_id_idx').on(t.federatedGraphId),
+      createdByIdIndex: index('cwo_created_by_id_idx').on(t.createdById),
+    };
+  },
+);
+
+export const namespaceCacheWarmerConfig = pgTable(
+  'namespace_cache_warmer_config', // nscwc
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    namespaceId: uuid('namespace_id')
+      .notNull()
+      .unique()
+      .references(() => namespaces.id, {
+        onDelete: 'cascade',
+      }),
+    maxOperationsCount: integer('max_operations_count').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+  },
+  (t) => {
+    return {
+      namespaceIdIndex: index('nscwc_namespace_id_idx').on(t.namespaceId),
+    };
+  },
+);
+
+export const namespaceCacheWarmerConfigRelations = relations(namespaceCacheWarmerConfig, ({ one }) => ({
+  namespace: one(namespaces),
+}));

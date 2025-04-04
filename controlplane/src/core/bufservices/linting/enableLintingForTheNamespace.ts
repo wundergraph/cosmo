@@ -40,7 +40,7 @@ export function enableLintingForTheNamespace(
       };
     }
 
-    await namespaceRepo.toggleEnableLinting({ name: req.namespace, enableLinting: req.enableLinting });
+    await namespaceRepo.updateConfiguration({ id: namespace.id, enableLinting: req.enableLinting });
 
     return {
       response: {

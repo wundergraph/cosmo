@@ -318,6 +318,7 @@ message FederatedGraph {
   bool supports_federation = 14;
   optional Contract contract = 15;
   optional string admission_webhook_url = 16;
+  string router_compatibility_version = 17;
 }
 
 message GetFederatedGraphsResponse {
@@ -381,7 +382,7 @@ message GetFederatedGraphByNameResponse {
   repeated Subgraph subgraphs = 3;
   string graphRequestToken = 4;
   repeated FeatureFlag featureFlagsInLatestValidComposition = 5;
-  // includes all the feature subgraphs that are part of the federated graph, 
+  // includes all the feature subgraphs that are part of the federated graph;
   // even the ones that are not part of the latest composition
   repeated Subgraph featureSubgraphs = 6;
 }
@@ -433,6 +434,10 @@ message GetLatestSubgraphSDLResponse {
   optional string version_id = 3;
 }
 
+message GetChecksByFederatedGraphNameFilters {
+  repeated string subgraphs = 1;
+}
+
 message GetChecksByFederatedGraphNameRequest {
   string name = 1;
   int32 limit = 2;
@@ -440,6 +445,7 @@ message GetChecksByFederatedGraphNameRequest {
   string startDate = 4;
   string endDate = 5;
   string namespace = 6;
+  optional GetChecksByFederatedGraphNameFilters filters = 7;
 }
 
 message SchemaCheck {
@@ -1195,6 +1201,12 @@ message DeleteOrganizationResponse {
   Response response = 1;
 }
 
+message RestoreOrganizationRequest {}
+
+message RestoreOrganizationResponse {
+  Response response = 1;
+}
+
 message LeaveOrganizationRequest {
   string userID = 1;
 }
@@ -1241,6 +1253,15 @@ message Organization {
   string slug = 3;
   optional string creatorUserId = 4;
   string createdAt = 5;
+}
+
+message GetOrganizationBySlugRequest {
+  string slug = 1;
+}
+
+message GetOrganizationBySlugResponse {
+  Response response = 1;
+  optional Organization organization = 2;
 }
 
 /**
@@ -1332,6 +1353,9 @@ message MetricsSeriesItem {
   string timestamp = 1;
   string value = 2;
   optional string previousValue = 3;
+  optional string p50 = 4;
+  optional string p90 = 5;
+  optional string p99 = 6;
 }
 
 message MetricsDashboard {
@@ -1594,6 +1618,7 @@ message AuditLog {
    string createdAt = 9;
    string targetNamespaceId = 10;
    string targetNamespaceDisplayName = 11;
+   string apiKeyName = 12;
 }
 
 message GetAuditLogsResponse {
@@ -1632,6 +1657,7 @@ message GraphComposition {
   optional bool hasMultipleChangedSubgraphs = 11;
   optional string triggeredBySubgraphName = 12;
   optional string compositionWarnings = 13;
+  string router_compatibility_version = 14;
 }
 
 message GraphCompositionSubgraph {
@@ -1650,7 +1676,7 @@ message GetCompositionsRequest {
   string startDate = 4;
   string endDate = 5;
   string namespace = 6;
-  bool excludeFeatureFlagCompositions = 7; 
+  bool excludeFeatureFlagCompositions = 7;
 }
 
 message GetCompositionsResponse {
@@ -1863,109 +1889,6 @@ message GetFieldUsageResponse {
   FieldUsageMeta meta = 4;
 }
 
-message CreateDiscussionRequest {
-  string target_id = 1;
-  string content_markdown = 2;
-  string content_json = 3;
-  string schema_version_id = 4;
-  int32 reference_line = 5;
-}
-
-message CreateDiscussionResponse {
-  Response response = 1;
-}
-
-message UpdateDiscussionCommentRequest {
-  string discussion_id = 1;
-  string comment_id = 2;
-  string content_markdown = 3;
-  string content_json = 4;
-}
-
-message UpdateDiscussionCommentResponse {
-  Response response = 1;
-}
-
-message DeleteDiscussionCommentRequest {
-  string discussion_id = 1;
-  string comment_id = 2;
-}
-
-message DeleteDiscussionCommentResponse {
-  Response response = 1;
-}
-
-message ReplyToDiscussionRequest {
-  string discussion_id = 2;
-  string content_markdown = 3;
-  string content_json = 4;
-}
-
-message ReplyToDiscussionResponse {
-  Response response = 1;
-}
-
-message GetAllDiscussionsRequest {
-  string target_id = 1;
-  optional string schema_version_id = 2;
-}
-
-message Discussion {
-  string id = 1;
-  string schema_version_id = 2;
-  string target_id = 3;
-  int32 reference_line = 4;
-  DiscussionComment openingComment = 5;
-  bool is_resolved = 6;
-}
-
-message DiscussionComment {
-  string id = 1;
-  string content_json = 2;
-  optional string created_by = 3;
-  string created_at = 4;
-  optional string updated_at = 5;
-  bool is_deleted = 6;
-}
-
-message GetAllDiscussionsResponse {
-  Response response = 1;
-  repeated Discussion discussions = 2;
-}
-
-message GetDiscussionRequest {
-  string discussion_id = 1;
-}
-
-message GetDiscussionResponse {
-  Response response = 1;
-  Discussion discussion  = 2;
-  repeated DiscussionComment comments = 3;
-}
-
-message GetDiscussionSchemasRequest {
-  string discussion_id = 1;
-}
-
-message GetDiscussionSchemasResponse {
-  message Schemas {
-    string reference = 1;
-    string latest = 2;
-  }
-
-  Response response = 1;
-  Schemas schemas = 4;
-}
-
-message SetDiscussionResolutionRequest {
-  string discussion_id = 1;
-  bool is_resolved = 2;
-}
-
-message SetDiscussionResolutionResponse {
-  Response response = 1;
-}
-
 message CreateNamespaceRequest {
   string name = 1;
 }
@@ -2024,6 +1947,25 @@ message GetNamespaceLintConfigResponse {
   Response response = 1;
   bool linterEnabled = 2;
   repeated LintConfig configs = 3;
+}
+
+message GetNamespaceChecksConfigurationRequest {
+   string namespace = 1;
+}
+
+message GetNamespaceChecksConfigurationResponse {
+  Response response = 1;
+  int32 timeframeInDays = 2;
+  int32 timeframeLimitInDays = 3;
+}
+
+message UpdateNamespaceChecksConfigurationRequest {
+  string namespace = 1;
+  int32 timeframeInDays = 2;
+}
+
+message UpdateNamespaceChecksConfigurationResponse {
+  Response response = 1;
 }
 
 message EnableLintingForTheNamespaceRequest {
@@ -2337,7 +2279,7 @@ message GetWebhookDeliveryDetailsResponse {
   WebhookDelivery delivery = 2;
 }
 
-message CreatePlaygroundScriptRequest { 
+message CreatePlaygroundScriptRequest {
   string title = 1;
   string type = 2;
   string content = 3;
@@ -2392,7 +2334,7 @@ message GetFederatedGraphByIdResponse {
   repeated Subgraph subgraphs = 3;
   string graphRequestToken = 4;
   repeated FeatureFlag featureFlagsInLatestValidComposition = 5;
-  // includes all the feature subgraphs that are part of the federated graph, 
+  // includes all the feature subgraphs that are part of the federated graph;
   // even the ones that are not part of the latest composition
   repeated Subgraph featureSubgraphs = 6;
 }
@@ -2415,6 +2357,108 @@ message GetNamespaceRequest {
 message GetNamespaceResponse {
   Response response = 1;
   Namespace namespace = 2;
+}
+
+message PushCacheWarmerOperationRequest {
+  string federatedGraphName = 1;
+  string operationContent = 2;
+  string operationName = 3;
+  string operationPersistedId = 4;
+  string namespace = 5;
+}
+
+message PushCacheWarmerOperationResponse {
+  Response response = 1;
+}
+
+message GetCacheWarmerOperationsRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message CacheWarmerOperation {
+  string id = 1;
+  string operationContent = 2;
+  string operationName = 3;
+  string operationPersistedId = 4;
+  string operationHash = 5;
+  string clientName = 6;
+  string clientVersion = 7;
+  float planningTime = 8;
+  bool isManuallyAdded = 9;
+  string createdAt = 10;
+  string createdBy = 11;
+}
+
+message GetCacheWarmerOperationsResponse {
+  Response response = 1;
+  repeated CacheWarmerOperation operations = 2;
+  int32 total_count = 3;
+  bool isCacheWarmerEnabled = 4;
+}
+
+message ComputeCacheWarmerOperationsRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+}
+
+message ComputeCacheWarmerOperationsResponse {
+  Response response = 1;
+}
+
+message ConfigureCacheWarmerRequest {
+  string namespace = 1;
+  bool enableCacheWarmer = 2;
+  int32 maxOperationsCount = 3;
+}
+
+message ConfigureCacheWarmerResponse {
+  Response response = 1;
+}
+
+message GetCacheWarmerConfigRequest {
+  string namespace = 1;
+}
+
+message GetCacheWarmerConfigResponse {
+  Response response = 1;
+  bool isCacheWarmerEnabled = 2;
+  int32 maxOperationsCount = 3;
+}
+
+message DeleteCacheWarmerOperationRequest {
+  string id = 1;
+  string federatedGraphName = 2;
+  string namespace = 3;
+}
+
+message DeleteCacheWarmerOperationResponse {
+  Response response = 1;
+}
+
+message ListRouterCompatibilityVersionsRequest {
+}
+
+message ListRouterCompatibilityVersionsResponse {
+  Response response = 1;
+  repeated string versions = 2;
+}
+
+message SetGraphRouterCompatibilityVersionRequest {
+  string name = 1;
+  string namespace = 2;
+  string version = 3;
+}
+
+message SetGraphRouterCompatibilityVersionResponse {
+  Response response = 1;
+  string previous_version = 2;
+  string new_version = 3;
+  repeated CompositionError compositionErrors = 4;
+  repeated DeploymentError deploymentErrors = 5;
+  repeated CompositionWarning compositionWarnings = 6;
 }
 
 service PlatformService {
@@ -2536,6 +2580,9 @@ service PlatformService {
   rpc GetFederatedGraphChangelog(GetFederatedGraphChangelogRequest) returns (GetFederatedGraphChangelogResponse) {}
   // CreateFederatedGraphToken creates a federated graph token that is consumed by the router to authenticate requests.
   rpc CreateFederatedGraphToken(CreateFederatedGraphTokenRequest) returns (CreateFederatedGraphTokenResponse) {}
+
+  // GetOrganizationBySlug returns a specific organization by its slug
+  rpc GetOrganizationBySlug(GetOrganizationBySlugRequest) returns (GetOrganizationBySlugResponse){}
   // GetOrganizationMembers returns the list of organization members
   rpc GetOrganizationMembers(GetOrganizationMembersRequest) returns (GetOrganizationMembersResponse){}
   // GetOrganizationMembers returns the list of pending organization invites
@@ -2588,6 +2635,8 @@ service PlatformService {
   rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {}
   // DeleteOrganization deletes an organization
   rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse) {}
+  // RestoreOrganization restore an organization pending deletion
+  rpc RestoreOrganization(RestoreOrganizationRequest) returns (RestoreOrganizationResponse) {}
   // LeaveOrganization removes a member from the organization
   rpc LeaveOrganization(LeaveOrganizationRequest) returns (LeaveOrganizationResponse) {}
   // UpdateOrganizationDetails updates the name and slug of the organization
@@ -2632,22 +2681,6 @@ service PlatformService {
   rpc RemoveSubgraphMember(RemoveSubgraphMemberRequest) returns (RemoveSubgraphMemberResponse) {}
   // GetSubgraphMembers gets all the members of the subgraph
   rpc GetSubgraphMembers(GetSubgraphMembersRequest) returns (GetSubgraphMembersResponse) {}
-  // CreateDiscussion creates a new discussion with an opening comment
-  rpc CreateDiscussion(CreateDiscussionRequest) returns (CreateDiscussionResponse) {}
-  // ReplyToDiscussion creates a new comment in the discussion
-  rpc ReplyToDiscussion(ReplyToDiscussionRequest) returns (ReplyToDiscussionResponse) {}
-  // GetAllDiscussions fetches all discussions which may be scoped to a schema version if passed
-  rpc GetAllDiscussions(GetAllDiscussionsRequest) returns (GetAllDiscussionsResponse) {}
-  // UpdateDiscussionComment edits the comment in the discussion
-  rpc UpdateDiscussionComment(UpdateDiscussionCommentRequest) returns (UpdateDiscussionCommentResponse) {}
-  // DeleteDiscussionComment deletes the comment or the discussion if it is an opening comment
-  rpc DeleteDiscussionComment(DeleteDiscussionCommentRequest) returns (DeleteDiscussionCommentResponse) {}
-  // GetDiscussion gets the entire discussion thread
-  rpc GetDiscussion(GetDiscussionRequest) returns (GetDiscussionResponse) {}
-  // GetDiscussionSchemas gets the reference and latest schema of the target graph in which the discussion was created
-  rpc GetDiscussionSchemas(GetDiscussionSchemasRequest) returns (GetDiscussionSchemasResponse) {}
-  // SetDiscussionResolutionRequest marks the discussion as resolved or not
-  rpc SetDiscussionResolution(SetDiscussionResolutionRequest) returns (SetDiscussionResolutionResponse) {}
   // AddReadme adds a readme of a target, can be a subgraph or a federated graph
   rpc AddReadme(AddReadmeRequest) returns (AddReadmeResponse) {}
   // GetUserAccessiblePermissions returns all the federated and subgraphs where the user has write permissions
@@ -2703,6 +2736,10 @@ service PlatformService {
   rpc ConfigureNamespaceLintConfig(ConfigureNamespaceLintConfigRequest) returns (ConfigureNamespaceLintConfigResponse) {}
   // GetNamespaceLintConfig returns the lint config of the namespace.
   rpc GetNamespaceLintConfig(GetNamespaceLintConfigRequest) returns (GetNamespaceLintConfigResponse) {}
+  // GetNamespaceChecksConfig returns the checks config of the namespace.
+  rpc GetNamespaceChecksConfig(GetNamespaceChecksConfigurationRequest) returns (GetNamespaceChecksConfigurationResponse) {}
+  // UpdateNamespaceChecksConfig updates the checks configuration for the namespace passed.
+  rpc UpdateNamespaceChecksConfig(UpdateNamespaceChecksConfigurationRequest) returns (UpdateNamespaceChecksConfigurationResponse) {}
   // EnablePruningForTheNamespace enables the graph pruning check for the namespace passed.
   rpc EnableGraphPruning(EnableGraphPruningRequest) returns (EnableGraphPruningResponse) {}
   // ConfigureNamespaceGraphPruningConfig configures the graph pruning config of the organization.
@@ -2724,6 +2761,18 @@ service PlatformService {
   rpc GetFederatedGraphById(GetFederatedGraphByIdRequest) returns (GetFederatedGraphByIdResponse) {}
   // GetSubgraphById returns the subgraph by id.
   rpc GetSubgraphById(GetSubgraphByIdRequest) returns (GetSubgraphByIdResponse) {}
+  // PushCacheWarmerOperation adds a operation to the list of cache warmer operations.
+  rpc PushCacheWarmerOperation(PushCacheWarmerOperationRequest) returns (PushCacheWarmerOperationResponse) {}
+  // GetCacheWarmerOperations returns the list of cache warmer operations.
+  rpc GetCacheWarmerOperations(GetCacheWarmerOperationsRequest) returns (GetCacheWarmerOperationsResponse) {}
+  // ComputeCacheWarmerOperations computes the list of cache warmer operations.
+  rpc ComputeCacheWarmerOperations(ComputeCacheWarmerOperationsRequest) returns (ComputeCacheWarmerOperationsResponse) {}
+  // ConfigureCacheWarmer enables cache warmer for the namespace passed.
+  rpc ConfigureCacheWarmer(ConfigureCacheWarmerRequest) returns (ConfigureCacheWarmerResponse) {}
+  // GetCacheWarmerConfig gets the config of cache warming for that namespace.
+  rpc GetCacheWarmerConfig(GetCacheWarmerConfigRequest) returns (GetCacheWarmerConfigResponse) {}
+  // DeleteCacheWarmerOperation deletes a cache warmer operation.
+  rpc DeleteCacheWarmerOperation(DeleteCacheWarmerOperationRequest) returns (DeleteCacheWarmerOperationResponse) {}
 
   //
   // Billing
@@ -2736,4 +2785,10 @@ service PlatformService {
   rpc CreateBillingPortalSession(CreateBillingPortalSessionRequest) returns (CreateBillingPortalSessionResponse) { }
   // Upgrade the current plan
   rpc UpgradePlan(UpgradePlanRequest) returns (UpgradePlanResponse) { }
+
+  // Router Compatibility Versions
+  rpc ListRouterCompatibilityVersions(ListRouterCompatibilityVersionsRequest) returns (ListRouterCompatibilityVersionsResponse) { }
+
+  // Graph
+  rpc SetGraphRouterCompatibilityVersion(SetGraphRouterCompatibilityVersionRequest) returns (SetGraphRouterCompatibilityVersionResponse) { }
 }

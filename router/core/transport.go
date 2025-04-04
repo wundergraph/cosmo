@@ -3,14 +3,14 @@ package core
 import (
 	"bytes"
 	"fmt"
-	"go.opentelemetry.io/otel/propagation"
 	"io"
 	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
 	"sync"
-	"time"
+
+	"go.opentelemetry.io/otel/propagation"
 
 	otelmetric "go.opentelemetry.io/otel/metric"
 
@@ -18,26 +18,26 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 
-	"github.com/wundergraph/cosmo/router/internal/docker"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/pool"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	otrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/internal/docker"
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 )
 
-var (
-	defaultTimeout = 60 * time.Second
+type (
+	TransportPreHandler  func(req *http.Request, ctx RequestContext) (*http.Request, *http.Response)
+	TransportPostHandler func(resp *http.Response, ctx RequestContext) *http.Response
 )
-
-type TransportPreHandler func(req *http.Request, ctx RequestContext) (*http.Request, *http.Response)
-type TransportPostHandler func(resp *http.Response, ctx RequestContext) *http.Response
 
 type CustomTransport struct {
 	roundTripper http.RoundTripper
@@ -64,13 +64,21 @@ func NewCustomTransport(
 	metricStore metric.Store,
 	enableSingleFlight bool,
 ) *CustomTransport {
-
 	ct := &CustomTransport{
 		metricStore: metricStore,
 	}
 
 	if retryOptions.Enabled {
-		ct.roundTripper = retrytransport.NewRetryHTTPTransport(roundTripper, retryOptions, logger)
+		// The round trip method is almost always called via the http.Client RoundTripper interface
+		// as a result we cannot pass in the request context logger directly, since this will break the interface
+		// The RoundTripper is also not in the core package so it does not have access to the
+		// getRequestContext function since its private to only the core package
+		// As a workaround we pass in a function that can be used to get the logger from within the round tripper
+		getRequestContextLogger := func(req *http.Request) *zap.Logger {
+			reqContext := getRequestContext(req.Context())
+			return reqContext.Logger()
+		}
+		ct.roundTripper = retrytransport.NewRetryHTTPTransport(roundTripper, retryOptions, getRequestContextLogger)
 	} else {
 		ct.roundTripper = roundTripper
 	}
@@ -83,7 +91,6 @@ func NewCustomTransport(
 }
 
 func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err error, resp *http.Response) {
-
 	reqContext := getRequestContext(req.Context())
 	activeSubgraph := reqContext.ActiveSubgraph(req)
 
@@ -97,6 +104,13 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 	}
 
 	attributes = append(attributes, reqContext.telemetry.metricAttrs...)
+	if reqContext.telemetry.metricAttributeExpressions != nil {
+		additionalAttrs, err := reqContext.telemetry.metricAttributeExpressions.expressionsAttributes(reqContext)
+		if err != nil {
+			ct.logger.Error("failed to resolve metric attribute expressions", zap.Error(err))
+		}
+		attributes = append(attributes, additionalAttrs...)
+	}
 	o := otelmetric.WithAttributeSet(attribute.NewSet(attributes...))
 
 	inFlightDone := ct.metricStore.MeasureInFlight(req.Context(), reqContext.telemetry.metricSliceAttrs, o)
@@ -119,7 +133,6 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 // RoundTrip of the engine upstream requests. The handler is called concurrently for each request.
 // Be aware that multiple modules can be active at the same time. Must be concurrency safe.
 func (ct *CustomTransport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
-
 	moduleContext := &moduleRequestContext{
 		requestContext: getRequestContext(req.Context()),
 		sendError:      nil,
@@ -194,7 +207,6 @@ func (ct *CustomTransport) allowSingleFlight(req *http.Request) bool {
 }
 
 func (ct *CustomTransport) roundTripSingleFlight(req *http.Request) (*http.Response, error) {
-
 	key := ct.singleFlightKey(req)
 	ct.sfMu.RLock()
 	item, shared := ct.sf[key]
@@ -344,7 +356,7 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 
 func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport http.RoundTripper) http.RoundTripper {
 	if t.subgraphTransportOptions != nil && t.subgraphTransportOptions.SubgraphMap != nil && len(t.subgraphTransportOptions.SubgraphMap) > 0 {
-		baseTransport = NewTimeoutTransport(t.subgraphTransportOptions, baseTransport, t.logger, t.proxy)
+		baseTransport = NewSubgraphTransport(t.subgraphTransportOptions, baseTransport, t.logger, t.proxy)
 	}
 
 	if t.localhostFallbackInsideDocker && docker.Inside() {
@@ -379,7 +391,6 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport ht
 			attributes = append(attributes, reqContext.telemetry.traceAttrs...)
 
 			span.SetAttributes(attributes...)
-
 		}),
 	)
 	tp := NewCustomTransport(
@@ -395,13 +406,6 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport ht
 	tp.logger = t.logger
 
 	return tp
-}
-
-func (t TransportFactory) DefaultTransportTimeout() time.Duration {
-	if t.subgraphTransportOptions != nil {
-		return t.subgraphTransportOptions.RequestTimeout
-	}
-	return defaultTimeout
 }
 
 func (t TransportFactory) DefaultHTTPProxyURL() *url.URL {

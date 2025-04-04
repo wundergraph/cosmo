@@ -1,17 +1,36 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../../src/core/test-util.js';
 import {
-  createBaseAndFeatureSubgraph, DEFAULT_NAMESPACE,
+  createBaseAndFeatureSubgraph,
+  DEFAULT_NAMESPACE,
   DEFAULT_SUBGRAPH_URL_ONE,
   DEFAULT_SUBGRAPH_URL_TWO,
   SetupTest,
 } from '../test-util.js';
+import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
 
 let dbname = '';
 
+vi.mock('../src/core/clickhouse/index.js', () => {
+  const ClickHouseClient = vi.fn();
+  ClickHouseClient.prototype.queryPromise = vi.fn();
+
+  return { ClickHouseClient };
+});
+
 describe('DeleteSubgraph', (ctx) => {
+  let chClient: ClickHouseClient;
+
+  beforeEach(() => {
+    chClient = new ClickHouseClient();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });
@@ -21,7 +40,7 @@ describe('DeleteSubgraph', (ctx) => {
   });
 
   test('Should be able to create a subgraph, publish the schema, create a federated graph and then delete a subgraph', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph');
@@ -79,7 +98,7 @@ describe('DeleteSubgraph', (ctx) => {
   });
 
   test('Should be able to delete a subgraph from multiple federated graphs', async (testContext) => {
-    const { client, server } = await SetupTest({ dbname });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const federatedGraph1Name = genID('fedGraph1');
     const federatedGraph2Name = genID('fedGraph2');
@@ -202,7 +221,7 @@ describe('DeleteSubgraph', (ctx) => {
     const deleteFederatedSubgraphResponse = await client.deleteFederatedSubgraph({
       subgraphName: baseSubgraphName,
       namespace: DEFAULT_NAMESPACE,
-    })
+    });
     expect(deleteFederatedSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
 
     // Expect the base subgraph to no longer exist

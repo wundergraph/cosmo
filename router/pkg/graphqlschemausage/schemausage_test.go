@@ -206,7 +206,8 @@ func TestGetSchemaUsageInfo(t *testing.T) {
 	inputVariables, err := astjson.ParseBytes(op.Input.Variables)
 	assert.NoError(t, err)
 
-	merged, _ := astjson.MergeValues(vars, inputVariables)
+	merged, _, err := astjson.MergeValues(vars, inputVariables)
+	assert.NoError(t, err)
 
 	fieldUsageInfo := GetTypeFieldUsageInfo(generatedPlan)
 	argumentUsageInfo, err := GetArgumentUsageInfo(&op, &def)
@@ -602,6 +603,6 @@ func (f *FakeDataSource) Load(ctx context.Context, input []byte, out *bytes.Buff
 	return
 }
 
-func (f *FakeDataSource) LoadWithFiles(ctx context.Context, input []byte, files []httpclient.File, out *bytes.Buffer) (err error) {
+func (f *FakeDataSource) LoadWithFiles(ctx context.Context, input []byte, files []*httpclient.FileUpload, out *bytes.Buffer) (err error) {
 	return
 }

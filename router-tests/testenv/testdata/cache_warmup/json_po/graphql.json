@@ -1,14 +1,18 @@
 {
-  "request": {
-    "extensions": {
-      "persistedQuery": {
-        "version": 1,
-        "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"
+  "operations": [
+    {
+      "request": {
+        "extensions": {
+          "persistedQuery": {
+            "version": 1,
+            "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"
+          }
+        }
+      },
+      "client": {
+        "name": "my-client",
+        "version": "missing"
       }
     }
-  },
-  "client": {
-    "name": "my-client",
-    "version": "missing"
-  }
+  ]
 }

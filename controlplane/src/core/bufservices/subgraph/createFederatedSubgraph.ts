@@ -16,6 +16,7 @@ import {
   formatWebsocketSubprotocol,
   getLogger,
   handleError,
+  isValidGraphName,
   isValidLabels,
 } from '../../util.js';
 
@@ -161,6 +162,18 @@ export function createFederatedSubgraph(
       };
     }
 
+    if (!isValidGraphName(req.name)) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_INVALID_NAME,
+          details: `The name of the subgraph is invalid. Name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between and must be between 1 and 100 characters in length.`,
+        },
+        compositionErrors: [],
+        deploymentErrors: [],
+        compositionWarnings: [],
+      };
+    }
+
     let baseSubgraphID = '';
     if (req.isFeatureSubgraph) {
       if (!req.baseSubgraphName) {
@@ -226,6 +239,7 @@ export function createFederatedSubgraph(
       auditableType: req.isFeatureSubgraph ? 'feature_subgraph' : 'subgraph',
       auditableDisplayName: subgraph.name,
       actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       targetNamespaceId: subgraph.namespaceId,
       targetNamespaceDisplayName: subgraph.namespace,

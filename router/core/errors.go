@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
+	"net/http"
+
 	"github.com/hashicorp/go-multierror"
 	"github.com/wundergraph/astjson"
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
@@ -17,8 +20,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-	"net"
-	"net/http"
 )
 
 type errorType int
@@ -33,6 +34,7 @@ const (
 	errorTypeEDFS
 	errorTypeInvalidWsSubprotocol
 	errorTypeEDFSInvalidMessage
+	errorTypeMergeResult
 )
 
 type (
@@ -47,6 +49,7 @@ type (
 		Authorization json.RawMessage `json:"authorization,omitempty"`
 		Trace         json.RawMessage `json:"trace,omitempty"`
 		StatusCode    int             `json:"statusCode,omitempty"`
+		Code          string          `json:"code,omitempty"`
 	}
 )
 
@@ -82,6 +85,10 @@ func getErrorType(err error) errorType {
 	if errors.As(err, &jsonParseErr) {
 		return errorTypeEDFSInvalidMessage
 	}
+	var mergeResultErr resolve.ErrMergeResult
+	if errors.As(err, &mergeResultErr) {
+		return errorTypeMergeResult
+	}
 	return errorTypeUnknown
 }
 
@@ -110,7 +117,7 @@ func trackFinalResponseError(ctx context.Context, err error) {
 		return
 	}
 
-	requestContext.error = err
+	requestContext.SetError(err)
 	requestContext.graphQLErrorServices = getAggregatedSubgraphServiceNames(requestContext.error)
 	requestContext.graphQLErrorCodes = getAggregatedSubgraphErrorCodes(requestContext.error)
 
@@ -182,7 +189,13 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 	if requestErrors == nil {
 		return
 	}
-	wgRequestParams := NegotiateSubscriptionParams(r)
+
+	// According to the tests requestContext can be nil (when called from module WriteResponseError)
+	// As such we have coded this condition defensively to be safe
+	requestContext := getRequestContext(r.Context())
+	isSubscription := requestContext != nil && requestContext.operation != nil && requestContext.operation.opType == "subscription"
+
+	wgRequestParams := NegotiateSubscriptionParams(r, !isSubscription)
 
 	// Is subscription
 	if wgRequestParams.UseSse || wgRequestParams.UseMultipart {
@@ -206,7 +219,7 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 			}
 		} else if wgRequestParams.UseMultipart {
 			// Handle multipart error response
-			if err := writeMultipartError(w, requestErrors, requestLogger); err != nil {
+			if err := writeMultipartError(w, requestErrors, isSubscription); err != nil {
 				if requestLogger != nil {
 					requestLogger.Error("error writing multipart response", zap.Error(err))
 				}
@@ -233,9 +246,13 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 }
 
 // writeMultipartError writes the error response in a multipart format with proper boundaries and headers.
-func writeMultipartError(w http.ResponseWriter, requestErrors graphqlerrors.RequestErrors, requestLogger *zap.Logger) error {
+func writeMultipartError(
+	w http.ResponseWriter,
+	requestErrors graphqlerrors.RequestErrors,
+	isSubscription bool,
+) error {
 	// Start with the multipart boundary
-	prefix := GetWriterPrefix(false, true)
+	prefix := GetWriterPrefix(false, true, true)
 	if _, err := w.Write([]byte(prefix)); err != nil {
 		return err
 	}
@@ -250,12 +267,20 @@ func writeMultipartError(w http.ResponseWriter, requestErrors graphqlerrors.Requ
 		return err
 	}
 
-	resp, err := wrapMultipartMessage(responseBytes)
+	resp, err := wrapMultipartMessage(responseBytes, isSubscription)
 	if err != nil {
 		return err
 	}
 
-	resp = append(resp, '\n')
+	// The multipart spec requires us to use both CRLF (\r and \n) characters together. Since we didn't do this
+	// before, some clients that rely on both CR and LF strictly to parse blocks were broken and not parsing our
+	// multipart chunks correctly. With this fix here (and in a few other places) the clients are now working.
+	if isSubscription {
+		resp = append(resp, '\r', '\n')
+	} else {
+		resp = append(resp, []byte("\r\n--graphql--")...)
+	}
+
 	if _, err := w.Write([]byte(resp)); err != nil {
 		return err
 	}
@@ -308,4 +333,15 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 	default:
 		writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errInternalServer), requestLogger)
 	}
+}
+
+type ExprWrapError struct {
+	Err error
+}
+
+func (e *ExprWrapError) Error() string {
+	if e.Err == nil {
+		return ""
+	}
+	return e.Err.Error()
 }

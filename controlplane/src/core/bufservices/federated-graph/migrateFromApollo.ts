@@ -161,6 +161,7 @@ export function migrateFromApollo(
           cdnBaseUrl: opts.cdnBaseUrl,
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
+        chClient: opts.chClient!,
       });
     });
 
@@ -183,6 +184,7 @@ export function migrateFromApollo(
       auditableType: 'federated_graph',
       auditableDisplayName: migratedGraph.name,
       actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       targetNamespaceId: migratedGraph.namespaceId,
       targetNamespaceDisplayName: migratedGraph.namespace,
@@ -201,6 +203,7 @@ export function migrateFromApollo(
         auditableType: 'subgraph',
         auditableDisplayName: subgraph.name,
         actorDisplayName: authContext.userDisplayName,
+        apiKeyName: authContext.apiKeyName,
         actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         targetNamespaceId: subgraph.namespaceId,
         targetNamespaceDisplayName: subgraph.namespace,
@@ -254,6 +257,7 @@ export function migrateFromApollo(
       targetDisplayName: migratedGraph.name,
       targetType: 'federated_graph',
       actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       auditableDisplayName: token.name,
       auditableType: 'graph_token',

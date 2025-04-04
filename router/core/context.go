@@ -2,25 +2,26 @@ package core
 
 import (
 	"context"
-	"github.com/wundergraph/cosmo/router/internal/expr"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/expr-lang/expr/vm"
+	"go.opentelemetry.io/otel/attribute"
+	"go.uber.org/zap"
+
 	"github.com/wundergraph/astjson"
-	"github.com/wundergraph/cosmo/router/pkg/config"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
-	"go.opentelemetry.io/otel/attribute"
-
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"go.uber.org/zap"
 )
 
 type contextKey int
@@ -129,6 +130,10 @@ type RequestContext interface {
 
 	// Authentication returns the authentication information for the request, if any
 	Authentication() authentication.Authentication
+
+	// SetAuthenticationScopes sets the scopes for the request on Authentication
+	// If Authentication is not set, it will be initialized with the scopes
+	SetAuthenticationScopes(scopes []string)
 }
 
 var metricAttrsPool = sync.Pool{
@@ -147,6 +152,15 @@ type requestTelemetryAttributes struct {
 	metricSetAttrs map[string]string
 	// metricSliceAttrs are the attributes for metrics that are string slices and needs to be exploded for prometheus
 	metricSliceAttrs []attribute.KeyValue
+	// mapper is an attribute mapper for context attributes.
+	// It is used to identify attributes that should not be included by default  but can be included if they are
+	// configured in the custom attributes list. The mapper will potentially filter out attributes or include them.
+	// It will also remap the key if configured.
+	mapper *attributeMapper
+	// traceAttributeExpressions is a map of expressions that can be used to resolve dynamic attributes in traces
+	traceAttributeExpressions *attributeExpressions
+	// metricAttributeExpressions is a map of expressions that can be used to resolve dynamic attributes in metrics
+	metricAttributeExpressions *attributeExpressions
 
 	// metricsEnabled indicates if metrics are enabled. If false, no metrics attributes will be added
 	metricsEnabled bool
@@ -198,11 +212,8 @@ func (r *requestTelemetryAttributes) addCustomMetricStringAttr(key string, value
 }
 
 func (r *requestTelemetryAttributes) addCommonAttribute(vals ...attribute.KeyValue) {
-	if !r.metricsEnabled && !r.traceEnabled {
-		return
-	}
-	r.metricAttrs = append(r.metricAttrs, vals...)
-	r.traceAttrs = append(r.traceAttrs, vals...)
+	r.addMetricAttribute(vals...)
+	r.addCommonTraceAttribute(vals...)
 }
 
 func (r *requestTelemetryAttributes) addCommonTraceAttribute(vals ...attribute.KeyValue) {
@@ -216,7 +227,8 @@ func (r *requestTelemetryAttributes) addMetricAttribute(vals ...attribute.KeyVal
 	if !r.metricsEnabled {
 		return
 	}
-	r.metricAttrs = append(r.metricAttrs, vals...)
+
+	r.metricAttrs = append(r.metricAttrs, r.mapper.mapAttributes(vals)...)
 }
 
 // requestContext is the default implementation of RequestContext
@@ -248,6 +260,30 @@ type requestContext struct {
 	telemetry *requestTelemetryAttributes
 	// expressionContext is the context that will be provided to a compiled expression in order to retrieve data via dynamic expressions
 	expressionContext expr.Context
+}
+
+func (c *requestContext) SetError(err error) {
+	c.error = err
+	c.expressionContext.Request.Error = err
+}
+
+func (c *requestContext) ResolveAnyExpressionWithWrappedError(expression *vm.Program) (any, error) {
+	// If an error exists already, wrap it and resolve the expression with the copied context
+	if c.expressionContext.Request.Error != nil {
+		// This will create a copy of the base expressionContext which we can modify
+		copyContext := c.expressionContext
+		copyContext.Request.Error = &ExprWrapError{c.expressionContext.Request.Error}
+		return expr.ResolveAnyExpression(expression, copyContext)
+	}
+	return expr.ResolveAnyExpression(expression, c.expressionContext)
+}
+
+func (c *requestContext) ResolveStringExpression(expression *vm.Program) (string, error) {
+	return expr.ResolveStringExpression(expression, c.expressionContext)
+}
+
+func (c *requestContext) ResolveBoolExpression(expression *vm.Program) (bool, error) {
+	return expr.ResolveBoolExpression(expression, c.expressionContext)
 }
 
 func (c *requestContext) Operation() OperationContext {
@@ -429,6 +465,15 @@ func (c *requestContext) Authentication() authentication.Authentication {
 	return authentication.FromContext(c.request.Context())
 }
 
+func (c *requestContext) SetAuthenticationScopes(scopes []string) {
+	auth := authentication.FromContext(c.request.Context())
+	if auth == nil {
+		auth = authentication.NewEmptyAuthentication()
+		c.request = c.request.WithContext(authentication.NewContext(c.request.Context(), auth))
+	}
+	auth.SetScopes(scopes)
+}
+
 type OperationContext interface {
 	// Name is the name of the operation
 	Name() string
@@ -460,13 +505,17 @@ type operationContext struct {
 	opType OperationType
 	// hash is the hash of the operation with the normalized content and variables. Used for analytics.
 	hash uint64
-	// internalHash is the hash of the operation with normalized content. Used for engine / executor caching.
+	// internalHash is the hash of the operation with the fully normalized content. Used for engine / executor caching.
 	// we can't use the hash for this due to engine limitations in handling variables with the normalized representation
 	internalHash uint64
-	// Content is the content of the operation
+	// remapVariables is a map of variables that have been remapped to the new names
+	remapVariables map[string]string
+	// RawContent is the raw content of the operation
+	rawContent string
+	// Content is the normalized content of the operation
 	content    string
 	variables  *astjson.Value
-	files      []httpclient.File
+	files      []*httpclient.FileUpload
 	clientInfo *ClientInfo
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan     *planWithMetaData
@@ -497,7 +546,7 @@ func (o *operationContext) Variables() *astjson.Value {
 	return o.variables
 }
 
-func (o *operationContext) Files() []httpclient.File {
+func (o *operationContext) Files() []*httpclient.FileUpload {
 	return o.files
 }
 
@@ -591,13 +640,16 @@ func subgraphResolverFromContext(ctx context.Context) *SubgraphResolver {
 }
 
 type requestContextOptions struct {
-	operationContext    *operationContext
-	requestLogger       *zap.Logger
-	metricSetAttributes map[string]string
-	metricsEnabled      bool
-	traceEnabled        bool
-	w                   http.ResponseWriter
-	r                   *http.Request
+	operationContext              *operationContext
+	requestLogger                 *zap.Logger
+	metricSetAttributes           map[string]string
+	metricsEnabled                bool
+	traceEnabled                  bool
+	mapper                        *attributeMapper
+	metricAttributeExpressions    *attributeExpressions
+	telemetryAttributeExpressions *attributeExpressions
+	w                             http.ResponseWriter
+	r                             *http.Request
 }
 
 func buildRequestContext(opts requestContextOptions) *requestContext {
@@ -613,9 +665,12 @@ func buildRequestContext(opts requestContextOptions) *requestContext {
 		request:        opts.r,
 		operation:      opts.operationContext,
 		telemetry: &requestTelemetryAttributes{
-			metricSetAttrs: opts.metricSetAttributes,
-			metricsEnabled: opts.metricsEnabled,
-			traceEnabled:   opts.traceEnabled,
+			metricSetAttrs:             opts.metricSetAttributes,
+			metricsEnabled:             opts.metricsEnabled,
+			traceEnabled:               opts.traceEnabled,
+			mapper:                     opts.mapper,
+			traceAttributeExpressions:  opts.telemetryAttributeExpressions,
+			metricAttributeExpressions: opts.metricAttributeExpressions,
 		},
 		expressionContext: rootCtx,
 		subgraphResolver:  subgraphResolverFromContext(opts.r.Context()),

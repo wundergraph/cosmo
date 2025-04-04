@@ -12,6 +12,7 @@ import {
   websocketSubprotocolEnum,
   webhookDeliveries,
   graphPruningRulesEnum,
+  cacheWarmerOperations,
 } from './schema.js';
 
 export type FederatedGraph = typeof federatedGraphs.$inferSelect;
@@ -26,6 +27,7 @@ export type MemberRole = (typeof memberRoleEnum.enumValues)[number];
 export type LintRuleEnum = (typeof lintRulesEnum.enumValues)[number];
 export type GraphPruningRuleEnum = (typeof graphPruningRulesEnum.enumValues)[number];
 export type WebsocketSubprotocol = (typeof websocketSubprotocolEnum.enumValues)[number];
+export type CacheWarmupOperation = typeof cacheWarmerOperations.$inferInsert;
 
 export type WebhookDeliveryInfo = typeof webhookDeliveries.$inferInsert;
 
@@ -56,6 +58,8 @@ export type AuditLogAction =
   | 'created'
   | 'updated'
   | 'deleted'
+  | 'queued_deletion'
+  | 'restore'
   | 'moved'
   | 'accepted'
   | 'declined'
@@ -73,6 +77,8 @@ export type AuditLogFullAction =
   | 'namespace.deleted'
   | 'organization.created'
   | 'organization.updated'
+  | 'organization.deletion_queued'
+  | 'organization.restored'
   | 'graph_token.created'
   | 'graph_token.deleted'
   | 'monograph.created'

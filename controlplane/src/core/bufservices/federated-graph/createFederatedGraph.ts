@@ -16,7 +16,7 @@ import { DefaultNamespace, NamespaceRepository } from '../../repositories/Namesp
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, isValidLabelMatchers } from '../../util.js';
+import { enrichLogger, getLogger, handleError, isValidGraphName, isValidLabelMatchers } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
 export function createFederatedGraph(
@@ -74,6 +74,18 @@ export function createFederatedGraph(
         response: {
           code: EnumStatusCode.ERR_ALREADY_EXISTS,
           details: `Federated graph '${req.name}' already exists in the namespace`,
+        },
+        compositionErrors: [],
+        deploymentErrors: [],
+        compositionWarnings: [],
+      };
+    }
+
+    if (!isValidGraphName(req.name)) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_INVALID_NAME,
+          details: `The name of the federated graph is invalid. Name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between and must be between 1 and 100 characters in length.`,
         },
         compositionErrors: [],
         deploymentErrors: [],
@@ -175,6 +187,7 @@ export function createFederatedGraph(
       auditableType: 'federated_graph',
       auditableDisplayName: federatedGraph.name,
       actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       targetNamespaceId: federatedGraph.namespaceId,
       targetNamespaceDisplayName: federatedGraph.namespace,
@@ -213,6 +226,7 @@ export function createFederatedGraph(
           cdnBaseUrl: opts.cdnBaseUrl,
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
+        chClient: opts.chClient!,
       });
 
       compositionErrors.push(...composition.compositionErrors);

@@ -4,20 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/file"
-	"github.com/expr-lang/expr/vm"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"net/http"
 	"net/url"
-	"reflect"
 )
 
 /**
 * Naming conventions:
 * - Fields are named using camelCase
 * - Methods are named using PascalCase (Required to be exported)
-* - Methods should be exported through the interface to make the contract clear
+* - Methods should be exported through a custom type to avoid exposing accidental methods that can mutate the context
+* - Use interface to expose only the required methods. Blocked by https://github.com/expr-lang/expr/issues/744
 *
 * Principles:
 * The Expr package is used to evaluate expressions in the context of the request or router.
@@ -28,24 +26,31 @@ import (
 * See https://github.com/expr-lang/expr/issues/734
  */
 
+const ExprRequestKey = "request"
+const ExprRequestAuthKey = "auth"
+
 // Context is the context for expressions parser when evaluating dynamic expressions
 type Context struct {
-	Request Request `expr:"request"`
+	Request Request `expr:"request"` // if changing the expr tag, the ExprRequestKey should be updated
 }
 
 // Request is the context for the request object in expressions. Be aware, that only value receiver methods
 // are exported in the expr environment. This is because the expressions are evaluated in a read-only context.
 type Request struct {
-	Auth   RequestAuth    `expr:"auth"`
+	Auth   RequestAuth    `expr:"auth"` // if changing the expr tag, the ExprRequestAuthKey should be updated
 	URL    RequestURL     `expr:"url"`
 	Header RequestHeaders `expr:"header"`
+	Body   RequestBody    `expr:"body"`
+	Error  error          `expr:"error"`
+	Trace  Trace          `expr:"trace"`
 }
 
-// RequestHeaders is the interface available for the headers object in expressions.
-type RequestHeaders interface {
-	// Get returns the value of the header with the given key. If the header is not present, an empty string is returned.
-	// The key is case-insensitive and transformed to the canonical format.
-	Get(key string) string
+type RequestBody struct {
+	Raw string `expr:"raw"`
+}
+
+type Trace struct {
+	Sampled bool `expr:"sampled"`
 }
 
 // RequestURL is the context for the URL object in expressions
@@ -62,10 +67,30 @@ type RequestURL struct {
 	Query map[string]string `expr:"query"`
 }
 
+type RequestHeaders struct {
+	Header http.Header `expr:"-"` // Do not expose the full header
+}
+
+type RequestAuth struct {
+	IsAuthenticated bool           `expr:"isAuthenticated"`
+	Type            string         `expr:"type"`
+	Claims          map[string]any `expr:"claims"`
+	Scopes          []string       `expr:"scopes"`
+}
+
+// Get returns the value of the header with the given key. If the header is not present, an empty string is returned.
+// The key is case-insensitive and transformed to the canonical format.
+// TODO: Use interface to expose only the required methods. Blocked by https://github.com/expr-lang/expr/issues/744
+func (r RequestHeaders) Get(key string) string {
+	return r.Header.Get(key)
+}
+
 // LoadRequest loads the request object into the context.
 func LoadRequest(req *http.Request) Request {
 	r := Request{
-		Header: req.Header,
+		Header: RequestHeaders{
+			Header: req.Header,
+		},
 	}
 
 	m, _ := url.ParseQuery(req.URL.RawQuery)
@@ -86,13 +111,6 @@ func LoadRequest(req *http.Request) Request {
 	return r
 }
 
-type RequestAuth struct {
-	IsAuthenticated bool           `expr:"isAuthenticated"`
-	Type            string         `expr:"type"`
-	Claims          map[string]any `expr:"claims"`
-	Scopes          []string       `expr:"scopes"`
-}
-
 // LoadAuth loads the authentication context into the request object.
 // Must only be called when the authentication was successful.
 func LoadAuth(ctx context.Context) RequestAuth {
@@ -106,64 +124,6 @@ func LoadAuth(ctx context.Context) RequestAuth {
 		IsAuthenticated: true,
 		Claims:          authCtx.Claims(),
 		Scopes:          authCtx.Scopes(),
-	}
-}
-
-// CompileBoolExpression compiles an expression and returns the program. It is used for expressions that return bool.
-// The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
-func CompileBoolExpression(s string) (*vm.Program, error) {
-	v, err := expr.Compile(s, expr.Env(Context{}), expr.AsBool())
-	if err != nil {
-		return nil, handleExpressionError(err)
-	}
-
-	return v, nil
-}
-
-// CompileStringExpression compiles an expression and returns the program. It is used for expressions that return strings
-// The exprContext is used to provide the context for the expression evaluation. Not safe for concurrent use.
-func CompileStringExpression(s string) (*vm.Program, error) {
-	v, err := expr.Compile(s, expr.Env(Context{}), expr.AsKind(reflect.String))
-	if err != nil {
-		return nil, handleExpressionError(err)
-	}
-
-	return v, nil
-}
-
-// ResolveStringExpression evaluates the expression and returns the result as a string. The exprContext is used to
-// provide the context for the expression evaluation. Not safe for concurrent use.
-func ResolveStringExpression(vm *vm.Program, ctx Context) (string, error) {
-	r, err := expr.Run(vm, ctx)
-	if err != nil {
-		return "", handleExpressionError(err)
-	}
-
-	switch v := r.(type) {
-	case string:
-		return v, nil
-	default:
-		return "", fmt.Errorf("expected string, got %T", r)
-	}
-}
-
-// ResolveBoolExpression evaluates the expression and returns the result as a bool. The exprContext is used to
-// provide the context for the expression evaluation. Not safe for concurrent use.
-func ResolveBoolExpression(vm *vm.Program, ctx Context) (bool, error) {
-	if vm == nil {
-		return false, nil
-	}
-
-	r, err := expr.Run(vm, ctx)
-	if err != nil {
-		return false, handleExpressionError(err)
-	}
-
-	switch v := r.(type) {
-	case bool:
-		return v, nil
-	default:
-		return false, fmt.Errorf("failed to run expression: expected bool, got %T", r)
 	}
 }
 

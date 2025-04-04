@@ -5,15 +5,16 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/internal/versioninfo"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/profile"
-	"log"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"go.uber.org/zap"
 )
@@ -29,7 +30,6 @@ var (
 )
 
 func Main() {
-
 	// Parse flags before calling profile.Start(), since it may add flags
 	flag.Parse()
 
@@ -44,17 +44,17 @@ func Main() {
 
 	result, err := config.LoadConfig(*configPathFlag, *overrideEnvFlag)
 	if err != nil {
-		log.Fatal("Could not load config", zap.Error(err))
+		log.Fatalf("Could not load config: %s", err)
 	}
 
 	logLevel, err := logging.ZapLogLevelFromString(result.Config.LogLevel)
 	if err != nil {
-		log.Fatal("Could not parse log level", zap.Error(err))
+		log.Fatalf("Could not parse log level: %s", err)
 	}
 
 	logger := logging.New(!result.Config.JSONLog, result.Config.DevelopmentMode, logLevel).
 		With(
-			zap.String("component", "@wundergraph/router"),
+			zap.String("service", "@wundergraph/router"),
 			zap.String("service_version", core.Version),
 		)
 
@@ -90,25 +90,22 @@ func Main() {
 		)
 	}
 
-	router, err := NewRouter(Params{
-		Config: &result.Config,
-		Logger: logger,
-	})
-
-	if err != nil {
-		logger.Fatal("Could not create router", zap.Error(err))
-	}
-
 	// Provide a way to cancel all running components of the router after graceful shutdown
 	// Don't use the parent context that is canceled by the signal handler
 	routerCtx, routerCancel := context.WithCancel(context.Background())
 	defer routerCancel()
 
-	go func() {
-		if err = router.Start(routerCtx); err != nil {
-			logger.Fatal("Could not start router", zap.Error(err))
-		}
-	}()
+	router, err := NewRouter(routerCtx, Params{
+		Config: &result.Config,
+		Logger: logger,
+	})
+	if err != nil {
+		logger.Fatal("Could not create router", zap.Error(err))
+	}
+
+	if err = router.Start(routerCtx); err != nil {
+		logger.Fatal("Could not start router", zap.Error(err))
+	}
 
 	<-ctx.Done()
 

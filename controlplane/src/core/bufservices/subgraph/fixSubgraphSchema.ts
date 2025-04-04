@@ -6,17 +6,18 @@ import {
   FixSubgraphSchemaRequest,
   FixSubgraphSchemaResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { LATEST_ROUTER_COMPATIBILITY_VERSION } from '@wundergraph/composition';
 import { Composer } from '../../composition/composer.js';
 import { buildSchema } from '../../composition/composition.js';
 import { OpenAIGraphql } from '../../openai-graphql/index.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { GraphCompositionRepository } from '../../repositories/GraphCompositionRepository.js';
-import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
+import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError } from '../../util.js';
 
 export function fixSubgraphSchema(
   opts: RouterOptions,
@@ -33,10 +34,31 @@ export function fixSubgraphSchema(
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
     const graphCompostionRepo = new GraphCompositionRepository(logger, opts.db);
+    const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
-    const composer = new Composer(logger, opts.db, fedGraphRepo, subgraphRepo, contractRepo, graphCompostionRepo);
+    const composer = new Composer(
+      logger,
+      opts.db,
+      fedGraphRepo,
+      subgraphRepo,
+      contractRepo,
+      graphCompostionRepo,
+      opts.chClient,
+    );
 
     req.namespace = req.namespace || DefaultNamespace;
+
+    const namespace = await namespaceRepo.byName(req.namespace);
+    if (!namespace) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Namespace "${req.namespace}" not found.`,
+        },
+        modified: false,
+        schema: '',
+      };
+    }
 
     const subgraph = await subgraphRepo.byName(req.subgraphName, req.namespace);
 
@@ -104,13 +126,27 @@ export function fixSubgraphSchema(
     const newSchemaSDL = req.schema;
 
     try {
+      const federatedGraphs = await fedGraphRepo.bySubgraphLabels({
+        labels: subgraph.labels,
+        namespaceId: namespace.id,
+      });
       // Here we check if the schema is valid as a subgraph
-      const { errors } = buildSchema(newSchemaSDL);
-      if (errors && errors.length > 0) {
+      const result = buildSchema(
+        newSchemaSDL,
+        true,
+        /*
+         * If there are any federated graphs for which the subgraph is a constituent, the subgraph will be validated
+         * against the first router compatibility version encountered.
+         * If no federated graphs have yet been created, the subgraph will be validated against the latest router
+         * compatibility version.
+         */
+        getFederatedGraphRouterCompatibilityVersion(federatedGraphs),
+      );
+      if (!result.success) {
         return {
           response: {
             code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA,
-            details: errors.map((e) => e.toString()).join('\n'),
+            details: result.errors.map((e) => e.toString()).join('\n'),
           },
           modified: false,
           schema: '',

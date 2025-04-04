@@ -6,6 +6,7 @@ import (
 	"github.com/expr-lang/expr/vm"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"go.uber.org/zap"
+	"reflect"
 )
 
 var (
@@ -15,13 +16,15 @@ var (
 )
 
 type OperationBlocker struct {
+	SafelistEnabled             bool
+	LogUnknownOperationsEnabled bool
+
 	blockMutations     BlockMutationOptions
 	blockSubscriptions BlockSubscriptionOptions
 	blockNonPersisted  BlockNonPersistedOptions
-
-	mutationExpr     *vm.Program
-	subscriptionExpr *vm.Program
-	nonPersistedExpr *vm.Program
+	mutationExpr       *vm.Program
+	subscriptionExpr   *vm.Program
+	nonPersistedExpr   *vm.Program
 }
 
 type BlockMutationOptions struct {
@@ -39,30 +42,39 @@ type BlockNonPersistedOptions struct {
 	Condition string
 }
 
+type SafelistPersistedOptions struct {
+	Enabled bool
+}
+
 type OperationBlockerOptions struct {
-	BlockMutations     BlockMutationOptions
-	BlockSubscriptions BlockSubscriptionOptions
-	BlockNonPersisted  BlockNonPersistedOptions
+	BlockMutations              BlockMutationOptions
+	BlockSubscriptions          BlockSubscriptionOptions
+	BlockNonPersisted           BlockNonPersistedOptions
+	SafelistEnabled             bool
+	LogUnknownOperationsEnabled bool
+	exprManager                 *expr.Manager
 }
 
 func NewOperationBlocker(opts *OperationBlockerOptions) (*OperationBlocker, error) {
 	ob := &OperationBlocker{
-		blockMutations:     opts.BlockMutations,
-		blockSubscriptions: opts.BlockSubscriptions,
-		blockNonPersisted:  opts.BlockNonPersisted,
+		blockMutations:              opts.BlockMutations,
+		blockSubscriptions:          opts.BlockSubscriptions,
+		blockNonPersisted:           opts.BlockNonPersisted,
+		SafelistEnabled:             opts.SafelistEnabled,
+		LogUnknownOperationsEnabled: opts.LogUnknownOperationsEnabled,
 	}
 
-	if err := ob.compileExpressions(); err != nil {
+	if err := ob.compileExpressions(opts.exprManager); err != nil {
 		return nil, err
 	}
 
 	return ob, nil
 }
 
-func (o *OperationBlocker) compileExpressions() error {
+func (o *OperationBlocker) compileExpressions(exprManager *expr.Manager) error {
 	if o.blockMutations.Enabled && o.blockMutations.Condition != "" {
 
-		v, err := expr.CompileBoolExpression(o.blockMutations.Condition)
+		v, err := exprManager.CompileExpression(o.blockMutations.Condition, reflect.Bool)
 		if err != nil {
 			return fmt.Errorf("failed to compile mutation expression: %w", err)
 		}
@@ -70,7 +82,7 @@ func (o *OperationBlocker) compileExpressions() error {
 	}
 
 	if o.blockSubscriptions.Enabled && o.blockSubscriptions.Condition != "" {
-		v, err := expr.CompileBoolExpression(o.blockSubscriptions.Condition)
+		v, err := exprManager.CompileExpression(o.blockSubscriptions.Condition, reflect.Bool)
 		if err != nil {
 			return fmt.Errorf("failed to compile subscription expression: %w", err)
 		}
@@ -78,7 +90,7 @@ func (o *OperationBlocker) compileExpressions() error {
 	}
 
 	if o.blockNonPersisted.Enabled && o.blockNonPersisted.Condition != "" {
-		v, err := expr.CompileBoolExpression(o.blockNonPersisted.Condition)
+		v, err := exprManager.CompileExpression(o.blockNonPersisted.Condition, reflect.Bool)
 		if err != nil {
 			return fmt.Errorf("failed to compile non-persisted expression: %w", err)
 		}

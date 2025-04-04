@@ -4,6 +4,44 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.33.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.33.0...graphqlmetrics@0.33.1) (2025-03-25)
+
+### Bug Fixes
+
+* updated go jwt dependency to fix vulnerability ([#1714](https://github.com/wundergraph/cosmo/issues/1714)) ([247b3cf](https://github.com/wundergraph/cosmo/commit/247b3cf5ee65a12910b68aca363e5ad3ec2a8be5)) (@SkArchon)
+
+# [0.33.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.32.3...graphqlmetrics@0.33.0) (2025-02-17)
+
+### Features
+
+* add composition versioning ([#1575](https://github.com/wundergraph/cosmo/issues/1575)) ([ee32cbb](https://github.com/wundergraph/cosmo/commit/ee32cbb3dbe7c46fa984920bbd95e4a00d01c9c3)) (@Aenimus)
+
+## [0.32.3](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.32.2...graphqlmetrics@0.32.3) (2025-02-05)
+
+**Note:** Version bump only for package graphqlmetrics
+
+## [0.32.2](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.32.1...graphqlmetrics@0.32.2) (2025-01-29)
+
+**Note:** Version bump only for package graphqlmetrics
+
+## [0.32.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.32.0...graphqlmetrics@0.32.1) (2025-01-19)
+
+### Bug Fixes
+
+* **cache operation:** swallow cache errors and other improvements ([#1515](https://github.com/wundergraph/cosmo/issues/1515)) ([d959e2c](https://github.com/wundergraph/cosmo/commit/d959e2c9fb492cc7c73d89f61c31f3bad2ac5706)) (@StarpTech)
+
+# [0.32.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.31.1...graphqlmetrics@0.32.0) (2025-01-17)
+
+### Features
+
+* cache warmer ([#1501](https://github.com/wundergraph/cosmo/issues/1501)) ([948edd2](https://github.com/wundergraph/cosmo/commit/948edd23e6d0ee968c91edd1a9e9943c3405ac2d)) (@JivusAyrus)
+
+## [0.31.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.31.0...graphqlmetrics@0.31.1) (2025-01-06)
+
+### Bug Fixes
+
+* add regex validation to graph names and routing urls ([#1450](https://github.com/wundergraph/cosmo/issues/1450)) ([e5b1c8f](https://github.com/wundergraph/cosmo/commit/e5b1c8fb33a41fc808067bb6495a43f74b60b314)) (@JivusAyrus)
+
 # [0.31.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.30.3...graphqlmetrics@0.31.0) (2024-12-21)
 
 ### Features

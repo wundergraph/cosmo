@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/playground",
-  "version": "0.8.2",
+  "version": "0.8.6",
   "description": "Cosmo Playground built on top of graphiql",
   "author": {
     "name": "WunderGraph Maintainers",
@@ -48,7 +48,7 @@
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-tabs": "^1.0.4",
     "@radix-ui/react-tooltip": "^1.0.7",
-    "axios": "^1.7.7",
+    "axios": "^1.8.4",
     "change-case": "^5.2.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
@@ -87,7 +87,7 @@
     "tailwindcss": "^3.4.15",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.5.2",
-    "vite": "^5.4.11",
+    "vite": "^5.4.14",
     "vite-plugin-dts": "4.3.0",
     "vite-plugin-html": "^3.2.2",
     "vite-plugin-singlefile": "^2.0.3"

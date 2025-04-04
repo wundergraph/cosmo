@@ -1,11 +1,12 @@
-import { Change, ChangeType, CriticalityLevel, diff } from '@graphql-inspector/core';
-import { GraphQLSchema } from 'graphql';
+import { ChangeType, CriticalityLevel, diff, TypeOfChangeType } from '@graphql-inspector/core';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { GraphQLSchema } from 'graphql';
+import { SupportedRouterCompatibilityVersion } from '@wundergraph/composition';
 import { buildSchema } from './composition.js';
 
 export interface SchemaDiff {
   message: string;
-  changeType: ChangeType;
+  changeType: TypeOfChangeType;
   // path is the path to the field or type that changed
   path: string;
   isBreaking: boolean;
@@ -47,31 +48,30 @@ export async function getSchemaDiff(oldSchemaSDL: GraphQLSchema, newSchemaSDL: G
 
 export async function getDiffBetweenGraphs(
   oldSchemaSDL: string,
-  newSchemaSDL?: string,
+  newSchemaSDL: string,
+  routerCompatibilityVersion: string,
 ): Promise<GetDiffBetweenGraphsResult> {
   try {
     let oldSchema: GraphQLSchema = new GraphQLSchema({});
     let newSchema: GraphQLSchema = new GraphQLSchema({});
     if (oldSchemaSDL) {
-      const { normalizationResult } = buildSchema(oldSchemaSDL);
-      if (normalizationResult?.schema) {
-        oldSchema = normalizationResult.schema;
+      const result = buildSchema(oldSchemaSDL, true, routerCompatibilityVersion);
+      if (result.success) {
+        oldSchema = result.schema;
       }
     }
 
-    if (newSchemaSDL?.length) {
-      const { errors, normalizationResult } = buildSchema(newSchemaSDL);
-      if (errors && errors.length > 0) {
+    if (newSchemaSDL.length > 0) {
+      const result = buildSchema(newSchemaSDL, true, routerCompatibilityVersion);
+      if (!result.success) {
         return {
           kind: 'failure',
-          error: new Error(errors.map((e) => e.toString()).join('\n')),
+          error: new Error(result.errors.map((e) => e.toString()).join('\n')),
           errorCode: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA,
-          errorMessage: errors.map((e) => e.toString()).join('\n'),
+          errorMessage: result.errors.map((e) => e.toString()).join('\n'),
         };
       }
-      if (normalizationResult?.schema) {
-        newSchema = normalizationResult.schema;
-      }
+      newSchema = result.schema;
     }
 
     const schemaChanges = await getSchemaDiff(oldSchema, newSchema);

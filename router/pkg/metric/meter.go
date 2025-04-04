@@ -128,11 +128,16 @@ func NewPrometheusMeterProvider(ctx context.Context, c *Config, serviceInstanceI
 	// Only available on Linux and Windows systems
 	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
-	promExporter, err := otelprom.New(
+	otelPromOpts := []otelprom.Option{
 		otelprom.WithoutUnits(),
 		otelprom.WithRegisterer(registry),
-	)
+	}
 
+	if c.Prometheus.ExcludeScopeInfo {
+		otelPromOpts = append(otelPromOpts, otelprom.WithoutScopeInfo())
+	}
+
+	promExporter, err := otelprom.New(otelPromOpts...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -289,6 +294,29 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 	return mp, nil
 }
 
+// IsDefaultCloudExporterConfigured checks if the default cloud exporter is configured in the provided exporters.
+func IsDefaultCloudExporterConfigured(c []*OpenTelemetryExporter) bool {
+	for _, exp := range c {
+		if isCloudExporter(exp) {
+			return true
+		}
+	}
+	return false
+}
+
+// isCloudExporter checks if the provided is the default cloud exporter.
+func isCloudExporter(exp *OpenTelemetryExporter) bool {
+	u, err := parseURL(exp.Endpoint)
+	if err != nil {
+		return false
+	}
+	defaultEndpoint, err := url.Parse(otelconfig.DefaultEndpoint())
+	if err != nil {
+		return false
+	}
+	return u.Host == defaultEndpoint.Host
+}
+
 func getResource(ctx context.Context, serviceInstanceID string, c *Config) (*resource.Resource, error) {
 	r, err := resource.New(ctx,
 		resource.WithAttributes(semconv.ServiceNameKey.String(c.Name)),
@@ -398,7 +426,6 @@ func defaultOtlpMetricOptions(ctx context.Context, serviceInstanceID string, c *
 	var view sdkmetric.View = func(i sdkmetric.Instrument) (sdkmetric.Stream, bool) {
 		// In a custom View function, we need to explicitly copy the name, description, and unit.
 		s := sdkmetric.Stream{Name: i.Name, Description: i.Description, Unit: i.Unit}
-
 		// Filter out metrics that match the excludeMetrics regexes
 		for _, re := range c.OpenTelemetry.ExcludeMetrics {
 			if re.MatchString(i.Name) {

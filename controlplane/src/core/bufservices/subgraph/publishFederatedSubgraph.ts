@@ -18,11 +18,14 @@ import {
   enrichLogger,
   formatSubscriptionProtocol,
   formatWebsocketSubprotocol,
+  getFederatedGraphRouterCompatibilityVersion,
   getLogger,
   handleError,
+  isValidGraphName,
   isValidLabels,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 
 export function publishFederatedSubgraph(
   opts: RouterOptions,
@@ -42,6 +45,7 @@ export function publishFederatedSubgraph(
       opts.billingDefaultPlanId,
     );
     const auditLogRepo = new AuditLogRepository(opts.db);
+    const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const schemaGraphPruningRepo = new SchemaGraphPruningRepository(opts.db);
@@ -61,37 +65,6 @@ export function publishFederatedSubgraph(
     }
 
     const subgraphSchemaSDL = req.schema;
-    let isEventDrivenGraph = false;
-    let isV2Graph: boolean | undefined;
-
-    try {
-      // Here we check if the schema is valid as a subgraph SDL
-      const { errors, normalizationResult } = buildSchema(subgraphSchemaSDL);
-      if (errors && errors.length > 0) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA,
-            details: errors.map((e) => e.toString()).join('\n'),
-          },
-          compositionErrors: [],
-          deploymentErrors: [],
-          compositionWarnings: [],
-        };
-      }
-      isEventDrivenGraph = normalizationResult?.isEventDrivenGraph || false;
-      isV2Graph = normalizationResult?.isVersionTwo;
-    } catch (e: any) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA,
-          details: e.message,
-        },
-        compositionErrors: [],
-        deploymentErrors: [],
-        compositionWarnings: [],
-      };
-    }
-
     const namespace = await namespaceRepo.byName(req.namespace);
     if (!namespace) {
       return {
@@ -104,9 +77,48 @@ export function publishFederatedSubgraph(
         compositionWarnings: [],
       };
     }
+    let subgraph = await subgraphRepo.byName(req.name, req.namespace);
+    let isEventDrivenGraph = false;
+    let isV2Graph: boolean | undefined;
+
+    try {
+      const federatedGraphs = subgraph
+        ? await fedGraphRepo.bySubgraphLabels({ labels: subgraph.labels, namespaceId: namespace.id })
+        : [];
+      /*
+       * If there are any federated graphs for which the subgraph is a constituent, the subgraph will be validated
+       * against the first router compatibility version encountered.
+       * If no federated graphs have yet been created, the subgraph will be validated against the latest router
+       * compatibility version.
+       */
+      // Here we check if the schema is valid as a subgraph SDL
+      const result = buildSchema(subgraphSchemaSDL, true, getFederatedGraphRouterCompatibilityVersion(federatedGraphs));
+      if (!result.success) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA,
+            details: result.errors.map((e) => e.toString()).join('\n'),
+          },
+          compositionErrors: [],
+          deploymentErrors: [],
+          compositionWarnings: [],
+        };
+      }
+      isEventDrivenGraph = result.isEventDrivenGraph || false;
+      isV2Graph = result.isVersionTwo;
+    } catch (e: any) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA,
+          details: e.message,
+        },
+        compositionErrors: [],
+        deploymentErrors: [],
+        compositionWarnings: [],
+      };
+    }
 
     const routingUrl = req.routingUrl || '';
-    let subgraph = await subgraphRepo.byName(req.name, req.namespace);
     let baseSubgraphID = '';
 
     /* If the subgraph exists, validate that no parameters were included.
@@ -260,6 +272,18 @@ export function publishFederatedSubgraph(
         }
       }
 
+      if (!isValidGraphName(req.name)) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_INVALID_NAME,
+            details: `The name of the subgraph is invalid. Name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between and must be between 1 and 100 characters in length.`,
+          },
+          compositionErrors: [],
+          deploymentErrors: [],
+          compositionWarnings: [],
+        };
+      }
+
       // Create the subgraph if it doesn't exist
       subgraph = await subgraphRepo.create({
         name: req.name,
@@ -295,6 +319,7 @@ export function publishFederatedSubgraph(
         auditableType: 'subgraph',
         auditableDisplayName: subgraph.name,
         actorDisplayName: authContext.userDisplayName,
+        apiKeyName: authContext.apiKeyName,
         actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         targetNamespaceId: subgraph.namespaceId,
         targetNamespaceDisplayName: subgraph.namespace,
@@ -317,6 +342,7 @@ export function publishFederatedSubgraph(
           cdnBaseUrl: opts.cdnBaseUrl,
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
+        opts.chClient!,
       );
 
     for (const graph of updatedFederatedGraphs) {
@@ -352,6 +378,7 @@ export function publishFederatedSubgraph(
       auditableType: subgraph.isFeatureSubgraph ? 'feature_subgraph' : 'subgraph',
       auditableDisplayName: subgraph.name,
       actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       targetNamespaceId: subgraph.namespaceId,
       targetNamespaceDisplayName: subgraph.namespace,

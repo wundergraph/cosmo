@@ -3,8 +3,9 @@ package configpoller
 import (
 	"context"
 	"errors"
-	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane"
@@ -35,6 +36,7 @@ type configPoller struct {
 	latestRouterConfigDate    time.Time
 	poller                    controlplane.Poller
 	pollInterval              time.Duration
+	pollJitter                time.Duration
 	configClient              routerconfig.Client
 	fallbackConfigClient      *routerconfig.Client
 }
@@ -52,7 +54,7 @@ func New(token string, opts ...Option) ConfigPoller {
 		c.logger = zap.NewNop()
 	}
 
-	c.poller = controlplane.NewPoll(c.pollInterval)
+	c.poller = controlplane.NewPoll(c.pollInterval, c.pollJitter)
 
 	return c
 }
@@ -67,9 +69,7 @@ func (c *configPoller) Stop(_ context.Context) error {
 }
 
 func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *nodev1.RouterConfig, _ string) error) {
-
 	c.poller.Subscribe(ctx, func() {
-
 		start := time.Now()
 
 		cfg, err := c.getRouterConfig(ctx)
@@ -161,9 +161,10 @@ func WithLogger(logger *zap.Logger) Option {
 	}
 }
 
-func WithPollInterval(interval time.Duration) Option {
+func WithPolling(interval time.Duration, jitter time.Duration) Option {
 	return func(s *configPoller) {
 		s.pollInterval = interval
+		s.pollJitter = jitter
 	}
 }
 

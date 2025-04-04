@@ -9,6 +9,7 @@ RUN npm install --global pnpm@9
 
 # Files required by pnpm install.
 COPY .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY patches patches
 
 # Files required by pnpm install for each package. Tried pnpm fetch but errors.
 COPY connect/package.json connect/
@@ -34,7 +35,7 @@ FROM --platform=${BUILDPLATFORM} node:lts-alpine
 
 WORKDIR /app
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 # Fetch built artifacts
 COPY --from=builder /app/pruned .

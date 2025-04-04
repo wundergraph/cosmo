@@ -196,6 +196,7 @@ export function updateSubgraph(
           cdnBaseUrl: opts.cdnBaseUrl,
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
+        opts.chClient!,
       );
 
     await auditLogRepo.addAuditLog({
@@ -206,6 +207,7 @@ export function updateSubgraph(
       auditableType: subgraph.isFeatureSubgraph ? 'feature_subgraph' : 'subgraph',
       auditableDisplayName: subgraph.name,
       actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       targetNamespaceId: subgraph.namespaceId,
       targetNamespaceDisplayName: subgraph.namespace,

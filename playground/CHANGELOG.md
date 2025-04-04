@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.8.6](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.5...@wundergraph/playground@0.8.6) (2025-04-02)
+
+**Note:** Version bump only for package @wundergraph/playground
+
+## [0.8.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.4...@wundergraph/playground@0.8.5) (2025-03-25)
+
+### Bug Fixes
+
+* upgrade `vite` to solve vulnerability ([#1700](https://github.com/wundergraph/cosmo/issues/1700)) ([a8bb8e5](https://github.com/wundergraph/cosmo/commit/a8bb8e591d1a0523ad77a593240aef7974e7c8b3)) (@wilsonrivera)
+
+## [0.8.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.3...@wundergraph/playground@0.8.4) (2025-02-11)
+
+### Bug Fixes
+
+* websocket url in router playground ([#1583](https://github.com/wundergraph/cosmo/issues/1583)) ([8523ace](https://github.com/wundergraph/cosmo/commit/8523aceca6ecbed7e0318c5cf1115f9c00a3f933)) (@thisisnithin)
+
+## [0.8.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.2...@wundergraph/playground@0.8.3) (2025-02-03)
+
+### Bug Fixes
+
+* incorrect graphql endpoint in playground ([#1562](https://github.com/wundergraph/cosmo/issues/1562)) ([2e680ce](https://github.com/wundergraph/cosmo/commit/2e680ce7e6e0a584b13d3ee3aa314ab6e9a051c2)) (@thisisnithin)
+
 ## [0.8.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.8.1...@wundergraph/playground@0.8.2) (2024-12-17)
 
 ### Bug Fixes

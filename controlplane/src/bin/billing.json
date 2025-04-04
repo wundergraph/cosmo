@@ -24,7 +24,7 @@
         { "id": "changelog-retention", "limit": 7 },
         { "id": "breaking-change-retention", "limit": 7 },
         { "id": "trace-sampling-rate", "limit": 0.1 },
-        { "id": "feature-flags", "limit": 0 },
+        { "id": "feature-flags", "description": "1 Feature Flag", "limit": 1 },
         {
           "id": "field-pruning-grace-period",
           "limit": 0
@@ -150,7 +150,7 @@
         { "id": "analytics-retention", "limit": 30 },
         { "id": "tracing-retention", "limit": 30 },
         { "id": "changelog-retention", "limit": 30 },
-        { "id": "breaking-change-retention", "limit": 90 },
+        { "id": "breaking-change-retention", "limit": 30 },
         { "id": "trace-sampling-rate", "limit": 0.1 },
         { "id": "oidc" },
         { "id": "scim", "description": "System for Cross-Domain Identity Management (SCIM)" },
@@ -158,7 +158,8 @@
         {
           "id": "field-pruning-grace-period",
           "limit": 30
-        }
+        },
+        { "id": "cache-warmer", "description": "Cache Warmer" }
       ]
     }
   }

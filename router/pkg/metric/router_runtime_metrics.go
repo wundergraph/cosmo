@@ -3,6 +3,7 @@ package metric
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/shirou/gopsutil/v3/process"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -74,8 +75,8 @@ func (r *RuntimeMetrics) Start() error {
 	lock.Lock()
 	defer lock.Unlock()
 
-	runtimeUptime, err := r.meter.Int64ObservableCounter(
-		"runtime.uptime",
+	runtimeUptime, err := r.meter.Int64ObservableGauge(
+		"process.uptime",
 		otelmetric.WithUnit("s"),
 		otelmetric.WithDescription("Seconds since application was initialized"),
 	)
@@ -189,7 +190,7 @@ func (r *RuntimeMetrics) Start() error {
 		return err
 	}
 
-	serverUptime, err := r.meter.Int64ObservableCounter(
+	serverUptime, err := r.meter.Int64ObservableGauge(
 		"server.uptime",
 		otelmetric.WithUnit("s"),
 		otelmetric.WithDescription("Seconds since the server started. Resets between router config changes."),
@@ -312,7 +313,11 @@ func (r *RuntimeMetrics) Shutdown() error {
 		}
 	}
 
-	return err
+	if err != nil {
+		return fmt.Errorf("shutdown runtime metrics: %w", err)
+	}
+
+	return nil
 }
 
 func computeGCPauses(

@@ -150,6 +150,7 @@ export function updateMonograph(
         },
         admissionWebhookURL: req.admissionWebhookURL,
         admissionWebhookSecret: req.admissionWebhookSecret,
+        chClient: opts.chClient!,
       });
 
       await subgraphRepo.update(
@@ -172,6 +173,7 @@ export function updateMonograph(
           cdnBaseUrl: opts.cdnBaseUrl,
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
+        opts.chClient!,
       );
 
       await auditLogRepo.addAuditLog({
@@ -182,6 +184,7 @@ export function updateMonograph(
         auditableType: 'monograph',
         auditableDisplayName: graph.name,
         actorDisplayName: authContext.userDisplayName,
+        apiKeyName: authContext.apiKeyName,
         actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         targetNamespaceId: graph.namespaceId,
         targetNamespaceDisplayName: graph.namespace,

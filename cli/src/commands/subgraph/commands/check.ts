@@ -33,7 +33,7 @@ export default (opts: BaseCommandOptions) => {
       if (!existsSync(schemaFile)) {
         program.error(
           pc.red(
-            pc.bold(`The readme file '${pc.bold(schemaFile)}' does not exist. Please check the path and try again.`),
+            pc.bold(`The schema file '${pc.bold(schemaFile)}' does not exist. Please check the path and try again.`),
           ),
         );
       }
@@ -71,7 +71,9 @@ export default (opts: BaseCommandOptions) => {
     const success = handleCheckResult(resp);
 
     if (!success && !ignoreErrorsDueToGitHubIntegration) {
-      process.exit(1);
+      process.exitCode = 1;
+      // eslint-disable-next-line no-useless-return
+      return;
     }
   });
 

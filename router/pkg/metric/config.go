@@ -1,13 +1,14 @@
 package metric
 
 import (
+	"net/url"
+	"regexp"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	"net/url"
-	"regexp"
 )
 
 // DefaultServerName Default resource name.
@@ -18,12 +19,15 @@ type PrometheusConfig struct {
 	ListenAddr   string
 	Path         string
 	GraphqlCache bool
+	EngineStats  EngineStatsConfig
 	// Metrics to exclude from Prometheus exporter
 	ExcludeMetrics []*regexp.Regexp
 	// Metric labels to exclude from Prometheus exporter
 	ExcludeMetricLabels []*regexp.Regexp
 	// TestRegistry is used for testing purposes. If set, the registry will be used instead of the default one.
 	TestRegistry *prometheus.Registry
+	// Whether or not to exclude scope info
+	ExcludeScopeInfo bool
 }
 
 type OpenTelemetryExporter struct {
@@ -41,10 +45,19 @@ type OpenTelemetryExporter struct {
 	Temporality otelconfig.ExporterTemporality
 }
 
+type EngineStatsConfig struct {
+	Subscription bool
+}
+
+func (e *EngineStatsConfig) Enabled() bool {
+	return e.Subscription
+}
+
 type OpenTelemetry struct {
 	Enabled       bool
 	RouterRuntime bool
 	GraphqlCache  bool
+	EngineStats   EngineStatsConfig
 	Exporters     []*OpenTelemetryExporter
 	// Metrics to exclude from the OTLP exporter.
 	ExcludeMetrics []*regexp.Regexp
@@ -92,6 +105,10 @@ type Config struct {
 	ResourceAttributes []attribute.KeyValue
 
 	Attributes []config.CustomAttribute
+
+	// IsUsingCloudExporter indicates whether the cloud exporter is used.
+	// This value is used for tests to enable/disable the simulated cloud exporter.
+	IsUsingCloudExporter bool
 }
 
 func (c *Config) IsEnabled() bool {

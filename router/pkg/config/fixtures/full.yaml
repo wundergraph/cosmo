@@ -11,6 +11,10 @@ listen_addr: "localhost:3002"
 controlplane_url: "https://cosmo-cp.wundergraph.com"
 playground_enabled: true
 playground_path: "/"
+playground:
+  enabled: false
+  path: "/my-playground"
+  concurrency_limit: 1500
 introspection_enabled: true
 json_log: true
 shutdown_delay: 15s
@@ -49,6 +53,9 @@ access_logs:
       - key: "hello"
         value_from:
           context_field: "operation_name"
+      - key: "request_information"
+        value_from:
+          expression: "request.error ?? 'success'"
   subgraphs:
     enabled: true
     fields:
@@ -102,6 +109,8 @@ telemetry:
       enabled: true
       router_runtime: true
       graphql_cache: true
+      engine_stats:
+        subscriptions: true
       exclude_metric_labels: []
       exclude_metrics: []
       # If no exporters are defined, the default one is used
@@ -119,8 +128,11 @@ telemetry:
       path: "/metrics"
       listen_addr: "127.0.0.1:8088"
       graphql_cache: true
+      engine_stats:
+        subscriptions: true
       exclude_metrics: []
       exclude_metric_labels: []
+      exclude_scope_info: true
 
 cache_control_policy:
   enabled: true
@@ -147,6 +159,7 @@ traffic_shaping:
     # Is the maximum size of the request body in MB, mib
     max_request_body_size: 5MB
     max_header_bytes: 4MiB
+    decompression_enabled: false
   all: # Rules are applied to all subgraph requests.
     # Subgraphs transport options
     request_timeout: 60s
@@ -172,15 +185,15 @@ traffic_shaping:
 headers:
   all: # Header rules for all subgraph requests.
     request:
-      - op: "propagate"            # Forward a client header
-        named: X-Test-Header       # Exact match (Use the canonical version)
+      - op: "propagate" # Forward a client header
+        named: X-Test-Header # Exact match (Use the canonical version)
 
       - op: "propagate"
         matching: (?i)^X-Custom-.* # Regex match (Case insensitive)
 
       - op: "propagate"
         named: "X-User-Id"
-        default: "123"             # Set the value when the header was not set
+        default: "123" # Set the value when the header was not set
       - op: "set"
         name: "X-API-Key"
         value: "some-secret"
@@ -202,19 +215,30 @@ headers:
         - op: "set"
           name: "X-Subgraph-Key"
           value: "some-subgraph-secret"
+  cookie_whitelist:
+    - "cookie1"
+    - "cookie2"
 
 # Authentication and Authorization
 # See https://cosmo-docs.wundergraph.com/router/authentication-and-authorization for more information
 authentication:
-  providers:
-    - name: My Auth Provider # Optional, used for error messages and diagnostics
-      jwks: # JWKS provider configuration
-        url: https://example.com/.well-known/jwks.json # URL to load the JWKS from
+  jwt:
+    jwks:
+      - url: "https://example.com/.well-known/jwks.json"
         refresh_interval: 1m
-        header_names:
-          - Authorization # Optional
-        header_value_prefixes:
-          - Bearer # Optional
+        algorithms: ["RS256"]
+      - url: "https://example.com/.well-known/jwks2.json"
+        refresh_interval: 2m
+        algorithms: ["RS256", "HS256"]
+      - url: "https://example.com/.well-known/jwks3.json"
+    header_name: Authorization
+    header_value_prefix: Bearer
+    header_sources:
+      - type: header
+        name: X-Authorization
+        value_prefixes: [Bearer, Token]
+      - type: header
+        name: authz
 
 authorization:
   require_authentication: false # Set to true to disable requests without authentication
@@ -266,7 +290,10 @@ rate_limit:
   enabled: true
   strategy: "simple"
   storage:
-    url: "redis://:test@localhost:6379"
+    cluster_enabled: true
+    urls:
+      - "test@localhost:8000"
+      - "test2@localhost:8001"
     key_prefix: "cosmo_rate_limit"
   simple_strategy:
     rate: 60
@@ -319,7 +346,10 @@ storage_providers:
       secure: false
   redis:
     - id: "my_redis"
-      url: "redis://:test@localhost:6379"
+      cluster_enabled: false
+      urls:
+        - "test@localhost:8000"
+        - "test2@localhost:8001"
 
 security:
   complexity_calculation_cache:
@@ -327,9 +357,9 @@ security:
     size: 1024
   complexity_limits:
     depth:
-        enabled: true
-        limit: 5
-        ignore_persisted_operations: true
+      enabled: true
+      limit: 5
+      ignore_persisted_operations: true
     total_fields:
       enabled: true
       limit: 7
@@ -343,6 +373,9 @@ security:
       limit: 4
       ignore_persisted_operations: true
 persisted_operations:
+  safelist:
+    enabled: true
+  log_unknown: true
   cache:
     size: 100MB
   storage:

@@ -1,4 +1,10 @@
+import { useFeature } from "@/hooks/use-feature";
+import { useFeatureLimit } from "@/hooks/use-feature-limit";
+import { useUser } from "@/hooks/use-user";
+import { docsBaseURL, graphPruningRules } from "@/lib/constants";
+import { checkUserAccess, cn } from "@/lib/utils";
 import { useMutation } from "@connectrpc/connect-query";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   configureNamespaceGraphPruningConfig,
   enableGraphPruning,
@@ -8,11 +14,10 @@ import {
   GraphPruningConfig,
   LintSeverity,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import Link from "next/link";
 import { useRouter } from "next/router";
-import { useState } from "react";
-import { useToast } from "../ui/use-toast";
-import { Switch } from "../ui/switch";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { useState, useEffect } from "react";
+import { Button } from "../ui/button";
 import {
   Card,
   CardContent,
@@ -20,12 +25,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
-import { Button } from "../ui/button";
-import { docsBaseURL, graphPruningRules } from "@/lib/constants";
-import Link from "next/link";
 import { Checkbox } from "../ui/checkbox";
-import { SeverityDropdown } from "./linter-config";
-import { checkUserAccess, cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -35,9 +35,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { useFeature } from "@/hooks/use-feature";
-import { useFeatureLimit } from "@/hooks/use-feature-limit";
-import { useUser } from "@/hooks/use-user";
+import { Switch } from "../ui/switch";
+import { useToast } from "../ui/use-toast";
+import { SeverityDropdown } from "./linter-config";
 
 const fetchPeriodOptions = (
   limit: number,
@@ -157,6 +157,11 @@ export const GraphPruningLintConfig = ({
     GraphPruningConfig[]
   >(data.configs);
 
+  useEffect(() => {
+    setGraphPruningEnabled(data.graphPrunerEnabled);
+    setSelectedPruneRules(data.configs);
+  }, [data]);
+
   return (
     <div className="space-y-6 rounded-lg border p-6">
       <div className="flex w-full items-center justify-between">
@@ -275,7 +280,7 @@ export const GraphPruningLintConfig = ({
                         if (d.response?.code === EnumStatusCode.OK) {
                           toast({
                             description:
-                              "Graph Pruning Lint Policy applied succesfully.",
+                              "Graph Pruning Lint Policy applied successfully.",
                             duration: 3000,
                           });
                         } else if (d.response?.details) {

@@ -7,11 +7,6 @@ import (
 	"go.uber.org/zap"
 )
 
-func init() {
-	// Register your module here
-	core.RegisterModule(&SetScopesModule{})
-}
-
 const myModuleID = "setScopesModule"
 
 // SetScopesModule is a simple module that has access to the GraphQL operation and adds custom scopes to the response

@@ -166,6 +166,7 @@ export function createFeatureFlag(
       actorId: authContext.userId,
       auditableType: 'feature_flag',
       auditableDisplayName: featureFlag.name,
+      apiKeyName: authContext.apiKeyName,
       actorDisplayName: authContext.userDisplayName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       targetNamespaceId: namespace.id,
@@ -205,6 +206,7 @@ export function createFeatureFlag(
           cdnBaseUrl: opts.cdnBaseUrl,
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
+        chClient: opts.chClient!,
       });
 
       compositionErrors.push(...composition.compositionErrors);

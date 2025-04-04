@@ -53,6 +53,44 @@ describe('Create subgraph tests', () => {
     await server.close();
   });
 
+    test('that an error is returned if the name is invalid', async () => {
+      const { client, server } = await SetupTest({ dbname });
+
+      let createFederatedSubgraphResp = await client.createFederatedSubgraph({
+        name: "a*a",
+        namespace: DEFAULT_NAMESPACE,
+        routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      });
+
+      expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
+
+      createFederatedSubgraphResp = await client.createFederatedSubgraph({
+        name: "a*a/",
+        namespace: DEFAULT_NAMESPACE,
+        routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      });
+
+      expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
+
+      createFederatedSubgraphResp = await client.createFederatedSubgraph({
+        name: "^a*a/",
+        namespace: DEFAULT_NAMESPACE,
+        routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      });
+
+      expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
+
+      createFederatedSubgraphResp = await client.createFederatedSubgraph({
+        name: "Test".repeat(26),
+        namespace: DEFAULT_NAMESPACE,
+        routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      });
+
+      expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
+
+      await server.close();
+    });
+
   test('that an error is returned if an Event-Driven subgraph defines a routing URL', async () => {
     const { client, server } = await SetupTest({ dbname });
 

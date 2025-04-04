@@ -10,11 +10,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dgraph-io/ristretto/v2"
+
 	"connectrpc.com/connect"
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/avast/retry-go"
-	"github.com/dgraph-io/ristretto"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/graphqlmetrics/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/graphqlmetrics/pkg/batchprocessor"
 	utils "github.com/wundergraph/cosmo/graphqlmetrics/pkg/utils"

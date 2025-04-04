@@ -4,6 +4,79 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.99.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.98.1...@wundergraph/cosmo-connect@0.99.0) (2025-04-01)
+
+### Features
+
+* remove discussions ([#1735](https://github.com/wundergraph/cosmo/issues/1735)) ([cbb6117](https://github.com/wundergraph/cosmo/commit/cbb61171505fd3fa67f501583d92002b0c807241)) (@thisisnithin)
+
+## [0.98.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.98.0...@wundergraph/cosmo-connect@0.98.1) (2025-03-28)
+
+### Bug Fixes
+
+* authorization directive cascading ([#1733](https://github.com/wundergraph/cosmo/issues/1733)) ([0199fb5](https://github.com/wundergraph/cosmo/commit/0199fb5f88104a585b74a79638f54f1a3b812436)) (@Aenimus)
+
+# [0.98.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.97.0...@wundergraph/cosmo-connect@0.98.0) (2025-03-25)
+
+### Features
+
+* allow to filter checks by subgraph name ([#1716](https://github.com/wundergraph/cosmo/issues/1716)) ([ae69dcd](https://github.com/wundergraph/cosmo/commit/ae69dcde94611196f7f8b47702e25cdcdfa41a19)) (@wilsonrivera)
+* introduce `p50`, `p90` and `p99` latency metrics for graphs and subgraphs ([#1710](https://github.com/wundergraph/cosmo/issues/1710)) ([1c55ed5](https://github.com/wundergraph/cosmo/commit/1c55ed51fe17be7371633a176c356e581ed44c62)) (@wilsonrivera)
+
+# [0.97.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.96.0...@wundergraph/cosmo-connect@0.97.0) (2025-03-20)
+
+### Features
+
+* implement checks configuration ([#1688](https://github.com/wundergraph/cosmo/issues/1688)) ([2cab283](https://github.com/wundergraph/cosmo/commit/2cab283b2cdeda7f943250d460150472eb464d22)) (@wilsonrivera)
+
+# [0.96.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.95.0...@wundergraph/cosmo-connect@0.96.0) (2025-03-12)
+
+### Features
+
+* display used api key name on the audit log table ([#1674](https://github.com/wundergraph/cosmo/issues/1674)) ([55ffbdd](https://github.com/wundergraph/cosmo/commit/55ffbdd7ac0ae10106de4bf3c073d650c0537a52)) (@wilsonrivera)
+
+# [0.95.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.94.1...@wundergraph/cosmo-connect@0.95.0) (2025-02-27)
+
+### Features
+
+* add option to set the number of operations for cache warming and implement FILO policy ([#1607](https://github.com/wundergraph/cosmo/issues/1607)) ([6867225](https://github.com/wundergraph/cosmo/commit/6867225dfcacf5e11b01394224dd9df5e9168dc8)) (@JivusAyrus)
+
+## [0.94.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.94.0...@wundergraph/cosmo-connect@0.94.1) (2025-02-26)
+
+### Bug Fixes
+
+* improve wgc auth login and router compatibility-version ([#1636](https://github.com/wundergraph/cosmo/issues/1636)) ([6946363](https://github.com/wundergraph/cosmo/commit/6946363024e49b6170a9553728ac3ecc973ce394)) (@Aenimus)
+
+# [0.94.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.93.0...@wundergraph/cosmo-connect@0.94.0) (2025-02-17)
+
+### Features
+
+* add composition versioning ([#1575](https://github.com/wundergraph/cosmo/issues/1575)) ([ee32cbb](https://github.com/wundergraph/cosmo/commit/ee32cbb3dbe7c46fa984920bbd95e4a00d01c9c3)) (@Aenimus)
+
+# [0.93.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.92.0...@wundergraph/cosmo-connect@0.93.0) (2025-02-12)
+
+### Features
+
+* add option to delete cache operation ([#1586](https://github.com/wundergraph/cosmo/issues/1586)) ([2946139](https://github.com/wundergraph/cosmo/commit/29461397e784eec0880546807df51dbfd8f2918c)) (@JivusAyrus)
+
+# [0.92.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.91.0...@wundergraph/cosmo-connect@0.92.0) (2025-01-24)
+
+### Features
+
+* add compatibility handshake between router and execution config ([#1534](https://github.com/wundergraph/cosmo/issues/1534)) ([4b8d60a](https://github.com/wundergraph/cosmo/commit/4b8d60ac48e1777069d68407ce72ea1d813155ca)) (@Aenimus)
+
+# [0.91.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.90.1...@wundergraph/cosmo-connect@0.91.0) (2025-01-17)
+
+### Features
+
+* cache warmer ([#1501](https://github.com/wundergraph/cosmo/issues/1501)) ([948edd2](https://github.com/wundergraph/cosmo/commit/948edd23e6d0ee968c91edd1a9e9943c3405ac2d)) (@JivusAyrus)
+
+## [0.90.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.90.0...@wundergraph/cosmo-connect@0.90.1) (2025-01-06)
+
+### Bug Fixes
+
+* add regex validation to graph names and routing urls ([#1450](https://github.com/wundergraph/cosmo/issues/1450)) ([e5b1c8f](https://github.com/wundergraph/cosmo/commit/e5b1c8fb33a41fc808067bb6495a43f74b60b314)) (@JivusAyrus)
+
 # [0.90.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.89.0...@wundergraph/cosmo-connect@0.90.0) (2024-12-17)
 
 ### Features

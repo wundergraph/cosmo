@@ -1,4 +1,4 @@
-import { Name, and, eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { NamespaceDTO } from '../../types/index.js';
@@ -14,6 +14,9 @@ export class NamespaceRepository {
   public async byName(name: string): Promise<NamespaceDTO | undefined> {
     const namespace = await this.db.query.namespaces.findFirst({
       where: and(eq(schema.namespaces.organizationId, this.organizationId), eq(schema.namespaces.name, name)),
+      with: {
+        namespaceConfig: true,
+      },
     });
 
     if (!namespace) {
@@ -23,16 +26,21 @@ export class NamespaceRepository {
     return {
       id: namespace.id,
       name: namespace.name,
-      enableGraphPruning: namespace.enableGraphPruning,
-      enableLinting: namespace.enableLinting,
+      enableGraphPruning: namespace.namespaceConfig?.enableGraphPruning ?? false,
+      enableLinting: namespace.namespaceConfig?.enableLinting ?? false,
       organizationId: namespace.organizationId,
       createdBy: namespace.createdBy || undefined,
+      enableCacheWarmer: namespace.namespaceConfig?.enableCacheWarming ?? false,
+      checksTimeframeInDays: namespace.namespaceConfig?.checksTimeframeInDays || undefined,
     };
   }
 
   public async byId(id: string): Promise<NamespaceDTO | undefined> {
     const namespace = await this.db.query.namespaces.findFirst({
       where: and(eq(schema.namespaces.organizationId, this.organizationId), eq(schema.namespaces.id, id)),
+      with: {
+        namespaceConfig: true,
+      },
     });
 
     if (!namespace) {
@@ -42,10 +50,12 @@ export class NamespaceRepository {
     return {
       id: namespace.id,
       name: namespace.name,
-      enableGraphPruning: namespace.enableGraphPruning,
-      enableLinting: namespace.enableLinting,
+      enableGraphPruning: namespace.namespaceConfig?.enableGraphPruning ?? false,
+      enableLinting: namespace.namespaceConfig?.enableLinting ?? false,
       organizationId: namespace.organizationId,
       createdBy: namespace.createdBy || undefined,
+      enableCacheWarmer: namespace.namespaceConfig?.enableCacheWarming ?? false,
+      checksTimeframeInDays: namespace.namespaceConfig?.checksTimeframeInDays || undefined,
     };
   }
 
@@ -64,21 +74,25 @@ export class NamespaceRepository {
     return res.find((r) => r.targets.find((t) => t.id === id));
   }
 
-  public async create(data: { name: string; createdBy: string }) {
-    const ns = await this.db
-      .insert(schema.namespaces)
-      .values({
-        name: data.name,
-        organizationId: this.organizationId,
-        createdBy: data.createdBy,
-      })
-      .returning();
+  public create(data: { name: string; createdBy: string }) {
+    return this.db.transaction(async (tx) => {
+      const ns = await tx
+        .insert(schema.namespaces)
+        .values({
+          name: data.name,
+          organizationId: this.organizationId,
+          createdBy: data.createdBy,
+        })
+        .returning();
 
-    if (ns.length === 0) {
-      return;
-    }
+      if (ns.length === 0) {
+        return;
+      }
 
-    return ns[0];
+      await tx.insert(schema.namespaceConfig).values({ namespaceId: ns[0].id });
+
+      return ns[0];
+    });
   }
 
   public async delete(name: string) {
@@ -102,21 +116,24 @@ export class NamespaceRepository {
     });
   }
 
-  public async toggleEnableLinting(data: { name: string; enableLinting: boolean }) {
-    await this.db
-      .update(schema.namespaces)
-      .set({
-        enableLinting: data.enableLinting,
-      })
-      .where(and(eq(schema.namespaces.name, data.name), eq(schema.namespaces.organizationId, this.organizationId)));
-  }
+  public async updateConfiguration(data: {
+    id: string;
+    enableLinting?: boolean;
+    enableGraphPruning?: boolean;
+    enableCacheWarming?: boolean;
+    checksTimeframeInDays?: number;
+  }) {
+    const values = {
+      namespaceId: data.id,
+      enableLinting: data.enableLinting,
+      enableGraphPruning: data.enableGraphPruning,
+      enableCacheWarming: data.enableCacheWarming,
+      checksTimeframeInDays: data.checksTimeframeInDays,
+    };
 
-  public async toggleEnableGraphPruning(data: { id: string; enableGraphPruning: boolean }) {
-    await this.db
-      .update(schema.namespaces)
-      .set({
-        enableGraphPruning: data.enableGraphPruning,
-      })
-      .where(and(eq(schema.namespaces.id, data.id), eq(schema.namespaces.organizationId, this.organizationId)));
+    await this.db.insert(schema.namespaceConfig).values(values).onConflictDoUpdate({
+      target: schema.namespaceConfig.namespaceId,
+      set: values,
+    });
   }
 }

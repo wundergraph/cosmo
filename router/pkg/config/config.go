@@ -33,6 +33,7 @@ type CustomDynamicAttribute struct {
 	RequestHeader  string `yaml:"request_header,omitempty"`
 	ContextField   string `yaml:"context_field,omitempty"`
 	ResponseHeader string `yaml:"response_header,omitempty"`
+	Expression     string `yaml:"expression,omitempty"` // only implemented by CustomAttribute in Metrics and Telemetry and Router Access Logs
 }
 
 type CustomAttribute struct {
@@ -84,13 +85,19 @@ type PropagationConfig struct {
 	Datadog      bool `yaml:"datadog"`
 }
 
+type EngineStats struct {
+	Subscriptions bool `yaml:"subscriptions" envDefault:"false" env:"ENGINE_STATS_SUBSCRIPTIONS"`
+}
+
 type Prometheus struct {
-	Enabled             bool       `yaml:"enabled" envDefault:"true" env:"PROMETHEUS_ENABLED"`
-	Path                string     `yaml:"path" envDefault:"/metrics" env:"PROMETHEUS_HTTP_PATH"`
-	ListenAddr          string     `yaml:"listen_addr" envDefault:"127.0.0.1:8088" env:"PROMETHEUS_LISTEN_ADDR"`
-	GraphqlCache        bool       `yaml:"graphql_cache" envDefault:"false" env:"PROMETHEUS_GRAPHQL_CACHE"`
-	ExcludeMetrics      RegExArray `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
-	ExcludeMetricLabels RegExArray `yaml:"exclude_metric_labels,omitempty" env:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
+	Enabled             bool        `yaml:"enabled" envDefault:"true" env:"PROMETHEUS_ENABLED"`
+	Path                string      `yaml:"path" envDefault:"/metrics" env:"PROMETHEUS_HTTP_PATH"`
+	ListenAddr          string      `yaml:"listen_addr" envDefault:"127.0.0.1:8088" env:"PROMETHEUS_LISTEN_ADDR"`
+	GraphqlCache        bool        `yaml:"graphql_cache" envDefault:"false" env:"PROMETHEUS_GRAPHQL_CACHE"`
+	EngineStats         EngineStats `yaml:"engine_stats" envPrefix:"PROMETHEUS_"`
+	ExcludeMetrics      RegExArray  `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
+	ExcludeMetricLabels RegExArray  `yaml:"exclude_metric_labels,omitempty" env:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
+	ExcludeScopeInfo    bool        `yaml:"exclude_scope_info" envDefault:"false" env:"PROMETHEUS_EXCLUDE_SCOPE_INFO"`
 }
 
 type MetricsOTLPExporter struct {
@@ -112,6 +119,7 @@ type MetricsOTLP struct {
 	Enabled             bool                  `yaml:"enabled" envDefault:"true" env:"METRICS_OTLP_ENABLED"`
 	RouterRuntime       bool                  `yaml:"router_runtime" envDefault:"true" env:"METRICS_OTLP_ROUTER_RUNTIME"`
 	GraphqlCache        bool                  `yaml:"graphql_cache" envDefault:"false" env:"METRICS_OTLP_GRAPHQL_CACHE"`
+	EngineStats         EngineStats           `yaml:"engine_stats" envPrefix:"METRICS_OTLP_"`
 	ExcludeMetrics      RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray            `yaml:"exclude_metric_labels,omitempty" env:"METRICS_OTLP_EXCLUDE_METRIC_LABELS"`
 	Exporters           []MetricsOTLPExporter `yaml:"exporters"`
@@ -154,18 +162,25 @@ type RouterTrafficConfiguration struct {
 	MaxRequestBodyBytes BytesString `yaml:"max_request_body_size" envDefault:"5MB"`
 	// MaxHeaderBytes is the maximum size of the request headers in bytes
 	MaxHeaderBytes BytesString `yaml:"max_header_bytes" envDefault:"0MiB" env:"MAX_HEADER_BYTES"`
+	// DecompressionEnabled is the configuration for request compression
+	DecompressionEnabled bool `yaml:"decompression_enabled" envDefault:"true"`
 }
 
 type GlobalSubgraphRequestRule struct {
 	BackoffJitterRetry BackoffJitterRetry `yaml:"retry"`
 	// See https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
-	RequestTimeout         time.Duration `yaml:"request_timeout,omitempty" envDefault:"60s"`
-	DialTimeout            time.Duration `yaml:"dial_timeout,omitempty" envDefault:"30s"`
-	ResponseHeaderTimeout  time.Duration `yaml:"response_header_timeout,omitempty" envDefault:"0s"`
-	ExpectContinueTimeout  time.Duration `yaml:"expect_continue_timeout,omitempty" envDefault:"0s"`
-	TLSHandshakeTimeout    time.Duration `yaml:"tls_handshake_timeout,omitempty" envDefault:"10s"`
-	KeepAliveIdleTimeout   time.Duration `yaml:"keep_alive_idle_timeout,omitempty" envDefault:"0s"`
-	KeepAliveProbeInterval time.Duration `yaml:"keep_alive_probe_interval,omitempty" envDefault:"30s"`
+	RequestTimeout         *time.Duration `yaml:"request_timeout,omitempty" envDefault:"60s"`
+	DialTimeout            *time.Duration `yaml:"dial_timeout,omitempty" envDefault:"30s"`
+	ResponseHeaderTimeout  *time.Duration `yaml:"response_header_timeout,omitempty" envDefault:"0s"`
+	ExpectContinueTimeout  *time.Duration `yaml:"expect_continue_timeout,omitempty" envDefault:"0s"`
+	TLSHandshakeTimeout    *time.Duration `yaml:"tls_handshake_timeout,omitempty" envDefault:"10s"`
+	KeepAliveIdleTimeout   *time.Duration `yaml:"keep_alive_idle_timeout,omitempty" envDefault:"0s"`
+	KeepAliveProbeInterval *time.Duration `yaml:"keep_alive_probe_interval,omitempty" envDefault:"30s"`
+
+	// Connection configuration
+	MaxConnsPerHost     *int `yaml:"max_conns_per_host,omitempty" envDefault:"100"`
+	MaxIdleConns        *int `yaml:"max_idle_conns,omitempty" envDefault:"1024"`
+	MaxIdleConnsPerHost *int `yaml:"max_idle_conns_per_host,omitempty" envDefault:"20"`
 }
 
 type SubgraphTrafficRequestRule struct {
@@ -198,8 +213,9 @@ type CacheControlPolicy struct {
 
 type HeaderRules struct {
 	// All is a set of rules that apply to all requests
-	All       *GlobalHeaderRule            `yaml:"all,omitempty"`
-	Subgraphs map[string]*GlobalHeaderRule `yaml:"subgraphs,omitempty"`
+	All             *GlobalHeaderRule            `yaml:"all,omitempty"`
+	Subgraphs       map[string]*GlobalHeaderRule `yaml:"subgraphs,omitempty"`
+	CookieWhitelist []string                     `yaml:"cookie_whitelist,omitempty"`
 }
 
 type GlobalHeaderRule struct {
@@ -312,26 +328,30 @@ type EngineDebugConfiguration struct {
 }
 
 type EngineExecutionConfiguration struct {
-	Debug                                  EngineDebugConfiguration `yaml:"debug"`
-	EnableSingleFlight                     bool                     `envDefault:"true" env:"ENGINE_ENABLE_SINGLE_FLIGHT" yaml:"enable_single_flight"`
-	EnableRequestTracing                   bool                     `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
-	EnableExecutionPlanCacheResponseHeader bool                     `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
-	MaxConcurrentResolvers                 int                      `envDefault:"32" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
-	EnableNetPoll                          bool                     `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
-	WebSocketClientPollTimeout             time.Duration            `envDefault:"1s" env:"ENGINE_WEBSOCKET_CLIENT_POLL_TIMEOUT" yaml:"websocket_client_poll_timeout,omitempty"`
-	WebSocketClientConnBufferSize          int                      `envDefault:"128" env:"ENGINE_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE" yaml:"websocket_client_conn_buffer_size,omitempty"`
-	WebSocketClientReadTimeout             time.Duration            `envDefault:"5s" env:"ENGINE_WEBSOCKET_CLIENT_READ_TIMEOUT" yaml:"websocket_client_read_timeout,omitempty"`
-	ExecutionPlanCacheSize                 int64                    `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
-	MinifySubgraphOperations               bool                     `envDefault:"true" env:"ENGINE_MINIFY_SUBGRAPH_OPERATIONS" yaml:"minify_subgraph_operations"`
-	EnablePersistedOperationsCache         bool                     `envDefault:"true" env:"ENGINE_ENABLE_PERSISTED_OPERATIONS_CACHE" yaml:"enable_persisted_operations_cache"`
-	EnableNormalizationCache               bool                     `envDefault:"true" env:"ENGINE_ENABLE_NORMALIZATION_CACHE" yaml:"enable_normalization_cache"`
-	NormalizationCacheSize                 int64                    `envDefault:"1024" env:"ENGINE_NORMALIZATION_CACHE_SIZE" yaml:"normalization_cache_size,omitempty"`
-	OperationHashCacheSize                 int64                    `envDefault:"2048" env:"ENGINE_OPERATION_HASH_CACHE_SIZE" yaml:"operation_hash_cache_size,omitempty"`
-	ParseKitPoolSize                       int                      `envDefault:"16" env:"ENGINE_PARSEKIT_POOL_SIZE" yaml:"parsekit_pool_size,omitempty"`
-	EnableValidationCache                  bool                     `envDefault:"true" env:"ENGINE_ENABLE_VALIDATION_CACHE" yaml:"enable_validation_cache"`
-	ValidationCacheSize                    int64                    `envDefault:"1024" env:"ENGINE_VALIDATION_CACHE_SIZE" yaml:"validation_cache_size,omitempty"`
-	ResolverMaxRecyclableParserSize        int                      `envDefault:"32768" env:"ENGINE_RESOLVER_MAX_RECYCLABLE_PARSER_SIZE" yaml:"resolver_max_recyclable_parser_size,omitempty"`
-	EnableSubgraphFetchOperationName       bool                     `envDefault:"false" env:"ENGINE_ENABLE_SUBGRAPH_FETCH_OPERATION_NAME" yaml:"enable_subgraph_fetch_operation_name"`
+	Debug                                            EngineDebugConfiguration `yaml:"debug"`
+	EnableSingleFlight                               bool                     `envDefault:"true" env:"ENGINE_ENABLE_SINGLE_FLIGHT" yaml:"enable_single_flight"`
+	EnableRequestTracing                             bool                     `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
+	EnableExecutionPlanCacheResponseHeader           bool                     `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
+	MaxConcurrentResolvers                           int                      `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
+	EnableNetPoll                                    bool                     `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
+	WebSocketClientPollTimeout                       time.Duration            `envDefault:"1s" env:"ENGINE_WEBSOCKET_CLIENT_POLL_TIMEOUT" yaml:"websocket_client_poll_timeout,omitempty"`
+	WebSocketClientConnBufferSize                    int                      `envDefault:"128" env:"ENGINE_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE" yaml:"websocket_client_conn_buffer_size,omitempty"`
+	WebSocketClientReadTimeout                       time.Duration            `envDefault:"5s" env:"ENGINE_WEBSOCKET_CLIENT_READ_TIMEOUT" yaml:"websocket_client_read_timeout,omitempty"`
+	WebSocketClientWriteTimeout                      time.Duration            `envDefault:"10s" env:"ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT" yaml:"websocket_client_write_timeout,omitempty"`
+	ExecutionPlanCacheSize                           int64                    `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
+	MinifySubgraphOperations                         bool                     `envDefault:"true" env:"ENGINE_MINIFY_SUBGRAPH_OPERATIONS" yaml:"minify_subgraph_operations"`
+	EnablePersistedOperationsCache                   bool                     `envDefault:"true" env:"ENGINE_ENABLE_PERSISTED_OPERATIONS_CACHE" yaml:"enable_persisted_operations_cache"`
+	EnableNormalizationCache                         bool                     `envDefault:"true" env:"ENGINE_ENABLE_NORMALIZATION_CACHE" yaml:"enable_normalization_cache"`
+	NormalizationCacheSize                           int64                    `envDefault:"1024" env:"ENGINE_NORMALIZATION_CACHE_SIZE" yaml:"normalization_cache_size,omitempty"`
+	OperationHashCacheSize                           int64                    `envDefault:"2048" env:"ENGINE_OPERATION_HASH_CACHE_SIZE" yaml:"operation_hash_cache_size,omitempty"`
+	ParseKitPoolSize                                 int                      `envDefault:"16" env:"ENGINE_PARSEKIT_POOL_SIZE" yaml:"parsekit_pool_size,omitempty"`
+	EnableValidationCache                            bool                     `envDefault:"true" env:"ENGINE_ENABLE_VALIDATION_CACHE" yaml:"enable_validation_cache"`
+	ValidationCacheSize                              int64                    `envDefault:"1024" env:"ENGINE_VALIDATION_CACHE_SIZE" yaml:"validation_cache_size,omitempty"`
+	DisableExposingVariablesContentOnValidationError bool                     `envDefault:"false" env:"ENGINE_DISABLE_EXPOSING_VARIABLES_CONTENT_ON_VALIDATION_ERROR" yaml:"disable_exposing_variables_content_on_validation_error"`
+	ResolverMaxRecyclableParserSize                  int                      `envDefault:"32768" env:"ENGINE_RESOLVER_MAX_RECYCLABLE_PARSER_SIZE" yaml:"resolver_max_recyclable_parser_size,omitempty"`
+	EnableSubgraphFetchOperationName                 bool                     `envDefault:"false" env:"ENGINE_ENABLE_SUBGRAPH_FETCH_OPERATION_NAME" yaml:"enable_subgraph_fetch_operation_name"`
+	DisableVariablesRemapping                        bool                     `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping"`
+	SubscriptionFetchTimeout                         time.Duration            `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
 }
 
 type BlockOperationConfiguration struct {
@@ -392,20 +412,27 @@ type OverridesConfiguration struct {
 	Subgraphs map[string]SubgraphOverridesConfiguration `yaml:"subgraphs"`
 }
 
-type AuthenticationProviderJWKS struct {
-	URL                 string        `yaml:"url"`
-	HeaderNames         []string      `yaml:"header_names"`
-	HeaderValuePrefixes []string      `yaml:"header_value_prefixes"`
-	RefreshInterval     time.Duration `yaml:"refresh_interval" envDefault:"1m"`
+type JWKSConfiguration struct {
+	URL             string        `yaml:"url"`
+	Algorithms      []string      `yaml:"algorithms"`
+	RefreshInterval time.Duration `yaml:"refresh_interval" envDefault:"1m"`
 }
 
-type AuthenticationProvider struct {
-	Name string                      `yaml:"name"`
-	JWKS *AuthenticationProviderJWKS `yaml:"jwks"`
+type HeaderSource struct {
+	Type          string   `yaml:"type"`
+	Name          string   `yaml:"name"`
+	ValuePrefixes []string `yaml:"value_prefixes"`
+}
+
+type JWTAuthenticationConfiguration struct {
+	JWKS              []JWKSConfiguration `yaml:"jwks"`
+	HeaderName        string              `yaml:"header_name" envDefault:"Authorization"`
+	HeaderValuePrefix string              `yaml:"header_value_prefix" envDefault:"Bearer"`
+	HeaderSources     []HeaderSource      `yaml:"header_sources"`
 }
 
 type AuthenticationConfiguration struct {
-	Providers []AuthenticationProvider `yaml:"providers"`
+	JWT JWTAuthenticationConfiguration `yaml:"jwt"`
 }
 
 type AuthorizationConfiguration struct {
@@ -420,19 +447,30 @@ type RateLimitConfiguration struct {
 	SimpleStrategy RateLimitSimpleStrategy `yaml:"simple_strategy"`
 	Storage        RedisConfiguration      `yaml:"storage"`
 	// Debug ensures that retryAfter and resetAfter are set to stable values for testing
-	Debug bool `yaml:"debug" envDefault:"false" env:"RATE_LIMIT_DEBUG"`
+	// Debug also exposes the rate limit key in the response extension for debugging purposes
+	Debug               bool                        `yaml:"debug" envDefault:"false" env:"RATE_LIMIT_DEBUG"`
+	KeySuffixExpression string                      `yaml:"key_suffix_expression,omitempty" env:"RATE_LIMIT_KEY_SUFFIX_EXPRESSION"`
+	ErrorExtensionCode  RateLimitErrorExtensionCode `yaml:"error_extension_code"`
+}
+
+type RateLimitErrorExtensionCode struct {
+	Enabled bool   `yaml:"enabled" envDefault:"true" env:"RATE_LIMIT_ERROR_EXTENSION_CODE_ENABLED"`
+	Code    string `yaml:"code" envDefault:"RATE_LIMIT_EXCEEDED" env:"RATE_LIMIT_ERROR_EXTENSION_CODE"`
 }
 
 type RedisConfiguration struct {
-	Url       string `yaml:"url,omitempty" envDefault:"redis://localhost:6379" env:"RATE_LIMIT_REDIS_URL"`
-	KeyPrefix string `yaml:"key_prefix,omitempty" envDefault:"cosmo_rate_limit" env:"RATE_LIMIT_REDIS_KEY_PREFIX"`
+	URLs           []string `yaml:"urls,omitempty" env:"RATE_LIMIT_REDIS_URLS"`
+	ClusterEnabled bool     `yaml:"cluster_enabled,omitempty" envDefault:"false" env:"RATE_LIMIT_REDIS_CLUSTER_ENABLED"`
+	KeyPrefix      string   `yaml:"key_prefix,omitempty" envDefault:"cosmo_rate_limit" env:"RATE_LIMIT_REDIS_KEY_PREFIX"`
 }
 
 type RateLimitSimpleStrategy struct {
-	Rate                    int           `yaml:"rate" envDefault:"10" env:"RATE_LIMIT_SIMPLE_RATE"`
-	Burst                   int           `yaml:"burst" envDefault:"10" env:"RATE_LIMIT_SIMPLE_BURST"`
-	Period                  time.Duration `yaml:"period" envDefault:"1s" env:"RATE_LIMIT_SIMPLE_PERIOD"`
-	RejectExceedingRequests bool          `yaml:"reject_exceeding_requests" envDefault:"false" env:"RATE_LIMIT_SIMPLE_REJECT_EXCEEDING_REQUESTS"`
+	Rate                           int           `yaml:"rate" envDefault:"10" env:"RATE_LIMIT_SIMPLE_RATE"`
+	Burst                          int           `yaml:"burst" envDefault:"10" env:"RATE_LIMIT_SIMPLE_BURST"`
+	Period                         time.Duration `yaml:"period" envDefault:"1s" env:"RATE_LIMIT_SIMPLE_PERIOD"`
+	RejectExceedingRequests        bool          `yaml:"reject_exceeding_requests" envDefault:"false" env:"RATE_LIMIT_SIMPLE_REJECT_EXCEEDING_REQUESTS"`
+	RejectStatusCode               int           `yaml:"reject_status_code" envDefault:"200" env:"RATE_LIMIT_SIMPLE_REJECT_STATUS_CODE"`
+	HideStatsFromResponseExtension bool          `yaml:"hide_stats_from_response_extension" envDefault:"false" env:"RATE_LIMIT_SIMPLE_HIDE_STATS_FROM_RESPONSE_EXTENSION"`
 }
 
 type CDNConfiguration struct {
@@ -541,6 +579,28 @@ type WebSocketConfiguration struct {
 	ForwardInitialPayload bool `yaml:"forward_initial_payload" envDefault:"true" env:"WEBSOCKETS_FORWARD_INITIAL_PAYLOAD"`
 	// Authentication configuration for the WebSocket Connection
 	Authentication WebSocketAuthenticationConfiguration `yaml:"authentication,omitempty"`
+	// SetClientInfoFromInitialPayload configuration for the WebSocket Connection
+	ClientInfoFromInitialPayload WebSocketClientInfoFromInitialPayloadConfiguration `yaml:"client_info_from_initial_payload"`
+}
+
+type WebSocketClientInfoFromInitialPayloadConfiguration struct {
+	// Enabled true if the Router should set the client info from the initial payload of a Subscription Request to the Subgraph
+	Enabled bool `yaml:"enabled" envDefault:"true" env:"WEBSOCKETS_CLIENT_INFO_FROM_INITIAL_PAYLOAD_ENABLED"`
+	// NameField is the name of the field in the initial payload that will have the client name
+	NameField string `yaml:"name_field" envDefault:"graphql-client-name" env:"WEBSOCKETS_CLIENT_INFO_FROM_INITIAL_PAYLOAD_NAME_FIELD"`
+	// VersionField is the name of the field in the initial payload that will have the client version
+	VersionField string `yaml:"version_field" envDefault:"graphql-client-version" env:"WEBSOCKETS_CLIENT_INFO_FROM_INITIAL_PAYLOAD_VERSION_FIELD"`
+	// ForwardToRequestHeaders configuration for the WebSocket Connection
+	ForwardToRequestHeaders ForwardToRequestHeadersConfiguration `yaml:"forward_to_request_headers"`
+}
+
+type ForwardToRequestHeadersConfiguration struct {
+	// Enabled true if the Router should forward the client info to the request headers
+	Enabled bool `yaml:"enabled" envDefault:"true" env:"WEBSOCKETS_CLIENT_INFO_FROM_INITIAL_PAYLOAD_FORWARD_TO_REQUEST_HEADERS_ENABLED"`
+	// NameTargetHeader is the name of the header where the client name should be forwarded to
+	NameTargetHeader string `yaml:"name_target_header" envDefault:"graphql-client-name" env:"WEBSOCKETS_CLIENT_INFO_FROM_INITIAL_PAYLOAD_NAME_TARGET_HEADER"`
+	// VersionTargetHeader is the name of the header where the client version should be forwarded to
+	VersionTargetHeader string `yaml:"version_target_header" envDefault:"graphql-client-version" env:"WEBSOCKETS_CLIENT_INFO_FROM_INITIAL_PAYLOAD_VERSION_TARGET_HEADER"`
 }
 
 type ForwardUpgradeHeadersConfiguration struct {
@@ -596,9 +656,9 @@ type SubgraphErrorPropagationConfiguration struct {
 }
 
 type StorageProviders struct {
-	S3    []S3StorageProvider   `yaml:"s3,omitempty"`
-	CDN   []BaseStorageProvider `yaml:"cdn,omitempty"`
-	Redis []BaseStorageProvider `yaml:"redis,omitempty"`
+	S3    []S3StorageProvider    `yaml:"s3,omitempty"`
+	CDN   []BaseStorageProvider  `yaml:"cdn,omitempty"`
+	Redis []RedisStorageProvider `yaml:"redis,omitempty"`
 }
 
 type PersistedOperationsStorageConfig struct {
@@ -627,8 +687,9 @@ type BaseStorageProvider struct {
 }
 
 type RedisStorageProvider struct {
-	ID  string `yaml:"id,omitempty" env:"STORAGE_PROVIDER_REDIS_ID"`
-	URL string `yaml:"url,omitempty" env:"STORAGE_PROVIDER_REDIS_URL"`
+	ID             string   `yaml:"id,omitempty" env:"STORAGE_PROVIDER_REDIS_ID"`
+	URLs           []string `yaml:"urls,omitempty" env:"STORAGE_PROVIDER_REDIS_URLS"`
+	ClusterEnabled bool     `yaml:"cluster_enabled,omitempty" envDefault:"false" env:"STORAGE_PROVIDER_REDIS_CLUSTER_ENABLED"`
 }
 
 type PersistedOperationsCDNProvider struct {
@@ -647,8 +708,9 @@ type FallbackExecutionConfigStorage struct {
 }
 
 type ExecutionConfigFile struct {
-	Path  string `yaml:"path,omitempty" env:"EXECUTION_CONFIG_FILE_PATH"`
-	Watch bool   `yaml:"watch,omitempty" envDefault:"false" env:"EXECUTION_CONFIG_FILE_WATCH"`
+	Path          string        `yaml:"path,omitempty" env:"EXECUTION_CONFIG_FILE_PATH"`
+	Watch         bool          `yaml:"watch,omitempty" envDefault:"false" env:"EXECUTION_CONFIG_FILE_WATCH"`
+	WatchInterval time.Duration `yaml:"watch_interval,omitempty" envDefault:"1s" env:"EXECUTION_CONFIG_FILE_WATCH_INTERVAL"`
 }
 
 type ExecutionConfig struct {
@@ -667,8 +729,14 @@ type AutomaticPersistedQueriesCacheConfig struct {
 }
 
 type PersistedOperationsConfig struct {
-	Cache   PersistedOperationsCacheConfig   `yaml:"cache"`
-	Storage PersistedOperationsStorageConfig `yaml:"storage"`
+	LogUnknown bool                             `yaml:"log_unknown" env:"PERSISTED_OPERATIONS_LOG_UNKNOWN" envDefault:"false"`
+	Safelist   SafelistConfiguration            `yaml:"safelist" envPrefix:"PERSISTED_OPERATIONS_SAFELIST_"`
+	Cache      PersistedOperationsCacheConfig   `yaml:"cache"`
+	Storage    PersistedOperationsStorageConfig `yaml:"storage"`
+}
+
+type SafelistConfiguration struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 }
 
 type AutomaticPersistedQueriesConfig struct {
@@ -717,12 +785,14 @@ type AccessLogsSubgraphsConfig struct {
 }
 
 type ApolloCompatibilityFlags struct {
-	EnableAll                     bool                                             `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
-	ValueCompletion               ApolloCompatibilityValueCompletion               `yaml:"value_completion"`
-	TruncateFloats                ApolloCompatibilityTruncateFloats                `yaml:"truncate_floats"`
-	SuppressFetchErrors           ApolloCompatibilitySuppressFetchErrors           `yaml:"suppress_fetch_errors"`
-	ReplaceUndefinedOpFieldErrors ApolloCompatibilityReplaceUndefinedOpFieldErrors `yaml:"replace_undefined_op_field_errors"`
-	ReplaceInvalidVarErrors       ApolloCompatibilityReplaceInvalidVarErrors       `yaml:"replace_invalid_var_errors"`
+	EnableAll                          bool                                                  `yaml:"enable_all" envDefault:"false" env:"APOLLO_COMPATIBILITY_ENABLE_ALL"`
+	ValueCompletion                    ApolloCompatibilityValueCompletion                    `yaml:"value_completion"`
+	TruncateFloats                     ApolloCompatibilityTruncateFloats                     `yaml:"truncate_floats"`
+	SuppressFetchErrors                ApolloCompatibilitySuppressFetchErrors                `yaml:"suppress_fetch_errors"`
+	ReplaceUndefinedOpFieldErrors      ApolloCompatibilityReplaceUndefinedOpFieldErrors      `yaml:"replace_undefined_op_field_errors"`
+	ReplaceInvalidVarErrors            ApolloCompatibilityReplaceInvalidVarErrors            `yaml:"replace_invalid_var_errors"`
+	ReplaceValidationErrorStatus       ApolloCompatibilityReplaceValidationErrorStatus       `yaml:"replace_validation_error_status"`
+	SubscriptionMultipartPrintBoundary ApolloCompatibilitySubscriptionMultipartPrintBoundary `yaml:"subscription_multipart_print_boundary"`
 }
 
 type ApolloCompatibilityValueCompletion struct {
@@ -750,13 +820,43 @@ type ApolloCompatibilityReplaceInvalidVarErrors struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_ENABLED"`
 }
 
+type ApolloCompatibilityReplaceValidationErrorStatus struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_REPLACE_VALIDATION_ERROR_STATUS_ENABLED"`
+}
+
+type ApolloCompatibilitySubscriptionMultipartPrintBoundary struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_COMPATIBILITY_SUBSCRIPTION_MULTIPART_PRINT_BOUNDARY_ENABLED"`
+}
+
+type ApolloRouterCompatibilityFlags struct {
+	ReplaceInvalidVarErrors ApolloRouterCompatibilityReplaceInvalidVarErrors `yaml:"replace_invalid_var_errors"`
+	SubrequestHTTPError     ApolloRouterCompatibilitySubrequestHTTPError     `yaml:"subrequest_http_error"`
+}
+
+type ApolloRouterCompatibilityReplaceInvalidVarErrors struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_ROUTER_COMPATIBILITY_REPLACE_INVALID_VAR_ERRORS_ENABLED"`
+}
+
+type ApolloRouterCompatibilitySubrequestHTTPError struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"APOLLO_ROUTER_COMPATIBILITY_SUBREQUEST_HTTP_ERROR_ENABLED"`
+}
+
+type CacheWarmupSource struct {
+	Filesystem *CacheWarmupFileSystemSource `yaml:"filesystem,omitempty"`
+}
+
+type CacheWarmupFileSystemSource struct {
+	Path string `yaml:"path" env:"CACHE_WARMUP_SOURCE_FILESYSTEM_PATH"`
+}
+
+type CacheWarmupCDNSource struct{}
+
 type CacheWarmupConfiguration struct {
-	Enabled        bool          `yaml:"enabled" envDefault:"false" env:"CACHE_WARMUP_ENABLED"`
-	Source         string        `yaml:"source" envDefault:"filesystem" env:"CACHE_WARMUP_SOURCE"`
-	Path           string        `yaml:"path" env:"CACHE_WARMUP_PATH"`
-	Workers        int           `yaml:"workers" envDefault:"8" env:"CACHE_WARMUP_WORKERS"`
-	ItemsPerSecond int           `yaml:"items_per_second" envDefault:"50" env:"CACHE_WARMUP_ITEMS_PER_SECOND"`
-	Timeout        time.Duration `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
+	Enabled        bool              `yaml:"enabled" envDefault:"false" env:"CACHE_WARMUP_ENABLED"`
+	Source         CacheWarmupSource `yaml:"source"  env:"CACHE_WARMUP_SOURCE"`
+	Workers        int               `yaml:"workers" envDefault:"8" env:"CACHE_WARMUP_WORKERS"`
+	ItemsPerSecond int               `yaml:"items_per_second" envDefault:"50" env:"CACHE_WARMUP_ITEMS_PER_SECOND"`
+	Timeout        time.Duration     `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
 }
 
 type Config struct {
@@ -780,6 +880,7 @@ type Config struct {
 
 	ListenAddr                    string                      `yaml:"listen_addr" envDefault:"localhost:3002" env:"LISTEN_ADDR"`
 	ControlplaneURL               string                      `yaml:"controlplane_url" envDefault:"https://cosmo-cp.wundergraph.com" env:"CONTROLPLANE_URL"`
+	PlaygroundConfig              PlaygroundConfig            `yaml:"playground,omitempty"`
 	PlaygroundEnabled             bool                        `yaml:"playground_enabled" envDefault:"true" env:"PLAYGROUND_ENABLED"`
 	IntrospectionEnabled          bool                        `yaml:"introspection_enabled" envDefault:"true" env:"INTROSPECTION_ENABLED"`
 	QueryPlansEnabled             bool                        `yaml:"query_plans_enabled" envDefault:"true" env:"QUERY_PLANS_ENABLED"`
@@ -788,6 +889,7 @@ type Config struct {
 	ShutdownDelay                 time.Duration               `yaml:"shutdown_delay" envDefault:"60s" env:"SHUTDOWN_DELAY"`
 	GracePeriod                   time.Duration               `yaml:"grace_period" envDefault:"30s" env:"GRACE_PERIOD"`
 	PollInterval                  time.Duration               `yaml:"poll_interval" envDefault:"10s" env:"POLL_INTERVAL"`
+	PollJitter                    time.Duration               `yaml:"poll_jitter" envDefault:"5s" env:"POLL_JITTER"`
 	HealthCheckPath               string                      `yaml:"health_check_path" envDefault:"/health" env:"HEALTH_CHECK_PATH"`
 	ReadinessCheckPath            string                      `yaml:"readiness_check_path" envDefault:"/health/ready" env:"READINESS_CHECK_PATH"`
 	LivenessCheckPath             string                      `yaml:"liveness_check_path" envDefault:"/health/live" env:"LIVENESS_CHECK_PATH"`
@@ -817,12 +919,19 @@ type Config struct {
 
 	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation"`
 
-	StorageProviders          StorageProviders                `yaml:"storage_providers"`
-	ExecutionConfig           ExecutionConfig                 `yaml:"execution_config"`
-	PersistedOperationsConfig PersistedOperationsConfig       `yaml:"persisted_operations"`
-	AutomaticPersistedQueries AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
-	ApolloCompatibilityFlags  ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
-	ClientHeader              ClientHeader                    `yaml:"client_header"`
+	StorageProviders               StorageProviders                `yaml:"storage_providers"`
+	ExecutionConfig                ExecutionConfig                 `yaml:"execution_config"`
+	PersistedOperationsConfig      PersistedOperationsConfig       `yaml:"persisted_operations"`
+	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
+	ApolloCompatibilityFlags       ApolloCompatibilityFlags        `yaml:"apollo_compatibility_flags"`
+	ApolloRouterCompatibilityFlags ApolloRouterCompatibilityFlags  `yaml:"apollo_router_compatibility_flags"`
+	ClientHeader                   ClientHeader                    `yaml:"client_header"`
+}
+
+type PlaygroundConfig struct {
+	Enabled          bool   `yaml:"enabled" envDefault:"true" env:"PLAYGROUND_ENABLED"`
+	Path             string `yaml:"path" envDefault:"/" env:"PLAYGROUND_PATH"`
+	ConcurrencyLimit int    `yaml:"concurrency_limit,omitempty" envDefault:"10" env:"PLAYGROUND_CONCURRENCY_LIMIT"`
 }
 
 type LoadResult struct {
@@ -863,7 +972,6 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 
 	isDefaultConfigPath := configFilePath == DefaultConfigPath
 	configFileBytes, err = os.ReadFile(configFilePath)
-
 	if err != nil {
 		if isDefaultConfigPath {
 			cfg.DefaultLoaded = false

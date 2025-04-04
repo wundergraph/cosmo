@@ -18,6 +18,11 @@ import { createBillingPortalSession } from './billing/createBillingPortalSession
 import { createCheckoutSession } from './billing/createCheckoutSession.js';
 import { getBillingPlans } from './billing/getBillingPlans.js';
 import { upgradePlan } from './billing/upgradePlan.js';
+import { computeCacheWarmerOperations } from './cache-warmer/computeCacheWarmerOperations.js';
+import { configureCacheWarmer } from './cache-warmer/configureCacheWarmer.js';
+import { getCacheWarmerConfig } from './cache-warmer/getCacheWarmerConfig.js';
+import { getCacheWarmerOperations } from './cache-warmer/getCacheWarmerOperations.js';
+import { pushCacheWarmerOperation } from './cache-warmer/pushCacheWarmerOperation.js';
 import { createIgnoreOverridesForAllOperations } from './check/createIgnoreOverridesForAllOperations.js';
 import { createOperationIgnoreAllOverride } from './check/createOperationIgnoreAllOverride.js';
 import { createOperationOverrides } from './check/createOperationOverrides.js';
@@ -27,23 +32,12 @@ import { getCheckOperations } from './check/getCheckOperations.js';
 import { getCheckSummary } from './check/getCheckSummary.js';
 import { getChecksByFederatedGraphName } from './check/getChecksByFederatedGraphName.js';
 import { getOperationOverrides } from './check/getOperationOverrides.js';
+import { isGitHubAppInstalled } from './check/isGitHubAppInstalled.js';
 import { removeOperationIgnoreAllOverride } from './check/removeOperationIgnoreAllOverride.js';
 import { removeOperationOverrides } from './check/removeOperationOverrides.js';
 import { toggleChangeOverridesForAllOperations } from './check/toggleChangeOverridesForAllOperations.js';
 import { createContract } from './contract/createContract.js';
 import { updateContract } from './contract/updateContract.js';
-import { createDiscussion } from './discussion/createDiscussion.js';
-import { deleteDiscussionComment } from './discussion/deleteDiscussionComment.js';
-import { getAllDiscussions } from './discussion/getAllDiscussions.js';
-import { getDiscussion } from './discussion/getDiscussion.js';
-import { getDiscussionSchemas } from './discussion/getDiscussionSchemas.js';
-import { replyToDiscussion } from './discussion/replyToDiscussion.js';
-import { setDiscussionResolution } from './discussion/setDiscussionResolution.js';
-import { updateDiscussionComment } from './discussion/updateDiscussionComment.js';
-import { getChangelogBySchemaVersion } from './schema-version/getChangelogBySchemaVersion.js';
-import { getSdlBySchemaVersion } from './schema-version/getSdlBySchemaVersion.js';
-import { isGitHubAppInstalled } from './check/isGitHubAppInstalled.js';
-import { migrateFromApollo } from './federated-graph/migrateFromApollo.js';
 import { createFeatureFlag } from './feature-flag/createFeatureFlag.js';
 import { deleteFeatureFlag } from './feature-flag/deleteFeatureFlag.js';
 import { enableFeatureFlag } from './feature-flag/enableFeatureFlag.js';
@@ -61,12 +55,15 @@ import { deleteRouterToken } from './federated-graph/deleteRouterToken.js';
 import { generateRouterToken } from './federated-graph/generateRouterToken.js';
 import { getCompositionDetails } from './federated-graph/getCompositionDetails.js';
 import { getCompositions } from './federated-graph/getCompositions.js';
+import { getFederatedGraphById } from './federated-graph/getFederatedGraphById.js';
+import { getFederatedGraphByName } from './federated-graph/getFederatedGraphByName.js';
 import { getFederatedGraphChangelog } from './federated-graph/getFederatedGraphChangelog.js';
 import { getFederatedGraphSDLByName } from './federated-graph/getFederatedGraphSDLByName.js';
 import { getFederatedGraphs } from './federated-graph/getFederatedGraphs.js';
 import { getFederatedGraphsBySubgraphLabels } from './federated-graph/getFederatedGraphsBySubgraphLabels.js';
 import { getRouterTokens } from './federated-graph/getRouterTokens.js';
 import { getRouters } from './federated-graph/getRouters.js';
+import { migrateFromApollo } from './federated-graph/migrateFromApollo.js';
 import { moveFederatedGraph } from './federated-graph/moveFederatedGraph.js';
 import { updateFederatedGraph } from './federated-graph/updateFederatedGraph.js';
 import { configureNamespaceGraphPruningConfig } from './linting/configureNamespaceGraphPruningConfig.js';
@@ -75,6 +72,8 @@ import { enableGraphPruning } from './linting/enableGraphPruning.js';
 import { enableLintingForTheNamespace } from './linting/enableLintingForTheNamespace.js';
 import { getNamespaceGraphPruningConfig } from './linting/getNamespaceGraphPruningConfig.js';
 import { getNamespaceLintConfig } from './linting/getNamespaceLintConfig.js';
+import { getNamespaceChecksConfig } from './check/getNamespaceChecksConfig.js';
+import { updateNamespaceChecksConfig } from './check/updateNamespaceChecksConfig.js';
 import { createMonograph } from './monograph/createMonograph.js';
 import { deleteMonograph } from './monograph/deleteMonograph.js';
 import { migrateMonograph } from './monograph/migrateMonograph.js';
@@ -83,6 +82,7 @@ import { publishMonograph } from './monograph/publishMonograph.js';
 import { updateMonograph } from './monograph/updateMonograph.js';
 import { createNamespace } from './namespace/createNamespace.js';
 import { deleteNamespace } from './namespace/deleteNamespace.js';
+import { getNamespace } from './namespace/getNamespace.js';
 import { getNamespaces } from './namespace/getNamespaces.js';
 import { renameNamespace } from './namespace/renameNamespace.js';
 import { createIntegration } from './notification/createIntegration.js';
@@ -99,6 +99,7 @@ import { updateIntegrationConfig } from './notification/updateIntegrationConfig.
 import { updateOrganizationWebhookConfig } from './notification/updateOrganizationWebhookConfig.js';
 import { createOrganization } from './organization/createOrganization.js';
 import { deleteOrganization } from './organization/deleteOrganization.js';
+import { restoreOrganization } from './organization/restoreOrganization.js';
 import { getAuditLogs } from './organization/getAuditLogs.js';
 import { getOrganizationMembers } from './organization/getOrganizationMembers.js';
 import { getPendingOrganizationMembers } from './organization/getPendingOrganizationMembers.js';
@@ -110,9 +111,17 @@ import { whoAmI } from './organization/whoAmI.js';
 import { getClients } from './persisted-operation/getClients.js';
 import { getPersistedOperations } from './persisted-operation/getPersistedOperations.js';
 import { publishPersistedOperations } from './persisted-operation/publishPersistedOperations.js';
+import { createPlaygroundScript } from './playground/createPlaygroundScript.js';
+import { deletePlaygroundScript } from './playground/deletePlaygroundScript.js';
+import { getPlaygroundScripts } from './playground/getPlaygroundScripts.js';
+import { updatePlaygroundScript } from './playground/updatePlaygroundScript.js';
+import { listRouterCompatibilityVersions } from './router/listRouterCompatibilityVersions.js';
+import { getChangelogBySchemaVersion } from './schema-version/getChangelogBySchemaVersion.js';
+import { getSdlBySchemaVersion } from './schema-version/getSdlBySchemaVersion.js';
 import { createOIDCProvider } from './sso/createOIDCProvider.js';
 import { deleteOIDCProvider } from './sso/deleteOIDCProvider.js';
 import { getOIDCProvider } from './sso/getOIDCProvider.js';
+import { updateIDPMappers } from './sso/updateIDPMappers.js';
 import { addReadme } from './subgraph/addReadme.js';
 import { addSubgraphMember } from './subgraph/addSubgraphMember.js';
 import { checkSubgraphSchema } from './subgraph/checkSubgraphSchema.js';
@@ -120,6 +129,8 @@ import { createFederatedSubgraph } from './subgraph/createFederatedSubgraph.js';
 import { deleteFederatedSubgraph } from './subgraph/deleteFederatedSubgraph.js';
 import { fixSubgraphSchema } from './subgraph/fixSubgraphSchema.js';
 import { getLatestSubgraphSDL } from './subgraph/getLatestSubgraphSDL.js';
+import { getSubgraphById } from './subgraph/getSubgraphById.js';
+import { getSubgraphByName } from './subgraph/getSubgraphByName.js';
 import { getSubgraphMembers } from './subgraph/getSubgraphMembers.js';
 import { getSubgraphSDLFromLatestComposition } from './subgraph/getSubgraphSDLFromLatestComposition.js';
 import { getSubgraphs } from './subgraph/getSubgraphs.js';
@@ -136,16 +147,9 @@ import { inviteUser } from './user/inviteUser.js';
 import { removeInvitation } from './user/removeInvitation.js';
 import { removeOrganizationMember } from './user/removeOrganizationMember.js';
 import { updateOrgMemberRole } from './user/updateOrgMemberRole.js';
-import { updateIDPMappers } from './sso/updateIDPMappers.js';
-import { createPlaygroundScript } from './playground/createPlaygroundScript.js';
-import { deletePlaygroundScript } from './playground/deletePlaygroundScript.js';
-import { getPlaygroundScripts } from './playground/getPlaygroundScripts.js';
-import { updatePlaygroundScript } from './playground/updatePlaygroundScript.js';
-import { getFederatedGraphByName } from './federated-graph/getFederatedGraphByName.js';
-import { getSubgraphByName } from './subgraph/getSubgraphByName.js';
-import { getNamespace } from './namespace/getNamespace.js';
-import { getSubgraphById } from './subgraph/getSubgraphById.js';
-import { getFederatedGraphById } from './federated-graph/getFederatedGraphById.js';
+import { deleteCacheWarmerOperation } from './cache-warmer/deleteCacheWarmerOperation.js';
+import { setGraphRouterCompatibilityVersion } from './graph/setGraphRouterCompatibilityVersion.js';
+import { getOrganizationBySlug } from './organization/getOrganizationBySlug.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -345,6 +349,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return deleteOrganization(opts, req, ctx);
     },
 
+    restoreOrganization: (req, ctx) => {
+      return restoreOrganization(opts, req, ctx);
+    },
+
     leaveOrganization: (req, ctx) => {
       return leaveOrganization(opts, req, ctx);
     },
@@ -419,6 +427,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     configureNamespaceGraphPruningConfig: (req, ctx) => {
       return configureNamespaceGraphPruningConfig(opts, req, ctx);
+    },
+
+    pushCacheWarmerOperation: (req, ctx) => {
+      return pushCacheWarmerOperation(opts, req, ctx);
+    },
+
+    deleteCacheWarmerOperation: (req, ctx) => {
+      return deleteCacheWarmerOperation(opts, req, ctx);
     },
 
     /*
@@ -498,6 +514,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     isMemberLimitReached: (req, ctx) => {
       return isMemberLimitReached(opts, req, ctx);
+    },
+
+    getOrganizationBySlug(req, ctx) {
+      return getOrganizationBySlug(opts, req, ctx);
     },
 
     getOrganizationMembers: (req, ctx) => {
@@ -622,38 +642,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return createBillingPortalSession(opts, req, ctx);
     },
 
-    createDiscussion: (req, ctx) => {
-      return createDiscussion(opts, req, ctx);
-    },
-
-    replyToDiscussion: (req, ctx) => {
-      return replyToDiscussion(opts, req, ctx);
-    },
-
-    getAllDiscussions: (req, ctx) => {
-      return getAllDiscussions(opts, req, ctx);
-    },
-
-    updateDiscussionComment: (req, ctx) => {
-      return updateDiscussionComment(opts, req, ctx);
-    },
-
-    deleteDiscussionComment: (req, ctx) => {
-      return deleteDiscussionComment(opts, req, ctx);
-    },
-
-    getDiscussion: (req, ctx) => {
-      return getDiscussion(opts, req, ctx);
-    },
-
-    getDiscussionSchemas: (req, ctx) => {
-      return getDiscussionSchemas(opts, req, ctx);
-    },
-
-    setDiscussionResolution: (req, ctx) => {
-      return setDiscussionResolution(opts, req, ctx);
-    },
-
     getSubgraphMetrics: (req, ctx) => {
       return getSubgraphMetrics(opts, req, ctx);
     },
@@ -664,6 +652,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getNamespaceLintConfig: (req, ctx) => {
       return getNamespaceLintConfig(opts, req, ctx);
+    },
+
+    getNamespaceChecksConfig: (req, ctx) => {
+      return getNamespaceChecksConfig(opts, req, ctx);
+    },
+
+    updateNamespaceChecksConfig: (req, ctx) => {
+      return updateNamespaceChecksConfig(opts, req, ctx);
     },
 
     getNamespaceGraphPruningConfig: (req, ctx) => {
@@ -726,6 +722,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return deletePlaygroundScript(opts, req, ctx);
     },
 
+    getCacheWarmerOperations: (req, ctx) => {
+      return getCacheWarmerOperations(opts, req, ctx);
+    },
+
+    computeCacheWarmerOperations: (req, ctx) => {
+      return computeCacheWarmerOperations(opts, req, ctx);
+    },
+
+    configureCacheWarmer: (req, ctx) => {
+      return configureCacheWarmer(opts, req, ctx);
+    },
+
+    getCacheWarmerConfig: (req, ctx) => {
+      return getCacheWarmerConfig(opts, req, ctx);
+    },
+
     // apis used by the terraform provider
 
     getSubgraphById: (req, ctx) => {
@@ -738,6 +750,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getNamespace: (req, ctx) => {
       return getNamespace(opts, req, ctx);
+    },
+
+    listRouterCompatibilityVersions: () => {
+      return listRouterCompatibilityVersions();
+    },
+
+    setGraphRouterCompatibilityVersion: (req, ctx) => {
+      return setGraphRouterCompatibilityVersion(opts, req, ctx);
     },
   };
 }

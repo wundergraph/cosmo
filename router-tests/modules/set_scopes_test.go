@@ -1,7 +1,14 @@
 package module_test
 
 import (
+	"io"
+	"net/http"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/require"
+	integration "github.com/wundergraph/cosmo/router-tests"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	setScopesModule "github.com/wundergraph/cosmo/router-tests/modules/custom-set-scopes"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -10,11 +17,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/zap"
-	"io"
-	"net/http"
-	"strings"
-	"testing"
-	"time"
 )
 
 const (
@@ -27,10 +29,14 @@ func configureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) 
 	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
-	tokenDecoder, _ := authentication.NewJwksTokenDecoder(zap.NewNop(), authServer.JWKSURL(), time.Second*5)
+	tokenDecoder, _ := authentication.NewJwksTokenDecoder(integration.NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
+		{
+			URL:             authServer.JWKSURL(),
+			RefreshInterval: time.Second * 5,
+		},
+	})
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{
 		Name:         jwksName,
-		URL:          authServer.JWKSURL(),
 		TokenDecoder: tokenDecoder,
 	}
 	authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -59,6 +65,7 @@ func TestCustomModuleSetScopes(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
 				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&module.MyModule{}, &setScopesModule.SetScopesModule{}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
@@ -98,6 +105,7 @@ func TestCustomModuleSetScopes(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
 				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&module.MyModule{}, &setScopesModule.SetScopesModule{}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
@@ -115,7 +123,7 @@ func TestCustomModuleSetScopes(t *testing.T) {
 			require.Equal(t, jwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",0,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",1,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",2,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",3,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",4,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",5,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",6,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",7,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",8,"startDate"]},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",9,"startDate"]}],"data":{"employees":[null,null,null,null,null,null,null,null,null,null]},"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":["read:employee"]}}}`, string(data))
+			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",0,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",1,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",2,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",3,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",4,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",5,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",6,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",7,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",8,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",9,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}],"data":{"employees":[null,null,null,null,null,null,null,null,null,null]},"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":["read:employee"]}}}`, string(data))
 		})
 	})
 }

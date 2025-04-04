@@ -141,6 +141,7 @@ export function updateContract(
         jwtSecret: opts.admissionWebhookJWTSecret,
       },
       labelMatchers: [],
+      chClient: opts.chClient!,
     });
 
     const compositionErrors: PlainMessage<CompositionError>[] = [];
@@ -167,6 +168,7 @@ export function updateContract(
         cdnBaseUrl: opts.cdnBaseUrl,
         webhookJWTSecret: opts.admissionWebhookJWTSecret,
       },
+      chClient: opts.chClient!,
     });
 
     compositionErrors.push(...composition.compositionErrors);
@@ -181,6 +183,7 @@ export function updateContract(
       auditableType: 'federated_graph',
       auditableDisplayName: graph.name,
       actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
       actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       targetNamespaceId: graph.namespaceId,
       targetNamespaceDisplayName: graph.namespace,

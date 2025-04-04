@@ -5,11 +5,6 @@ import {
   DatePickerWithRange,
   DateRangePickerChangeHandler,
 } from "@/components/date-picker-with-range";
-import {
-  CommentCard,
-  NewDiscussion,
-} from "@/components/discussions/discussion";
-import { ThreadSheet } from "@/components/discussions/thread";
 import { EmptyState } from "@/components/empty-state";
 import {
   GraphContext,
@@ -17,13 +12,8 @@ import {
   getGraphLayout,
 } from "@/components/layout/graph-layout";
 import { EmptySchema } from "@/components/schema/empty-schema-state";
-import {
-  SchemaSettings,
-  hideDiscussionsKey,
-  hideResolvedDiscussionsKey,
-} from "@/components/schema/sdl-viewer";
 import { SchemaToolbar } from "@/components/schema/toolbar";
-import { Badge } from "@/components/ui/badge";
+import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   CommandDialog,
@@ -49,10 +39,10 @@ import {
 import { Kbd } from "@/components/ui/kbd";
 import { Loader } from "@/components/ui/loader";
 import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -76,17 +66,20 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { TooltipPortal } from "@radix-ui/react-tooltip";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
-import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useUser } from "@/hooks/use-user";
-import useWindowSize from "@/hooks/use-window-size";
 import { useChartData } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import {
   FieldMatch,
   GraphQLTypeCategory,
+  GraphQLTypeDefinition,
   ParsedGraphQLField,
   TypeMatch,
+  getParsedTypes,
+  extractDirectives,
+  getAuthenticatedTypes,
   getCategoryDescription,
   getCategoryForType,
   getDeprecatedTypes,
@@ -105,21 +98,15 @@ import {
   ChevronUpDownIcon,
   ExclamationTriangleIcon,
   InformationCircleIcon,
+  LockClosedIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import {
-  ArrowRightIcon,
-  CheckCircledIcon,
-  MagnifyingGlassIcon,
-  PlusIcon,
-} from "@radix-ui/react-icons";
+import { MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
-  getAllDiscussions,
   getFederatedGraphSDLByName,
   getFieldUsage,
-  getOrganizationMembers,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { sentenceCase } from "change-case";
 import { CommandLoading, useCommandState } from "cmdk";
@@ -138,7 +125,7 @@ import {
   useState,
 } from "react";
 import { MdOutlineFeaturedPlayList } from "react-icons/md";
-import { PiChat, PiGraphLight } from "react-icons/pi";
+import { PiGraphLight } from "react-icons/pi";
 import { Line, LineChart, ResponsiveContainer } from "recharts";
 import { useDebounce } from "use-debounce";
 
@@ -282,7 +269,11 @@ const Fields = (props: {
 
   const hasArgs = filteredFields.some((f) => !!f.args);
   const hasDetails = filteredFields.some(
-    (f) => !!f.description || !!f.deprecationReason,
+    (f) =>
+      !!f.description ||
+      !!f.deprecationReason ||
+      f.authenticated ||
+      !f.requiresScopes,
   );
   const hasUsage = !(["scalars", "enums"] as GraphQLTypeCategory[]).includes(
     props.category,
@@ -340,6 +331,12 @@ const Fields = (props: {
         >
           {items.map((virtualRow) => {
             const field = filteredFields[virtualRow.index];
+            const fieldHasArgs = !!field.args;
+            const fieldHasDetails =
+              !!field.description ||
+              !!field.deprecationReason ||
+              field.authenticated ||
+              !!field.requiresScopes;
             return (
               <TableRow
                 className="group absolute flex w-full py-1 even:bg-secondary/20 hover:bg-secondary/40"
@@ -371,7 +368,7 @@ const Fields = (props: {
                     {field.type && <TypeLink name={`: ${field.type}`} />}
                   </p>
                 </TableCell>
-                {(hasDetails || hasArgs) && (
+                {(fieldHasDetails || fieldHasArgs) && (
                   <TableCell
                     className={cn(
                       "my-1.5 w-5/12",
@@ -381,27 +378,26 @@ const Fields = (props: {
                     <div
                       className={cn("flex flex-col", {
                         "gap-y-4":
-                          hasDetails && field.args && field.args.length > 0,
+                          fieldHasDetails &&
+                          field.args &&
+                          field.args.length > 0,
                       })}
                     >
                       {(!field.args || field.args?.length === 0) &&
-                        !hasDetails && <span>-</span>}
-                      {hasDetails && (
+                        !fieldHasDetails && <span>-</span>}
+                      {fieldHasDetails && (
                         <div className="flex flex-col gap-y-4">
                           {field.description && (
                             <p className="text-muted-foreground group-hover:text-current">
                               {field.description}
                             </p>
                           )}
-                          {field.deprecationReason && (
-                            <p className="flex flex-col items-start gap-x-1">
-                              <span className="flex items-center gap-x-1 font-semibold">
-                                <ExclamationTriangleIcon className="h-3 w-3 flex-shrink-0" />
-                                Deprecated
-                              </span>{" "}
-                              {field.deprecationReason}
-                            </p>
-                          )}
+                          <DeprecatedBadge reason={field.deprecationReason} />
+                          <AuthenticatedBadge
+                            isType={false}
+                            authenticated={field.authenticated}
+                            requiresScopes={field.requiresScopes}
+                          />
                         </div>
                       )}
                       {field.args && (
@@ -428,22 +424,18 @@ const Fields = (props: {
                                       {arg.name}
                                     </Badge>
                                   </TooltipTrigger>
-                                  <TooltipContent>
-                                    <div className="flex w-96 flex-col gap-y-4">
-                                      {arg.description && (
-                                        <p>{arg.description}</p>
-                                      )}
-                                      {arg.deprecationReason && (
-                                        <p className="flex flex-col items-start gap-x-1">
-                                          <span className="flex items-center gap-x-1 font-semibold">
-                                            <ExclamationTriangleIcon className="h-3 w-3 flex-shrink-0" />
-                                            Deprecated
-                                          </span>{" "}
-                                          {arg.deprecationReason}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </TooltipContent>
+                                  <TooltipPortal>
+                                    <TooltipContent>
+                                      <div className="flex w-96 flex-col gap-y-4">
+                                        {arg.description && (
+                                          <p>{arg.description}</p>
+                                        )}
+                                        <DeprecatedBadge
+                                          reason={arg.deprecationReason}
+                                        />
+                                      </div>
+                                    </TooltipContent>
+                                  </TooltipPortal>
                                 </Tooltip>
 
                                 <TypeLink name={`: ${arg.type}`} />
@@ -489,175 +481,38 @@ const Fields = (props: {
   );
 };
 
-const TypeDiscussions = ({
-  name,
-  startLineNo,
-  endLineNo,
-}: {
-  name: string;
-  startLineNo: number;
-  endLineNo: number;
-}) => {
-  const router = useRouter();
-  const graphData = useContext(GraphContext);
-  const { schemaVersionId } = useContext(ExplorerContext);
-
-  const [hideResolvedDiscussions] = useLocalStorage(
-    hideResolvedDiscussionsKey,
-    false,
-  );
-
-  const [newDiscussionLine, setNewDiscussionLine] = useState(-1);
-
-  const applyParams = useApplyParams();
-
-  const { data, isLoading, error, refetch } = useQuery(
-    getAllDiscussions,
-    {
-      targetId: graphData?.graph?.targetId,
-      schemaVersionId,
-    },
-    { enabled: !!graphData?.graph?.targetId },
-  );
-
-  const { data: membersData } = useQuery(getOrganizationMembers);
-
-  if (isLoading) return <Loader fullscreen />;
-
-  if (error || data?.response?.code !== EnumStatusCode.OK) {
-    return (
-      <EmptyState
-        icon={<ExclamationTriangleIcon />}
-        title={`Could not retrieve discussions for ${name}`}
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
-        actions={<Button onClick={() => refetch()}>Retry</Button>}
-      />
-    );
-  }
-
-  const discussions = data?.discussions
-    .filter(
-      (d) => d.referenceLine >= startLineNo && d.referenceLine <= endLineNo,
-    )
-    .filter((ld) => !(ld.isResolved && hideResolvedDiscussions));
-
-  return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between text-lg font-semibold">
-        Discussions{" "}
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setNewDiscussionLine(startLineNo)}
-        >
-          <PlusIcon className="mr-2" />
-          New
-        </Button>
-      </div>
-      {discussions.length === 0 && newDiscussionLine === -1 && (
-        <EmptyState
-          icon={<PiChat />}
-          title="No discussions found"
-          className="my-24 h-auto"
-          description={`You can start a new one for type ${name}`}
-        />
-      )}
-      {startLineNo &&
-        graphData?.graph?.targetId &&
-        newDiscussionLine !== -1 && (
-          <div className="mt-4">
-            <NewDiscussion
-              className="w-auto px-0"
-              lineNo={startLineNo}
-              versionId={schemaVersionId}
-              targetId={graphData.graph.targetId}
-              setNewDiscussionLine={setNewDiscussionLine}
-              placeholder={`Write something to discuss about \`${name}\``}
-              refetch={() => refetch()}
-            />
-          </div>
-        )}
-      <div className="scrollbar-custom mt-4 flex h-full flex-col gap-y-4 overflow-y-auto">
-        {discussions.map((ld) => {
-          return (
-            <div
-              key={ld.id}
-              className="flex h-auto w-full max-w-full flex-col rounded-md border pb-2 pt-4"
-            >
-              <CommentCard
-                isOpeningComment
-                discussionId={ld.id}
-                comment={ld.openingComment!}
-                author={membersData?.members.find(
-                  (m) => m.userID === ld.openingComment?.createdBy,
-                )}
-                onUpdate={() => refetch()}
-                onDelete={() => refetch()}
-              />
-              <Separator className="mb-2 mt-4" />
-
-              <div className="mt-auto flex flex-wrap items-center gap-4 px-4">
-                {ld.isResolved && (
-                  <Badge variant="outline" className="gap-2 py-1.5">
-                    <CheckCircledIcon className="h-4 w-4 text-success" />
-                    <span>Resolved</span>
-                  </Badge>
-                )}
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="ml-auto w-max"
-                  onClick={() => {
-                    applyParams({
-                      discussionId: ld.id,
-                    });
-                  }}
-                >
-                  View thread <ArrowRightIcon className="ml-2" />
-                </Button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
 const Type = (props: {
   name: string;
   category: GraphQLTypeCategory;
   description: string;
+  authenticated?: boolean;
+  requiresScopes?: string[][];
   interfaces?: string[];
   fields?: ParsedGraphQLField[];
   startLineNo?: number;
   endLineNo?: number;
 }) => {
-  const [hideDiscussions] = useLocalStorage(hideDiscussionsKey, false);
-
   const router = useRouter();
+  const isAuthenticatedType = props.authenticated || !!props.requiresScopes?.length;
 
-  const { isMobile } = useWindowSize();
-
-  const { schemaVersionId } = useContext(ExplorerContext);
-
-  const showDiscussions =
-    !!props.startLineNo && !!props.endLineNo && !isMobile && !hideDiscussions;
-
-  const typeContent = (
-    <div
-      className={cn(
-        "flex h-full flex-col",
-        showDiscussions && "scrollbar-custom overflow-auto",
-      )}
-    >
+  return (
+    <div className="flex h-full flex-col">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col">
           <div className="flex items-center gap-x-4">
             <div className="flex flex-wrap items-center gap-x-2 text-lg font-semibold tracking-tight">
-              <h3>{props.name}</h3>
+              <h3 className="flex items-center justify-start gap-x-1">
+                {isAuthenticatedType && (
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <LockClosedIcon className="size-4" />
+                    </TooltipTrigger>
+                    <TooltipContent>Authenticated</TooltipContent>
+                  </Tooltip>
+                )}
+
+                {props.name}
+              </h3>
               {props.interfaces && props.interfaces.length > 0 && (
                 <div className="font-normal text-muted-foreground">
                   implements
@@ -687,6 +542,12 @@ const Type = (props: {
                 {props.category}
               </Link>
             </Badge>
+
+            {props.requiresScopes?.length && (
+              <AuthenticatedScopes isType scopes={props.requiresScopes} asChild>
+                <button type="button" className={badgeVariants({ className: "w-max" })}>View scopes</button>
+              </AuthenticatedScopes>
+            )}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             {props.description || getRootDescription(props.name) || (
@@ -732,46 +593,6 @@ const Type = (props: {
         )}
       </div>
     </div>
-  );
-
-  if (!showDiscussions) {
-    return typeContent;
-  }
-
-  return (
-    <ResizablePanelGroup direction="horizontal" className="flex max-w-full">
-      <ResizablePanel
-        className={cn(showDiscussions && "pr-4")}
-        minSize={35}
-        defaultSize={isMobile ? 1000 : 65}
-      >
-        {typeContent}
-      </ResizablePanel>
-      {showDiscussions && (
-        <>
-          <ResizableHandle withHandle />
-          <ResizablePanel className="pl-4" minSize={35} defaultSize={35}>
-            {router.query.schemaType === "client" ? (
-              <EmptyState
-                icon={<PiChat />}
-                title="Cannot start discussions here"
-                className="my-24 h-auto"
-                description={`Discussions can only be started on the router schema`}
-              />
-            ) : (
-              <>
-                <TypeDiscussions
-                  name={props.name}
-                  startLineNo={props.startLineNo!}
-                  endLineNo={props.endLineNo!}
-                />
-                <ThreadSheet schemaVersionId={schemaVersionId} />
-              </>
-            )}
-          </ResizablePanel>
-        </>
-      )}
-    </ResizablePanelGroup>
   );
 };
 
@@ -851,6 +672,7 @@ const TypeWrapper = ({
               >
                 {items.map((virtualRow) => {
                   const l = list[virtualRow.index];
+                  const directives = extractDirectives(l.astNode);
                   return (
                     <TableRow
                       className="group absolute flex w-full py-1 even:bg-secondary/20 hover:bg-secondary/40"
@@ -866,6 +688,11 @@ const TypeWrapper = ({
                       </TableCell>
                       <TableCell className="my-1.5 w-5/12 text-muted-foreground group-hover:text-current">
                         {l.description || "-"}
+                        <AuthenticatedBadge
+                          isType
+                          authenticated={directives.authenticated}
+                          requiresScopes={directives.requiresScopes}
+                        />
                       </TableCell>
                       <TableCell className="w-3/12 flex-shrink-0 text-right align-top">
                         <Button
@@ -908,12 +735,107 @@ const TypeWrapper = ({
         name={type.name}
         category={type.category}
         description={type.description}
+        authenticated={type.authenticated}
+        requiresScopes={type.requiresScopes}
         interfaces={type.interfaces}
         fields={type.fields}
         startLineNo={type.loc?.startToken.line}
         endLineNo={type.loc?.endToken.line}
       />
     </div>
+  );
+};
+
+const DeprecatedBadge = ({ reason }: { reason: string | undefined | null }) => {
+  if (reason == null) {
+    return null;
+  }
+
+  return (
+    <p className="flex flex-col items-start gap-x-1">
+      <span className="flex items-center gap-x-1 font-semibold">
+        <ExclamationTriangleIcon className="h-3 w-3 flex-shrink-0" />
+        Deprecated
+      </span>
+      {reason}
+    </p>
+  );
+};
+
+const AuthenticatedBadge = ({ isType, authenticated, requiresScopes }: {
+  isType: boolean;
+  authenticated?: boolean;
+  requiresScopes?: string[][];
+}) => {
+  if (!authenticated && !requiresScopes?.length) {
+    return null;
+  }
+
+  return (
+    <p className="flex flex-col items-start gap-x-1">
+      <span className="flex items-center gap-1 font-semibold">
+        <LockClosedIcon className="h-3 w-3 flex-shrink-0" />
+        Authenticated
+      </span>
+      {!!requiresScopes?.length && <AuthenticatedScopes isType={isType} scopes={requiresScopes} />}
+    </p>
+  );
+};
+
+const AuthenticatedScopes = ({
+  isType,
+  scopes,
+  asChild = true,
+  children,
+}: {
+  isType: boolean;
+  scopes: string[][];
+  asChild?: boolean;
+  children?: React.ReactNode;
+}) => {
+  return (
+    <Popover>
+      <PopoverTrigger asChild={asChild}>
+        {children
+          ? children
+          : (
+            <Button variant="link" size="sm" className="h-auto p-0">
+              View scopes
+            </Button>
+          )}
+      </PopoverTrigger>
+      <PopoverContent className="px-0">
+        <div className="mb-3 border-b border-border px-4 pb-3">
+          The following scope(s) are required to access this {isType ? "type" : "field"}:
+        </div>
+
+        {scopes
+          .filter((s) => s.length > 0)
+          .map((s, i) => (
+            <div key={`scope-list-${i}`}>
+              {i > 0 && (
+                <div className="relative flex items-center py-2 text-xs">
+                  <div className="flex-grow border-t border-border"></div>
+                  <span className="mx-4 flex-shrink text-muted-foreground">
+                    OR
+                  </span>
+                  <div className="flex-grow border-t border-border"></div>
+                </div>
+              )}
+              <div className="px-4 text-sm">
+                {s.length === 1 ? (
+                  s[0]
+                ) : (
+                  <>
+                    {s.slice(0, -1).join(", ")}{" "}
+                    <span className="font-semibold">AND</span> {s[s.length - 1]}
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+      </PopoverContent>
+    </Popover>
   );
 };
 
@@ -931,10 +853,12 @@ const SearchDescription = ({
   }
 
   const [category, index, _] = activeValue?.split("-");
-  const type = results.types[Number(index)]?.type;
+  const matchingType = results.types[Number(index)];
+  const type = matchingType?.type;
 
   const [fieldIndex] = activeValue?.split(".")?.map((v) => v.trim());
   const field = results.fields[Number(fieldIndex)]?.field;
+  const parsedField = results.fields[Number(fieldIndex)]?.parsed;
 
   return (
     <div className="hidden w-64 flex-shrink-0 flex-col p-4 md:flex">
@@ -946,6 +870,11 @@ const SearchDescription = ({
               <span className="italic">No description provided</span>
             )}
           </p>
+          <AuthenticatedBadge
+            isType
+            authenticated={matchingType?.authenticated}
+            requiresScopes={matchingType?.requiresScopes}
+          />
         </>
       ) : field ? (
         <div>
@@ -955,14 +884,13 @@ const SearchDescription = ({
                 <span className="italic">No description provided</span>
               )}
             </p>
-            {field.deprecationReason && (
-              <p className="flex flex-col items-start gap-x-1">
-                <span className="flex items-center gap-x-1 font-semibold">
-                  <ExclamationTriangleIcon className="h-3 w-3 flex-shrink-0" />
-                  Deprecated
-                </span>{" "}
-                {field.deprecationReason}
-              </p>
+            <DeprecatedBadge reason={field.deprecationReason} />
+            {parsedField && (
+              <AuthenticatedBadge
+                isType={false}
+                authenticated={parsedField.authenticated}
+                requiresScopes={parsedField.requiresScopes}
+              />
             )}
           </div>
         </div>
@@ -1262,13 +1190,20 @@ export const GraphSelector = () => {
   }
 };
 
-const Toolbar = () => {
+const Toolbar = ({
+  typeCounts,
+  deprecatedTypesCount,
+  authenticatedTypesCount,
+}: {
+  typeCounts: Record<string, number> | undefined;
+  deprecatedTypesCount: number;
+  authenticatedTypesCount: number;
+}) => {
   const router = useRouter();
   const selectedCategory = (router.query.category as string) ?? "query";
   const [open, setOpen] = useState(false);
 
   const { ast } = useContext(ExplorerContext);
-  const typeCounts = getTypeCounts(ast);
 
   const analyticsRetention = useFeatureLimit("analytics-retention", 7);
 
@@ -1368,7 +1303,15 @@ const Toolbar = () => {
               <span>Deprecated</span>
               {typeCounts && ast && (
                 <Badge variant="secondary" className="ml-2">
-                  {getDeprecatedTypes(ast).length}
+                  {deprecatedTypesCount}
+                </Badge>
+              )}
+            </SelectItem>
+            <SelectItem value="authenticated">
+              <span>Authentication</span>
+              {typeCounts && ast && (
+                <Badge variant="secondary" className="ml-2">
+                  {authenticatedTypesCount}
                 </Badge>
               )}
             </SelectItem>
@@ -1383,35 +1326,40 @@ const Toolbar = () => {
           calendarDaysLimit={analyticsRetention}
         />
       )}
-      <SchemaSettings />
     </SchemaToolbar>
   );
 };
 
-const DeprecatedTypes = () => {
-  const { ast } = useContext(ExplorerContext);
-
-  const types = getDeprecatedTypes(ast);
-
+const TypesList = ({
+  types,
+  emptyTitle,
+  emptyDescription,
+}: {
+  types: GraphQLTypeDefinition[];
+  emptyTitle: string;
+  emptyDescription: string;
+}) => {
   if (types.length === 0) {
     return (
       <EmptyState
         icon={<InformationCircleIcon />}
-        title="No deprecated fields found"
-        description="You can view all deprecated fields or fields with deprecated arguments here"
+        title={emptyTitle}
+        description={emptyDescription}
       />
     );
   }
 
   return (
-    <div className="flex h-full flex-col gap-y-12 divide-y">
+    <div className="flex flex-col gap-y-12 divide-y">
       {types.map((type) => {
         return (
-          <div key={type.name} className="h-2/3 pt-12 first:pt-2">
+          <div key={type.name} className="pt-12 first:pt-2">
             <Type
               name={type.name}
               category={type.category}
               description={type.description}
+              authenticated={type.authenticated}
+              requiresScopes={type.requiresScopes}
               interfaces={type.interfaces}
               fields={type.fields}
               startLineNo={type.loc?.startToken.line}
@@ -1421,6 +1369,36 @@ const DeprecatedTypes = () => {
         );
       })}
     </div>
+  );
+};
+
+const DeprecatedTypes = ({ types }: { types: GraphQLTypeDefinition[] }) => {
+  return (
+    <TypesList
+      types={types}
+      emptyTitle="No deprecated fields found"
+      emptyDescription="You can view all deprecated fields or fields with deprecated arguments here"
+    />
+  );
+};
+
+const AuthenticatedTypes = ({
+  types,
+  isRouterSchema,
+}: {
+  types: GraphQLTypeDefinition[];
+  isRouterSchema: boolean;
+}) => {
+  return (
+    <TypesList
+      types={types}
+      emptyTitle="No authenticated fields found"
+      emptyDescription={
+        isRouterSchema
+          ? "You can view all authenticated fields here"
+          : "To view authenticated fields, switch to the router schema"
+      }
+    />
   );
 };
 
@@ -1445,16 +1423,18 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
     },
   );
 
+  const schemaType = router.query.schemaType as string;
   const schema =
-    (router.query.schemaType as string) === "router"
-      ? data?.sdl
-      : data?.clientSchema || data?.sdl;
+    schemaType === "router" ? data?.sdl : data?.clientSchema || data?.sdl;
 
-  const { ast, isParsing } = useParseSchema(schema);
+  const { ast, doc, isParsing } = useParseSchema(schema);
+  const parsedTypes = useMemo(() => (doc ? getParsedTypes(doc) : []), [doc]);
+
+  const typeCounts = useMemo(() => (ast ? getTypeCounts(ast) : undefined), [ast],);
+  const [deprecatedTypesCount, deprecatedTypes] = useMemo(() => getDeprecatedTypes(parsedTypes), [parsedTypes]);
+  const [authenticatedTypesCount, authenticatedTypes] = useMemo(() => getAuthenticatedTypes(parsedTypes), [parsedTypes]);
 
   const isLoadingAST = isLoading || isParsing;
-
-  const typeCounts = ast ? getTypeCounts(ast) : undefined;
 
   let title = "Schema";
   let breadcrumbs = [];
@@ -1497,7 +1477,13 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
         title={title}
         breadcrumbs={breadcrumbs}
         subtitle="Explore schema and field level metrics of your federated graph"
-        toolbar={<Toolbar />}
+        toolbar={
+          <Toolbar
+            typeCounts={typeCounts}
+            deprecatedTypesCount={deprecatedTypesCount}
+            authenticatedTypesCount={authenticatedTypesCount}
+          />
+        }
         noPadding
       >
         <div className="flex h-full flex-row">
@@ -1600,7 +1586,37 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                       variant="secondary"
                       className="ml-auto bg-accent/50 px-1.5"
                     >
-                      {getDeprecatedTypes(ast).length}
+                      {deprecatedTypesCount}
+                    </Badge>
+                  )}
+                </Link>
+              </Button>
+
+              <Button
+                asChild
+                variant="ghost"
+                className={cn("justify-start px-3", {
+                  "bg-accent text-accent-foreground":
+                    selectedCategory === "authenticated",
+                })}
+              >
+                <Link
+                  href={{
+                    pathname: `${router.pathname}`,
+                    query: {
+                      ...router.query,
+                      category: "authenticated",
+                      typename: undefined,
+                    },
+                  }}
+                >
+                  <span>Authentication</span>
+                  {typeCounts && ast && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-auto bg-accent/50 px-1.5"
+                    >
+                      {authenticatedTypesCount}
                     </Badge>
                   )}
                 </Link>
@@ -1620,10 +1636,19 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
                 actions={<Button onClick={() => refetch()}>Retry</Button>}
               />
             )}
-            {ast && selectedCategory === "deprecated" && <DeprecatedTypes />}
-            {ast && selectedCategory !== "deprecated" && (
-              <TypeWrapper typename={typename} category={category} />
+            {ast && selectedCategory === "deprecated" && (
+              <DeprecatedTypes types={deprecatedTypes} />
             )}
+            {ast && selectedCategory === "authenticated" && (
+              <AuthenticatedTypes
+                types={authenticatedTypes}
+                isRouterSchema={schemaType === "router"}
+              />
+            )}
+            {ast &&
+              !["deprecated", "authenticated"].includes(selectedCategory) && (
+                <TypeWrapper typename={typename} category={category} />
+              )}
             <FieldUsageSheet />
           </div>
         </div>

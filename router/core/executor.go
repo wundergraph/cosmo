@@ -48,13 +48,14 @@ type Executor struct {
 }
 
 type ExecutorBuildOptions struct {
-	EngineConfig             *nodev1.EngineConfiguration
-	Subgraphs                []*nodev1.Subgraph
-	RouterEngineConfig       *RouterEngineConfiguration
-	PubSubProviders          *EnginePubSubProviders
-	Reporter                 resolve.Reporter
-	ApolloCompatibilityFlags config.ApolloCompatibilityFlags
-	HeartbeatInterval        time.Duration
+	EngineConfig                   *nodev1.EngineConfiguration
+	Subgraphs                      []*nodev1.Subgraph
+	RouterEngineConfig             *RouterEngineConfiguration
+	PubSubProviders                *EnginePubSubProviders
+	Reporter                       resolve.Reporter
+	ApolloCompatibilityFlags       config.ApolloCompatibilityFlags
+	ApolloRouterCompatibilityFlags config.ApolloRouterCompatibilityFlags
+	HeartbeatInterval              time.Duration
 }
 
 func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *ExecutorBuildOptions) (*Executor, error) {
@@ -78,6 +79,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		AllowedSubgraphErrorFields:         opts.RouterEngineConfig.SubgraphErrorPropagation.AllowedFields,
 		MaxRecyclableParserSize:            opts.RouterEngineConfig.Execution.ResolverMaxRecyclableParserSize,
 		MultipartSubHeartbeatInterval:      opts.HeartbeatInterval,
+		MaxSubscriptionFetchTimeout:        opts.RouterEngineConfig.Execution.SubscriptionFetchTimeout,
 	}
 
 	if opts.ApolloCompatibilityFlags.ValueCompletion.Enabled {
@@ -94,6 +96,10 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 	}
 	if opts.ApolloCompatibilityFlags.ReplaceInvalidVarErrors.Enabled {
 		options.ResolvableOptions.ApolloCompatibilityReplaceInvalidVarError = true
+	}
+
+	if opts.ApolloRouterCompatibilityFlags.SubrequestHTTPError.Enabled {
+		options.ResolvableOptions.ApolloRouterCompatibilitySubrequestHTTPError = true
 	}
 
 	switch opts.RouterEngineConfig.SubgraphErrorPropagation.Mode {
@@ -238,7 +244,6 @@ func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([
 // Only general options like TLS, SASL, etc. are configured here. Specific options like topics, etc. are
 // configured in the KafkaPubSub implementation.
 func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
-
 	opts := []kgo.Opt{
 		kgo.SeedBrokers(eventSource.Brokers...),
 		// Ensure proper timeouts are set
@@ -270,7 +275,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 
 	loader := NewLoader(b.trackUsageInfo, NewDefaultFactoryResolver(
 		ctx,
-		NewTransport(b.transportOptions),
+		b.transportOptions,
 		b.transport,
 		b.logger,
 		routerEngineCfg.Execution.EnableSingleFlight,

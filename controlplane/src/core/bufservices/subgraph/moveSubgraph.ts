@@ -116,6 +116,7 @@ export function moveSubgraph(
               cdnBaseUrl: opts.cdnBaseUrl,
               jwtSecret: opts.admissionWebhookJWTSecret,
             },
+            opts.chClient!,
           );
 
         await auditLogRepo.addAuditLog({
@@ -126,6 +127,7 @@ export function moveSubgraph(
           auditableType: 'subgraph',
           auditableDisplayName: subgraph.name,
           actorDisplayName: authContext.userDisplayName,
+          apiKeyName: authContext.apiKeyName,
           actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
           targetNamespaceId: newNamespace.id,
           targetNamespaceDisplayName: newNamespace.name,

@@ -25,6 +25,7 @@ import {
   users,
 } from '../../db/schema.js';
 import {
+  FeatureSubgraphDTO,
   FederatedGraphDTO,
   GetChecksResponse,
   Label,
@@ -37,7 +38,8 @@ import {
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
-import { hasLabelsChanged, normalizeLabels } from '../util.js';
+import { getFederatedGraphRouterCompatibilityVersion, hasLabelsChanged, normalizeLabels } from '../util.js';
+import { ClickHouseClient } from '../clickhouse/index.js';
 import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
@@ -211,6 +213,7 @@ export class SubgraphRepository {
       webhookJWTSecret: string;
       cdnBaseUrl: string;
     },
+    chClient: ClickHouseClient,
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
     compositionWarnings: PlainMessage<CompositionWarning>[];
@@ -393,16 +396,28 @@ export class SubgraphRepository {
             });
             // If an enabled feature flag includes the feature graph that has just been published, push it to the array
             if (enabledFeatureFlags.length > 0) {
-              updatedFederatedGraphs.push(federatedGraphDTO);
+              const exists = updatedFederatedGraphs.find((g) => g.name === federatedGraphDTO.name);
+              if (!exists) {
+                updatedFederatedGraphs.push(federatedGraphDTO);
+              }
             }
           }
         }
         // Generate a new router config for non-feature graphs upon routing/subscription urls and labels changes
       } else if (subgraphChanged || labelChanged) {
-        // find all federated graphs that use this subgraph. We need evaluate them again.
-        updatedFederatedGraphs.push(
-          ...(await fedGraphRepo.bySubgraphLabels({ labels: subgraph.labels, namespaceId: data.namespaceId })),
-        );
+        // find all federated graphs that use this subgraph (with old labels). We need evaluate them again.
+        // When labels change,  graphs which matched with old labels may no longer match with new ones
+        const affectedGraphs = await fedGraphRepo.bySubgraphLabels({
+          labels: subgraph.labels,
+          namespaceId: data.namespaceId,
+        });
+
+        for (const graph of affectedGraphs) {
+          const exists = updatedFederatedGraphs.find((g) => g.name === graph.name);
+          if (!exists) {
+            updatedFederatedGraphs.push(graph);
+          }
+        }
       }
 
       // update the readme of the subgraph
@@ -423,6 +438,7 @@ export class SubgraphRepository {
         blobStorage,
         admissionConfig,
         actorId: data.updatedBy,
+        chClient,
       });
 
       compositionErrors.push(...cErrors);
@@ -453,6 +469,7 @@ export class SubgraphRepository {
       jwtSecret: string;
       cdnBaseUrl: string;
     },
+    chClient: ClickHouseClient,
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
     updatedFederatedGraphs: FederatedGraphDTO[];
@@ -503,6 +520,7 @@ export class SubgraphRepository {
           cdnBaseUrl: admissionConfig.cdnBaseUrl,
         },
         actorId: data.updatedBy,
+        chClient,
       });
 
       return { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings };
@@ -655,13 +673,17 @@ export class SubgraphRepository {
   }
 
   /**
-   * Returns all subgraphs that are part of the federated graph.
+   * When the parameter `subgraphs` is provided as an array of ids, those the subgraphs corresponding to the
+   * provided identifiers and belonging to the federated graph will be returned; otherwise, all subgraphs
+   * that are part of the federated graph are returned.
+   *
    * Even if they have not been published yet. Optionally, you can set the `published` flag to true
    * to only return subgraphs that have been published with a version.
    */
   public async listByFederatedGraph(data: {
     federatedGraphTargetId: string;
     published?: boolean;
+    includeSubgraphs?: string[];
   }): Promise<SubgraphDTO[]> {
     const target = await this.db.query.targets.findFirst({
       where: and(
@@ -689,7 +711,12 @@ export class SubgraphRepository {
         lastUpdatedAt: schema.schemaVersion.createdAt,
       })
       .from(schema.targets)
-      .innerJoin(schema.subgraphs, eq(schema.subgraphs.targetId, schema.targets.id))
+      .innerJoin(
+        schema.subgraphs,
+        Array.isArray(data.includeSubgraphs) && data.includeSubgraphs.length > 0
+          ? and(eq(schema.subgraphs.targetId, schema.targets.id), inArray(schema.subgraphs.id, data.includeSubgraphs))
+          : eq(schema.subgraphs.targetId, schema.targets.id),
+      )
       [data.published ? 'innerJoin' : 'leftJoin'](
         schema.schemaVersion,
         eq(schema.subgraphs.schemaVersionId, schema.schemaVersion.id),
@@ -807,18 +834,21 @@ export class SubgraphRepository {
     offset,
     startDate,
     endDate,
+    includeSubgraphs,
   }: {
     federatedGraphTargetId: string;
     limit: number;
     offset: number;
     startDate: string;
     endDate: string;
+    includeSubgraphs: string[];
   }): Promise<GetChecksResponse> {
-    const subgraphs = await this.listByFederatedGraph({
+    const selectedSubgraphs = await this.listByFederatedGraph({
       federatedGraphTargetId,
+      includeSubgraphs,
     });
 
-    if (subgraphs.length === 0) {
+    if (selectedSubgraphs.length === 0) {
       return {
         checks: [],
         checksCount: 0,
@@ -835,20 +865,20 @@ export class SubgraphRepository {
       where: and(
         inArray(
           schemaChecks.targetId,
-          subgraphs.map(({ targetId }) => targetId),
+          selectedSubgraphs.map(({ targetId }) => targetId),
         ),
         gt(schemaChecks.createdAt, new Date(startDate)),
         lt(schemaChecks.createdAt, new Date(endDate)),
       ),
     });
 
-    const checksCount = await this.getChecksCount({ federatedGraphTargetId, startDate, endDate });
+    const checksCount = await this.getChecksCount({ federatedGraphTargetId, startDate, endDate, includeSubgraphs });
 
     return {
       checks: checkList.map((c) => ({
         id: c.id,
         targetID: c.targetId,
-        subgraphName: subgraphs.find((s) => s.targetId === c.targetId)?.name ?? '',
+        subgraphName: selectedSubgraphs.find((s) => s.targetId === c.targetId)?.name ?? '',
         timestamp: c.createdAt.toISOString(),
         isBreaking: c.hasBreakingChanges ?? false,
         isComposable: c.isComposable ?? false,
@@ -877,13 +907,16 @@ export class SubgraphRepository {
     federatedGraphTargetId,
     startDate,
     endDate,
+    includeSubgraphs,
   }: {
     federatedGraphTargetId: string;
     startDate?: string;
     endDate?: string;
+    includeSubgraphs?: string[];
   }): Promise<number> {
     const subgraphs = await this.listByFederatedGraph({
       federatedGraphTargetId,
+      includeSubgraphs,
     });
 
     if (subgraphs.length === 0) {
@@ -1362,7 +1395,17 @@ export class SubgraphRepository {
     namespaceId: string;
     graphPruningConfigs: SchemaGraphPruningDTO[];
   }) {
-    const schemaChanges = await getDiffBetweenGraphs(schemaSDL, newSchemaSDL);
+    const subgraph = await this.byId(subgraphId);
+    if (!subgraph) {
+      throw new Error(`Subgraph not found.`);
+    }
+    const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
+    const federatedGraphs = await fedGraphRepo.bySubgraphLabels({ labels: subgraph.labels, namespaceId });
+    const schemaChanges = await getDiffBetweenGraphs(
+      schemaSDL,
+      newSchemaSDL,
+      getFederatedGraphRouterCompatibilityVersion(federatedGraphs),
+    );
     if (schemaChanges.kind === 'failure') {
       this.logger.error(`Failed to get diff between schemas for subgraph ${subgraphId} while handling grace periods`);
     } else {

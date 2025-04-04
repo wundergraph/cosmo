@@ -4,6 +4,157 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.108.1](https://github.com/wundergraph/cosmo/compare/studio@0.108.0...studio@0.108.1) (2025-04-02)
+
+**Note:** Version bump only for package studio
+
+# [0.108.0](https://github.com/wundergraph/cosmo/compare/studio@0.107.0...studio@0.108.0) (2025-04-01)
+
+### Bug Fixes
+
+* update the docs link of cache warmer ([#1732](https://github.com/wundergraph/cosmo/issues/1732)) ([7a5a160](https://github.com/wundergraph/cosmo/commit/7a5a160d133db6ca44beead7cb6c320458184d47)) (@JivusAyrus)
+
+### Features
+
+* remove discussions ([#1735](https://github.com/wundergraph/cosmo/issues/1735)) ([cbb6117](https://github.com/wundergraph/cosmo/commit/cbb61171505fd3fa67f501583d92002b0c807241)) (@thisisnithin)
+
+# [0.107.0](https://github.com/wundergraph/cosmo/compare/studio@0.106.0...studio@0.107.0) (2025-03-28)
+
+### Features
+
+* align the selected checks filter with the filter ([#1724](https://github.com/wundergraph/cosmo/issues/1724)) ([b35b92a](https://github.com/wundergraph/cosmo/commit/b35b92af3c900d48e86b4638d290ad8e7df42d19)) (@wilsonrivera)
+* synchronize hovering all graphs in analytics pages ([#1730](https://github.com/wundergraph/cosmo/issues/1730)) ([8a7aa1c](https://github.com/wundergraph/cosmo/commit/8a7aa1cc0835ca2e927e012dcf3e68e5097509ba)) (@wilsonrivera)
+
+# [0.106.0](https://github.com/wundergraph/cosmo/compare/studio@0.105.0...studio@0.106.0) (2025-03-25)
+
+### Features
+
+* allow to filter checks by subgraph name ([#1716](https://github.com/wundergraph/cosmo/issues/1716)) ([ae69dcd](https://github.com/wundergraph/cosmo/commit/ae69dcde94611196f7f8b47702e25cdcdfa41a19)) (@wilsonrivera)
+* introduce `p50`, `p90` and `p99` latency metrics for graphs and subgraphs ([#1710](https://github.com/wundergraph/cosmo/issues/1710)) ([1c55ed5](https://github.com/wundergraph/cosmo/commit/1c55ed51fe17be7371633a176c356e581ed44c62)) (@wilsonrivera)
+
+# [0.105.0](https://github.com/wundergraph/cosmo/compare/studio@0.104.2...studio@0.105.0) (2025-03-20)
+
+### Features
+
+* implement checks configuration ([#1688](https://github.com/wundergraph/cosmo/issues/1688)) ([2cab283](https://github.com/wundergraph/cosmo/commit/2cab283b2cdeda7f943250d460150472eb464d22)) (@wilsonrivera)
+
+## [0.104.2](https://github.com/wundergraph/cosmo/compare/studio@0.104.1...studio@0.104.2) (2025-03-19)
+
+**Note:** Version bump only for package studio
+
+## [0.104.1](https://github.com/wundergraph/cosmo/compare/studio@0.104.0...studio@0.104.1) (2025-03-19)
+
+### Bug Fixes
+
+* upgrade `next` dependency to solve vulnerability ([#1698](https://github.com/wundergraph/cosmo/issues/1698)) ([46cf756](https://github.com/wundergraph/cosmo/commit/46cf75601ade8083cf112d7de61de313c88ab7e6)) (@wilsonrivera)
+
+# [0.104.0](https://github.com/wundergraph/cosmo/compare/studio@0.103.0...studio@0.104.0) (2025-03-12)
+
+### Features
+
+* display used api key name on the audit log table ([#1674](https://github.com/wundergraph/cosmo/issues/1674)) ([55ffbdd](https://github.com/wundergraph/cosmo/commit/55ffbdd7ac0ae10106de4bf3c073d650c0537a52)) (@wilsonrivera)
+
+# [0.103.0](https://github.com/wundergraph/cosmo/compare/studio@0.102.0...studio@0.103.0) (2025-03-11)
+
+### Features
+
+* add option to select all and prefix search option ([#1655](https://github.com/wundergraph/cosmo/issues/1655)) ([b8917b6](https://github.com/wundergraph/cosmo/commit/b8917b6219456bcadfab2cd198a2100ed31a30f8)) (@JivusAyrus)
+
+# [0.102.0](https://github.com/wundergraph/cosmo/compare/studio@0.101.0...studio@0.102.0) (2025-03-05)
+
+### Features
+
+* **studio:** implement authenticated field visual indicator ([#1633](https://github.com/wundergraph/cosmo/issues/1633)) ([e219e92](https://github.com/wundergraph/cosmo/commit/e219e92e1fd15774f4560da901400a19cb03c5f9)) (@wilsonrivera)
+
+# [0.101.0](https://github.com/wundergraph/cosmo/compare/studio@0.100.4...studio@0.101.0) (2025-02-27)
+
+### Features
+
+* add option to set the number of operations for cache warming and implement FILO policy ([#1607](https://github.com/wundergraph/cosmo/issues/1607)) ([6867225](https://github.com/wundergraph/cosmo/commit/6867225dfcacf5e11b01394224dd9df5e9168dc8)) (@JivusAyrus)
+* improve the cache warmer operations manifest for persisted operations ([#1599](https://github.com/wundergraph/cosmo/issues/1599)) ([2579a1c](https://github.com/wundergraph/cosmo/commit/2579a1c7d9c4618efba37e340d27dff9edd6136d)) (@JivusAyrus)
+
+## [0.100.4](https://github.com/wundergraph/cosmo/compare/studio@0.100.3...studio@0.100.4) (2025-02-26)
+
+### Bug Fixes
+
+* schema parsing ([#1638](https://github.com/wundergraph/cosmo/issues/1638)) ([a2f8b65](https://github.com/wundergraph/cosmo/commit/a2f8b659f87551a2f48df9eb498633252caf56d1)) (@thisisnithin)
+
+## [0.100.3](https://github.com/wundergraph/cosmo/compare/studio@0.100.2...studio@0.100.3) (2025-02-26)
+
+**Note:** Version bump only for package studio
+
+## [0.100.2](https://github.com/wundergraph/cosmo/compare/studio@0.100.1...studio@0.100.2) (2025-02-21)
+
+**Note:** Version bump only for package studio
+
+## [0.100.1](https://github.com/wundergraph/cosmo/compare/studio@0.100.0...studio@0.100.1) (2025-02-17)
+
+**Note:** Version bump only for package studio
+
+# [0.100.0](https://github.com/wundergraph/cosmo/compare/studio@0.99.5...studio@0.100.0) (2025-02-12)
+
+### Features
+
+* add option to delete cache operation ([#1586](https://github.com/wundergraph/cosmo/issues/1586)) ([2946139](https://github.com/wundergraph/cosmo/commit/29461397e784eec0880546807df51dbfd8f2918c)) (@JivusAyrus)
+
+## [0.99.5](https://github.com/wundergraph/cosmo/compare/studio@0.99.4...studio@0.99.5) (2025-02-05)
+
+**Note:** Version bump only for package studio
+
+## [0.99.4](https://github.com/wundergraph/cosmo/compare/studio@0.99.3...studio@0.99.4) (2025-02-05)
+
+### Bug Fixes
+
+* update vulnerable packages ([#1560](https://github.com/wundergraph/cosmo/issues/1560)) ([f97e30f](https://github.com/wundergraph/cosmo/commit/f97e30f48a8cdab7b26d6cede9235e61fd1dec23)) (@JivusAyrus)
+
+## [0.99.3](https://github.com/wundergraph/cosmo/compare/studio@0.99.2...studio@0.99.3) (2025-01-31)
+
+### Bug Fixes
+
+* change the defaults of breaking-change-retention ([#1551](https://github.com/wundergraph/cosmo/issues/1551)) ([38df3ee](https://github.com/wundergraph/cosmo/commit/38df3ee3bc2370ea4c729978545dcc6d79f5be28)) (@JivusAyrus)
+
+## [0.99.2](https://github.com/wundergraph/cosmo/compare/studio@0.99.1...studio@0.99.2) (2025-01-29)
+
+### Bug Fixes
+
+* add copy button to subgraph routing url ([#1543](https://github.com/wundergraph/cosmo/issues/1543)) ([d48255d](https://github.com/wundergraph/cosmo/commit/d48255d8edcc4907cc5730636b3cda43dc582db8)) (@thisisnithin)
+* subgraphs search functionality ([#1540](https://github.com/wundergraph/cosmo/issues/1540)) ([3bd7b36](https://github.com/wundergraph/cosmo/commit/3bd7b36fa0a5db912afbe127c2616542fc68399d)) (@JivusAyrus)
+* trim the inputs of group mappers ([#1541](https://github.com/wundergraph/cosmo/issues/1541)) ([18a6025](https://github.com/wundergraph/cosmo/commit/18a6025a1e352ae6adb77ec2d231f209e20c4833)) (@JivusAyrus)
+
+## [0.99.1](https://github.com/wundergraph/cosmo/compare/studio@0.99.0...studio@0.99.1) (2025-01-24)
+
+**Note:** Version bump only for package studio
+
+# [0.99.0](https://github.com/wundergraph/cosmo/compare/studio@0.98.1...studio@0.99.0) (2025-01-23)
+
+### Features
+
+* improve cache warmer ([#1530](https://github.com/wundergraph/cosmo/issues/1530)) ([2e3f0d2](https://github.com/wundergraph/cosmo/commit/2e3f0d2f05f0ecd8c2a39fd1588c5610af22eaed)) (@StarpTech)
+
+## [0.98.1](https://github.com/wundergraph/cosmo/compare/studio@0.98.0...studio@0.98.1) (2025-01-19)
+
+### Bug Fixes
+
+* **cache operation:** swallow cache errors and other improvements ([#1515](https://github.com/wundergraph/cosmo/issues/1515)) ([d959e2c](https://github.com/wundergraph/cosmo/commit/d959e2c9fb492cc7c73d89f61c31f3bad2ac5706)) (@StarpTech)
+
+# [0.98.0](https://github.com/wundergraph/cosmo/compare/studio@0.97.0...studio@0.98.0) (2025-01-17)
+
+### Features
+
+* cache warmer ([#1501](https://github.com/wundergraph/cosmo/issues/1501)) ([948edd2](https://github.com/wundergraph/cosmo/commit/948edd23e6d0ee968c91edd1a9e9943c3405ac2d)) (@JivusAyrus)
+
+# [0.97.0](https://github.com/wundergraph/cosmo/compare/studio@0.96.4...studio@0.97.0) (2025-01-08)
+
+### Features
+
+* expose type data and record subgraphs for enums ([#1495](https://github.com/wundergraph/cosmo/issues/1495)) ([9e13f28](https://github.com/wundergraph/cosmo/commit/9e13f28c0a90b0d2f335c9b31f35e728c4a1799c)) (@thisisnithin)
+
+## [0.96.4](https://github.com/wundergraph/cosmo/compare/studio@0.96.3...studio@0.96.4) (2025-01-06)
+
+### Bug Fixes
+
+* add regex validation to graph names and routing urls ([#1450](https://github.com/wundergraph/cosmo/issues/1450)) ([e5b1c8f](https://github.com/wundergraph/cosmo/commit/e5b1c8fb33a41fc808067bb6495a43f74b60b314)) (@JivusAyrus)
+
 ## [0.96.3](https://github.com/wundergraph/cosmo/compare/studio@0.96.2...studio@0.96.3) (2024-12-20)
 
 ### Bug Fixes

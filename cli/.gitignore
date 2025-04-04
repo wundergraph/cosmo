@@ -1,4 +1,7 @@
 dist
+wgc
+out
 node_modules
 .env
 .eslintcache
+e2e/config.json

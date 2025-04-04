@@ -1,3 +1,4 @@
+import { buildASTSchema } from "@wundergraph/composition";
 import { noCase } from "change-case";
 import {
   GraphQLArgument,
@@ -13,13 +14,20 @@ import {
   GraphQLUnionType,
   Kind,
   Location,
-  buildASTSchema,
+  FieldDefinitionNode,
+  TypeNode,
+  TypeDefinitionNode,
+  DocumentNode,
+  ASTNode,
   isInputObjectType,
   isInterfaceType,
   isObjectType,
   isScalarType,
   parse,
-} from "graphql";
+  visit,
+  getArgumentValues,
+  GraphQLDeprecatedDirective,
+} from 'graphql';
 import babelPlugin from "prettier/plugins/babel";
 import estreePlugin from "prettier/plugins/estree";
 import graphQLPlugin from "prettier/plugins/graphql";
@@ -50,6 +58,8 @@ export type ParsedGraphQLField = {
   name: string;
   description?: string;
   deprecationReason?: string;
+  authenticated?: boolean;
+  requiresScopes?: string[][];
   defaultValue?: any;
   type?: string;
   args?: Array<{
@@ -57,7 +67,7 @@ export type ParsedGraphQLField = {
     description: string;
     defaultValue: any;
     type: string;
-    deprecationReason: string;
+    deprecationReason?: string;
     loc?: Location;
   }>;
   loc?: Location;
@@ -66,6 +76,8 @@ export type ParsedGraphQLField = {
 export type GraphQLTypeDefinition = {
   category: GraphQLTypeCategory;
   name: string;
+  authenticated?: boolean;
+  requiresScopes?: string[][];
   description: string;
   interfaces?: string[];
   fields?: ParsedGraphQLField[];
@@ -81,9 +93,12 @@ export const mapGraphQLType = (
     | GraphQLScalarType
     | GraphQLUnionType,
 ): GraphQLTypeDefinition => {
+  const directives = extractDirectives(graphqlType.astNode);
   const common = {
     name: graphqlType.name,
     description: graphqlType.description || "",
+    authenticated: directives.authenticated,
+    requiresScopes: directives.requiresScopes,
     loc: graphqlType.astNode?.loc,
   };
 
@@ -97,21 +112,7 @@ export const mapGraphQLType = (
         graphqlType instanceof GraphQLObjectType ? "objects" : "interfaces",
       interfaces:
         graphqlType.getInterfaces?.().map((iface) => iface.name) || [],
-      fields: Object.values(graphqlType.getFields()).map((field) => ({
-        name: field.name,
-        description: field.description || "",
-        deprecationReason: field.deprecationReason || "",
-        type: field.type.toString(),
-        args: field.args.map((arg) => ({
-          name: arg.name,
-          description: arg.description || "",
-          defaultValue: arg.defaultValue,
-          type: arg.type.toString(),
-          deprecationReason: arg.deprecationReason || "",
-          loc: arg.astNode?.loc,
-        })),
-        loc: field.astNode?.loc,
-      })),
+      fields: Object.values(graphqlType.getFields()).map(field => maybeParseField(field.astNode)!).filter(Boolean),
     };
   }
 
@@ -441,7 +442,7 @@ export const getRootDescription = (name: string) => {
   return getCategoryDescription(noCase(name) as GraphQLTypeCategory);
 };
 
-export const parseSchema = (schema?: string) => {
+export const parseSchema = (schema?: string): { ast: GraphQLSchema, doc: DocumentNode } | null => {
   if (!schema) return null;
 
   try {
@@ -450,10 +451,12 @@ export const parseSchema = (schema?: string) => {
     const ast = buildASTSchema(doc, {
       assumeValid: true,
       assumeValidSDL: true,
+      addInvalidExtensionOrphans: true,
     });
 
-    return ast;
-  } catch {
+    return { ast, doc };
+  } catch (e) {
+    console.error(e);
     return null;
   }
 };
@@ -470,21 +473,22 @@ export const formatAndParseSchema = async (schema?: string) => {
     });
 
     return parseSchema(res);
-  } catch {
+  } catch (e) {
+    console.error(e);
     return null;
   }
 };
 
 export const useParseSchema = (schema?: string) => {
   const [isParsing, setIsParsing] = useState(true);
-  const [ast, setAst] = useState<GraphQLSchema | null>(null);
+  const [astAndDoc, setAstAndDoc] = useState<{ ast: GraphQLSchema | null, doc: DocumentNode | null }>({ ast: null, doc: null });
 
   useEffect(() => {
     let t: NodeJS.Timeout;
     setIsParsing(true);
 
     formatAndParseSchema(schema).then((res) => {
-      setAst(res);
+      setAstAndDoc(res || { ast: null, doc: null });
 
       t = setTimeout(() => {
         setIsParsing(false);
@@ -496,7 +500,7 @@ export const useParseSchema = (schema?: string) => {
     };
   }, [schema]);
 
-  return { ast, isParsing };
+  return { ...astAndDoc, isParsing };
 };
 
 export const getGraphQLTypeAtLineNumber = (
@@ -546,117 +550,275 @@ export const getGraphQLTypeAtLineNumber = (
   return null;
 };
 
-export const getDeprecatedTypes = (
-  astSchema: GraphQLSchema,
-): GraphQLTypeDefinition[] => {
-  const deprecatedTypes: GraphQLTypeDefinition[] = [];
-
-  const checkType = (type: any) => {
-    const common = {
-      name: type.name,
-      description: type.description || "",
-      loc: type.astNode?.loc,
-    };
-
-    const deprecatedFields: ParsedGraphQLField[] = [];
-
-    let category: GraphQLTypeCategory | null = null;
-
-    if (
-      type instanceof GraphQLObjectType ||
-      type instanceof GraphQLInterfaceType
-    ) {
-      const fields = Object.values(type.getFields());
-
-      for (const field of fields) {
-        if (
-          field.deprecationReason ||
-          field.args.some((arg) => arg.deprecationReason)
-        ) {
-          deprecatedFields.push({
-            name: field.name,
-            description: field.description || "",
-            deprecationReason: field.deprecationReason || "",
-            type: field.type.toString(),
-            args: field.args.map((arg) => ({
-              name: arg.name,
-              description: arg.description || "",
-              defaultValue: arg.defaultValue,
-              type: arg.type.toString(),
-              deprecationReason: arg.deprecationReason || "",
-              loc: arg.astNode?.loc,
-            })),
-            loc: field.astNode?.loc,
-          });
-        }
-      }
-
-      category = type instanceof GraphQLObjectType ? "objects" : "interfaces";
-    }
-
-    if (type instanceof GraphQLInputObjectType) {
-      const fields = Object.values(type.getFields());
-
-      for (const field of fields) {
-        if (field.deprecationReason) {
-          deprecatedFields.push({
-            name: field.name,
-            description: field.description || "",
-            deprecationReason: field.deprecationReason || "",
-            defaultValue: field.defaultValue,
-            type: field.type.toString(),
-            loc: field.astNode?.loc,
-          });
-        }
-      }
-
-      category = "inputs";
-    }
-
-    if (type instanceof GraphQLEnumType) {
-      const values = type.getValues();
-
-      for (const value of values) {
-        if (value.deprecationReason) {
-          deprecatedFields.push({
-            name: value.name,
-            description: value.description || "",
-            deprecationReason: value.deprecationReason || "",
-            loc: value.astNode?.loc,
-          });
-        }
-      }
-
-      category = "enums";
-    }
-
-    if (deprecatedFields.length > 0 && category) {
-      deprecatedTypes.push({
-        ...common,
-        category,
-        fields: deprecatedFields,
-      });
-    }
-  };
-
-  const allTypes = Object.values(astSchema.getTypeMap()).filter(
-    (type) => !type.name.startsWith("__"),
-  );
-
-  for (const type of allTypes) {
-    checkType(type);
+const maybeParseField = (field: ASTNode | undefined | null): ParsedGraphQLField | null => {
+  if (field?.kind !== Kind.FIELD_DEFINITION) {
+    return null;
   }
 
-  return deprecatedTypes;
+  return parseField(field);
+}
+
+const getTypeName = (ast: TypeNode): string => {
+  switch (ast.kind) {
+    case Kind.NAMED_TYPE:
+      return ast.name.value;
+    case Kind.LIST_TYPE:
+      return `[${getTypeName(ast.type)}]`;
+    case Kind.NON_NULL_TYPE:
+      return `${getTypeName(ast.type)}!`;
+  }
+}
+
+const parseField = (
+  field: FieldDefinitionNode,
+  directives?: ExtractedDirectives
+): ParsedGraphQLField => {
+  directives ??= extractDirectives(field);
+
+  return {
+    name: field.name.value,
+    description: field.description?.value || "",
+    deprecationReason: directives.deprecationReason,
+    authenticated: directives.authenticated,
+    requiresScopes: directives.requiresScopes,
+    type: getTypeName(field.type),
+    defaultValue: "",
+    args: field.arguments?.map((arg) => ({
+      name: arg.name.value,
+      description: arg.description?.value || "",
+      defaultValue: arg.defaultValue,
+      type: getTypeName(arg.type),
+      deprecationReason: extractDirectives(arg).deprecationReason,
+      loc: arg.loc,
+    })) ?? [],
+    loc: field.loc,
+  };
+}
+
+type ExtractedDirectives = {
+  authenticated: boolean;
+  requiresScopes?: string[][];
+  deprecationReason?: string;
+  tags: string[];
+}
+
+export const extractDirectives = (node: ASTNode | undefined | null): ExtractedDirectives => {
+  const result: ExtractedDirectives = {
+    authenticated: false,
+    requiresScopes: undefined,
+    deprecationReason: undefined,
+    tags: [],
+  };
+
+  if (
+    (
+      node?.kind !== Kind.OBJECT_TYPE_DEFINITION &&
+      node?.kind !== Kind.INTERFACE_TYPE_DEFINITION &&
+      node?.kind !== Kind.ENUM_TYPE_DEFINITION &&
+      node?.kind !== Kind.SCALAR_TYPE_DEFINITION &&
+      node?.kind !== Kind.UNION_TYPE_DEFINITION &&
+      node?.kind !== Kind.INPUT_OBJECT_TYPE_DEFINITION &&
+      node?.kind !== Kind.FIELD_DEFINITION &&
+      node?.kind !== Kind.ENUM_VALUE_DEFINITION &&
+      node?.kind !== Kind.INPUT_VALUE_DEFINITION
+    ) ||
+    !node?.directives?.length
+  ) {
+    return result;
+  }
+
+  for (const directive of node.directives) {
+    switch (directive.name.value) {
+      case "deprecated":
+        const deprecatedDirValues = getArgumentValues(GraphQLDeprecatedDirective, directive);
+        result.deprecationReason = (deprecatedDirValues.reason ?? "") as string;
+        break;
+      case "authenticated":
+        result.authenticated = true;
+        break;
+      case "requiresScopes":
+        const scopesArg = directive.arguments?.[0];
+        if (scopesArg?.name.value === "scopes" && scopesArg?.value.kind === Kind.LIST) {
+          result.requiresScopes = scopesArg.value.values
+            .filter((value) => value.kind === Kind.LIST)
+            .map((value) => value.values)
+            .map((value) => value.filter((sv) => sv.kind === Kind.STRING).map((sv) => sv.value));
+        }
+
+        break;
+      case "tags":
+        const nameArg = directive.arguments?.[0];
+        if (nameArg?.name.value === "name" && nameArg?.value.kind === Kind.STRING) {
+          result.tags.push(nameArg.value.value);
+        }
+
+        break;
+    }
+  }
+
+  return result;
+}
+
+export const getParsedTypes = (document: DocumentNode): GraphQLTypeDefinition[] => {
+  let currentType: TypeDefinitionNode | undefined;
+  const types: Record<string, GraphQLTypeDefinition> = {};
+
+  const getTypeCategory = (node: ASTNode): GraphQLTypeCategory | undefined => {
+    switch (node.kind) {
+      case Kind.OBJECT_TYPE_DEFINITION:
+        return 'objects';
+      case Kind.INTERFACE_TYPE_DEFINITION:
+        return 'interfaces';
+      case Kind.ENUM_TYPE_DEFINITION:
+        return 'enums';
+      case Kind.SCALAR_TYPE_DEFINITION:
+        return 'scalars';
+      case Kind.UNION_TYPE_DEFINITION:
+        return 'unions';
+      case Kind.INPUT_OBJECT_TYPE_DEFINITION:
+        return 'inputs';
+    }
+
+    return undefined;
+  }
+
+  const ensureTypeExists = (node: TypeDefinitionNode) => {
+    const typeName = node.name.value;
+    if (typeName in types) {
+      return;
+    }
+
+    let interfaces: string[] | undefined = undefined;
+    if (
+      node.kind === Kind.OBJECT_TYPE_DEFINITION ||
+      node.kind === Kind.INTERFACE_TYPE_DEFINITION
+    ) {
+      interfaces = node.interfaces?.map((iface) => iface.name.value);
+    }
+
+    types[typeName] = {
+      name: typeName,
+      description: node.description?.value || "",
+      category: getTypeCategory(node)!,
+      fields: [],
+      interfaces,
+      loc: node.loc,
+    };
+  }
+
+  const processType = (node: TypeDefinitionNode) => {
+    currentType = node;
+
+    const directives = extractDirectives(node);
+    if (!directives.authenticated && !directives.requiresScopes) {
+      return undefined;
+    }
+
+    ensureTypeExists(node);
+
+    const typeName = node.name.value;
+    types[typeName].authenticated = directives.authenticated;
+    types[typeName].requiresScopes = directives.requiresScopes;
+  };
+
+  visit(document, {
+    ObjectTypeDefinition: processType,
+    InterfaceTypeDefinition: processType,
+    EnumTypeDefinition: processType,
+    ScalarTypeDefinition: processType,
+    UnionTypeDefinition: processType,
+    InputObjectTypeDefinition: processType,
+    FieldDefinition(node, parent, path, ancestors) {
+      if (!currentType || node.name.value.startsWith("__")) {
+        return false;
+      }
+
+      const typeName = currentType.name.value;
+      const directives = extractDirectives(node);
+
+      ensureTypeExists(currentType);
+      types[typeName].fields!.push(parseField(node, directives));
+    },
+    EnumValueDefinition(node, parent, path, ancestors) {
+      if (!currentType) {
+        return false;
+      }
+
+      const typeName = currentType.name.value;
+      const directives = extractDirectives(node);
+
+      ensureTypeExists(currentType);
+      types[typeName].fields!.push({
+        name: node.name.value,
+        description: node.description?.value || "",
+        deprecationReason: directives.deprecationReason,
+        loc: node.loc,
+      });
+    },
+  });
+
+  return Object.values(types);
+}
+
+export const getDeprecatedTypes = (types: GraphQLTypeDefinition[]) => {
+  let count = 0;
+  const result: GraphQLTypeDefinition[] = [];
+
+  for (const typeDefinition of types) {
+    const fields = typeDefinition.fields?.filter((field) =>
+      field.deprecationReason != null ||
+      field.args?.some((arg) => arg.deprecationReason != null)
+    );
+
+    if (!fields?.length) {
+      continue;
+    }
+
+    count += fields.length;
+    result.push({ ...typeDefinition, fields });
+  }
+
+  return [count, result] as const;
+}
+
+export const getAuthenticatedTypes = (types: GraphQLTypeDefinition[]) => {
+  let count = 0;
+  const result: GraphQLTypeDefinition[] = [];
+
+  for (const typeDefinition of types) {
+    if (typeDefinition.authenticated || !!typeDefinition.requiresScopes?.length) {
+      count++;
+      result.push(typeDefinition);
+      continue;
+    }
+
+    const fields = typeDefinition.fields?.filter(
+      (field) => field.authenticated || !!field.requiresScopes?.length
+    );
+
+    if (!fields?.length) {
+      continue;
+    }
+
+    count += fields.length;
+    result.push({ ...typeDefinition, fields });
+  }
+
+  return [count, result] as const;
 };
 
 export type FieldMatch = {
   type: GraphQLNamedType;
   field: GraphQLField<unknown, unknown> | GraphQLInputField;
+  parsed: ParsedGraphQLField | null;
   argument?: GraphQLArgument;
 };
 
-export type TypeMatch = { type: GraphQLNamedType };
+export type TypeMatch = {
+  type: GraphQLNamedType;
+  authenticated?: boolean;
+  requiresScopes?: string[][];
+};
 
 export const getAllFields = (schema: GraphQLSchema): FieldMatch[] => {
   const fields: FieldMatch[] = [];
@@ -682,6 +844,7 @@ export const getAllFields = (schema: GraphQLSchema): FieldMatch[] => {
       fields.push({
         type,
         field,
+        parsed: maybeParseField(field.astNode),
       });
     }
   }
@@ -712,7 +875,7 @@ export const searchSchema = (searchValue: string, schema: GraphQLSchema) => {
   }
 
   const typeMap = schema.getTypeMap();
-  let typeNames = Object.keys(typeMap);
+  let typeNames = Object.keys(typeMap).filter((typeName) => !typeName.startsWith("__"));
 
   for (const typeName of typeNames) {
     if (matches.types.length + matches.fields.length >= 100) {
@@ -721,7 +884,12 @@ export const searchSchema = (searchValue: string, schema: GraphQLSchema) => {
 
     const type = typeMap[typeName];
     if (isMatch(typeName, searchValue)) {
-      matches.types.push({ type });
+      const directives = extractDirectives(type.astNode);
+      matches.types.push({
+        type,
+        authenticated: directives.authenticated,
+        requiresScopes: directives.requiresScopes,
+      });
     }
 
     if (
@@ -734,6 +902,10 @@ export const searchSchema = (searchValue: string, schema: GraphQLSchema) => {
 
     const fields = type.getFields();
     for (const fieldName in fields) {
+      if (fieldName.startsWith("__")) {
+        continue;
+      }
+
       const field = fields[fieldName];
       let matchingArgs: GraphQLArgument[] | undefined;
 
@@ -752,8 +924,8 @@ export const searchSchema = (searchValue: string, schema: GraphQLSchema) => {
 
       matches["fields"].push(
         ...(matchingArgs
-          ? matchingArgs.map((argument) => ({ type, field, argument }))
-          : [{ type, field }]),
+          ? matchingArgs.map((argument) => ({ type, field, parsed: maybeParseField(field.astNode), argument }))
+          : [{ type, field, parsed: maybeParseField(field.astNode) }]),
       );
     }
   }

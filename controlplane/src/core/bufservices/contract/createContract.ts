@@ -16,7 +16,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, isValidSchemaTags } from '../../util.js';
+import { enrichLogger, getLogger, handleError, isValidGraphName, isValidSchemaTags } from '../../util.js';
 
 export function createContract(
   opts: RouterOptions,
@@ -79,6 +79,18 @@ export function createContract(
       req.includeTags = [...new Set(req.includeTags)];
       if (!isValidSchemaTags(req.includeTags)) {
         throw new PublicError(EnumStatusCode.ERR, `Provided include tags are invalid`);
+      }
+
+      if (!isValidGraphName(req.name)) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_INVALID_NAME,
+            details: `The name of the contract is invalid. Name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between and must be between 1 and 100 characters in length.`,
+          },
+          compositionErrors: [],
+          deploymentErrors: [],
+          compositionWarnings: [],
+        };
       }
 
       const count = await fedGraphRepo.count();
@@ -161,6 +173,7 @@ export function createContract(
         auditableType: 'federated_graph',
         auditableDisplayName: contractGraph.name,
         actorDisplayName: authContext.userDisplayName,
+        apiKeyName: authContext.apiKeyName,
         actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
         targetNamespaceId: contractGraph.namespaceId,
         targetNamespaceDisplayName: contractGraph.namespace,
@@ -178,6 +191,7 @@ export function createContract(
           cdnBaseUrl: opts.cdnBaseUrl,
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
+        chClient: opts.chClient!,
       });
 
       compositionErrors.push(...composition.compositionErrors);

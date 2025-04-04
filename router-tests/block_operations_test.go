@@ -125,7 +125,7 @@ func TestBlockOperations(t *testing.T) {
 		t.Run("should block operation by scope expression condition", func(t *testing.T) {
 			t.Parallel()
 
-			authenticators, authServer := configureAuth(t)
+			authenticators, authServer := ConfigureAuth(t)
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithAccessController(core.NewAccessController(authenticators, false)),
@@ -278,7 +278,7 @@ func TestBlockOperations(t *testing.T) {
 		t.Run("should block subscriptions by scope match expression", func(t *testing.T) {
 			t.Parallel()
 
-			authenticators, authServer := configureAuth(t)
+			authenticators, authServer := ConfigureAuth(t)
 
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
@@ -370,7 +370,7 @@ func TestBlockOperations(t *testing.T) {
 		t.Run("should block subscriptions by scope match expression and from initial payload enabled", func(t *testing.T) {
 			t.Parallel()
 
-			authenticators, authServer := configureAuth(t)
+			authenticators, authServer := ConfigureAuth(t)
 
 			testenv.Run(t, &testenv.Config{
 				ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
@@ -532,6 +532,22 @@ func TestBlockOperations(t *testing.T) {
 				require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json")
 				require.Equal(t, `{"errors":[{"message":"non-persisted operation is blocked"}]}`, res.Body)
 			})
+		})
+
+		t.Run("should not be possible to access unexported fields", func(t *testing.T) {
+			t.Parallel()
+			err := testenv.RunWithError(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.BlockNonPersistedOperations = config.BlockOperationConfiguration{
+						Enabled:   true,
+						Condition: "request.header.Header.Set('graphql-client-name')",
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				t.Fatal("this should not be possible")
+			})
+
+			require.ErrorContains(t, err, "line 1, column 15: type expr.RequestHeaders has no field Header")
 		})
 	})
 }

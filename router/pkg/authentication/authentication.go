@@ -22,7 +22,6 @@ type Provider interface {
 type Authenticator interface {
 	Name() string
 	Authenticate(ctx context.Context, p Provider) (Claims, error)
-	Close()
 }
 
 type Authentication interface {
@@ -109,4 +108,8 @@ func Authenticate(ctx context.Context, authenticators []Authenticator, p Provide
 	// If no authentication failed error will be nil here,
 	// even if to claims were found.
 	return nil, joinedErrors
+}
+
+func NewEmptyAuthentication() Authentication {
+	return &authentication{}
 }

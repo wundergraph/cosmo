@@ -1,0 +1,57 @@
+name: Build and release wgc binaries
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  wgc-releases-matrix:
+    if: startsWith(github.event.release.tag_name, 'wgc@')
+    name: Build and release wgc binaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      matrix:
+        target: [bun-linux-x64, bun-linux-arm64, bun-darwin-x64, bun-darwin-arm64]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: ./.github/actions/node
+
+      - name: Install dependencies
+        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition install --frozen-lockfile
+
+      - name: Build
+        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition run build
+
+      - uses: winterjung/split@v2
+        id: split
+        with:
+          separator: '@'
+          msg: '${{ github.event.release.tag_name }}'
+
+      - name: 'Build wgc binary'
+        working-directory: cli
+        run: bun build --compile --minify --sourcemap --target ${{ matrix.target }} src/index.ts --outfile out/wgc-experimental-${{ steps.split.outputs._1 }}-${{ matrix.target }}
+
+      - name: 'Gzip wgc binary'
+        working-directory: cli
+        shell: bash
+        # the '*' here is needed to catch `.exe` files for Windows builds, if we ever add them
+        run: gzip -9 -v out/wgc-experimental-${{ steps.split.outputs._1 }}-${{ matrix.target }}*
+
+      - name: 'Upload build to release'
+        working-directory: cli
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        # the '*' here is needed to catch `.exe` files for Windows builds, if we ever add them
+        run: gh release upload ${{ github.event.release.tag_name }} out/wgc-experimental-${{ steps.split.outputs._1 }}-${{ matrix.target }}*.gz --clobber

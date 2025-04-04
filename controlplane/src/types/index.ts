@@ -20,7 +20,8 @@ export type FeatureIds =
   | 'ai'
   | 'oidc'
   | 'scim'
-  | 'field-pruning-grace-period';
+  | 'field-pruning-grace-period'
+  | 'cache-warmer';
 
 export type Features = {
   [key in FeatureIds]: Feature;
@@ -81,6 +82,7 @@ export interface FederatedGraphDTO {
   namespaceId: string;
   supportsFederation: boolean;
   contract?: ContractDTO;
+  routerCompatibilityVersion: string;
 }
 
 export interface FederatedGraphChangelogDTO {
@@ -217,6 +219,10 @@ export interface OrganizationDTO {
     reason?: string;
     initiatedAt: string;
   };
+  deletion?: {
+    queuedAt: string;
+    queuedBy?: string;
+  };
 }
 
 export interface UserDTO {
@@ -326,6 +332,30 @@ export enum SchemaChangeType {
   TYPE_DESCRIPTION_ADDED = 'TYPE_DESCRIPTION_ADDED',
   UNION_MEMBER_REMOVED = 'UNION_MEMBER_REMOVED',
   UNION_MEMBER_ADDED = 'UNION_MEMBER_ADDED',
+  DIRECTIVE_USAGE_UNION_MEMBER_ADDED = 'DIRECTIVE_USAGE_UNION_MEMBER_ADDED',
+  DIRECTIVE_USAGE_UNION_MEMBER_REMOVED = 'DIRECTIVE_USAGE_UNION_MEMBER_REMOVED',
+  DIRECTIVE_USAGE_ENUM_ADDED = 'DIRECTIVE_USAGE_ENUM_ADDED',
+  DIRECTIVE_USAGE_ENUM_REMOVED = 'DIRECTIVE_USAGE_ENUM_REMOVED',
+  DIRECTIVE_USAGE_ENUM_VALUE_ADDED = 'DIRECTIVE_USAGE_ENUM_VALUE_ADDED',
+  DIRECTIVE_USAGE_ENUM_VALUE_REMOVED = 'DIRECTIVE_USAGE_ENUM_VALUE_REMOVED',
+  DIRECTIVE_USAGE_INPUT_OBJECT_ADDED = 'DIRECTIVE_USAGE_INPUT_OBJECT_ADDED',
+  DIRECTIVE_USAGE_INPUT_OBJECT_REMOVED = 'DIRECTIVE_USAGE_INPUT_OBJECT_REMOVED',
+  DIRECTIVE_USAGE_FIELD_ADDED = 'DIRECTIVE_USAGE_FIELD_ADDED',
+  DIRECTIVE_USAGE_FIELD_REMOVED = 'DIRECTIVE_USAGE_FIELD_REMOVED',
+  DIRECTIVE_USAGE_SCALAR_ADDED = 'DIRECTIVE_USAGE_SCALAR_ADDED',
+  DIRECTIVE_USAGE_SCALAR_REMOVED = 'DIRECTIVE_USAGE_SCALAR_REMOVED',
+  DIRECTIVE_USAGE_OBJECT_ADDED = 'DIRECTIVE_USAGE_OBJECT_ADDED',
+  DIRECTIVE_USAGE_OBJECT_REMOVED = 'DIRECTIVE_USAGE_OBJECT_REMOVED',
+  DIRECTIVE_USAGE_INTERFACE_ADDED = 'DIRECTIVE_USAGE_INTERFACE_ADDED',
+  DIRECTIVE_USAGE_INTERFACE_REMOVED = 'DIRECTIVE_USAGE_INTERFACE_REMOVED',
+  DIRECTIVE_USAGE_ARGUMENT_DEFINITION_ADDED = 'DIRECTIVE_USAGE_ARGUMENT_DEFINITION_ADDED',
+  DIRECTIVE_USAGE_ARGUMENT_DEFINITION_REMOVED = 'DIRECTIVE_USAGE_ARGUMENT_DEFINITION_REMOVED',
+  DIRECTIVE_USAGE_SCHEMA_ADDED = 'DIRECTIVE_USAGE_SCHEMA_ADDED',
+  DIRECTIVE_USAGE_SCHEMA_REMOVED = 'DIRECTIVE_USAGE_SCHEMA_REMOVED',
+  DIRECTIVE_USAGE_FIELD_DEFINITION_ADDED = 'DIRECTIVE_USAGE_FIELD_DEFINITION_ADDED',
+  DIRECTIVE_USAGE_FIELD_DEFINITION_REMOVED = 'DIRECTIVE_USAGE_FIELD_DEFINITION_REMOVED',
+  DIRECTIVE_USAGE_INPUT_FIELD_DEFINITION_ADDED = 'DIRECTIVE_USAGE_INPUT_FIELD_DEFINITION_ADDED',
+  DIRECTIVE_USAGE_INPUT_FIELD_DEFINITION_REMOVED = 'DIRECTIVE_USAGE_INPUT_FIELD_DEFINITION_REMOVED',
 }
 
 export interface JWTEncodeParams<Payload extends JWTPayload = JWTPayload, Secret = string> {
@@ -356,6 +386,8 @@ export type CustomAccessTokenClaims = {
   email: string;
   preferred_username: string;
   groups?: string[];
+  given_name?: string;
+  family_name?: string;
 };
 
 export type UserInfoEndpointResponse = {
@@ -377,6 +409,7 @@ export type AuthContext = {
   isAdmin: boolean;
   userId: string;
   userDisplayName: string;
+  apiKeyName?: string;
 };
 
 export interface GraphApiKeyJwtPayload extends JWTPayload {
@@ -418,6 +451,19 @@ export interface ClientDTO {
   lastUpdatedBy: string;
 }
 
+export interface PersistedOperationWithClientDTO {
+  id: string;
+  operationId: string;
+  hash: string;
+  filePath: string;
+  createdAt: string;
+  createdBy?: string;
+  lastUpdatedAt: string;
+  lastUpdatedBy: string;
+  clientName: string;
+  contents: string;
+}
+
 export interface PersistedOperationDTO {
   id: string;
   operationId: string;
@@ -456,6 +502,7 @@ export interface GraphCompositionDTO {
   isLatestValid: boolean;
   admissionError?: string;
   deploymentError?: string;
+  routerCompatibilityVersion: string;
 }
 
 export interface FeatureFlagCompositionDTO {
@@ -478,26 +525,6 @@ export interface SubgraphMemberDTO {
   email: string;
 }
 
-export type DiscussionDTO = {
-  id: string;
-  createdAt: Date;
-  targetId: string;
-  schemaVersionId: string;
-  referenceLine: number;
-  isResolved: boolean;
-  thread: DiscussionThreadDTO;
-}[];
-
-export type DiscussionThreadDTO = {
-  id: string;
-  createdAt: Date;
-  discussionId: string;
-  contentMarkdown: string | null;
-  contentJson: unknown;
-  updatedAt: Date | null;
-  createdById: string | null;
-  isDeleted: boolean;
-}[];
 export interface SubgraphLatencyResult {
   subgraphID: string;
   latency: number;
@@ -561,7 +588,7 @@ export const LintRules: LintRuleType = {
 export type Severity = 1 | 2;
 export type LintSeverityLevel = 'warn' | 'error';
 export type RuleLevel = Severity | LintSeverityLevel;
-export type RuleLevelAndOptions<Options extends any[] = any[]> = Prepend<Partial<Options>, RuleLevel>;
+export type RuleLevelAndOptions<Options extends any[] = any[]> = [RuleLevel, ...Partial<Options>];
 export type RuleEntry<Options extends any[] = any[]> = RuleLevel | RuleLevelAndOptions<Options>;
 
 export interface RulesConfig {
@@ -653,4 +680,6 @@ export interface NamespaceDTO {
   organizationId: string;
   enableLinting: boolean;
   enableGraphPruning: boolean;
+  enableCacheWarmer: boolean;
+  checksTimeframeInDays?: number;
 }

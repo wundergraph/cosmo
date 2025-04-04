@@ -3,6 +3,7 @@ package core
 import (
 	stdContext "context"
 	"fmt"
+	"go.opentelemetry.io/otel/propagation"
 	"math"
 	"net/http"
 	"sort"
@@ -102,6 +103,16 @@ type RouterMiddlewareHandler interface {
 	Middleware(ctx RequestContext, next http.Handler)
 }
 
+// RouterOnRequestMiddlewareHandler allows youu to add middleware that runs before most internal router logic.
+// This runs after the creation of the request context and the creatio of the recovery handler.
+// This hook is useful if you want to do some custom logic before tracing or authentication, for example
+// if you want to manipulate the bearer auth headers or add a header on a condition that can be logged by tracing.
+// The same semantics of http.Handler apply here. Don't manipulate / consume the body of the request unless
+// you know what you are doing. If you consume the body of the request it will not be available for the next handler.
+type RouterOnRequestHandler interface {
+	RouterOnRequest(ctx RequestContext, next http.Handler)
+}
+
 // EnginePreOriginHandler allows you to add a handler to the router engine origin requests.
 // The handler is called before the request is sent to the origin. All origin handlers are called sequentially.
 // It allows you to modify the request before it is sent or return a custom response. The same semantics of http.RoundTripper apply here.
@@ -121,6 +132,14 @@ type EnginePostOriginHandler interface {
 	// OnOriginResponse is called after the request is sent to the origin.
 	// Might be called multiple times if there are multiple origins
 	OnOriginResponse(resp *http.Response, ctx RequestContext) *http.Response
+}
+
+// TracePropagationProvider is an interface that allows you to provide custom trace propagators.
+// The trace propagators are used to inject and extract trace information from the request.
+// The provided propagators will be used in addition to the configured propagators.
+type TracePropagationProvider interface {
+	// TracePropagators returns the custom trace propagators which should be used by the router.
+	TracePropagators() []propagation.TextMapPropagator
 }
 
 // Provisioner is called before the server starts

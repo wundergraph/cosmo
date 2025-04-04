@@ -21,6 +21,11 @@
 
 WunderGraph Cosmo is a comprehensive Lifecycle API Management platform tailored for Federated GraphQL. It encompasses everything from Schema Registry, composition checks, and analytics, to metrics, tracing, and routing. Whether you’re looking to deploy 100% on-prem or prefer a [Managed Service](https://cosmo.wundergraph.com/login), Cosmo offers flexibility without vendor lock-in, all under the Apache 2.0 license.
 
+## The State of GraphQL Federation 2024
+
+Get insights from industry experts and Federation practicioners across all industries and learn how companies are using GraphQL Federation.
+Head over to the [State of GraphQL Federation 2024](https://wundergraph.com/state-of-graphql-federation/2024) page and download the full **48 page PDF report** for free!
+
 ### Why Federated GraphQL?
 
 GraphQL Federation empowers organizations to break down their GraphQL schema into multiple smaller, manageable schemas, each maintained by different teams or services. These individual schemas are then combined into a single, unified graph, ensuring that all teams have consistent access to the data they need. In today's data-driven world, where information is often referred to as the new oil, building a unified API that can be consumed by both internal and external teams is more crucial than ever.
@@ -52,6 +57,21 @@ _For any questions, feedback, or support, please [contact](https://wundergraph.c
 <img width="250" src="./docs/assets/cta_readme.png"/>
 </a>
 </p>
+
+## From the WunderGraph Blog
+
+Here's a selection of blog posts that focus on the technical aspects of Cosmo:
+
+- [**How we scaled Cosmo Router for the SuperBowl**](https://wundergraph.com/blog/scaling-graphql-federation-for-the-superbowl)
+- [**The Architecture of our Observability Stack**](https://wundergraph.com/blog/scaling_graphql_observability)
+- [**How Normalization affects Query Planning**](https://wundergraph.com/blog/normalization_query_planning_graphql_federation)
+- [**Zero cost abstraction for the @skip and @include Directives**](https://wundergraph.com/blog/zero_cost_abstraction_for_skip_include_in_federated_graphql)
+- [**Algorithm to minify GraphQL ASTs by up to 99%**](https://wundergraph.com/blog/graphql_query_ast_minification)
+- [**Federated GraphQL Subscriptions with NATS and Event Driven Architecture**](https://wundergraph.com/blog/distributed_graphql_subscriptions_with_nats_and_event_driven_architecture)
+- [**Implementing the viewer pattern in GraphQL Federation**](https://wundergraph.com/blog/graphql_federation_viewer_pattern)
+- [**How we're using Epoll/Kqueue to scale GraphQL Subscriptions**](https://wundergraph.com/blog/edfs_scaling_graphql_subscriptions_in_go)
+- [**ASTJSON - A fast way to merge JSON objects**](https://wundergraph.com/blog/astjson_high_performance_json_transformations_in_golang)
+- [**Dataloader 3.0, an efficient algorithm for Federation data loading**](https://wundergraph.com/blog/dataloader_3_0_breadth_first_data_loading)
 
 ## Contributing
 
