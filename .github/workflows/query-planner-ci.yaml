@@ -134,7 +134,7 @@ jobs:
   get_pr_url:
     needs: [ build_test, check-label ]
     runs-on: ubuntu-latest
-    if: ${{ needs.check-label.outputs.has_label == 'true' }}
+    if: ${{ always() && needs.check-label.outputs.has_label == 'true' }}
     outputs:
       pullrequest_url: ${{ steps.get_url.outputs.pr_url }}
     steps:
