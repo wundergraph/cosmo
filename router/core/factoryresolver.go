@@ -64,6 +64,7 @@ type DefaultFactoryResolver struct {
 func NewDefaultFactoryResolver(
 	ctx context.Context,
 	transportOptions *TransportOptions,
+	subscriptionClientOptions *SubscriptionClientOptions,
 	baseTransport http.RoundTripper,
 	log *zap.Logger,
 	enableSingleFlight bool,
@@ -92,12 +93,20 @@ func NewDefaultFactoryResolver(
 
 	netPollConfig.Enable = enableNetPoll
 
+	options := []graphql_datasource.Options{
+		graphql_datasource.WithLogger(factoryLogger),
+		graphql_datasource.WithNetPollConfiguration(netPollConfig),
+	}
+
+	if subscriptionClientOptions != nil {
+		options = append(options, graphql_datasource.WithPingInterval(subscriptionClientOptions.PingInterval))
+	}
+
 	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
 		defaultHttpClient,
 		streamingClient,
 		ctx,
-		graphql_datasource.WithLogger(factoryLogger),
-		graphql_datasource.WithNetPollConfiguration(netPollConfig),
+		options...,
 	)
 
 	return &DefaultFactoryResolver{
