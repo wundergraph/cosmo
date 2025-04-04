@@ -55,6 +55,9 @@ func (f *HttpFlushWriter) Complete() {
 			_, _ = f.writer.Write([]byte("--" + multipartBoundary + "--\r\n"))
 		}
 	}
+
+	f.flusher.Flush()
+
 	f.Close()
 }
 
