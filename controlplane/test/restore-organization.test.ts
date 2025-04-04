@@ -1,8 +1,6 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
-import { QueueEvents } from "bullmq";
-import { OidcRepository } from '../src/core/repositories/OidcRepository.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel, TestUser } from '../src/core/test-util.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
@@ -18,7 +16,7 @@ vi.mock('../src/core/clickhouse/index.js', () => {
   return { ClickHouseClient };
 });
 
-describe('Delete Organization', (ctx) => {
+describe('Restore Organization', (ctx) => {
   let chClient: ClickHouseClient;
 
   beforeEach(() => {
@@ -37,7 +35,7 @@ describe('Delete Organization', (ctx) => {
     await afterAllSetup(dbname);
   });
 
-  test('should queue org deletion and delete after scheduled', async (testContext) => {
+  test('should removed queued job and keep organization', async () => {
     const { client, server, keycloakClient, realm, users, authenticator, queues, blobStorage } = await SetupTest({
       dbname,
       chClient,
@@ -97,96 +95,30 @@ describe('Delete Organization', (ctx) => {
       blobStorage,
     });
 
-    const job = await orgRepo.queueOrganizationDeletion({
+    await orgRepo.queueOrganizationDeletion({
       organizationId: org!.id,
       queuedBy: mainUserContext.userDisplayName,
       deleteOrganizationQueue: queues.deleteOrganizationQueue,
     });
 
-    await job.changeDelay(0);
-    await job.waitUntilFinished(new QueueEvents(job.queueName));
+    const restoreOrgResult = await client.restoreOrganization({ userID: mainUserContext.userId });
+    expect(restoreOrgResult.response?.code).toBe(EnumStatusCode.OK);
+
+    const job = await queues.deleteOrganizationQueue.getJob({ organizationId: org!.id });
+    expect(job).toBeUndefined();
 
     const graphsRes = await client.getFederatedGraphs({});
     expect(graphsRes.response?.code).toBe(EnumStatusCode.OK);
-    expect(graphsRes.graphs.length).toBe(0);
+    expect(graphsRes.graphs.length).toBe(1);
 
     const subgraphsRes = await client.getSubgraphs({});
     expect(subgraphsRes.response?.code).toBe(EnumStatusCode.OK);
-    expect(subgraphsRes.graphs.length).toBe(0);
+    expect(subgraphsRes.graphs.length).toBe(1);
 
     const orgAfterDeletion = await orgRepo.bySlug(orgName);
-    expect(orgAfterDeletion).toBeNull();
+    expect(orgAfterDeletion).not.toBeNull();
 
-    expect(blobStorage.keys().includes(graphKey)).toEqual(false);
-
-    await worker.close();
-
-    await server.close();
-  });
-
-  test('Should delete OIDC when deleting org', async (testContext) => {
-    const { client, server, keycloakClient, realm, users, authenticator, queues, blobStorage } = await SetupTest({
-      dbname,
-    });
-    const mainUserContext = users[TestUser.adminAliceCompanyA];
-
-    const orgName = genID();
-    await client.createOrganization({
-      name: orgName,
-      slug: orgName,
-    });
-
-    const orgRepo = new OrganizationRepository(server.log, server.db);
-    const org = await orgRepo.bySlug(orgName);
-    expect(org).toBeDefined();
-
-    authenticator.changeUserWithSuppliedContext({
-      ...mainUserContext,
-      organizationId: org!.id,
-      organizationName: org!.name,
-      organizationSlug: org!.slug,
-    });
-
-    const createOIDCRes = await client.createOIDCProvider({
-      clientID: '123',
-      clientSecrect: '345',
-      discoveryEndpoint: `http://localhost:8080/realms/${realm}/.well-known/openid-configuration`,
-      mappers: [],
-    });
-    expect(createOIDCRes.response?.code).toBe(EnumStatusCode.OK);
-
-    const oidcRepo = new OidcRepository(server.db);
-    const provider = await oidcRepo.getOidcProvider({ organizationId: org!.id });
-    expect(provider).toBeDefined();
-
-    const worker = createDeleteOrganizationWorker({
-      redisConnection: server.redisForWorker,
-      db: server.db,
-      logger: server.log,
-      keycloakClient,
-      keycloakRealm: realm,
-      blobStorage,
-    });
-
-    const job = await orgRepo.queueOrganizationDeletion({
-      organizationId: org!.id,
-      queuedBy: mainUserContext.userDisplayName,
-      deleteOrganizationQueue: queues.deleteOrganizationQueue,
-    });
-
-    await job.changeDelay(0);
-    await job.waitUntilFinished(new QueueEvents(job.queueName));
-
-    const provider2 = await oidcRepo.getOidcProvider({ organizationId: org!.id });
-    expect(provider2).toBeUndefined();
-    const idp2 = await keycloakClient.client.identityProviders.findOne({
-      alias: provider!.alias,
-      realm,
-    });
-    expect(idp2).toBeNull();
-
-    const orgAfterDeletion = await orgRepo.bySlug(orgName);
-    expect(orgAfterDeletion).toBeNull();
+    expect(blobStorage.keys().includes(graphKey)).toEqual(true);
 
     await worker.close();
 

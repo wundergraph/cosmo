@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createTransport, Transporter } from 'nodemailer';
 import * as ejs from 'ejs';
 import { MailerParams } from '../../types/index.js';
@@ -45,7 +46,6 @@ export default class Mailer {
     organizationName: string;
     invitedBy?: string;
   }) {
-    const emailBody = readFileSync('./src/templates/email/organizationInvite.html').toString('utf8');
     let inviteBody;
     if (invitedBy) {
       inviteBody = `Hello <strong>${receiverEmail}</strong>, you have been invited to the
@@ -61,8 +61,7 @@ export default class Mailer {
       inviteBody,
     };
 
-    const template = ejs.compile(emailBody);
-    const htmlBody = template(data);
+    const htmlBody = this.renderTemplate('organizationInvite.html', data);
 
     await this.client.sendMail({
       from: 'system@wundergraph.com',
@@ -70,5 +69,33 @@ export default class Mailer {
       subject: `[WunderGraph Cosmo] You have been invited to the ${organizationName} organization.`,
       html: htmlBody,
     });
+  }
+
+  public async sendOrganizationDeletionQueuedEmail({
+    receiverEmails,
+    ...data
+  }: {
+    receiverEmails: string[];
+    organizationName: string;
+    userDisplayName: string;
+    queuedOnDate: string;
+    deletionDate: string;
+    restoreLink: string;
+  }) {
+    const htmlBody = this.renderTemplate('organizationDeletionQueued.html', data);
+
+    await this.client.sendMail({
+      from: 'system@wundergraph.com',
+      to: receiverEmails,
+      subject: `[WunderGraph Cosmo] Organization ${data.organizationName} have been queued for deletion.`,
+      html: htmlBody,
+    });
+  }
+
+  private renderTemplate<T extends ejs.Data>(templateFile: string, data: T) {
+    const emailBody = readFileSync(join('./src/templates/emails', templateFile)).toString('utf8');
+
+    const template = ejs.compile(emailBody, { openDelimiter: '[', closeDelimiter: ']' });
+    return template(data);
   }
 }
