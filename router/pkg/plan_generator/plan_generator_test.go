@@ -213,7 +213,7 @@ func TestPlanGenerator(t *testing.T) {
 		assert.Equal(t, string(resultsExpected), string(results))
 	})
 
-	t.Run("with fail on plan error and results should return an error and generate results file", func(t *testing.T) {
+	t.Run("will not fail on warnings and results should return the warnings and generate results file", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "plans-")
 		require.NoError(t, err)
 		defer os.RemoveAll(tempDir)
@@ -228,7 +228,7 @@ func TestPlanGenerator(t *testing.T) {
 		}
 
 		err = PlanGenerator(context.Background(), cfg)
-		assert.ErrorContains(t, err, "some queries failed to generate plan")
+		assert.NoError(t, err)
 
 		queries, err := os.ReadDir(tempDir)
 		assert.NoError(t, err)
@@ -247,7 +247,7 @@ func TestPlanGenerator(t *testing.T) {
 		assert.Equal(t, string(resultsExpected), string(results))
 	})
 
-	t.Run("with fail on plan error and files should return an error and generate files", func(t *testing.T) {
+	t.Run("will not fail on warnings and files should have warnings and generate files", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "plans-")
 		require.NoError(t, err)
 		defer os.RemoveAll(tempDir)
@@ -262,7 +262,7 @@ func TestPlanGenerator(t *testing.T) {
 		}
 
 		err = PlanGenerator(context.Background(), cfg)
-		assert.ErrorContains(t, err, "some queries failed to generate plan")
+		assert.NoError(t, err)
 
 		queries, err := os.ReadDir(tempDir)
 		assert.NoError(t, err)
