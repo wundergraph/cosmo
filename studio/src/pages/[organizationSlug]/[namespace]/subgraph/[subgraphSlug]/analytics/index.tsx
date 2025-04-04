@@ -3,6 +3,7 @@ import { AnalyticsSelectedFilters } from "@/components/analytics/filters";
 import {
   ErrorMetricsCard,
   LatencyMetricsCard,
+  LatencyDistributionCard,
   MetricsFilters,
   RequestMetricsCard,
   getInfoTip,
@@ -59,7 +60,7 @@ import {
   YAxis,
 } from "recharts";
 
-const SubgraphErrorRateOverTimeCard = () => {
+const SubgraphErrorRateOverTimeCard = ({ syncId }: { syncId?: string }) => {
   const id = useId();
   const subgraph = useSubgraph();
 
@@ -141,6 +142,7 @@ const SubgraphErrorRateOverTimeCard = () => {
         <AreaChart
           data={data}
           margin={{ top: 8, right: 8, bottom: 8, left: 0 }}
+          syncId={syncId}
         >
           <defs>
             <linearGradient id={`${id}-gradient`} x1="0" y1="0" x2="0" y2="1">
@@ -347,6 +349,7 @@ const OverviewToolbar = () => {
 
 const SubgraphAnalyticsPage: NextPageWithLayout = () => {
   const subgraph = useSubgraph();
+  const syncId = `${subgraph?.subgraph?.namespace}-${subgraph?.subgraph?.name}`;
 
   const { filters, range, dateRange, refreshInterval } =
     useAnalyticsQueryState();
@@ -393,12 +396,13 @@ const SubgraphAnalyticsPage: NextPageWithLayout = () => {
     <div className="w-full space-y-4">
       <OverviewToolbar />
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3">
-        <RequestMetricsCard data={data?.requests} isSubgraphAnalytics={true} />
-        <LatencyMetricsCard data={data?.latency} isSubgraphAnalytics={true} />
-        <ErrorMetricsCard data={data?.errors} isSubgraphAnalytics={true} />
+        <RequestMetricsCard data={data?.requests} isSubgraphAnalytics={true} syncId={syncId} />
+        <LatencyMetricsCard data={data?.latency} isSubgraphAnalytics={true} syncId={syncId} />
+        <ErrorMetricsCard data={data?.errors} isSubgraphAnalytics={true} syncId={syncId} />
       </div>
 
-      <SubgraphErrorRateOverTimeCard />
+      <SubgraphErrorRateOverTimeCard syncId={syncId} />
+      <LatencyDistributionCard series={data?.latency?.series ?? []} syncId={syncId} />
     </div>
   );
 };

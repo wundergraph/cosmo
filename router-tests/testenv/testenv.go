@@ -26,7 +26,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -349,65 +348,31 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	var (
 		kafkaAdminClient *kadm.Client
-		kafkaStarted     sync.WaitGroup
 		kafkaClient      *kgo.Client
-		natsStarted      sync.WaitGroup
 		natsSetup        *NatsData
-		kafkaSetup       *KafkaData
 		pubSubPrefix     = strconv.FormatUint(rand.Uint64(), 16)
 	)
 
-	if len(cfg.KafkaSeeds) == 0 {
-		cfg.KafkaSeeds = []string{"localhost:9092"}
-	}
-
 	if cfg.EnableKafka {
-		// Depending on whether or not we are in CI e.g. Github Actions, we
-		// either start a kafka container or use the one provided by the CI
-		// This is faster in GHA due to pitiful DIND speed, and helps prevent timeout
-		// related errors (for now)
-		if os.Getenv("CI") == "true" {
-			cfg.KafkaSeeds = []string{"localhost:9092"}
+		cfg.KafkaSeeds = []string{"localhost:9092"}
 
-			client, err := kgo.NewClient(
-				kgo.SeedBrokers(cfg.KafkaSeeds...),
-			)
-			if err != nil {
-				return nil, err
-			}
-
-			kafkaClient = client
-			kafkaAdminClient = kadm.NewClient(kafkaClient)
-		} else {
-			kafkaStarted.Add(1)
-			go func() {
-				defer kafkaStarted.Done()
-
-				var kafkaSetupErr error
-				kafkaSetup, kafkaSetupErr = setupKafkaServer(t)
-				if kafkaSetupErr != nil || kafkaSetup == nil {
-					t.Fatalf("could not setup kafka: %s", kafkaSetupErr.Error())
-					return
-				}
-
-				kafkaClient = kafkaSetup.Client
-				kafkaAdminClient = kadm.NewClient(kafkaClient)
-
-				cfg.KafkaSeeds = kafkaSetup.Brokers
-			}()
+		client, err := kgo.NewClient(
+			kgo.SeedBrokers(cfg.KafkaSeeds...),
+		)
+		if err != nil {
+			return nil, err
 		}
+
+		kafkaClient = client
+		kafkaAdminClient = kadm.NewClient(kafkaClient)
 	}
 
 	if cfg.EnableNats {
-		natsStarted.Add(1)
-		go func() {
-			defer natsStarted.Done()
-			var natsErr error
-			natsSetup, natsErr = setupNatsServers(t)
-			if natsErr != nil {
-				t.Fatalf("could not setup nats: %s", natsErr.Error())
-			}
-		}()
+		s, err := setupNatsClients(t)
+		if err != nil {
+			t.Fatalf("could not setup nats clients: %s", err.Error())
+		}
+		natsSetup = s
 	}
 
 	if cfg.AssertCacheMetrics != nil {
@@ -431,7 +396,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		ec.TimeKey = "time"
 
 		syncer := zapcore.AddSync(os.Stderr)
-		cfg.Logger = logging.NewZapLogger(syncer, false, true, zapcore.WarnLevel)
+		cfg.Logger = logging.NewZapLogger(syncer, false, true, zapcore.ErrorLevel)
 	}
 
 	if cfg.AccessLogger == nil {
@@ -454,8 +419,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	requiredPorts := 2
 
 	ports := freeport.GetN(t, requiredPorts)
-
-	natsStarted.Wait()
 
 	getPubSubName := GetPubSubNameFn(pubSubPrefix)
 
@@ -618,8 +581,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		client = retryClient.StandardClient()
 	}
 
-	kafkaStarted.Wait()
-
 	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
 	if err != nil {
 		return nil, err
@@ -752,7 +713,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		}
 	}
 
-	waitErr := e.WaitForServer(ctx, e.RouterURL+"/health/ready", 100, 10)
+	waitErr := e.WaitForServer(ctx, e.RouterURL+"/health/ready", 250, 30)
 
 	return e, waitErr
 }
@@ -817,6 +778,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		WebSocketClientPollTimeout:     300 * time.Millisecond,
 		WebSocketClientConnBufferSize:  1,
 		WebSocketClientReadTimeout:     100 * time.Millisecond,
+		WebSocketClientWriteTimeout:    1 * time.Second,
 		MaxConcurrentResolvers:         32,
 		ExecutionPlanCacheSize:         1024,
 		EnablePersistedOperationsCache: true,
@@ -844,7 +806,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		for _, sourceName := range demoNatsProviders {
 			natsEventSources = append(natsEventSources, config.NatsEventSource{
 				ID:  sourceName,
-				URL: natsData.Server.ClientURL(),
+				URL: nats.DefaultURL,
 			})
 		}
 	}
@@ -1014,6 +976,16 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 				FromInitialPayload: config.InitialPayloadAuthenticationConfiguration{
 					Enabled: false,
 					Key:     "Authorization",
+				},
+			},
+			ClientInfoFromInitialPayload: config.WebSocketClientInfoFromInitialPayloadConfiguration{
+				Enabled:      true,
+				NameField:    "graphql-client-name",
+				VersionField: "graphql-client-version",
+				ForwardToRequestHeaders: config.ForwardToRequestHeadersConfiguration{
+					Enabled:             true,
+					NameTargetHeader:    "graphql-client-name",
+					VersionTargetHeader: "graphql-client-version",
 				},
 			},
 		}
@@ -1774,8 +1746,6 @@ func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	sub := e.Router.EngineStats.Subscribe(ctx)
-
 	report := e.Router.EngineStats.GetReport()
 	if report.Subscriptions == desiredCount {
 		return
@@ -1786,13 +1756,9 @@ func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", report.Subscriptions, desiredCount)
 			return
-		case r, ok := <-sub:
-			if !ok {
-				e.t.Fatalf("channel, closed timed out waiting for subscription count, got %d, want %d", r.Subscriptions, desiredCount)
-				return
-			}
-			if r.Subscriptions == desiredCount {
-				time.Sleep(100 * time.Millisecond) // Give NATS some time to have the subscription set up
+		case <-time.After(100 * time.Millisecond):
+			report = e.Router.EngineStats.GetReport()
+			if report.Subscriptions == desiredCount {
 				return
 			}
 		}
@@ -1805,8 +1771,6 @@ func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.D
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	sub := e.Router.EngineStats.Subscribe(ctx)
-
 	report := e.Router.EngineStats.GetReport()
 	if report.Connections == desiredCount {
 		return
@@ -1817,12 +1781,9 @@ func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.D
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for connection count, got %d, want %d", report.Connections, desiredCount)
 			return
-		case r, ok := <-sub:
-			if !ok {
-				e.t.Fatalf("timed out waiting for connection count, got %d, want %d", r.Connections, desiredCount)
-				return
-			}
-			if r.Connections == desiredCount {
+		case <-time.After(100 * time.Millisecond):
+			report = e.Router.EngineStats.GetReport()
+			if report.Connections == desiredCount {
 				return
 			}
 		}
@@ -1881,8 +1842,6 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	sub := e.Router.EngineStats.Subscribe(ctx)
-
 	report := e.Router.EngineStats.GetReport()
 	if report.MessagesSent == desiredCount {
 		return
@@ -1893,12 +1852,9 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for messages sent, got %d, want %d", report.MessagesSent, desiredCount)
 			return
-		case r, ok := <-sub:
-			if !ok {
-				e.t.Fatalf("channel closed, timed out waiting for messages sent, got %d, want %d", r.MessagesSent, desiredCount)
-				return
-			}
-			if r.MessagesSent == desiredCount {
+		case <-time.After(100 * time.Millisecond):
+			report = e.Router.EngineStats.GetReport()
+			if report.MessagesSent == desiredCount {
 				return
 			}
 		}
@@ -1911,8 +1867,6 @@ func (e *Environment) WaitForMinMessagesSent(minCount uint64, timeout time.Durat
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	sub := e.Router.EngineStats.Subscribe(ctx)
-
 	report := e.Router.EngineStats.GetReport()
 	if report.MessagesSent >= minCount {
 		return
@@ -1923,12 +1877,8 @@ func (e *Environment) WaitForMinMessagesSent(minCount uint64, timeout time.Durat
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", report.MessagesSent, minCount)
 			return
-		case r, ok := <-sub:
-			if !ok {
-				e.t.Fatalf("channel closed, timed out waiting for messages sent, got %d, want at least %d", r.MessagesSent, minCount)
-				return
-			}
-			report = r
+		case <-time.After(100 * time.Millisecond):
+			report = e.Router.EngineStats.GetReport()
 			if report.MessagesSent >= minCount {
 				return
 			}
@@ -1942,8 +1892,6 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	sub := e.Router.EngineStats.Subscribe(ctx)
-
 	report := e.Router.EngineStats.GetReport()
 	if report.Triggers == desiredCount {
 		return
@@ -1954,12 +1902,9 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 		case <-ctx.Done():
 			e.t.Fatalf("timed out waiting for trigger count, got %d, want %d", report.Triggers, desiredCount)
 			return
-		case r, ok := <-sub:
-			if !ok {
-				e.t.Fatalf("timed out waiting for trigger count, got %d, want %d", r.Triggers, desiredCount)
-				return
-			}
-			if r.Triggers == desiredCount {
+		case <-time.After(100 * time.Millisecond):
+			report = e.Router.EngineStats.GetReport()
+			if report.Triggers == desiredCount {
 				return
 			}
 		}

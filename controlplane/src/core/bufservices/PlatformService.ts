@@ -38,14 +38,6 @@ import { removeOperationOverrides } from './check/removeOperationOverrides.js';
 import { toggleChangeOverridesForAllOperations } from './check/toggleChangeOverridesForAllOperations.js';
 import { createContract } from './contract/createContract.js';
 import { updateContract } from './contract/updateContract.js';
-import { createDiscussion } from './discussion/createDiscussion.js';
-import { deleteDiscussionComment } from './discussion/deleteDiscussionComment.js';
-import { getAllDiscussions } from './discussion/getAllDiscussions.js';
-import { getDiscussion } from './discussion/getDiscussion.js';
-import { getDiscussionSchemas } from './discussion/getDiscussionSchemas.js';
-import { replyToDiscussion } from './discussion/replyToDiscussion.js';
-import { setDiscussionResolution } from './discussion/setDiscussionResolution.js';
-import { updateDiscussionComment } from './discussion/updateDiscussionComment.js';
 import { createFeatureFlag } from './feature-flag/createFeatureFlag.js';
 import { deleteFeatureFlag } from './feature-flag/deleteFeatureFlag.js';
 import { enableFeatureFlag } from './feature-flag/enableFeatureFlag.js';
@@ -107,6 +99,7 @@ import { updateIntegrationConfig } from './notification/updateIntegrationConfig.
 import { updateOrganizationWebhookConfig } from './notification/updateOrganizationWebhookConfig.js';
 import { createOrganization } from './organization/createOrganization.js';
 import { deleteOrganization } from './organization/deleteOrganization.js';
+import { restoreOrganization } from './organization/restoreOrganization.js';
 import { getAuditLogs } from './organization/getAuditLogs.js';
 import { getOrganizationMembers } from './organization/getOrganizationMembers.js';
 import { getPendingOrganizationMembers } from './organization/getPendingOrganizationMembers.js';
@@ -354,6 +347,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     deleteOrganization: (req, ctx) => {
       return deleteOrganization(opts, req, ctx);
+    },
+
+    restoreOrganization: (req, ctx) => {
+      return restoreOrganization(opts, req, ctx);
     },
 
     leaveOrganization: (req, ctx) => {
@@ -643,38 +640,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     createBillingPortalSession: (req, ctx) => {
       return createBillingPortalSession(opts, req, ctx);
-    },
-
-    createDiscussion: (req, ctx) => {
-      return createDiscussion(opts, req, ctx);
-    },
-
-    replyToDiscussion: (req, ctx) => {
-      return replyToDiscussion(opts, req, ctx);
-    },
-
-    getAllDiscussions: (req, ctx) => {
-      return getAllDiscussions(opts, req, ctx);
-    },
-
-    updateDiscussionComment: (req, ctx) => {
-      return updateDiscussionComment(opts, req, ctx);
-    },
-
-    deleteDiscussionComment: (req, ctx) => {
-      return deleteDiscussionComment(opts, req, ctx);
-    },
-
-    getDiscussion: (req, ctx) => {
-      return getDiscussion(opts, req, ctx);
-    },
-
-    getDiscussionSchemas: (req, ctx) => {
-      return getDiscussionSchemas(opts, req, ctx);
-    },
-
-    setDiscussionResolution: (req, ctx) => {
-      return setDiscussionResolution(opts, req, ctx);
     },
 
     getSubgraphMetrics: (req, ctx) => {

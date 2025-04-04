@@ -18,6 +18,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/klauspost/compress/gzip"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -573,7 +574,11 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	return err
+	if err != nil {
+		return fmt.Errorf("shutdown graph mux: %w", err)
+	}
+
+	return nil
 }
 
 // buildGraphMux creates a new graph mux with the given feature flags and engine configuration.
@@ -602,9 +607,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	// we only enable the attribute mapper if we are not using the default cloud exporter
 	enableAttributeMapper := !(s.metricConfig.IsUsingCloudExporter || rmetric.IsDefaultCloudExporterConfigured(s.metricConfig.OpenTelemetry.Exporters))
 
+	exprManager := expr.CreateNewExprManager()
+
 	// We might want to remap or exclude known attributes based on the configuration for metrics
 	mapper := newAttributeMapper(enableAttributeMapper, s.metricConfig.Attributes)
-	attExpressions, attErr := newAttributeExpressions(s.metricConfig.Attributes)
+	attExpressions, attErr := newAttributeExpressions(s.metricConfig.Attributes, exprManager)
 	if attErr != nil {
 		return nil, attErr
 	}
@@ -612,7 +619,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	var telemetryAttExpressions *attributeExpressions
 	if len(s.telemetryAttributes) > 0 {
 		var telemetryAttErr error
-		telemetryAttExpressions, telemetryAttErr = newAttributeExpressions(s.telemetryAttributes)
+		telemetryAttExpressions, telemetryAttErr = newAttributeExpressions(s.telemetryAttributes, exprManager)
 		if telemetryAttErr != nil {
 			return nil, telemetryAttErr
 		}
@@ -802,6 +809,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 					span := oteltrace.SpanFromContext(r.Context())
 					span.SetAttributes(reqContext.telemetry.traceAttrs...)
 
+					// Set if the trace is sampled in the expression context
+					isSampled := span.SpanContext().IsSampled()
+					reqContext.expressionContext.Request.Trace.Sampled = isSampled
+
 					// Set the trace ID in the response header
 					if s.traceConfig.ResponseTraceHeader.Enabled {
 						w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
@@ -815,7 +826,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	var subgraphAccessLogger *requestlogger.SubgraphAccessLogger
 	if s.accessLogsConfig != nil && s.accessLogsConfig.Logger != nil {
-		exprAttributes, err := requestlogger.GetAccessLogConfigExpressions(s.accessLogsConfig.Attributes)
+		exprAttributes, err := requestlogger.GetAccessLogConfigExpressions(s.accessLogsConfig.Attributes, exprManager)
 		if err != nil {
 			return nil, fmt.Errorf("failed building router access log expressions: %w", err)
 		}
@@ -917,20 +928,21 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	operationProcessor := NewOperationProcessor(OperationProcessorOptions{
-		Executor:                            executor,
-		MaxOperationSizeInBytes:             int64(s.routerTrafficConfig.MaxRequestBodyBytes),
-		PersistedOperationClient:            s.persistedOperationClient,
-		AutomaticPersistedOperationCacheTtl: s.automaticPersistedQueriesConfig.Cache.TTL,
-		EnablePersistedOperationsCache:      s.engineExecutionConfiguration.EnablePersistedOperationsCache,
-		PersistedOpsNormalizationCache:      gm.persistedOperationCache,
-		NormalizationCache:                  gm.normalizationCache,
-		ValidationCache:                     gm.validationCache,
-		QueryDepthCache:                     gm.complexityCalculationCache,
-		OperationHashCache:                  gm.operationHashCache,
-		ParseKitPoolSize:                    s.engineExecutionConfiguration.ParseKitPoolSize,
-		IntrospectionEnabled:                s.Config.introspection,
-		ApolloCompatibilityFlags:            s.apolloCompatibilityFlags,
-		ApolloRouterCompatibilityFlags:      s.apolloRouterCompatibilityFlags,
+		Executor:                                         executor,
+		MaxOperationSizeInBytes:                          int64(s.routerTrafficConfig.MaxRequestBodyBytes),
+		PersistedOperationClient:                         s.persistedOperationClient,
+		AutomaticPersistedOperationCacheTtl:              s.automaticPersistedQueriesConfig.Cache.TTL,
+		EnablePersistedOperationsCache:                   s.engineExecutionConfiguration.EnablePersistedOperationsCache,
+		PersistedOpsNormalizationCache:                   gm.persistedOperationCache,
+		NormalizationCache:                               gm.normalizationCache,
+		ValidationCache:                                  gm.validationCache,
+		QueryDepthCache:                                  gm.complexityCalculationCache,
+		OperationHashCache:                               gm.operationHashCache,
+		ParseKitPoolSize:                                 s.engineExecutionConfiguration.ParseKitPoolSize,
+		IntrospectionEnabled:                             s.Config.introspection,
+		ApolloCompatibilityFlags:                         s.apolloCompatibilityFlags,
+		ApolloRouterCompatibilityFlags:                   s.apolloRouterCompatibilityFlags,
+		DisableExposingVariablesContentOnValidationError: s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
@@ -1024,6 +1036,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			Debug:               s.rateLimit.Debug,
 			RejectStatusCode:    s.rateLimit.SimpleStrategy.RejectStatusCode,
 			KeySuffixExpression: s.rateLimit.KeySuffixExpression,
+			ExprManager:         exprManager,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create rate limiter: %w", err)
@@ -1052,6 +1065,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		},
 		SafelistEnabled:             s.persistedOperationsConfig.Safelist.Enabled,
 		LogUnknownOperationsEnabled: s.persistedOperationsConfig.LogUnknown,
+		exprManager:                 exprManager,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create operation blocker: %w", err)
@@ -1084,6 +1098,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		ComputeOperationSha256:      computeSha256,
 		ApolloCompatibilityFlags:    &s.apolloCompatibilityFlags,
 		DisableVariablesRemapping:   s.engineExecutionConfiguration.DisableVariablesRemapping,
+		ExprManager:                 exprManager,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
@@ -1098,6 +1113,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			Logger:                    s.logger,
 			Stats:                     s.engineStats,
 			ReadTimeout:               s.engineExecutionConfiguration.WebSocketClientReadTimeout,
+			WriteTimeout:              s.engineExecutionConfiguration.WebSocketClientWriteTimeout,
 			EnableNetPoll:             s.engineExecutionConfiguration.EnableNetPoll,
 			NetPollTimeout:            s.engineExecutionConfiguration.WebSocketClientPollTimeout,
 			NetPollConnBufferSize:     s.engineExecutionConfiguration.WebSocketClientConnBufferSize,
@@ -1275,8 +1291,7 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	// Wait for all in-flight requests to finish.
 	// In the worst case, we wait until the context is done or all requests has timed out.
 	if err := s.wait(ctx); err != nil {
-		s.logger.Error("Failed to wait for in-flight requests to finish", zap.Error(err))
-		finalErr = errors.Join(finalErr, err)
+		finalErr = errors.Join(finalErr, fmt.Errorf("failed to wait for in-flight requests: %w", err))
 	}
 
 	s.logger.Debug("Shutdown of graph server resources",
@@ -1294,21 +1309,18 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 
 	if s.runtimeMetrics != nil {
 		if err := s.runtimeMetrics.Shutdown(); err != nil {
-			s.logger.Error("Failed to shutdown runtime metrics", zap.Error(err))
 			finalErr = errors.Join(finalErr, err)
 		}
 	}
 
 	if s.otlpEngineMetrics != nil {
 		if err := s.otlpEngineMetrics.Shutdown(); err != nil {
-			s.logger.Error("Failed to shutdown OTLP engine metrics", zap.Error(err))
 			finalErr = errors.Join(finalErr, err)
 		}
 	}
 
 	if s.prometheusEngineMetrics != nil {
 		if err := s.prometheusEngineMetrics.Shutdown(); err != nil {
-			s.logger.Error("Failed to shutdown Prometheus engine metrics", zap.Error(err))
 			finalErr = errors.Join(finalErr, err)
 		}
 	}
@@ -1319,7 +1331,6 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	defer s.graphMuxListLock.Unlock()
 	for _, mux := range s.graphMuxList {
 		if err := mux.Shutdown(ctx); err != nil {
-			s.logger.Error("Failed to shutdown graph mux", zap.Error(err))
 			finalErr = errors.Join(finalErr, err)
 		}
 	}

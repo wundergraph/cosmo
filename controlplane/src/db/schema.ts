@@ -1102,6 +1102,8 @@ export const organizations = pgTable(
     isDeactivated: boolean('is_deactivated').default(false),
     deactivationReason: text('deactivation_reason'),
     deactivatedAt: timestamp('deactivated_at', { withTimezone: true }),
+    queuedForDeletionAt: timestamp('queued_for_deletion_at', { withTimezone: true }),
+    queuedForDeletionBy: text('queued_for_deletion_by'), // display name in case the member is removed
   },
   (t) => {
     return {
@@ -1737,78 +1739,6 @@ export const subgraphMembers = pgTable(
     };
   },
 );
-
-export const discussions = pgTable(
-  'discussions', // dis
-  {
-    id: uuid('id').notNull().primaryKey().defaultRandom(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    targetId: uuid('target_id')
-      .references(() => targets.id, {
-        onDelete: 'cascade',
-      })
-      .notNull(),
-    schemaVersionId: uuid('schema_version_id')
-      .notNull()
-      .references(() => schemaVersion.id, {
-        onDelete: 'cascade',
-      }),
-    referenceLine: integer('reference_line').notNull(),
-    isResolved: boolean('is_resolved').default(false).notNull(),
-  },
-  (t) => {
-    return {
-      targetIdIndex: index('dis_target_id_idx').on(t.targetId),
-      schemaVersionIdIndex: index('dis_schema_version_id_idx').on(t.schemaVersionId),
-    };
-  },
-);
-
-export const discussionThread = pgTable(
-  'discussion_thread', // dist
-  {
-    id: uuid('id').notNull().primaryKey().defaultRandom(),
-    discussionId: uuid('discussion_id')
-      .notNull()
-      .references(() => discussions.id, {
-        onDelete: 'cascade',
-      }),
-    contentMarkdown: text('content_markdown'),
-    contentJson: json('content_json').$type<JSONContent>(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }),
-    createdById: uuid('created_by_id').references(() => users.id, {
-      onDelete: 'set null',
-    }),
-    isDeleted: boolean('is_deleted').default(false).notNull(),
-  },
-  (t) => {
-    return {
-      discussionIdIndex: index('dist_discussion_id_idx').on(t.discussionId),
-      createdByIdIndex: index('dist_created_by_id_idx').on(t.createdById),
-    };
-  },
-);
-
-export const discussionRelations = relations(discussions, ({ one, many }) => ({
-  target: one(targets, {
-    fields: [discussions.targetId],
-    references: [targets.id],
-  }),
-  schemaVersion: one(schemaVersion),
-  thread: many(discussionThread),
-}));
-
-export const discussionThreadRelations = relations(discussionThread, ({ one }) => ({
-  createdBy: one(users, {
-    fields: [discussionThread.createdById],
-    references: [users.id],
-  }),
-  discussion: one(discussions, {
-    fields: [discussionThread.discussionId],
-    references: [discussions.id],
-  }),
-}));
 
 export const lintRulesEnum = pgEnum('lint_rules', [
   'FIELD_NAMES_SHOULD_BE_CAMEL_CASE',

@@ -68,6 +68,7 @@ type PreHandlerOptions struct {
 	ComputeOperationSha256      bool
 	ApolloCompatibilityFlags    *config.ApolloCompatibilityFlags
 	DisableVariablesRemapping   bool
+	ExprManager                 *expr.Manager
 }
 
 type PreHandler struct {
@@ -99,6 +100,7 @@ type PreHandler struct {
 	apolloCompatibilityFlags    *config.ApolloCompatibilityFlags
 	variableParsePool           astjson.ParserPool
 	disableVariablesRemapping   bool
+	exprManager                 *expr.Manager
 }
 
 type httpOperation struct {
@@ -143,6 +145,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		computeOperationSha256:    opts.ComputeOperationSha256,
 		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
 		disableVariablesRemapping: opts.DisableVariablesRemapping,
+		exprManager:               opts.ExprManager,
 	}
 }
 
@@ -283,6 +286,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			var err error
 			body, files, err = multipartParser.Parse(r, h.getBodyReadBuffer(r.ContentLength))
+			// We set it before the error so that users could log the body if it exists in case of an error
+			if h.exprManager.VisitorManager.IsBodyUsedInExpressions() {
+				requestContext.expressionContext.Request.Body.Raw = string(body)
+			}
 			if err != nil {
 				requestContext.SetError(err)
 				writeOperationError(r, w, requestLogger, requestContext.error)
@@ -311,6 +318,10 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			var err error
 			body, err = h.operationProcessor.ReadBody(r.Body, h.getBodyReadBuffer(r.ContentLength))
+			// We set it before the error so that users could log the body if it exists in case of an error
+			if h.exprManager.VisitorManager.IsBodyUsedInExpressions() {
+				requestContext.expressionContext.Request.Body.Raw = string(body)
+			}
 			if err != nil {
 				requestContext.SetError(err)
 
@@ -339,7 +350,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			validatedReq, err := h.accessController.Access(w, r)
 			if err != nil {
 				requestContext.SetError(err)
-				requestLogger.Error("Failed to authenticate request", zap.Error(err))
+				requestLogger.Debug("Failed to authenticate request", zap.Error(err))
 
 				// Mark the root span of the router as failed, so we can easily identify failed requests
 				rtrace.AttachErrToSpan(routerSpan, err)
@@ -828,6 +839,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	if err != nil {
 		rtrace.AttachErrToSpan(engineValidateSpan, err)
 
+		requestContext.graphQLErrorCodes = append(requestContext.graphQLErrorCodes, h.getErrorCodes(err)...)
 		requestContext.operation.validationTime = time.Since(startValidation)
 
 		if !requestContext.operation.traceOptions.ExcludeValidateStats {
@@ -900,8 +912,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 	err = h.planner.plan(requestContext.operation, planOptions)
 	if err != nil {
-
-		httpOperation.requestLogger.Error("failed to plan operation", zap.Error(err))
+		httpOperation.requestLogger.Debug("failed to plan operation", zap.Error(err))
 		rtrace.AttachErrToSpan(enginePlanSpan, err)
 
 		if !requestContext.operation.traceOptions.ExcludePlannerStats {
@@ -957,6 +968,31 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	}
 
 	return nil
+}
+
+func (h *PreHandler) getErrorCodes(err error) []string {
+	errorCodes := make([]string, 0)
+
+	var reportErr *reportError
+	if errors.As(err, &reportErr) {
+		for _, extError := range reportErr.Report().ExternalErrors {
+			if extError.ExtensionCode != "" {
+				errorCodes = append(errorCodes, extError.ExtensionCode)
+			}
+		}
+	}
+
+	// If "skipLoader" was passed as false to the Validate function, an httpGraphqlError with
+	// an extension code could be returned
+	var httpGqlError *httpGraphqlError
+	if errors.As(err, &httpGqlError) {
+		extensionCode := httpGqlError.ExtensionCode()
+		if extensionCode != "" {
+			errorCodes = append(errorCodes, extensionCode)
+		}
+	}
+
+	return errorCodes
 }
 
 // flushMetrics flushes all metrics to the respective exporters
@@ -1018,7 +1054,7 @@ func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *Cl
 				return h.routerPublicKey, nil
 			}, jwt.WithValidMethods([]string{jwt.SigningMethodES256.Name}))
 			if err != nil {
-				requestLogger.Error(fmt.Sprintf("failed to parse request token: %s", err.Error()))
+				requestLogger.Debug(fmt.Sprintf("failed to parse request token: %s", err.Error()))
 				return resolve.ExecutionOptions{}, resolve.TraceOptions{}, err
 			}
 			return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil

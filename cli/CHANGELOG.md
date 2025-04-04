@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.76.1](https://github.com/wundergraph/cosmo/compare/wgc@0.76.0...wgc@0.76.1) (2025-04-01)
+
+**Note:** Version bump only for package wgc
+
+# [0.76.0](https://github.com/wundergraph/cosmo/compare/wgc@0.75.12...wgc@0.76.0) (2025-03-28)
+
+### Features
+
+* implement `--client-schema` flag ([#1729](https://github.com/wundergraph/cosmo/issues/1729)) ([4634e7e](https://github.com/wundergraph/cosmo/commit/4634e7e7bbf4998bd8a7462623c29001ed39cc3c)) (@wilsonrivera)
+
+## [0.75.12](https://github.com/wundergraph/cosmo/compare/wgc@0.75.11...wgc@0.75.12) (2025-03-25)
+
+### Bug Fixes
+
+* upgrade `undici` to solve vulnerability ([#1701](https://github.com/wundergraph/cosmo/issues/1701)) ([3b4b2d9](https://github.com/wundergraph/cosmo/commit/3b4b2d9638c059bee654f3596135a48ecd698690)) (@wilsonrivera)
+
 ## [0.75.11](https://github.com/wundergraph/cosmo/compare/wgc@0.75.10...wgc@0.75.11) (2025-03-20)
 
 **Note:** Version bump only for package wgc

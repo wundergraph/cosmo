@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.38.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.38.0...@wundergraph/composition@0.38.1) (2025-03-28)
+
+### Bug Fixes
+
+* authorization directive cascading ([#1733](https://github.com/wundergraph/cosmo/issues/1733)) ([0199fb5](https://github.com/wundergraph/cosmo/commit/0199fb5f88104a585b74a79638f54f1a3b812436)) (@Aenimus)
+
+# [0.38.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.37.3...@wundergraph/composition@0.38.0) (2025-03-25)
+
+### Features
+
+* add map of key field sets to which some key field coords contri… ([#1717](https://github.com/wundergraph/cosmo/issues/1717)) ([02f05e2](https://github.com/wundergraph/cosmo/commit/02f05e28e76078a098ddc4a8562d392faa74e1f9)) (@Aenimus)
+
 ## [0.37.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.37.2...@wundergraph/composition@0.37.3) (2025-03-19)
 
 ### Bug Fixes

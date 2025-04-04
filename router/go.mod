@@ -9,7 +9,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/cloudflare/backoff v0.0.0-20161212185259-647f3cdfc87a
 	github.com/dustin/go-humanize v1.0.1
-	github.com/go-chi/chi/v5 v5.1.0
+	github.com/go-chi/chi/v5 v5.2.1
 	github.com/go-redis/redis_rate/v10 v10.0.1
 	github.com/gobwas/ws v1.4.0
 	github.com/goccy/go-yaml v1.13.4
@@ -31,7 +31,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.165
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.168
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0
@@ -58,7 +58,7 @@ require (
 
 require (
 	github.com/KimMachineGun/automemlimit v0.6.1
-	github.com/MicahParks/jwkset v0.5.19
+	github.com/MicahParks/jwkset v0.9.0
 	github.com/MicahParks/keyfunc/v3 v3.3.5
 	github.com/alicebob/miniredis/v2 v2.34.0
 	github.com/caarlos0/env/v11 v11.3.1
@@ -74,7 +74,7 @@ require (
 	go.uber.org/ratelimit v0.3.1
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
 	golang.org/x/text v0.21.0
-	golang.org/x/time v0.5.0
+	golang.org/x/time v0.9.0
 )
 
 require (

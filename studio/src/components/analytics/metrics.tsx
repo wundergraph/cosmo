@@ -7,7 +7,6 @@ import {
   AnalyticsFilters,
 } from "@/components/analytics/filters";
 import { optionConstructor } from "@/components/analytics/getDataTableFilters";
-import { useRange } from "@/components/analytics/use-range";
 import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
 import { EmptyState } from "@/components/empty-state";
 import { InfoTooltip } from "@/components/info-tooltip";
@@ -44,7 +43,7 @@ import {
 import { differenceInHours, formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import React, { useCallback, useContext, useId, useMemo } from "react";
+import React, { useCallback, useContext, useId, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -52,6 +51,8 @@ import {
   ResponsiveContainer,
   XAxis,
   YAxis,
+  Line,
+  LineChart,
 } from "recharts";
 
 export const getInfoTip = (range?: number) => {
@@ -68,6 +69,11 @@ export const getInfoTip = (range?: number) => {
       return "selected period";
   }
 };
+
+const useTimeRange = () => {
+  const { range, dateRange } = useAnalyticsQueryState();
+  return (dateRange ? differenceInHours(dateRange.end, dateRange.start) : range) ?? 24;
+}
 
 const useSelectedFilters = () => {
   const router = useRouter();
@@ -337,10 +343,11 @@ interface SparklineProps {
   timeRange: number;
   className?: string;
   valueFormatter?: (value: any) => any;
+  syncId?: string;
 }
 
 const Sparkline: React.FC<SparklineProps> = (props) => {
-  const { timeRange = 24, valueFormatter } = props;
+  const { timeRange = 24, valueFormatter, syncId } = props;
   const id = useId();
 
   const { data, ticks, domain, timeFormatter } = useChartData(
@@ -356,6 +363,7 @@ const Sparkline: React.FC<SparklineProps> = (props) => {
         <AreaChart
           data={data}
           margin={{ top: 10, right: 6, bottom: 8, left: 6 }}
+          syncId={syncId}
         >
           <defs>
             <linearGradient
@@ -424,9 +432,10 @@ const Sparkline: React.FC<SparklineProps> = (props) => {
 export const RequestMetricsCard = (props: {
   data?: MetricsDashboardMetric;
   isSubgraphAnalytics?: boolean;
+  syncId?: string;
 }) => {
-  const range = useRange();
-  const { data } = props;
+  const timeRange = useTimeRange();
+  const { data, syncId } = props;
 
   const top = data?.top ?? [];
 
@@ -456,7 +465,7 @@ export const RequestMetricsCard = (props: {
           <div className="flex space-x-2 text-sm">
             <h4>Request Rate</h4>
             <div>
-              <InfoTooltip>RPM in {getInfoTip(range)}</InfoTooltip>
+              <InfoTooltip>RPM in {getInfoTip(timeRange)}</InfoTooltip>
             </div>
           </div>
 
@@ -473,7 +482,8 @@ export const RequestMetricsCard = (props: {
         <Sparkline
           series={data?.series ?? []}
           valueFormatter={formatter}
-          timeRange={range}
+          timeRange={timeRange}
+          syncId={syncId}
         />
       </CardContent>
       <TopList
@@ -490,9 +500,10 @@ export const RequestMetricsCard = (props: {
 export const LatencyMetricsCard = (props: {
   data?: MetricsDashboardMetric;
   isSubgraphAnalytics?: boolean;
+  syncId?: string;
 }) => {
-  const range = useRange();
-  const { data } = props;
+  const timeRange = useTimeRange();
+  const { data, syncId } = props;
 
   const top = data?.top ?? [];
 
@@ -511,7 +522,7 @@ export const LatencyMetricsCard = (props: {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm">
             <h4>P95 Latency</h4>
-            <InfoTooltip>P95 latency in {getInfoTip(range)}</InfoTooltip>
+            <InfoTooltip>P95 latency in {getInfoTip(timeRange)}</InfoTooltip>
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
 
@@ -526,7 +537,8 @@ export const LatencyMetricsCard = (props: {
         <Sparkline
           series={data?.series ?? []}
           valueFormatter={formatter}
-          timeRange={range}
+          timeRange={timeRange}
+          syncId={syncId}
         />
       </CardContent>
       <TopList
@@ -543,9 +555,10 @@ export const LatencyMetricsCard = (props: {
 export const ErrorMetricsCard = (props: {
   data?: MetricsDashboardMetric;
   isSubgraphAnalytics?: boolean;
+  syncId?: string;
 }) => {
-  const range = useRange();
-  const { data } = props;
+  const timeRange = useTimeRange();
+  const { data, syncId } = props;
 
   const top = data?.top ?? [];
 
@@ -560,7 +573,7 @@ export const ErrorMetricsCard = (props: {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm">
             <h4>Error Percentage</h4>
-            <InfoTooltip>Error percentage in {getInfoTip(range)}</InfoTooltip>
+            <InfoTooltip>Error percentage in {getInfoTip(timeRange)}</InfoTooltip>
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
           <p className="text-sm text-muted-foreground">
@@ -574,7 +587,8 @@ export const ErrorMetricsCard = (props: {
         <ErrorPercentChart
           series={data?.series ?? []}
           valueFormatter={formatter}
-          timeRange={range}
+          timeRange={timeRange}
+          syncId={syncId}
         />
       </CardContent>
       <TopList
@@ -593,7 +607,7 @@ export const ErrorMetricsCard = (props: {
 };
 
 const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
-  const { timeRange = 24, valueFormatter } = props;
+  const { timeRange = 24, valueFormatter, syncId } = props;
   const id = useId();
   const { data, ticks, domain, timeFormatter } = useChartData(
     timeRange,
@@ -606,6 +620,7 @@ const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
         <AreaChart
           data={data}
           margin={{ top: 10, right: 6, bottom: 8, left: 6 }}
+          syncId={syncId}
         >
           <defs>
             <linearGradient id={`${id}-gradient`} x1="0" y1="0" x2="0" y2="1">
@@ -658,7 +673,7 @@ const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
   );
 };
 
-export const ErrorRateOverTimeCard = () => {
+export const ErrorRateOverTimeCard = ({ syncId }: { syncId?: string }) => {
   const id = useId();
   const graphContext = useContext(GraphContext);
 
@@ -740,6 +755,7 @@ export const ErrorRateOverTimeCard = () => {
         <AreaChart
           data={data}
           margin={{ top: 8, right: 8, bottom: 8, left: 0 }}
+          syncId={syncId}
         >
           <defs>
             <linearGradient id={`${id}-gradient`} x1="0" y1="0" x2="0" y2="1">
@@ -810,6 +826,109 @@ export const ErrorRateOverTimeCard = () => {
       </CardHeader>
 
       <CardContent className="h-[240px]">{content}</CardContent>
+    </Card>
+  );
+};
+
+export const LatencyDistributionCard = ({ series, syncId } : { series: any[]; syncId?: string; }) => {
+  const [activeLatencies, setActiveLatencies] = useState({ p50: false, p90: false, p99: false });
+  const timeRange = useTimeRange();
+  const formatter = (value: number) => {
+    return formatDurationMetric(value, {
+      maximumFractionDigits: 3,
+    });
+  };
+
+  const { isMobile } = useWindowSize();
+  const { data, ticks, domain, timeFormatter } = useChartData(timeRange, series);
+
+  const p50StrokeColor = "hsl(var(--chart-primary))";
+  const p90StrokeColor = "hsl(var(--warning))";
+  const p99StrokeColor = "hsl(var(--destructive))";
+
+  return (
+    <Card className="bg-transparent">
+      <CardHeader>
+        <div className="flex space-x-2">
+          <CardTitle>Latency</CardTitle>
+          <InfoTooltip>
+            Latency in {getInfoTip(timeRange)}
+          </InfoTooltip>
+        </div>
+      </CardHeader>
+
+      <CardContent className="h-[240px]">
+        <ResponsiveContainer width="99%" height="100%">
+          <LineChart
+            data={data}
+            margin={{ top: 8, right: 8, bottom: 8, left: 0 }}
+            syncId={syncId}
+          >
+            <Line
+              name="p99"
+              type="monotone"
+              dataKey="p99"
+              animationDuration={300}
+              dot={false}
+              hide={activeLatencies.p99}
+              stroke={p99StrokeColor}
+              strokeWidth={1.5}
+            />
+            <Line
+              name="p90"
+              type="monotone"
+              dataKey="p90"
+              animationDuration={300}
+              dot={false}
+              hide={activeLatencies.p90}
+              stroke={p90StrokeColor}
+              strokeWidth={1.5}
+            />
+            <Line
+              name="p50"
+              type="monotone"
+              dataKey="p50"
+              animationDuration={300}
+              dot={false}
+              hide={activeLatencies.p50}
+              stroke={p50StrokeColor}
+              strokeWidth={1.5}
+            />
+
+            <XAxis
+              dataKey="timestamp"
+              domain={domain}
+              ticks={ticks}
+              tickFormatter={timeFormatter}
+              type="number"
+              interval="preserveStart"
+              minTickGap={60}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: "13px" }}
+            />
+
+            <YAxis
+              hide={isMobile}
+              tickFormatter={formatter}
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: "13px" }}
+            />
+
+            <Legend
+              verticalAlign="top"
+              align="right"
+              inactiveColor="hsl(var(--muted-foreground) / 0.45)"
+              wrapperStyle={{ fontSize: "13px", marginTop: "-10px" }}
+              onClick={({ dataKey, inactive }) => {
+                setActiveLatencies({
+                  ...activeLatencies,
+                  [dataKey]: !inactive
+                });
+              }}
+            />
+
+            <ChartTooltip formatter={formatter} />
+          </LineChart>
+        </ResponsiveContainer>
+      </CardContent>
     </Card>
   );
 };
