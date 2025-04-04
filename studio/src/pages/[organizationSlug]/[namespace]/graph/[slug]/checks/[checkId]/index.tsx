@@ -459,10 +459,12 @@ const CheckDetails = ({
   const ghDetails = data.check.ghDetails;
   const vcsContext = data.check.vcsContext;
 
-  const reason = !data.check.isComposable
-    ? "Composition errors were found"
-    : data.check.isBreaking && data.check?.clientTrafficCheckSkipped
-      ? "Breaking changes were detected"
+  const reason = data.check.proposalMatch === "error"
+    ? "Proposal match check failed"
+    : !data.check.isComposable
+      ? "Composition errors were found"
+      : data.check.isBreaking && data.check?.clientTrafficCheckSkipped
+        ? "Breaking changes were detected"
       : data.check.isBreaking && data.check.hasClientTraffic
         ? "Operations were affected by breaking changes"
         : data.check.isBreaking && !data.check.hasClientTraffic
