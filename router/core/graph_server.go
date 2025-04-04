@@ -18,8 +18,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/klauspost/compress/gzip"
-	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
@@ -30,8 +28,6 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/exp/maps"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -47,9 +43,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
-	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
@@ -66,11 +59,6 @@ type (
 		HealthChecks() health.Checker
 	}
 
-	EnginePubSubProviders struct {
-		nats  map[string]pubsub_datasource.NatsPubSub
-		kafka map[string]pubsub_datasource.KafkaPubSub
-	}
-
 	// graphServer is the swappable implementation of a Graph instance which is an HTTP mux with middlewares.
 	// Everytime a schema is updated, the old graph server is shutdown and a new graph server is created.
 	// For feature flags, a graphql server has multiple mux and is dynamically switched based on the feature flag header or cookie.
@@ -79,7 +67,6 @@ type (
 		*Config
 		context                 context.Context
 		cancelFunc              context.CancelFunc
-		pubSubProviders         *EnginePubSubProviders
 		engineStats             statistics.EngineStatistics
 		playgroundHandler       func(http.Handler) http.Handler
 		publicKey               *ecdsa.PublicKey
@@ -127,10 +114,6 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		graphMuxList:            make([]*graphMux, 0, 1),
 		routerListenAddr:        r.listenAddr,
 		hostName:                r.hostName,
-		pubSubProviders: &EnginePubSubProviders{
-			nats:  map[string]pubsub_datasource.NatsPubSub{},
-			kafka: map[string]pubsub_datasource.KafkaPubSub{},
-		},
 	}
 
 	baseOtelAttributes := []attribute.KeyValue{
@@ -895,10 +878,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		SubgraphErrorPropagation: s.subgraphErrorPropagation,
 	}
 
-	err = s.buildPubSubConfiguration(ctx, engineConfig, routerEngineConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build pubsub configuration: %w", err)
-	}
+	//err = s.buildPubSubConfiguration(ctx, engineConfig, routerEngineConfig)
+	//if err != nil {
+	//	return nil, fmt.Errorf("failed to build pubsub configuration: %w", err)
+	//}
 
 	ecb := &ExecutorConfigurationBuilder{
 		introspection:  s.introspection,
@@ -934,7 +917,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			EngineConfig:                   engineConfig,
 			Subgraphs:                      configSubgraphs,
 			RouterEngineConfig:             routerEngineConfig,
-			PubSubProviders:                s.pubSubProviders,
 			Reporter:                       s.engineStats,
 			ApolloCompatibilityFlags:       s.apolloCompatibilityFlags,
 			ApolloRouterCompatibilityFlags: s.apolloRouterCompatibilityFlags,
@@ -1190,85 +1172,85 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	return gm, nil
 }
 
-func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, routerEngineCfg *RouterEngineConfiguration) error {
-	datasourceConfigurations := engineConfig.GetDatasourceConfigurations()
-	for _, datasourceConfiguration := range datasourceConfigurations {
-		if datasourceConfiguration.CustomEvents == nil {
-			continue
-		}
-
-		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetNats() {
-
-			providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
-			// if this source name's provider has already been initiated, do not try to initiate again
-			_, ok := s.pubSubProviders.nats[providerID]
-			if ok {
-				continue
-			}
-
-			for _, eventSource := range routerEngineCfg.Events.Providers.Nats {
-				if eventSource.ID == eventConfiguration.EngineEventConfiguration.GetProviderId() {
-					options, err := buildNatsOptions(eventSource, s.logger)
-					if err != nil {
-						return fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", providerID, err)
-					}
-					natsConnection, err := nats.Connect(eventSource.URL, options...)
-					if err != nil {
-						return fmt.Errorf("failed to create connection for Nats provider with ID \"%s\": %w", providerID, err)
-					}
-					js, err := jetstream.New(natsConnection)
-					if err != nil {
-						return err
-					}
-
-					s.pubSubProviders.nats[providerID] = pubsubNats.NewConnector(s.logger, natsConnection, js, s.hostName, s.routerListenAddr).New(ctx)
-
-					break
-				}
-			}
-
-			_, ok = s.pubSubProviders.nats[providerID]
-			if !ok {
-				return fmt.Errorf("failed to find Nats provider with ID \"%s\". Ensure the provider definition is part of the config", providerID)
-			}
-		}
-
-		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetKafka() {
-
-			providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
-			// if this source name's provider has already been initiated, do not try to initiate again
-			_, ok := s.pubSubProviders.kafka[providerID]
-			if ok {
-				continue
-			}
-
-			for _, eventSource := range routerEngineCfg.Events.Providers.Kafka {
-				if eventSource.ID == providerID {
-					options, err := buildKafkaOptions(eventSource)
-					if err != nil {
-						return fmt.Errorf("failed to build options for Kafka provider with ID \"%s\": %w", providerID, err)
-					}
-					ps, err := kafka.NewConnector(s.logger, options)
-					if err != nil {
-						return fmt.Errorf("failed to create connection for Kafka provider with ID \"%s\": %w", providerID, err)
-					}
-
-					s.pubSubProviders.kafka[providerID] = ps.New(ctx)
-
-					break
-				}
-			}
-
-			_, ok = s.pubSubProviders.kafka[providerID]
-			if !ok {
-				return fmt.Errorf("failed to find Kafka provider with ID \"%s\". Ensure the provider definition is part of the config", providerID)
-			}
-		}
-
-	}
-
-	return nil
-}
+//func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, routerEngineCfg *RouterEngineConfiguration) error {
+//	datasourceConfigurations := engineConfig.GetDatasourceConfigurations()
+//	for _, datasourceConfiguration := range datasourceConfigurations {
+//		if datasourceConfiguration.CustomEvents == nil {
+//			continue
+//		}
+//
+//		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetNats() {
+//
+//			providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
+//			// if this source name's provider has already been initiated, do not try to initiate again
+//			_, ok := s.pubSubProviders.nats[providerID]
+//			if ok {
+//				continue
+//			}
+//
+//			for _, eventSource := range routerEngineCfg.Events.Providers.Nats {
+//				if eventSource.ID == eventConfiguration.EngineEventConfiguration.GetProviderId() {
+//					options, err := buildNatsOptions(eventSource, s.logger)
+//					if err != nil {
+//						return fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", providerID, err)
+//					}
+//					natsConnection, err := nats.Connect(eventSource.URL, options...)
+//					if err != nil {
+//						return fmt.Errorf("failed to create connection for Nats provider with ID \"%s\": %w", providerID, err)
+//					}
+//					js, err := jetstream.New(natsConnection)
+//					if err != nil {
+//						return err
+//					}
+//
+//					s.pubSubProviders.nats[providerID] = pubsubNats.NewConnector(s.logger, natsConnection, js, s.hostName, s.routerListenAddr).New(ctx)
+//
+//					break
+//				}
+//			}
+//
+//			_, ok = s.pubSubProviders.nats[providerID]
+//			if !ok {
+//				return fmt.Errorf("failed to find Nats provider with ID \"%s\". Ensure the provider definition is part of the config", providerID)
+//			}
+//		}
+//
+//		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetKafka() {
+//
+//			providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
+//			// if this source name's provider has already been initiated, do not try to initiate again
+//			_, ok := s.pubSubProviders.kafka[providerID]
+//			if ok {
+//				continue
+//			}
+//
+//			for _, eventSource := range routerEngineCfg.Events.Providers.Kafka {
+//				if eventSource.ID == providerID {
+//					options, err := buildKafkaOptions(eventSource)
+//					if err != nil {
+//						return fmt.Errorf("failed to build options for Kafka provider with ID \"%s\": %w", providerID, err)
+//					}
+//					ps, err := kafka.NewConnector(s.logger, options)
+//					if err != nil {
+//						return fmt.Errorf("failed to create connection for Kafka provider with ID \"%s\": %w", providerID, err)
+//					}
+//
+//					s.pubSubProviders.kafka[providerID] = ps.New(ctx)
+//
+//					break
+//				}
+//			}
+//
+//			_, ok = s.pubSubProviders.kafka[providerID]
+//			if !ok {
+//				return fmt.Errorf("failed to find Kafka provider with ID \"%s\". Ensure the provider definition is part of the config", providerID)
+//			}
+//		}
+//
+//	}
+//
+//	return nil
+//}
 
 // wait waits for all in-flight requests to finish. Similar to http.Server.Shutdown we wait in intervals + jitter
 // to make the shutdown process more efficient.
@@ -1340,26 +1322,6 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	if s.prometheusEngineMetrics != nil {
 		if err := s.prometheusEngineMetrics.Shutdown(); err != nil {
 			finalErr = errors.Join(finalErr, err)
-		}
-	}
-
-	if s.pubSubProviders != nil {
-
-		s.logger.Debug("Shutting down pubsub providers")
-
-		for _, pubSub := range s.pubSubProviders.nats {
-			if p, ok := pubSub.(pubsub.Lifecycle); ok {
-				if err := p.Shutdown(ctx); err != nil {
-					finalErr = errors.Join(finalErr, err)
-				}
-			}
-		}
-		for _, pubSub := range s.pubSubProviders.kafka {
-			if p, ok := pubSub.(pubsub.Lifecycle); ok {
-				if err := p.Shutdown(ctx); err != nil {
-					finalErr = errors.Join(finalErr, err)
-				}
-			}
 		}
 	}
 

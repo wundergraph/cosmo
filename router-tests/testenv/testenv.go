@@ -36,7 +36,6 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 	"github.com/twmb/franz-go/pkg/kadm"
@@ -49,8 +48,6 @@ import (
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 	"google.golang.org/protobuf/encoding/protojson"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
 	"github.com/wundergraph/cosmo/router/core"
@@ -1126,6 +1123,10 @@ func (e *Environment) GetPubSubName(name string) string {
 	return e.getPubSubName(name)
 }
 
+func (e *Environment) GetKafkaSeeds() []string {
+	return e.cfg.KafkaSeeds
+}
+
 func (e *Environment) RouterConfigVersionMain() string {
 	return e.routerConfigVersionMain
 }
@@ -1977,16 +1978,13 @@ func DeflakeWSWriteJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err 
 func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, natsData *NatsData, pubSubName func(string) string) *subgraphs.SubgraphOptions {
 	if natsData == nil {
 		return &subgraphs.SubgraphOptions{
-			NatsPubSubByProviderID: map[string]pubsub_datasource.NatsPubSub{},
+			NatsPubSubByProviderID: map[string]*pubsubNats.NatsPubSub{},
 			GetPubSubName:          pubSubName,
 		}
 	}
-	natsPubSubByProviderID := make(map[string]pubsub_datasource.NatsPubSub, len(demoNatsProviders))
+	natsPubSubByProviderID := make(map[string]*pubsubNats.NatsPubSub, len(demoNatsProviders))
 	for _, sourceName := range demoNatsProviders {
-		js, err := jetstream.New(natsData.Connections[0])
-		require.NoError(t, err)
-
-		natsPubSubByProviderID[sourceName] = pubsubNats.NewConnector(logger, natsData.Connections[0], js, "hostname", "listenaddr").New(ctx)
+		natsPubSubByProviderID[sourceName] = pubsubNats.NewConnector(logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr").New(ctx)
 	}
 
 	return &subgraphs.SubgraphOptions{

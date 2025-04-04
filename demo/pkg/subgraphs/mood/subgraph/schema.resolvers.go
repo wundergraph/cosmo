@@ -10,7 +10,7 @@ import (
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/mood/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/mood/subgraph/model"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 )
 
 // UpdateMood is the resolver for the updateMood field.
@@ -18,7 +18,7 @@ func (r *mutationResolver) UpdateMood(ctx context.Context, employeeID int, mood 
 	storage.Set(employeeID, mood)
 	myNatsTopic := r.GetPubSubName(fmt.Sprintf("employeeUpdated.%d", employeeID))
 	payload := fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID)
-	err := r.NatsPubSubByProviderID["default"].Publish(ctx, pubsub_datasource.NatsPublishAndRequestEventConfiguration{
+	err := r.NatsPubSubByProviderID["default"].Publish(ctx, nats.PublishAndRequestEventConfiguration{
 		Subject: myNatsTopic,
 		Data:    []byte(payload),
 	})
@@ -27,7 +27,7 @@ func (r *mutationResolver) UpdateMood(ctx context.Context, employeeID int, mood 
 	}
 
 	defaultTopic := r.GetPubSubName(fmt.Sprintf("employeeUpdatedMyNats.%d", employeeID))
-	err = r.NatsPubSubByProviderID["my-nats"].Publish(ctx, pubsub_datasource.NatsPublishAndRequestEventConfiguration{
+	err = r.NatsPubSubByProviderID["my-nats"].Publish(ctx, nats.PublishAndRequestEventConfiguration{
 		Subject: defaultTopic,
 		Data:    []byte(payload),
 	})
