@@ -142,6 +142,7 @@
           "Default": "",
           "Name": "",
           "Value": "",
+          "Expression": "",
           "ValueFrom": null
         },
         {
@@ -152,6 +153,7 @@
           "Default": "",
           "Name": "",
           "Value": "",
+          "Expression": "",
           "ValueFrom": null
         },
         {
@@ -162,6 +164,7 @@
           "Default": "123",
           "Name": "",
           "Value": "",
+          "Expression": "",
           "ValueFrom": null
         },
         {
@@ -172,6 +175,7 @@
           "Default": "",
           "Name": "X-API-Key",
           "Value": "some-secret",
+          "Expression": "",
           "ValueFrom": null
         },
         {
@@ -182,12 +186,24 @@
           "Default": "",
           "Name": "x-operation-name",
           "Value": "",
+          "Expression": "",
           "ValueFrom": {
             "RequestHeader": "",
             "ContextField": "operation_name",
             "ResponseHeader": "",
             "Expression": ""
           }
+        },
+        {
+          "Operation": "set",
+          "Matching": "",
+          "Named": "",
+          "Rename": "",
+          "Default": "",
+          "Name": "x-expression-header",
+          "Value": "",
+          "Expression": "request.header.Get('X-Operation-Name')",
+          "ValueFrom": null
         }
       ],
       "Response": [
@@ -214,6 +230,7 @@
             "Default": "some-secret",
             "Name": "",
             "Value": "",
+            "Expression": "",
             "ValueFrom": null
           }
         ],
