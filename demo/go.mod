@@ -10,9 +10,9 @@ require (
 	github.com/ravilushqa/otelgqlgen v0.13.1
 	github.com/rs/cors v1.11.0
 	github.com/vektah/gqlparser/v2 v2.5.21
-	github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d
-	github.com/wundergraph/cosmo/router v0.0.0-20250313152501-2665e6cbc068
-	github.com/wundergraph/cosmo/router-tests v0.0.0-20250313152501-2665e6cbc068
+	github.com/wundergraph/cosmo/composition-go v0.0.0-20250325074030-0f21399c19eb
+	github.com/wundergraph/cosmo/router v0.0.0-20250325074030-0f21399c19eb
+	github.com/wundergraph/cosmo/router-tests v0.0.0-20250325074030-0f21399c19eb
 	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.165
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/otel v1.28.0
@@ -35,7 +35,6 @@ require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/bep/debounce v1.2.1 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/caarlos0/env/v11 v11.3.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
@@ -56,7 +55,6 @@ require (
 	github.com/expr-lang/expr v1.17.0 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-chi/chi/v5 v5.1.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
