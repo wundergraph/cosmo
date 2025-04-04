@@ -2190,7 +2190,7 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 				}
 				defer conn.Close()
 
-				// Simple message handler to handle the GraphQL protocol
+				// Handle the GraphQL protocol
 				for {
 					// Read message
 					messageType, message, err := conn.ReadMessage()
