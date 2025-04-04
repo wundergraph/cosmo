@@ -92,7 +92,7 @@ const ChecksPage: NextPageWithLayout = () => {
       endDate: formatISO(endDate),
       filters: {
         subgraphs: !selectedSubgraphs.length
-          ? graphContext?.subgraphs?.map((sg) => sg.id) ?? []
+          ? (graphContext?.subgraphs?.map((sg) => sg.id) ?? [])
           : selectedSubgraphs,
       },
     },
@@ -181,6 +181,7 @@ const ChecksPage: NextPageWithLayout = () => {
                   lintSkipped,
                   graphPruningSkipped,
                   checkedSubgraphs,
+                  proposalMatch,
                 }) => {
                   const isSuccessful = isCheckSuccessful(
                     isComposable,
@@ -189,6 +190,7 @@ const ChecksPage: NextPageWithLayout = () => {
                     hasLintErrors,
                     hasGraphPruningErrors,
                     clientTrafficCheckSkipped,
+                    proposalMatch === "error",
                   );
 
                   const path = `${router.asPath.split("?")[0]}/${id}`;
@@ -233,8 +235,8 @@ const ChecksPage: NextPageWithLayout = () => {
                             (checkedSubgraphs.length > 1
                               ? "Multiple Subgraphs"
                               : checkedSubgraphs.length > 0
-                              ? checkedSubgraphs[0].subgraphName
-                              : "Subgraph")}
+                                ? checkedSubgraphs[0].subgraphName
+                                : "Subgraph")}
                         </TableCell>
                       )}
                       <TableCell>
@@ -290,6 +292,22 @@ const ChecksPage: NextPageWithLayout = () => {
                             )}
                             <span className="flex-1 truncate">
                               Pruning Errors
+                            </span>
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "gap-2 py-1.5",
+                              !proposalMatch && "text-muted-foreground",
+                            )}
+                          >
+                            {!proposalMatch ? (
+                              <NoSymbolIcon className="h-4 w-4" />
+                            ) : (
+                              getCheckIcon(proposalMatch !== "error")
+                            )}
+                            <span className="flex-1 truncate">
+                              Proposal Match
                             </span>
                           </Badge>
                         </div>

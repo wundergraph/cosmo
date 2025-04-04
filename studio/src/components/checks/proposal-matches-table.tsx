@@ -1,15 +1,19 @@
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-    TableWrapper,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableWrapper,
 } from "@/components/ui/table";
-import { CheckCircleIcon, NoSymbolIcon } from "@heroicons/react/24/outline";
+import {
+  CheckCircleIcon,
+  ExclamationCircleIcon,
+  NoSymbolIcon,
+} from "@heroicons/react/24/outline";
 import { CrossCircledIcon, LightningBoltIcon } from "@radix-ui/react-icons";
 import { GetCheckSummaryResponse_ProposalSchemaMatch } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
@@ -26,7 +30,7 @@ export const ProposalMatchesTable = ({
   proposalMatches: GetCheckSummaryResponse_ProposalSchemaMatch[];
   caption?: React.ReactNode;
   isProposalsEnabled: boolean;
-  proposalMatch: boolean;
+  proposalMatch?: string;
 }) => {
   const router = useRouter();
 
@@ -55,12 +59,32 @@ export const ProposalMatchesTable = ({
     );
   }
 
-  if (!proposalMatch || proposalMatches.length === 0) {
+  if (!proposalMatch) {
     return (
       <EmptyState
         icon={<NoSymbolIcon className="text-gray-400" />}
         title="Proposal match is skipped"
         description="Proposal match is skipped for this check."
+      />
+    );
+  }
+
+  if (proposalMatch === "error" && proposalMatches.length === 0) {
+    return (
+      <EmptyState
+        icon={<CrossCircledIcon className="h-16 w-16 text-destructive" />}
+        title="Proposal Match Check Failed"
+        description="The proposal match check failed for this check as no matching proposal was found."
+      />
+    );
+  }
+
+  if (proposalMatch === "warn" && proposalMatches.length === 0) {
+    return (
+      <EmptyState
+        icon={<ExclamationCircleIcon className="h-16 w-16 text-warning" />}
+        title="Proposal Match Check passed with warnings"
+        description="The proposal match check passed with warnings as the check severity was set to warn."
       />
     );
   }

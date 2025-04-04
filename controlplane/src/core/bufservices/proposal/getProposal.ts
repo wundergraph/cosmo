@@ -4,7 +4,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import {
   GetProposalRequest,
   GetProposalResponse,
-  Proposal
+  Proposal,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';

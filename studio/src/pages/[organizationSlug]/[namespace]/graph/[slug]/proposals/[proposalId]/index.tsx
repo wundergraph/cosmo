@@ -352,6 +352,7 @@ export const ProposalDetails = ({
                               lintSkipped,
                               graphPruningSkipped,
                               checkedSubgraphs,
+                              proposalMatch,
                             }) => {
                               const isSuccessful = isCheckSuccessful(
                                 isComposable,
@@ -360,6 +361,7 @@ export const ProposalDetails = ({
                                 hasLintErrors,
                                 hasGraphPruningErrors,
                                 clientTrafficCheckSkipped,
+                                proposalMatch === "error",
                               );
 
                               const path = `/${organizationSlug}/${namespace}/graph/${slug}/checks/${id}`;
@@ -576,7 +578,7 @@ export const ProposalDetails = ({
                 isLoading={isPending}
                 className="ml-4"
               >
-                 Approve Proposal
+                Approve Proposal
               </Button>
             </div>
           </div>

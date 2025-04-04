@@ -3,7 +3,7 @@ import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   GetChecksOfProposalRequest,
-  GetChecksOfProposalResponse
+  GetChecksOfProposalResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';

@@ -449,6 +449,7 @@ const CheckDetails = ({
     data.check.hasLintErrors,
     data.check.hasGraphPruningErrors,
     data.check.clientTrafficCheckSkipped,
+    data.check.proposalMatch === "error",
   );
 
   const currentAffectedGraph = data.affectedGraphs.find(
@@ -1142,7 +1143,7 @@ const CheckDetails = ({
                   proposalMatches={data.proposalMatches}
                   caption={`${data.proposalMatches.length} matches found`}
                   isProposalsEnabled={data.isProposalsEnabled}
-                  proposalMatch={!!data.check.proposalMatch}
+                  proposalMatch={data.check.proposalMatch}
                 />
               </TabsContent>
               <TabsContent value="schema" className="relative w-full flex-1">

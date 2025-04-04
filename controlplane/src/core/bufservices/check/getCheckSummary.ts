@@ -142,6 +142,7 @@ export function getCheckSummary(
           hasLintErrors,
           hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
           clientTrafficCheckSkipped: check.clientTrafficCheckSkipped,
+          hasProposalMatchError: check.proposalMatch === 'error',
         }),
       }),
     );
@@ -183,6 +184,7 @@ export function getCheckSummary(
             hasLintErrors,
             hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
             clientTrafficCheckSkipped: check.clientTrafficCheckSkipped,
+            hasProposalMatchError: check.proposalMatch === 'error',
           }),
         }),
       );
