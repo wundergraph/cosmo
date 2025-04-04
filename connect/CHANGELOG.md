@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.100.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.99.0...@wundergraph/cosmo-connect@0.100.0) (2025-04-04)
+
+### Features
+
+* improve delete organization workflow ([#1741](https://github.com/wundergraph/cosmo/issues/1741)) ([643c179](https://github.com/wundergraph/cosmo/commit/643c179f71daf5a77a56c685b3924d10894c2d9c)) (@wilsonrivera)
+
 # [0.99.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.98.1...@wundergraph/cosmo-connect@0.99.0) (2025-04-01)
 
 ### Features
