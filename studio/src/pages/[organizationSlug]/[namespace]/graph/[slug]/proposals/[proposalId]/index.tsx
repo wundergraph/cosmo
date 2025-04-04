@@ -574,7 +574,7 @@ export const ProposalDetails = ({
               </div>
               <Button
                 onClick={handleApproveProposal}
-                disabled={isPending || latestCheckSuccess}
+                disabled={isPending || !latestCheckSuccess}
                 isLoading={isPending}
                 className="ml-4"
               >
