@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"net/http"
 	"net/url"
 	"strings"
@@ -39,7 +40,6 @@ import (
 	rmiddleware "github.com/wundergraph/cosmo/router/internal/middleware"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
@@ -906,6 +906,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		transport:      s.executionTransport,
 		logger:         s.logger,
 		trackUsageInfo: s.graphqlMetricsConfig.Enabled,
+		subscriptionClientOptions: &SubscriptionClientOptions{
+			PingInterval: s.engineExecutionConfiguration.WebSocketClientPingInterval,
+		},
 		transportOptions: &TransportOptions{
 			Proxy:                    s.executionTransportProxy,
 			SubgraphTransportOptions: s.subgraphTransportOptions,

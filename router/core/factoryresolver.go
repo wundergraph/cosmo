@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 	"net/http"
 	"net/url"
 	"slices"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 
 	"github.com/buger/jsonparser"
 
@@ -64,6 +63,7 @@ type DefaultFactoryResolver struct {
 func NewDefaultFactoryResolver(
 	ctx context.Context,
 	transportOptions *TransportOptions,
+	subscriptionClientOptions *SubscriptionClientOptions,
 	baseTransport http.RoundTripper,
 	log *zap.Logger,
 	enableSingleFlight bool,
@@ -92,12 +92,22 @@ func NewDefaultFactoryResolver(
 
 	netPollConfig.Enable = enableNetPoll
 
+	options := []graphql_datasource.Options{
+		graphql_datasource.WithLogger(factoryLogger),
+		graphql_datasource.WithNetPollConfiguration(netPollConfig),
+	}
+
+	if subscriptionClientOptions != nil {
+		if subscriptionClientOptions.PingInterval > 0 {
+			options = append(options, graphql_datasource.WithPingInterval(subscriptionClientOptions.PingInterval))
+		}
+	}
+
 	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
 		defaultHttpClient,
 		streamingClient,
 		ctx,
-		graphql_datasource.WithLogger(factoryLogger),
-		graphql_datasource.WithNetPollConfiguration(netPollConfig),
+		options...,
 	)
 
 	return &DefaultFactoryResolver{
