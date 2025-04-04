@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -2157,5 +2158,209 @@ func expectConnectAndReadCurrentTime(t *testing.T, xEnv *testenv.Environment) {
 		require.True(t, netErr.Timeout())
 	} else {
 		require.Fail(t, "expected net.Error")
+	}
+}
+
+func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
+	t.Parallel()
+
+	t.Run("epoll", func(t *testing.T) {
+
+		t.Parallel()
+
+		totalUpdates := 5
+
+		// Channel to collect pings from the router
+		pingReceived := make(chan bool, totalUpdates)
+
+		// Middleware to handle WebSocket connections
+		wsMiddleware := func(handler http.Handler) http.Handler {
+			// Configure the WebSocket upgrader
+			upgrader := websocket.Upgrader{
+				CheckOrigin:  func(r *http.Request) bool { return true },
+				Subprotocols: []string{"graphql-transport-ws"},
+			}
+
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Upgrade the connection
+				conn, err := upgrader.Upgrade(w, r, nil)
+				if err != nil {
+					t.Logf("WebSocket upgrade failed: %v", err)
+					return
+				}
+				defer conn.Close()
+
+				// Simple message handler to handle the GraphQL protocol
+				for {
+					// Read message
+					messageType, message, err := conn.ReadMessage()
+					if err != nil {
+						// Normal close is OK
+						if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+							return
+						}
+						t.Logf("Failed to read message: %v", err)
+						return
+					}
+
+					// Only handle text messages
+					if messageType != websocket.TextMessage {
+						continue
+					}
+
+					// Parse the message
+					var msg map[string]interface{}
+					if err := json.Unmarshal(message, &msg); err != nil {
+						t.Logf("Failed to unmarshal message: %v", err)
+						continue
+					}
+
+					// Process based on message type
+					msgType, ok := msg["type"].(string)
+					if !ok {
+						continue
+					}
+
+					switch msgType {
+					case "connection_init":
+						// Acknowledge connection
+						if err := conn.WriteJSON(map[string]string{"type": "connection_ack"}); err != nil {
+							t.Logf("Failed to send connection_ack: %v", err)
+							return
+						}
+
+					case "ping":
+						// Record ping and send pong
+						select {
+						case pingReceived <- true:
+							t.Log("Received ping from router")
+						default:
+							// Don't block if channel is full
+						}
+
+						if err := conn.WriteJSON(map[string]string{"type": "pong"}); err != nil {
+							t.Logf("Failed to send pong: %v", err)
+							return
+						}
+
+					case "subscribe":
+						// Handle countEmp subscription
+						if payload, ok := msg["payload"].(map[string]interface{}); ok {
+							if query, ok := payload["query"].(string); ok && strings.Contains(query, "countEmp") {
+								go handleCountEmpSubscription(t, conn, msg["id"], 200*time.Millisecond, totalUpdates)
+							}
+						}
+
+					case "complete":
+						// Client completed subscription
+						return
+					}
+				}
+			})
+		}
+
+		// Configure and run the test
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalMiddleware: wsMiddleware,
+			},
+			ModifyEngineExecutionConfiguration: func(config *config.EngineExecutionConfiguration) {
+				// Use short ping interval to test quickly
+				config.WebSocketClientPingInterval = 100 * time.Millisecond
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Setup client connection
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+
+			// Start the subscription
+			err := testenv.DeflakeWSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { countEmp(max: 5, intervalMilliseconds: 200) }"}`),
+			})
+			require.NoError(t, err)
+
+			// Process subscription updates
+			var receivedUpdates int
+			for receivedUpdates < totalUpdates {
+				var res testenv.WebSocketMessage
+				err = testenv.DeflakeWSReadJSON(t, conn, &res)
+				require.NoError(t, err)
+
+				if res.Type == "next" {
+					receivedUpdates++
+					var payload struct {
+						Data struct {
+							CountEmp int `json:"countEmp"`
+						} `json:"data"`
+					}
+					err := json.Unmarshal(res.Payload, &payload)
+					require.NoError(t, err)
+					require.Equal(t, receivedUpdates, payload.Data.CountEmp)
+				}
+			}
+
+			// Get the complete message
+			var complete testenv.WebSocketMessage
+			err = testenv.DeflakeWSReadJSON(t, conn, &complete)
+			require.NoError(t, err)
+			require.Equal(t, "complete", complete.Type)
+
+			// Check that we received at least one ping
+			timeoutCh := time.After(3 * time.Second)
+			pingCount := 0
+
+			for {
+				select {
+				case <-pingReceived:
+					pingCount++
+
+					if pingCount >= totalUpdates {
+						t.Logf("Received %d pings from router", pingCount)
+						return
+					}
+				case <-timeoutCh:
+					require.GreaterOrEqual(t, pingCount, 1, "Expected at least one ping from router")
+					return
+				}
+			}
+		})
+
+	})
+}
+
+// Helper function to handle countEmp subscription
+func handleCountEmpSubscription(t *testing.T, conn *websocket.Conn, id interface{}, updateInterval time.Duration, totalUpdates int) {
+	// Send updates with the specified interval
+	for i := 1; i <= totalUpdates; i++ {
+		response := map[string]interface{}{
+			"type": "next",
+			"id":   id,
+			"payload": map[string]interface{}{
+				"data": map[string]interface{}{
+					"countEmp": i,
+				},
+			},
+		}
+
+		err := conn.WriteJSON(response)
+		if err != nil {
+			t.Logf("Failed to send subscription update: %v", err)
+			return
+		}
+		t.Logf("Sent subscription update %d/%d", i, totalUpdates)
+		time.Sleep(updateInterval)
+	}
+
+	// Send complete message
+	t.Log("Sending complete message for subscription")
+	err := conn.WriteJSON(map[string]interface{}{
+		"type": "complete",
+		"id":   id,
+	})
+	if err != nil {
+		t.Logf("Failed to send complete message: %v", err)
+	} else {
+		t.Log("Sent complete message")
 	}
 }
