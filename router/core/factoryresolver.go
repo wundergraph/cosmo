@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 	"net/http"
 	"net/url"
 	"slices"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 
 	"github.com/buger/jsonparser"
 
@@ -99,7 +98,9 @@ func NewDefaultFactoryResolver(
 	}
 
 	if subscriptionClientOptions != nil {
-		options = append(options, graphql_datasource.WithPingInterval(subscriptionClientOptions.PingInterval))
+		if subscriptionClientOptions.PingInterval > 0 {
+			options = append(options, graphql_datasource.WithPingInterval(subscriptionClientOptions.PingInterval))
+		}
 	}
 
 	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(

@@ -33,6 +33,12 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
+// Define the wsMessage type at the package level
+type wsMessage struct {
+	data interface{}
+	done chan error
+}
+
 func TestWebSockets(t *testing.T) {
 	t.Parallel()
 
@@ -2173,6 +2179,9 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 		// Channel to collect pings from the router
 		pingReceived := make(chan bool, totalUpdates)
 
+		// Channel for handling websocket writes
+		wsWriteCh := make(chan wsMessage)
+
 		// Middleware to handle WebSocket connections
 		wsMiddleware := func(handler http.Handler) http.Handler {
 			// Configure the WebSocket upgrader
@@ -2189,6 +2198,14 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 					return
 				}
 				defer conn.Close()
+
+				// Start a goroutine to handle all writes to the websocket
+				go func() {
+					for msg := range wsWriteCh {
+						err := conn.WriteJSON(msg.data)
+						msg.done <- err
+					}
+				}()
 
 				// Handle the GraphQL protocol
 				for {
@@ -2224,7 +2241,12 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 					switch msgType {
 					case "connection_init":
 						// Acknowledge connection
-						if err := conn.WriteJSON(map[string]string{"type": "connection_ack"}); err != nil {
+						done := make(chan error, 1)
+						wsWriteCh <- wsMessage{
+							data: map[string]string{"type": "connection_ack"},
+							done: done,
+						}
+						if err := <-done; err != nil {
 							t.Logf("Failed to send connection_ack: %v", err)
 							return
 						}
@@ -2238,7 +2260,12 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 							// Don't block if channel is full
 						}
 
-						if err := conn.WriteJSON(map[string]string{"type": "pong"}); err != nil {
+						done := make(chan error, 1)
+						wsWriteCh <- wsMessage{
+							data: map[string]string{"type": "pong"},
+							done: done,
+						}
+						if err := <-done; err != nil {
 							t.Logf("Failed to send pong: %v", err)
 							return
 						}
@@ -2247,7 +2274,7 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 						// Handle countEmp subscription
 						if payload, ok := msg["payload"].(map[string]interface{}); ok {
 							if query, ok := payload["query"].(string); ok && strings.Contains(query, "countEmp") {
-								go handleCountEmpSubscription(t, conn, msg["id"], 200*time.Millisecond, totalUpdates)
+								go handleCountEmpSubscription(t, wsWriteCh, msg["id"], 200*time.Millisecond, totalUpdates)
 							}
 						}
 
@@ -2330,7 +2357,7 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 }
 
 // Helper function to handle countEmp subscription
-func handleCountEmpSubscription(t *testing.T, conn *websocket.Conn, id interface{}, updateInterval time.Duration, totalUpdates int) {
+func handleCountEmpSubscription(t *testing.T, wsWriteCh chan<- wsMessage, id interface{}, updateInterval time.Duration, totalUpdates int) {
 	// Send updates with the specified interval
 	for i := 1; i <= totalUpdates; i++ {
 		response := map[string]interface{}{
@@ -2343,8 +2370,12 @@ func handleCountEmpSubscription(t *testing.T, conn *websocket.Conn, id interface
 			},
 		}
 
-		err := conn.WriteJSON(response)
-		if err != nil {
+		done := make(chan error, 1)
+		wsWriteCh <- wsMessage{
+			data: response,
+			done: done,
+		}
+		if err := <-done; err != nil {
 			t.Logf("Failed to send subscription update: %v", err)
 			return
 		}
@@ -2354,11 +2385,15 @@ func handleCountEmpSubscription(t *testing.T, conn *websocket.Conn, id interface
 
 	// Send complete message
 	t.Log("Sending complete message for subscription")
-	err := conn.WriteJSON(map[string]interface{}{
-		"type": "complete",
-		"id":   id,
-	})
-	if err != nil {
+	done := make(chan error, 1)
+	wsWriteCh <- wsMessage{
+		data: map[string]interface{}{
+			"type": "complete",
+			"id":   id,
+		},
+		done: done,
+	}
+	if err := <-done; err != nil {
 		t.Logf("Failed to send complete message: %v", err)
 	} else {
 		t.Log("Sent complete message")
