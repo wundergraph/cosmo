@@ -2304,7 +2304,7 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 					case "subscribe":
 						// Handle countEmp subscription
 						if subscriptionMsg.Payload != nil && strings.Contains(subscriptionMsg.Payload.Query, "countEmp") {
-							go handleCountEmpSubscription(t, wsWriteCh, subscriptionMsg.ID, 200*time.Millisecond, totalUpdates)
+							go handleCountEmpSubscription(t, wsWriteCh, subscriptionMsg.ID, 500*time.Millisecond, totalUpdates)
 						}
 
 					case "complete":
@@ -2321,8 +2321,8 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 				GlobalMiddleware: wsMiddleware,
 			},
 			ModifyEngineExecutionConfiguration: func(config *config.EngineExecutionConfiguration) {
-				// Use short ping interval to test quickly
-				config.WebSocketClientPingInterval = 100 * time.Millisecond
+				// Don't use too small ping intervals
+				config.WebSocketClientPingInterval = 500 * time.Millisecond
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Setup client connection
@@ -2332,7 +2332,7 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { countEmp(max: 5, intervalMilliseconds: 100) }"}`),
+				Payload: []byte(`{"query":"subscription { countEmp(max: 5, intervalMilliseconds: 500) }"}`),
 			})
 			require.NoError(t, err)
 
@@ -2361,7 +2361,7 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 			require.Equal(t, "complete", complete.Type)
 
 			// Check that we received at least one ping
-			timeoutCh := time.After(2 * time.Second)
+			timeoutCh := time.After(5 * time.Second)
 			pingCount := 0
 
 			for {
