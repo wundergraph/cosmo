@@ -659,7 +659,6 @@ export class Composer {
     });
   }
 
-
   async composeWithProposedSchemas({
     inputSubgraphs,
     graphs,
