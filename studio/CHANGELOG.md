@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.109.0](https://github.com/wundergraph/cosmo/compare/studio@0.108.1...studio@0.109.0) (2025-04-04)
+
+### Features
+
+* improve authenticated badge for types and fields ([#1752](https://github.com/wundergraph/cosmo/issues/1752)) ([3fe509c](https://github.com/wundergraph/cosmo/commit/3fe509c05789150cc5e7f654af3d55e4b4f7c9e4)) (@wilsonrivera)
+* improve delete organization workflow ([#1741](https://github.com/wundergraph/cosmo/issues/1741)) ([643c179](https://github.com/wundergraph/cosmo/commit/643c179f71daf5a77a56c685b3924d10894c2d9c)) (@wilsonrivera)
+
+## [0.108.1](https://github.com/wundergraph/cosmo/compare/studio@0.108.0...studio@0.108.1) (2025-04-02)
+
+**Note:** Version bump only for package studio
+
 # [0.108.0](https://github.com/wundergraph/cosmo/compare/studio@0.107.0...studio@0.108.0) (2025-04-01)
 
 ### Bug Fixes

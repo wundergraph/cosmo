@@ -1217,6 +1217,12 @@ message DeleteOrganizationResponse {
   Response response = 1;
 }
 
+message RestoreOrganizationRequest {}
+
+message RestoreOrganizationResponse {
+  Response response = 1;
+}
+
 message LeaveOrganizationRequest {
   string userID = 1;
 }
@@ -2691,6 +2697,8 @@ service PlatformService {
   rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {}
   // DeleteOrganization deletes an organization
   rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse) {}
+  // RestoreOrganization restore an organization pending deletion
+  rpc RestoreOrganization(RestoreOrganizationRequest) returns (RestoreOrganizationResponse) {}
   // LeaveOrganization removes a member from the organization
   rpc LeaveOrganization(LeaveOrganizationRequest) returns (LeaveOrganizationResponse) {}
   // UpdateOrganizationDetails updates the name and slug of the organization

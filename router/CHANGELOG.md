@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.195.0](https://github.com/wundergraph/cosmo/compare/router@0.194.0...router@0.195.0) (2025-04-04)
+
+### Bug Fixes
+
+* **router:** update JWK dependency ([#1751](https://github.com/wundergraph/cosmo/issues/1751)) ([c4c5611](https://github.com/wundergraph/cosmo/commit/c4c5611f8886f867722fb76def78163e1a290b0b)) (@MicahParks)
+
+### Features
+
+* add option to disable exposing variables content on validation error ([#1753](https://github.com/wundergraph/cosmo/issues/1753)) ([d78076f](https://github.com/wundergraph/cosmo/commit/d78076f86068799fb9ffab4ca92587e31077cbe3)) (@jensneuse)
+
+# [0.194.0](https://github.com/wundergraph/cosmo/compare/router@0.193.3...router@0.194.0) (2025-04-02)
+
+### Features
+
+* add support to set ClientInfo from initial payload when using WebSockets ([#1744](https://github.com/wundergraph/cosmo/issues/1744)) ([7dd44cb](https://github.com/wundergraph/cosmo/commit/7dd44cbfb581410266c0a9c24299aceb8b0dc186)) (@jensneuse)
+
 ## [0.193.3](https://github.com/wundergraph/cosmo/compare/router@0.193.2...router@0.193.3) (2025-04-01)
 
 ### Bug Fixes

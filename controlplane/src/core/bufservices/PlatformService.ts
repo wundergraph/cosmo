@@ -99,6 +99,7 @@ import { updateIntegrationConfig } from './notification/updateIntegrationConfig.
 import { updateOrganizationWebhookConfig } from './notification/updateOrganizationWebhookConfig.js';
 import { createOrganization } from './organization/createOrganization.js';
 import { deleteOrganization } from './organization/deleteOrganization.js';
+import { restoreOrganization } from './organization/restoreOrganization.js';
 import { getAuditLogs } from './organization/getAuditLogs.js';
 import { getOrganizationMembers } from './organization/getOrganizationMembers.js';
 import { getPendingOrganizationMembers } from './organization/getPendingOrganizationMembers.js';
@@ -356,6 +357,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     deleteOrganization: (req, ctx) => {
       return deleteOrganization(opts, req, ctx);
+    },
+
+    restoreOrganization: (req, ctx) => {
+      return restoreOrganization(opts, req, ctx);
     },
 
     leaveOrganization: (req, ctx) => {

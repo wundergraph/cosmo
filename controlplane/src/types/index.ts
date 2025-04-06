@@ -229,6 +229,10 @@ export interface OrganizationDTO {
     reason?: string;
     initiatedAt: string;
   };
+  deletion?: {
+    queuedAt: string;
+    queuedBy?: string;
+  };
 }
 
 export interface UserDTO {

@@ -399,7 +399,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		ec.TimeKey = "time"
 
 		syncer := zapcore.AddSync(os.Stderr)
-		cfg.Logger = logging.NewZapLogger(syncer, false, true, zapcore.WarnLevel)
+		cfg.Logger = logging.NewZapLogger(syncer, false, true, zapcore.ErrorLevel)
 	}
 
 	if cfg.AccessLogger == nil {
@@ -716,7 +716,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		}
 	}
 
-	waitErr := e.WaitForServer(ctx, e.RouterURL+"/health/ready", 100, 10)
+	waitErr := e.WaitForServer(ctx, e.RouterURL+"/health/ready", 250, 30)
 
 	return e, waitErr
 }
@@ -979,6 +979,16 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 				FromInitialPayload: config.InitialPayloadAuthenticationConfiguration{
 					Enabled: false,
 					Key:     "Authorization",
+				},
+			},
+			ClientInfoFromInitialPayload: config.WebSocketClientInfoFromInitialPayloadConfiguration{
+				Enabled:      true,
+				NameField:    "graphql-client-name",
+				VersionField: "graphql-client-version",
+				ForwardToRequestHeaders: config.ForwardToRequestHeadersConfiguration{
+					Enabled:             true,
+					NameTargetHeader:    "graphql-client-name",
+					VersionTargetHeader: "graphql-client-version",
 				},
 			},
 		}
