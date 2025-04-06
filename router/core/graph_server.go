@@ -5,12 +5,13 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto/v2"

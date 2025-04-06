@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 	"net/http"
+
 	"net/url"
 	"slices"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 
 	"github.com/buger/jsonparser"
 
@@ -27,7 +29,7 @@ import (
 
 type Loader struct {
 	resolver FactoryResolver
-	// includeInfo controls whether additional information like type usage and field usage is included in the plan
+	// includeInfo controls whether additional information like type usage and field usage is included in the plan de
 	includeInfo bool
 }
 

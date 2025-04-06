@@ -39,6 +39,42 @@ type wsMessage struct {
 	done chan error
 }
 
+// GraphQLWSSubscriptionMessage represents the structure of GraphQL-Transport-WS protocol messages
+type GraphQLWSSubscriptionMessage struct {
+	ID      string          `json:"id,omitempty"`
+	Type    string          `json:"type"`
+	Payload *GraphQLPayload `json:"payload,omitempty"`
+}
+
+// GraphQLPayload represents the payload within a GraphQL subscription message
+type GraphQLPayload struct {
+	Query         string                 `json:"query,omitempty"`
+	Variables     map[string]interface{} `json:"variables,omitempty"`
+	OperationName string                 `json:"operationName,omitempty"`
+}
+
+// GraphQLWSSimpleResponse for simpler messages like connection_ack, pong, complete
+type GraphQLWSSimpleResponse struct {
+	Type string `json:"type"`
+}
+
+// GraphQLWSDataResponse for sending subscription data
+type GraphQLWSDataResponse struct {
+	Type    string      `json:"type"`
+	ID      string      `json:"id"`
+	Payload interface{} `json:"payload"`
+}
+
+// CountEmpData represents the structure of the countEmp field data
+type CountEmpData struct {
+	CountEmp int `json:"countEmp"`
+}
+
+// CountEmpResponse represents the structure of the countEmp subscription data
+type CountEmpResponse struct {
+	Data CountEmpData `json:"data"`
+}
+
 func TestWebSockets(t *testing.T) {
 	t.Parallel()
 
@@ -2226,25 +2262,19 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 					}
 
 					// Parse the message
-					var msg map[string]interface{}
-					if err := json.Unmarshal(message, &msg); err != nil {
+					var subscriptionMsg GraphQLWSSubscriptionMessage
+					if err := json.Unmarshal(message, &subscriptionMsg); err != nil {
 						t.Logf("Failed to unmarshal message: %v", err)
 						continue
 					}
 
 					// Process based on message type
-					msgType, ok := msg["type"].(string)
-					if !ok {
-					        t.Log("Failed to read msgType")
-						continue
-					}
-
-					switch msgType {
+					switch subscriptionMsg.Type {
 					case "connection_init":
 						// Acknowledge connection
 						done := make(chan error, 1)
 						wsWriteCh <- wsMessage{
-							data: map[string]string{"type": "connection_ack"},
+							data: GraphQLWSSimpleResponse{Type: "connection_ack"},
 							done: done,
 						}
 						if err := <-done; err != nil {
@@ -2263,7 +2293,7 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 
 						done := make(chan error, 1)
 						wsWriteCh <- wsMessage{
-							data: map[string]string{"type": "pong"},
+							data: GraphQLWSSimpleResponse{Type: "pong"},
 							done: done,
 						}
 						if err := <-done; err != nil {
@@ -2273,10 +2303,8 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 
 					case "subscribe":
 						// Handle countEmp subscription
-						if payload, ok := msg["payload"].(map[string]interface{}); ok {
-							if query, ok := payload["query"].(string); ok && strings.Contains(query, "countEmp") {
-								go handleCountEmpSubscription(t, wsWriteCh, msg["id"], 200*time.Millisecond, totalUpdates)
-							}
+						if subscriptionMsg.Payload != nil && strings.Contains(subscriptionMsg.Payload.Query, "countEmp") {
+							go handleCountEmpSubscription(t, wsWriteCh, subscriptionMsg.ID, 200*time.Millisecond, totalUpdates)
 						}
 
 					case "complete":
@@ -2359,17 +2387,17 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 }
 
 // Helper function to handle countEmp subscription
-func handleCountEmpSubscription(t *testing.T, wsWriteCh chan<- wsMessage, id interface{}, updateInterval time.Duration, totalUpdates int) {
+func handleCountEmpSubscription(t *testing.T, wsWriteCh chan<- wsMessage, id string, updateInterval time.Duration, totalUpdates int) {
 	// Send updates with the specified interval
 	for i := 1; i <= totalUpdates; i++ {
-		response := map[string]interface{}{
-			"type": "next",
-			"id":   id,
-			"payload": map[string]interface{}{
-				"data": map[string]interface{}{
-					"countEmp": i,
-				},
-			},
+		// Create a properly structured GraphQL response payload
+		countEmpData := CountEmpResponse{}
+		countEmpData.Data.CountEmp = i
+
+		response := GraphQLWSDataResponse{
+			Type:    "next",
+			ID:      id,
+			Payload: countEmpData,
 		}
 
 		done := make(chan error, 1)
@@ -2389,9 +2417,9 @@ func handleCountEmpSubscription(t *testing.T, wsWriteCh chan<- wsMessage, id int
 	t.Log("Sending complete message for subscription")
 	done := make(chan error, 1)
 	wsWriteCh <- wsMessage{
-		data: map[string]interface{}{
-			"type": "complete",
-			"id":   id,
+		data: GraphQLWSDataResponse{
+			Type: "complete",
+			ID:   id,
 		},
 		done: done,
 	}
