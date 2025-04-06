@@ -2235,6 +2235,7 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 					// Process based on message type
 					msgType, ok := msg["type"].(string)
 					if !ok {
+					        t.Log("Failed to read msgType")
 						continue
 					}
 
