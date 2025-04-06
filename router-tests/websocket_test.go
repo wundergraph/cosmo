@@ -2345,14 +2345,12 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 
 				if res.Type == "next" {
 					receivedUpdates++
-					var payload struct {
-						Data struct {
-							CountEmp int `json:"countEmp"`
-						} `json:"data"`
-					}
-					err := json.Unmarshal(res.Payload, &payload)
+
+					response := CountEmpResponse{}
+
+					err := json.Unmarshal(res.Payload, &response)
 					require.NoError(t, err)
-					require.Equal(t, receivedUpdates, payload.Data.CountEmp)
+					require.Equal(t, receivedUpdates, response.Data.CountEmp)
 				}
 			}
 
