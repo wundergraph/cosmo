@@ -38,7 +38,7 @@ export const ProposalMatchesTable = ({
   const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
 
-  if (!isProposalsEnabled) {
+  if (!proposalMatch && !isProposalsEnabled) {
     return (
       <EmptyState
         icon={<NoSymbolIcon className="text-gray-400" />}
