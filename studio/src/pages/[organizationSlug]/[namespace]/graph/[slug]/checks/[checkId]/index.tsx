@@ -506,7 +506,13 @@ const CheckDetails = ({
           <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1">
             <dt className="text-sm text-muted-foreground">Action</dt>
             <dd className="whitespace-nowrap">
-              {data.check.isDeleted ? "Delete subgraph" : "Update schema"}
+              {data.check.checkedSubgraphs.length > 1
+                ? "Multiple subgraphs updated"
+                : data.check.isDeleted ||
+                  (data.check.checkedSubgraphs.length === 1 &&
+                    data.check.checkedSubgraphs[0].isDeleted)
+                ? "Delete subgraph"
+                : "Update schema"}
             </dd>
           </div>
 
@@ -917,7 +923,11 @@ const CheckDetails = ({
                     ) : null}
                   </Link>
                 </TabsTrigger>
-                {!data.check.isDeleted && (
+                {(data.check.checkedSubgraphs.length > 1 ||
+                  (data.check.checkedSubgraphs.length === 1 &&
+                    !data.check.checkedSubgraphs[0].isDeleted) ||
+                  (data.check.checkedSubgraphs.length === 0 &&
+                    !data.check.isDeleted)) && (
                   <TabsTrigger
                     value="schema"
                     onClick={() => setTab("schema")}
