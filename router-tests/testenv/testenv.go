@@ -29,6 +29,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cloudflare/backoff"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -1911,68 +1913,176 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 	}
 }
 
-func DeflakeWSReadMessage(t testing.TB, conn *websocket.Conn) (messageType int, p []byte, err error) {
-	for i := 0; i < 5; i++ {
+func WSReadMessage(t testing.TB, conn *websocket.Conn) (messageType int, p []byte, err error) {
+	b := backoff.New(5*time.Second, 100*time.Millisecond)
+
+	attempts := 0
+	maxAttempts := 5
+
+	for attempts < maxAttempts {
+		attempts++
+
+		// Set a reasonable read deadline
+		readDeadline := time.Now().Add(2 * time.Second)
+		if err = conn.SetReadDeadline(readDeadline); err != nil {
+			t.Logf("Failed to set read deadline: %v", err)
+			return 0, nil, err
+		}
+
 		messageType, p, err = conn.ReadMessage()
-		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
-			t.Log("connection reset by peer found, retrying...")
-			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-			require.NoError(t, err)
-			time.Sleep(time.Duration(i*200) * time.Millisecond)
-			continue
+
+		// Reset the deadline to prevent future operations from timing out
+		if resetErr := conn.SetReadDeadline(time.Time{}); resetErr != nil {
+			t.Logf("Failed to reset read deadline: %v", resetErr)
 		}
-		break
+
+		if err == nil {
+			return messageType, p, nil
+		}
+
+		if attempts >= maxAttempts {
+			return 0, nil, fmt.Errorf("failed to read from WebSocket after %d attempts: %w", attempts, err)
+		}
+
+		// Get backoff duration for this attempt
+		duration := b.Duration()
+		t.Logf("WebSocket read error (attempt %d/%d): %v - retrying in %v...",
+			attempts, maxAttempts, err, duration)
+
+		time.Sleep(duration)
 	}
 
-	return messageType, p, err
+	// This should not be reached
+	return 0, nil, fmt.Errorf("failed to read from WebSocket: %w", err)
 }
 
-func DeflakeWSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
-	for i := 0; i < 5; i++ {
+func WSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
+	b := backoff.New(5*time.Second, 100*time.Millisecond)
+
+	attempts := 0
+	maxAttempts := 5
+
+	for attempts < maxAttempts {
+		attempts++
+
+		// Set a reasonable read deadline
+		readDeadline := time.Now().Add(2 * time.Second)
+		if err = conn.SetReadDeadline(readDeadline); err != nil {
+			t.Logf("Failed to set read deadline: %v", err)
+			return err
+		}
+
 		err = conn.ReadJSON(v)
-		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
-			t.Log("connection reset by peer found, retrying...")
-			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-			require.NoError(t, err)
-			time.Sleep(time.Duration(i*200) * time.Millisecond)
-			continue
+
+		// Reset the deadline to prevent future operations from timing out
+		if resetErr := conn.SetReadDeadline(time.Time{}); resetErr != nil {
+			t.Logf("Failed to reset read deadline: %v", resetErr)
 		}
-		break
+
+		if err == nil {
+			return nil
+		}
+
+		if attempts >= maxAttempts {
+			return fmt.Errorf("failed to read JSON from WebSocket after %d attempts: %w", attempts, err)
+		}
+
+		// Get backoff duration for this attempt
+		duration := b.Duration()
+		t.Logf("WebSocket read JSON error (attempt %d/%d): %v - retrying in %v...",
+			attempts, maxAttempts, err, duration)
+
+		time.Sleep(duration)
 	}
 
-	return err
+	// This should not be reached
+	return fmt.Errorf("failed to read JSON from WebSocket: %w", err)
 }
 
-func DeflakeWSWriteMessage(t testing.TB, conn *websocket.Conn, messageType int, data []byte) (err error) {
-	for i := 0; i < 5; i++ {
+func WSWriteMessage(t testing.TB, conn *websocket.Conn, messageType int, data []byte) (err error) {
+	b := backoff.New(5*time.Second, 100*time.Millisecond)
+
+	attempts := 0
+	maxAttempts := 5
+
+	for attempts < maxAttempts {
+		attempts++
+
+		// Set a reasonable write deadline
+		writeDeadline := time.Now().Add(2 * time.Second)
+		if err = conn.SetWriteDeadline(writeDeadline); err != nil {
+			t.Logf("Failed to set write deadline: %v", err)
+			return err
+		}
+
 		err = conn.WriteMessage(messageType, data)
-		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
-			t.Log("connection reset by peer found, retrying...")
-			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-			require.NoError(t, err)
-			time.Sleep(time.Duration(i*200) * time.Millisecond)
-			continue
+
+		// Reset the deadline to prevent future operations from timing out
+		if resetErr := conn.SetWriteDeadline(time.Time{}); resetErr != nil {
+			t.Logf("Failed to reset write deadline: %v", resetErr)
 		}
-		break
+
+		if err == nil {
+			return nil
+		}
+
+		if attempts >= maxAttempts {
+			return fmt.Errorf("failed to write message to WebSocket after %d attempts: %w", attempts, err)
+		}
+
+		// Get backoff duration for this attempt
+		duration := b.Duration()
+		t.Logf("WebSocket write message error (attempt %d/%d): %v - retrying in %v...",
+			attempts, maxAttempts, err, duration)
+
+		time.Sleep(duration)
 	}
 
-	return err
+	// This should not be reached
+	return fmt.Errorf("failed to write message to WebSocket: %w", err)
 }
 
-func DeflakeWSWriteJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
-	for i := 0; i < 5; i++ {
-		err = conn.WriteJSON(v)
-		if err != nil && strings.Contains(err.Error(), "connection reset by peer") {
-			t.Log("connection reset by peer found, retrying...")
-			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-			require.NoError(t, err)
-			time.Sleep(time.Duration(i*200) * time.Millisecond)
-			continue
+func WSWriteJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
+	b := backoff.New(5*time.Second, 100*time.Millisecond)
+
+	attempts := 0
+	maxAttempts := 5
+
+	for attempts < maxAttempts {
+		attempts++
+
+		// Set a reasonable write deadline
+		writeDeadline := time.Now().Add(2 * time.Second)
+		if err = conn.SetWriteDeadline(writeDeadline); err != nil {
+			t.Logf("Failed to set write deadline: %v", err)
+			return err
 		}
-		break
+
+		err = conn.WriteJSON(v)
+
+		// Reset the deadline to prevent future operations from timing out
+		if resetErr := conn.SetWriteDeadline(time.Time{}); resetErr != nil {
+			t.Logf("Failed to reset write deadline: %v", resetErr)
+		}
+
+		if err == nil {
+			return nil
+		}
+
+		if attempts >= maxAttempts {
+			return fmt.Errorf("failed to write JSON to WebSocket after %d attempts: %w", attempts, err)
+		}
+
+		// Get backoff duration for this attempt
+		duration := b.Duration()
+		t.Logf("WebSocket write JSON error (attempt %d/%d): %v - retrying in %v...",
+			attempts, maxAttempts, err, duration)
+
+		time.Sleep(duration)
 	}
 
-	return err
+	// This should not be reached
+	return fmt.Errorf("failed to write JSON to WebSocket: %w", err)
 }
 
 func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, natsData *NatsData, pubSubName func(string) string) *subgraphs.SubgraphOptions {

@@ -57,20 +57,20 @@ func TestWebSockets(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err := testenv.DeflakeWSWriteJSON(t, conn, testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"{ employees { id } }"}`),
 			})
 			require.NoError(t, err)
 			var res testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &res)
+			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
 			require.Equal(t, "next", res.Type)
 			require.Equal(t, "1", res.ID)
 			require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, string(res.Payload))
 			var complete testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &complete)
+			err = testenv.WSReadJSON(t, conn, &complete)
 			require.NoError(t, err)
 			require.Equal(t, "complete", complete.Type)
 			require.Equal(t, "1", complete.ID)
@@ -106,20 +106,20 @@ func TestWebSockets(t *testing.T) {
 				"Authorization": []string{"Bearer " + token},
 			}
 			conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
-			err = testenv.DeflakeWSWriteJSON(t, conn, testenv.WebSocketMessage{
+			err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"{ employees { id startDate } }"}`),
 			})
 			require.NoError(t, err)
 			var res testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &res)
+			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
 			require.Equal(t, `[{"message":"Unauthorized"}]`, string(res.Payload))
 			var complete testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &complete)
+			err = testenv.WSReadJSON(t, conn, &complete)
 			require.NoError(t, err)
 			require.Equal(t, "complete", complete.Type)
 			require.Equal(t, "1", complete.ID)
@@ -155,20 +155,20 @@ func TestWebSockets(t *testing.T) {
 				"Authorization": []string{"Bearer " + token},
 			}
 			conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
-			err = testenv.DeflakeWSWriteJSON(t, conn, testenv.WebSocketMessage{
+			err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"{ employees { id startDate } }"}`),
 			})
 			require.NoError(t, err)
 			var res testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &res)
+			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
 			require.Equal(t, `[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",0,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",1,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",2,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",3,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",4,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",5,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",6,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",7,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",8,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",9,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}]`, string(res.Payload))
 			var complete testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &complete)
+			err = testenv.WSReadJSON(t, conn, &complete)
 			require.NoError(t, err)
 			require.Equal(t, "complete", complete.Type)
 			require.Equal(t, "1", complete.ID)
@@ -206,7 +206,7 @@ func TestWebSockets(t *testing.T) {
 				"Authorization": []string{"Bearer " + token},
 			}
 			conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
-			err = testenv.DeflakeWSWriteJSON(t, conn, testenv.WebSocketMessage{
+			err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } startDate }}"}`),
@@ -225,7 +225,7 @@ func TestWebSockets(t *testing.T) {
 			}()
 
 			var res testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &res)
+			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
@@ -265,7 +265,7 @@ func TestWebSockets(t *testing.T) {
 				"Authorization": []string{"Bearer " + token},
 			}
 			conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
-			err = testenv.DeflakeWSWriteJSON(t, conn, testenv.WebSocketMessage{
+			err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } startDate }}"}`),
@@ -282,7 +282,7 @@ func TestWebSockets(t *testing.T) {
 				require.NoError(t, err)
 			}()
 			var res testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &res)
+			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
@@ -325,7 +325,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			initialPayload := []byte(`{"Authorization":"Bearer ` + token + `"}`)
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, initialPayload)
-			err = testenv.DeflakeWSWriteJSON(t, conn, testenv.WebSocketMessage{
+			err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id }}"}`),
@@ -344,7 +344,7 @@ func TestWebSockets(t *testing.T) {
 			}()
 
 			var res testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &res)
+			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
 			require.Equal(t, "next", res.Type)
 			require.Equal(t, "1", res.ID)
@@ -383,7 +383,7 @@ func TestWebSockets(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			require.NoError(t, err)
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err = testenv.DeflakeWSWriteJSON(t, conn, testenv.WebSocketMessage{
+			err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id }}"}`),
@@ -391,7 +391,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 
 			var res testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &res)
+			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			payload, err := json.Marshal(res.Payload)
@@ -433,7 +433,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			initialPayload := []byte(`{"Authorization": true }`)
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, initialPayload)
-			err = testenv.DeflakeWSWriteJSON(t, conn, testenv.WebSocketMessage{
+			err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id }}"}`),
@@ -441,7 +441,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 
 			var res testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &res)
+			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			payload, err := json.Marshal(res.Payload)
@@ -472,7 +472,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			initialPayload := []byte(`{"Authorization":"` + token + `"}`)
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, initialPayload)
-			err = testenv.DeflakeWSWriteJSON(t, conn, testenv.WebSocketMessage{
+			err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id }}"}`),
@@ -494,7 +494,7 @@ func TestWebSockets(t *testing.T) {
 			require.Eventually(t, done.Load, time.Second*5, time.Millisecond*100)
 
 			var res testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &res)
+			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
 			require.Equal(t, "next", res.Type)
 			require.Equal(t, "1", res.ID)
@@ -571,27 +571,27 @@ func TestWebSockets(t *testing.T) {
 							require.NoError(t, err)
 							defer conn.Close()
 
-							_, message, err := testenv.DeflakeWSReadMessage(t, conn)
+							_, message, err := testenv.WSReadMessage(t, conn)
 							require.NoError(t, err)
 							require.Equal(t, `{"type":"connection_init","payload":{"Custom-Auth":"test","extensions":{"upgradeHeaders":{"Authorization":"Bearer test","Canonical-Header-Name":"matches","Reverse-Canonical-Header-Name":"matches as well","X-Custom-Auth":"customAuth"},"upgradeQueryParams":{"token":"Bearer Something"},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
 
-							err = testenv.DeflakeWSWriteMessage(t, conn, websocket.TextMessage, []byte(`{"type":"connection_ack"}`))
+							err = testenv.WSWriteMessage(t, conn, websocket.TextMessage, []byte(`{"type":"connection_ack"}`))
 							require.NoError(t, err)
 
-							_, message, err = testenv.DeflakeWSReadMessage(t, conn)
+							_, message, err = testenv.WSReadMessage(t, conn)
 							require.NoError(t, err)
 							require.Equal(t, `{"id":"1","type":"subscribe","payload":{"query":"subscription{currentTime {unixTime timeStamp}}","extensions":{"upgradeHeaders":{"Authorization":"Bearer test","Canonical-Header-Name":"matches","Reverse-Canonical-Header-Name":"matches as well","X-Custom-Auth":"customAuth"},"upgradeQueryParams":{"token":"Bearer Something"},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
 
-							err = testenv.DeflakeWSWriteMessage(t, conn, websocket.TextMessage, []byte(`{"type":"next","id":"1","payload":{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}}`))
+							err = testenv.WSWriteMessage(t, conn, websocket.TextMessage, []byte(`{"type":"next","id":"1","payload":{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}}`))
 							require.NoError(t, err)
 
-							_, message, err = testenv.DeflakeWSReadMessage(t, conn)
+							_, message, err = testenv.WSReadMessage(t, conn)
 							if errors.Is(err, websocket.ErrCloseSent) {
 								return
 							}
 							require.Equal(t, `{"id":"1","type":"complete"}`, string(message))
 
-							err = testenv.DeflakeWSWriteMessage(t, conn, websocket.TextMessage, []byte(`{"type":"complete","id":"1"}`))
+							err = testenv.WSWriteMessage(t, conn, websocket.TextMessage, []byte(`{"type":"complete","id":"1"}`))
 							require.NoError(t, err)
 						})
 					},
@@ -621,7 +621,7 @@ func TestWebSockets(t *testing.T) {
 			},
 				[]byte(`{"Custom-Auth":"test"}`),
 			)
-			err := testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
@@ -631,7 +631,7 @@ func TestWebSockets(t *testing.T) {
 			var payload currentTimePayload
 
 			// Read a result and store its timestamp, next result should be 1 second later
-			err = testenv.DeflakeWSReadJSON(t, conn, &msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Equal(t, "1", msg.ID)
 			require.Equal(t, "next", msg.Type)
@@ -640,7 +640,7 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, float64(1), payload.Data.CurrentTime.UnixTime)
 
 			// Sending a complete must stop the subscription
-			err = testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+			err = testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:   "1",
 				Type: "complete",
 			})
@@ -649,7 +649,7 @@ func TestWebSockets(t *testing.T) {
 			var complete testenv.WebSocketMessage
 			err = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 			require.NoError(t, err)
-			err = testenv.DeflakeWSReadJSON(t, conn, &complete)
+			err = testenv.WSReadJSON(t, conn, &complete)
 			require.NoError(t, err)
 			require.Equal(t, "1", complete.ID)
 			require.Equal(t, "complete", complete.Type)
@@ -712,29 +712,29 @@ func TestWebSockets(t *testing.T) {
 							require.NoError(t, err)
 							defer conn.Close()
 
-							_, message, err := testenv.DeflakeWSReadMessage(t, conn)
+							_, message, err := testenv.WSReadMessage(t, conn)
 							require.NoError(t, err)
 							message = jsonparser.Delete(message, "payload", "extensions", "upgradeHeaders", "Sec-Websocket-Key") // Sec-Websocket-Key is a random value
 							require.Equal(t, `{"type":"connection_init","payload":{"Custom-Auth":"test","extensions":{"upgradeHeaders":{"Authorization":"Bearer test","Canonical-Header-Name":"matches","Connection":"Upgrade","Ignored":"ignored","Not-Allowlisted-But-Forwarded":"but still part of the origin upgrade request","Reverse-Canonical-Header-Name":"matches as well","Sec-Websocket-Protocol":"graphql-transport-ws","Sec-Websocket-Version":"13","Upgrade":"websocket","User-Agent":"Go-http-client/1.1","X-Custom-Auth":"customAuth"},"upgradeQueryParams":{"ignored":"ignored","token":"Bearer Something","x-custom-auth":"customAuth"},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
 
-							err = testenv.DeflakeWSWriteMessage(t, conn, websocket.TextMessage, []byte(`{"type":"connection_ack"}`))
+							err = testenv.WSWriteMessage(t, conn, websocket.TextMessage, []byte(`{"type":"connection_ack"}`))
 							require.NoError(t, err)
 
-							_, message, err = testenv.DeflakeWSReadMessage(t, conn)
+							_, message, err = testenv.WSReadMessage(t, conn)
 							require.NoError(t, err)
 							message = jsonparser.Delete(message, "payload", "extensions", "upgradeHeaders", "Sec-Websocket-Key") // Sec-Websocket-Key is a random value
 							require.Equal(t, `{"id":"1","type":"subscribe","payload":{"query":"subscription{currentTime {unixTime timeStamp}}","extensions":{"upgradeHeaders":{"Authorization":"Bearer test","Canonical-Header-Name":"matches","Connection":"Upgrade","Ignored":"ignored","Not-Allowlisted-But-Forwarded":"but still part of the origin upgrade request","Reverse-Canonical-Header-Name":"matches as well","Sec-Websocket-Protocol":"graphql-transport-ws","Sec-Websocket-Version":"13","Upgrade":"websocket","User-Agent":"Go-http-client/1.1","X-Custom-Auth":"customAuth"},"upgradeQueryParams":{"ignored":"ignored","token":"Bearer Something","x-custom-auth":"customAuth"},"initialPayload":{"Custom-Auth":"test"}}}}`, string(message))
 
-							err = testenv.DeflakeWSWriteMessage(t, conn, websocket.TextMessage, []byte(`{"type":"next","id":"1","payload":{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}}`))
+							err = testenv.WSWriteMessage(t, conn, websocket.TextMessage, []byte(`{"type":"next","id":"1","payload":{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}}`))
 							require.NoError(t, err)
 
-							_, message, err = testenv.DeflakeWSReadMessage(t, conn)
+							_, message, err = testenv.WSReadMessage(t, conn)
 							if errors.Is(err, websocket.ErrCloseSent) {
 								return
 							}
 							require.Equal(t, `{"id":"1","type":"complete"}`, string(message))
 
-							err = testenv.DeflakeWSWriteMessage(t, conn, websocket.TextMessage, []byte(`{"type":"complete","id":"1"}`))
+							err = testenv.WSWriteMessage(t, conn, websocket.TextMessage, []byte(`{"type":"complete","id":"1"}`))
 							require.NoError(t, err)
 						})
 					},
@@ -765,7 +765,7 @@ func TestWebSockets(t *testing.T) {
 			},
 				[]byte(`{"Custom-Auth":"test"}`),
 			)
-			err := testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
@@ -775,7 +775,7 @@ func TestWebSockets(t *testing.T) {
 			var payload currentTimePayload
 
 			// Read a result and store its timestamp, next result should be 1 second later
-			err = testenv.DeflakeWSReadJSON(t, conn, &msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Equal(t, "1", msg.ID)
 			require.Equal(t, "next", msg.Type)
@@ -784,7 +784,7 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, float64(1), payload.Data.CurrentTime.UnixTime)
 
 			// Sending a complete must stop the subscription
-			err = testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+			err = testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:   "1",
 				Type: "complete",
 			})
@@ -793,7 +793,7 @@ func TestWebSockets(t *testing.T) {
 			var complete testenv.WebSocketMessage
 			err = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 			require.NoError(t, err)
-			err = testenv.DeflakeWSReadJSON(t, conn, &complete)
+			err = testenv.WSReadJSON(t, conn, &complete)
 			require.NoError(t, err)
 			require.Equal(t, "1", complete.ID)
 			require.Equal(t, "complete", complete.Type)
@@ -875,7 +875,7 @@ func TestWebSockets(t *testing.T) {
 			conn := xEnv.InitGraphQLWebSocketConnection(http.Header{
 				"Authorization": []string{"Bearer test"},
 			}, nil, []byte(`{"Custom-Auth":"test"}`))
-			err := testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
@@ -885,7 +885,7 @@ func TestWebSockets(t *testing.T) {
 			var payload currentTimePayload
 
 			// Read a result and store its timestamp, next result should be 1 second later
-			err = testenv.DeflakeWSReadJSON(t, conn, &msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Equal(t, "1", msg.ID)
 			require.Equal(t, "next", msg.Type)
@@ -894,7 +894,7 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, float64(1), payload.Data.CurrentTime.UnixTime)
 
 			// Sending a complete must stop the subscription
-			err = testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+			err = testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:   "1",
 				Type: "complete",
 			})
@@ -903,14 +903,14 @@ func TestWebSockets(t *testing.T) {
 			var complete testenv.WebSocketMessage
 			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 			require.NoError(t, err)
-			err = testenv.DeflakeWSReadJSON(t, conn, &complete)
+			err = testenv.WSReadJSON(t, conn, &complete)
 			require.NoError(t, err)
 			require.Equal(t, "1", complete.ID)
 			require.Equal(t, "complete", complete.Type)
 
 			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 			require.NoError(t, err)
-			_, _, err = testenv.DeflakeWSReadMessage(t, conn)
+			_, _, err = testenv.WSReadMessage(t, conn)
 			require.Error(t, err)
 			var netErr net.Error
 			if errors.As(err, &netErr) {
@@ -991,7 +991,7 @@ func TestWebSockets(t *testing.T) {
 			conn := xEnv.InitGraphQLWebSocketConnection(http.Header{
 				"Authorization": []string{"Bearer test"},
 			}, nil, []byte(`{"Custom-Auth":"test"}`))
-			err := testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
@@ -1001,7 +1001,7 @@ func TestWebSockets(t *testing.T) {
 			var payload currentTimePayload
 
 			// Read a result and store its timestamp, next result should be 1 second later
-			err = testenv.DeflakeWSReadJSON(t, conn, &msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Equal(t, "1", msg.ID)
 			require.Equal(t, "next", msg.Type)
@@ -1010,7 +1010,7 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, float64(1), payload.Data.CurrentTime.UnixTime)
 
 			// Sending a complete must stop the subscription
-			err = testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+			err = testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:   "1",
 				Type: "complete",
 			})
@@ -1019,14 +1019,14 @@ func TestWebSockets(t *testing.T) {
 			var complete testenv.WebSocketMessage
 			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 			require.NoError(t, err)
-			err = testenv.DeflakeWSReadJSON(t, conn, &complete)
+			err = testenv.WSReadJSON(t, conn, &complete)
 			require.NoError(t, err)
 			require.Equal(t, "1", complete.ID)
 			require.Equal(t, "complete", complete.Type)
 
 			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 			require.NoError(t, err)
-			_, _, err = testenv.DeflakeWSReadMessage(t, conn)
+			_, _, err = testenv.WSReadMessage(t, conn)
 			require.Error(t, err)
 			var netErr net.Error
 			if errors.As(err, &netErr) {
@@ -1056,7 +1056,7 @@ func TestWebSockets(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err := testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
@@ -1065,7 +1065,7 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 
 			// Read a result and store its timestamp, next result should be 1 second later
-			err = testenv.DeflakeWSReadJSON(t, conn, &msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Equal(t, "1", msg.ID)
 			require.Equal(t, "error", msg.Type)
@@ -1095,7 +1095,7 @@ func TestWebSockets(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err := testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
@@ -1104,7 +1104,7 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 
 			// Read a result and store its timestamp, next result should be 1 second later
-			err = testenv.DeflakeWSReadJSON(t, conn, &msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Equal(t, "1", msg.ID)
 			require.Equal(t, "error", msg.Type)
@@ -1131,7 +1131,7 @@ func TestWebSockets(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err := testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { returnsError }"}`),
@@ -1140,7 +1140,7 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 
 			// Read a result and store its timestamp, next result should be 1 second later
-			err = testenv.DeflakeWSReadJSON(t, conn, &msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Equal(t, "1", msg.ID)
 			require.Equal(t, "error", msg.Type)
@@ -1170,7 +1170,7 @@ func TestWebSockets(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err := testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { returnsError }"}`),
@@ -1179,7 +1179,7 @@ func TestWebSockets(t *testing.T) {
 			var msg testenv.WebSocketMessage
 
 			// Read a result and store its timestamp, next result should be 1 second later
-			err = testenv.DeflakeWSReadJSON(t, conn, &msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Equal(t, "1", msg.ID)
 			require.Equal(t, "error", msg.Type)
@@ -1191,7 +1191,7 @@ func TestWebSockets(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err := testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { does_not_exist }"}`),
@@ -1200,7 +1200,7 @@ func TestWebSockets(t *testing.T) {
 			err = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 			require.NoError(t, err)
 			var msg testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Equal(t, "error", msg.Type)
 			// Payload should be an array of GraphQLError
@@ -1399,14 +1399,14 @@ func TestWebSockets(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"123": 456, "extensions": {"hello": "world"}}`))
 			var err error
-			err = testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+			err = testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
 			})
 			require.NoError(t, err)
 			var msg testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}}}`, string(msg.Payload))
 		})
@@ -1419,14 +1419,14 @@ func TestWebSockets(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"123": 456, "extensions": {"hello": "world"}}`))
 			var err error
-			err = testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+			err = testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
 			})
 			require.NoError(t, err)
 			var msg testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}}}`, string(msg.Payload))
 		})
@@ -1441,20 +1441,20 @@ func TestWebSockets(t *testing.T) {
 			conn := xEnv.InitGraphQLWebSocketConnection(map[string][]string{
 				"X-Feature-Flag": {"myff"},
 			}, nil, nil)
-			err := testenv.DeflakeWSWriteJSON(t, conn, testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"{ employees { id productCount } }"}`),
 			})
 			require.NoError(t, err)
 			var res testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &res)
+			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
 			require.Equal(t, "next", res.Type)
 			require.Equal(t, "1", res.ID)
 			require.JSONEq(t, `{"data":{"employees":[{"id":1,"productCount":5},{"id":2,"productCount":2},{"id":3,"productCount":2},{"id":4,"productCount":3},{"id":5,"productCount":2},{"id":7,"productCount":0},{"id":8,"productCount":2},{"id":10,"productCount":3},{"id":11,"productCount":1},{"id":12,"productCount":4}]}}`, string(res.Payload))
 			var complete testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &complete)
+			err = testenv.WSReadJSON(t, conn, &complete)
 			require.NoError(t, err)
 			require.Equal(t, "complete", complete.Type)
 			require.Equal(t, "1", complete.ID)
@@ -1467,14 +1467,14 @@ func TestWebSockets(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err := testenv.DeflakeWSWriteJSON(t, conn, testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"{ employees { id productCount } }"}`),
 			})
 			require.NoError(t, err)
 			var res testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &res)
+			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
@@ -1495,7 +1495,7 @@ func TestWebSockets(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err := testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { does_not_exist }"}`),
@@ -1503,7 +1503,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			// Discard the first message
 			var msg testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			xEnv.Shutdown()
 			_, _, err = conn.NextReader()
@@ -1524,7 +1524,7 @@ func TestWebSockets(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err := testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { does_not_exist }"}`),
@@ -1532,7 +1532,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			// Discard the first message
 			var msg testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			xEnv.Shutdown()
 			_, _, err = conn.NextReader()
@@ -1552,14 +1552,14 @@ func TestWebSockets(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"123":456,"extensions":{"hello":"world"}}`))
-			err := testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
 			})
 			require.NoError(t, err)
 			var msg testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}}}`, string(msg.Payload))
 		})
@@ -1574,14 +1574,14 @@ func TestWebSockets(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// "extensions" in the request should override the "extensions" in initial payload
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"123":456,"extensions":{"hello":"world"}}`))
-			err := testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }","extensions":{"hello":"world2"}}`),
 			})
 			require.NoError(t, err)
 			var msg testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world2","initialPayload":{"123":456,"extensions":{"hello":"world"}}}}}}`, string(msg.Payload))
 		})
@@ -1603,7 +1603,7 @@ func TestWebSockets(t *testing.T) {
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`),
 			}
-			err := testenv.DeflakeWSWriteJSON(t, conn, &sub1)
+			err := testenv.WSWriteJSON(t, conn, &sub1)
 			require.NoError(t, err)
 
 			sub2 := testenv.WebSocketMessage{
@@ -1611,7 +1611,7 @@ func TestWebSockets(t *testing.T) {
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
 			}
-			err = testenv.DeflakeWSWriteJSON(t, conn, &sub2)
+			err = testenv.WSWriteJSON(t, conn, &sub2)
 			require.NoError(t, err)
 
 			xEnv.WaitForSubscriptionCount(2, time.Second*5)
@@ -1629,7 +1629,7 @@ func TestWebSockets(t *testing.T) {
 
 				var msg testenv.WebSocketMessage
 				for {
-					err := testenv.DeflakeWSReadJSON(t, conn, &msg)
+					err := testenv.WSReadJSON(t, conn, &msg)
 					if err != nil {
 						return
 					}
@@ -1646,10 +1646,10 @@ func TestWebSockets(t *testing.T) {
 									ID:   "1",
 									Type: "complete",
 								}
-								err = testenv.DeflakeWSWriteJSON(t, conn, &stop)
+								err = testenv.WSWriteJSON(t, conn, &stop)
 								require.NoError(t, err)
 								var complete testenv.WebSocketMessage
-								err = testenv.DeflakeWSReadJSON(t, conn, &complete)
+								err = testenv.WSReadJSON(t, conn, &complete)
 								require.NoError(t, err)
 								require.Equal(t, "1", complete.ID)
 								require.Equal(t, "complete", complete.Type)
@@ -1664,10 +1664,10 @@ func TestWebSockets(t *testing.T) {
 									ID:   "2",
 									Type: "complete",
 								}
-								err = testenv.DeflakeWSWriteJSON(t, conn, &stop)
+								err = testenv.WSWriteJSON(t, conn, &stop)
 								require.NoError(t, err)
 								var complete testenv.WebSocketMessage
-								err = testenv.DeflakeWSReadJSON(t, conn, &complete)
+								err = testenv.WSReadJSON(t, conn, &complete)
 								require.NoError(t, err)
 								require.Equal(t, "2", complete.ID)
 								require.Equal(t, "complete", complete.Type)
@@ -1678,7 +1678,7 @@ func TestWebSockets(t *testing.T) {
 						terminate := testenv.WebSocketMessage{
 							Type: "connection_terminate",
 						}
-						err = testenv.DeflakeWSWriteJSON(t, conn, &terminate)
+						err = testenv.WSWriteJSON(t, conn, &terminate)
 						require.NoError(t, err)
 						_, _, err = conn.NextReader()
 						require.Error(t, err)
@@ -1756,19 +1756,19 @@ func TestWebSockets(t *testing.T) {
 			}
 
 			conn := xEnv.InitAbsintheWebSocketConnection(nil, json.RawMessage(`["1", "1", "__absinthe__:control", "phx_join", {}]`))
-			err := testenv.DeflakeWSWriteJSON(t, conn, json.RawMessage(`["1", "1", "__absinthe__:control", "doc", {"query":"subscription { currentTime { unixTime timeStamp }}" }]`))
+			err := testenv.WSWriteJSON(t, conn, json.RawMessage(`["1", "1", "__absinthe__:control", "doc", {"query":"subscription { currentTime { unixTime timeStamp }}" }]`))
 			require.NoError(t, err)
 			var msg json.RawMessage
 			var payload currentTimePayload
 
 			// Read a result and store its timestamp, next result should be 1 second later
-			err = testenv.DeflakeWSReadJSON(t, conn, &msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			h := sha256.New()
 			h.Write([]byte("1"))
 			operationId := new(big.Int).SetBytes(h.Sum(nil))
 			require.Equal(t, string(msg), fmt.Sprintf(`["1","1","__absinthe__:control","phx_reply",{"status":"ok","response":{"subscriptionId":"__absinthe__:doc:1:%s"}}]`, operationId))
-			err = testenv.DeflakeWSReadJSON(t, conn, &msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Contains(t, string(msg), `["1","1","__absinthe__:control","subscription:data"`)
 			var data []json.RawMessage
@@ -1780,7 +1780,7 @@ func TestWebSockets(t *testing.T) {
 
 			unix1 := payload.Result.Data.CurrentTime.UnixTime
 
-			err = testenv.DeflakeWSReadJSON(t, conn, &msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Contains(t, string(msg), `["1","1","__absinthe__:control","subscription:data"`)
 			err = json.Unmarshal(msg, &data)
@@ -1793,19 +1793,19 @@ func TestWebSockets(t *testing.T) {
 			require.Greater(t, unix2, unix1)
 
 			// Sending a complete must stop the subscription
-			err = testenv.DeflakeWSWriteJSON(t, conn, json.RawMessage(`["1", "1", "__absinthe__:control", "phx_leave", {}]`))
+			err = testenv.WSWriteJSON(t, conn, json.RawMessage(`["1", "1", "__absinthe__:control", "phx_leave", {}]`))
 			require.NoError(t, err)
 
 			var complete json.RawMessage
 			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 			require.NoError(t, err)
-			err = testenv.DeflakeWSReadJSON(t, conn, &complete)
+			err = testenv.WSReadJSON(t, conn, &complete)
 			require.NoError(t, err)
 			require.Equal(t, string(complete), fmt.Sprintf(`["1","","__absinthe__:control","phx_reply",{"status":"ok","response":{"subscriptionId":"__absinthe__:doc:1:%s"}}]`, operationId))
 
 			err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 			require.NoError(t, err)
-			_, _, err = testenv.DeflakeWSReadMessage(t, conn)
+			_, _, err = testenv.WSReadMessage(t, conn)
 			require.Error(t, err)
 			var netErr net.Error
 			if errors.As(err, &netErr) {
@@ -1832,7 +1832,7 @@ func TestWebSockets(t *testing.T) {
 			})},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err := testenv.DeflakeWSWriteJSON(t, conn, testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { currentTime { unixTime } }"}`),
@@ -1840,7 +1840,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 
 			var res testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &res)
+			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
 			require.Equal(t, "next", res.Type)
 			require.Equal(t, "1", res.ID)
@@ -1883,14 +1883,14 @@ func TestWebSockets(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"graphql-client-name": "test-client", "graphql-client-version": "1.0.0"}`))
-			err := testenv.DeflakeWSWriteJSON(t, conn, testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp } }"}`),
 			})
 			require.NoError(t, err)
 			var res testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &res)
+			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
 			require.Equal(t, "next", res.Type)
 			require.Equal(t, "1", res.ID)
@@ -1933,14 +1933,14 @@ func TestWebSockets(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err := testenv.DeflakeWSWriteJSON(t, conn, testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp } }"}`),
 			})
 			require.NoError(t, err)
 			var res testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &res)
+			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
 			require.Equal(t, "next", res.Type)
 			require.Equal(t, "1", res.ID)
@@ -2111,7 +2111,7 @@ func expectConnectAndReadCurrentTime(t *testing.T, xEnv *testenv.Environment) {
 	conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 	defer conn.Close()
 
-	err := testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+	err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 		ID:      "1",
 		Type:    "subscribe",
 		Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
@@ -2121,7 +2121,7 @@ func expectConnectAndReadCurrentTime(t *testing.T, xEnv *testenv.Environment) {
 	var payload currentTimePayload
 
 	// Read a result and store its timestamp, next result should be 1 second later
-	err = testenv.DeflakeWSReadJSON(t, conn, &msg)
+	err = testenv.WSReadJSON(t, conn, &msg)
 	require.NoError(t, err)
 	require.Equal(t, "1", msg.ID)
 	require.Equal(t, "next", msg.Type)
@@ -2130,7 +2130,7 @@ func expectConnectAndReadCurrentTime(t *testing.T, xEnv *testenv.Environment) {
 
 	unix1 := payload.Data.CurrentTime.UnixTime
 
-	err = testenv.DeflakeWSReadJSON(t, conn, &msg)
+	err = testenv.WSReadJSON(t, conn, &msg)
 	require.NoError(t, err)
 	require.Equal(t, "1", msg.ID)
 	require.Equal(t, "next", msg.Type)
@@ -2141,7 +2141,7 @@ func expectConnectAndReadCurrentTime(t *testing.T, xEnv *testenv.Environment) {
 	require.Greater(t, unix2, unix1)
 
 	// Sending a complete must stop the subscription
-	err = testenv.DeflakeWSWriteJSON(t, conn, &testenv.WebSocketMessage{
+	err = testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 		ID:   "1",
 		Type: "complete",
 	})
@@ -2150,14 +2150,14 @@ func expectConnectAndReadCurrentTime(t *testing.T, xEnv *testenv.Environment) {
 	var complete testenv.WebSocketMessage
 	err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 	require.NoError(t, err)
-	err = testenv.DeflakeWSReadJSON(t, conn, &complete)
+	err = testenv.WSReadJSON(t, conn, &complete)
 	require.NoError(t, err)
 	require.Equal(t, "1", complete.ID)
 	require.Equal(t, "complete", complete.Type)
 
 	err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 	require.NoError(t, err)
-	_, _, err = testenv.DeflakeWSReadMessage(t, conn)
+	_, _, err = testenv.WSReadMessage(t, conn)
 	require.Error(t, err)
 	var netErr net.Error
 	if errors.As(err, &netErr) {
@@ -2301,10 +2301,10 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 
 			// Start the subscription
-			err := testenv.DeflakeWSWriteJSON(t, conn, testenv.WebSocketMessage{
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { countEmp(max: 5, intervalMilliseconds: 200) }"}`),
+				Payload: []byte(`{"query":"subscription { countEmp(max: 5, intervalMilliseconds: 100) }"}`),
 			})
 			require.NoError(t, err)
 
@@ -2312,7 +2312,7 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 			var receivedUpdates int
 			for receivedUpdates < totalUpdates {
 				var res testenv.WebSocketMessage
-				err = testenv.DeflakeWSReadJSON(t, conn, &res)
+				err = testenv.WSReadJSON(t, conn, &res)
 				require.NoError(t, err)
 
 				if res.Type == "next" {
@@ -2330,12 +2330,12 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 
 			// Get the complete message
 			var complete testenv.WebSocketMessage
-			err = testenv.DeflakeWSReadJSON(t, conn, &complete)
+			err = testenv.WSReadJSON(t, conn, &complete)
 			require.NoError(t, err)
 			require.Equal(t, "complete", complete.Type)
 
 			// Check that we received at least one ping
-			timeoutCh := time.After(3 * time.Second)
+			timeoutCh := time.After(2 * time.Second)
 			pingCount := 0
 
 			for {
@@ -2349,6 +2349,7 @@ func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 					}
 				case <-timeoutCh:
 					require.GreaterOrEqual(t, pingCount, 1, "Expected at least one ping from router")
+					require.LessOrEqual(t, pingCount, totalUpdates, "Expected no more than %d pings from router", totalUpdates)
 					return
 				}
 			}
