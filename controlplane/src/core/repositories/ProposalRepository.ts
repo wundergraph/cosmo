@@ -200,7 +200,7 @@ export class ProposalRepository {
     }
 
     const proposalsWithSubgraphs: { proposal: ProposalDTO; proposalSubgraphs: ProposalSubgraphDTO[] }[] = [];
-    const proposals = await this.db
+    const proposalsQuery = this.db
       .select({
         id: schema.proposals.id,
         name: schema.proposals.name,
@@ -213,9 +213,17 @@ export class ProposalRepository {
       .from(schema.proposals)
       .leftJoin(schema.users, eq(schema.proposals.createdById, schema.users.id))
       .where(whereCondition)
-      .orderBy(desc(schema.proposals.createdAt))
-      .limit(limit)
-      .offset(offset);
+      .orderBy(desc(schema.proposals.createdAt));
+
+    if (limit) {
+      proposalsQuery.limit(limit);
+    }
+
+    if (offset) {
+      proposalsQuery.offset(offset);
+    }
+
+    const proposals = await proposalsQuery;
 
     if (proposals.length === 0) {
       return {
