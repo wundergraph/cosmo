@@ -354,7 +354,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		Protocol:                     protocol,
 		Logger:                       requestLogger,
 		Stats:                        h.stats,
-		ConnectionID:                 h.connectionIDs.Inc(),
+		ConnectionID:                 resolve.ConnectionIDs.Inc(),
 		ClientInfo:                   clientInfo,
 		InitRequestID:                requestID,
 		ForwardUpgradeHeaders:        h.forwardUpgradeHeadersConfig,

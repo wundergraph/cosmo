@@ -26,6 +26,10 @@ const (
 	multipartStart       = "\r\n--" + multipartBoundary
 )
 
+type withFlushWriter interface {
+	SubscriptionResponseWriter() resolve.SubscriptionResponseWriter
+}
+
 type HttpFlushWriter struct {
 	ctx           context.Context
 	cancel        context.CancelFunc
@@ -126,9 +130,6 @@ func (f *HttpFlushWriter) Flush() (err error) {
 }
 
 func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http.ResponseWriter, apolloSubscriptionMultipartPrintBoundary bool) (*resolve.Context, resolve.SubscriptionResponseWriter, bool) {
-	type withFlushWriter interface {
-		SubscriptionResponseWriter() resolve.SubscriptionResponseWriter
-	}
 	if wfw, ok := w.(withFlushWriter); ok {
 		return ctx, wfw.SubscriptionResponseWriter(), true
 	}
@@ -140,8 +141,6 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 	}
 
 	setSubscriptionHeaders(wgParams, r, w)
-
-	flusher.Flush()
 
 	flushWriter := &HttpFlushWriter{
 		writer:                                   w,
