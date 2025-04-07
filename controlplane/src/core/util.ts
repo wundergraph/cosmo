@@ -524,3 +524,28 @@ export function getFederatedGraphRouterCompatibilityVersion(federatedGraphDTOs: 
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
+
+export const isCheckSuccessful = ({
+  isComposable,
+  isBreaking,
+  hasClientTraffic,
+  hasLintErrors,
+  hasGraphPruningErrors,
+  clientTrafficCheckSkipped,
+}: {
+  isComposable: boolean;
+  isBreaking: boolean;
+  hasClientTraffic: boolean;
+  hasLintErrors: boolean;
+  hasGraphPruningErrors: boolean;
+  clientTrafficCheckSkipped: boolean;
+}) => {
+  return (
+    isComposable &&
+    // If no breaking changes found
+    // OR Breaking changes are found, but no client traffic is found and traffic check is not skipped
+    (!isBreaking || (isBreaking && !hasClientTraffic && !clientTrafficCheckSkipped)) &&
+    !hasLintErrors &&
+    !hasGraphPruningErrors
+  );
+};

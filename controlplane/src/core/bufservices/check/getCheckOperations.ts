@@ -43,7 +43,11 @@ export function getCheckOperations(
       };
     }
 
-    const check = await subgraphRepo.checkById({ id: req.checkId, federatedGraphTargetId: graph.targetId });
+    const check = await subgraphRepo.checkById({
+      id: req.checkId,
+      federatedGraphTargetId: graph.targetId,
+      federatedGraphId: graph.id,
+    });
     const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
 
     if (!check || !checkDetails) {
