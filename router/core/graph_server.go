@@ -273,6 +273,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 				r.tracerProvider,
 				s.clientHeader,
 				s.baseOtelAttributes,
+				s.baseRouterConfigVersion,
 			)
 			cr.Handle(r.graphqlPath, handler)
 		} else {

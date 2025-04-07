@@ -54,6 +54,7 @@ func Handler(
 	tracerProvider *sdktrace.TracerProvider,
 	clientHeader config.ClientHeader,
 	baseOtelAttributes []attribute.KeyValue,
+	routerConfigVersion string,
 ) http.Handler {
 	tracer := tracerProvider.Tracer(
 		"wundergraph/cosmo/router/internal/batch",
@@ -93,7 +94,7 @@ func Handler(
 
 		batchOperationsLength := len(batchOperations)
 
-		addTracing(r, bodyBytes, clientHeader, batchOperationsLength, baseOtelAttributes)
+		addTracing(r, bodyBytes, clientHeader, batchOperationsLength, baseOtelAttributes, routerConfigVersion)
 
 		// When a max batch limit has been specified
 		if batchOperationsLength > maxEntriesPerBatch {
@@ -163,13 +164,7 @@ func Handler(
 	return http.HandlerFunc(fn)
 }
 
-func addTracing(
-	r *http.Request,
-	bodyBytes []byte,
-	clientHeader config.ClientHeader,
-	batchOperationsLength int,
-	baseOtelAttributes []attribute.KeyValue,
-) {
+func addTracing(r *http.Request, bodyBytes []byte, clientHeader config.ClientHeader, batchOperationsLength int, baseOtelAttributes []attribute.KeyValue, version string) {
 	rootSpan := trace.SpanFromContext(r.Context())
 
 	stringBody := string(bodyBytes)
@@ -186,6 +181,7 @@ func addTracing(
 		otel.WgOperationHash.String(operationHashBatch),
 		otel.WgClientName.String(clientName),
 		otel.WgClientVersion.String(clientVersion),
-		otel.WgBatchedRecordsCount.Int(batchOperationsLength),
+		otel.WgBatchedOperationsCount.Int(batchOperationsLength),
+		otel.WgRouterConfigVersion.String(version),
 	)
 }
