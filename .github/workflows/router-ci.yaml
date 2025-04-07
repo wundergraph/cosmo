@@ -137,7 +137,12 @@ jobs:
     timeout-minutes: 30
     services:
       nats:
-        image: ghcr.io/wundergraph/cosmo/nats:2.11.0
+        image: ghcr.io/wundergraph/cosmo/nats:2.11.0-alpine
+        options: >-
+          --health-cmd "curl -f http://localhost:8222/healthz"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
         ports:
           - 4222:4222
           - 8222:8222
@@ -157,6 +162,11 @@ jobs:
           - 6379:6379
       kafka:
         image: bitnami/kafka:3.7.0
+        options: >-
+          --health-cmd "kafka-broker-api-versions.sh --version"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
         env:
           KAFKA_ENABLE_KRAFT: yes
           KAFKA_CFG_PROCESS_ROLES: controller,broker
