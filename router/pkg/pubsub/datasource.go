@@ -16,20 +16,31 @@ import (
 )
 
 func GetDataSourcesFromConfig(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger) ([]plan.DataSource, error) {
-	var dataSources []plan.DataSource
+	var pubSubs datasource.PubSubGeneralImplementerList
+
 	for _, pubSub := range datasource.GetRegisteredPubSubs() {
-		ds, err := pubSub(ctx, in, dsMeta, config, logger)
+		pubSub, err := pubSub(ctx, in, dsMeta, config, logger)
 		if err != nil {
 			return nil, err
 		}
-		if ds != nil {
-			dataSources = append(dataSources, ds)
+		if pubSub != nil {
+			pubSubs = append(pubSubs, pubSub)
 		}
 	}
 
-	if len(dataSources) == 0 {
+	if len(pubSubs) == 0 {
 		return nil, fmt.Errorf("no pubsub data sources found for data source %s", in.Id)
 	}
 
-	return dataSources, nil
+	ds, err := plan.NewDataSourceConfiguration(
+		in.Id,
+		datasource.NewFactory(ctx, config, pubSubs),
+		dsMeta,
+		pubSubs,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return []plan.DataSource{ds}, nil
 }

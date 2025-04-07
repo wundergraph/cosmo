@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/utils"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
@@ -11,59 +12,79 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-type Planner[EC EventConfigType, P any] struct {
+type EventConfigType2 interface {
+	GetResolveDataSource() (resolve.DataSource, error)
+	GetResolveDataSourceInput(event []byte) (string, error)
+	GetEngineEventConfiguration() *nodev1.EngineEventConfiguration
+	GetResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error)
+	GetResolveDataSourceSubscriptionInput() (string, error)
+}
+
+type PubSubGeneralImplementerList []PubSubGeneralImplementer
+
+func (p *PubSubGeneralImplementerList) FindEventConfig2(typeName string, fieldName string, extractFn func(string) (string, error)) (EventConfigType2, error) {
+	for _, pubSub := range *p {
+		eventConfigV, err := pubSub.FindEventConfig2(typeName, fieldName, extractFn)
+		if err != nil {
+			return nil, err
+		}
+		if eventConfigV != nil {
+			return eventConfigV, nil
+		}
+	}
+	return nil, fmt.Errorf("failed to find event config for type name \"%s\" and field name \"%s\"", typeName, fieldName)
+}
+
+type PubSubGeneralImplementer interface {
+	FindEventConfig2(typeName string, fieldName string, extractFn func(string) (string, error)) (EventConfigType2, error)
+}
+
+type Planner struct {
 	id           int
-	config       Implementer[EC, P]
-	eventConfig  EC
+	pubSubs      PubSubGeneralImplementerList
+	eventConfig  EventConfigType2
 	rootFieldRef int
 	variables    resolve.Variables
 	visitor      *plan.Visitor
-	providers    map[string]P
 }
 
-func (p *Planner[EC, P]) SetID(id int) {
+func (p *Planner) SetID(id int) {
 	p.id = id
 }
 
-func (p *Planner[EC, P]) ID() (id int) {
+func (p *Planner) ID() (id int) {
 	return p.id
 }
 
-func (p *Planner[EC, P]) DownstreamResponseFieldAlias(downstreamFieldRef int) (alias string, exists bool) {
+func (p *Planner) DownstreamResponseFieldAlias(downstreamFieldRef int) (alias string, exists bool) {
 	// skip, not required
 	return
 }
 
-func (p *Planner[EC, P]) DataSourcePlanningBehavior() plan.DataSourcePlanningBehavior {
+func (p *Planner) DataSourcePlanningBehavior() plan.DataSourcePlanningBehavior {
 	return plan.DataSourcePlanningBehavior{
 		MergeAliasedRootNodes:      false,
 		OverrideFieldPathFromAlias: false,
 	}
 }
 
-func (p *Planner[EC, P]) Register(visitor *plan.Visitor, configuration plan.DataSourceConfiguration[Implementer[EC, P]], _ plan.DataSourcePlannerConfiguration) error {
+func (p *Planner) Register(visitor *plan.Visitor, configuration plan.DataSourceConfiguration[PubSubGeneralImplementerList], _ plan.DataSourcePlannerConfiguration) error {
 	p.visitor = visitor
 	visitor.Walker.RegisterEnterFieldVisitor(p)
 	visitor.Walker.RegisterEnterDocumentVisitor(p)
-	p.config = configuration.CustomConfiguration()
+	p.pubSubs = configuration.CustomConfiguration()
 	return nil
 }
 
-func (p *Planner[EC, P]) ConfigureFetch() resolve.FetchConfiguration {
-	if any(p.eventConfig) == nil {
-		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to configure fetch: event config is nil"))
+func (p *Planner) ConfigureFetch() resolve.FetchConfiguration {
+	if p.eventConfig == nil {
+		// p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to configure fetch: event config is nil"))
 		return resolve.FetchConfiguration{}
 	}
 
 	var dataSource resolve.DataSource
-	providerId := p.config.GetProviderId(p.eventConfig)
-	pubsub, ok := p.providers[providerId]
-	if !ok {
-		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("no pubsub connection exists with provider id \"%s\"", providerId))
-		return resolve.FetchConfiguration{}
-	}
 
-	dataSource, err := p.config.GetResolveDataSource(p.eventConfig, pubsub)
+	dataSource, err := p.eventConfig.GetResolveDataSource()
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get data source: %w", err))
 		return resolve.FetchConfiguration{}
@@ -75,7 +96,7 @@ func (p *Planner[EC, P]) ConfigureFetch() resolve.FetchConfiguration {
 		return resolve.FetchConfiguration{}
 	}
 
-	input, err := p.config.GetResolveDataSourceInput(p.eventConfig, event)
+	input, err := p.eventConfig.GetResolveDataSourceInput(event)
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source input: %w", err))
 		return resolve.FetchConfiguration{}
@@ -91,25 +112,19 @@ func (p *Planner[EC, P]) ConfigureFetch() resolve.FetchConfiguration {
 	}
 }
 
-func (p *Planner[EC, P]) ConfigureSubscription() plan.SubscriptionConfiguration {
-	if any(p.eventConfig) == nil {
-		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to configure subscription: event manager is nil"))
-		return plan.SubscriptionConfiguration{}
-	}
-	providerId := p.config.GetProviderId(p.eventConfig)
-	pubsub, ok := p.providers[providerId]
-	if !ok {
-		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("no pubsub connection exists with provider id \"%s\"", providerId))
+func (p *Planner) ConfigureSubscription() plan.SubscriptionConfiguration {
+	if p.eventConfig == nil {
+		// p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to configure subscription: event manager is nil"))
 		return plan.SubscriptionConfiguration{}
 	}
 
-	dataSource, err := p.config.GetResolveDataSourceSubscription(p.eventConfig, pubsub)
+	dataSource, err := p.eventConfig.GetResolveDataSourceSubscription()
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source subscription: %w", err))
 		return plan.SubscriptionConfiguration{}
 	}
 
-	input, err := p.config.GetResolveDataSourceSubscriptionInput(p.eventConfig, pubsub)
+	input, err := p.eventConfig.GetResolveDataSourceSubscriptionInput()
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source subscription input: %w", err))
 		return plan.SubscriptionConfiguration{}
@@ -125,7 +140,7 @@ func (p *Planner[EC, P]) ConfigureSubscription() plan.SubscriptionConfiguration 
 	}
 }
 
-func (p *Planner[EC, P]) addContextVariableByArgumentRef(argumentRef int, argumentPath []string) (string, error) {
+func (p *Planner) addContextVariableByArgumentRef(argumentRef int, argumentPath []string) (string, error) {
 	variablePath, err := p.visitor.Operation.VariablePathByArgumentRefAndArgumentPath(argumentRef, argumentPath, p.visitor.Walker.Ancestors[0].Ref)
 	if err != nil {
 		return "", err
@@ -149,7 +164,7 @@ func StringParser(subject string) (string, error) {
 	return "", fmt.Errorf(`subject "%s" is not a valid NATS subject`, subject)
 }
 
-func (p *Planner[EC, P]) extractArgumentTemplate(fieldRef int, template string) (string, error) {
+func (p *Planner) extractArgumentTemplate(fieldRef int, template string) (string, error) {
 	matches := argument_templates.ArgumentTemplateRegex.FindAllStringSubmatch(template, -1)
 	// If no argument templates are defined, there are only static values
 	if len(matches) < 1 {
@@ -188,13 +203,11 @@ func (p *Planner[EC, P]) extractArgumentTemplate(fieldRef int, template string) 
 	return templateWithVariableTemplateReplacements, nil
 }
 
-func (p *Planner[EC, P]) EnterDocument(_, _ *ast.Document) {
+func (p *Planner) EnterDocument(_, _ *ast.Document) {
 	p.rootFieldRef = -1
-	var zero EC
-	p.eventConfig = zero
 }
 
-func (p *Planner[EC, P]) EnterField(ref int) {
+func (p *Planner) EnterField(ref int) {
 	if p.rootFieldRef != -1 {
 		// This is a nested field; nothing needs to be done
 		return
@@ -208,10 +221,10 @@ func (p *Planner[EC, P]) EnterField(ref int) {
 		return p.extractArgumentTemplate(ref, tpl)
 	}
 
-	eventConfigV, err := p.config.FindEventConfig(p.config.GetEventsDataConfigurations(), typeName, fieldName, extractFn)
+	eventConfigV, err := p.pubSubs.FindEventConfig2(typeName, fieldName, extractFn)
 	if err != nil {
+		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to find event config for type name \"%s\" and field name \"%s\": %w", typeName, fieldName, err))
 		return
 	}
-
 	p.eventConfig = eventConfigV
 }

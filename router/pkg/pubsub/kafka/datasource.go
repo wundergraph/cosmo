@@ -16,29 +16,14 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 )
 
-func GetPlanDataSource(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger) (plan.DataSource, error) {
+func GetPlanDataSource(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger) (datasource.PubSubGeneralImplementer, error) {
 	if kafkaData := in.GetCustomEvents().GetKafka(); kafkaData != nil {
 		k := NewPubSub(logger)
 		err := k.PrepareProviders(ctx, in, dsMeta, config)
 		if err != nil {
 			return nil, err
 		}
-		factory := k.GetFactory(ctx, config)
-		ds, err := plan.NewDataSourceConfiguration[datasource.Implementer[*nodev1.KafkaEventConfiguration, *KafkaPubSub]](
-			in.Id+"-kafka",
-			factory,
-			dsMeta,
-			&Configuration{
-				EventConfiguration: kafkaData,
-				Logger:             logger,
-			},
-		)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return ds, nil
+		return k.config, nil
 	}
 
 	return nil, nil
@@ -53,6 +38,7 @@ func init() {
 type Kafka struct {
 	logger    *zap.Logger
 	providers map[string]*KafkaPubSub
+	config    *Configuration
 }
 
 // buildKafkaOptions creates a list of kgo.Opt options for the given Kafka event source configuration.
@@ -109,7 +95,16 @@ func (k *Kafka) PrepareProviders(ctx context.Context, in *nodev1.DataSourceConfi
 		}
 		k.providers[provider.ID] = ps.New(ctx)
 	}
+	k.config = &Configuration{
+		EventConfiguration: in.CustomEvents.GetKafka(),
+		Logger:             k.logger,
+		Providers:          k.providers,
+	}
 	return nil
+}
+
+func (k *Kafka) GetPubSubGeneralImplementerList() datasource.PubSubGeneralImplementer {
+	return k.config
 }
 
 // func (k *Kafka) ConnectProviders(ctx context.Context) error {
@@ -122,9 +117,9 @@ func (k *Kafka) PrepareProviders(ctx context.Context, in *nodev1.DataSourceConfi
 // 	return nil
 // }
 
-func (k *Kafka) GetFactory(executionContext context.Context, config config.EventsConfiguration) *datasource.Factory[*nodev1.KafkaEventConfiguration, *KafkaPubSub] {
-	return datasource.NewFactory[*nodev1.KafkaEventConfiguration](executionContext, config, k.providers)
-}
+// func (k *Kafka) GetFactory(executionContext context.Context, config config.EventsConfiguration) *datasource.Factory {
+// 	return datasource.NewFactory(executionContext, config, k.config)
+// }
 
 func NewPubSub(logger *zap.Logger) Kafka {
 	return Kafka{

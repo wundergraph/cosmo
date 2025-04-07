@@ -104,7 +104,13 @@ func (p *NatsPubSub) Subscribe(ctx context.Context, event SubscriptionEventConfi
 		if event.StreamConfiguration.ConsumerInactiveThreshold > 0 {
 			consumerConfig.InactiveThreshold = time.Duration(event.StreamConfiguration.ConsumerInactiveThreshold) * time.Second
 		}
-		consumer, err := p.client.GetJetStream().CreateOrUpdateConsumer(ctx, event.StreamConfiguration.StreamName, consumerConfig)
+		js, err := p.client.GetJetStream()
+		if err != nil {
+			log.Error("getting jetstream client", zap.Error(err))
+			return datasource.NewError("failed to get jetstream client", err)
+		}
+
+		consumer, err := js.CreateOrUpdateConsumer(ctx, event.StreamConfiguration.StreamName, consumerConfig)
 		if err != nil {
 			log.Error("creating or updating consumer", zap.Error(err))
 			return datasource.NewError(fmt.Sprintf(`failed to create or update consumer for stream "%s"`, event.StreamConfiguration.StreamName), err)
@@ -152,10 +158,16 @@ func (p *NatsPubSub) Subscribe(ctx context.Context, event SubscriptionEventConfi
 		return nil
 	}
 
+	nc, err := p.client.GetClient()
+	if err != nil {
+		log.Error("getting nats client", zap.Error(err))
+		return datasource.NewError("failed to get nats client", err)
+	}
+
 	msgChan := make(chan *nats.Msg)
 	subscriptions := make([]*nats.Subscription, len(event.Subjects))
 	for i, subject := range event.Subjects {
-		subscription, err := p.client.GetClient().ChanSubscribe(subject, msgChan)
+		subscription, err := nc.ChanSubscribe(subject, msgChan)
 		if err != nil {
 			log.Error("subscribing to NATS subject", zap.Error(err), zap.String("subscription_subject", subject))
 			return datasource.NewError(fmt.Sprintf(`failed to subscribe to NATS subject "%s"`, subject), err)
@@ -209,7 +221,13 @@ func (p *NatsPubSub) Publish(_ context.Context, event PublishAndRequestEventConf
 
 	log.Debug("publish", zap.ByteString("data", event.Data))
 
-	err := p.client.GetClient().Publish(event.Subject, event.Data)
+	nc, err := p.client.GetClient()
+	if err != nil {
+		log.Error("getting nats client", zap.Error(err))
+		return datasource.NewError("failed to get nats client", err)
+	}
+
+	err = nc.Publish(event.Subject, event.Data)
 	if err != nil {
 		log.Error("publish error", zap.Error(err))
 		return datasource.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
@@ -227,7 +245,13 @@ func (p *NatsPubSub) Request(ctx context.Context, event PublishAndRequestEventCo
 
 	log.Debug("request", zap.ByteString("data", event.Data))
 
-	msg, err := p.client.GetClient().RequestWithContext(ctx, event.Subject, event.Data)
+	nc, err := p.client.GetClient()
+	if err != nil {
+		log.Error("getting nats client", zap.Error(err))
+		return datasource.NewError("failed to get nats client", err)
+	}
+
+	msg, err := nc.RequestWithContext(ctx, event.Subject, event.Data)
 	if err != nil {
 		log.Error("request error", zap.Error(err))
 		return datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)
@@ -243,32 +267,40 @@ func (p *NatsPubSub) Request(ctx context.Context, event PublishAndRequestEventCo
 }
 
 func (p *NatsPubSub) flush(ctx context.Context) error {
-	return p.client.GetClient().FlushWithContext(ctx)
+	nc, err := p.client.GetClient()
+	if err != nil {
+		return err
+	}
+	return nc.FlushWithContext(ctx)
 }
 
 func (p *NatsPubSub) Shutdown(ctx context.Context) error {
+	nc, err := p.client.GetClient()
+	if err != nil {
+		return nil // Already disconnected or failed to connect
+	}
 
-	if p.client.GetClient().IsClosed() {
+	if nc.IsClosed() {
 		return nil
 	}
 
-	var err error
+	var shutdownErr error
 
 	fErr := p.flush(ctx)
 	if fErr != nil {
-		err = errors.Join(err, fErr)
+		shutdownErr = errors.Join(shutdownErr, fErr)
 	}
 
-	drainErr := p.client.GetClient().Drain()
+	drainErr := nc.Drain()
 	if drainErr != nil {
-		err = errors.Join(err, drainErr)
+		shutdownErr = errors.Join(shutdownErr, drainErr)
 	}
 
 	// Wait for all subscriptions to be closed
 	p.closeWg.Wait()
 
-	if err != nil {
-		return fmt.Errorf("nats pubsub shutdown: %w", err)
+	if shutdownErr != nil {
+		return fmt.Errorf("nats pubsub shutdown: %w", shutdownErr)
 	}
 
 	return nil

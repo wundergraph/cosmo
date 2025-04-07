@@ -26,36 +26,21 @@ const (
 	tsep = "."
 )
 
-func GetDataSource(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger) (plan.DataSource, error) {
+func GetPlanDataSource(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger) (datasource.PubSubGeneralImplementer, error) {
 	if natsData := in.GetCustomEvents().GetNats(); natsData != nil {
 		k := NewPubSub(logger)
 		err := k.PrepareProviders(ctx, in, dsMeta, config)
 		if err != nil {
 			return nil, err
 		}
-		factory := k.GetFactory(ctx, config, k.providers)
-		ds, err := plan.NewDataSourceConfiguration[datasource.Implementer[*nodev1.NatsEventConfiguration, *NatsPubSub]](
-			in.Id+"-nats",
-			factory,
-			dsMeta,
-			&Configuration{
-				EventConfiguration: natsData,
-				Logger:             logger,
-			},
-		)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return ds, nil
+		return k.config, nil
 	}
 
 	return nil, nil
 }
 
 func init() {
-	datasource.RegisterPubSub(GetDataSource)
+	datasource.RegisterPubSub(GetPlanDataSource)
 }
 
 func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([]nats.Option, error) {
@@ -107,6 +92,7 @@ type Nats struct {
 	logger           *zap.Logger
 	hostName         string // How to get it here?
 	routerListenAddr string // How to get it here?
+	config           *Configuration
 }
 
 type LazyClient struct {
@@ -115,31 +101,36 @@ type LazyClient struct {
 	opts   []nats.Option
 	client *nats.Conn
 	js     jetstream.JetStream
+	err    error
 }
 
-func (c *LazyClient) Connect(opts ...nats.Option) (err error) {
+func (c *LazyClient) Connect(opts ...nats.Option) error {
 	c.once.Do(func() {
-		c.client, err = nats.Connect(c.url, opts...)
-		if err != nil {
+		c.client, c.err = nats.Connect(c.url, opts...)
+		if c.err != nil {
 			return
 		}
-		c.js, err = jetstream.New(c.client)
+		c.js, c.err = jetstream.New(c.client)
 	})
-	return
+	return c.err
 }
 
-func (c *LazyClient) GetClient() *nats.Conn {
+func (c *LazyClient) GetClient() (*nats.Conn, error) {
 	if c.client == nil {
-		c.Connect()
+		if err := c.Connect(c.opts...); err != nil {
+			return nil, err
+		}
 	}
-	return c.client
+	return c.client, c.err
 }
 
-func (c *LazyClient) GetJetStream() jetstream.JetStream {
+func (c *LazyClient) GetJetStream() (jetstream.JetStream, error) {
 	if c.js == nil {
-		c.Connect()
+		if err := c.Connect(c.opts...); err != nil {
+			return nil, err
+		}
 	}
-	return c.js
+	return c.js, c.err
 }
 
 func NewLazyClient(url string, opts ...nats.Option) *LazyClient {
@@ -173,12 +164,21 @@ func (n *Nats) PrepareProviders(ctx context.Context, in *nodev1.DataSourceConfig
 
 		n.providers[provider.ID] = NewConnector(n.logger, provider.URL, options, n.hostName, n.routerListenAddr).New(ctx)
 	}
+	n.config = &Configuration{
+		EventConfiguration: in.CustomEvents.GetNats(),
+		Logger:             n.logger,
+		Providers:          n.providers,
+	}
 	return nil
 }
 
-func (n *Nats) GetFactory(executionContext context.Context, config config.EventsConfiguration, providers map[string]*NatsPubSub) *datasource.Factory[*nodev1.NatsEventConfiguration, *NatsPubSub] {
-	return datasource.NewFactory[*nodev1.NatsEventConfiguration](executionContext, config, n.providers)
+func (n *Nats) GetPubSubGeneralImplementerList() datasource.PubSubGeneralImplementer {
+	return n.config
 }
+
+// func (n *Nats) GetFactory(executionContext context.Context, config config.EventsConfiguration, providers map[string]*NatsPubSub) *datasource.Factory[*nodev1.NatsEventConfiguration, *NatsPubSub] {
+// 	return datasource.NewFactory[*nodev1.NatsEventConfiguration](executionContext, config, n.providers)
+// }
 
 func NewPubSub(logger *zap.Logger) Nats {
 	return Nats{
@@ -190,6 +190,7 @@ type Configuration struct {
 	Data               string `json:"data"`
 	EventConfiguration []*nodev1.NatsEventConfiguration
 	Logger             *zap.Logger
+	Providers          map[string]*NatsPubSub
 }
 
 func (c *Configuration) GetEventsDataConfigurations() []*nodev1.NatsEventConfiguration {
@@ -296,13 +297,51 @@ func (c *Configuration) transformEventConfig(cfg *nodev1.NatsEventConfiguration,
 	return cfg, nil
 }
 
-func (c *Configuration) FindEventConfig(eventConfigs []*nodev1.NatsEventConfiguration, typeName string, fieldName string, fn datasource.ArgumentTemplateCallback) (*nodev1.NatsEventConfiguration, error) {
-	for _, cfg := range eventConfigs {
+func (c *Configuration) FindEventConfig2(typeName string, fieldName string, extractFn func(string) (string, error)) (datasource.EventConfigType2, error) {
+	for _, cfg := range c.EventConfiguration {
 		if cfg.GetEngineEventConfiguration().GetTypeName() == typeName && cfg.GetEngineEventConfiguration().GetFieldName() == fieldName {
-			return c.transformEventConfig(cfg, fn)
+			transformedCfg, err := c.transformEventConfig(cfg, extractFn)
+			if err != nil {
+				return nil, err
+			}
+			return &SelectedConfiguration{
+				Config:             c,
+				EventConfiguration: transformedCfg,
+				Provider:           c.Providers[c.GetProviderId(transformedCfg)],
+			}, nil
 		}
 	}
-	return nil, fmt.Errorf("failed to find event config for type name \"%s\" and field name \"%s\"", typeName, fieldName)
+	return nil, nil
+}
+
+type SelectedConfiguration struct {
+	Config             *Configuration
+	EventConfiguration *nodev1.NatsEventConfiguration
+	Provider           *NatsPubSub
+}
+
+func (c *SelectedConfiguration) GetEngineEventConfiguration() *nodev1.EngineEventConfiguration {
+	return c.EventConfiguration.GetEngineEventConfiguration()
+}
+
+func (c *SelectedConfiguration) GetResolveDataSource() (resolve.DataSource, error) {
+	return c.Config.GetResolveDataSource(c.EventConfiguration, c.Provider)
+}
+
+func (c *SelectedConfiguration) GetResolveDataSourceInput(event []byte) (string, error) {
+	return c.Config.GetResolveDataSourceInput(c.EventConfiguration, event)
+}
+
+func (c *SelectedConfiguration) GetResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error) {
+	return c.Config.GetResolveDataSourceSubscription(c.EventConfiguration, c.Provider)
+}
+
+func (c *SelectedConfiguration) GetResolveDataSourceSubscriptionInput() (string, error) {
+	return c.Config.GetResolveDataSourceSubscriptionInput(c.EventConfiguration, c.Provider)
+}
+
+func (c *SelectedConfiguration) GetProviderId() string {
+	return c.Config.GetProviderId(c.EventConfiguration)
 }
 
 func isValidNatsSubject(subject string) bool {

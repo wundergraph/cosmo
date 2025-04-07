@@ -9,30 +9,30 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 )
 
-func NewFactory[EC EventConfigType, P any](executionContext context.Context, config config.EventsConfiguration, providers map[string]P) *Factory[EC, P] {
-	return &Factory[EC, P]{
+func NewFactory(executionContext context.Context, config config.EventsConfiguration, providers PubSubGeneralImplementerList) *Factory {
+	return &Factory{
 		providers:        providers,
 		executionContext: executionContext,
 		config:           config,
 	}
 }
 
-type Factory[EC EventConfigType, P any] struct {
-	providers        map[string]P
+type Factory struct {
+	providers        PubSubGeneralImplementerList
 	executionContext context.Context
 	config           config.EventsConfiguration
 }
 
-func (f *Factory[EC, P]) Planner(_ abstractlogger.Logger) plan.DataSourcePlanner[Implementer[EC, P]] {
-	return &Planner[EC, P]{
-		providers: f.providers,
+func (f *Factory) Planner(_ abstractlogger.Logger) plan.DataSourcePlanner[PubSubGeneralImplementerList] {
+	return &Planner{
+		pubSubs: f.providers,
 	}
 }
 
-func (f *Factory[EC, P]) Context() context.Context {
+func (f *Factory) Context() context.Context {
 	return f.executionContext
 }
 
-func (f *Factory[EC, P]) UpstreamSchema(dataSourceConfig plan.DataSourceConfiguration[Implementer[EC, P]]) (*ast.Document, bool) {
+func (f *Factory) UpstreamSchema(dataSourceConfig plan.DataSourceConfiguration[PubSubGeneralImplementerList]) (*ast.Document, bool) {
 	return nil, false
 }

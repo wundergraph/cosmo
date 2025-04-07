@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type Getter func(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger) (plan.DataSource, error)
+type Getter func(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger) (PubSubGeneralImplementer, error)
 
 var pubSubs []Getter
 
@@ -26,7 +26,7 @@ type ArgumentTemplateCallback func(tpl string) (string, error)
 
 type PubSubImplementer[F any] interface {
 	PrepareProviders(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration) error
-	GetFactory(executionContext context.Context, config config.EventsConfiguration) F
+	//GetFactory(executionContext context.Context, config config.EventsConfiguration) F
 }
 
 type EventConfigType interface {
