@@ -2471,6 +2471,11 @@
           "default": 1024,
           "description": "The size of the validation cache."
         },
+        "disable_exposing_variables_content_on_validation_error": {
+          "type": "boolean",
+          "default": false,
+          "description": "Disables exposing the variables content in the error response. This is useful to avoid leaking sensitive information in the error response."
+        },
         "enable_subgraph_fetch_operation_name": {
           "type": "boolean",
           "default": false,
