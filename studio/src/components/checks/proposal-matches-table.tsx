@@ -109,7 +109,11 @@ export const ProposalMatchesTable = ({
                     </span>
                   ) : (
                     <span className="inline-flex items-center rounded-md bg-destructive/20 px-2 py-1 text-xs text-destructive">
-                      <CrossCircledIcon className="mr-1 h-3 w-3 text-destructive" />
+                      {proposalMatch === "error" ? (
+                        <CrossCircledIcon className="mr-1 h-3 w-3 text-destructive" />
+                      ) : (
+                        <ExclamationCircleIcon className="mr-1 h-3 w-3 text-destructive" />
+                      )}
                       Not Matching
                     </span>
                   )}
@@ -120,7 +124,7 @@ export const ProposalMatchesTable = ({
                   <span>{match.proposalName}</span>
                 </div>
               </TableCell>
-              <TableCell className="flex justify-end mx-2">
+              <TableCell className="mx-2 flex justify-end">
                 <Button
                   size="sm"
                   variant="outline"
