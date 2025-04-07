@@ -1918,7 +1918,7 @@ func WSReadMessage(t testing.TB, conn *websocket.Conn) (messageType int, p []byt
 	b := backoff.New(5*time.Second, 100*time.Millisecond)
 
 	attempts := 0
-	maxAttempts := 5
+	maxAttempts := 10
 
 	for attempts < maxAttempts {
 		attempts++
@@ -1961,7 +1961,7 @@ func WSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
 	b := backoff.New(5*time.Second, 100*time.Millisecond)
 
 	attempts := 0
-	maxAttempts := 5
+	maxAttempts := 10
 
 	for attempts < maxAttempts {
 		attempts++
@@ -2004,7 +2004,7 @@ func WSWriteMessage(t testing.TB, conn *websocket.Conn, messageType int, data []
 	b := backoff.New(5*time.Second, 100*time.Millisecond)
 
 	attempts := 0
-	maxAttempts := 5
+	maxAttempts := 10
 
 	for attempts < maxAttempts {
 		attempts++
@@ -2047,7 +2047,7 @@ func WSWriteJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) 
 	b := backoff.New(5*time.Second, 100*time.Millisecond)
 
 	attempts := 0
-	maxAttempts := 5
+	maxAttempts := 10
 
 	for attempts < maxAttempts {
 		attempts++

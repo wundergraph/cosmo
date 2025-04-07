@@ -240,8 +240,6 @@ type WebsocketHandler struct {
 	connections   map[int]*WebSocketConnectionHandler
 	connectionsMu sync.RWMutex
 
-	connectionIDs atomic.Int64
-
 	stats      statistics.EngineStatistics
 	attributes []attribute.KeyValue
 
