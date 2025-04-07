@@ -5,6 +5,7 @@ go 1.23
 require (
 	github.com/MicahParks/jwkset v0.9.0
 	github.com/buger/jsonparser v1.1.1
+	github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.1
@@ -24,7 +25,7 @@ require (
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
 	github.com/wundergraph/cosmo/demo v0.0.0-20250325163111-208e63bb0e3d
 	github.com/wundergraph/cosmo/router v0.0.0-20250325163111-208e63bb0e3d
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.168
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.169
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
@@ -51,7 +52,6 @@ require (
 	github.com/caarlos0/env/v11 v11.3.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/cloudflare/backoff v0.0.0-20161212185259-647f3cdfc87a // indirect
 	github.com/containerd/continuity v0.4.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -63,7 +63,6 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/expr-lang/expr v1.17.0 // indirect
-	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-chi/chi/v5 v5.2.1 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
@@ -76,7 +75,7 @@ require (
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.4.0 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
-	github.com/goccy/go-yaml v1.13.4 // indirect
+	github.com/goccy/go-yaml v1.17.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect

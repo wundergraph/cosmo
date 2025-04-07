@@ -5,9 +5,9 @@ import {
   isCheckSuccessful,
 } from "@/components/check-badge-icon";
 import { ChangesTable } from "@/components/checks/changes-table";
+import { GraphPruningIssuesTable } from "@/components/checks/graph-pruning-issues-table";
 import { LintIssuesTable } from "@/components/checks/lint-issues-table";
 import { CheckOperations } from "@/components/checks/operations";
-import { CodeViewerActions } from "@/components/code-viewer";
 import { EmptyState } from "@/components/empty-state";
 import { InfoTooltip } from "@/components/info-tooltip";
 import {
@@ -15,6 +15,7 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
+import { SDLViewerActions } from "@/components/schema/sdl-viewer";
 import {
   DecorationCollection,
   SDLViewerMonaco,
@@ -35,6 +36,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/components/ui/link";
 import { Loader } from "@/components/ui/loader";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
@@ -45,40 +55,42 @@ import { useToast } from "@/components/ui/use-toast";
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { formatDate, formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
+import { cn } from "@/lib/utils";
+import { useMutation, useQuery } from "@connectrpc/connect-query";
 import {
   CheckCircleIcon,
+  ExclamationCircleIcon,
   ExclamationTriangleIcon,
   NoSymbolIcon,
 } from "@heroicons/react/24/outline";
 import {
   ArrowLeftIcon,
   CheckCircledIcon,
+  Component2Icon,
   CrossCircledIcon,
   CubeIcon,
   ReaderIcon,
   UpdateIcon,
 } from "@radix-ui/react-icons";
-import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   forceCheckSuccess,
   getCheckSummary,
-  getFederatedGraphs,
+  getProposedSchemaOfCheckedSubgraph,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
   GetCheckSummaryResponse,
   GraphPruningIssue,
   LintIssue,
   LintSeverity,
+  SchemaCheck_CheckedSubgraph,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow, subDays } from "date-fns";
 import { useRouter } from "next/router";
 import React, { useContext, useMemo } from "react";
-import { PiBracketsCurlyBold, PiGraphLight } from "react-icons/pi";
 import { HiOutlineScissors } from "react-icons/hi2";
-import { GraphPruningIssuesTable } from "@/components/checks/graph-pruning-issues-table";
+import { PiBracketsCurlyBold, PiCubeFocus, PiGraphLight } from "react-icons/pi";
 import { SiLintcode } from "react-icons/si";
-import { cn } from "@/lib/utils";
 
 const ForceSuccess: React.FC<{ onSubmit: () => void }> = (props) => {
   return (
@@ -108,6 +120,120 @@ const ForceSuccess: React.FC<{ onSubmit: () => void }> = (props) => {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  );
+};
+
+const ProposedSchemas = ({
+  checkId,
+  sdl,
+  checkedSubgraphs,
+  lintIssues,
+  graphPruningIssues,
+}: {
+  checkId: string;
+  sdl?: string;
+  checkedSubgraphs: SchemaCheck_CheckedSubgraph[];
+  lintIssues: LintIssue[];
+  graphPruningIssues: GraphPruningIssue[];
+}) => {
+  const router = useRouter();
+  const subgraph = router.query.subgraph as string;
+  const hash = router.asPath.split("#")?.[1];
+
+  const checkedSubgraph = checkedSubgraphs.find(
+    (s) => s.subgraphName === subgraph,
+  );
+
+  const activeSubgraph = checkedSubgraph || checkedSubgraphs?.[0];
+  const activeSubgraphName = activeSubgraph?.subgraphName;
+
+  const { data: sdlData, isLoading: fetchingSdl } = useQuery(
+    getProposedSchemaOfCheckedSubgraph,
+    {
+      checkId,
+      checkedSubgraphId: activeSubgraph?.id,
+    },
+    {
+      enabled: !!activeSubgraph && !!activeSubgraphName,
+    },
+  );
+
+  if (fetchingSdl) return <Loader fullscreen />;
+
+  return (
+    <>
+      <div className="-top-[60px] right-8 px-4 md:absolute md:px-0">
+        <div className="flex gap-x-2">
+          {checkedSubgraphs.length > 0 && (
+            <Select
+              value={activeSubgraphName}
+              onValueChange={(subgraph) =>
+                router.push({
+                  pathname: router.pathname,
+                  query: {
+                    ...router.query,
+                    subgraph,
+                  },
+                })
+              }
+            >
+              <SelectTrigger
+                value={activeSubgraphName}
+                className="w-full md:ml-auto md:w-[200px]"
+              >
+                <SelectValue aria-label={activeSubgraphName}>
+                  {activeSubgraphName}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                    <Component2Icon className="h-3 w-3" /> Subgraphs
+                  </SelectLabel>
+                  {checkedSubgraphs.map(
+                    ({ subgraphName: name, id, isDeleted }) => {
+                      return (
+                        <SelectItem key={name} value={name}>
+                          <div
+                            className={cn({
+                              "text-destructive": isDeleted,
+                            })}
+                          >
+                            <p>{name}</p>
+                            <p className="text-xs">{id.split("-")[0]}</p>
+                          </div>
+                        </SelectItem>
+                      );
+                    },
+                  )}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          )}
+          <SDLViewerActions
+            sdl={
+              (checkedSubgraphs.length > 0 ? sdlData?.proposedSchema : sdl) ||
+              ""
+            }
+            size="icon"
+            targetName={activeSubgraphName}
+          />
+        </div>
+      </div>
+      <div className="scrollbar-custom h-full min-h-[300px] w-full overflow-auto">
+        <SDLViewerMonaco
+          schema={
+            (checkedSubgraphs.length > 0 ? sdlData?.proposedSchema : sdl) || ""
+          }
+          disablePrettier
+          decorationCollections={getDecorationCollection(
+            lintIssues,
+            graphPruningIssues,
+          )}
+          line={hash ? Number(hash.slice(1)) : undefined}
+        />
+      </div>
+    </>
   );
 };
 
@@ -266,9 +392,6 @@ const CheckDetails = ({
   const slug = router.query.slug as string;
   const id = router.query.checkId as string;
   const tab = router.query.tab as string;
-  const hash = router.asPath.split("#")?.[1];
-
-  const { data: allGraphsData } = useQuery(getFederatedGraphs);
 
   const { mutate: forceSuccess } = useMutation(forceCheckSuccess, {
     onSuccess: (data) => {
@@ -342,6 +465,14 @@ const CheckDetails = ({
     ? "No operations were affected by breaking changes"
     : "All tasks were successful";
 
+  const subgraphName =
+    data.check.subgraphName ||
+    (data.check.checkedSubgraphs.length > 1
+      ? "Multiple Subgraphs"
+      : data.check.checkedSubgraphs.length > 0
+      ? data.check.checkedSubgraphs[0].subgraphName
+      : "Subgraph");
+
   const setTab = (tab: string) => {
     const query: Record<string, any> = {
       ...router.query,
@@ -375,7 +506,13 @@ const CheckDetails = ({
           <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1">
             <dt className="text-sm text-muted-foreground">Action</dt>
             <dd className="whitespace-nowrap">
-              {data.check.isDeleted ? "Delete subgraph" : "Update schema"}
+              {data.check.checkedSubgraphs.length > 1
+                ? "Multiple subgraphs updated"
+                : data.check.isDeleted ||
+                  (data.check.checkedSubgraphs.length === 1 &&
+                    data.check.checkedSubgraphs[0].isDeleted)
+                ? "Delete subgraph"
+                : "Update schema"}
             </dd>
           </div>
 
@@ -389,7 +526,7 @@ const CheckDetails = ({
                 >
                   <div className="flex items-center gap-x-1">
                     <CubeIcon />
-                    {data.check.subgraphName}
+                    {subgraphName}
                   </div>
                 </Link>
               </dd>
@@ -528,26 +665,35 @@ const CheckDetails = ({
             </dd>
           </div>
 
-          {data.affectedGraphs.length > 0 && (
+          {data.affectedGraphs.length > 1 && (
             <div className="flex-start flex flex-col gap-1">
-              <dt className="text-sm text-muted-foreground">Affected Graphs</dt>
-              <dd className="flex flex-wrap items-center gap-2">
+              <dt className="mb-2 text-sm text-muted-foreground">
+                Other Affected Graphs
+              </dt>
+              <dd className="flex flex-row flex-wrap gap-2 lg:flex lg:flex-col">
                 {data.affectedGraphs.map((ag) => {
-                  const graph = allGraphsData?.graphs.find(
-                    (g) => g.id === ag.id,
-                  );
-
-                  if (!graph) return null;
-
+                  if (ag.id === graphContext.graph?.id) {
+                    return null;
+                  }
                   return (
-                    <Link
+                    <Badge
                       key={ag.id}
-                      href={`/${organizationSlug}/${graph.namespace}/graph/${graph.name}`}
-                      className="flex items-center gap-x-1 text-sm"
+                      variant="outline"
+                      className="flex items-center space-x-2 py-2"
                     >
-                      <PiGraphLight />
-                      {graph.name}
-                    </Link>
+                      {getCheckIcon(ag.isCheckSuccessful)}
+                      <Link
+                        href={`/${organizationSlug}/${namespace}/graph/${ag.name}/checks/${id}`}
+                        className=" flex-1 truncate hover:underline"
+                      >
+                        <span>{ag.name}</span>
+                      </Link>
+                      <InfoTooltip>
+                        {ag.isCheckSuccessful
+                          ? "Check successful"
+                          : "Check failed"}
+                      </InfoTooltip>
+                    </Badge>
                   );
                 })}
               </dd>
@@ -678,11 +824,33 @@ const CheckDetails = ({
         </dl>
         <div className="scrollbar-custom h-full flex-1 overflow-auto">
           <Tabs
-            value={tab ?? "changes"}
+            value={tab ?? "composition"}
             className="flex h-full min-h-0 flex-col"
           >
             <div className="flex flex-row px-4 py-4 lg:px-6">
               <TabsList className="justify-start overflow-x-auto scrollbar-none">
+                <TabsTrigger
+                  value="composition"
+                  className="flex items-center gap-x-2"
+                  asChild
+                >
+                  <Link
+                    href={{
+                      query: { ...router.query, tab: "composition" },
+                    }}
+                  >
+                    <PiCubeFocus className="flex-shrink-0" />
+                    Composition{" "}
+                    {data.compositionErrors.length ? (
+                      <Badge
+                        variant="muted"
+                        className="bg-white px-1.5 text-current dark:bg-gray-900/60"
+                      >
+                        {data.changes.length}
+                      </Badge>
+                    ) : null}
+                  </Link>
+                </TabsTrigger>
                 <TabsTrigger
                   value="changes"
                   className="flex items-center gap-x-2"
@@ -755,7 +923,11 @@ const CheckDetails = ({
                     ) : null}
                   </Link>
                 </TabsTrigger>
-                {!data.check.isDeleted && (
+                {(data.check.checkedSubgraphs.length > 1 ||
+                  (data.check.checkedSubgraphs.length === 1 &&
+                    !data.check.checkedSubgraphs[0].isDeleted) ||
+                  (data.check.checkedSubgraphs.length === 0 &&
+                    !data.check.isDeleted)) && (
                   <TabsTrigger
                     value="schema"
                     onClick={() => setTab("schema")}
@@ -764,7 +936,7 @@ const CheckDetails = ({
                   >
                     <Link href={{ query: { ...router.query, tab: "schema" } }}>
                       <ReaderIcon />
-                      Schema
+                      Proposed Schema
                     </Link>
                   </TabsTrigger>
                 )}
@@ -772,7 +944,7 @@ const CheckDetails = ({
             </div>
             <div className="flex min-h-0 flex-1">
               <TabsContent
-                value="changes"
+                value="composition"
                 className="w-full space-y-4 px-4 lg:px-6"
               >
                 {data.compositionErrors?.length ? (
@@ -807,6 +979,30 @@ const CheckDetails = ({
                   </Alert>
                 ) : null}
 
+                {data.compositionErrors.length === 0 &&
+                data.compositionWarnings.length === 0 &&
+                !data.check.isComposable ? (
+                  <EmptyState
+                    icon={
+                      <CrossCircledIcon className="h-16 w-16 text-destructive" />
+                    }
+                    title="Composition Check Failed"
+                    description='This check succeeded for the current federated graph, but it failed in one or more other affected federated graphs. Please check the "Affected Graphs" section to identify which graphs encountered composition errors.'
+                  />
+                ) : data.compositionErrors.length === 0 &&
+                  data.compositionWarnings.length === 0 ? (
+                  <EmptyState
+                    icon={<CheckCircleIcon className="text-success" />}
+                    title="Composition Check Successful"
+                    description="There are no composition errors or warnings."
+                  />
+                ) : null}
+              </TabsContent>
+
+              <TabsContent
+                value="changes"
+                className="w-full space-y-4 px-4 lg:px-6"
+              >
                 {data.check.isBreaking &&
                 data.check.isComposable &&
                 data.check.hasClientTraffic ? (
@@ -914,28 +1110,17 @@ const CheckDetails = ({
                   pruneIssues={data.graphPruningIssues}
                   caption={`${data.graphPruningIssues.length} issues found`}
                   isGraphPruningEnabled={!data.check?.graphPruningSkipped}
+                  hasGraphPruningErrors={data.check.hasGraphPruningErrors}
                 />
               </TabsContent>
               <TabsContent value="schema" className="relative w-full flex-1">
-                <div className="right-8 top-5 px-4 md:absolute md:px-0">
-                  <CodeViewerActions
-                    code={sdl}
-                    subgraphName={data.check.subgraphName}
-                    size="sm"
-                    variant="outline"
-                  />
-                </div>
-                <div className="scrollbar-custom h-full min-h-[300px] w-full overflow-auto">
-                  <SDLViewerMonaco
-                    schema={sdl}
-                    disablePrettier
-                    decorationCollections={getDecorationCollection(
-                      data.lintIssues,
-                      data.graphPruningIssues,
-                    )}
-                    line={hash ? Number(hash.slice(1)) : undefined}
-                  />
-                </div>
+                <ProposedSchemas
+                  checkId={id}
+                  sdl={sdl}
+                  checkedSubgraphs={data.check.checkedSubgraphs}
+                  lintIssues={data.lintIssues}
+                  graphPruningIssues={data.graphPruningIssues}
+                />
               </TabsContent>
             </div>
           </Tabs>

@@ -382,7 +382,7 @@ persisted_operations:
     size: 100MB
   storage:
     provider_id: s3
-	# Missing object_prefix
+    # Missing object_prefix
 `)
 	_, err := LoadConfig(f, "")
 	var js *jsonschema.ValidationError
@@ -475,7 +475,7 @@ storage_providers:
 execution_config:
   storage:
     provider_id: s3
-	# Missing object_path
+    # Missing object_path
 `)
 		_, err := LoadConfig(f, "")
 		var js *jsonschema.ValidationError

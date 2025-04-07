@@ -44,6 +44,7 @@ type QueryPlanResult struct {
 	FileName string `json:"file_name,omitempty"`
 	Plan     string `json:"plan,omitempty"`
 	Error    string `json:"error,omitempty"`
+	Warning  string `json:"warning,omitempty"`
 }
 
 func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
@@ -143,11 +144,16 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 						Plan:     outContent,
 					}
 					if err != nil {
-						res.Error = err.Error()
-						outContent = fmt.Sprintf("Error: %v", err)
-						planError.Store(true)
-						if cfg.FailFast {
-							cancel()
+						if _, ok := err.(*core.PlannerOperationValidationError); ok {
+							res.Warning = err.Error()
+							outContent = fmt.Sprintf("Warning: %v", err)
+						} else {
+							res.Error = err.Error()
+							outContent = fmt.Sprintf("Error: %v", err)
+							planError.Store(true)
+							if cfg.FailFast {
+								cancel()
+							}
 						}
 					}
 
