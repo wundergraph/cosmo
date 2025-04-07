@@ -42,7 +42,7 @@ import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
 import { createDeleteOrganizationWorker, DeleteOrganizationQueue } from './workers/DeleteOrganizationWorker.js';
 import {
   createDeleteOrganizationAuditLogsWorker,
-  DeleteOrganizationAuditLogsQueue
+  DeleteOrganizationAuditLogsQueue,
 } from './workers/DeleteOrganizationAuditLogsWorker.js';
 import {
   createDeactivateOrganizationWorker,
@@ -330,8 +330,8 @@ export default async function build(opts: BuildConfig) {
     createDeleteOrganizationAuditLogsWorker({
       redisConnection: fastify.redisForWorker,
       db: fastify.db,
-      logger
-    })
+      logger,
+    }),
   );
 
   const deleteOrganizationQueue = new DeleteOrganizationQueue(logger, fastify.redisForQueue);

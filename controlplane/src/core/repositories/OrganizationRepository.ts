@@ -31,7 +31,7 @@ import Keycloak from '../services/Keycloak.js';
 import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { delayForManualOrgDeletionInDays, delayForOrgAuditLogsDeletionInDays } from '../constants.js';
-import { DeleteOrganizationAuditLogsQueue } from "../workers/DeleteOrganizationAuditLogsWorker.js";
+import { DeleteOrganizationAuditLogsQueue } from '../workers/DeleteOrganizationAuditLogsWorker.js';
 import { BillingRepository } from './BillingRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
@@ -928,7 +928,8 @@ export class OrganizationRepository {
   public deleteOrganization(
     organizationId: string,
     blobStorage: BlobStorage,
-    deleteOrganizationAuditLogsQueue: DeleteOrganizationAuditLogsQueue) {
+    deleteOrganizationAuditLogsQueue: DeleteOrganizationAuditLogsQueue,
+  ) {
     return this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, organizationId);
       const targetRepo = new TargetRepository(tx, organizationId);
@@ -956,9 +957,7 @@ export class OrganizationRepository {
       const deleteAt = addDays(now, delayForOrgAuditLogsDeletionInDays);
       const delay = Number(deleteAt) - Number(now);
 
-      await deleteOrganizationAuditLogsQueue.addJob(
-        { organizationId, },
-        { delay, });
+      await deleteOrganizationAuditLogsQueue.addJob({ organizationId }, { delay });
     });
   }
 

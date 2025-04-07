@@ -103,11 +103,7 @@ export class UserRepository {
       // Delete all solo organizations of the user
       const deleteOrgs: Promise<void>[] = [];
       for (const org of orgMemberships.soloAdminSoloMemberOrgs) {
-        deleteOrgs.push(orgRepo.deleteOrganization(
-          org.id,
-          blobStorage,
-          deleteOrganizationAuditLogsQueue
-        ));
+        deleteOrgs.push(orgRepo.deleteOrganization(org.id, blobStorage, deleteOrganizationAuditLogsQueue));
       }
       await Promise.all(deleteOrgs);
 

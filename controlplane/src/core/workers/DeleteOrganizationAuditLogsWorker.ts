@@ -57,11 +57,13 @@ export class DeleteOrganizationAuditLogsQueue implements IQueue<DeleteOrganizati
 }
 
 class DeleteOrganizationAuditLogsWorker implements IWorker {
-  constructor(private input: {
-    redisConnection: ConnectionOptions;
-    db: PostgresJsDatabase<typeof schema>;
-    logger: pino.Logger;
-  }) {
+  constructor(
+    private input: {
+      redisConnection: ConnectionOptions;
+      db: PostgresJsDatabase<typeof schema>;
+      logger: pino.Logger;
+    },
+  ) {
     this.input.logger = input.logger.child({ worker: WorkerName });
   }
 
