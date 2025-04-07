@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
 	"net/url"
 	"slices"
 
@@ -28,7 +29,7 @@ import (
 
 type Loader struct {
 	resolver FactoryResolver
-	// includeInfo controls whether additional information like type usage and field usage is included in the plan
+	// includeInfo controls whether additional information like type usage and field usage is included in the plan de
 	includeInfo bool
 }
 
@@ -64,6 +65,7 @@ type DefaultFactoryResolver struct {
 func NewDefaultFactoryResolver(
 	ctx context.Context,
 	transportOptions *TransportOptions,
+	subscriptionClientOptions *SubscriptionClientOptions,
 	baseTransport http.RoundTripper,
 	log *zap.Logger,
 	enableSingleFlight bool,
@@ -92,12 +94,22 @@ func NewDefaultFactoryResolver(
 
 	netPollConfig.Enable = enableNetPoll
 
+	options := []graphql_datasource.Options{
+		graphql_datasource.WithLogger(factoryLogger),
+		graphql_datasource.WithNetPollConfiguration(netPollConfig),
+	}
+
+	if subscriptionClientOptions != nil {
+		if subscriptionClientOptions.PingInterval > 0 {
+			options = append(options, graphql_datasource.WithPingInterval(subscriptionClientOptions.PingInterval))
+		}
+	}
+
 	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
 		defaultHttpClient,
 		streamingClient,
 		ctx,
-		graphql_datasource.WithLogger(factoryLogger),
-		graphql_datasource.WithNetPollConfiguration(netPollConfig),
+		options...,
 	)
 
 	return &DefaultFactoryResolver{

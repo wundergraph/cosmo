@@ -240,8 +240,6 @@ type WebsocketHandler struct {
 	connections   map[int]*WebSocketConnectionHandler
 	connectionsMu sync.RWMutex
 
-	connectionIDs atomic.Int64
-
 	stats      statistics.EngineStatistics
 	attributes []attribute.KeyValue
 
@@ -354,7 +352,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		Protocol:                     protocol,
 		Logger:                       requestLogger,
 		Stats:                        h.stats,
-		ConnectionID:                 h.connectionIDs.Inc(),
+		ConnectionID:                 resolve.ConnectionIDs.Inc(),
 		ClientInfo:                   clientInfo,
 		InitRequestID:                requestID,
 		ForwardUpgradeHeaders:        h.forwardUpgradeHeadersConfig,
