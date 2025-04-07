@@ -129,7 +129,7 @@ export class AuditLogRepository {
     return auditLogsCount[0].count;
   }
 
-  public async deleteOrganizationLogs(input: { organizationId: string }) {
-    await this.db.delete(schema.auditLogs).where(eq(schema.auditLogs.organizationId, input.organizationId)).execute();
+  public deleteOrganizationLogs(input: { organizationId: string }) {
+    return this.db.delete(schema.auditLogs).where(eq(schema.auditLogs.organizationId, input.organizationId)).execute();
   }
 }
