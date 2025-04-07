@@ -1,9 +1,12 @@
+/* eslint-disable camelcase */
 import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   GetCheckSummaryRequest,
   GetCheckSummaryResponse,
+  GetCheckSummaryResponse_AffectedGraph,
+  LintSeverity,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
@@ -12,7 +15,7 @@ import { SchemaGraphPruningRepository } from '../../repositories/SchemaGraphPrun
 import { SchemaLintRepository } from '../../repositories/SchemaLintRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { enrichLogger, getLogger, handleError, isCheckSuccessful } from '../../util.js';
 
 export function getCheckSummary(
   opts: RouterOptions,
@@ -48,6 +51,7 @@ export function getCheckSummary(
         graphPruningIssues: [],
         isGraphPruningEnabled: false,
         isLintingEnabled: false,
+        checkedSubgraphs: [],
       };
     }
 
@@ -68,10 +72,15 @@ export function getCheckSummary(
         graphPruningIssues: [],
         isGraphPruningEnabled: false,
         isLintingEnabled: false,
+        checkedSubgraphs: [],
       };
     }
 
-    const check = await subgraphRepo.checkById({ id: req.checkId, federatedGraphTargetId: graph.targetId });
+    const check = await subgraphRepo.checkById({
+      id: req.checkId,
+      federatedGraphTargetId: graph.targetId,
+      federatedGraphId: graph.id,
+    });
     const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
 
     if (!check || !checkDetails) {
@@ -89,6 +98,7 @@ export function getCheckSummary(
         graphPruningIssues: [],
         isGraphPruningEnabled: false,
         isLintingEnabled: false,
+        checkedSubgraphs: [],
       };
     }
 
@@ -100,12 +110,82 @@ export function getCheckSummary(
       federatedGraphId: graph.id,
     });
 
+    const currentAffectedGraph = check.affectedGraphs.find((ag) => ag.id === graph.id);
+    const affectedGraphs: GetCheckSummaryResponse_AffectedGraph[] = [];
+
+    const hasLintErrors = lintIssues.some((issue) => issue.severity === LintSeverity.error);
+    let hasAffectedOperations = false;
+    if (check.hasClientTraffic) {
+      const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId({
+        checkId: req.checkId,
+        limit: 1,
+        offset: 0,
+      });
+      hasAffectedOperations = affectedOperations.length > 0;
+    }
+    affectedGraphs.push(
+      new GetCheckSummaryResponse_AffectedGraph({
+        ...currentAffectedGraph,
+        name: graph.name,
+        isCheckSuccessful: isCheckSuccessful({
+          isComposable: checkDetails.compositionErrors.length === 0,
+          isBreaking: checkDetails.changes.some((change) => change.isBreaking),
+          hasClientTraffic: hasAffectedOperations,
+          hasLintErrors,
+          hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
+          clientTrafficCheckSkipped: check.clientTrafficCheckSkipped,
+        }),
+      }),
+    );
+
+    // checking if the checks for the other affected graphs are successful
+    for (const ag of check.affectedGraphs) {
+      if (ag.id === graph.id) {
+        continue;
+      }
+      const fedGraph = await fedGraphRepo.byId(ag.id);
+      if (!fedGraph) {
+        continue;
+      }
+      const checkDetails = await subgraphRepo.checkDetails(req.checkId, fedGraph.targetId);
+      if (!checkDetails) {
+        continue;
+      }
+      const graphPruningIssues = await schemaGraphPruningRepo.getSchemaCheckGraphPruningIsssues({
+        schemaCheckId: req.checkId,
+        federatedGraphId: fedGraph.id,
+      });
+
+      if (check.hasClientTraffic) {
+        const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId({
+          checkId: req.checkId,
+          limit: 1,
+          offset: 0,
+        });
+        hasAffectedOperations = affectedOperations.length > 0;
+      }
+      affectedGraphs.push(
+        new GetCheckSummaryResponse_AffectedGraph({
+          ...ag,
+          name: fedGraph.name,
+          isCheckSuccessful: isCheckSuccessful({
+            isComposable: checkDetails.compositionErrors.length === 0,
+            isBreaking: checkDetails.changes.some((change) => change.isBreaking),
+            hasClientTraffic: hasAffectedOperations,
+            hasLintErrors,
+            hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
+            clientTrafficCheckSkipped: check.clientTrafficCheckSkipped,
+          }),
+        }),
+      );
+    }
+
     return {
       response: {
         code: EnumStatusCode.OK,
       },
       check,
-      affectedGraphs: check.affectedGraphs,
+      affectedGraphs,
       proposedSubgraphSchemaSDL: check.proposedSubgraphSchemaSDL,
       changes: checkDetails.changes,
       compositionErrors: checkDetails.compositionErrors,
