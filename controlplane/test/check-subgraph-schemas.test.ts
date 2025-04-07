@@ -84,11 +84,11 @@ describe('CheckSubgraphSchemas', (ctx) => {
       subgraphs: [
         {
           name: subgraphName1,
-          schema: 'type Query { hello: String!, helloExtended: String! }',
+          schemaSDL: 'type Query { hello: String!, helloExtended: String! }',
         },
         {
           name: subgraphName2,
-          schema: 'type Query { world: String!, worldExtended: String! }',
+          schemaSDL: 'type Query { world: String!, worldExtended: String! }',
         },
       ],
     });
@@ -202,15 +202,15 @@ describe('CheckSubgraphSchemas', (ctx) => {
       subgraphs: [
         {
           name: subgraphName1,
-          schema: 'type Query { test1: String!, test1Extended: String! }',
+          schemaSDL: 'type Query { test1: String!, test1Extended: String! }',
         },
         {
           name: subgraphName2,
-          schema: 'type Query { test2: String!, test2Extended: String! }',
+          schemaSDL: 'type Query { test2: String!, test2Extended: String! }',
         },
         {
           name: subgraphName3,
-          schema: 'type Query { test3: String!, test3Extended: String! }',
+          schemaSDL: 'type Query { test3: String!, test3Extended: String! }',
         },
       ],
     });
@@ -252,7 +252,6 @@ describe('CheckSubgraphSchemas', (ctx) => {
     expect(checkSummary3.affectedGraphs).toHaveLength(3);
     expect(checkSummary3.check?.checkedSubgraphs.length).toEqual(3);
 
-
     await server.close();
   });
 
@@ -284,7 +283,7 @@ describe('CheckSubgraphSchemas', (ctx) => {
         {
           name: subgraphName,
           // Removing a required field is a breaking change
-          schema: 'type Query { newField: String }',
+          schemaSDL: 'type Query { newField: String }',
         },
       ],
     });
@@ -337,8 +336,8 @@ describe('CheckSubgraphSchemas', (ctx) => {
       subgraphs: [
         {
           name: subgraphName,
-          schema: '',
-          delete: true,
+          schemaSDL: '',
+          isDeleted: true,
         },
       ],
     });
@@ -392,7 +391,7 @@ describe('CheckSubgraphSchemas', (ctx) => {
         {
           name: subgraphName1,
           // Reference Product in extend but it doesn't exist
-          schema: 'type Query { users: [User!]! } type User { id: ID! } extend type Product { name: String! }',
+          schemaSDL: 'type Query { users: [User!]! } type User { id: ID! } extend type Product { name: String! }',
         },
       ],
     });
