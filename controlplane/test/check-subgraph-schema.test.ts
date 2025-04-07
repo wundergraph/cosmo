@@ -466,4 +466,196 @@ type Employee {
 
     await server.close();
   });
+
+  test('Should test check with delete option', async () => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+
+    const fedGraphName = genID('fedGraph');
+    const subgraph1Name = genID('subgraph1');
+    const subgraph2Name = genID('subgraph2');
+    const label = genUniqueLabel();
+
+    const subgraph1Schema = `
+type Query {
+  employees: [Employee!]!
+}
+
+type Employee {
+  id: Int!
+  name: String!
+}
+`;
+
+    const subgraph2Schema = `
+type Query {
+  departments: [Department!]!
+}
+
+type Department {
+  id: Int!
+  title: String!
+}
+`;
+
+    // Create a federated graph
+    const createFedGraphRes = await client.createFederatedGraph({
+      name: fedGraphName,
+      namespace: 'default',
+      routingUrl: 'http://localhost:8081',
+      labelMatchers: [joinLabel(label)],
+    });
+    expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create and publish first subgraph
+    let resp = await client.createFederatedSubgraph({
+      name: subgraph1Name,
+      namespace: 'default',
+      labels: [label],
+      routingUrl: 'http://localhost:8082',
+    });
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+    resp = await client.publishFederatedSubgraph({
+      name: subgraph1Name,
+      namespace: 'default',
+      schema: subgraph1Schema,
+    });
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create and publish second subgraph
+    resp = await client.createFederatedSubgraph({
+      name: subgraph2Name,
+      namespace: 'default',
+      labels: [label],
+      routingUrl: 'http://localhost:8083',
+    });
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+    resp = await client.publishFederatedSubgraph({
+      name: subgraph2Name,
+      namespace: 'default',
+      schema: subgraph2Schema,
+    });
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Now run another check with delete option set to true
+    const checkWithDeleteResp = await client.checkSubgraphSchema({
+      subgraphName: subgraph1Name,
+      namespace: 'default',
+      delete: true,
+    });
+    expect(checkWithDeleteResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkWithDeleteResp.breakingChanges.length).toBe(9);
+    expect(checkWithDeleteResp.compositionErrors.length).toBe(0);
+
+    const checkSummary = await client.getCheckSummary({
+      namespace: 'default',
+      graphName: fedGraphName,
+      checkId: checkWithDeleteResp.checkId,
+    });
+    expect(checkSummary.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkSummary.check?.checkedSubgraphs).toHaveLength(1);
+    expect(checkSummary.check?.checkedSubgraphs[0].isDeleted).toBe(true);
+    expect(checkSummary.check?.checkedSubgraphs[0].subgraphName).toBe(subgraph1Name);
+    await server.close();
+  });
+
+  test('Should run check against a subgraph identified by label when it does not exist', async () => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+
+    const fedGraphName = genID('fedGraph');
+    const subgraph1Name = genID('subgraph1');
+    const subgraph2Name = genID('subgraph2');
+    const nonexistentSubgraphName = genID('nonexistentSubgraph');
+    const label1 = genUniqueLabel();
+    const label2 = genUniqueLabel();
+    const nonexistentLabel = genUniqueLabel();
+
+    const subgraph1Schema = `
+type Query {
+  products: [Product!]!
+}
+
+type Product {
+  id: Int!
+  name: String!
+}
+`;
+
+    const subgraph2Schema = `
+type Query {
+  categories: [Category!]!
+}
+
+type Category {
+  id: Int!
+  title: String!
+}
+`;
+
+    // Create a federated graph with multiple label matchers
+    const createFedGraphRes = await client.createFederatedGraph({
+      name: fedGraphName,
+      namespace: 'default',
+      routingUrl: 'http://localhost:8081',
+      labelMatchers: [`${joinLabel(label1)},${joinLabel(label2)}`],
+    });
+    expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create and publish first subgraph
+    let resp = await client.createFederatedSubgraph({
+      name: subgraph1Name,
+      namespace: 'default',
+      labels: [label1],
+      routingUrl: 'http://localhost:8082',
+    });
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+    resp = await client.publishFederatedSubgraph({
+      name: subgraph1Name,
+      namespace: 'default',
+      schema: subgraph1Schema,
+    });
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create and publish second subgraph
+    resp = await client.createFederatedSubgraph({
+      name: subgraph2Name,
+      namespace: 'default',
+      labels: [label2],
+      routingUrl: 'http://localhost:8083',
+    });
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+    resp = await client.publishFederatedSubgraph({
+      name: subgraph2Name,
+      namespace: 'default',
+      schema: subgraph2Schema,
+    });
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+    let checkResp = await client.checkSubgraphSchema({
+      subgraphName: nonexistentSubgraphName,
+      labels: [label1],
+      namespace: 'default',
+      schema: Buffer.from('type Query { nonexistent: String! }'),
+    });
+
+    expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkResp.checkedFederatedGraphs).toHaveLength(1);
+    expect(checkResp.nonBreakingChanges.length).toBeGreaterThan(0);
+
+    checkResp = await client.checkSubgraphSchema({
+      subgraphName: nonexistentSubgraphName,
+      labels: [nonexistentLabel],
+      namespace: 'default',
+      schema: Buffer.from('type Query { nonexistent: String! }'),
+    });
+
+    expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkResp.checkedFederatedGraphs).toHaveLength(0);
+    expect(checkResp.nonBreakingChanges.length).toBeGreaterThan(0);
+
+    await server.close();
+  });
 });
