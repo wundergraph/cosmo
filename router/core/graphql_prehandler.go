@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/batch"
 	"maps"
 	"net/http"
 	"slices"
@@ -608,6 +609,15 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		otel.WgOperationType.String(operationKit.parsedOperation.Type),
 	}
 	requestContext.telemetry.addCommonAttribute(attributesAfterParse...)
+
+	if isBatchedRequest, _ := req.Context().Value(batch.IsBatchedRequestKey{}).(bool); isBatchedRequest {
+		if requestContext.operation.opType != "query" {
+			return &httpGraphqlError{
+				message:    "Batched requests can only contain queries",
+				statusCode: http.StatusOK,
+			}
+		}
+	}
 
 	// Set the router span name after we have the operation name
 	httpOperation.routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Request.OperationName, operationKit.parsedOperation.Type))

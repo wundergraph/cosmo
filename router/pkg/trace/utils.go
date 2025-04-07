@@ -2,6 +2,7 @@ package trace
 
 import (
 	"context"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/codes"
 	"net/http"
@@ -61,6 +62,12 @@ func GetClientHeader(h http.Header, headerNames []string, defaultValue string) s
 		}
 	}
 	return defaultValue
+}
+
+func GetClientDetails(r *http.Request, clientHeader config.ClientHeader) (string, string) {
+	clientName := GetClientHeader(r.Header, []string{clientHeader.Name, "graphql-client-name", "apollographql-client-name"}, "unknown")
+	clientVersion := GetClientHeader(r.Header, []string{clientHeader.Version, "graphql-client-version", "apollographql-client-version"}, "missing")
+	return clientName, clientVersion
 }
 
 // AttachErrToSpan attaches an error to a span if it is not nil.
