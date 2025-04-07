@@ -1,1 +1,0 @@
-ALTER TABLE "schema_check_proposal_match" ADD CONSTRAINT "unique_schema_check_proposal_match" UNIQUE("schema_check_id","proposal_id");
