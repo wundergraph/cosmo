@@ -23,7 +23,7 @@ vi.mock('../../src/core/clickhouse/index.js', () => {
 });
 
 // Helper function to enable proposals for namespace
-async function enableProposalsForNamespace(client, namespace = DEFAULT_NAMESPACE) {
+async function enableProposalsForNamespace(client: any, namespace = DEFAULT_NAMESPACE) {
   const enableResponse = await client.enableProposalsForNamespace({
     namespace,
     enableProposals: true,

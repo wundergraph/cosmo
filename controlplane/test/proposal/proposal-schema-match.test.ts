@@ -23,7 +23,7 @@ vi.mock('../../src/core/clickhouse/index.js', () => {
 });
 
 // Helper function to enable proposals for namespace
-async function enableProposalsForNamespace(client, namespace = DEFAULT_NAMESPACE) {
+async function enableProposalsForNamespace(client: any, namespace = DEFAULT_NAMESPACE) {
   const enableResponse = await client.enableProposalsForNamespace({
     namespace,
     enableProposals: true,
@@ -34,7 +34,7 @@ async function enableProposalsForNamespace(client, namespace = DEFAULT_NAMESPACE
 
 // Helper function to set check/publish severity for namespace
 async function setProposalSeverity(
-  client,
+  client: any,
   namespace = DEFAULT_NAMESPACE,
   checkSeverity: 'warn' | 'error',
   publishSeverity: 'warn' | 'error',
@@ -52,7 +52,7 @@ async function setProposalSeverity(
 
 // Helper function to create a proposal
 async function createTestProposal(
-  client,
+  client: any,
   options: {
     federatedGraphName: string;
     proposalName: string;
@@ -82,7 +82,7 @@ async function createTestProposal(
 
 // Helper function to create a proposal with a deleted subgraph
 async function createTestProposalWithDeletedSubgraph(
-  client,
+  client: any,
   options: {
     federatedGraphName: string;
     proposalName: string;
