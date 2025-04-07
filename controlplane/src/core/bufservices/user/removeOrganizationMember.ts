@@ -118,6 +118,7 @@ export function removeOrganizationMember(
           keycloakRealm: opts.keycloakRealm,
         },
         opts.blobStorage,
+        opts.queues.deleteOrganizationAuditLogsQueue,
       );
     }
 

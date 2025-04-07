@@ -1621,11 +1621,7 @@ export const auditLogs = pgTable(
   'audit_logs', // auditlogs
   {
     id: uuid('id').notNull().primaryKey().defaultRandom(),
-    organizationId: uuid('organization_id')
-      .notNull()
-      .references(() => organizations.id, {
-        onDelete: 'cascade',
-      }),
+    organizationId: uuid('organization_id').notNull(), // we don't want the audit log to be dropped when the organization is deleted
 
     // Information about the action
     action: text('action').$type<AuditLogAction>().notNull(), // e.g. created

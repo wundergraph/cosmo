@@ -107,6 +107,7 @@ export function removeInvitation(
           keycloakRealm: opts.keycloakRealm,
         },
         opts.blobStorage,
+        opts.queues.deleteOrganizationAuditLogsQueue,
       );
     }
 

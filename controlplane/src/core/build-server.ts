@@ -41,6 +41,10 @@ import { fastifyLoggerId, createS3ClientConfig, extractS3BucketName } from './ut
 import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
 import { createDeleteOrganizationWorker, DeleteOrganizationQueue } from './workers/DeleteOrganizationWorker.js';
 import {
+  createDeleteOrganizationAuditLogsWorker,
+  DeleteOrganizationAuditLogsQueue
+} from './workers/DeleteOrganizationAuditLogsWorker.js';
+import {
   createDeactivateOrganizationWorker,
   DeactivateOrganizationQueue,
 } from './workers/DeactivateOrganizationWorker.js';
@@ -321,6 +325,15 @@ export default async function build(opts: BuildConfig) {
     );
   }
 
+  const deleteOrganizationAuditLogsQueue = new DeleteOrganizationAuditLogsQueue(logger, fastify.redisForQueue);
+  bullWorkers.push(
+    createDeleteOrganizationAuditLogsWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      logger
+    })
+  );
+
   const deleteOrganizationQueue = new DeleteOrganizationQueue(logger, fastify.redisForQueue);
   bullWorkers.push(
     createDeleteOrganizationWorker({
@@ -330,6 +343,7 @@ export default async function build(opts: BuildConfig) {
       keycloakClient,
       keycloakRealm: opts.keycloak.realm,
       blobStorage,
+      deleteOrganizationAuditLogsQueue,
     }),
   );
 
@@ -365,6 +379,7 @@ export default async function build(opts: BuildConfig) {
       keycloakRealm: opts.keycloak.realm,
       blobStorage,
       platformWebhooks,
+      deleteOrganizationAuditLogsQueue,
     }),
   );
 
@@ -468,6 +483,7 @@ export default async function build(opts: BuildConfig) {
       queues: {
         readmeQueue,
         deleteOrganizationQueue,
+        deleteOrganizationAuditLogsQueue,
         deactivateOrganizationQueue,
         reactivateOrganizationQueue,
         deleteUserQueue,
