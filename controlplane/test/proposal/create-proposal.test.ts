@@ -697,4 +697,211 @@ describe('Create proposal tests', () => {
 
     await server.close();
   });
+
+  test('should fail to create a proposal with the same name for the same federated graph', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+    });
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Setup a federated graph with a single subgraph
+    const subgraphName = genID('subgraph1');
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName = genID('proposal');
+
+    const subgraphSchemaSDL = `
+      type Query {
+        hello: String!
+      }
+    `;
+
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Create first proposal
+    const updatedSubgraphSDL = `
+      type Query {
+        hello: String!
+        newField: Int!
+      }
+    `;
+
+    const createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      subgraphs: [
+        {
+          name: subgraphName,
+          schemaSDL: updatedSubgraphSDL,
+          isDeleted: false,
+        },
+      ],
+      didHubCreate: false,
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(createProposalResponse.proposalId).toBeDefined();
+
+    // Try to create a second proposal with the same name for the same federated graph
+    const secondProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName, // Same proposal name
+      subgraphs: [
+        {
+          name: subgraphName,
+          schemaSDL: `
+            type Query {
+              hello: String!
+              anotherField: String!
+            }
+          `,
+          isDeleted: false,
+        },
+      ],
+      didHubCreate: false,
+    });
+
+    // Expect an error response
+    expect(secondProposalResponse.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
+    expect(secondProposalResponse.response?.details).toContain(`Proposal ${proposalName} already exists.`);
+
+    await server.close();
+  });
+
+  test('should allow creating proposals with the same name for different federated graphs', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+    });
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Setup common test data
+    const subgraphName = genID('subgraph');
+    const fedGraph1Name = genID('fedGraph1');
+    const fedGraph2Name = genID('fedGraph2');
+    const label1 = genUniqueLabel('label1');
+    const label2 = genUniqueLabel('label2');
+    const proposalName = genID('proposal'); // Same proposal name to be used for both graphs
+
+    const subgraphSchemaSDL = `
+      type Query {
+        hello: String!
+      }
+    `;
+
+    // Create subgraph1 with label1 and fedGraph1
+    await createThenPublishSubgraph(
+      client,
+      subgraphName + '1',
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label1],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraph1Name, DEFAULT_NAMESPACE, [joinLabel(label1)], DEFAULT_ROUTER_URL);
+
+    // Create subgraph2 with label2 and fedGraph2
+    await createThenPublishSubgraph(
+      client,
+      subgraphName + '2',
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label2],
+      DEFAULT_SUBGRAPH_URL_TWO,
+    );
+
+    await createFederatedGraph(client, fedGraph2Name, DEFAULT_NAMESPACE, [joinLabel(label2)], DEFAULT_ROUTER_URL);
+
+    // Create first proposal for fedGraph1
+    const updatedSubgraphSDL1 = `
+      type Query {
+        hello: String!
+        newField1: Int!
+      }
+    `;
+
+    const createProposalResponse1 = await client.createProposal({
+      federatedGraphName: fedGraph1Name,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      subgraphs: [
+        {
+          name: subgraphName + '1',
+          schemaSDL: updatedSubgraphSDL1,
+          isDeleted: false,
+        },
+      ],
+      didHubCreate: false,
+    });
+
+    expect(createProposalResponse1.response?.code).toBe(EnumStatusCode.OK);
+    expect(createProposalResponse1.proposalId).toBeDefined();
+
+    // Create second proposal with the same name but for fedGraph2
+    const updatedSubgraphSDL2 = `
+      type Query {
+        hello: String!
+        newField2: String!
+      }
+    `;
+
+    const createProposalResponse2 = await client.createProposal({
+      federatedGraphName: fedGraph2Name,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName, // Same proposal name
+      subgraphs: [
+        {
+          name: subgraphName + '2',
+          schemaSDL: updatedSubgraphSDL2,
+          isDeleted: false,
+        },
+      ],
+      didHubCreate: false,
+    });
+
+    // Expect success for the second proposal as well
+    expect(createProposalResponse2.response?.code).toBe(EnumStatusCode.OK);
+    expect(createProposalResponse2.proposalId).toBeDefined();
+
+    // Verify both proposals were created successfully
+    const proposal1Response = await client.getProposal({
+      proposalId: createProposalResponse1.proposalId,
+    });
+
+    const proposal2Response = await client.getProposal({
+      proposalId: createProposalResponse2.proposalId,
+    });
+
+    expect(proposal1Response.response?.code).toBe(EnumStatusCode.OK);
+    expect(proposal2Response.response?.code).toBe(EnumStatusCode.OK);
+
+    // Verify they have the same name but different federated graphs
+    expect(proposal1Response.proposal?.name).toBe(proposalName);
+    expect(proposal2Response.proposal?.name).toBe(proposalName);
+    expect(proposal1Response.proposal?.federatedGraphName).toBe(fedGraph1Name);
+    expect(proposal2Response.proposal?.federatedGraphName).toBe(fedGraph2Name);
+
+    await server.close();
+  });
 });

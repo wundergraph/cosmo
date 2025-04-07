@@ -111,17 +111,15 @@ export default (opts: BaseCommandOptions) => {
       },
     );
 
-    spinner.stop();
-
     const result = handleProposalResult(resp, name, true);
 
     if (result.success) {
       if (result.message) {
-        console.log(result.message);
+        spinner.succeed(result.message);
       }
     } else {
       if (result.message) {
-        console.error(result.message);
+        spinner.fail(result.message);
       }
       process.exitCode = 1;
     }

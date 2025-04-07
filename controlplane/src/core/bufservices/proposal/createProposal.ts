@@ -131,6 +131,33 @@ export function createProposal(
       };
     }
 
+    const existingProposal = await proposalRepo.ByName({
+      name: req.name,
+      federatedGraphId: federatedGraph.id,
+    });
+    if (existingProposal) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_ALREADY_EXISTS,
+          details: `Proposal ${req.name} already exists.`,
+        },
+        proposalId: '',
+        breakingChanges: [],
+        nonBreakingChanges: [],
+        compositionErrors: [],
+        checkId: '',
+        lintWarnings: [],
+        lintErrors: [],
+        graphPruneWarnings: [],
+        graphPruneErrors: [],
+        compositionWarnings: [],
+        operationUsageStats: [],
+        lintingSkipped: false,
+        graphPruningSkipped: false,
+        checkUrl: '',
+      };
+    }
+
     const subgraphsOfFedGraph = await subgraphRepo.listByFederatedGraph({
       federatedGraphTargetId: federatedGraph.targetId,
     });

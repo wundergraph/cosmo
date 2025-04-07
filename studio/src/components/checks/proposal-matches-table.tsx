@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -18,8 +19,6 @@ import { CrossCircledIcon, LightningBoltIcon } from "@radix-ui/react-icons";
 import { GetCheckSummaryResponse_ProposalSchemaMatch } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
 import React from "react";
-
-type ProposalMatch = "success" | "error" | "warn";
 
 export const ProposalMatchesTable = ({
   proposalMatches,
@@ -91,42 +90,37 @@ export const ProposalMatchesTable = ({
 
   return (
     <TableWrapper>
-      {caption && (
-        <p className="p-2 text-sm text-muted-foreground">{caption}</p>
-      )}
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[200px]">Proposal</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Match</TableHead>
+            <TableHead className="w-[200px]">Status</TableHead>
+            <TableHead>Proposal</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {proposalMatches.map((match) => (
-            <TableRow key={match.proposalId}>
-              <TableCell className="font-medium">
-                <div className="flex items-center gap-x-2">
-                  <LightningBoltIcon className="h-4 w-4" />
-                  <span>{match.proposalName}</span>
-                </div>
-              </TableCell>
+            <TableRow key={match.proposalId} className="group">
               <TableCell>
                 <div className="flex items-center">
                   {match.proposalMatch ? (
-                    <span className="inline-flex items-center rounded-full bg-success/20 px-2 py-1 text-xs text-success">
+                    <span className="inline-flex items-center rounded-md bg-success/20 px-2 py-1 text-xs text-success">
                       <CheckCircleIcon className="mr-1 h-3 w-3" />
                       Matching
                     </span>
                   ) : (
-                    <span className="inline-flex items-center rounded-full bg-destructive/20 px-2 py-1 text-xs text-destructive">
+                    <span className="inline-flex items-center rounded-md bg-destructive/20 px-2 py-1 text-xs text-destructive">
                       <CrossCircledIcon className="mr-1 h-3 w-3 text-destructive" />
                       Not Matching
                     </span>
                   )}
                 </div>
               </TableCell>
-              <TableCell>
+              <TableCell className="font-medium">
+                <div className="flex items-center gap-x-2">
+                  <span>{match.proposalName}</span>
+                </div>
+              </TableCell>
+              <TableCell className="flex justify-end mx-2">
                 <Button
                   size="sm"
                   variant="outline"
@@ -142,6 +136,7 @@ export const ProposalMatchesTable = ({
             </TableRow>
           ))}
         </TableBody>
+        {caption && <TableCaption>{caption}</TableCaption>}
       </Table>
     </TableWrapper>
   );

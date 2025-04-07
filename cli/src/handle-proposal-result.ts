@@ -4,28 +4,8 @@ import {
   UpdateProposalResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Table from 'cli-table3';
-import { program } from 'commander';
 import logSymbols from 'log-symbols';
 import pc from 'picocolors';
-
-/**
- * A shared type that represents the relevant response fields from both
- * CreateProposalResponse and UpdateProposalResponse
- */
-type ProposalResponse = {
-  response?: { code?: EnumStatusCode; details?: string };
-  breakingChanges: any[];
-  nonBreakingChanges: any[];
-  compositionErrors: any[];
-  compositionWarnings: any[];
-  lintErrors: any[];
-  lintWarnings: any[];
-  graphPruneErrors: any[];
-  graphPruneWarnings: any[];
-  checkId?: string;
-  checkUrl?: string;
-  proposalId?: string;
-};
 
 /**
  * Shared handler for proposal command responses (both create and update).
@@ -113,18 +93,60 @@ export const handleProposalResult = (
 
   console.log(`\nChecking the proposed schema`);
 
-  // Assume that no operations were affected if there is no operation usage stats
-  success =
-    resp.breakingChanges.length === 0 &&
-    resp.compositionErrors.length === 0 &&
-    resp.lintErrors.length === 0 &&
-    resp.graphPruneErrors.length === 0;
+  // No operations usage stats mean the check was not performed against any live traffic
+  if (resp.operationUsageStats) {
+    for (const { operationUsageStats, subgraphName } of resp.operationUsageStats) {
+      if (!operationUsageStats) {
+        continue;
+      }
 
-  if (resp.breakingChanges.length > 0) {
-    const warningMessage = [logSymbols.warning, ` Found ${pc.bold(resp.breakingChanges.length)} breaking changes.`];
-    console.log(warningMessage.join(''));
+      if (operationUsageStats.totalOperations === 0) {
+        // Composition errors are still considered failures, otherwise we can consider this a success
+        // because no operations were affected by the change
+        success =
+          resp.compositionErrors.length === 0 && resp.lintErrors.length === 0 && resp.graphPruneErrors.length === 0;
+        console.log(`No operations were affected by ${pc.bold(subgraphName)}'s schema change.`);
+        finalStatement += `${pc.bold(subgraphName)}'s schema change didn't affect any operations from existing client traffic.`;
+      } else if (operationUsageStats.totalOperations === operationUsageStats.safeOperations) {
+        // This is also a success because changes to these operations were marked as safe
+        success =
+          resp.compositionErrors.length === 0 && resp.lintErrors.length === 0 && resp.graphPruneErrors.length === 0;
+        console.log(`${operationUsageStats.totalOperations} operations were considered safe due to overrides.`);
+        finalStatement += `${pc.bold(subgraphName)}'s schema change affected operations with safe overrides.`;
+      } else {
+        // Composition and breaking errors are considered failures because operations were affected by the change
+        success =
+          resp.breakingChanges.length === 0 &&
+          resp.compositionErrors.length === 0 &&
+          resp.lintErrors.length === 0 &&
+          resp.graphPruneErrors.length === 0;
 
-    finalStatement = `This check has encountered ${pc.bold(`${resp.breakingChanges.length}`)} breaking changes.`;
+        const { breakingChanges } = resp;
+        const { totalOperations, safeOperations, firstSeenAt, lastSeenAt } = operationUsageStats;
+
+        if (breakingChanges.length > 0) {
+          const warningMessage = [logSymbols.warning, ` Found ${pc.bold(breakingChanges.length)} breaking changes.`];
+
+          if (totalOperations > 0) {
+            warningMessage.push(`${pc.bold(totalOperations - safeOperations)} operations impacted.`);
+          }
+
+          if (safeOperations > 0) {
+            warningMessage.push(`In addition, ${safeOperations} operations marked safe due to overrides.`);
+          }
+
+          warningMessage.push(
+            `\nFound client activity between ${pc.underline(
+              new Date(firstSeenAt).toLocaleString(),
+            )} and ${pc.underline(new Date(lastSeenAt).toLocaleString())}.`,
+          );
+
+          console.log(warningMessage.join(''));
+
+          finalStatement += `${pc.bold(subgraphName)}'s schema has encountered ${pc.bold(`${breakingChanges.length}`)} breaking changes that would break operations from existing client traffic.`;
+        }
+      }
+    }
   }
 
   if (resp.nonBreakingChanges.length > 0 || resp.breakingChanges.length > 0) {

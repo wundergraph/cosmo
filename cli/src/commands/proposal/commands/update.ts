@@ -98,7 +98,12 @@ export default (opts: BaseCommandOptions) => {
         proposalName: name,
         federatedGraphName: options.federationGraph,
         namespace: options.namespace,
-        ...(updatedSubgraphs.length > 0 ? { updatedSubgraphs: { subgraphs: updatedSubgraphs } } : {}),
+        updateAction: {
+          case: 'updatedSubgraphs',
+          value: {
+            subgraphs: updatedSubgraphs,
+          },
+        },
       },
       {
         headers: getBaseHeaders(),

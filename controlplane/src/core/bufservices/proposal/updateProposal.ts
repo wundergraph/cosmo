@@ -12,7 +12,7 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { GraphCompositionRepository } from '../../repositories/GraphCompositionRepository.js';
-import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
+import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SchemaCheckRepository } from '../../repositories/SchemaCheckRepository.js';
 import { SchemaGraphPruningRepository } from '../../repositories/SchemaGraphPruningRepository.js';
@@ -44,6 +44,30 @@ export function updateProposal(
     );
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
 
+    req.namespace = req.namespace || DefaultNamespace;
+
+    if (!authContext.hasWriteAccess) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `The user does not have the permissions to perform this operation`,
+        },
+        breakingChanges: [],
+        nonBreakingChanges: [],
+        compositionErrors: [],
+        checkId: '',
+        lintWarnings: [],
+        lintErrors: [],
+        graphPruneWarnings: [],
+        graphPruneErrors: [],
+        compositionWarnings: [],
+        operationUsageStats: [],
+        lintingSkipped: false,
+        graphPruningSkipped: false,
+        checkUrl: '',
+      };
+    }
+
     const namespace = await namespaceRepo.byName(req.namespace);
     if (!namespace) {
       return {
@@ -51,7 +75,6 @@ export function updateProposal(
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: `Namespace ${req.namespace} not found`,
         },
-        proposalId: '',
         breakingChanges: [],
         nonBreakingChanges: [],
         compositionErrors: [],
@@ -75,7 +98,6 @@ export function updateProposal(
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: `Federated graph ${req.federatedGraphName} not found`,
         },
-        proposalId: '',
         breakingChanges: [],
         nonBreakingChanges: [],
         compositionErrors: [],
