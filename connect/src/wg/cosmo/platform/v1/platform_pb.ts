@@ -886,6 +886,11 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
    */
   vcsContext?: VCSContext;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.Label labels = 8;
+   */
+  labels: Label[] = [];
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -901,6 +906,7 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
     { no: 5, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "skip_traffic_check", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 7, name: "vcsContext", kind: "message", T: VCSContext, opt: true },
+    { no: 8, name: "labels", kind: "message", T: Label, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaRequest {
