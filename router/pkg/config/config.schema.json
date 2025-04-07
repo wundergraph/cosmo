@@ -2408,7 +2408,7 @@
           "type": "string",
           "format": "go-duration",
           "default": "1s",
-          "description": "The timeout for the poll loop of the WebSocket client implementation. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+          "description": "The timeout for the poll loop of the WebSocket client implementation. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         },
         "websocket_client_conn_buffer_size": {
           "type": "integer",
@@ -2419,7 +2419,21 @@
           "type": "string",
           "format": "go-duration",
           "default": "5s",
-          "description": "The timeout for the websocket read of the WebSocket client implementation. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+          "description": "Defines the timeout for the websocket read of the WebSocket client implementation. This is used to set the read deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "websocket_client_write_timeout": {
+            "type": "string",
+            "format": "go-duration",
+            "default": "5s",
+            "description": "Defines the timeout for the websocket write of the WebSocket client implementation. This is used to set the write deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "websocket_client_ping_interval": {
+          "type": "string",
+          "description": "The Websocket client ping interval to the subgraph. Defines how often the router will ping the subgraph to signal that the connection is still alive. Timeout needs to be coordinated with the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "10s",
+          "duration": {
+            "minimum": "10s"
+          }
         },
         "execution_plan_cache_size": {
           "type": "integer",

@@ -26,6 +26,10 @@ const (
 	multipartStart       = "\r\n--" + multipartBoundary
 )
 
+type withFlushWriter interface {
+	SubscriptionResponseWriter() resolve.SubscriptionResponseWriter
+}
+
 type HttpFlushWriter struct {
 	ctx           context.Context
 	cancel        context.CancelFunc
@@ -55,6 +59,10 @@ func (f *HttpFlushWriter) Complete() {
 			_, _ = f.writer.Write([]byte("--" + multipartBoundary + "--\r\n"))
 		}
 	}
+
+	// Flush before closing the writer to ensure all data is sent
+	f.flusher.Flush()
+
 	f.Close()
 }
 
@@ -110,17 +118,18 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	if err != nil {
 		return err
 	}
+
+	// Flush before closing the writer to ensure all data is sent
 	f.flusher.Flush()
+
 	if f.subscribeOnce {
 		defer f.Close()
 	}
+
 	return nil
 }
 
 func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http.ResponseWriter, apolloSubscriptionMultipartPrintBoundary bool) (*resolve.Context, resolve.SubscriptionResponseWriter, bool) {
-	type withFlushWriter interface {
-		SubscriptionResponseWriter() resolve.SubscriptionResponseWriter
-	}
 	if wfw, ok := w.(withFlushWriter); ok {
 		return ctx, wfw.SubscriptionResponseWriter(), true
 	}
@@ -132,8 +141,6 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 	}
 
 	setSubscriptionHeaders(wgParams, r, w)
-
-	flusher.Flush()
 
 	flushWriter := &HttpFlushWriter{
 		writer:                                   w,
