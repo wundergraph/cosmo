@@ -56,6 +56,7 @@ func (f *HttpFlushWriter) Complete() {
 		}
 	}
 
+	// Flush before closing the writer to ensure all data is sent
 	f.flusher.Flush()
 
 	f.Close()
@@ -113,10 +114,14 @@ func (f *HttpFlushWriter) Flush() (err error) {
 	if err != nil {
 		return err
 	}
+
+	// Flush before closing the writer to ensure all data is sent
 	f.flusher.Flush()
+
 	if f.subscribeOnce {
 		defer f.Close()
 	}
+
 	return nil
 }
 
