@@ -866,11 +866,15 @@ export class SubgraphRepository {
       .leftJoin(schema.schemaCheckSubgraphs, eq(schema.schemaCheckSubgraphs.schemaCheckId, schemaChecks.id))
       .where(
         and(
+          // We have this or conditions because we want to fetch the checks based on the new schema or the old schema
+          // as we are not doing a data migration for the checks table
           or(
+            // This is to fetch the checks based on the new schema
             inArray(
               schema.schemaCheckSubgraphs.subgraphName,
               selectedSubgraphs.map(({ name }) => name),
             ),
+            // This is to fetch the checks based on the old schema
             inArray(
               schemaChecks.targetId,
               selectedSubgraphs.map(({ targetId }) => targetId),
@@ -983,11 +987,15 @@ export class SubgraphRepository {
 
     if (startDate && endDate) {
       conditions = and(
+        // We have this or conditions because we want to fetch the checks based on the new schema or the old schema
+        // as we are not doing a data migration for the checks table
         or(
+          // This is to fetch the checks based on the new schema
           inArray(
             schema.schemaCheckSubgraphs.subgraphName,
             subgraphs.map(({ name }) => name),
           ),
+          // This is to fetch the checks based on the old schema
           inArray(
             schemaChecks.targetId,
             subgraphs.map(({ targetId }) => targetId),

@@ -1,14 +1,9 @@
-import { ThreadSheet } from "@/components/discussions/thread";
 import { EmptyState } from "@/components/empty-state";
 import {
   SubgraphPageLayout,
   getSubgraphLayout,
 } from "@/components/layout/subgraph-layout";
-import {
-  SDLViewer,
-  SDLViewerActions,
-  SchemaSettings,
-} from "@/components/schema/sdl-viewer";
+import { SDLViewer, SDLViewerActions } from "@/components/schema/sdl-viewer";
 import { Button } from "@/components/ui/button";
 import { CLI } from "@/components/ui/cli";
 import { Loader } from "@/components/ui/loader";
@@ -17,9 +12,11 @@ import { useSubgraph } from "@/hooks/use-subgraph";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
-import { CommandLineIcon } from "@heroicons/react/24/outline";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@connectrpc/connect-query";
+import {
+  CommandLineIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getLatestSubgraphSDL } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
@@ -77,7 +74,6 @@ const SubgraphSchemaPage: NextPageWithLayout = () => {
             size="icon-sm"
             targetName={name}
           />
-          <SchemaSettings size="icon-sm" />
         </Toolbar>
       }
     >
@@ -106,12 +102,7 @@ const SubgraphSchemaPage: NextPageWithLayout = () => {
         />
       ) : (
         <div className="flex h-full flex-col-reverse md:flex-col">
-          <SDLViewer
-            sdl={data.sdl ?? ""}
-            targetId={graph?.subgraph.targetId}
-            versionId={data?.versionId ?? ""}
-          />
-          <ThreadSheet schemaVersionId={data.versionId ?? ""} />
+          <SDLViewer sdl={data.sdl ?? ""} />
           <div className="flex w-full flex-col items-center gap-x-8 gap-y-1 border-t bg-card p-2 text-xs lg:flex-row">
             <p className="text-center">
               Displaying the latest published schema of this subgraph

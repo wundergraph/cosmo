@@ -4,6 +4,46 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.196.0](https://github.com/wundergraph/cosmo/compare/router@0.195.0...router@0.196.0) (2025-04-07)
+
+### Features
+
+* add execution of check_query_planner ([#1661](https://github.com/wundergraph/cosmo/issues/1661)) ([90a17f9](https://github.com/wundergraph/cosmo/commit/90a17f995cb52e38584cef830cc6b214d21e44af)) (@alepane21)
+
+# [0.195.0](https://github.com/wundergraph/cosmo/compare/router@0.194.0...router@0.195.0) (2025-04-04)
+
+### Bug Fixes
+
+* **router:** update JWK dependency ([#1751](https://github.com/wundergraph/cosmo/issues/1751)) ([c4c5611](https://github.com/wundergraph/cosmo/commit/c4c5611f8886f867722fb76def78163e1a290b0b)) (@MicahParks)
+
+### Features
+
+* add option to disable exposing variables content on validation error ([#1753](https://github.com/wundergraph/cosmo/issues/1753)) ([d78076f](https://github.com/wundergraph/cosmo/commit/d78076f86068799fb9ffab4ca92587e31077cbe3)) (@jensneuse)
+
+# [0.194.0](https://github.com/wundergraph/cosmo/compare/router@0.193.3...router@0.194.0) (2025-04-02)
+
+### Features
+
+* add support to set ClientInfo from initial payload when using WebSockets ([#1744](https://github.com/wundergraph/cosmo/issues/1744)) ([7dd44cb](https://github.com/wundergraph/cosmo/commit/7dd44cbfb581410266c0a9c24299aceb8b0dc186)) (@jensneuse)
+
+## [0.193.3](https://github.com/wundergraph/cosmo/compare/router@0.193.2...router@0.193.3) (2025-04-01)
+
+### Bug Fixes
+
+* **websocket:** improve write and read deadlines ([#1693](https://github.com/wundergraph/cosmo/issues/1693)) ([99a3a88](https://github.com/wundergraph/cosmo/commit/99a3a88da188d1c59a208254c4707c4881b7a479)) (@StarpTech)
+
+## [0.193.2](https://github.com/wundergraph/cosmo/compare/router@0.193.1...router@0.193.2) (2025-04-01)
+
+### Bug Fixes
+
+* subgraph error code is not propagated AND panics on websocket request logging ([#1738](https://github.com/wundergraph/cosmo/issues/1738)) ([beff6d7](https://github.com/wundergraph/cosmo/commit/beff6d7bab74e4e8fb18d49d30b9ec4bc692ace1)) (@SkArchon)
+
+## [0.193.1](https://github.com/wundergraph/cosmo/compare/router@0.193.0...router@0.193.1) (2025-03-28)
+
+### Bug Fixes
+
+* authorization directive cascading ([#1733](https://github.com/wundergraph/cosmo/issues/1733)) ([0199fb5](https://github.com/wundergraph/cosmo/commit/0199fb5f88104a585b74a79638f54f1a3b812436)) (@Aenimus)
+
 # [0.193.0](https://github.com/wundergraph/cosmo/compare/router@0.192.3...router@0.193.0) (2025-03-26)
 
 ### Features

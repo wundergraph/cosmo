@@ -512,7 +512,13 @@ const CheckDetails = ({
           <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1">
             <dt className="text-sm text-muted-foreground">Action</dt>
             <dd className="whitespace-nowrap">
-              {data.check.isDeleted ? "Delete subgraph" : "Update schema"}
+              {data.check.checkedSubgraphs.length > 1
+                ? "Multiple subgraphs updated"
+                : data.check.isDeleted ||
+                  (data.check.checkedSubgraphs.length === 1 &&
+                    data.check.checkedSubgraphs[0].isDeleted)
+                ? "Delete subgraph"
+                : "Update schema"}
             </dd>
           </div>
 
@@ -707,13 +713,16 @@ const CheckDetails = ({
             </dd>
           </div>
 
-          {data.affectedGraphs.length > 0 && (
+          {data.affectedGraphs.length > 1 && (
             <div className="flex-start flex flex-col gap-1">
               <dt className="mb-2 text-sm text-muted-foreground">
-                Affected Graphs
+                Other Affected Graphs
               </dt>
               <dd className="flex flex-row flex-wrap gap-2 lg:flex lg:flex-col">
                 {data.affectedGraphs.map((ag) => {
+                  if (ag.id === graphContext.graph?.id) {
+                    return null;
+                  }
                   return (
                     <Badge
                       key={ag.id}
@@ -976,7 +985,12 @@ const CheckDetails = ({
                     Proposal Matches
                   </Link>
                 </TabsTrigger>
-                {!data.check.isDeleted && (
+                
+                {(data.check.checkedSubgraphs.length > 1 ||
+                  (data.check.checkedSubgraphs.length === 1 &&
+                    !data.check.checkedSubgraphs[0].isDeleted) ||
+                  (data.check.checkedSubgraphs.length === 0 &&
+                    !data.check.isDeleted)) && (
                   <TabsTrigger
                     value="schema"
                     onClick={() => setTab("schema")}

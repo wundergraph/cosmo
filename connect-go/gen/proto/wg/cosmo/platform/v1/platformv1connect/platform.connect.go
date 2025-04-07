@@ -292,6 +292,9 @@ const (
 	// PlatformServiceDeleteOrganizationProcedure is the fully-qualified name of the PlatformService's
 	// DeleteOrganization RPC.
 	PlatformServiceDeleteOrganizationProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteOrganization"
+	// PlatformServiceRestoreOrganizationProcedure is the fully-qualified name of the PlatformService's
+	// RestoreOrganization RPC.
+	PlatformServiceRestoreOrganizationProcedure = "/wg.cosmo.platform.v1.PlatformService/RestoreOrganization"
 	// PlatformServiceLeaveOrganizationProcedure is the fully-qualified name of the PlatformService's
 	// LeaveOrganization RPC.
 	PlatformServiceLeaveOrganizationProcedure = "/wg.cosmo.platform.v1.PlatformService/LeaveOrganization"
@@ -355,30 +358,6 @@ const (
 	// PlatformServiceGetSubgraphMembersProcedure is the fully-qualified name of the PlatformService's
 	// GetSubgraphMembers RPC.
 	PlatformServiceGetSubgraphMembersProcedure = "/wg.cosmo.platform.v1.PlatformService/GetSubgraphMembers"
-	// PlatformServiceCreateDiscussionProcedure is the fully-qualified name of the PlatformService's
-	// CreateDiscussion RPC.
-	PlatformServiceCreateDiscussionProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateDiscussion"
-	// PlatformServiceReplyToDiscussionProcedure is the fully-qualified name of the PlatformService's
-	// ReplyToDiscussion RPC.
-	PlatformServiceReplyToDiscussionProcedure = "/wg.cosmo.platform.v1.PlatformService/ReplyToDiscussion"
-	// PlatformServiceGetAllDiscussionsProcedure is the fully-qualified name of the PlatformService's
-	// GetAllDiscussions RPC.
-	PlatformServiceGetAllDiscussionsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetAllDiscussions"
-	// PlatformServiceUpdateDiscussionCommentProcedure is the fully-qualified name of the
-	// PlatformService's UpdateDiscussionComment RPC.
-	PlatformServiceUpdateDiscussionCommentProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateDiscussionComment"
-	// PlatformServiceDeleteDiscussionCommentProcedure is the fully-qualified name of the
-	// PlatformService's DeleteDiscussionComment RPC.
-	PlatformServiceDeleteDiscussionCommentProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteDiscussionComment"
-	// PlatformServiceGetDiscussionProcedure is the fully-qualified name of the PlatformService's
-	// GetDiscussion RPC.
-	PlatformServiceGetDiscussionProcedure = "/wg.cosmo.platform.v1.PlatformService/GetDiscussion"
-	// PlatformServiceGetDiscussionSchemasProcedure is the fully-qualified name of the PlatformService's
-	// GetDiscussionSchemas RPC.
-	PlatformServiceGetDiscussionSchemasProcedure = "/wg.cosmo.platform.v1.PlatformService/GetDiscussionSchemas"
-	// PlatformServiceSetDiscussionResolutionProcedure is the fully-qualified name of the
-	// PlatformService's SetDiscussionResolution RPC.
-	PlatformServiceSetDiscussionResolutionProcedure = "/wg.cosmo.platform.v1.PlatformService/SetDiscussionResolution"
 	// PlatformServiceAddReadmeProcedure is the fully-qualified name of the PlatformService's AddReadme
 	// RPC.
 	PlatformServiceAddReadmeProcedure = "/wg.cosmo.platform.v1.PlatformService/AddReadme"
@@ -623,6 +602,7 @@ var (
 	platformServiceDeleteIntegrationMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("DeleteIntegration")
 	platformServiceDeleteUserMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("DeleteUser")
 	platformServiceDeleteOrganizationMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("DeleteOrganization")
+	platformServiceRestoreOrganizationMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("RestoreOrganization")
 	platformServiceLeaveOrganizationMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("LeaveOrganization")
 	platformServiceUpdateOrganizationDetailsMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("UpdateOrganizationDetails")
 	platformServiceUpdateOrgMemberRoleMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("UpdateOrgMemberRole")
@@ -644,14 +624,6 @@ var (
 	platformServiceAddSubgraphMemberMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("AddSubgraphMember")
 	platformServiceRemoveSubgraphMemberMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("RemoveSubgraphMember")
 	platformServiceGetSubgraphMembersMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphMembers")
-	platformServiceCreateDiscussionMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("CreateDiscussion")
-	platformServiceReplyToDiscussionMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("ReplyToDiscussion")
-	platformServiceGetAllDiscussionsMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("GetAllDiscussions")
-	platformServiceUpdateDiscussionCommentMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("UpdateDiscussionComment")
-	platformServiceDeleteDiscussionCommentMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("DeleteDiscussionComment")
-	platformServiceGetDiscussionMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetDiscussion")
-	platformServiceGetDiscussionSchemasMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("GetDiscussionSchemas")
-	platformServiceSetDiscussionResolutionMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("SetDiscussionResolution")
 	platformServiceAddReadmeMethodDescriptor                             = platformServiceServiceDescriptor.Methods().ByName("AddReadme")
 	platformServiceGetUserAccessiblePermissionsMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetUserAccessiblePermissions")
 	platformServiceCreateFeatureFlagMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("CreateFeatureFlag")
@@ -865,6 +837,8 @@ type PlatformServiceClient interface {
 	DeleteUser(context.Context, *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error)
 	// DeleteOrganization deletes an organization
 	DeleteOrganization(context.Context, *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error)
+	// RestoreOrganization restore an organization pending deletion
+	RestoreOrganization(context.Context, *connect.Request[v1.RestoreOrganizationRequest]) (*connect.Response[v1.RestoreOrganizationResponse], error)
 	// LeaveOrganization removes a member from the organization
 	LeaveOrganization(context.Context, *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error)
 	// UpdateOrganizationDetails updates the name and slug of the organization
@@ -907,22 +881,6 @@ type PlatformServiceClient interface {
 	RemoveSubgraphMember(context.Context, *connect.Request[v1.RemoveSubgraphMemberRequest]) (*connect.Response[v1.RemoveSubgraphMemberResponse], error)
 	// GetSubgraphMembers gets all the members of the subgraph
 	GetSubgraphMembers(context.Context, *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error)
-	// CreateDiscussion creates a new discussion with an opening comment
-	CreateDiscussion(context.Context, *connect.Request[v1.CreateDiscussionRequest]) (*connect.Response[v1.CreateDiscussionResponse], error)
-	// ReplyToDiscussion creates a new comment in the discussion
-	ReplyToDiscussion(context.Context, *connect.Request[v1.ReplyToDiscussionRequest]) (*connect.Response[v1.ReplyToDiscussionResponse], error)
-	// GetAllDiscussions fetches all discussions which may be scoped to a schema version if passed
-	GetAllDiscussions(context.Context, *connect.Request[v1.GetAllDiscussionsRequest]) (*connect.Response[v1.GetAllDiscussionsResponse], error)
-	// UpdateDiscussionComment edits the comment in the discussion
-	UpdateDiscussionComment(context.Context, *connect.Request[v1.UpdateDiscussionCommentRequest]) (*connect.Response[v1.UpdateDiscussionCommentResponse], error)
-	// DeleteDiscussionComment deletes the comment or the discussion if it is an opening comment
-	DeleteDiscussionComment(context.Context, *connect.Request[v1.DeleteDiscussionCommentRequest]) (*connect.Response[v1.DeleteDiscussionCommentResponse], error)
-	// GetDiscussion gets the entire discussion thread
-	GetDiscussion(context.Context, *connect.Request[v1.GetDiscussionRequest]) (*connect.Response[v1.GetDiscussionResponse], error)
-	// GetDiscussionSchemas gets the reference and latest schema of the target graph in which the discussion was created
-	GetDiscussionSchemas(context.Context, *connect.Request[v1.GetDiscussionSchemasRequest]) (*connect.Response[v1.GetDiscussionSchemasResponse], error)
-	// SetDiscussionResolutionRequest marks the discussion as resolved or not
-	SetDiscussionResolution(context.Context, *connect.Request[v1.SetDiscussionResolutionRequest]) (*connect.Response[v1.SetDiscussionResolutionResponse], error)
 	// AddReadme adds a readme of a target, can be a subgraph or a federated graph
 	AddReadme(context.Context, *connect.Request[v1.AddReadmeRequest]) (*connect.Response[v1.AddReadmeResponse], error)
 	// GetUserAccessiblePermissions returns all the federated and subgraphs where the user has write permissions
@@ -1547,6 +1505,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceDeleteOrganizationMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		restoreOrganization: connect.NewClient[v1.RestoreOrganizationRequest, v1.RestoreOrganizationResponse](
+			httpClient,
+			baseURL+PlatformServiceRestoreOrganizationProcedure,
+			connect.WithSchema(platformServiceRestoreOrganizationMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		leaveOrganization: connect.NewClient[v1.LeaveOrganizationRequest, v1.LeaveOrganizationResponse](
 			httpClient,
 			baseURL+PlatformServiceLeaveOrganizationProcedure,
@@ -1671,54 +1635,6 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceGetSubgraphMembersProcedure,
 			connect.WithSchema(platformServiceGetSubgraphMembersMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		createDiscussion: connect.NewClient[v1.CreateDiscussionRequest, v1.CreateDiscussionResponse](
-			httpClient,
-			baseURL+PlatformServiceCreateDiscussionProcedure,
-			connect.WithSchema(platformServiceCreateDiscussionMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		replyToDiscussion: connect.NewClient[v1.ReplyToDiscussionRequest, v1.ReplyToDiscussionResponse](
-			httpClient,
-			baseURL+PlatformServiceReplyToDiscussionProcedure,
-			connect.WithSchema(platformServiceReplyToDiscussionMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		getAllDiscussions: connect.NewClient[v1.GetAllDiscussionsRequest, v1.GetAllDiscussionsResponse](
-			httpClient,
-			baseURL+PlatformServiceGetAllDiscussionsProcedure,
-			connect.WithSchema(platformServiceGetAllDiscussionsMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		updateDiscussionComment: connect.NewClient[v1.UpdateDiscussionCommentRequest, v1.UpdateDiscussionCommentResponse](
-			httpClient,
-			baseURL+PlatformServiceUpdateDiscussionCommentProcedure,
-			connect.WithSchema(platformServiceUpdateDiscussionCommentMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		deleteDiscussionComment: connect.NewClient[v1.DeleteDiscussionCommentRequest, v1.DeleteDiscussionCommentResponse](
-			httpClient,
-			baseURL+PlatformServiceDeleteDiscussionCommentProcedure,
-			connect.WithSchema(platformServiceDeleteDiscussionCommentMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		getDiscussion: connect.NewClient[v1.GetDiscussionRequest, v1.GetDiscussionResponse](
-			httpClient,
-			baseURL+PlatformServiceGetDiscussionProcedure,
-			connect.WithSchema(platformServiceGetDiscussionMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		getDiscussionSchemas: connect.NewClient[v1.GetDiscussionSchemasRequest, v1.GetDiscussionSchemasResponse](
-			httpClient,
-			baseURL+PlatformServiceGetDiscussionSchemasProcedure,
-			connect.WithSchema(platformServiceGetDiscussionSchemasMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		setDiscussionResolution: connect.NewClient[v1.SetDiscussionResolutionRequest, v1.SetDiscussionResolutionResponse](
-			httpClient,
-			baseURL+PlatformServiceSetDiscussionResolutionProcedure,
-			connect.WithSchema(platformServiceSetDiscussionResolutionMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		addReadme: connect.NewClient[v1.AddReadmeRequest, v1.AddReadmeResponse](
@@ -2125,6 +2041,7 @@ type platformServiceClient struct {
 	deleteIntegration                     *connect.Client[v1.DeleteIntegrationRequest, v1.DeleteIntegrationResponse]
 	deleteUser                            *connect.Client[v1.DeleteUserRequest, v1.DeleteUserResponse]
 	deleteOrganization                    *connect.Client[v1.DeleteOrganizationRequest, v1.DeleteOrganizationResponse]
+	restoreOrganization                   *connect.Client[v1.RestoreOrganizationRequest, v1.RestoreOrganizationResponse]
 	leaveOrganization                     *connect.Client[v1.LeaveOrganizationRequest, v1.LeaveOrganizationResponse]
 	updateOrganizationDetails             *connect.Client[v1.UpdateOrganizationDetailsRequest, v1.UpdateOrganizationDetailsResponse]
 	updateOrgMemberRole                   *connect.Client[v1.UpdateOrgMemberRoleRequest, v1.UpdateOrgMemberRoleResponse]
@@ -2146,14 +2063,6 @@ type platformServiceClient struct {
 	addSubgraphMember                     *connect.Client[v1.AddSubgraphMemberRequest, v1.AddSubgraphMemberResponse]
 	removeSubgraphMember                  *connect.Client[v1.RemoveSubgraphMemberRequest, v1.RemoveSubgraphMemberResponse]
 	getSubgraphMembers                    *connect.Client[v1.GetSubgraphMembersRequest, v1.GetSubgraphMembersResponse]
-	createDiscussion                      *connect.Client[v1.CreateDiscussionRequest, v1.CreateDiscussionResponse]
-	replyToDiscussion                     *connect.Client[v1.ReplyToDiscussionRequest, v1.ReplyToDiscussionResponse]
-	getAllDiscussions                     *connect.Client[v1.GetAllDiscussionsRequest, v1.GetAllDiscussionsResponse]
-	updateDiscussionComment               *connect.Client[v1.UpdateDiscussionCommentRequest, v1.UpdateDiscussionCommentResponse]
-	deleteDiscussionComment               *connect.Client[v1.DeleteDiscussionCommentRequest, v1.DeleteDiscussionCommentResponse]
-	getDiscussion                         *connect.Client[v1.GetDiscussionRequest, v1.GetDiscussionResponse]
-	getDiscussionSchemas                  *connect.Client[v1.GetDiscussionSchemasRequest, v1.GetDiscussionSchemasResponse]
-	setDiscussionResolution               *connect.Client[v1.SetDiscussionResolutionRequest, v1.SetDiscussionResolutionResponse]
 	addReadme                             *connect.Client[v1.AddReadmeRequest, v1.AddReadmeResponse]
 	getUserAccessiblePermissions          *connect.Client[v1.GetUserAccessiblePermissionsRequest, v1.GetUserAccessiblePermissionsResponse]
 	createFeatureFlag                     *connect.Client[v1.CreateFeatureFlagRequest, v1.CreateFeatureFlagResponse]
@@ -2652,6 +2561,11 @@ func (c *platformServiceClient) DeleteOrganization(ctx context.Context, req *con
 	return c.deleteOrganization.CallUnary(ctx, req)
 }
 
+// RestoreOrganization calls wg.cosmo.platform.v1.PlatformService.RestoreOrganization.
+func (c *platformServiceClient) RestoreOrganization(ctx context.Context, req *connect.Request[v1.RestoreOrganizationRequest]) (*connect.Response[v1.RestoreOrganizationResponse], error) {
+	return c.restoreOrganization.CallUnary(ctx, req)
+}
+
 // LeaveOrganization calls wg.cosmo.platform.v1.PlatformService.LeaveOrganization.
 func (c *platformServiceClient) LeaveOrganization(ctx context.Context, req *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error) {
 	return c.leaveOrganization.CallUnary(ctx, req)
@@ -2756,46 +2670,6 @@ func (c *platformServiceClient) RemoveSubgraphMember(ctx context.Context, req *c
 // GetSubgraphMembers calls wg.cosmo.platform.v1.PlatformService.GetSubgraphMembers.
 func (c *platformServiceClient) GetSubgraphMembers(ctx context.Context, req *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error) {
 	return c.getSubgraphMembers.CallUnary(ctx, req)
-}
-
-// CreateDiscussion calls wg.cosmo.platform.v1.PlatformService.CreateDiscussion.
-func (c *platformServiceClient) CreateDiscussion(ctx context.Context, req *connect.Request[v1.CreateDiscussionRequest]) (*connect.Response[v1.CreateDiscussionResponse], error) {
-	return c.createDiscussion.CallUnary(ctx, req)
-}
-
-// ReplyToDiscussion calls wg.cosmo.platform.v1.PlatformService.ReplyToDiscussion.
-func (c *platformServiceClient) ReplyToDiscussion(ctx context.Context, req *connect.Request[v1.ReplyToDiscussionRequest]) (*connect.Response[v1.ReplyToDiscussionResponse], error) {
-	return c.replyToDiscussion.CallUnary(ctx, req)
-}
-
-// GetAllDiscussions calls wg.cosmo.platform.v1.PlatformService.GetAllDiscussions.
-func (c *platformServiceClient) GetAllDiscussions(ctx context.Context, req *connect.Request[v1.GetAllDiscussionsRequest]) (*connect.Response[v1.GetAllDiscussionsResponse], error) {
-	return c.getAllDiscussions.CallUnary(ctx, req)
-}
-
-// UpdateDiscussionComment calls wg.cosmo.platform.v1.PlatformService.UpdateDiscussionComment.
-func (c *platformServiceClient) UpdateDiscussionComment(ctx context.Context, req *connect.Request[v1.UpdateDiscussionCommentRequest]) (*connect.Response[v1.UpdateDiscussionCommentResponse], error) {
-	return c.updateDiscussionComment.CallUnary(ctx, req)
-}
-
-// DeleteDiscussionComment calls wg.cosmo.platform.v1.PlatformService.DeleteDiscussionComment.
-func (c *platformServiceClient) DeleteDiscussionComment(ctx context.Context, req *connect.Request[v1.DeleteDiscussionCommentRequest]) (*connect.Response[v1.DeleteDiscussionCommentResponse], error) {
-	return c.deleteDiscussionComment.CallUnary(ctx, req)
-}
-
-// GetDiscussion calls wg.cosmo.platform.v1.PlatformService.GetDiscussion.
-func (c *platformServiceClient) GetDiscussion(ctx context.Context, req *connect.Request[v1.GetDiscussionRequest]) (*connect.Response[v1.GetDiscussionResponse], error) {
-	return c.getDiscussion.CallUnary(ctx, req)
-}
-
-// GetDiscussionSchemas calls wg.cosmo.platform.v1.PlatformService.GetDiscussionSchemas.
-func (c *platformServiceClient) GetDiscussionSchemas(ctx context.Context, req *connect.Request[v1.GetDiscussionSchemasRequest]) (*connect.Response[v1.GetDiscussionSchemasResponse], error) {
-	return c.getDiscussionSchemas.CallUnary(ctx, req)
-}
-
-// SetDiscussionResolution calls wg.cosmo.platform.v1.PlatformService.SetDiscussionResolution.
-func (c *platformServiceClient) SetDiscussionResolution(ctx context.Context, req *connect.Request[v1.SetDiscussionResolutionRequest]) (*connect.Response[v1.SetDiscussionResolutionResponse], error) {
-	return c.setDiscussionResolution.CallUnary(ctx, req)
 }
 
 // AddReadme calls wg.cosmo.platform.v1.PlatformService.AddReadme.
@@ -3229,6 +3103,8 @@ type PlatformServiceHandler interface {
 	DeleteUser(context.Context, *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error)
 	// DeleteOrganization deletes an organization
 	DeleteOrganization(context.Context, *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error)
+	// RestoreOrganization restore an organization pending deletion
+	RestoreOrganization(context.Context, *connect.Request[v1.RestoreOrganizationRequest]) (*connect.Response[v1.RestoreOrganizationResponse], error)
 	// LeaveOrganization removes a member from the organization
 	LeaveOrganization(context.Context, *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error)
 	// UpdateOrganizationDetails updates the name and slug of the organization
@@ -3271,22 +3147,6 @@ type PlatformServiceHandler interface {
 	RemoveSubgraphMember(context.Context, *connect.Request[v1.RemoveSubgraphMemberRequest]) (*connect.Response[v1.RemoveSubgraphMemberResponse], error)
 	// GetSubgraphMembers gets all the members of the subgraph
 	GetSubgraphMembers(context.Context, *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error)
-	// CreateDiscussion creates a new discussion with an opening comment
-	CreateDiscussion(context.Context, *connect.Request[v1.CreateDiscussionRequest]) (*connect.Response[v1.CreateDiscussionResponse], error)
-	// ReplyToDiscussion creates a new comment in the discussion
-	ReplyToDiscussion(context.Context, *connect.Request[v1.ReplyToDiscussionRequest]) (*connect.Response[v1.ReplyToDiscussionResponse], error)
-	// GetAllDiscussions fetches all discussions which may be scoped to a schema version if passed
-	GetAllDiscussions(context.Context, *connect.Request[v1.GetAllDiscussionsRequest]) (*connect.Response[v1.GetAllDiscussionsResponse], error)
-	// UpdateDiscussionComment edits the comment in the discussion
-	UpdateDiscussionComment(context.Context, *connect.Request[v1.UpdateDiscussionCommentRequest]) (*connect.Response[v1.UpdateDiscussionCommentResponse], error)
-	// DeleteDiscussionComment deletes the comment or the discussion if it is an opening comment
-	DeleteDiscussionComment(context.Context, *connect.Request[v1.DeleteDiscussionCommentRequest]) (*connect.Response[v1.DeleteDiscussionCommentResponse], error)
-	// GetDiscussion gets the entire discussion thread
-	GetDiscussion(context.Context, *connect.Request[v1.GetDiscussionRequest]) (*connect.Response[v1.GetDiscussionResponse], error)
-	// GetDiscussionSchemas gets the reference and latest schema of the target graph in which the discussion was created
-	GetDiscussionSchemas(context.Context, *connect.Request[v1.GetDiscussionSchemasRequest]) (*connect.Response[v1.GetDiscussionSchemasResponse], error)
-	// SetDiscussionResolutionRequest marks the discussion as resolved or not
-	SetDiscussionResolution(context.Context, *connect.Request[v1.SetDiscussionResolutionRequest]) (*connect.Response[v1.SetDiscussionResolutionResponse], error)
 	// AddReadme adds a readme of a target, can be a subgraph or a federated graph
 	AddReadme(context.Context, *connect.Request[v1.AddReadmeRequest]) (*connect.Response[v1.AddReadmeResponse], error)
 	// GetUserAccessiblePermissions returns all the federated and subgraphs where the user has write permissions
@@ -3907,6 +3767,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceDeleteOrganizationMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceRestoreOrganizationHandler := connect.NewUnaryHandler(
+		PlatformServiceRestoreOrganizationProcedure,
+		svc.RestoreOrganization,
+		connect.WithSchema(platformServiceRestoreOrganizationMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceLeaveOrganizationHandler := connect.NewUnaryHandler(
 		PlatformServiceLeaveOrganizationProcedure,
 		svc.LeaveOrganization,
@@ -4031,54 +3897,6 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceGetSubgraphMembersProcedure,
 		svc.GetSubgraphMembers,
 		connect.WithSchema(platformServiceGetSubgraphMembersMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceCreateDiscussionHandler := connect.NewUnaryHandler(
-		PlatformServiceCreateDiscussionProcedure,
-		svc.CreateDiscussion,
-		connect.WithSchema(platformServiceCreateDiscussionMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceReplyToDiscussionHandler := connect.NewUnaryHandler(
-		PlatformServiceReplyToDiscussionProcedure,
-		svc.ReplyToDiscussion,
-		connect.WithSchema(platformServiceReplyToDiscussionMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceGetAllDiscussionsHandler := connect.NewUnaryHandler(
-		PlatformServiceGetAllDiscussionsProcedure,
-		svc.GetAllDiscussions,
-		connect.WithSchema(platformServiceGetAllDiscussionsMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceUpdateDiscussionCommentHandler := connect.NewUnaryHandler(
-		PlatformServiceUpdateDiscussionCommentProcedure,
-		svc.UpdateDiscussionComment,
-		connect.WithSchema(platformServiceUpdateDiscussionCommentMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceDeleteDiscussionCommentHandler := connect.NewUnaryHandler(
-		PlatformServiceDeleteDiscussionCommentProcedure,
-		svc.DeleteDiscussionComment,
-		connect.WithSchema(platformServiceDeleteDiscussionCommentMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceGetDiscussionHandler := connect.NewUnaryHandler(
-		PlatformServiceGetDiscussionProcedure,
-		svc.GetDiscussion,
-		connect.WithSchema(platformServiceGetDiscussionMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceGetDiscussionSchemasHandler := connect.NewUnaryHandler(
-		PlatformServiceGetDiscussionSchemasProcedure,
-		svc.GetDiscussionSchemas,
-		connect.WithSchema(platformServiceGetDiscussionSchemasMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceSetDiscussionResolutionHandler := connect.NewUnaryHandler(
-		PlatformServiceSetDiscussionResolutionProcedure,
-		svc.SetDiscussionResolution,
-		connect.WithSchema(platformServiceSetDiscussionResolutionMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceAddReadmeHandler := connect.NewUnaryHandler(
@@ -4568,6 +4386,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceDeleteUserHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteOrganizationProcedure:
 			platformServiceDeleteOrganizationHandler.ServeHTTP(w, r)
+		case PlatformServiceRestoreOrganizationProcedure:
+			platformServiceRestoreOrganizationHandler.ServeHTTP(w, r)
 		case PlatformServiceLeaveOrganizationProcedure:
 			platformServiceLeaveOrganizationHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateOrganizationDetailsProcedure:
@@ -4610,22 +4430,6 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceRemoveSubgraphMemberHandler.ServeHTTP(w, r)
 		case PlatformServiceGetSubgraphMembersProcedure:
 			platformServiceGetSubgraphMembersHandler.ServeHTTP(w, r)
-		case PlatformServiceCreateDiscussionProcedure:
-			platformServiceCreateDiscussionHandler.ServeHTTP(w, r)
-		case PlatformServiceReplyToDiscussionProcedure:
-			platformServiceReplyToDiscussionHandler.ServeHTTP(w, r)
-		case PlatformServiceGetAllDiscussionsProcedure:
-			platformServiceGetAllDiscussionsHandler.ServeHTTP(w, r)
-		case PlatformServiceUpdateDiscussionCommentProcedure:
-			platformServiceUpdateDiscussionCommentHandler.ServeHTTP(w, r)
-		case PlatformServiceDeleteDiscussionCommentProcedure:
-			platformServiceDeleteDiscussionCommentHandler.ServeHTTP(w, r)
-		case PlatformServiceGetDiscussionProcedure:
-			platformServiceGetDiscussionHandler.ServeHTTP(w, r)
-		case PlatformServiceGetDiscussionSchemasProcedure:
-			platformServiceGetDiscussionSchemasHandler.ServeHTTP(w, r)
-		case PlatformServiceSetDiscussionResolutionProcedure:
-			platformServiceSetDiscussionResolutionHandler.ServeHTTP(w, r)
 		case PlatformServiceAddReadmeProcedure:
 			platformServiceAddReadmeHandler.ServeHTTP(w, r)
 		case PlatformServiceGetUserAccessiblePermissionsProcedure:
@@ -5081,6 +4885,10 @@ func (UnimplementedPlatformServiceHandler) DeleteOrganization(context.Context, *
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteOrganization is not implemented"))
 }
 
+func (UnimplementedPlatformServiceHandler) RestoreOrganization(context.Context, *connect.Request[v1.RestoreOrganizationRequest]) (*connect.Response[v1.RestoreOrganizationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.RestoreOrganization is not implemented"))
+}
+
 func (UnimplementedPlatformServiceHandler) LeaveOrganization(context.Context, *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.LeaveOrganization is not implemented"))
 }
@@ -5163,38 +4971,6 @@ func (UnimplementedPlatformServiceHandler) RemoveSubgraphMember(context.Context,
 
 func (UnimplementedPlatformServiceHandler) GetSubgraphMembers(context.Context, *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetSubgraphMembers is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) CreateDiscussion(context.Context, *connect.Request[v1.CreateDiscussionRequest]) (*connect.Response[v1.CreateDiscussionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateDiscussion is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) ReplyToDiscussion(context.Context, *connect.Request[v1.ReplyToDiscussionRequest]) (*connect.Response[v1.ReplyToDiscussionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ReplyToDiscussion is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) GetAllDiscussions(context.Context, *connect.Request[v1.GetAllDiscussionsRequest]) (*connect.Response[v1.GetAllDiscussionsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetAllDiscussions is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) UpdateDiscussionComment(context.Context, *connect.Request[v1.UpdateDiscussionCommentRequest]) (*connect.Response[v1.UpdateDiscussionCommentResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateDiscussionComment is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) DeleteDiscussionComment(context.Context, *connect.Request[v1.DeleteDiscussionCommentRequest]) (*connect.Response[v1.DeleteDiscussionCommentResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteDiscussionComment is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) GetDiscussion(context.Context, *connect.Request[v1.GetDiscussionRequest]) (*connect.Response[v1.GetDiscussionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetDiscussion is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) GetDiscussionSchemas(context.Context, *connect.Request[v1.GetDiscussionSchemasRequest]) (*connect.Response[v1.GetDiscussionSchemasResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetDiscussionSchemas is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) SetDiscussionResolution(context.Context, *connect.Request[v1.SetDiscussionResolutionRequest]) (*connect.Response[v1.SetDiscussionResolutionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.SetDiscussionResolution is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) AddReadme(context.Context, *connect.Request[v1.AddReadmeRequest]) (*connect.Response[v1.AddReadmeResponse], error) {
