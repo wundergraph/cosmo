@@ -1,4 +1,6 @@
-FROM nats:2.11.0
+FROM nats:2.11.0-alpine
+
+RUN apk add --no-cache curl
 
 # Copy custom config
 COPY nats-server.conf /etc/nats/nats-server.conf
