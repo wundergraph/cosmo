@@ -490,9 +490,14 @@ type NatsCredentialsAuthentication struct {
 	Username *string `yaml:"username,omitempty"`
 }
 
+type NatsCredentialsFileAuthentication struct {
+	CredentialsFile *string `yaml:"credentials_file,omitempty"`
+}
+
 type NatsAuthentication struct {
-	UserInfo                     NatsCredentialsAuthentication `yaml:"user_info"`
-	NatsTokenBasedAuthentication `yaml:"token,inline"`
+	UserInfo                          NatsCredentialsAuthentication `yaml:"user_info"`
+	NatsTokenBasedAuthentication      `yaml:"token,inline"`
+	NatsCredentialsFileAuthentication `yaml:"credentials_file,inline"`
 }
 
 type NatsEventSource struct {

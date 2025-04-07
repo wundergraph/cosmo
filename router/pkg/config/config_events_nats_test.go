@@ -99,3 +99,25 @@ events:
 	_, err := LoadConfig(f, "")
 	require.NoError(t, err)
 }
+
+func TestValidAuthenticatedNatsProviderWithCredsFile(t *testing.T) {
+	t.Parallel()
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+events:
+  providers:
+    nats:
+      - id: default
+        url: "nats://localhost:4222"
+        authentication:
+          credentials_file: "/nkeys/creds/user.creds"
+`)
+
+	_, err := LoadConfig(f, "")
+	require.NoError(t, err)
+}
