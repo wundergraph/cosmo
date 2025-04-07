@@ -58,7 +58,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
         console.log(pc.yellow(`Warning: Proposal match failed`));
         console.log(pc.yellow(resp.proposalMatchMessage));
       }
-      
+
       if (
         resp.nonBreakingChanges.length === 0 &&
         resp.breakingChanges.length === 0 &&
