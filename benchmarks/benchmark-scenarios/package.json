@@ -1,0 +1,13 @@
+{
+  "name": "benchmark-scenarios",
+  "private": true,
+  "scripts": {
+    "bundle": "webpack"
+  },
+  "devDependencies": {
+    "@types/k6": "1.0.2"
+  },
+  "dependencies": {
+    "uuid": "^10.0.0"
+  }
+}
