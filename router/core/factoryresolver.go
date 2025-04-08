@@ -29,13 +29,20 @@ import (
 type Loader struct {
 	resolver FactoryResolver
 	// includeInfo controls whether additional information like type usage and field usage is included in the plan de
-	includeInfo bool
-	logger      *zap.Logger
+	includeInfo  bool
+	logger       *zap.Logger
+	instanceData InstanceData
+}
+
+type InstanceData struct {
+	hostName      string
+	listenAddress string
 }
 
 type FactoryResolver interface {
 	ResolveGraphqlFactory(subgraphName string) (plan.PlannerFactory[graphql_datasource.Configuration], error)
 	ResolveStaticFactory() (plan.PlannerFactory[staticdatasource.Configuration], error)
+	InstanceData() InstanceData
 }
 
 type ApiTransportFactory interface {
@@ -58,6 +65,7 @@ type DefaultFactoryResolver struct {
 	subscriptionClient graphql_datasource.GraphQLSubscriptionClient
 
 	factoryLogger abstractlogger.Logger
+	instanceData  InstanceData
 }
 
 func NewDefaultFactoryResolver(
@@ -68,6 +76,7 @@ func NewDefaultFactoryResolver(
 	log *zap.Logger,
 	enableSingleFlight bool,
 	enableNetPoll bool,
+	instanceData InstanceData,
 ) *DefaultFactoryResolver {
 	transportFactory := NewTransport(transportOptions)
 
@@ -144,6 +153,10 @@ func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (pla
 
 func (d *DefaultFactoryResolver) ResolveStaticFactory() (factory plan.PlannerFactory[staticdatasource.Configuration], err error) {
 	return d.static, nil
+}
+
+func (d *DefaultFactoryResolver) InstanceData() InstanceData {
+	return d.instanceData
 }
 
 func NewLoader(includeInfo bool, resolver FactoryResolver, logger *zap.Logger) *Loader {
@@ -410,8 +423,8 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				l.dataSourceMetaData(in),
 				routerEngineConfig.Events,
 				l.logger,
-				"localhost",
-				"localhost:8080",
+				l.resolver.InstanceData().hostName,
+				l.resolver.InstanceData().listenAddress,
 			)
 			if err != nil {
 				return nil, err

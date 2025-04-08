@@ -84,8 +84,7 @@ type (
 		runtimeMetrics          *rmetric.RuntimeMetrics
 		otlpEngineMetrics       *rmetric.EngineMetrics
 		prometheusEngineMetrics *rmetric.EngineMetrics
-		hostName                string
-		routerListenAddr        string
+		instanceData            InstanceData
 	}
 )
 
@@ -113,8 +112,10 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		baseRouterConfigVersion: routerConfig.GetVersion(),
 		inFlightRequests:        &atomic.Uint64{},
 		graphMuxList:            make([]*graphMux, 0, 1),
-		routerListenAddr:        r.listenAddr,
-		hostName:                r.hostName,
+		instanceData: InstanceData{
+			hostName:      r.hostName,
+			listenAddress: r.listenAddr,
+		},
 	}
 
 	baseOtelAttributes := []attribute.KeyValue{
@@ -925,6 +926,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			ApolloCompatibilityFlags:       s.apolloCompatibilityFlags,
 			ApolloRouterCompatibilityFlags: s.apolloRouterCompatibilityFlags,
 			HeartbeatInterval:              s.multipartHeartbeatInterval,
+			InstanceData:                   s.instanceData,
 		},
 	)
 	if err != nil {

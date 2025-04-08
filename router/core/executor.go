@@ -29,6 +29,7 @@ type ExecutorConfigurationBuilder struct {
 
 	transportOptions          *TransportOptions
 	subscriptionClientOptions *SubscriptionClientOptions
+	instanceData              InstanceData
 }
 
 type Executor struct {
@@ -51,6 +52,7 @@ type ExecutorBuildOptions struct {
 	ApolloCompatibilityFlags       config.ApolloCompatibilityFlags
 	ApolloRouterCompatibilityFlags config.ApolloRouterCompatibilityFlags
 	HeartbeatInterval              time.Duration
+	InstanceData                   InstanceData
 }
 
 func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *ExecutorBuildOptions) (*Executor, error) {
@@ -204,6 +206,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		b.logger,
 		routerEngineCfg.Execution.EnableSingleFlight,
 		routerEngineCfg.Execution.EnableNetPoll,
+		b.instanceData,
 	), b.logger)
 
 	// this generates the plan config using the data source factories from the config package
