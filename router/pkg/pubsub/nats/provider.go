@@ -15,10 +15,6 @@ import (
 	"go.uber.org/zap"
 )
 
-func init() {
-	datasource.RegisterProviderFactory(GetProvider)
-}
-
 func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([]nats.Option, error) {
 	opts := []nats.Option{
 		nats.Name(fmt.Sprintf("cosmo.router.edfs.nats.%s", eventSource.ID)),

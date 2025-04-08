@@ -16,10 +16,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 )
 
-func init() {
-	datasource.RegisterProviderFactory(GetProvider)
-}
-
 // buildKafkaOptions creates a list of kgo.Opt options for the given Kafka event source configuration.
 // Only general options like TLS, SASL, etc. are configured here. Specific options like topics, etc. are
 // configured in the KafkaPubSub implementation.
