@@ -880,11 +880,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		SubgraphErrorPropagation: s.subgraphErrorPropagation,
 	}
 
-	//err = s.buildPubSubConfiguration(ctx, engineConfig, routerEngineConfig)
-	//if err != nil {
-	//	return nil, fmt.Errorf("failed to build pubsub configuration: %w", err)
-	//}
-
 	ecb := &ExecutorConfigurationBuilder{
 		introspection:  s.introspection,
 		baseURL:        s.baseURL,
@@ -1177,86 +1172,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	return gm, nil
 }
-
-//func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, routerEngineCfg *RouterEngineConfiguration) error {
-//	datasourceConfigurations := engineConfig.GetDatasourceConfigurations()
-//	for _, datasourceConfiguration := range datasourceConfigurations {
-//		if datasourceConfiguration.CustomEvents == nil {
-//			continue
-//		}
-//
-//		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetNats() {
-//
-//			providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
-//			// if this source name's provider has already been initiated, do not try to initiate again
-//			_, ok := s.pubSubProviders.nats[providerID]
-//			if ok {
-//				continue
-//			}
-//
-//			for _, eventSource := range routerEngineCfg.Events.Providers.Nats {
-//				if eventSource.ID == eventConfiguration.EngineEventConfiguration.GetProviderId() {
-//					options, err := buildNatsOptions(eventSource, s.logger)
-//					if err != nil {
-//						return fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", providerID, err)
-//					}
-//					natsConnection, err := nats.Connect(eventSource.URL, options...)
-//					if err != nil {
-//						return fmt.Errorf("failed to create connection for Nats provider with ID \"%s\": %w", providerID, err)
-//					}
-//					js, err := jetstream.New(natsConnection)
-//					if err != nil {
-//						return err
-//					}
-//
-//					s.pubSubProviders.nats[providerID] = pubsubNats.NewConnector(s.logger, natsConnection, js, s.hostName, s.routerListenAddr).New(ctx)
-//
-//					break
-//				}
-//			}
-//
-//			_, ok = s.pubSubProviders.nats[providerID]
-//			if !ok {
-//				return fmt.Errorf("failed to find Nats provider with ID \"%s\". Ensure the provider definition is part of the config", providerID)
-//			}
-//		}
-//
-//		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetKafka() {
-//
-//			providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
-//			// if this source name's provider has already been initiated, do not try to initiate again
-//			_, ok := s.pubSubProviders.kafka[providerID]
-//			if ok {
-//				continue
-//			}
-//
-//			for _, eventSource := range routerEngineCfg.Events.Providers.Kafka {
-//				if eventSource.ID == providerID {
-//					options, err := buildKafkaOptions(eventSource)
-//					if err != nil {
-//						return fmt.Errorf("failed to build options for Kafka provider with ID \"%s\": %w", providerID, err)
-//					}
-//					ps, err := kafka.NewConnector(s.logger, options)
-//					if err != nil {
-//						return fmt.Errorf("failed to create connection for Kafka provider with ID \"%s\": %w", providerID, err)
-//					}
-//
-//					s.pubSubProviders.kafka[providerID] = ps.New(ctx)
-//
-//					break
-//				}
-//			}
-//
-//			_, ok = s.pubSubProviders.kafka[providerID]
-//			if !ok {
-//				return fmt.Errorf("failed to find Kafka provider with ID \"%s\". Ensure the provider definition is part of the config", providerID)
-//			}
-//		}
-//
-//	}
-//
-//	return nil
-//}
 
 // wait waits for all in-flight requests to finish. Similar to http.Server.Shutdown we wait in intervals + jitter
 // to make the shutdown process more efficient.
