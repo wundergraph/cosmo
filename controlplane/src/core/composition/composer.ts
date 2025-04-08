@@ -13,7 +13,7 @@ import {
 } from '@wundergraph/composition';
 import { buildRouterConfig, ComposedSubgraph as IComposedSubgraph } from '@wundergraph/cosmo-shared';
 import { FastifyBaseLogger } from 'fastify';
-import { DocumentNode, parse, printSchema } from 'graphql';
+import { DocumentNode, GraphQLSchema, parse, printSchema } from 'graphql';
 import {
   FeatureFlagRouterExecutionConfig,
   FeatureFlagRouterExecutionConfigs,
@@ -36,8 +36,10 @@ import * as schema from '../../db/schema.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { CacheWarmerRepository } from '../repositories/CacheWarmerRepository.js';
 import { NamespaceRepository } from '../repositories/NamespaceRepository.js';
+import { InspectorSchemaChange } from '../services/SchemaUsageTrafficInspector.js';
+import { SchemaCheckChangeAction } from '../../db/models.js';
 import { composeSubgraphs, composeFederatedGraphWithPotentialContracts } from './composition.js';
-import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult } from './schemaCheck.js';
+import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult, GetDiffBetweenGraphsSuccess } from './schemaCheck.js';
 
 export function getRouterCompatibilityVersionPath(routerCompatibilityVersion: string): string {
   switch (routerCompatibilityVersion) {
@@ -188,6 +190,15 @@ export class RouterConfigUploadError extends Error {
 
 export type ComposeDeploymentError = RouterConfigUploadError | AdmissionError | Error;
 
+export type CheckSubgraph = {
+  subgraph: SubgraphDTO;
+  checkSubgraphId: string;
+  newSchemaSDL: string;
+  newGraphQLSchema?: GraphQLSchema;
+  inspectorChanges: InspectorSchemaChange[];
+  schemaChanges: GetDiffBetweenGraphsSuccess;
+  storedBreakingChanges: SchemaCheckChangeAction[];
+};
 export class Composer {
   constructor(
     private logger: FastifyBaseLogger,
@@ -648,23 +659,99 @@ export class Composer {
     });
   }
 
-  composeWithDeletedSubgraph(subgraphLabels: Label[], subgraphName: string, namespaceId: string) {
-    return this.composeWithLabels(subgraphLabels, namespaceId, (subgraphs) => {
-      const subgraphsToBeComposed: Array<Subgraph> = [];
+  async composeWithProposedSchemas({
+    inputSubgraphs,
+    graphs,
+  }: {
+    inputSubgraphs: Map<string, CheckSubgraph>;
+    graphs: FederatedGraphDTO[];
+  }) {
+    const composedGraphs: ComposedFederatedGraph[] = [];
+    // the key is the federated graph id and the value is the list of check subgraph ids which are part of the composition for that federated graph
+    const checkSubgraphsByFedGraph = new Map<string, string[]>();
+    for (const graph of graphs) {
+      try {
+        const subgraphsOfFedGraph = await this.subgraphRepo.listByFederatedGraph({
+          federatedGraphTargetId: graph.targetId,
+        });
 
-      const filteredSubgraphs = subgraphs.filter((s) => s.name !== subgraphName);
-
-      for (const subgraph of subgraphs) {
-        if (subgraph.name !== subgraphName && subgraph.schemaSDL !== '') {
-          subgraphsToBeComposed.push({
-            name: subgraph.name,
-            url: subgraph.routingUrl,
-            definitions: parse(subgraph.schemaSDL),
-          });
+        const subgraphsToBeComposed: Subgraph[] = [];
+        for (const subgraph of subgraphsOfFedGraph) {
+          const inputSubgraph = inputSubgraphs.get(subgraph.name);
+          if (inputSubgraph) {
+            checkSubgraphsByFedGraph.set(graph.id, [
+              ...(checkSubgraphsByFedGraph.get(graph.id) || []),
+              inputSubgraph.checkSubgraphId,
+            ]);
+            if (inputSubgraph.newSchemaSDL === '') {
+              continue;
+            }
+            subgraphsToBeComposed.push({
+              name: subgraph.name,
+              url: subgraph.routingUrl,
+              definitions: parse(inputSubgraph.newSchemaSDL),
+            });
+          } else {
+            subgraphsToBeComposed.push({
+              name: subgraph.name,
+              url: subgraph.routingUrl,
+              definitions: parse(subgraph.schemaSDL),
+            });
+          }
         }
-      }
 
-      return [filteredSubgraphs, subgraphsToBeComposed];
-    });
+        const contracts = await this.contractRepo.bySourceFederatedGraphId(graph.id);
+
+        if (contracts.length === 0) {
+          const federationResult = composeSubgraphs(subgraphsToBeComposed, graph.routerCompatibilityVersion);
+          composedGraphs.push(mapResultToComposedGraph(graph, subgraphsOfFedGraph, federationResult));
+          continue;
+        }
+
+        const tagOptionsByContractName = new Map<string, ContractTagOptions>();
+
+        for (const contract of contracts) {
+          tagOptionsByContractName.set(
+            contract.downstreamFederatedGraph.target.name,
+            newContractTagOptionsFromArrays(contract.excludeTags, contract.includeTags),
+          );
+        }
+
+        const federationResult = composeFederatedGraphWithPotentialContracts(
+          subgraphsToBeComposed,
+          tagOptionsByContractName,
+          graph.routerCompatibilityVersion,
+        );
+        composedGraphs.push(mapResultToComposedGraph(graph, subgraphsOfFedGraph, federationResult));
+
+        if (!federationResult.success) {
+          continue;
+        }
+
+        for (const [contractName, contractResult] of federationResult.federationResultByContractName) {
+          const contractGraph = await this.federatedGraphRepo.byName(contractName, graph.namespace);
+          if (!contractGraph) {
+            throw new Error(`Contract graph ${contractName} not found`);
+          }
+          composedGraphs.push(mapResultToComposedGraph(contractGraph, subgraphsOfFedGraph, contractResult));
+        }
+      } catch (e: any) {
+        composedGraphs.push({
+          id: graph.id,
+          name: graph.name,
+          namespace: graph.namespace,
+          namespaceId: graph.namespaceId,
+          targetID: graph.targetId,
+          fieldConfigurations: [],
+          errors: [e],
+          subgraphs: [],
+          warnings: [],
+        });
+      }
+    }
+    return {
+      composedGraphs,
+      checkSubgraphsByFedGraph,
+    };
   }
 }

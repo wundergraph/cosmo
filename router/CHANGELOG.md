@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.196.1](https://github.com/wundergraph/cosmo/compare/router@0.196.0...router@0.196.1) (2025-04-07)
+
+### Bug Fixes
+
+* **websocket:** handle ping/pong correctly ([#1755](https://github.com/wundergraph/cosmo/issues/1755)) ([ead4f4e](https://github.com/wundergraph/cosmo/commit/ead4f4e816a2bca017c1e44a547c8cbccf751dc0)) (@StarpTech)
+
+# [0.196.0](https://github.com/wundergraph/cosmo/compare/router@0.195.0...router@0.196.0) (2025-04-07)
+
+### Features
+
+* add execution of check_query_planner ([#1661](https://github.com/wundergraph/cosmo/issues/1661)) ([90a17f9](https://github.com/wundergraph/cosmo/commit/90a17f995cb52e38584cef830cc6b214d21e44af)) (@alepane21)
+
 # [0.195.0](https://github.com/wundergraph/cosmo/compare/router@0.194.0...router@0.195.0) (2025-04-04)
 
 ### Bug Fixes

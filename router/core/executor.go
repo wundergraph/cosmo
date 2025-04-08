@@ -32,7 +32,8 @@ type ExecutorConfigurationBuilder struct {
 	transport      http.RoundTripper
 	logger         *zap.Logger
 
-	transportOptions *TransportOptions
+	transportOptions          *TransportOptions
+	subscriptionClientOptions *SubscriptionClientOptions
 }
 
 type Executor struct {
@@ -276,6 +277,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	loader := NewLoader(b.trackUsageInfo, NewDefaultFactoryResolver(
 		ctx,
 		b.transportOptions,
+		b.subscriptionClientOptions,
 		b.transport,
 		b.logger,
 		routerEngineCfg.Execution.EnableSingleFlight,
