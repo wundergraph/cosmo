@@ -135,4 +135,7 @@ export type AuditLogFullAction =
   | 'operation_ignore_override.created'
   | 'operation_ignore_override.deleted'
   | 'proposal.created'
-  | 'proposal.updated';
+  | 'proposal.updated'
+  | 'proposal.approved'
+  | 'proposal.published'
+  | 'proposal.closed';

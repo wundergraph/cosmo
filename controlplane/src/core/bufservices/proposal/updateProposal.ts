@@ -154,7 +154,14 @@ export function updateProposal(
 
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
-        auditAction: 'proposal.updated',
+        auditAction:
+          stateValue === 'APPROVED'
+            ? 'proposal.approved'
+            : stateValue === 'PUBLISHED'
+            ? 'proposal.published'
+            : stateValue === 'CLOSED'
+            ? 'proposal.closed'
+            : 'proposal.updated',
         action: 'updated',
         actorId: authContext.userId,
         auditableType: 'proposal',
