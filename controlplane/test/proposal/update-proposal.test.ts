@@ -1718,4 +1718,86 @@ describe('Update proposal tests', () => {
 
     await server.close();
   });
+
+  test('should fail to update a proposal with "updatedSubgraphs" when no subgraphs are passed', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+    });
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Setup a federated graph with a single subgraph
+    const subgraphName = genID('subgraph1');
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName = genID('proposal');
+
+    const subgraphSchemaSDL = `
+      type Query {
+        hello: String!
+      }
+    `;
+
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Create a proposal with a schema change to the subgraph
+    const updatedSubgraphSDL = `
+      type Query {
+        hello: String!
+        newField: Int!
+      }
+    `;
+
+    const createProposalResponse = await createTestProposal(client, {
+      federatedGraphName: fedGraphName,
+      proposalName,
+      subgraphName,
+      subgraphSchemaSDL,
+      updatedSubgraphSDL,
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Try to update the proposal with an empty subgraphs array
+    const updateProposalResponse = await client.updateProposal({
+      proposalName,
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      updateAction: {
+        case: 'updatedSubgraphs',
+        value: {
+          subgraphs: [], // empty array
+        },
+      },
+    });
+
+    expect(updateProposalResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(updateProposalResponse.response?.details).toContain(
+      'No subgraphs provided. At least one subgraph is required to create a proposal.',
+    );
+
+    // Verify the proposal wasn't updated
+    const getProposalResponse = await client.getProposal({
+      proposalId: createProposalResponse.proposalId,
+    });
+
+    expect(getProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getProposalResponse.proposal?.subgraphs.length).toBe(1);
+    expect(getProposalResponse.proposal?.subgraphs[0].schemaSDL).toBe(updatedSubgraphSDL);
+
+    await server.close();
+  });
 });

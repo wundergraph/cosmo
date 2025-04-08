@@ -941,4 +941,55 @@ describe('Create proposal tests', () => {
 
     await server.close();
   });
+
+  test('should fail to create a proposal when no subgraphs are passed', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+    });
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Setup a federated graph
+    const fedGraphName = genID('fedGraph');
+    const subgraphName = genID('subgraph');
+    const label = genUniqueLabel('label');
+    const proposalName = genID('proposal');
+
+    const subgraphSchemaSDL = `
+      type Query {
+        hello: String!
+      }
+    `;
+
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Try to create a proposal without any subgraphs
+    const createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      subgraphs: [], // empty array
+      didHubCreate: false,
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(createProposalResponse.response?.details).toContain(
+      'No subgraphs provided. At least one subgraph is required to create a proposal.',
+    );
+
+    await server.close();
+  });
 });

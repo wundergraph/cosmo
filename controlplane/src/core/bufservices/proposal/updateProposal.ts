@@ -261,6 +261,28 @@ export function updateProposal(
         };
       }
 
+      if (req.updateAction.value.subgraphs.length === 0) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: `No subgraphs provided. At least one subgraph is required to update a proposal.`,
+          },
+          breakingChanges: [],
+          nonBreakingChanges: [],
+          compositionErrors: [],
+          checkId: '',
+          lintWarnings: [],
+          lintErrors: [],
+          graphPruneWarnings: [],
+          graphPruneErrors: [],
+          compositionWarnings: [],
+          operationUsageStats: [],
+          lintingSkipped: false,
+          graphPruningSkipped: false,
+          checkUrl: '',
+        };
+      }
+
       const subgraphsOfFedGraph = await subgraphRepo.listByFederatedGraph({
         federatedGraphTargetId: federatedGraph.targetId,
       });
