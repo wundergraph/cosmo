@@ -4,10 +4,10 @@ import { z } from 'zod';
 import { ToolContext } from './types.js';
 import { SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
-export const registerSubgraphCheckTool = ({ server, opts }: ToolContext) => {
+export const registerSubgraphVerifySchemaChangesTool = ({ server, opts }: ToolContext) => {
     server.tool(
-        "subgraph-check",
-        "Check if a subgraph schema change would be valid",
+        "subgraph-verify-schema-changes",
+        "When making changes to a Subgraph Schema, this command can validate if the schema is valid GraphQL SDL, if it composes with all other subgraphs into a valid supergraph, and if there are any breaking changes.",
         {
             name: z.string().describe("The name of the subgraph"),
             namespace: z.string().optional().describe("The namespace of the subgraph"),
