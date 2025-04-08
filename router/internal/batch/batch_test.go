@@ -11,6 +11,8 @@ import (
 
 func TestBatch(t *testing.T) {
 	t.Run("verify performance gains for huge strings", func(t *testing.T) {
+		t.Parallel()
+
 		rs := randomString(defaultBufioReaderSize*50, 'A')
 		fullString := `{"somestring": ` + rs + `}`
 
@@ -30,6 +32,8 @@ func TestBatch(t *testing.T) {
 	})
 
 	t.Run("verify string is read even when buffer is smaller without spaces", func(t *testing.T) {
+		t.Parallel()
+
 		rs := randomString(2000, 'A')
 		fullString := `{"somestring": ` + rs + `}`
 
@@ -44,6 +48,8 @@ func TestBatch(t *testing.T) {
 	})
 
 	t.Run("verify string is read even when buffer is larger without spaces", func(t *testing.T) {
+		t.Parallel()
+
 		rs := randomString(2000, 'A')
 		fullString := `{"somestring": ` + rs + `}`
 
@@ -58,6 +64,8 @@ func TestBatch(t *testing.T) {
 	})
 
 	t.Run("verify string when string has spaces with smaller buffer size", func(t *testing.T) {
+		t.Parallel()
+
 		rs := randomString(2000, 'A')
 		primaryString := `[{"somestring": ` + rs + `}]`
 		fullString := "  \n\r    \t  " + primaryString
@@ -73,6 +81,8 @@ func TestBatch(t *testing.T) {
 	})
 
 	t.Run("verify string when string has spaces with larger buffer size", func(t *testing.T) {
+		t.Parallel()
+
 		rs := randomString(2000, 'A')
 		primaryString := `[{"somestring": ` + rs + `}]`
 		fullString := "  \n\r    \t  " + primaryString
@@ -88,6 +98,8 @@ func TestBatch(t *testing.T) {
 	})
 
 	t.Run("verify string when spaces are larger than buffer size", func(t *testing.T) {
+		t.Parallel()
+
 		rs := randomString(2000, 'A')
 		primaryString := `[{"somestring": ` + rs + `}]`
 		whitespaceString := randomString(200, ' ')
@@ -105,6 +117,8 @@ func TestBatch(t *testing.T) {
 	})
 
 	t.Run("verify string when string is only spaces when buffer is smaller", func(t *testing.T) {
+		t.Parallel()
+
 		whitespaceString := randomString(200, ' ')
 		fullString := "  \n\r    \t  " + whitespaceString + " \t \r "
 
@@ -120,6 +134,8 @@ func TestBatch(t *testing.T) {
 	})
 
 	t.Run("verify string when string is only spaces when buffer is larger", func(t *testing.T) {
+		t.Parallel()
+		
 		whitespaceString := randomString(200, ' ')
 		fullString := "  \n\r    \t  " + whitespaceString + " \t \r "
 

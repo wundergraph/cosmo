@@ -71,7 +71,7 @@ func TestBatch(t *testing.T) {
 				})
 				require.NoError(t, err)
 				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-				require.Equal(t, `{"errors":[{"message":"error parsing request body"}]}`, res.Body)
+				require.JSONEq(t, `{"errors":[{"message":"error parsing request body"}]}`, res.Body)
 			},
 		)
 	})
@@ -119,26 +119,30 @@ func TestBatch(t *testing.T) {
 	})
 
 	t.Run("attempt to start server with invalid max concurrent", func(t *testing.T) {
+		t.Parallel()
+
 		err := testenv.RunWithError(t, &testenv.Config{
 			BatchingConfig: config.BatchingConfig{
 				Enabled:            true,
 				MaxConcurrent:      0,
 				MaxEntriesPerBatch: 100,
 			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
+		}, func(t *testing.T, _ *testenv.Environment) {
 			assert.Fail(t, "should not be called")
 		})
 		assert.Error(t, err, "maxConcurrent must be greater than 0")
 	})
 
 	t.Run("attempt to start server with invalid max entries per batch", func(t *testing.T) {
+		t.Parallel()
+
 		err := testenv.RunWithError(t, &testenv.Config{
 			BatchingConfig: config.BatchingConfig{
 				Enabled:            true,
 				MaxConcurrent:      10,
 				MaxEntriesPerBatch: 0,
 			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
+		}, func(t *testing.T, _ *testenv.Environment) {
 			assert.Fail(t, "should not be called")
 		})
 		assert.Error(t, err, "maxEntriesPerBatch must be greater than 0")
@@ -264,8 +268,8 @@ func TestBatch(t *testing.T) {
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Products: testenv.SubgraphConfig{
-					Middleware: func(handler http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Middleware: func(_ http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							w.Header().Set("Content-Type", "application/json")
 							w.WriteHeader(http.StatusForbidden)
 							_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
@@ -312,8 +316,8 @@ func TestBatch(t *testing.T) {
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Products: testenv.SubgraphConfig{
-					Middleware: func(handler http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Middleware: func(_ http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							w.Header().Set("Content-Type", "application/json")
 							w.WriteHeader(http.StatusForbidden)
 							_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
@@ -520,7 +524,7 @@ func TestBatch(t *testing.T) {
 }
 
 func getSpanNames(directChildSpans []sdktrace.ReadOnlySpan) []string {
-	var retrievedSpanNames []string
+	var retrievedSpanNames = make([]string, 0, len(directChildSpans))
 	for _, span := range directChildSpans {
 		retrievedSpanNames = append(retrievedSpanNames, span.Name())
 	}
@@ -528,10 +532,10 @@ func getSpanNames(directChildSpans []sdktrace.ReadOnlySpan) []string {
 }
 
 func getRootDirectChildSpans(rootSpan sdktrace.ReadOnlySpan, rootSpanChildSpanCount int, sn []sdktrace.ReadOnlySpan) []sdktrace.ReadOnlySpan {
-	rootSpanId := rootSpan.SpanContext().SpanID()
+	rootSpanID := rootSpan.SpanContext().SpanID()
 	directChildSpans := make([]sdktrace.ReadOnlySpan, 0, rootSpanChildSpanCount)
 	for _, spanEntry := range sn {
-		if spanEntry.Parent().SpanID() == rootSpanId {
+		if spanEntry.Parent().SpanID() == rootSpanID {
 			directChildSpans = append(directChildSpans, spanEntry)
 		}
 	}

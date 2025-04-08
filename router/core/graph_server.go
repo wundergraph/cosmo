@@ -244,10 +244,10 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 	if s.batchingConfig.Enabled {
 		if s.batchingConfig.MaxConcurrentRoutines <= 0 {
-			return nil, fmt.Errorf("maxConcurrent must be greater than 0")
+			return nil, errors.New("maxConcurrent must be greater than 0")
 		}
 		if s.batchingConfig.MaxEntriesPerBatch <= 0 {
-			return nil, fmt.Errorf("maxEntriesPerBatch must be greater than 0")
+			return nil, errors.New("maxEntriesPerBatch must be greater than 0")
 		}
 	}
 
