@@ -11,7 +11,6 @@ import (
 )
 
 type Configuration struct {
-	Data               string `json:"data"`
 	EventConfiguration []*nodev1.KafkaEventConfiguration
 	Logger             *zap.Logger
 	Providers          map[string]*KafkaPubSub
@@ -79,7 +78,7 @@ func (c *Configuration) GetResolveDataSourceInput(eventConfig *nodev1.KafkaEvent
 func (c *Configuration) GetProviderId(eventConfig *nodev1.KafkaEventConfiguration) string {
 	return eventConfig.GetEngineEventConfiguration().GetProviderId()
 }
-func (c *Configuration) FindEventConfig2(typeName string, fieldName string, extractFn func(string) (string, error)) (datasource.EventConfigType2, error) {
+func (c *Configuration) FindEventConfig(typeName string, fieldName string, extractFn func(string) (string, error)) (datasource.EventConfigType, error) {
 	for _, cfg := range c.EventConfiguration {
 		if cfg.GetEngineEventConfiguration().GetTypeName() == typeName && cfg.GetEngineEventConfiguration().GetFieldName() == fieldName {
 			return &SelectedConfiguration{

@@ -16,7 +16,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 )
 
-func GetPlanDataSource(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger) (datasource.PubSubGeneralImplementer, error) {
+func GetPlanDataSource(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger, hostName string, routerListenAddr string) (datasource.PubSubGeneralImplementer, error) {
 	if kafkaData := in.GetCustomEvents().GetKafka(); kafkaData != nil {
 		k := NewPubSub(logger)
 		err := k.PrepareProviders(ctx, in, dsMeta, config)

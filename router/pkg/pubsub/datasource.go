@@ -15,11 +15,11 @@ import (
 	_ "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 )
 
-func GetDataSourcesFromConfig(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger) ([]plan.DataSource, error) {
+func GetDataSourcesFromConfig(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger, hostName string, routerListenAddr string) ([]plan.DataSource, error) {
 	var pubSubs datasource.PubSubGeneralImplementerList
 
 	for _, pubSub := range datasource.GetRegisteredPubSubs() {
-		pubSub, err := pubSub(ctx, in, dsMeta, config, logger)
+		pubSub, err := pubSub(ctx, in, dsMeta, config, logger, hostName, routerListenAddr)
 		if err != nil {
 			return nil, err
 		}

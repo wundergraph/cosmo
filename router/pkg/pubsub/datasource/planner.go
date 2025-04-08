@@ -12,7 +12,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-type EventConfigType2 interface {
+type EventConfigType interface {
 	GetResolveDataSource() (resolve.DataSource, error)
 	GetResolveDataSourceInput(event []byte) (string, error)
 	GetEngineEventConfiguration() *nodev1.EngineEventConfiguration
@@ -22,9 +22,9 @@ type EventConfigType2 interface {
 
 type PubSubGeneralImplementerList []PubSubGeneralImplementer
 
-func (p *PubSubGeneralImplementerList) FindEventConfig2(typeName string, fieldName string, extractFn func(string) (string, error)) (EventConfigType2, error) {
+func (p *PubSubGeneralImplementerList) FindEventConfig(typeName string, fieldName string, extractFn func(string) (string, error)) (EventConfigType, error) {
 	for _, pubSub := range *p {
-		eventConfigV, err := pubSub.FindEventConfig2(typeName, fieldName, extractFn)
+		eventConfigV, err := pubSub.FindEventConfig(typeName, fieldName, extractFn)
 		if err != nil {
 			return nil, err
 		}
@@ -36,13 +36,13 @@ func (p *PubSubGeneralImplementerList) FindEventConfig2(typeName string, fieldNa
 }
 
 type PubSubGeneralImplementer interface {
-	FindEventConfig2(typeName string, fieldName string, extractFn func(string) (string, error)) (EventConfigType2, error)
+	FindEventConfig(typeName string, fieldName string, extractFn func(string) (string, error)) (EventConfigType, error)
 }
 
 type Planner struct {
 	id           int
 	pubSubs      PubSubGeneralImplementerList
-	eventConfig  EventConfigType2
+	eventConfig  EventConfigType
 	rootFieldRef int
 	variables    resolve.Variables
 	visitor      *plan.Visitor
@@ -221,7 +221,7 @@ func (p *Planner) EnterField(ref int) {
 		return p.extractArgumentTemplate(ref, tpl)
 	}
 
-	eventConfigV, err := p.pubSubs.FindEventConfig2(typeName, fieldName, extractFn)
+	eventConfigV, err := p.pubSubs.FindEventConfig(typeName, fieldName, extractFn)
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to find event config for type name \"%s\" and field name \"%s\": %w", typeName, fieldName, err))
 		return

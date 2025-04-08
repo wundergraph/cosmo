@@ -410,6 +410,8 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				l.dataSourceMetaData(in),
 				routerEngineConfig.Events,
 				l.logger,
+				"localhost",
+				"localhost:8080",
 			)
 			if err != nil {
 				return nil, err

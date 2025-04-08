@@ -26,9 +26,9 @@ const (
 	tsep = "."
 )
 
-func GetPlanDataSource(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger) (datasource.PubSubGeneralImplementer, error) {
+func GetPlanDataSource(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger, hostName string, routerListenAddr string) (datasource.PubSubGeneralImplementer, error) {
 	if natsData := in.GetCustomEvents().GetNats(); natsData != nil {
-		k := NewPubSub(logger)
+		k := NewPubSub(logger, hostName, routerListenAddr)
 		err := k.PrepareProviders(ctx, in, dsMeta, config)
 		if err != nil {
 			return nil, err
@@ -90,8 +90,8 @@ func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([
 type Nats struct {
 	providers        map[string]*NatsPubSub
 	logger           *zap.Logger
-	hostName         string // How to get it here?
-	routerListenAddr string // How to get it here?
+	hostName         string
+	routerListenAddr string
 	config           *Configuration
 }
 
@@ -180,14 +180,15 @@ func (n *Nats) GetPubSubGeneralImplementerList() datasource.PubSubGeneralImpleme
 // 	return datasource.NewFactory[*nodev1.NatsEventConfiguration](executionContext, config, n.providers)
 // }
 
-func NewPubSub(logger *zap.Logger) Nats {
+func NewPubSub(logger *zap.Logger, hostName string, routerListenAddr string) Nats {
 	return Nats{
-		logger: logger,
+		logger:           logger,
+		hostName:         hostName,
+		routerListenAddr: routerListenAddr,
 	}
 }
 
 type Configuration struct {
-	Data               string `json:"data"`
 	EventConfiguration []*nodev1.NatsEventConfiguration
 	Logger             *zap.Logger
 	Providers          map[string]*NatsPubSub
@@ -297,7 +298,7 @@ func (c *Configuration) transformEventConfig(cfg *nodev1.NatsEventConfiguration,
 	return cfg, nil
 }
 
-func (c *Configuration) FindEventConfig2(typeName string, fieldName string, extractFn func(string) (string, error)) (datasource.EventConfigType2, error) {
+func (c *Configuration) FindEventConfig(typeName string, fieldName string, extractFn func(string) (string, error)) (datasource.EventConfigType, error) {
 	for _, cfg := range c.EventConfiguration {
 		if cfg.GetEngineEventConfiguration().GetTypeName() == typeName && cfg.GetEngineEventConfiguration().GetFieldName() == fieldName {
 			transformedCfg, err := c.transformEventConfig(cfg, extractFn)
