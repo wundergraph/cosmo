@@ -221,7 +221,7 @@ const ProposalsPage: NextPageWithLayout = () => {
                     <TableCell>
                       {latestCheckId ? (
                         <Link
-                          href={`/${router.query.organizationSlug}/${namespace}/graph/${federatedGraphName}/checks/${latestCheckId}`}
+                          href={`/${user?.currentOrganization.slug}/${namespace}/graph/${federatedGraphName}/checks/${latestCheckId}`}
                           onClick={(e) => e.stopPropagation()}
                           className="flex items-center gap-2"
                         >

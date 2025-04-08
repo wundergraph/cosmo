@@ -10,15 +10,17 @@ import {
   TableRow,
   TableWrapper,
 } from "@/components/ui/table";
+import { useUser } from "@/hooks/use-user";
 import {
   CheckCircleIcon,
   ExclamationCircleIcon,
   NoSymbolIcon,
 } from "@heroicons/react/24/outline";
-import { CrossCircledIcon, LightningBoltIcon } from "@radix-ui/react-icons";
+import { CrossCircledIcon } from "@radix-ui/react-icons";
 import { GetCheckSummaryResponse_ProposalSchemaMatch } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
-import React from "react";
+import React, { useContext } from "react";
+import { GraphContext } from "../layout/graph-layout";
 
 export const ProposalMatchesTable = ({
   proposalMatches,
@@ -32,10 +34,8 @@ export const ProposalMatchesTable = ({
   proposalMatch?: string;
 }) => {
   const router = useRouter();
-
-  const organizationSlug = router.query.organizationSlug as string;
-  const namespace = router.query.namespace as string;
-  const slug = router.query.slug as string;
+  const user = useUser();
+  const graphContext = useContext(GraphContext);
 
   if (!proposalMatch && !isProposalsEnabled) {
     return (
@@ -47,7 +47,7 @@ export const ProposalMatchesTable = ({
           <Button
             onClick={() => {
               router.push(
-                `/${organizationSlug}/policies?namespace=${namespace}#proposals`,
+                `/${user?.currentOrganization.slug}/policies?namespace=${graphContext?.graph?.namespace}#proposals`,
               );
             }}
           >
@@ -130,7 +130,7 @@ export const ProposalMatchesTable = ({
                   variant="outline"
                   onClick={() => {
                     router.push(
-                      `/${organizationSlug}/${namespace}/graph/${slug}/proposals/${match.proposalId}`,
+                      `/${user?.currentOrganization.slug}/${graphContext?.graph?.namespace}/graph/${graphContext?.graph?.name}/proposals/${match.proposalId}`,
                     );
                   }}
                 >
