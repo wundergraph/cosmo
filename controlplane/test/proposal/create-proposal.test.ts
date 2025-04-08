@@ -345,6 +345,15 @@ describe('Create proposal tests', () => {
     expect(proposalResponse.proposal?.subgraphs[0].name).toBe(newSubgraphName);
     expect(proposalResponse.proposal?.subgraphs[0].schemaSDL).toBe(newSubgraphSDL);
 
+    const checksResponse = await client.getChecksOfProposal({
+      proposalId: createProposalResponse.proposalId,
+    });
+
+    expect(checksResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(checksResponse.checks.length).toBe(1);
+    expect(checksResponse.checks[0].checkedSubgraphs.length).toBe(1);
+    expect(checksResponse.checks[0].checkedSubgraphs[0].subgraphName).toBe(newSubgraphName);
+
     await server.close();
   });
 

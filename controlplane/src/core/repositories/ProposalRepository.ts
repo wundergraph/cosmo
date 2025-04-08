@@ -561,7 +561,7 @@ export class ProposalRepository {
       );
     }
 
-    const checksList = await this.db
+    const checksListQuery = this.db
       .select({
         id: schema.schemaChecks.id,
         createdAt: schema.schemaChecks.createdAt,
@@ -581,9 +581,17 @@ export class ProposalRepository {
       .from(schema.schemaCheckProposals)
       .innerJoin(schema.schemaChecks, eq(schema.schemaCheckProposals.schemaCheckId, schema.schemaChecks.id))
       .where(whereCondition)
-      .orderBy(desc(schema.schemaCheckProposals.createdAt))
-      .limit(limit)
-      .offset(offset);
+      .orderBy(desc(schema.schemaCheckProposals.createdAt));
+
+    if (limit) {
+      checksListQuery.limit(limit);
+    }
+
+    if (offset) {
+      checksListQuery.offset(offset);
+    }
+
+    const checksList = await checksListQuery;
 
     // Get the total count of checks for this proposal
     const checksCount = await this.db
