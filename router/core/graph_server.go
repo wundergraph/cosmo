@@ -267,13 +267,18 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
 		if s.batchingConfig.Enabled {
 			handler := batch.Handler(
-				s.batchingConfig.MaxEntriesPerBatch,
-				s.batchingConfig.MaxConcurrentRoutines,
-				multiGraphHandler,
-				r.tracerProvider,
-				s.clientHeader,
-				s.baseOtelAttributes,
-				s.baseRouterConfigVersion,
+				batch.HandlerOpts{
+					MaxEntriesPerBatch: s.batchingConfig.MaxEntriesPerBatch,
+					MaxRoutines:        s.batchingConfig.MaxConcurrentRoutines,
+					HandlerSent:        multiGraphHandler,
+					Tracer: r.tracerProvider.Tracer(
+						"wundergraph/cosmo/router/internal/batch",
+						oteltrace.WithInstrumentationVersion("0.0.1"),
+					),
+					ClientHeader:        s.clientHeader,
+					BaseOtelAttributes:  s.baseOtelAttributes,
+					RouterConfigVersion: s.baseRouterConfigVersion,
+				},
 			)
 			cr.Handle(r.graphqlPath, handler)
 		} else {

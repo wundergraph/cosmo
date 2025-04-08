@@ -12,16 +12,17 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/otel/attribute"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	"io"
 	"net/http"
 	"strconv"
 )
 
-func getFirstNonWhitespaceChar(r io.Reader) (*byte, *bufio.Reader, error) {
+const defaultBufioReaderSize = 4096
+
+func getFirstNonWhitespaceChar(r io.Reader, readerSize int) (*byte, *bufio.Reader, error) {
 	// This uses the default buffer of 4 kb
-	bufReader := bufio.NewReaderSize(r, 16)
+	bufReader := bufio.NewReaderSize(r, readerSize)
 
 	for {
 		peeked, err := bufReader.Peek(1)
@@ -48,21 +49,19 @@ func getFirstNonWhitespaceChar(r io.Reader) (*byte, *bufio.Reader, error) {
 	}
 }
 
-func Handler(
-	maxEntriesPerBatch, maxRoutines int,
-	handlerSent http.Handler,
-	tracerProvider *sdktrace.TracerProvider,
-	clientHeader config.ClientHeader,
-	baseOtelAttributes []attribute.KeyValue,
-	routerConfigVersion string,
-) http.Handler {
-	tracer := tracerProvider.Tracer(
-		"wundergraph/cosmo/router/internal/batch",
-		trace.WithInstrumentationVersion("0.0.1"),
-	)
+type HandlerOpts struct {
+	MaxEntriesPerBatch  int
+	MaxRoutines         int
+	HandlerSent         http.Handler
+	Tracer              trace.Tracer
+	ClientHeader        config.ClientHeader
+	BaseOtelAttributes  []attribute.KeyValue
+	RouterConfigVersion string
+}
 
+func Handler(handlerOpts HandlerOpts) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		firstChar, bufReader, err := getFirstNonWhitespaceChar(r.Body)
+		firstChar, bufReader, err := getFirstNonWhitespaceChar(r.Body, defaultBufioReaderSize)
 		if err != nil {
 			http.Error(w, "failed to read request", http.StatusBadRequest)
 			return
@@ -74,7 +73,7 @@ func Handler(
 			// if firstChar is nil we have downstream handle it
 			// which is the current behaviour
 			r.Body = io.NopCloser(bufReader)
-			handlerSent.ServeHTTP(w, r)
+			handlerOpts.HandlerSent.ServeHTTP(w, r)
 			return
 		}
 
@@ -94,10 +93,10 @@ func Handler(
 
 		batchOperationsLength := len(batchOperations)
 
-		addTracing(r, bodyBytes, clientHeader, batchOperationsLength, baseOtelAttributes, routerConfigVersion)
+		addTracing(r, bodyBytes, handlerOpts.ClientHeader, batchOperationsLength, handlerOpts.BaseOtelAttributes, handlerOpts.RouterConfigVersion)
 
 		// When a max batch limit has been specified
-		if batchOperationsLength > maxEntriesPerBatch {
+		if batchOperationsLength > handlerOpts.MaxEntriesPerBatch {
 			http.Error(w, "unable to process request", http.StatusBadRequest)
 			return
 		}
@@ -108,7 +107,7 @@ func Handler(
 		// We have a batched request.
 		responses := make([]json.RawMessage, batchOperationsLength)
 
-		sem := make(chan struct{}, maxRoutines)
+		sem := make(chan struct{}, handlerOpts.MaxRoutines)
 		// Process each operation in parallel.
 		for i, singleOp := range batchOperations {
 			// print the pointer value of the above
@@ -119,7 +118,7 @@ func Handler(
 					<-sem
 				}()
 
-				spanCtx, span := tracer.Start(
+				spanCtx, span := handlerOpts.Tracer.Start(
 					r.Context(), fmt.Sprintf("batch-operation-%d", i),
 				)
 
@@ -135,7 +134,7 @@ func Handler(
 				// Create a ResponseWriter that captures the output.
 				rw := newBufferingResponseWriter()
 				// Execute the mux handler for this operation.
-				handlerSent.ServeHTTP(rw, rCopy)
+				handlerOpts.HandlerSent.ServeHTTP(rw, rCopy)
 
 				// Store the response (assuming the response is valid JSON).
 				responses[i] = rw.Body.Bytes()
@@ -143,11 +142,10 @@ func Handler(
 		}
 
 		// Wait for all operations to be completed by blocking.
-		for n := maxRoutines; n > 0; n-- {
+		for n := handlerOpts.MaxRoutines; n > 0; n-- {
 			sem <- struct{}{}
 		}
 
-		// TODO: Check if we actually need to manually drain this, is it GCd?
 		// Drain and close the semaphore.
 		for len(sem) > 0 {
 			<-sem
