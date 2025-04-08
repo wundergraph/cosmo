@@ -29,9 +29,8 @@ import (
 type Loader struct {
 	resolver FactoryResolver
 	// includeInfo controls whether additional information like type usage and field usage is included in the plan de
-	includeInfo  bool
-	logger       *zap.Logger
-	instanceData InstanceData
+	includeInfo bool
+	logger      *zap.Logger
 }
 
 type InstanceData struct {
