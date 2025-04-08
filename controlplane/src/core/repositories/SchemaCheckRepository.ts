@@ -3,7 +3,6 @@ import { buildASTSchema } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   CheckOperationUsageStats,
-  CheckOperationUsageStatsofSubgraph,
   CompositionError,
   CompositionWarning,
   GraphPruningIssue,
@@ -567,7 +566,6 @@ export class SchemaCheckRepository {
     const inspectedOperations: InspectorOperationResult[] = [];
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
-    const operationUsageStats: CheckOperationUsageStatsofSubgraph[] = [];
 
     const federatedGraphs: FederatedGraphDTO[] = [];
     const checkSubgraphs: Map<string, CheckSubgraph> = new Map();
@@ -957,15 +955,6 @@ export class SchemaCheckRepository {
         for (const resultElement of overrideCheck.result.values()) {
           inspectedOperations.push(...resultElement);
         }
-
-        operationUsageStats.push(
-          new CheckOperationUsageStatsofSubgraph({
-            operationUsageStats: new CheckOperationUsageStats({
-              ...collectOperationUsageStats(inspectedOperations),
-            }),
-            subgraphName,
-          }),
-        );
       }
     }
 
@@ -991,7 +980,7 @@ export class SchemaCheckRepository {
       graphPruneWarnings,
       graphPruneErrors,
       compositionWarnings,
-      operationUsageStats,
+      operationUsageStats: collectOperationUsageStats(inspectedOperations),
       proposalMatchMessage,
     };
   }

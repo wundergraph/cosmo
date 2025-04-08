@@ -198,15 +198,17 @@ export default (opts: BaseCommandOptions) => {
       },
     );
 
+    spinner.stop();
+
     const result = handleProposalResult(resp, name, true);
 
     if (result.success) {
       if (result.message) {
-        spinner.succeed(result.message);
+        console.log(result.message);
       }
     } else {
       if (result.message) {
-        spinner.fail(result.message);
+       console.error(result.message);
       }
       process.exitCode = 1;
     }

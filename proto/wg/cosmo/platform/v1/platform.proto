@@ -2498,11 +2498,6 @@ message CheckSubgraphSchemasRequest {
   optional VCSContext vcsContext = 4;
 }
 
-message CheckOperationUsageStatsofSubgraph {
-  CheckOperationUsageStats operationUsageStats = 1;
-  string subgraphName = 2;
-}
-
 message CheckSubgraphSchemasResponse {
   Response response = 1;
   string checkId = 2;
@@ -2514,7 +2509,7 @@ message CheckSubgraphSchemasResponse {
   repeated LintIssue lintWarnings = 8;
   repeated GraphPruningIssue graphPruneErrors = 9;
   repeated GraphPruningIssue graphPruneWarnings = 10;
-  repeated CheckOperationUsageStatsofSubgraph operationUsageStats = 11;
+  CheckOperationUsageStats operationUsageStats = 11;
   bool lintingSkipped = 12;
   bool graphPruningSkipped = 13;
   string checkUrl = 14;
@@ -2572,7 +2567,7 @@ message CreateProposalResponse {
   repeated LintIssue lintWarnings = 9;
   repeated GraphPruningIssue graphPruneErrors = 10;
   repeated GraphPruningIssue graphPruneWarnings = 11;
-  repeated CheckOperationUsageStatsofSubgraph operationUsageStats = 12;
+  CheckOperationUsageStats operationUsageStats = 12;
   bool lintingSkipped = 13;
   bool graphPruningSkipped = 14;
   string checkUrl = 15;
@@ -2646,7 +2641,7 @@ message UpdateProposalResponse {
   repeated LintIssue lintWarnings = 8;
   repeated GraphPruningIssue graphPruneErrors = 9;
   repeated GraphPruningIssue graphPruneWarnings = 10;
-  repeated CheckOperationUsageStatsofSubgraph operationUsageStats = 11;
+  CheckOperationUsageStats operationUsageStats = 11;
   bool lintingSkipped = 12;
   bool graphPruningSkipped = 13;
   string checkUrl = 14;

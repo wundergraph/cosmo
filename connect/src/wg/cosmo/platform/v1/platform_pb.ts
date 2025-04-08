@@ -19712,49 +19712,6 @@ export class CheckSubgraphSchemasRequest extends Message<CheckSubgraphSchemasReq
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.CheckOperationUsageStatsofSubgraph
- */
-export class CheckOperationUsageStatsofSubgraph extends Message<CheckOperationUsageStatsofSubgraph> {
-  /**
-   * @generated from field: wg.cosmo.platform.v1.CheckOperationUsageStats operationUsageStats = 1;
-   */
-  operationUsageStats?: CheckOperationUsageStats;
-
-  /**
-   * @generated from field: string subgraphName = 2;
-   */
-  subgraphName = "";
-
-  constructor(data?: PartialMessage<CheckOperationUsageStatsofSubgraph>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.CheckOperationUsageStatsofSubgraph";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "operationUsageStats", kind: "message", T: CheckOperationUsageStats },
-    { no: 2, name: "subgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckOperationUsageStatsofSubgraph {
-    return new CheckOperationUsageStatsofSubgraph().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CheckOperationUsageStatsofSubgraph {
-    return new CheckOperationUsageStatsofSubgraph().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CheckOperationUsageStatsofSubgraph {
-    return new CheckOperationUsageStatsofSubgraph().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: CheckOperationUsageStatsofSubgraph | PlainMessage<CheckOperationUsageStatsofSubgraph> | undefined, b: CheckOperationUsageStatsofSubgraph | PlainMessage<CheckOperationUsageStatsofSubgraph> | undefined): boolean {
-    return proto3.util.equals(CheckOperationUsageStatsofSubgraph, a, b);
-  }
-}
-
-/**
  * @generated from message wg.cosmo.platform.v1.CheckSubgraphSchemasResponse
  */
 export class CheckSubgraphSchemasResponse extends Message<CheckSubgraphSchemasResponse> {
@@ -19809,9 +19766,9 @@ export class CheckSubgraphSchemasResponse extends Message<CheckSubgraphSchemasRe
   graphPruneWarnings: GraphPruningIssue[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.CheckOperationUsageStatsofSubgraph operationUsageStats = 11;
+   * @generated from field: wg.cosmo.platform.v1.CheckOperationUsageStats operationUsageStats = 11;
    */
-  operationUsageStats: CheckOperationUsageStatsofSubgraph[] = [];
+  operationUsageStats?: CheckOperationUsageStats;
 
   /**
    * @generated from field: bool lintingSkipped = 12;
@@ -19851,7 +19808,7 @@ export class CheckSubgraphSchemasResponse extends Message<CheckSubgraphSchemasRe
     { no: 8, name: "lintWarnings", kind: "message", T: LintIssue, repeated: true },
     { no: 9, name: "graphPruneErrors", kind: "message", T: GraphPruningIssue, repeated: true },
     { no: 10, name: "graphPruneWarnings", kind: "message", T: GraphPruningIssue, repeated: true },
-    { no: 11, name: "operationUsageStats", kind: "message", T: CheckOperationUsageStatsofSubgraph, repeated: true },
+    { no: 11, name: "operationUsageStats", kind: "message", T: CheckOperationUsageStats },
     { no: 12, name: "lintingSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 13, name: "graphPruningSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 14, name: "checkUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -20234,9 +20191,9 @@ export class CreateProposalResponse extends Message<CreateProposalResponse> {
   graphPruneWarnings: GraphPruningIssue[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.CheckOperationUsageStatsofSubgraph operationUsageStats = 12;
+   * @generated from field: wg.cosmo.platform.v1.CheckOperationUsageStats operationUsageStats = 12;
    */
-  operationUsageStats: CheckOperationUsageStatsofSubgraph[] = [];
+  operationUsageStats?: CheckOperationUsageStats;
 
   /**
    * @generated from field: bool lintingSkipped = 13;
@@ -20272,7 +20229,7 @@ export class CreateProposalResponse extends Message<CreateProposalResponse> {
     { no: 9, name: "lintWarnings", kind: "message", T: LintIssue, repeated: true },
     { no: 10, name: "graphPruneErrors", kind: "message", T: GraphPruningIssue, repeated: true },
     { no: 11, name: "graphPruneWarnings", kind: "message", T: GraphPruningIssue, repeated: true },
-    { no: 12, name: "operationUsageStats", kind: "message", T: CheckOperationUsageStatsofSubgraph, repeated: true },
+    { no: 12, name: "operationUsageStats", kind: "message", T: CheckOperationUsageStats },
     { no: 13, name: "lintingSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 14, name: "graphPruningSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 15, name: "checkUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -20810,9 +20767,9 @@ export class UpdateProposalResponse extends Message<UpdateProposalResponse> {
   graphPruneWarnings: GraphPruningIssue[] = [];
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.CheckOperationUsageStatsofSubgraph operationUsageStats = 11;
+   * @generated from field: wg.cosmo.platform.v1.CheckOperationUsageStats operationUsageStats = 11;
    */
-  operationUsageStats: CheckOperationUsageStatsofSubgraph[] = [];
+  operationUsageStats?: CheckOperationUsageStats;
 
   /**
    * @generated from field: bool lintingSkipped = 12;
@@ -20847,7 +20804,7 @@ export class UpdateProposalResponse extends Message<UpdateProposalResponse> {
     { no: 8, name: "lintWarnings", kind: "message", T: LintIssue, repeated: true },
     { no: 9, name: "graphPruneErrors", kind: "message", T: GraphPruningIssue, repeated: true },
     { no: 10, name: "graphPruneWarnings", kind: "message", T: GraphPruningIssue, repeated: true },
-    { no: 11, name: "operationUsageStats", kind: "message", T: CheckOperationUsageStatsofSubgraph, repeated: true },
+    { no: 11, name: "operationUsageStats", kind: "message", T: CheckOperationUsageStats },
     { no: 12, name: "lintingSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 13, name: "graphPruningSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 14, name: "checkUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },

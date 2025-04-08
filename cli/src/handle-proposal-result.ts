@@ -106,56 +106,44 @@ export const handleProposalResult = (
 
   // No operations usage stats mean the check was not performed against any live traffic
   if (resp.operationUsageStats) {
-    for (const { operationUsageStats, subgraphName } of resp.operationUsageStats) {
-      if (!operationUsageStats) {
-        continue;
-      }
+    if (resp.operationUsageStats.totalOperations === 0) {
+      // Composition errors are still considered failures, otherwise we can consider this a success
+      // because no operations were affected by the change
+      success =
+        resp.compositionErrors.length === 0 && resp.lintErrors.length === 0 && resp.graphPruneErrors.length === 0;
+      console.log(`No operations were affected by this schema change.`);
+      finalStatement = `This schema change didn't affect any operations from existing client traffic.`;
+    } else if (resp.operationUsageStats.totalOperations === resp.operationUsageStats.safeOperations) {
+      // This is also a success because changes to these operations were marked as safe
+      success =
+        resp.compositionErrors.length === 0 && resp.lintErrors.length === 0 && resp.graphPruneErrors.length === 0;
+      console.log(`${resp.operationUsageStats.totalOperations} operations were considered safe due to overrides.`);
+      finalStatement = `This schema change affected operations with safe overrides.`;
+    } else {
+      // Composition and breaking errors are considered failures because operations were affected by the change
+      success =
+        resp.breakingChanges.length === 0 &&
+        resp.compositionErrors.length === 0 &&
+        resp.lintErrors.length === 0 &&
+        resp.graphPruneErrors.length === 0;
 
-      if (operationUsageStats.totalOperations === 0) {
-        // Composition errors are still considered failures, otherwise we can consider this a success
-        // because no operations were affected by the change
-        success =
-          resp.compositionErrors.length === 0 && resp.lintErrors.length === 0 && resp.graphPruneErrors.length === 0;
-        console.log(`No operations were affected by ${pc.bold(subgraphName)}'s schema change.`);
-        finalStatement += `${pc.bold(subgraphName)}'s schema change didn't affect any operations from existing client traffic.`;
-      } else if (operationUsageStats.totalOperations === operationUsageStats.safeOperations) {
-        // This is also a success because changes to these operations were marked as safe
-        success =
-          resp.compositionErrors.length === 0 && resp.lintErrors.length === 0 && resp.graphPruneErrors.length === 0;
-        console.log(`${operationUsageStats.totalOperations} operations were considered safe due to overrides.`);
-        finalStatement += `${pc.bold(subgraphName)}'s schema change affected operations with safe overrides.`;
-      } else {
-        // Composition and breaking errors are considered failures because operations were affected by the change
-        success =
-          resp.breakingChanges.length === 0 &&
-          resp.compositionErrors.length === 0 &&
-          resp.lintErrors.length === 0 &&
-          resp.graphPruneErrors.length === 0;
+      const { breakingChanges, operationUsageStats } = resp;
+      const { totalOperations, safeOperations, firstSeenAt, lastSeenAt } = operationUsageStats;
 
-        const { breakingChanges } = resp;
-        const { totalOperations, safeOperations, firstSeenAt, lastSeenAt } = operationUsageStats;
+      if (breakingChanges.length > 0) {
+        const warningMessage = [logSymbols.warning, ` Found ${pc.bold(breakingChanges.length)} breaking changes.`];
 
-        if (breakingChanges.length > 0) {
-          const warningMessage = [logSymbols.warning, ` Found ${pc.bold(breakingChanges.length)} breaking changes.`];
-
-          if (totalOperations > 0) {
-            warningMessage.push(`${pc.bold(totalOperations - safeOperations)} operations impacted.`);
-          }
-
-          if (safeOperations > 0) {
-            warningMessage.push(`In addition, ${safeOperations} operations marked safe due to overrides.`);
-          }
-
-          warningMessage.push(
-            `\nFound client activity between ${pc.underline(
-              new Date(firstSeenAt).toLocaleString(),
-            )} and ${pc.underline(new Date(lastSeenAt).toLocaleString())}.`,
-          );
-
-          console.log(warningMessage.join(''));
-
-          finalStatement += `${pc.bold(subgraphName)}'s schema has encountered ${pc.bold(`${breakingChanges.length}`)} breaking changes that would break operations from existing client traffic.`;
+        if (totalOperations > 0) {
+          warningMessage.push(`${pc.bold(totalOperations - safeOperations)} operations impacted.`);
         }
+
+        if (safeOperations > 0) {
+          warningMessage.push(`In addition, ${safeOperations} operations marked safe due to overrides.`);
+        }
+
+        console.log(warningMessage.join(''));
+
+        finalStatement = `This check has encountered ${pc.bold(`${breakingChanges.length}`)} breaking changes that would break operations from existing client traffic.`;
       }
     }
   }
