@@ -208,7 +208,7 @@ export default (opts: BaseCommandOptions) => {
       }
     } else {
       if (result.message) {
-       console.error(result.message);
+        console.error(result.message);
       }
       process.exitCode = 1;
     }
