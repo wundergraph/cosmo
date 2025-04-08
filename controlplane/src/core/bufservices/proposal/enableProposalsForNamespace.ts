@@ -63,8 +63,8 @@ export function enableProposalsForNamespace(
     if (req.enableProposals) {
       await proposalRepo.configureProposalConfig({
         namespaceId: namespace.id,
-        checkSeverityLevel: 'warn',
-        publishSeverityLevel: 'warn',
+        checkSeverityLevel: 'error',
+        publishSeverityLevel: 'error',
       });
     } else {
       await proposalRepo.deleteProposalConfig({ namespaceId: namespace.id });

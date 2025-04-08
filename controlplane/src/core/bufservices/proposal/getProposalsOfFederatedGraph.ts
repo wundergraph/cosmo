@@ -11,6 +11,7 @@ import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 
 export function getProposalsOfFederatedGraph(
   opts: RouterOptions,
@@ -26,6 +27,32 @@ export function getProposalsOfFederatedGraph(
     const federatedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const proposalRepo = new ProposalRepository(opts.db);
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+    const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+
+    req.namespace = req.namespace || DefaultNamespace;
+
+    const namespace = await namespaceRepo.byName(req.namespace);
+    if (!namespace) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Namespace ${req.namespace} not found`,
+        },
+        proposals: [],
+        isProposalsEnabled: false,
+      };
+    }
+
+    if (!namespace.enableProposals) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Proposals are not enabled for namespace ${req.namespace}`,
+        },
+        proposals: [],
+        isProposalsEnabled: false,
+      };
+    }
 
     const federatedGraph = await federatedGraphRepo.byName(req.federatedGraphName, req.namespace);
     if (!federatedGraph) {
@@ -35,6 +62,7 @@ export function getProposalsOfFederatedGraph(
           details: `Federated graph ${req.federatedGraphName} not found`,
         },
         proposals: [],
+        isProposalsEnabled: namespace.enableProposals,
       };
     }
 
@@ -58,6 +86,7 @@ export function getProposalsOfFederatedGraph(
           details: 'Invalid date range',
         },
         proposals: [],
+        isProposalsEnabled: namespace.enableProposals,
       };
     }
 
@@ -69,6 +98,7 @@ export function getProposalsOfFederatedGraph(
           details: 'Invalid limit',
         },
         proposals: [],
+        isProposalsEnabled: namespace.enableProposals,
       };
     }
 
@@ -117,6 +147,7 @@ export function getProposalsOfFederatedGraph(
             latestCheckId: proposal.latestCheckId,
           }),
       ),
+      isProposalsEnabled: true,
     };
   });
 }

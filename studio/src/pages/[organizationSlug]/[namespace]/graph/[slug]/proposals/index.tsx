@@ -29,15 +29,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useFeature } from "@/hooks/use-feature";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
+import { useUser } from "@/hooks/use-user";
 import { formatDateTime } from "@/lib/format-date";
 import { createDateRange } from "@/lib/insights-helpers";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
-import {
-  ExclamationTriangleIcon
-} from "@heroicons/react/24/outline";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getProposalsOfFederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { formatDistanceToNow, formatISO } from "date-fns";
@@ -46,6 +47,8 @@ import { useRouter } from "next/router";
 
 const ProposalsPage: NextPageWithLayout = () => {
   const router = useRouter();
+  const user = useUser();
+  const proposalsFeature = useFeature("proposals");
   const federatedGraphName = router.query.slug as string;
   const namespace = router.query.namespace as string;
   const pageNumber = router.query.page
@@ -74,10 +77,51 @@ const ProposalsPage: NextPageWithLayout = () => {
     },
     {
       placeholderData: (prev) => prev,
+      enabled: proposalsFeature?.enabled,
     },
   );
 
+  if (!proposalsFeature?.enabled) {
+    return (
+      <EmptyState
+        icon={<InfoCircledIcon className="h-12 w-12" />}
+        title="Proposals are not available"
+        description="Please upgrade to the enterprise plan to use the proposals."
+        actions={
+          <Button
+            onClick={() => {
+              router.push(`/${user?.currentOrganization.slug}/billing`);
+            }}
+          >
+            Upgrade
+          </Button>
+        }
+      />
+    );
+  }
+
   if (isLoading) return <Loader fullscreen />;
+
+  if (!data?.isProposalsEnabled) {
+    return (
+      <EmptyState
+        icon={<InfoCircledIcon className="h-12 w-12" />}
+        title="Proposals are not enabled"
+        description="Enable proposals to create and manage schema change proposals."
+        actions={
+          <Button
+            onClick={() => {
+              router.push(
+                `/${user?.currentOrganization.slug}/policies?namespace=${router.query.namespace}#proposals`,
+              );
+            }}
+          >
+            Configure Proposals
+          </Button>
+        }
+      />
+    );
+  }
 
   if (!data || error || data?.response?.code !== EnumStatusCode.OK)
     return (

@@ -20505,6 +20505,11 @@ export class GetProposalsOfFederatedGraphResponse extends Message<GetProposalsOf
    */
   proposals: Proposal[] = [];
 
+  /**
+   * @generated from field: bool isProposalsEnabled = 3;
+   */
+  isProposalsEnabled = false;
+
   constructor(data?: PartialMessage<GetProposalsOfFederatedGraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -20515,6 +20520,7 @@ export class GetProposalsOfFederatedGraphResponse extends Message<GetProposalsOf
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "proposals", kind: "message", T: Proposal, repeated: true },
+    { no: 3, name: "isProposalsEnabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetProposalsOfFederatedGraphResponse {

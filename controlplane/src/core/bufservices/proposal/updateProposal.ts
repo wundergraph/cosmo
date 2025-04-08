@@ -95,6 +95,28 @@ export function updateProposal(
       };
     }
 
+    if (!namespace.enableProposals) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Proposals are not enabled for namespace ${req.namespace}`,
+        },
+        breakingChanges: [],
+        nonBreakingChanges: [],
+        compositionErrors: [],
+        checkId: '',
+        lintWarnings: [],
+        lintErrors: [],
+        graphPruneWarnings: [],
+        graphPruneErrors: [],
+        compositionWarnings: [],
+        operationUsageStats: [],
+        lintingSkipped: false,
+        graphPruningSkipped: false,
+        checkUrl: '',
+      };
+    }
+
     const federatedGraph = await federatedGraphRepo.byName(req.federatedGraphName, req.namespace);
     if (!federatedGraph) {
       return {
@@ -158,10 +180,10 @@ export function updateProposal(
           stateValue === 'APPROVED'
             ? 'proposal.approved'
             : stateValue === 'PUBLISHED'
-            ? 'proposal.published'
-            : stateValue === 'CLOSED'
-            ? 'proposal.closed'
-            : 'proposal.updated',
+              ? 'proposal.published'
+              : stateValue === 'CLOSED'
+                ? 'proposal.closed'
+                : 'proposal.updated',
         action: 'updated',
         actorId: authContext.userId,
         auditableType: 'proposal',

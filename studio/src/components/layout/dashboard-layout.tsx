@@ -171,11 +171,6 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         title: "Cache Warmer",
         href: basePath + "/cache-warmer",
         icon: <FaGripfire className="h-4 w-4" />,
-      },
-      {
-        title: "Proposals Config",
-        href: basePath + "/proposal-config",
-        icon: <DocumentPlusIcon className="h-4 w-4" />,
         separator: true,
       },
       {

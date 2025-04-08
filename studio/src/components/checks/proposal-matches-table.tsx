@@ -47,7 +47,7 @@ export const ProposalMatchesTable = ({
           <Button
             onClick={() => {
               router.push(
-                `/${organizationSlug}/${namespace}/graph/${slug}/proposals/config`,
+                `/${organizationSlug}/policies?namespace=${namespace}#proposals`,
               );
             }}
           >

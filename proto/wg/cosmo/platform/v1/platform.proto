@@ -2605,6 +2605,7 @@ message GetProposalsOfFederatedGraphRequest {
 message GetProposalsOfFederatedGraphResponse {
   Response response = 1;
   repeated Proposal proposals = 2;
+  bool isProposalsEnabled = 3;
 }
 
 message GetChecksOfProposalRequest {
