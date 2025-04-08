@@ -210,6 +210,28 @@ export function updateProposal(
         checkUrl: '',
       };
     } else if (req.updateAction.case === 'updatedSubgraphs') {
+      if (proposal.proposal.state !== 'DRAFT') {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: `Proposal is in ${proposal.proposal.state} state, cannot update subgraphs`,
+          },
+          breakingChanges: [],
+          nonBreakingChanges: [],
+          compositionErrors: [],
+          checkId: '',
+          lintWarnings: [],
+          lintErrors: [],
+          graphPruneWarnings: [],
+          graphPruneErrors: [],
+          compositionWarnings: [],
+          operationUsageStats: [],
+          lintingSkipped: false,
+          graphPruningSkipped: false,
+          checkUrl: '',
+        };
+      }
+
       const subgraphsOfFedGraph = await subgraphRepo.listByFederatedGraph({
         federatedGraphTargetId: federatedGraph.targetId,
       });

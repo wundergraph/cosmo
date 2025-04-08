@@ -683,6 +683,405 @@ describe('Update proposal tests', () => {
     await server.close();
   });
 
+  test('should only allow updating proposal subgraphs when proposal is in DRAFT state', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+    });
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Setup a federated graph with a single subgraph
+    const subgraphName = genID('subgraph1');
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName = genID('proposal');
+
+    const subgraphSchemaSDL = `
+      type Query {
+        hello: String!
+      }
+    `;
+
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Create a proposal with a schema change to the subgraph
+    const initialUpdatedSubgraphSDL = `
+      type Query {
+        hello: String!
+        newField: Int!
+      }
+    `;
+
+    const createProposalResponse = await createTestProposal(client, {
+      federatedGraphName: fedGraphName,
+      proposalName,
+      subgraphName,
+      subgraphSchemaSDL,
+      updatedSubgraphSDL: initialUpdatedSubgraphSDL,
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Verify the proposal is in DRAFT state initially
+    let getProposalResponse = await client.getProposal({
+      proposalId: createProposalResponse.proposalId,
+    });
+    expect(getProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getProposalResponse.proposal?.state).toBe('DRAFT');
+
+    // Update subgraph schema in DRAFT state - should succeed
+    const updatedSubgraphSDL = `
+      type Query {
+        hello: String!
+        newField: Int!
+        anotherField: Boolean!
+      }
+    `;
+
+    let updateProposalResponse = await client.updateProposal({
+      proposalName,
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      updateAction: {
+        case: 'updatedSubgraphs',
+        value: {
+          subgraphs: [
+            {
+              name: subgraphName,
+              schemaSDL: updatedSubgraphSDL,
+              isDeleted: false,
+              isNew: false,
+              labels: [],
+            },
+          ],
+        },
+      },
+    });
+
+    expect(updateProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Verify the schema update was successful
+    getProposalResponse = await client.getProposal({
+      proposalId: createProposalResponse.proposalId,
+    });
+    expect(getProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getProposalResponse.proposal?.subgraphs[0].schemaSDL).toBe(updatedSubgraphSDL);
+
+    // Change proposal state to APPROVED
+    await client.updateProposal({
+      proposalName,
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      updateAction: {
+        case: 'state',
+        value: 'APPROVED',
+      },
+    });
+
+    // Verify the proposal state was updated
+    getProposalResponse = await client.getProposal({
+      proposalId: createProposalResponse.proposalId,
+    });
+    expect(getProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getProposalResponse.proposal?.state).toBe('APPROVED');
+
+    // Try to update subgraph schema when proposal is in APPROVED state - should fail
+    const furtherUpdatedSubgraphSDL = `
+      type Query {
+        hello: String!
+        newField: Int!
+        anotherField: Boolean!
+        yetAnotherField: Float!
+      }
+    `;
+
+    updateProposalResponse = await client.updateProposal({
+      proposalName,
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      updateAction: {
+        case: 'updatedSubgraphs',
+        value: {
+          subgraphs: [
+            {
+              name: subgraphName,
+              schemaSDL: furtherUpdatedSubgraphSDL,
+              isDeleted: false,
+              isNew: false,
+              labels: [],
+            },
+          ],
+        },
+      },
+    });
+
+    // Expect an error response indicating the proposal cannot be updated
+    expect(updateProposalResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(updateProposalResponse.response?.details).toContain(
+      'Proposal is in APPROVED state, cannot update subgraphs',
+    );
+
+    // Verify the schema was not updated
+    getProposalResponse = await client.getProposal({
+      proposalId: createProposalResponse.proposalId,
+    });
+    expect(getProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getProposalResponse.proposal?.subgraphs[0].schemaSDL).toBe(updatedSubgraphSDL);
+    expect(getProposalResponse.proposal?.subgraphs[0].schemaSDL).not.toBe(furtherUpdatedSubgraphSDL);
+
+    await server.close();
+  });
+
+  test('should not allow updating proposal subgraphs when proposal is in PUBLISHED state', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+    });
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Setup a federated graph with a single subgraph
+    const subgraphName = genID('subgraph1');
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName = genID('proposal');
+
+    const subgraphSchemaSDL = `
+      type Query {
+        hello: String!
+      }
+    `;
+
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Create a proposal with a schema change to the subgraph
+    const updatedSubgraphSDL = `
+      type Query {
+        hello: String!
+        newField: Int!
+      }
+    `;
+
+    const createProposalResponse = await createTestProposal(client, {
+      federatedGraphName: fedGraphName,
+      proposalName,
+      subgraphName,
+      subgraphSchemaSDL,
+      updatedSubgraphSDL,
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Approve the proposal
+    await client.updateProposal({
+      proposalName,
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      updateAction: {
+        case: 'state',
+        value: 'APPROVED',
+      },
+    });
+
+    // Publish the subgraph schema to transition proposal to PUBLISHED state
+    await client.publishFederatedSubgraph({
+      name: subgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      schema: updatedSubgraphSDL,
+    });
+
+    // Verify the proposal is now in PUBLISHED state
+    let getProposalResponse = await client.getProposal({
+      proposalId: createProposalResponse.proposalId,
+    });
+    expect(getProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getProposalResponse.proposal?.state).toBe('PUBLISHED');
+
+    // Try to update subgraph schema when proposal is in PUBLISHED state - should fail
+    const furtherUpdatedSubgraphSDL = `
+      type Query {
+        hello: String!
+        newField: Int!
+        anotherField: Boolean!
+      }
+    `;
+
+    const updateProposalResponse = await client.updateProposal({
+      proposalName,
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      updateAction: {
+        case: 'updatedSubgraphs',
+        value: {
+          subgraphs: [
+            {
+              name: subgraphName,
+              schemaSDL: furtherUpdatedSubgraphSDL,
+              isDeleted: false,
+              isNew: false,
+              labels: [],
+            },
+          ],
+        },
+      },
+    });
+
+    // Expect an error response indicating the proposal cannot be updated
+    expect(updateProposalResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(updateProposalResponse.response?.details).toContain(
+      'Proposal is in PUBLISHED state, cannot update subgraphs',
+    );
+
+    // Verify the schema was not updated
+    getProposalResponse = await client.getProposal({
+      proposalId: createProposalResponse.proposalId,
+    });
+    expect(getProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getProposalResponse.proposal?.subgraphs[0].schemaSDL).toBe(updatedSubgraphSDL);
+    expect(getProposalResponse.proposal?.subgraphs[0].schemaSDL).not.toBe(furtherUpdatedSubgraphSDL);
+
+    await server.close();
+  });
+
+  test('should not allow updating proposal subgraphs when proposal is in CLOSED state', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+    });
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Setup a federated graph with a single subgraph
+    const subgraphName = genID('subgraph1');
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName = genID('proposal');
+
+    const subgraphSchemaSDL = `
+      type Query {
+        hello: String!
+      }
+    `;
+
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Create a proposal with a schema change to the subgraph
+    const updatedSubgraphSDL = `
+      type Query {
+        hello: String!
+        newField: Int!
+      }
+    `;
+
+    const createProposalResponse = await createTestProposal(client, {
+      federatedGraphName: fedGraphName,
+      proposalName,
+      subgraphName,
+      subgraphSchemaSDL,
+      updatedSubgraphSDL,
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Close the proposal
+    await client.updateProposal({
+      proposalName,
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      updateAction: {
+        case: 'state',
+        value: 'CLOSED',
+      },
+    });
+
+    // Verify the proposal is now in CLOSED state
+    let getProposalResponse = await client.getProposal({
+      proposalId: createProposalResponse.proposalId,
+    });
+    expect(getProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getProposalResponse.proposal?.state).toBe('CLOSED');
+
+    // Try to update subgraph schema when proposal is in CLOSED state - should fail
+    const furtherUpdatedSubgraphSDL = `
+      type Query {
+        hello: String!
+        newField: Int!
+        anotherField: Boolean!
+      }
+    `;
+
+    const updateProposalResponse = await client.updateProposal({
+      proposalName,
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      updateAction: {
+        case: 'updatedSubgraphs',
+        value: {
+          subgraphs: [
+            {
+              name: subgraphName,
+              schemaSDL: furtherUpdatedSubgraphSDL,
+              isDeleted: false,
+              isNew: false,
+              labels: [],
+            },
+          ],
+        },
+      },
+    });
+
+    // Expect an error response indicating the proposal cannot be updated
+    expect(updateProposalResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(updateProposalResponse.response?.details).toContain('Proposal is in CLOSED state, cannot update subgraphs');
+
+    // Verify the schema was not updated
+    getProposalResponse = await client.getProposal({
+      proposalId: createProposalResponse.proposalId,
+    });
+    expect(getProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getProposalResponse.proposal?.subgraphs[0].schemaSDL).toBe(updatedSubgraphSDL);
+    expect(getProposalResponse.proposal?.subgraphs[0].schemaSDL).not.toBe(furtherUpdatedSubgraphSDL);
+
+    await server.close();
+  });
+
   test('should fetch proposal checks after updating a proposal', async () => {
     const { client, server } = await SetupTest({
       dbname,
