@@ -11,6 +11,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"io"
@@ -20,34 +21,10 @@ import (
 
 const defaultBufioReaderSize = 4096
 
-func getFirstNonWhitespaceChar(r io.Reader, readerSize int) (*byte, *bufio.Reader, error) {
-	// This uses the default buffer of 4 kb
-	bufReader := bufio.NewReaderSize(r, readerSize)
-
-	for {
-		peeked, err := bufReader.Peek(1)
-		if err != nil {
-			if err == io.EOF {
-				return nil, bufReader, nil
-			}
-			return nil, nil, err
-		}
-
-		if len(peeked) == 0 {
-			return nil, bufReader, nil
-		}
-		peekByte := peeked[0]
-		switch peekByte {
-		// we check the characters based on this RFC https://datatracker.ietf.org/doc/html/rfc8259
-		// and also the array decode function in goccy/go-json (which is the library we used to decode)
-		case ' ', '\n', '\t', '\r':
-			bufReader.ReadByte()
-			continue
-		default:
-			return &peekByte, bufReader, nil
-		}
-	}
-}
+const (
+	ExtensionCodeBatchSizeExceeded        = "BATCH_LIMIT_EXCEEDED"
+	ExtensionQueriesOnlyAllowedInBatching = "QUERIES_ONLY_ALLOWED_IN_BATCHING"
+)
 
 type HandlerOpts struct {
 	MaxEntriesPerBatch  int
@@ -57,6 +34,8 @@ type HandlerOpts struct {
 	ClientHeader        config.ClientHeader
 	BaseOtelAttributes  []attribute.KeyValue
 	RouterConfigVersion string
+	Digest              *xxhash.Digest
+	OmitExtensions      bool
 }
 
 func Handler(handlerOpts HandlerOpts) http.Handler {
@@ -93,11 +72,28 @@ func Handler(handlerOpts HandlerOpts) http.Handler {
 
 		batchOperationsLength := len(batchOperations)
 
-		addTracing(r, bodyBytes, handlerOpts.ClientHeader, batchOperationsLength, handlerOpts.BaseOtelAttributes, handlerOpts.RouterConfigVersion)
+		addTracing(r,
+			bodyBytes,
+			handlerOpts.ClientHeader,
+			batchOperationsLength,
+			handlerOpts.BaseOtelAttributes,
+			handlerOpts.RouterConfigVersion,
+			handlerOpts.Digest,
+		)
 
 		// When a max batch limit has been specified
 		if batchOperationsLength > handlerOpts.MaxEntriesPerBatch {
-			http.Error(w, "unable to process request", http.StatusBadRequest)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			errors := graphqlerrors.RequestErrors{
+				{
+					Message: "Invalid GraphQL request",
+					Extensions: &graphqlerrors.Extensions{
+						Code: ExtensionCodeBatchSizeExceeded,
+					},
+				},
+			}
+			errors.WriteResponse(w)
 			return
 		}
 
@@ -162,14 +158,22 @@ func Handler(handlerOpts HandlerOpts) http.Handler {
 	return http.HandlerFunc(fn)
 }
 
-func addTracing(r *http.Request, bodyBytes []byte, clientHeader config.ClientHeader, batchOperationsLength int, baseOtelAttributes []attribute.KeyValue, version string) {
+func addTracing(
+	r *http.Request,
+	bodyBytes []byte,
+	clientHeader config.ClientHeader,
+	batchOperationsLength int,
+	baseOtelAttributes []attribute.KeyValue,
+	version string,
+	digest *xxhash.Digest,
+) {
 	rootSpan := trace.SpanFromContext(r.Context())
 
-	stringBody := string(bodyBytes)
-
-	digest := xxhash.New()
-	digest.WriteString(stringBody)
+	digest.Write(bodyBytes)
 	operationHashBatch := strconv.FormatUint(digest.Sum64(), 10)
+
+	// We need to reset the digest so we can reuse it
+	digest.Reset()
 
 	clientName, clientVersion := ctrace.GetClientDetails(r, clientHeader)
 
@@ -182,4 +186,33 @@ func addTracing(r *http.Request, bodyBytes []byte, clientHeader config.ClientHea
 		otel.WgBatchedOperationsCount.Int(batchOperationsLength),
 		otel.WgRouterConfigVersion.String(version),
 	)
+}
+
+func getFirstNonWhitespaceChar(r io.Reader, readerSize int) (*byte, *bufio.Reader, error) {
+	// This uses the default buffer of 4 kb
+	bufReader := bufio.NewReaderSize(r, readerSize)
+
+	for {
+		peeked, err := bufReader.Peek(1)
+		if err != nil {
+			if err == io.EOF {
+				return nil, bufReader, nil
+			}
+			return nil, nil, err
+		}
+
+		if len(peeked) == 0 {
+			return nil, bufReader, nil
+		}
+		peekByte := peeked[0]
+		switch peekByte {
+		// we check the characters based on this RFC https://datatracker.ietf.org/doc/html/rfc8259
+		// and also the array decode function in goccy/go-json (which is the library we used to decode)
+		case ' ', '\n', '\t', '\r':
+			bufReader.ReadByte()
+			continue
+		default:
+			return &peekByte, bufReader, nil
+		}
+	}
 }

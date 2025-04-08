@@ -612,15 +612,22 @@
           "description": "Enable the batching. The batching is used to batch an incoming query array in a request. The default value is false.",
           "default": false
         },
-        "max_concurrent": {
+        "max_concurrency": {
           "type": "integer",
           "description": "The maximum number of batches that can be processed concurrently",
-          "default": 10
+          "default": 10,
+          "minimum": 1
         },
         "max_entries_per_batch": {
           "type": "integer",
-          "description": "The maximum number of entries allowed in a batch, if 0 the batch size is unlimited",
-          "default": 100
+          "description": "The maximum number of entries allowed in a batch",
+          "default": 10,
+          "minimum": 1
+        },
+        "omit_extensions": {
+          "type": "boolean",
+          "description": "omit extensions on any batch processing errors",
+          "default": false
         }
       }
     },

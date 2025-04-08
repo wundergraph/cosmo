@@ -25,7 +25,7 @@ func TestBatch(t *testing.T) {
 			&testenv.Config{
 				BatchingConfig: config.BatchingConfig{
 					Enabled:            true,
-					MaxConcurrent:      10,
+					MaxConcurrency:     10,
 					MaxEntriesPerBatch: 100,
 				},
 			},
@@ -56,7 +56,7 @@ func TestBatch(t *testing.T) {
 			&testenv.Config{
 				BatchingConfig: config.BatchingConfig{
 					Enabled:            false,
-					MaxConcurrent:      10,
+					MaxConcurrency:     10,
 					MaxEntriesPerBatch: 100,
 				},
 			},
@@ -83,7 +83,7 @@ func TestBatch(t *testing.T) {
 			&testenv.Config{
 				BatchingConfig: config.BatchingConfig{
 					Enabled:            true,
-					MaxConcurrent:      10,
+					MaxConcurrency:     10,
 					MaxEntriesPerBatch: 5,
 				},
 			},
@@ -124,7 +124,7 @@ func TestBatch(t *testing.T) {
 		err := testenv.RunWithError(t, &testenv.Config{
 			BatchingConfig: config.BatchingConfig{
 				Enabled:            true,
-				MaxConcurrent:      0,
+				MaxConcurrency:     0,
 				MaxEntriesPerBatch: 100,
 			},
 		}, func(t *testing.T, _ *testenv.Environment) {
@@ -139,7 +139,7 @@ func TestBatch(t *testing.T) {
 		err := testenv.RunWithError(t, &testenv.Config{
 			BatchingConfig: config.BatchingConfig{
 				Enabled:            true,
-				MaxConcurrent:      10,
+				MaxConcurrency:     10,
 				MaxEntriesPerBatch: 0,
 			},
 		}, func(t *testing.T, _ *testenv.Environment) {
@@ -155,7 +155,7 @@ func TestBatch(t *testing.T) {
 			&testenv.Config{
 				BatchingConfig: config.BatchingConfig{
 					Enabled:            true,
-					MaxConcurrent:      10,
+					MaxConcurrency:     10,
 					MaxEntriesPerBatch: 100,
 				},
 			},
@@ -187,7 +187,7 @@ func TestBatch(t *testing.T) {
 			&testenv.Config{
 				BatchingConfig: config.BatchingConfig{
 					Enabled:            true,
-					MaxConcurrent:      10,
+					MaxConcurrency:     10,
 					MaxEntriesPerBatch: 100,
 				},
 			},
@@ -224,7 +224,7 @@ func TestBatch(t *testing.T) {
 			&testenv.Config{
 				BatchingConfig: config.BatchingConfig{
 					Enabled:            true,
-					MaxConcurrent:      10,
+					MaxConcurrency:     10,
 					MaxEntriesPerBatch: 100,
 				},
 			},
@@ -259,7 +259,7 @@ func TestBatch(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			BatchingConfig: config.BatchingConfig{
 				Enabled:            true,
-				MaxConcurrent:      10,
+				MaxConcurrency:     10,
 				MaxEntriesPerBatch: 100,
 			},
 			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
@@ -307,7 +307,7 @@ func TestBatch(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			BatchingConfig: config.BatchingConfig{
 				Enabled:            true,
-				MaxConcurrent:      10,
+				MaxConcurrency:     10,
 				MaxEntriesPerBatch: 100,
 			},
 			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
@@ -366,7 +366,7 @@ func TestBatch(t *testing.T) {
 				MetricReader:  metricReader,
 				BatchingConfig: config.BatchingConfig{
 					Enabled:            true,
-					MaxConcurrent:      10,
+					MaxConcurrency:     10,
 					MaxEntriesPerBatch: 100,
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -412,7 +412,7 @@ func TestBatch(t *testing.T) {
 				MetricReader:  metricReader,
 				BatchingConfig: config.BatchingConfig{
 					Enabled:            true,
-					MaxConcurrent:      10,
+					MaxConcurrency:     10,
 					MaxEntriesPerBatch: 100,
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -446,8 +446,6 @@ func TestBatch(t *testing.T) {
 				require.True(t, sa.HasValue("http.read_bytes"))
 				require.True(t, sa.HasValue("http.wrote_bytes"))
 				require.True(t, sa.HasValue(otel.WgRouterConfigVersion))
-
-				// TODO: check why this is there for batches
 				require.True(t, sa.HasValue(otel.WgFederatedGraphID))
 
 				require.Contains(t, rootSpanAttributes, semconv.HTTPMethod("POST"))
@@ -482,7 +480,7 @@ func TestBatch(t *testing.T) {
 				MetricReader:  metricReader,
 				BatchingConfig: config.BatchingConfig{
 					Enabled:            true,
-					MaxConcurrent:      10,
+					MaxConcurrency:     10,
 					MaxEntriesPerBatch: 100,
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {

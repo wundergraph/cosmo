@@ -114,6 +114,7 @@ type (
 		Enabled               bool
 		MaxConcurrentRoutines int
 		MaxEntriesPerBatch    int
+		OmitExtensions        bool
 	}
 
 	IPAnonymizationConfig struct {

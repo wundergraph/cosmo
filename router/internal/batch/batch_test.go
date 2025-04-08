@@ -2,8 +2,11 @@ package batch
 
 import (
 	"bytes"
+	"fmt"
+	"github.com/cespare/xxhash/v2"
 	"github.com/stretchr/testify/require"
 	"io"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -135,7 +138,7 @@ func TestBatch(t *testing.T) {
 
 	t.Run("verify string when string is only spaces when buffer is larger", func(t *testing.T) {
 		t.Parallel()
-		
+
 		whitespaceString := randomString(200, ' ')
 		fullString := "  \n\r    \t  " + whitespaceString + " \t \r "
 
@@ -148,6 +151,22 @@ func TestBatch(t *testing.T) {
 		readString, err := io.ReadAll(bufferReader)
 		require.NoError(t, err)
 		require.Equal(t, "", string(readString))
+	})
+
+	t.Run("test testcase", func(t *testing.T) {
+		t.Parallel()
+
+		stringBody := "awesome"
+
+		digest := xxhash.New()
+		digest.WriteString(stringBody)
+		operationHashBatch := strconv.FormatUint(digest.Sum64(), 10)
+		fmt.Println(operationHashBatch)
+
+		digest.Reset()
+		digest.WriteString(stringBody)
+		operationHashBatch = strconv.FormatUint(digest.Sum64(), 10)
+		fmt.Println(operationHashBatch)
 	})
 }
 

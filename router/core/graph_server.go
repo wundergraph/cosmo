@@ -5,14 +5,11 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/cosmo/router/internal/batch"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	otelmetric "go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/propagation"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
 	"net/http"
 	"net/url"
@@ -231,13 +228,14 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	}
 
 	if s.traceConfig.Enabled {
-		handler := NewTracingHandler(TracingHandlerOpts{
-			traceConfig:         s.traceConfig,
-			healthCheckPath:     s.healthCheckPath,
-			readinessCheckPath:  s.readinessCheckPath,
-			livenessCheckPath:   s.livenessCheckPath,
-			compositePropagator: s.compositePropagator,
-			tracerProvider:      s.tracerProvider,
+		handler := rtrace.NewTracingHandler(rtrace.TracingHandlerOpts{
+			TraceConfig:         s.traceConfig,
+			HealthCheckPath:     s.healthCheckPath,
+			ReadinessCheckPath:  s.readinessCheckPath,
+			LivenessCheckPath:   s.livenessCheckPath,
+			CompositePropagator: s.compositePropagator,
+			TracerProvider:      s.tracerProvider,
+			SpanNameFormatter:   SpanNameFormatter,
 		})
 		httpRouter.Use(handler)
 	}
@@ -270,11 +268,13 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 				batch.HandlerOpts{
 					MaxEntriesPerBatch: s.batchingConfig.MaxEntriesPerBatch,
 					MaxRoutines:        s.batchingConfig.MaxConcurrentRoutines,
+					OmitExtensions:     s.batchingConfig.OmitExtensions,
 					HandlerSent:        multiGraphHandler,
 					Tracer: r.tracerProvider.Tracer(
 						"wundergraph/cosmo/router/internal/batch",
 						oteltrace.WithInstrumentationVersion("0.0.1"),
 					),
+					Digest:              xxhash.New(),
 					ClientHeader:        s.clientHeader,
 					BaseOtelAttributes:  s.baseOtelAttributes,
 					RouterConfigVersion: s.baseRouterConfigVersion,
@@ -308,60 +308,6 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	s.mux = httpRouter
 
 	return s, nil
-}
-
-type TracingHandlerOpts struct {
-	traceConfig         *rtrace.Config
-	healthCheckPath     string
-	readinessCheckPath  string
-	livenessCheckPath   string
-	compositePropagator propagation.TextMapPropagator
-	tracerProvider      *sdktrace.TracerProvider
-}
-
-func NewTracingHandler(s TracingHandlerOpts) func(next http.Handler) http.Handler {
-	if s.traceConfig.Enabled {
-		spanStartOptions := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(
-				otel.RouterServerAttribute,
-				otel.WgRouterRootSpan.Bool(true),
-			),
-		}
-
-		if s.traceConfig.WithNewRoot {
-			spanStartOptions = append(spanStartOptions, oteltrace.WithNewRoot())
-		}
-
-		middlewareOptions := []otelhttp.Option{
-			otelhttp.WithSpanOptions(spanStartOptions...),
-			otelhttp.WithFilter(rtrace.CommonRequestFilter),
-			otelhttp.WithFilter(rtrace.PrefixRequestFilter(
-				[]string{s.healthCheckPath, s.readinessCheckPath, s.livenessCheckPath}),
-			),
-			// Disable built-in metricStore through NoopMeterProvider
-			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
-			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
-			otelhttp.WithTracerProvider(s.tracerProvider),
-		}
-
-		if s.compositePropagator != nil {
-			middlewareOptions = append(middlewareOptions, otelhttp.WithPropagators(s.compositePropagator))
-		}
-
-		traceHandler := rtrace.NewMiddleware(
-			rtrace.WithTracePreHandler(
-				func(r *http.Request, w http.ResponseWriter) {
-					traceID := rtrace.GetTraceID(r.Context())
-					if s.traceConfig.ResponseTraceHeader.Enabled {
-						w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
-					}
-				}),
-			rtrace.WithOtelHttp(middlewareOptions...),
-		)
-
-		return traceHandler.Handler
-	}
-	return nil
 }
 
 func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig) (http.HandlerFunc, error) {

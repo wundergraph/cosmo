@@ -855,7 +855,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithListenerAddr(listenerAddr),
 		core.WithBatching(&core.BatchingConfig{
 			Enabled:               testConfig.BatchingConfig.Enabled,
-			MaxConcurrentRoutines: testConfig.BatchingConfig.MaxConcurrent,
+			MaxConcurrentRoutines: testConfig.BatchingConfig.MaxConcurrency,
 			MaxEntriesPerBatch:    testConfig.BatchingConfig.MaxEntriesPerBatch,
 		}),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),

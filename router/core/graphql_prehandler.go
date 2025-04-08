@@ -613,8 +613,9 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	if isBatchedRequest, _ := req.Context().Value(batch.IsBatchedRequestKey{}).(bool); isBatchedRequest {
 		if requestContext.operation.opType != "query" {
 			return &httpGraphqlError{
-				message:    "Batched requests can only contain queries",
-				statusCode: http.StatusOK,
+				message:       "Batched requests can only contain queries",
+				statusCode:    http.StatusBadRequest,
+				extensionCode: batch.ExtensionQueriesOnlyAllowedInBatching,
 			}
 		}
 	}

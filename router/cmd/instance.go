@@ -91,8 +91,9 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 		}),
 		core.WithBatching(&core.BatchingConfig{
 			Enabled:               cfg.Batching.Enabled,
-			MaxConcurrentRoutines: cfg.Batching.MaxConcurrent,
+			MaxConcurrentRoutines: cfg.Batching.MaxConcurrency,
 			MaxEntriesPerBatch:    cfg.Batching.MaxEntriesPerBatch,
+			OmitExtensions:        cfg.Batching.OmitExtensions,
 		}),
 		core.WithClusterName(cfg.Cluster.Name),
 		core.WithInstanceID(cfg.InstanceID),
