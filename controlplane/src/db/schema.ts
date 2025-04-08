@@ -2222,6 +2222,7 @@ export const proposalSubgraphs = pgTable(
     currentSchemaVersionId: uuid('current_schema_version_id').references(() => schemaVersion.id, {
       onDelete: 'set null',
     }),
+    labels: text('labels').array(),
   },
   (t) => ({
     uniqueProposalSubgraph: unique('proposal_subgraph').on(t.proposalId, t.subgraphName),

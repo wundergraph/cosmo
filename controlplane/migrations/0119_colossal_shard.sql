@@ -1,0 +1,1 @@
+ALTER TABLE "proposal_subgraphs" ADD COLUMN "labels" text[];

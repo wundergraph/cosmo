@@ -110,6 +110,8 @@ export function getProposalsOfFederatedGraph(
               name: subgraph.subgraphName,
               schemaSDL: subgraph.schemaSDL,
               isDeleted: subgraph.isDeleted,
+              isNew: subgraph.isNew,
+              labels: subgraph.labels || [],
             })),
             latestCheckSuccess: proposal.latestCheckSuccess,
             latestCheckId: proposal.latestCheckId,

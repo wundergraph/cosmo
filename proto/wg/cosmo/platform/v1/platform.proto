@@ -2548,6 +2548,8 @@ message ProposalSubgraph {
   string name = 1;
   string schemaSDL = 2;
   bool isDeleted = 3;
+  bool isNew = 4;
+  repeated Label labels = 5;
 }
 
 message CreateProposalRequest {

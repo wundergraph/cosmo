@@ -20071,6 +20071,16 @@ export class ProposalSubgraph extends Message<ProposalSubgraph> {
    */
   isDeleted = false;
 
+  /**
+   * @generated from field: bool isNew = 4;
+   */
+  isNew = false;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.Label labels = 5;
+   */
+  labels: Label[] = [];
+
   constructor(data?: PartialMessage<ProposalSubgraph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -20082,6 +20092,8 @@ export class ProposalSubgraph extends Message<ProposalSubgraph> {
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "schemaSDL", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "isDeleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "isNew", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "labels", kind: "message", T: Label, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProposalSubgraph {

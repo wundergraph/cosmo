@@ -1,9 +1,11 @@
 import { and, desc, eq, gt, lt } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { ProposalState } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
-import { GetChecksResponse, LintSeverityLevel, ProposalDTO, ProposalSubgraphDTO } from '../../types/index.js';
+import { GetChecksResponse, Label, LintSeverityLevel, ProposalDTO, ProposalSubgraphDTO } from '../../types/index.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
+import { normalizeLabels } from '../util.js';
 import { SchemaCheckRepository } from './SchemaCheckRepository.js';
 
 /**
@@ -29,6 +31,7 @@ export class ProposalRepository {
       isDeleted: boolean;
       isNew: boolean;
       currentSchemaVersionId?: string;
+      labels: Label[];
     }[];
     didHubCreate: boolean;
   }): Promise<ProposalDTO> {
@@ -52,6 +55,7 @@ export class ProposalRepository {
         isDeleted: subgraph.isDeleted,
         isNew: subgraph.isNew,
         currentSchemaVersionId: subgraph.currentSchemaVersionId,
+        labels: subgraph.isNew ? normalizeLabels(subgraph.labels).map((l) => joinLabel(l)) : undefined,
       })),
     );
 
@@ -90,6 +94,8 @@ export class ProposalRepository {
         schemaSDL: schema.proposalSubgraphs.schemaSDL,
         isDeleted: schema.proposalSubgraphs.isDeleted,
         currentSchemaVersionId: schema.proposalSubgraphs.currentSchemaVersionId,
+        isNew: schema.proposalSubgraphs.isNew,
+        labels: schema.proposalSubgraphs.labels,
       })
       .from(schema.proposalSubgraphs)
       .where(eq(schema.proposalSubgraphs.proposalId, id));
@@ -114,6 +120,8 @@ export class ProposalRepository {
         schemaSDL: subgraph.schemaSDL || '',
         isDeleted: subgraph.isDeleted,
         currentSchemaVersionId: subgraph.currentSchemaVersionId || undefined,
+        isNew: subgraph.isNew,
+        labels: subgraph.labels ? subgraph.labels.map((l) => splitLabel(l)) : [],
       })),
     };
   }
@@ -151,6 +159,8 @@ export class ProposalRepository {
         schemaSDL: schema.proposalSubgraphs.schemaSDL,
         isDeleted: schema.proposalSubgraphs.isDeleted,
         currentSchemaVersionId: schema.proposalSubgraphs.currentSchemaVersionId,
+        isNew: schema.proposalSubgraphs.isNew,
+        labels: schema.proposalSubgraphs.labels,
       })
       .from(schema.proposalSubgraphs)
       .where(eq(schema.proposalSubgraphs.proposalId, proposal[0].id));
@@ -172,6 +182,8 @@ export class ProposalRepository {
         schemaSDL: subgraph.schemaSDL || '',
         isDeleted: subgraph.isDeleted,
         currentSchemaVersionId: subgraph.currentSchemaVersionId || undefined,
+        isNew: subgraph.isNew,
+        labels: subgraph.labels ? subgraph.labels.map((l) => splitLabel(l)) : [],
       })),
     };
   }
@@ -239,6 +251,8 @@ export class ProposalRepository {
           subgraphName: schema.proposalSubgraphs.subgraphName,
           schemaSDL: schema.proposalSubgraphs.schemaSDL,
           isDeleted: schema.proposalSubgraphs.isDeleted,
+          isNew: schema.proposalSubgraphs.isNew,
+          labels: schema.proposalSubgraphs.labels,
         })
         .from(schema.proposalSubgraphs)
         .where(eq(schema.proposalSubgraphs.proposalId, proposal.id));
@@ -259,6 +273,8 @@ export class ProposalRepository {
           subgraphName: subgraph.subgraphName,
           schemaSDL: subgraph.schemaSDL || '',
           isDeleted: subgraph.isDeleted,
+          isNew: subgraph.isNew,
+          labels: subgraph.labels ? subgraph.labels.map((l) => splitLabel(l)) : [],
         })),
       });
     }
@@ -282,6 +298,7 @@ export class ProposalRepository {
       isDeleted: boolean;
       isNew: boolean;
       currentSchemaVersionId?: string;
+      labels: Label[];
     }[];
   }) {
     if (state) {
@@ -304,6 +321,7 @@ export class ProposalRepository {
           isDeleted: subgraph.isDeleted,
           isNew: subgraph.isNew,
           currentSchemaVersionId: subgraph.currentSchemaVersionId,
+          labels: subgraph.isNew ? normalizeLabels(subgraph.labels).map((l) => joinLabel(l)) : undefined,
         })),
       );
     }

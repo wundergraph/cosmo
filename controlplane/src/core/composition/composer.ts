@@ -199,6 +199,8 @@ export type CheckSubgraph = {
   schemaChanges: GetDiffBetweenGraphsSuccess;
   storedBreakingChanges: SchemaCheckChangeAction[];
   routerCompatibilityVersion: string;
+  // will be used only for new subgraphs
+  labels?: Label[];
 };
 export class Composer {
   constructor(
@@ -699,6 +701,35 @@ export class Composer {
               definitions: parse(subgraph.schemaSDL),
             });
           }
+        }
+
+        // Handles new subgraphs
+        for (const [subgraphName, subgraph] of inputSubgraphs.entries()) {
+          if (subgraph.subgraph) {
+            continue;
+          }
+          // get the fed graphs which match the labels of the new subgraph
+          const fedGraphsOfNewSubgraphs = await this.federatedGraphRepo.bySubgraphLabels({
+            labels: subgraph.labels || [],
+            namespaceId: graph.namespaceId,
+            excludeContracts: true,
+          });
+
+          // if the current fed graph(the main loop) is present in the list of fed graphs which match the labels of the new subgraph, then we can compose the new subgraph
+          if (!fedGraphsOfNewSubgraphs.some((fg) => fg.id === graph.id)) {
+            continue;
+          }
+
+          checkSubgraphsByFedGraph.set(graph.id, [
+            ...(checkSubgraphsByFedGraph.get(graph.id) || []),
+            subgraph.checkSubgraphId,
+          ]);
+          
+          subgraphsToBeComposed.push({
+            name: subgraphName,
+            url: '',
+            definitions: parse(subgraph.newSchemaSDL),
+          });
         }
 
         const contracts = await this.contractRepo.bySourceFederatedGraphId(graph.id);

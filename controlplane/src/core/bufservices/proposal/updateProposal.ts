@@ -1,7 +1,11 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { UpdateProposalRequest, UpdateProposalResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  Label,
+  UpdateProposalRequest,
+  UpdateProposalResponse,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { ProposalState } from '../../../db/models.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
@@ -217,6 +221,7 @@ export function updateProposal(
         isDeleted: boolean;
         isNew: boolean;
         currentSchemaVersionId?: string;
+        labels: Label[];
       }[] = [];
 
       const updatedSubgraphs = req.updateAction.value.subgraphs;
@@ -249,6 +254,29 @@ export function updateProposal(
               checkUrl: '',
             };
           }
+
+          if (proposalSubgraph.isNew) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details: `Subgraph ${proposalSubgraph.name} is marked as new, but a subgraph with the same name already exists.`,
+              },
+              proposalId: '',
+              breakingChanges: [],
+              nonBreakingChanges: [],
+              compositionErrors: [],
+              checkId: '',
+              lintWarnings: [],
+              lintErrors: [],
+              graphPruneWarnings: [],
+              graphPruneErrors: [],
+              compositionWarnings: [],
+              operationUsageStats: [],
+              lintingSkipped: false,
+              graphPruningSkipped: false,
+              checkUrl: '',
+            };
+          }
         }
 
         proposalSubgraphs.push({
@@ -258,6 +286,7 @@ export function updateProposal(
           isDeleted: proposalSubgraph.isDeleted,
           isNew: !subgraph,
           currentSchemaVersionId: subgraph?.schemaVersionId,
+          labels: proposalSubgraph.labels,
         });
       }
 
@@ -325,7 +354,6 @@ export function updateProposal(
         logger,
         chClient: opts.chClient,
         skipProposalMatchCheck: true,
-        federatedGraph,
       });
 
       await schemaCheckRepo.createSchemaCheckProposal({

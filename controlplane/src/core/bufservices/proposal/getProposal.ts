@@ -84,6 +84,8 @@ export function getProposal(
           name: subgraph.subgraphName,
           schemaSDL: subgraph.schemaSDL,
           isDeleted: subgraph.isDeleted,
+          isNew: subgraph.isNew,
+          labels: subgraph.labels,
         })),
         latestCheckSuccess: latestCheck?.isSuccessful || false,
         latestCheckId: latestCheck?.checkId || '',

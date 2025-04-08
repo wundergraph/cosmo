@@ -541,7 +541,6 @@ export class SchemaCheckRepository {
     vcsContext,
     chClient,
     skipProposalMatchCheck,
-    federatedGraph,
   }: {
     organizationId: string;
     orgRepo: OrganizationRepository;
@@ -558,7 +557,6 @@ export class SchemaCheckRepository {
     vcsContext?: VCSContext;
     chClient?: ClickHouseClient;
     skipProposalMatchCheck: boolean;
-    federatedGraph?: FederatedGraphDTO;
   }) {
     const breakingChanges: SchemaChange[] = [];
     const nonBreakingChanges: SchemaChange[] = [];
@@ -612,17 +610,13 @@ export class SchemaCheckRepository {
         };
       }
 
-      if (subgraph) {
-        const graphs = await fedGraphRepo.bySubgraphLabels({
-          labels: subgraph.labels,
-          namespaceId: namespace.id,
-          excludeContracts: true,
-        });
+      const graphs = await fedGraphRepo.bySubgraphLabels({
+        labels: subgraph?.labels || s.labels,
+        namespaceId: namespace.id,
+        excludeContracts: true,
+      });
 
-        federatedGraphs.push(...graphs.filter((g) => !federatedGraphs.some((fg) => fg.id === g.id)));
-      } else if (federatedGraph) {
-        federatedGraphs.push(federatedGraph);
-      }
+      federatedGraphs.push(...graphs.filter((g) => !federatedGraphs.some((fg) => fg.id === g.id)));
 
       const newSchemaSDL = s.isDeleted ? '' : s.schemaSDL;
       const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion(federatedGraphs);
@@ -709,6 +703,7 @@ export class SchemaCheckRepository {
         storedBreakingChanges: [],
         checkSubgraphId: '',
         routerCompatibilityVersion,
+        labels: s.isNew ? s.labels : undefined,
       });
     }
 
