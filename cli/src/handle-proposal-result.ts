@@ -17,7 +17,12 @@ export const handleProposalResult = (
   isCreate = false,
 ): { success: boolean; message?: string } => {
   const changesTable = new Table({
-    head: [pc.bold(pc.white('CHANGE')), pc.bold(pc.white('TYPE')), pc.bold(pc.white('DESCRIPTION'))],
+    head: [
+      pc.bold(pc.white('SUBGRAPH_NAME')),
+      pc.bold(pc.white('CHANGE')),
+      pc.bold(pc.white('TYPE')),
+      pc.bold(pc.white('DESCRIPTION')),
+    ],
     wordWrap: true,
   });
 
@@ -34,13 +39,19 @@ export const handleProposalResult = (
   });
 
   const lintIssuesTable = new Table({
-    head: [pc.bold(pc.white('LINT_RULE')), pc.bold(pc.white('ERROR_MESSAGE')), pc.bold(pc.white('LINE NUMBER'))],
+    head: [
+      pc.bold(pc.white('SUBGRAPH_NAME')),
+      pc.bold(pc.white('LINT_RULE')),
+      pc.bold(pc.white('ERROR_MESSAGE')),
+      pc.bold(pc.white('LINE NUMBER')),
+    ],
     colAligns: ['left', 'left', 'center'],
     wordWrap: true,
   });
 
   const graphPruningIssuesTable = new Table({
     head: [
+      pc.bold(pc.white('SUBGRAPH_NAME')),
       pc.bold(pc.white('RULE')),
       pc.bold(pc.white('FIELD_PATH')),
       pc.bold(pc.white('MESSAGE')),
@@ -155,6 +166,7 @@ export const handleProposalResult = (
     if (resp.breakingChanges.length > 0) {
       for (const breakingChange of resp.breakingChanges) {
         changesTable.push([
+          breakingChange.subgraphName || '-',
           `${logSymbols.error} ${pc.red('BREAKING')}`,
           breakingChange.changeType,
           breakingChange.message,
@@ -165,6 +177,7 @@ export const handleProposalResult = (
     if (resp.nonBreakingChanges.length > 0) {
       for (const nonBreakingChange of resp.nonBreakingChanges) {
         changesTable.push([
+          nonBreakingChange.subgraphName || '-',
           `${logSymbols.success} NON-BREAKING`,
           nonBreakingChange.changeType,
           nonBreakingChange.message,
@@ -195,6 +208,7 @@ export const handleProposalResult = (
     console.log('\nDetected lint issues:');
     for (const error of resp.lintErrors) {
       lintIssuesTable.push([
+        error.subgraphName || '-',
         `${logSymbols.error} ${pc.red(error.lintRuleType)}`,
         error.message,
         error.issueLocation?.line,
@@ -202,6 +216,7 @@ export const handleProposalResult = (
     }
     for (const warning of resp.lintWarnings) {
       lintIssuesTable.push([
+        warning.subgraphName || '-',
         `${logSymbols.warning} ${pc.yellow(warning.lintRuleType)}`,
         warning.message,
         warning.issueLocation?.line,
@@ -214,6 +229,7 @@ export const handleProposalResult = (
     console.log('\nDetected graph pruning issues:');
     for (const error of resp.graphPruneErrors) {
       graphPruningIssuesTable.push([
+        error.subgraphName || '-',
         `${logSymbols.error} ${pc.red(error.graphPruningRuleType)}`,
         error.fieldPath,
         error.message,
@@ -222,6 +238,7 @@ export const handleProposalResult = (
     }
     for (const warning of resp.graphPruneWarnings) {
       graphPruningIssuesTable.push([
+        warning.subgraphName || '-',
         `${logSymbols.warning} ${pc.yellow(warning.graphPruningRuleType)}`,
         warning.fieldPath,
         warning.message,
