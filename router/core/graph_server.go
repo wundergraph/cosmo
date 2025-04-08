@@ -5,6 +5,14 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
+
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto/v2"
 	"github.com/go-chi/chi/v5"
@@ -24,11 +32,6 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/exp/maps"
-	"net/http"
-	"net/url"
-	"strings"
-	"sync"
-	"time"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
@@ -38,7 +41,6 @@ import (
 	rmiddleware "github.com/wundergraph/cosmo/router/internal/middleware"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
@@ -590,7 +592,11 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	return err
+	if err != nil {
+		return fmt.Errorf("shutdown graph mux: %w", err)
+	}
+
+	return nil
 }
 
 // buildGraphMux creates a new graph mux with the given feature flags and engine configuration.
@@ -901,6 +907,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		transport:      s.executionTransport,
 		logger:         s.logger,
 		trackUsageInfo: s.graphqlMetricsConfig.Enabled,
+		subscriptionClientOptions: &SubscriptionClientOptions{
+			PingInterval: s.engineExecutionConfiguration.WebSocketClientPingInterval,
+		},
 		transportOptions: &TransportOptions{
 			Proxy:                    s.executionTransportProxy,
 			SubgraphTransportOptions: s.subgraphTransportOptions,
@@ -941,20 +950,21 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	operationProcessor := NewOperationProcessor(OperationProcessorOptions{
-		Executor:                            executor,
-		MaxOperationSizeInBytes:             int64(s.routerTrafficConfig.MaxRequestBodyBytes),
-		PersistedOperationClient:            s.persistedOperationClient,
-		AutomaticPersistedOperationCacheTtl: s.automaticPersistedQueriesConfig.Cache.TTL,
-		EnablePersistedOperationsCache:      s.engineExecutionConfiguration.EnablePersistedOperationsCache,
-		PersistedOpsNormalizationCache:      gm.persistedOperationCache,
-		NormalizationCache:                  gm.normalizationCache,
-		ValidationCache:                     gm.validationCache,
-		QueryDepthCache:                     gm.complexityCalculationCache,
-		OperationHashCache:                  gm.operationHashCache,
-		ParseKitPoolSize:                    s.engineExecutionConfiguration.ParseKitPoolSize,
-		IntrospectionEnabled:                s.Config.introspection,
-		ApolloCompatibilityFlags:            s.apolloCompatibilityFlags,
-		ApolloRouterCompatibilityFlags:      s.apolloRouterCompatibilityFlags,
+		Executor:                                         executor,
+		MaxOperationSizeInBytes:                          int64(s.routerTrafficConfig.MaxRequestBodyBytes),
+		PersistedOperationClient:                         s.persistedOperationClient,
+		AutomaticPersistedOperationCacheTtl:              s.automaticPersistedQueriesConfig.Cache.TTL,
+		EnablePersistedOperationsCache:                   s.engineExecutionConfiguration.EnablePersistedOperationsCache,
+		PersistedOpsNormalizationCache:                   gm.persistedOperationCache,
+		NormalizationCache:                               gm.normalizationCache,
+		ValidationCache:                                  gm.validationCache,
+		QueryDepthCache:                                  gm.complexityCalculationCache,
+		OperationHashCache:                               gm.operationHashCache,
+		ParseKitPoolSize:                                 s.engineExecutionConfiguration.ParseKitPoolSize,
+		IntrospectionEnabled:                             s.Config.introspection,
+		ApolloCompatibilityFlags:                         s.apolloCompatibilityFlags,
+		ApolloRouterCompatibilityFlags:                   s.apolloRouterCompatibilityFlags,
+		DisableExposingVariablesContentOnValidationError: s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
@@ -1125,6 +1135,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			Logger:                    s.logger,
 			Stats:                     s.engineStats,
 			ReadTimeout:               s.engineExecutionConfiguration.WebSocketClientReadTimeout,
+			WriteTimeout:              s.engineExecutionConfiguration.WebSocketClientWriteTimeout,
 			EnableNetPoll:             s.engineExecutionConfiguration.EnableNetPoll,
 			NetPollTimeout:            s.engineExecutionConfiguration.WebSocketClientPollTimeout,
 			NetPollConnBufferSize:     s.engineExecutionConfiguration.WebSocketClientConnBufferSize,
@@ -1302,8 +1313,7 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	// Wait for all in-flight requests to finish.
 	// In the worst case, we wait until the context is done or all requests has timed out.
 	if err := s.wait(ctx); err != nil {
-		s.logger.Error("Failed to wait for in-flight requests to finish", zap.Error(err))
-		finalErr = errors.Join(finalErr, err)
+		finalErr = errors.Join(finalErr, fmt.Errorf("failed to wait for in-flight requests: %w", err))
 	}
 
 	s.logger.Debug("Shutdown of graph server resources",
@@ -1321,21 +1331,18 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 
 	if s.runtimeMetrics != nil {
 		if err := s.runtimeMetrics.Shutdown(); err != nil {
-			s.logger.Error("Failed to shutdown runtime metrics", zap.Error(err))
 			finalErr = errors.Join(finalErr, err)
 		}
 	}
 
 	if s.otlpEngineMetrics != nil {
 		if err := s.otlpEngineMetrics.Shutdown(); err != nil {
-			s.logger.Error("Failed to shutdown OTLP engine metrics", zap.Error(err))
 			finalErr = errors.Join(finalErr, err)
 		}
 	}
 
 	if s.prometheusEngineMetrics != nil {
 		if err := s.prometheusEngineMetrics.Shutdown(); err != nil {
-			s.logger.Error("Failed to shutdown Prometheus engine metrics", zap.Error(err))
 			finalErr = errors.Join(finalErr, err)
 		}
 	}
@@ -1347,7 +1354,6 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		for _, pubSub := range s.pubSubProviders.nats {
 			if p, ok := pubSub.(pubsub.Lifecycle); ok {
 				if err := p.Shutdown(ctx); err != nil {
-					s.logger.Error("Failed to shutdown Nats pubsub provider", zap.Error(err))
 					finalErr = errors.Join(finalErr, err)
 				}
 			}
@@ -1355,7 +1361,6 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		for _, pubSub := range s.pubSubProviders.kafka {
 			if p, ok := pubSub.(pubsub.Lifecycle); ok {
 				if err := p.Shutdown(ctx); err != nil {
-					s.logger.Error("Failed to shutdown Kafka pubsub provider", zap.Error(err))
 					finalErr = errors.Join(finalErr, err)
 				}
 			}
@@ -1368,7 +1373,6 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	defer s.graphMuxListLock.Unlock()
 	for _, mux := range s.graphMuxList {
 		if err := mux.Shutdown(ctx); err != nil {
-			s.logger.Error("Failed to shutdown graph mux", zap.Error(err))
 			finalErr = errors.Join(finalErr, err)
 		}
 	}

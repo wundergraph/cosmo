@@ -1,1 +1,1 @@
-Error: failed to parse operation: external: unexpected literal - got: UNDEFINED want one of: [ENUM TYPE UNION QUERY INPUT EXTEND SCHEMA SCALAR FRAGMENT INTERFACE DIRECTIVE], locations: [{Line:1 Column:1}], path: []
+Warning: external: unexpected literal - got: UNDEFINED want one of: [ENUM TYPE UNION QUERY INPUT EXTEND SCHEMA SCALAR FRAGMENT INTERFACE DIRECTIVE], locations: [{Line:1 Column:1}], path: []

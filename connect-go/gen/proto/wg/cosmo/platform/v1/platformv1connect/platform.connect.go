@@ -110,6 +110,12 @@ const (
 	// PlatformServiceCheckSubgraphSchemaProcedure is the fully-qualified name of the PlatformService's
 	// CheckSubgraphSchema RPC.
 	PlatformServiceCheckSubgraphSchemaProcedure = "/wg.cosmo.platform.v1.PlatformService/CheckSubgraphSchema"
+	// PlatformServiceCheckSubgraphSchemasProcedure is the fully-qualified name of the PlatformService's
+	// CheckSubgraphSchemas RPC.
+	PlatformServiceCheckSubgraphSchemasProcedure = "/wg.cosmo.platform.v1.PlatformService/CheckSubgraphSchemas"
+	// PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure is the fully-qualified name of the
+	// PlatformService's GetProposedSchemaOfCheckedSubgraph RPC.
+	PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetProposedSchemaOfCheckedSubgraph"
 	// PlatformServiceFixSubgraphSchemaProcedure is the fully-qualified name of the PlatformService's
 	// FixSubgraphSchema RPC.
 	PlatformServiceFixSubgraphSchemaProcedure = "/wg.cosmo.platform.v1.PlatformService/FixSubgraphSchema"
@@ -286,6 +292,9 @@ const (
 	// PlatformServiceDeleteOrganizationProcedure is the fully-qualified name of the PlatformService's
 	// DeleteOrganization RPC.
 	PlatformServiceDeleteOrganizationProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteOrganization"
+	// PlatformServiceRestoreOrganizationProcedure is the fully-qualified name of the PlatformService's
+	// RestoreOrganization RPC.
+	PlatformServiceRestoreOrganizationProcedure = "/wg.cosmo.platform.v1.PlatformService/RestoreOrganization"
 	// PlatformServiceLeaveOrganizationProcedure is the fully-qualified name of the PlatformService's
 	// LeaveOrganization RPC.
 	PlatformServiceLeaveOrganizationProcedure = "/wg.cosmo.platform.v1.PlatformService/LeaveOrganization"
@@ -508,6 +517,8 @@ var (
 	platformServiceDeleteFederatedGraphMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("DeleteFederatedGraph")
 	platformServiceDeleteFederatedSubgraphMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("DeleteFederatedSubgraph")
 	platformServiceCheckSubgraphSchemaMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("CheckSubgraphSchema")
+	platformServiceCheckSubgraphSchemasMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("CheckSubgraphSchemas")
+	platformServiceGetProposedSchemaOfCheckedSubgraphMethodDescriptor    = platformServiceServiceDescriptor.Methods().ByName("GetProposedSchemaOfCheckedSubgraph")
 	platformServiceFixSubgraphSchemaMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("FixSubgraphSchema")
 	platformServiceUpdateFederatedGraphMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("UpdateFederatedGraph")
 	platformServiceUpdateSubgraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UpdateSubgraph")
@@ -567,6 +578,7 @@ var (
 	platformServiceDeleteIntegrationMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("DeleteIntegration")
 	platformServiceDeleteUserMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("DeleteUser")
 	platformServiceDeleteOrganizationMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("DeleteOrganization")
+	platformServiceRestoreOrganizationMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("RestoreOrganization")
 	platformServiceLeaveOrganizationMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("LeaveOrganization")
 	platformServiceUpdateOrganizationDetailsMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("UpdateOrganizationDetails")
 	platformServiceUpdateOrgMemberRoleMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("UpdateOrgMemberRole")
@@ -674,6 +686,8 @@ type PlatformServiceClient interface {
 	DeleteFederatedSubgraph(context.Context, *connect.Request[v1.DeleteFederatedSubgraphRequest]) (*connect.Response[v1.DeleteFederatedSubgraphResponse], error)
 	// CheckSubgraphSchema checks if the schema is valid and if it can be composed without conflicts with the provided new subgraph schema.
 	CheckSubgraphSchema(context.Context, *connect.Request[v1.CheckSubgraphSchemaRequest]) (*connect.Response[v1.CheckSubgraphSchemaResponse], error)
+	CheckSubgraphSchemas(context.Context, *connect.Request[v1.CheckSubgraphSchemasRequest]) (*connect.Response[v1.CheckSubgraphSchemasResponse], error)
+	GetProposedSchemaOfCheckedSubgraph(context.Context, *connect.Request[v1.GetProposedSchemaOfCheckedSubgraphRequest]) (*connect.Response[v1.GetProposedSchemaOfCheckedSubgraphResponse], error)
 	FixSubgraphSchema(context.Context, *connect.Request[v1.FixSubgraphSchemaRequest]) (*connect.Response[v1.FixSubgraphSchemaResponse], error)
 	// UpdateFederatedGraph updates a federated graph with new labels and routing url
 	UpdateFederatedGraph(context.Context, *connect.Request[v1.UpdateFederatedGraphRequest]) (*connect.Response[v1.UpdateFederatedGraphResponse], error)
@@ -791,6 +805,8 @@ type PlatformServiceClient interface {
 	DeleteUser(context.Context, *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error)
 	// DeleteOrganization deletes an organization
 	DeleteOrganization(context.Context, *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error)
+	// RestoreOrganization restore an organization pending deletion
+	RestoreOrganization(context.Context, *connect.Request[v1.RestoreOrganizationRequest]) (*connect.Response[v1.RestoreOrganizationResponse], error)
 	// LeaveOrganization removes a member from the organization
 	LeaveOrganization(context.Context, *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error)
 	// UpdateOrganizationDetails updates the name and slug of the organization
@@ -1072,6 +1088,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceCheckSubgraphSchemaProcedure,
 			connect.WithSchema(platformServiceCheckSubgraphSchemaMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		checkSubgraphSchemas: connect.NewClient[v1.CheckSubgraphSchemasRequest, v1.CheckSubgraphSchemasResponse](
+			httpClient,
+			baseURL+PlatformServiceCheckSubgraphSchemasProcedure,
+			connect.WithSchema(platformServiceCheckSubgraphSchemasMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getProposedSchemaOfCheckedSubgraph: connect.NewClient[v1.GetProposedSchemaOfCheckedSubgraphRequest, v1.GetProposedSchemaOfCheckedSubgraphResponse](
+			httpClient,
+			baseURL+PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure,
+			connect.WithSchema(platformServiceGetProposedSchemaOfCheckedSubgraphMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		fixSubgraphSchema: connect.NewClient[v1.FixSubgraphSchemaRequest, v1.FixSubgraphSchemaResponse](
@@ -1426,6 +1454,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceDeleteOrganizationProcedure,
 			connect.WithSchema(platformServiceDeleteOrganizationMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		restoreOrganization: connect.NewClient[v1.RestoreOrganizationRequest, v1.RestoreOrganizationResponse](
+			httpClient,
+			baseURL+PlatformServiceRestoreOrganizationProcedure,
+			connect.WithSchema(platformServiceRestoreOrganizationMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		leaveOrganization: connect.NewClient[v1.LeaveOrganizationRequest, v1.LeaveOrganizationResponse](
@@ -1849,6 +1883,8 @@ type platformServiceClient struct {
 	deleteFederatedGraph                  *connect.Client[v1.DeleteFederatedGraphRequest, v1.DeleteFederatedGraphResponse]
 	deleteFederatedSubgraph               *connect.Client[v1.DeleteFederatedSubgraphRequest, v1.DeleteFederatedSubgraphResponse]
 	checkSubgraphSchema                   *connect.Client[v1.CheckSubgraphSchemaRequest, v1.CheckSubgraphSchemaResponse]
+	checkSubgraphSchemas                  *connect.Client[v1.CheckSubgraphSchemasRequest, v1.CheckSubgraphSchemasResponse]
+	getProposedSchemaOfCheckedSubgraph    *connect.Client[v1.GetProposedSchemaOfCheckedSubgraphRequest, v1.GetProposedSchemaOfCheckedSubgraphResponse]
 	fixSubgraphSchema                     *connect.Client[v1.FixSubgraphSchemaRequest, v1.FixSubgraphSchemaResponse]
 	updateFederatedGraph                  *connect.Client[v1.UpdateFederatedGraphRequest, v1.UpdateFederatedGraphResponse]
 	updateSubgraph                        *connect.Client[v1.UpdateSubgraphRequest, v1.UpdateSubgraphResponse]
@@ -1908,6 +1944,7 @@ type platformServiceClient struct {
 	deleteIntegration                     *connect.Client[v1.DeleteIntegrationRequest, v1.DeleteIntegrationResponse]
 	deleteUser                            *connect.Client[v1.DeleteUserRequest, v1.DeleteUserResponse]
 	deleteOrganization                    *connect.Client[v1.DeleteOrganizationRequest, v1.DeleteOrganizationResponse]
+	restoreOrganization                   *connect.Client[v1.RestoreOrganizationRequest, v1.RestoreOrganizationResponse]
 	leaveOrganization                     *connect.Client[v1.LeaveOrganizationRequest, v1.LeaveOrganizationResponse]
 	updateOrganizationDetails             *connect.Client[v1.UpdateOrganizationDetailsRequest, v1.UpdateOrganizationDetailsResponse]
 	updateOrgMemberRole                   *connect.Client[v1.UpdateOrgMemberRoleRequest, v1.UpdateOrgMemberRoleResponse]
@@ -2097,6 +2134,17 @@ func (c *platformServiceClient) DeleteFederatedSubgraph(ctx context.Context, req
 // CheckSubgraphSchema calls wg.cosmo.platform.v1.PlatformService.CheckSubgraphSchema.
 func (c *platformServiceClient) CheckSubgraphSchema(ctx context.Context, req *connect.Request[v1.CheckSubgraphSchemaRequest]) (*connect.Response[v1.CheckSubgraphSchemaResponse], error) {
 	return c.checkSubgraphSchema.CallUnary(ctx, req)
+}
+
+// CheckSubgraphSchemas calls wg.cosmo.platform.v1.PlatformService.CheckSubgraphSchemas.
+func (c *platformServiceClient) CheckSubgraphSchemas(ctx context.Context, req *connect.Request[v1.CheckSubgraphSchemasRequest]) (*connect.Response[v1.CheckSubgraphSchemasResponse], error) {
+	return c.checkSubgraphSchemas.CallUnary(ctx, req)
+}
+
+// GetProposedSchemaOfCheckedSubgraph calls
+// wg.cosmo.platform.v1.PlatformService.GetProposedSchemaOfCheckedSubgraph.
+func (c *platformServiceClient) GetProposedSchemaOfCheckedSubgraph(ctx context.Context, req *connect.Request[v1.GetProposedSchemaOfCheckedSubgraphRequest]) (*connect.Response[v1.GetProposedSchemaOfCheckedSubgraphResponse], error) {
+	return c.getProposedSchemaOfCheckedSubgraph.CallUnary(ctx, req)
 }
 
 // FixSubgraphSchema calls wg.cosmo.platform.v1.PlatformService.FixSubgraphSchema.
@@ -2406,6 +2454,11 @@ func (c *platformServiceClient) DeleteUser(ctx context.Context, req *connect.Req
 // DeleteOrganization calls wg.cosmo.platform.v1.PlatformService.DeleteOrganization.
 func (c *platformServiceClient) DeleteOrganization(ctx context.Context, req *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error) {
 	return c.deleteOrganization.CallUnary(ctx, req)
+}
+
+// RestoreOrganization calls wg.cosmo.platform.v1.PlatformService.RestoreOrganization.
+func (c *platformServiceClient) RestoreOrganization(ctx context.Context, req *connect.Request[v1.RestoreOrganizationRequest]) (*connect.Response[v1.RestoreOrganizationResponse], error) {
+	return c.restoreOrganization.CallUnary(ctx, req)
 }
 
 // LeaveOrganization calls wg.cosmo.platform.v1.PlatformService.LeaveOrganization.
@@ -2783,6 +2836,8 @@ type PlatformServiceHandler interface {
 	DeleteFederatedSubgraph(context.Context, *connect.Request[v1.DeleteFederatedSubgraphRequest]) (*connect.Response[v1.DeleteFederatedSubgraphResponse], error)
 	// CheckSubgraphSchema checks if the schema is valid and if it can be composed without conflicts with the provided new subgraph schema.
 	CheckSubgraphSchema(context.Context, *connect.Request[v1.CheckSubgraphSchemaRequest]) (*connect.Response[v1.CheckSubgraphSchemaResponse], error)
+	CheckSubgraphSchemas(context.Context, *connect.Request[v1.CheckSubgraphSchemasRequest]) (*connect.Response[v1.CheckSubgraphSchemasResponse], error)
+	GetProposedSchemaOfCheckedSubgraph(context.Context, *connect.Request[v1.GetProposedSchemaOfCheckedSubgraphRequest]) (*connect.Response[v1.GetProposedSchemaOfCheckedSubgraphResponse], error)
 	FixSubgraphSchema(context.Context, *connect.Request[v1.FixSubgraphSchemaRequest]) (*connect.Response[v1.FixSubgraphSchemaResponse], error)
 	// UpdateFederatedGraph updates a federated graph with new labels and routing url
 	UpdateFederatedGraph(context.Context, *connect.Request[v1.UpdateFederatedGraphRequest]) (*connect.Response[v1.UpdateFederatedGraphResponse], error)
@@ -2900,6 +2955,8 @@ type PlatformServiceHandler interface {
 	DeleteUser(context.Context, *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error)
 	// DeleteOrganization deletes an organization
 	DeleteOrganization(context.Context, *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error)
+	// RestoreOrganization restore an organization pending deletion
+	RestoreOrganization(context.Context, *connect.Request[v1.RestoreOrganizationRequest]) (*connect.Response[v1.RestoreOrganizationResponse], error)
 	// LeaveOrganization removes a member from the organization
 	LeaveOrganization(context.Context, *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error)
 	// UpdateOrganizationDetails updates the name and slug of the organization
@@ -3177,6 +3234,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceCheckSubgraphSchemaProcedure,
 		svc.CheckSubgraphSchema,
 		connect.WithSchema(platformServiceCheckSubgraphSchemaMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceCheckSubgraphSchemasHandler := connect.NewUnaryHandler(
+		PlatformServiceCheckSubgraphSchemasProcedure,
+		svc.CheckSubgraphSchemas,
+		connect.WithSchema(platformServiceCheckSubgraphSchemasMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetProposedSchemaOfCheckedSubgraphHandler := connect.NewUnaryHandler(
+		PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure,
+		svc.GetProposedSchemaOfCheckedSubgraph,
+		connect.WithSchema(platformServiceGetProposedSchemaOfCheckedSubgraphMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceFixSubgraphSchemaHandler := connect.NewUnaryHandler(
@@ -3531,6 +3600,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceDeleteOrganizationProcedure,
 		svc.DeleteOrganization,
 		connect.WithSchema(platformServiceDeleteOrganizationMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceRestoreOrganizationHandler := connect.NewUnaryHandler(
+		PlatformServiceRestoreOrganizationProcedure,
+		svc.RestoreOrganization,
+		connect.WithSchema(platformServiceRestoreOrganizationMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceLeaveOrganizationHandler := connect.NewUnaryHandler(
@@ -3976,6 +4051,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceDeleteFederatedSubgraphHandler.ServeHTTP(w, r)
 		case PlatformServiceCheckSubgraphSchemaProcedure:
 			platformServiceCheckSubgraphSchemaHandler.ServeHTTP(w, r)
+		case PlatformServiceCheckSubgraphSchemasProcedure:
+			platformServiceCheckSubgraphSchemasHandler.ServeHTTP(w, r)
+		case PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure:
+			platformServiceGetProposedSchemaOfCheckedSubgraphHandler.ServeHTTP(w, r)
 		case PlatformServiceFixSubgraphSchemaProcedure:
 			platformServiceFixSubgraphSchemaHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateFederatedGraphProcedure:
@@ -4094,6 +4173,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceDeleteUserHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteOrganizationProcedure:
 			platformServiceDeleteOrganizationHandler.ServeHTTP(w, r)
+		case PlatformServiceRestoreOrganizationProcedure:
+			platformServiceRestoreOrganizationHandler.ServeHTTP(w, r)
 		case PlatformServiceLeaveOrganizationProcedure:
 			platformServiceLeaveOrganizationHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateOrganizationDetailsProcedure:
@@ -4331,6 +4412,14 @@ func (UnimplementedPlatformServiceHandler) CheckSubgraphSchema(context.Context, 
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CheckSubgraphSchema is not implemented"))
 }
 
+func (UnimplementedPlatformServiceHandler) CheckSubgraphSchemas(context.Context, *connect.Request[v1.CheckSubgraphSchemasRequest]) (*connect.Response[v1.CheckSubgraphSchemasResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CheckSubgraphSchemas is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetProposedSchemaOfCheckedSubgraph(context.Context, *connect.Request[v1.GetProposedSchemaOfCheckedSubgraphRequest]) (*connect.Response[v1.GetProposedSchemaOfCheckedSubgraphResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetProposedSchemaOfCheckedSubgraph is not implemented"))
+}
+
 func (UnimplementedPlatformServiceHandler) FixSubgraphSchema(context.Context, *connect.Request[v1.FixSubgraphSchemaRequest]) (*connect.Response[v1.FixSubgraphSchemaResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.FixSubgraphSchema is not implemented"))
 }
@@ -4565,6 +4654,10 @@ func (UnimplementedPlatformServiceHandler) DeleteUser(context.Context, *connect.
 
 func (UnimplementedPlatformServiceHandler) DeleteOrganization(context.Context, *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteOrganization is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) RestoreOrganization(context.Context, *connect.Request[v1.RestoreOrganizationRequest]) (*connect.Response[v1.RestoreOrganizationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.RestoreOrganization is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) LeaveOrganization(context.Context, *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error) {

@@ -749,11 +749,9 @@ export const schemaChecks = pgTable(
   'schema_checks', // sc
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    targetId: uuid('target_id')
-      .notNull()
-      .references(() => targets.id, {
-        onDelete: 'cascade',
-      }),
+    targetId: uuid('target_id').references(() => targets.id, {
+      onDelete: 'cascade',
+    }),
     isComposable: boolean('is_composable').default(false),
     isDeleted: boolean('is_deleted').default(false),
     hasBreakingChanges: boolean('has_breaking_changes').default(false),
@@ -782,6 +780,31 @@ export const schemaChecks = pgTable(
   (t) => {
     return {
       targetIdIndex: index('sc_target_id_idx').on(t.targetId),
+    };
+  },
+);
+
+export const schemaCheckSubgraphs = pgTable(
+  'schema_check_subgraphs', // scs
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    schemaCheckId: uuid('schema_check_id')
+      .notNull()
+      .references(() => schemaChecks.id, {
+        onDelete: 'cascade',
+      }),
+    subgraphId: uuid('subgraph_id').references(() => subgraphs.id, {
+      onDelete: 'set null',
+    }),
+    subgraphName: text('subgraph_name').notNull(),
+    proposedSubgraphSchemaSDL: text('proposed_subgraph_schema_sdl'),
+    isDeleted: boolean('is_deleted').default(false).notNull(),
+    isNew: boolean('is_new').default(false).notNull(),
+  },
+  (t) => {
+    return {
+      schemaCheckIdIndex: index('scs_schema_check_id_idx').on(t.schemaCheckId),
+      subgraphIdIndex: index('scs_subgraph_id_idx').on(t.subgraphId),
     };
   },
 );
@@ -827,6 +850,7 @@ export const schemaCheckChangeActionOperationUsageRelations = relations(
 export const schemaCheckFederatedGraphs = pgTable(
   'schema_check_federated_graphs', // scfg
   {
+    id: uuid('id').primaryKey().defaultRandom(),
     checkId: uuid('check_id')
       .notNull()
       .references(() => schemaChecks.id, {
@@ -858,6 +882,30 @@ export const schemaCheckFederatedGraphsRelations = relations(schemaCheckFederate
   }),
 }));
 
+// a join table between schema check subgraphs and schema check fed graphs
+export const schemaCheckSubgraphsFederatedGraphs = pgTable(
+  'schema_check_subgraphs_federated_graphs', // scsfg
+  {
+    schemaCheckFederatedGraphId: uuid('schema_check_federated_graph_id').references(
+      () => schemaCheckFederatedGraphs.id,
+      {
+        onDelete: 'cascade',
+      },
+    ),
+    schemaCheckSubgraphId: uuid('schema_check_subgraph_id').references(() => schemaCheckSubgraphs.id, {
+      onDelete: 'cascade',
+    }),
+  },
+  (t) => {
+    return {
+      schemaCheckSubgraphIdIndex: index('scsfg_schema_check_subgraph_id_idx').on(t.schemaCheckSubgraphId),
+      schemaCheckFederatedGraphIdIndex: index('scsfg_schema_check_federated_graph_id_idx').on(
+        t.schemaCheckFederatedGraphId,
+      ),
+    };
+  },
+);
+
 export const schemaCheckChangeAction = pgTable(
   'schema_check_change_action', // scca
   {
@@ -872,6 +920,9 @@ export const schemaCheckChangeAction = pgTable(
     isBreaking: boolean('is_breaking').default(false),
     path: text('path'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    schemaCheckSubgraphId: uuid('schema_check_subgraph_id').references(() => schemaCheckSubgraphs.id, {
+      onDelete: 'set null',
+    }),
   },
   (t) => {
     return {
@@ -886,6 +937,10 @@ export const schemaCheckChangeActionRelations = relations(schemaCheckChangeActio
     references: [schemaChecks.id],
   }),
   operationUsage: many(schemaCheckChangeActionOperationUsage),
+  checkSubgraph: one(schemaCheckSubgraphs, {
+    fields: [schemaCheckChangeAction.schemaCheckSubgraphId],
+    references: [schemaCheckSubgraphs.id],
+  }),
 }));
 
 export const operationChangeOverrides = pgTable(
@@ -962,6 +1017,8 @@ export const schemaCheckRelations = relations(schemaChecks, ({ many }) => ({
   changes: many(schemaCheckChangeAction),
   compositions: many(schemaCheckComposition),
   affectedGraphs: many(schemaCheckFederatedGraphs),
+  subgraphs: many(schemaCheckSubgraphs),
+  federatedGraphs: many(schemaCheckFederatedGraphs),
 }));
 
 export const users = pgTable('users', {
@@ -1102,6 +1159,8 @@ export const organizations = pgTable(
     isDeactivated: boolean('is_deactivated').default(false),
     deactivationReason: text('deactivation_reason'),
     deactivatedAt: timestamp('deactivated_at', { withTimezone: true }),
+    queuedForDeletionAt: timestamp('queued_for_deletion_at', { withTimezone: true }),
+    queuedForDeletionBy: text('queued_for_deletion_by'), // display name in case the member is removed
   },
   (t) => {
     return {
@@ -1839,6 +1898,9 @@ export const schemaCheckLintAction = pgTable(
       .$type<{ line: number; column: number; endLine?: number; endColumn?: number }>()
       .notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    schemaCheckSubgraphId: uuid('schema_check_subgraph_id').references(() => schemaCheckSubgraphs.id, {
+      onDelete: 'set null',
+    }),
   },
   (t) => {
     return {
@@ -1851,6 +1913,10 @@ export const schemaCheckLintActionRelations = relations(schemaCheckLintAction, (
   check: one(schemaChecks, {
     fields: [schemaCheckLintAction.schemaCheckId],
     references: [schemaChecks.id],
+  }),
+  checkSubgraph: one(schemaCheckSubgraphs, {
+    fields: [schemaCheckLintAction.schemaCheckSubgraphId],
+    references: [schemaCheckSubgraphs.id],
   }),
 }));
 
@@ -1876,6 +1942,9 @@ export const schemaCheckGraphPruningAction = pgTable(
       .references(() => federatedGraphs.id, {
         onDelete: 'cascade',
       }),
+    schemaCheckSubgraphId: uuid('schema_check_subgraph_id').references(() => schemaCheckSubgraphs.id, {
+      onDelete: 'set null',
+    }),
   },
   (t) => {
     return {
@@ -1893,6 +1962,10 @@ export const schemaCheckGraphPruningActionRelations = relations(schemaCheckGraph
   federatedGraph: one(federatedGraphs, {
     fields: [schemaCheckGraphPruningAction.federatedGraphId],
     references: [federatedGraphs.id],
+  }),
+  checkSubgraph: one(schemaCheckSubgraphs, {
+    fields: [schemaCheckGraphPruningAction.schemaCheckSubgraphId],
+    references: [schemaCheckSubgraphs.id],
   }),
 }));
 

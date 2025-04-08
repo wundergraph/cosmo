@@ -21,7 +21,7 @@ func TestMain(m *testing.M) {
 }
 
 var (
-	watchInterval = 10 * time.Millisecond
+	watchInterval = 50 * time.Millisecond
 	testTimeout   = 5 * time.Second
 
 	assertTimeout      = 500 * time.Millisecond

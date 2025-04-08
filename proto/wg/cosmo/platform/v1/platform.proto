@@ -177,6 +177,7 @@ message SchemaChange{
   optional string path = 3;
   bool isBreaking = 4;
   optional bool hasOverride = 5;
+  optional string subgraphName = 6;
 }
 
 message CompositionError {
@@ -230,6 +231,7 @@ message LintIssue{
   LintSeverity severity = 2;
   string message = 3;
   LintLocation issueLocation = 4;
+  optional string subgraphName = 5;
 }
 
 message GraphPruningIssue{
@@ -239,6 +241,7 @@ message GraphPruningIssue{
   string message = 4;
   LintLocation issueLocation = 5;
   string federatedGraphName = 6;
+  optional string subgraphName = 7;
 }
 
 message CheckSubgraphSchemaResponse {
@@ -455,9 +458,19 @@ message SchemaCheck {
     string repositorySlug = 3;
   }
 
+  message CheckedSubgraph {
+    // its the check subgraph id
+    string id = 1;
+    string subgraphName = 2;
+    // its optional because the subgraph can be deleted
+    optional string subgraphId = 3;
+    bool isDeleted = 4;
+    bool isNew = 5;
+  }
+
   string id = 1;
-  string targetID = 2;
-  string subgraphName = 3;
+  optional string targetID = 2;
+  optional string subgraphName = 3;
   string timestamp = 4;
   bool isComposable = 5;
   bool isBreaking = 6;
@@ -471,6 +484,7 @@ message SchemaCheck {
   bool lint_skipped = 14;
   bool graph_pruning_skipped = 15;
   optional VCSContext vcsContext = 16;
+  repeated CheckedSubgraph checkedSubgraphs = 17;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -495,6 +509,8 @@ message GetCheckSummaryResponse {
   message AffectedGraph {
     string id = 1;
     int32 traffic_check_days = 2;
+    string name = 3;
+    bool isCheckSuccessful = 4;
   }
 
   Response response = 1;
@@ -1198,6 +1214,12 @@ message DeleteOrganizationRequest {
 }
 
 message DeleteOrganizationResponse {
+  Response response = 1;
+}
+
+message RestoreOrganizationRequest {}
+
+message RestoreOrganizationResponse {
   Response response = 1;
 }
 
@@ -2455,6 +2477,50 @@ message SetGraphRouterCompatibilityVersionResponse {
   repeated CompositionWarning compositionWarnings = 6;
 }
 
+message CheckSubgraphSchemasRequest {
+  message CheckSubgraph {
+    string name = 1;
+    string schema = 2;
+    optional bool delete = 3;
+  }
+  string namespace = 1;
+  repeated CheckSubgraph subgraphs = 2;
+  GitInfo gitInfo = 3;
+  optional VCSContext vcsContext = 4;
+}
+
+message CheckOperationUsageStatsofSubgraph {
+  CheckOperationUsageStats operationUsageStats = 1;
+  string subgraphName = 2;
+}
+
+message CheckSubgraphSchemasResponse {
+  Response response = 1;
+  string checkId = 2;
+  repeated SchemaChange breakingChanges = 3;
+  repeated SchemaChange nonBreakingChanges = 4;
+  repeated CompositionError compositionErrors = 5;
+  repeated CompositionWarning compositionWarnings = 6;
+  repeated LintIssue lintErrors = 7;
+  repeated LintIssue lintWarnings = 8;
+  repeated GraphPruningIssue graphPruneErrors = 9;
+  repeated GraphPruningIssue graphPruneWarnings = 10;
+  repeated CheckOperationUsageStatsofSubgraph operationUsageStats = 11;
+  bool lintingSkipped = 12;
+  bool graphPruningSkipped = 13;
+  string checkUrl = 14;
+}
+
+message GetProposedSchemaOfCheckedSubgraphRequest {
+  string checkId = 1;
+  string checkedSubgraphId = 2;
+}
+
+message GetProposedSchemaOfCheckedSubgraphResponse {
+  Response response = 1;
+  string proposedSchema = 2;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -2500,6 +2566,8 @@ service PlatformService {
   rpc DeleteFederatedSubgraph(DeleteFederatedSubgraphRequest) returns (DeleteFederatedSubgraphResponse) {}
   // CheckSubgraphSchema checks if the schema is valid and if it can be composed without conflicts with the provided new subgraph schema.
   rpc CheckSubgraphSchema(CheckSubgraphSchemaRequest) returns (CheckSubgraphSchemaResponse) {}
+  rpc CheckSubgraphSchemas(CheckSubgraphSchemasRequest) returns (CheckSubgraphSchemasResponse) {}
+  rpc GetProposedSchemaOfCheckedSubgraph(GetProposedSchemaOfCheckedSubgraphRequest) returns (GetProposedSchemaOfCheckedSubgraphResponse) {}
   rpc FixSubgraphSchema(FixSubgraphSchemaRequest) returns (FixSubgraphSchemaResponse) {}
   // UpdateFederatedGraph updates a federated graph with new labels and routing url
   rpc UpdateFederatedGraph(UpdateFederatedGraphRequest) returns (UpdateFederatedGraphResponse) {}
@@ -2629,6 +2697,8 @@ service PlatformService {
   rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {}
   // DeleteOrganization deletes an organization
   rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse) {}
+  // RestoreOrganization restore an organization pending deletion
+  rpc RestoreOrganization(RestoreOrganizationRequest) returns (RestoreOrganizationResponse) {}
   // LeaveOrganization removes a member from the organization
   rpc LeaveOrganization(LeaveOrganizationRequest) returns (LeaveOrganizationResponse) {}
   // UpdateOrganizationDetails updates the name and slug of the organization

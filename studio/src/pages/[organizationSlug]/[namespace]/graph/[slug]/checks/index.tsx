@@ -35,7 +35,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ChecksFilterMenu, parseSelectedSubgraphs } from "@/components/checks/checks-filter-menu";
+import {
+  ChecksFilterMenu,
+  parseSelectedSubgraphs,
+} from "@/components/checks/checks-filter-menu";
 import { SelectedChecksFilters } from "@/components/checks/selected-checks-filters";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { useSessionStorage } from "@/hooks/use-session-storage";
@@ -65,7 +68,7 @@ const ChecksPage: NextPageWithLayout = () => {
     : 1;
 
   const limit = Number.parseInt((router.query.pageSize as string) || "10");
-  const selectedSubgraphs =  parseSelectedSubgraphs(router.query.subgraphs);
+  const selectedSubgraphs = parseSelectedSubgraphs(router.query.subgraphs);
 
   const {
     dateRange: { start, end },
@@ -177,6 +180,7 @@ const ChecksPage: NextPageWithLayout = () => {
                   clientTrafficCheckSkipped,
                   lintSkipped,
                   graphPruningSkipped,
+                  checkedSubgraphs,
                 }) => {
                   const isSuccessful = isCheckSuccessful(
                     isComposable,
@@ -224,7 +228,14 @@ const ChecksPage: NextPageWithLayout = () => {
                         </div>
                       </TableCell>
                       {graphContext.graph?.supportsFederation && (
-                        <TableCell>{subgraphName}</TableCell>
+                        <TableCell>
+                          {subgraphName ||
+                            (checkedSubgraphs.length > 1
+                              ? "Multiple Subgraphs"
+                              : checkedSubgraphs.length > 0
+                              ? checkedSubgraphs[0].subgraphName
+                              : "Subgraph")}
+                        </TableCell>
                       )}
                       <TableCell>
                         <div className="flex flex-wrap items-start gap-2">
