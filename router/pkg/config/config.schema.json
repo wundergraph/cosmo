@@ -2424,7 +2424,7 @@
         "websocket_client_write_timeout": {
             "type": "string",
             "format": "go-duration",
-            "default": "5s",
+            "default": "10s",
             "description": "Defines the timeout for the websocket write of the WebSocket client implementation. This is used to set the write deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         },
         "websocket_client_ping_interval": {

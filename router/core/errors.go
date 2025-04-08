@@ -228,7 +228,7 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 		}
 	} else {
 		// Regular request
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		if statusCode != 0 {
 			w.WriteHeader(statusCode)
 		}
