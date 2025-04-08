@@ -26,7 +26,10 @@
     "coverage": "vitest run --coverage",
     "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
     "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && prettier --write -c src",
-    "e2e": "bun test e2e/"
+    "e2e": "bun test e2e/",
+    "mcp:build": "bun build --compile src/mcp/index.ts --outfile cosmo-mcp-server",
+    "mcp:run": "npm run mcp:build && ./cosmo-mcp-server",
+    "mcp:debug": "npm run mcp:build && npx @modelcontextprotocol/inspector ./cosmo-mcp-server"
   },
   "keywords": [
     "wundergraph",
@@ -41,6 +44,7 @@
     "@connectrpc/connect": "^1.4.0",
     "@connectrpc/connect-node": "^1.4.0",
     "@graphql-tools/utils": "^10.2.2",
+    "@modelcontextprotocol/sdk": "^1.9.0",
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-connect": "workspace:*",
     "@wundergraph/cosmo-shared": "workspace:*",
@@ -64,7 +68,8 @@
     "ora": "^8.0.1",
     "pathe": "^1.1.1",
     "picocolors": "^1.0.0",
-    "undici": "^6.21.1"
+    "undici": "^6.21.1",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/bun": "^1.2.3",
