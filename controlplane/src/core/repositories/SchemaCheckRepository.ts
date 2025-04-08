@@ -604,7 +604,6 @@ export class SchemaCheckRepository {
           graphPruneWarnings: [],
           graphPruneErrors: [],
           compositionWarnings: [],
-          operationUsageStats: [],
         };
       }
 
@@ -638,7 +637,6 @@ export class SchemaCheckRepository {
               graphPruneWarnings: [],
               graphPruneErrors: [],
               compositionWarnings: [],
-              operationUsageStats: [],
             };
           }
           if (namespace.enableGraphPruning) {
@@ -661,7 +659,6 @@ export class SchemaCheckRepository {
             graphPruneWarnings: [],
             graphPruneErrors: [],
             compositionWarnings: [],
-            operationUsageStats: [],
           };
         }
       }
@@ -688,7 +685,6 @@ export class SchemaCheckRepository {
           graphPruneWarnings: [],
           graphPruneErrors: [],
           compositionWarnings: [],
-          operationUsageStats: [],
         };
       }
 
@@ -744,7 +740,6 @@ export class SchemaCheckRepository {
                 graphPruneWarnings: [],
                 graphPruneErrors: [],
                 compositionWarnings: [],
-                operationUsageStats: [],
                 proposalMatchMessage: `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`,
               };
             }
