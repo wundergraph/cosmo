@@ -11,3 +11,4 @@ packages:
   - cdn-server/cdn
   - admission-server
   - playground
+  - benchmarks/benchmark-scenarios

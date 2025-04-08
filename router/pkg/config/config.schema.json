@@ -1107,6 +1107,41 @@
         }
       }
     },
+    "profiling": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Set this to enable/disable profiling. The default value is false.",
+          "default": false
+        },
+        "server_address": {
+          "type": "string",
+          "description": "The address of the pyroscope server. The default value is 'http://localhost:4040'.",
+          "default": "http://localhost:4040"
+        },
+        "profile_types": {
+          "type": "array",
+          "description": "The profile types to collect. The default value is 'cpu'.",
+          "default": ["cpu"]
+        },
+        "tags": {
+          "type": "object",
+          "description": "The tags to add to the profiling data. The default value is an empty object.",
+          "default": {},
+          "additionalProperties": true
+        },
+        "basic_auth_user": {
+          "type": "string",
+          "description": "The basic auth user for the pyroscope server. The default value is an empty string."
+        },
+        "basic_auth_password": {
+          "type": "string",
+          "description": "The basic auth password for the pyroscope server. The default value is an empty string."
+        }
+      }
+    },
     "cors": {
       "type": "object",
       "additionalProperties": false,

@@ -1,0 +1,23 @@
+extend schema
+@link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
+
+scalar Time
+
+type User @key(fields: "id") {
+    id: ID!
+    name: String!
+    email: String!
+    password: String!
+    createdAt: Time!
+    updatedAt: Time!
+}
+
+
+type Query {
+    users: [User!]!
+    user(id: ID!): User!
+}
+
+type Mutation {
+    createUser(name: String!, email: String!, password: String!): User!
+}

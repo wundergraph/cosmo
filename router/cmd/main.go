@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/internal/profiler"
 	"github.com/wundergraph/cosmo/router/internal/versioninfo"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
@@ -64,6 +65,12 @@ func Main() {
 		defer pprofSvr.Close()
 		go pprofSvr.Listen()
 	}
+
+	pyroscopeStop, err := profiler.StartProfiler(result.Config)
+	if err != nil {
+		logger.Fatal("Could not start profiler", zap.Error(err))
+	}
+	defer pyroscopeStop()
 
 	// Start profiling if flags are set
 	profiler := profile.Start(logger, *cpuProfilePath, *memProfilePath)

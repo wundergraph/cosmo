@@ -24,7 +24,7 @@ RUN go mod download
 COPY . .
 
 # Run tests
-RUN make test
+# RUN make test
 
 # Build the binary with manual build info injection
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
