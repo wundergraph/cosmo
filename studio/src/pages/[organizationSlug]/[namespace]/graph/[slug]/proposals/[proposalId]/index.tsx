@@ -48,7 +48,12 @@ import {
   ExclamationTriangleIcon,
   NoSymbolIcon,
 } from "@heroicons/react/24/outline";
-import { Component2Icon, GitHubLogoIcon } from "@radix-ui/react-icons";
+import {
+  CheckCircledIcon,
+  Component2Icon,
+  GitHubLogoIcon,
+  ReaderIcon,
+} from "@radix-ui/react-icons";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   getChecksOfProposal,
@@ -212,6 +217,25 @@ export const ProposalDetails = ({
               </Tooltip>
             </dd>
           </div>
+
+          <div className="flex-start flex max-w-[200px] flex-col gap-1">
+            <dt className="text-sm text-muted-foreground">Latest Check</dt>
+            <dd>
+              <div className="flex items-center gap-x-2">
+                <Badge
+                  variant="outline"
+                  className={cn("gap-2 py-1.5", {
+                    "border-success/20 bg-success/10 text-success hover:bg-success/20":
+                      latestCheckSuccess,
+                    "border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive/20":
+                      !latestCheckSuccess,
+                  })}
+                >
+                  {latestCheckSuccess ? "PASSED" : "FAILED"}
+                </Badge>
+              </div>
+            </dd>
+          </div>
         </dl>
       </div>
       <div className="flex min-h-0 flex-1 flex-col">
@@ -222,13 +246,23 @@ export const ProposalDetails = ({
           >
             <div className="flex flex-row px-4 py-4 lg:px-6">
               <TabsList>
-                <TabsTrigger value="schemas" asChild>
+                <TabsTrigger
+                  value="schemas"
+                  className="flex items-center gap-x-2"
+                  asChild
+                >
                   <Link href={{ query: { ...router.query, tab: "schemas" } }}>
+                    <ReaderIcon className="flex-shrink-0" />
                     Proposed Schemas
                   </Link>
                 </TabsTrigger>
-                <TabsTrigger value="checks" asChild>
+                <TabsTrigger
+                  value="checks"
+                  className="flex items-center gap-x-2"
+                  asChild
+                >
                   <Link href={{ query: { ...router.query, tab: "checks" } }}>
+                    <CheckCircledIcon className="flex-shrink-0" />
                     Checks
                   </Link>
                 </TabsTrigger>
@@ -414,8 +448,8 @@ export const ProposalDetails = ({
                                         (checkedSubgraphs.length > 1
                                           ? "Multiple Subgraphs"
                                           : checkedSubgraphs.length > 0
-                                            ? checkedSubgraphs[0].subgraphName
-                                            : "Subgraph")}
+                                          ? checkedSubgraphs[0].subgraphName
+                                          : "Subgraph")}
                                     </TableCell>
                                   )}
                                   <TableCell>

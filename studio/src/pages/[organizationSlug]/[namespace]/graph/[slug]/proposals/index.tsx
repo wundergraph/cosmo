@@ -57,7 +57,7 @@ const ProposalsPage: NextPageWithLayout = () => {
   const {
     dateRange: { start, end },
     range,
-  } = useDateRangeQueryState();
+  } = useDateRangeQueryState(168);
 
   const startDate = range ? createDateRange(range).start : start;
   const endDate = range ? createDateRange(range).end : end;
@@ -226,7 +226,7 @@ const ProposalToolbar = () => {
   const {
     dateRange: { start: startDate, end: endDate },
     range,
-  } = useDateRangeQueryState();
+  } = useDateRangeQueryState(168);
 
   const onDateRangeChange: DateRangePickerChangeHandler = ({
     dateRange,
