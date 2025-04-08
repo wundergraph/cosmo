@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
 import { Pagination } from "@/components/ui/pagination";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio";
 import {
   Select,
   SelectContent,
@@ -53,6 +54,7 @@ import {
   Component2Icon,
   GitHubLogoIcon,
   ReaderIcon,
+  ChevronDownIcon,
 } from "@radix-ui/react-icons";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -67,7 +69,14 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useContext } from "react";
+import { useContext, useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Label } from "@/components/ui/label";
 
 export const ProposalDetails = ({
   proposal,
@@ -91,6 +100,10 @@ export const ProposalDetails = ({
   const limit = Number.parseInt((router.query.pageSize as string) || "10");
   const { toast } = useToast();
 
+  const [reviewAction, setReviewAction] = useState<
+    "APPROVED" | "CLOSED" | null
+  >(null);
+
   const graphData = useContext(GraphContext);
 
   const {
@@ -110,31 +123,60 @@ export const ProposalDetails = ({
     },
   );
 
-  const { mutate, isPending } = useMutation(updateProposal, {
-    onSuccess: (data) => {
-      if (data.response?.code === EnumStatusCode.OK) {
+  const { mutate: approveProposal, isPending: isApproving } = useMutation(
+    updateProposal,
+    {
+      onSuccess: (data) => {
+        if (data.response?.code === EnumStatusCode.OK) {
+          toast({
+            description: "Proposal approved successfully.",
+            duration: 3000,
+          });
+          refetch();
+        } else {
+          toast({
+            description: `Failed to approve proposal: ${data.response?.details}`,
+            duration: 3000,
+          });
+        }
+      },
+      onError: (error) => {
         toast({
-          description: "Proposal approved successfully.",
+          description: `Failed to approve proposal: ${error.message}`,
           duration: 3000,
         });
-        refetch();
-      } else {
+      },
+    },
+  );
+
+  const { mutate: closeProposal, isPending: isClosing } = useMutation(
+    updateProposal,
+    {
+      onSuccess: (data) => {
+        if (data.response?.code === EnumStatusCode.OK) {
+          toast({
+            description: "Proposal closed successfully.",
+            duration: 3000,
+          });
+          refetch();
+        } else {
+          toast({
+            description: `Failed to close proposal: ${data.response?.details}`,
+            duration: 3000,
+          });
+        }
+      },
+      onError: (error) => {
         toast({
-          description: `Failed to approve proposal: ${data.response?.details}`,
+          description: `Failed to close proposal: ${error.message}`,
           duration: 3000,
         });
-      }
+      },
     },
-    onError: (error) => {
-      toast({
-        description: `Failed to approve proposal: ${error.message}`,
-        duration: 3000,
-      });
-    },
-  });
+  );
 
   const handleApproveProposal = () => {
-    mutate({
+    approveProposal({
       proposalName: proposal.name,
       federatedGraphName: slug,
       namespace,
@@ -143,6 +185,26 @@ export const ProposalDetails = ({
         value: "APPROVED",
       },
     });
+  };
+
+  const handleCloseProposal = () => {
+    closeProposal({
+      proposalName: proposal.name,
+      federatedGraphName: slug,
+      namespace,
+      updateAction: {
+        case: "state",
+        value: "CLOSED",
+      },
+    });
+  };
+
+  const handleSubmitReview = () => {
+    if (reviewAction === "APPROVED") {
+      handleApproveProposal();
+    } else if (reviewAction === "CLOSED") {
+      handleCloseProposal();
+    }
   };
 
   const proposalSubgraph = proposal.subgraphs.find((s) => s.name === subgraph);
@@ -606,14 +668,93 @@ export const ProposalDetails = ({
                   </>
                 )}
               </div>
-              <Button
-                onClick={handleApproveProposal}
-                disabled={isPending || !latestCheckSuccess}
-                isLoading={isPending}
-                className="ml-4"
-              >
-                Approve Proposal
-              </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="ml-4" disabled={isApproving || isClosing}>
+                    Review Changes
+                    <ChevronDownIcon className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[500px] p-3">
+                  <div className="space-y-4 px-2 py-1.5">
+                    <RadioGroup
+                      value={reviewAction || ""}
+                      onValueChange={(value: string) => {
+                        if (value === "APPROVED" || value === "CLOSED") {
+                          setReviewAction(value as "APPROVED" | "CLOSED");
+                        } else {
+                          setReviewAction(null);
+                        }
+                      }}
+                      className="space-y-4"
+                    >
+                      <div
+                        className={cn(
+                          "flex cursor-pointer items-start space-x-2",
+                          !latestCheckSuccess &&
+                            "cursor-not-allowed opacity-50",
+                        )}
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                      >
+                        <RadioGroupItem
+                          value="APPROVED"
+                          id="approve-option"
+                          disabled={!latestCheckSuccess}
+                        />
+                        <div className="grid gap-1.5">
+                          <Label
+                            htmlFor="approve-option"
+                            className={cn(
+                              "cursor-pointer font-semibold",
+                              !latestCheckSuccess
+                                ? "cursor-not-allowed text-muted-foreground"
+                                : "",
+                            )}
+                          >
+                            Approve
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            Approve the changes made by the proposal.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div
+                        className="flex cursor-pointer items-start space-x-2"
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                      >
+                        <RadioGroupItem value="CLOSED" id="close-option" />
+                        <div className="grid gap-1.5">
+                          <Label
+                            htmlFor="close-option"
+                            className="cursor-pointer font-semibold text-destructive"
+                          >
+                            Close
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            Close the proposal without approving the changes.
+                          </p>
+                        </div>
+                      </div>
+                    </RadioGroup>
+
+                    <div className="mt-4 flex justify-end border-t pt-3">
+                      <Button
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          handleSubmitReview();
+                        }}
+                        isLoading={isApproving || isClosing}
+                        disabled={!reviewAction}
+                        size="sm"
+                      >
+                        Submit review
+                      </Button>
+                    </div>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         )}
