@@ -46,7 +46,7 @@ func (s *PublishEventConfiguration) MarshalJSONTemplate() string {
 }
 
 type SubscriptionSource struct {
-	pubSub *NatsPubSub
+	pubSub *Adapter
 }
 
 func (s *SubscriptionSource) UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
@@ -81,7 +81,7 @@ func (s *SubscriptionSource) Start(ctx *resolve.Context, input []byte, updater r
 }
 
 type NatsPublishDataSource struct {
-	pubSub *NatsPubSub
+	pubSub *Adapter
 }
 
 func (s *NatsPublishDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
@@ -104,7 +104,7 @@ func (s *NatsPublishDataSource) LoadWithFiles(ctx context.Context, input []byte,
 }
 
 type NatsRequestDataSource struct {
-	pubSub *NatsPubSub
+	pubSub *Adapter
 }
 
 func (s *NatsRequestDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {

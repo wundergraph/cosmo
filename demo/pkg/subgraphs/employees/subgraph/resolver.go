@@ -15,7 +15,7 @@ import (
 
 type Resolver struct {
 	mux                    sync.Mutex
-	NatsPubSubByProviderID map[string]*nats.NatsPubSub
+	NatsPubSubByProviderID map[string]*nats.Adapter
 	EmployeesData          []*model.Employee
 }
 

@@ -161,7 +161,7 @@ func subgraphHandler(schema graphql.ExecutableSchema) http.Handler {
 }
 
 type SubgraphOptions struct {
-	NatsPubSubByProviderID map[string]*natsPubsub.NatsPubSub
+	NatsPubSubByProviderID map[string]*natsPubsub.Adapter
 	GetPubSubName          func(string) string
 }
 
@@ -207,10 +207,19 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 		url = defaultSourceNameURL
 	}
 
-	natsPubSubByProviderID := map[string]*natsPubsub.NatsPubSub{
-		"default": natsPubsub.NewConnector(zap.NewNop(), url, []nats.Option{}, "hostname", "test").New(ctx),
-		"my-nats": natsPubsub.NewConnector(zap.NewNop(), url, []nats.Option{}, "hostname", "test").New(ctx),
+	natsPubSubByProviderID := map[string]*natsPubsub.Adapter{}
+
+	defaultAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create default nats adapter: %w", err)
 	}
+	natsPubSubByProviderID["default"] = defaultAdapter
+
+	myNatsAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create my-nats adapter: %w", err)
+	}
+	natsPubSubByProviderID["my-nats"] = myNatsAdapter
 
 	defaultConnection, err := nats.Connect(url)
 	if err != nil {

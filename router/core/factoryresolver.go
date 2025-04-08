@@ -272,7 +272,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 	}
 
 	for _, in := range engineConfig.DatasourceConfigurations {
-		var outs []plan.DataSource
+		var out plan.DataSource
 
 		switch in.Kind {
 		case nodev1.DataSourceKind_STATIC:
@@ -281,7 +281,6 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				return nil, err
 			}
 
-			var out plan.DataSource
 			out, err = plan.NewDataSourceConfiguration[staticdatasource.Configuration](
 				in.Id,
 				factory,
@@ -293,7 +292,6 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			if err != nil {
 				return nil, fmt.Errorf("error creating data source configuration for data source %s: %w", in.Id, err)
 			}
-			outs = append(outs, out)
 
 		case nodev1.DataSourceKind_GRAPHQL:
 			header := http.Header{}
@@ -401,7 +399,6 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				return nil, err
 			}
 
-			var out plan.DataSource
 			out, err = plan.NewDataSourceConfigurationWithName[graphql_datasource.Configuration](
 				in.Id,
 				dataSourceName,
@@ -412,12 +409,11 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			if err != nil {
 				return nil, fmt.Errorf("error creating data source configuration for data source %s: %w", in.Id, err)
 			}
-			outs = append(outs, out)
 
 		case nodev1.DataSourceKind_PUBSUB:
 			var err error
 
-			outs, err = pubsub.GetDataSourcesFromConfig(
+			out, err = pubsub.GetDataSourceFromConfig(
 				context.Background(),
 				in,
 				l.dataSourceMetaData(in),
@@ -433,7 +429,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			return nil, fmt.Errorf("unknown data source type %q", in.Kind)
 		}
 
-		outConfig.DataSources = append(outConfig.DataSources, outs...)
+		outConfig.DataSources = append(outConfig.DataSources, out)
 	}
 	return &outConfig, nil
 }

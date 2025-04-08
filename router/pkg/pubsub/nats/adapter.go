@@ -16,38 +16,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type connector struct {
-	client           *LazyClient
-	logger           *zap.Logger
-	hostName         string
-	routerListenAddr string
-}
-
-func NewConnector(logger *zap.Logger, url string, opts []nats.Option, hostName string, routerListenAddr string) *connector {
-	client := NewLazyClient(url, opts...)
-	return &connector{
-		client:           client,
-		logger:           logger,
-		hostName:         hostName,
-		routerListenAddr: routerListenAddr,
-	}
-}
-
-func (c *connector) New(ctx context.Context) *NatsPubSub {
-	if c.logger == nil {
-		c.logger = zap.NewNop()
-	}
-	return &NatsPubSub{
-		ctx:              ctx,
-		client:           c.client,
-		logger:           c.logger.With(zap.String("pubsub", "nats")),
-		closeWg:          sync.WaitGroup{},
-		hostName:         c.hostName,
-		routerListenAddr: c.routerListenAddr,
-	}
-}
-
-type NatsPubSub struct {
+type Adapter struct {
 	ctx              context.Context
 	client           *LazyClient
 	logger           *zap.Logger
@@ -60,7 +29,7 @@ type NatsPubSub struct {
 // We use the hostname and the address the router is listening on, which should provide a good representation
 // of what a unique instance is from the perspective of the client that has started a subscription to this instance
 // and want to restart the subscription after a failure on the client or router side.
-func (p *NatsPubSub) getInstanceIdentifier() string {
+func (p *Adapter) getInstanceIdentifier() string {
 	return fmt.Sprintf("%s-%s", p.hostName, p.routerListenAddr)
 }
 
@@ -68,7 +37,7 @@ func (p *NatsPubSub) getInstanceIdentifier() string {
 // we need to make sure that the durable consumer name is unique for each instance and subjects to prevent
 // multiple routers from changing the same consumer, which would lead to message loss and wrong messages delivered
 // to the subscribers
-func (p *NatsPubSub) getDurableConsumerName(durableName string, subjects []string) (string, error) {
+func (p *Adapter) getDurableConsumerName(durableName string, subjects []string) (string, error) {
 	subjHash := xxhash.New()
 	_, err := subjHash.WriteString(p.getInstanceIdentifier())
 	if err != nil {
@@ -84,7 +53,7 @@ func (p *NatsPubSub) getDurableConsumerName(durableName string, subjects []strin
 	return fmt.Sprintf("%s-%x", durableName, subjHash.Sum64()), nil
 }
 
-func (p *NatsPubSub) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
+func (p *Adapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "subscribe"),
@@ -212,7 +181,7 @@ func (p *NatsPubSub) Subscribe(ctx context.Context, event SubscriptionEventConfi
 	return nil
 }
 
-func (p *NatsPubSub) Publish(_ context.Context, event PublishAndRequestEventConfiguration) error {
+func (p *Adapter) Publish(_ context.Context, event PublishAndRequestEventConfiguration) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "publish"),
@@ -236,7 +205,7 @@ func (p *NatsPubSub) Publish(_ context.Context, event PublishAndRequestEventConf
 	return nil
 }
 
-func (p *NatsPubSub) Request(ctx context.Context, event PublishAndRequestEventConfiguration, w io.Writer) error {
+func (p *Adapter) Request(ctx context.Context, event PublishAndRequestEventConfiguration, w io.Writer) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "request"),
@@ -266,7 +235,7 @@ func (p *NatsPubSub) Request(ctx context.Context, event PublishAndRequestEventCo
 	return err
 }
 
-func (p *NatsPubSub) flush(ctx context.Context) error {
+func (p *Adapter) flush(ctx context.Context) error {
 	nc, err := p.client.GetClient()
 	if err != nil {
 		return err
@@ -274,7 +243,7 @@ func (p *NatsPubSub) flush(ctx context.Context) error {
 	return nc.FlushWithContext(ctx)
 }
 
-func (p *NatsPubSub) Shutdown(ctx context.Context) error {
+func (p *Adapter) Shutdown(ctx context.Context) error {
 	nc, err := p.client.GetClient()
 	if err != nil {
 		return nil // Already disconnected or failed to connect
@@ -304,4 +273,21 @@ func (p *NatsPubSub) Shutdown(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats.Option, hostName string, routerListenAddr string) (*Adapter, error) {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
+	client := NewLazyClient(url, opts...)
+
+	return &Adapter{
+		ctx:              ctx,
+		client:           client,
+		logger:           logger.With(zap.String("pubsub", "nats")),
+		closeWg:          sync.WaitGroup{},
+		hostName:         hostName,
+		routerListenAddr: routerListenAddr,
+	}, nil
 }

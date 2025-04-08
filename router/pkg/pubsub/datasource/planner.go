@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/utils"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
@@ -12,40 +11,13 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-type EventConfigType interface {
-	GetResolveDataSource() (resolve.DataSource, error)
-	GetResolveDataSourceInput(event []byte) (string, error)
-	GetEngineEventConfiguration() *nodev1.EngineEventConfiguration
-	GetResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error)
-	GetResolveDataSourceSubscriptionInput() (string, error)
-}
-
-type PubSubGeneralImplementerList []PubSubGeneralImplementer
-
-func (p *PubSubGeneralImplementerList) FindEventConfig(typeName string, fieldName string, extractFn func(string) (string, error)) (EventConfigType, error) {
-	for _, pubSub := range *p {
-		eventConfigV, err := pubSub.FindEventConfig(typeName, fieldName, extractFn)
-		if err != nil {
-			return nil, err
-		}
-		if eventConfigV != nil {
-			return eventConfigV, nil
-		}
-	}
-	return nil, fmt.Errorf("failed to find event config for type name \"%s\" and field name \"%s\"", typeName, fieldName)
-}
-
-type PubSubGeneralImplementer interface {
-	FindEventConfig(typeName string, fieldName string, extractFn func(string) (string, error)) (EventConfigType, error)
-}
-
 type Planner struct {
-	id           int
-	pubSubs      PubSubGeneralImplementerList
-	eventConfig  EventConfigType
-	rootFieldRef int
-	variables    resolve.Variables
-	visitor      *plan.Visitor
+	id               int
+	providers        []PubSubProvider
+	pubSubDataSource PubSubDataSource
+	rootFieldRef     int
+	variables        resolve.Variables
+	visitor          *plan.Visitor
 }
 
 func (p *Planner) SetID(id int) {
@@ -68,23 +40,23 @@ func (p *Planner) DataSourcePlanningBehavior() plan.DataSourcePlanningBehavior {
 	}
 }
 
-func (p *Planner) Register(visitor *plan.Visitor, configuration plan.DataSourceConfiguration[PubSubGeneralImplementerList], _ plan.DataSourcePlannerConfiguration) error {
+func (p *Planner) Register(visitor *plan.Visitor, configuration plan.DataSourceConfiguration[[]PubSubProvider], _ plan.DataSourcePlannerConfiguration) error {
 	p.visitor = visitor
 	visitor.Walker.RegisterEnterFieldVisitor(p)
 	visitor.Walker.RegisterEnterDocumentVisitor(p)
-	p.pubSubs = configuration.CustomConfiguration()
+	p.providers = configuration.CustomConfiguration()
 	return nil
 }
 
 func (p *Planner) ConfigureFetch() resolve.FetchConfiguration {
-	if p.eventConfig == nil {
+	if p.pubSubDataSource == nil {
 		// p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to configure fetch: event config is nil"))
 		return resolve.FetchConfiguration{}
 	}
 
 	var dataSource resolve.DataSource
 
-	dataSource, err := p.eventConfig.GetResolveDataSource()
+	dataSource, err := p.pubSubDataSource.GetResolveDataSource()
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get data source: %w", err))
 		return resolve.FetchConfiguration{}
@@ -96,7 +68,7 @@ func (p *Planner) ConfigureFetch() resolve.FetchConfiguration {
 		return resolve.FetchConfiguration{}
 	}
 
-	input, err := p.eventConfig.GetResolveDataSourceInput(event)
+	input, err := p.pubSubDataSource.GetResolveDataSourceInput(event)
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source input: %w", err))
 		return resolve.FetchConfiguration{}
@@ -107,24 +79,24 @@ func (p *Planner) ConfigureFetch() resolve.FetchConfiguration {
 		Variables:  p.variables,
 		DataSource: dataSource,
 		PostProcessing: resolve.PostProcessingConfiguration{
-			MergePath: []string{p.eventConfig.GetEngineEventConfiguration().GetFieldName()},
+			MergePath: []string{p.pubSubDataSource.GetEngineEventConfiguration().GetFieldName()},
 		},
 	}
 }
 
 func (p *Planner) ConfigureSubscription() plan.SubscriptionConfiguration {
-	if p.eventConfig == nil {
+	if p.pubSubDataSource == nil {
 		// p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to configure subscription: event manager is nil"))
 		return plan.SubscriptionConfiguration{}
 	}
 
-	dataSource, err := p.eventConfig.GetResolveDataSourceSubscription()
+	dataSource, err := p.pubSubDataSource.GetResolveDataSourceSubscription()
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source subscription: %w", err))
 		return plan.SubscriptionConfiguration{}
 	}
 
-	input, err := p.eventConfig.GetResolveDataSourceSubscriptionInput()
+	input, err := p.pubSubDataSource.GetResolveDataSourceSubscriptionInput()
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source subscription input: %w", err))
 		return plan.SubscriptionConfiguration{}
@@ -135,7 +107,7 @@ func (p *Planner) ConfigureSubscription() plan.SubscriptionConfiguration {
 		Variables:  p.variables,
 		DataSource: dataSource,
 		PostProcessing: resolve.PostProcessingConfiguration{
-			MergePath: []string{p.eventConfig.GetEngineEventConfiguration().GetFieldName()},
+			MergePath: []string{p.pubSubDataSource.GetEngineEventConfiguration().GetFieldName()},
 		},
 	}
 }
@@ -221,10 +193,23 @@ func (p *Planner) EnterField(ref int) {
 		return p.extractArgumentTemplate(ref, tpl)
 	}
 
-	eventConfigV, err := p.pubSubs.FindEventConfig(typeName, fieldName, extractFn)
-	if err != nil {
-		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to find event config for type name \"%s\" and field name \"%s\": %w", typeName, fieldName, err))
-		return
+	var pubSubDataSource PubSubDataSource
+	var err error
+
+	for _, pubSub := range p.providers {
+		pubSubDataSource, err = pubSub.FindPubSubDataSource(typeName, fieldName, extractFn)
+		if err != nil {
+			p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to find event config for type name \"%s\" and field name \"%s\": %w", typeName, fieldName, err))
+			return
+		}
+		if pubSubDataSource != nil {
+			break
+		}
 	}
-	p.eventConfig = eventConfigV
+
+	if pubSubDataSource == nil {
+		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to find event config for type name \"%s\" and field name \"%s\"", typeName, fieldName))
+	}
+
+	p.pubSubDataSource = pubSubDataSource
 }

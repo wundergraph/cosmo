@@ -2090,13 +2090,15 @@ func WSWriteJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) 
 func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, natsData *NatsData, pubSubName func(string) string) *subgraphs.SubgraphOptions {
 	if natsData == nil {
 		return &subgraphs.SubgraphOptions{
-			NatsPubSubByProviderID: map[string]*pubsubNats.NatsPubSub{},
+			NatsPubSubByProviderID: map[string]*pubsubNats.Adapter{},
 			GetPubSubName:          pubSubName,
 		}
 	}
-	natsPubSubByProviderID := make(map[string]*pubsubNats.NatsPubSub, len(demoNatsProviders))
+	natsPubSubByProviderID := make(map[string]*pubsubNats.Adapter, len(demoNatsProviders))
 	for _, sourceName := range demoNatsProviders {
-		natsPubSubByProviderID[sourceName] = pubsubNats.NewConnector(logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr").New(ctx)
+		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr")
+		require.NoError(t, err)
+		natsPubSubByProviderID[sourceName] = adapter
 	}
 
 	return &subgraphs.SubgraphOptions{
