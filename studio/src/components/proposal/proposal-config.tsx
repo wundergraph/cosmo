@@ -53,10 +53,10 @@ export const ProposalConfig = ({
   );
   const [proposalsEnabled, setProposalsEnabled] = useState(data.enabled);
   const [checkSeverityLevel, setCheckSeverityLevel] = useState<string>(
-    data.checkSeverityLevel === LintSeverity.error ? "error" : "warn",
+    data.checkSeverityLevel === LintSeverity.warn ? "warn" : "error",
   );
   const [publishSeverityLevel, setPublishSeverityLevel] = useState<string>(
-    data.publishSeverityLevel === LintSeverity.error ? "error" : "warn",
+    data.publishSeverityLevel === LintSeverity.warn ? "warn" : "error",
   );
   const { toast } = useToast();
 

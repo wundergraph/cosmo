@@ -114,6 +114,7 @@ const PoliciesPage: NextPageWithLayout = () => {
       />
       <ChecksConfig namespace={namespace} data={checksConfig} />
       <ProposalConfig
+        key={proposalConfig.enabled ? "enabled" : "disabled"}
         data={proposalConfig}
         refetch={refetchProposalConfig}
       />
