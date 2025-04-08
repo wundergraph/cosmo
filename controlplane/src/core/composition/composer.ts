@@ -700,6 +700,22 @@ export class Composer {
           }
         }
 
+        // Handles new subgraphs
+        for (const [subgraphName, subgraph] of inputSubgraphs.entries()) {
+          if (subgraph.subgraph) {
+            continue;
+          }
+          checkSubgraphsByFedGraph.set(graph.id, [
+            ...(checkSubgraphsByFedGraph.get(graph.id) || []),
+            subgraph.checkSubgraphId,
+          ]);
+          subgraphsToBeComposed.push({
+            name: subgraphName,
+            url: '',
+            definitions: parse(subgraph.newSchemaSDL),
+          });
+        }
+
         const contracts = await this.contractRepo.bySourceFederatedGraphId(graph.id);
 
         if (contracts.length === 0) {
