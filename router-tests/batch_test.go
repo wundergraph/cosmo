@@ -179,7 +179,7 @@ func TestBatch(t *testing.T) {
 				}, nil)
 				require.NoError(t, err)
 				require.Equal(t, http.StatusOK, res.Response.StatusCode)
-				require.Equal(t, "application/json", res.Response.Header.Get("Content-Type"))
+				require.Equal(t, "application/json; charset=utf-8", res.Response.Header.Get("Content-Type"))
 				require.JSONEq(t, `{"errors":[{"message":"Invalid GraphQL request"}]}`, res.Body)
 			},
 		)
@@ -223,7 +223,7 @@ func TestBatch(t *testing.T) {
 				}, nil)
 				require.NoError(t, err)
 				require.Equal(t, http.StatusOK, res.Response.StatusCode)
-				require.Equal(t, "application/json", res.Response.Header.Get("Content-Type"))
+				require.Equal(t, "application/json; charset=utf-8", res.Response.Header.Get("Content-Type"))
 				require.JSONEq(t, `{"errors":[{"message":"Invalid GraphQL request","extensions":{"code":"BATCH_LIMIT_EXCEEDED"}}]}`, res.Body)
 			},
 		)
