@@ -160,11 +160,3 @@ func TestKafkaPubSubDataSourceMultiTopicSubscription(t *testing.T) {
 	require.Equal(t, "test-topic-2", subscriptionConfig.Topics[1], "Expected second topic to be 'test-topic-2'")
 
 }
-
-// bytesBuffer is a helper that implements io.Writer to capture output
-type bytesBuffer []byte
-
-func (b *bytesBuffer) Write(p []byte) (n int, err error) {
-	*b = append(*b, p...)
-	return len(p), nil
-}
