@@ -13,8 +13,8 @@ import { getFederatedGraphSchemas } from '../../graph/federated-graph/utils.js';
  */
 export const registerVerifyQueryAgainstRemoteSchemaTool = ({ server, opts }: { server: McpServer, opts: BaseCommandOptions }) => {
     server.tool(
-        "verify_query_against_remote_schema",
-        "Verify if a GraphQL query is valid against a remote Supergraph schema.",
+        "mcp_cosmo_verify_query_against_remote_schema",
+        "Verify if a GraphQL query is valid against a remote Supergraph.",
         { query: z.string(), supergraph: z.string(), namespace: z.string().optional() },
         async ({ query, supergraph, namespace }) => {
             try {

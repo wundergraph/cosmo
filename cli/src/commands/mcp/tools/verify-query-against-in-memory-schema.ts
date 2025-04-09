@@ -12,8 +12,8 @@ import type { BaseCommandOptions } from '../../../core/types/types.js';
  */
 export const registerVerifyQueryAgainstInMemorySchemaTool = ({ server, opts }: { server: McpServer, opts: BaseCommandOptions }) => {
     server.tool(
-        "verify_query_against_in_memory_schema",
-        "Verify if a GraphQL query is valid against a local in memory schema or Supergraph.",
+        "mcp_cosmo_verify_query_against_in_memory_schema",
+        "Verify if a GraphQL query is valid against a local in memory Supergraph or GraphQL SDL.",
         { query: z.string(), schema: z.string() },
         async ({ query, schema: schemaString }) => { // Renamed schema to schemaString to avoid conflict
             try {

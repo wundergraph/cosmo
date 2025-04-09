@@ -11,7 +11,7 @@ import type { BaseCommandOptions } from '../../../core/types/types.js';
  */
 export const registerSchemaChangeProposalWorkflowTool = ({ server, opts }: { server: McpServer, opts: BaseCommandOptions }) => {
     server.tool(
-        "schema_change_proposal_workflow",
+        "mcp_cosmo_schema_change_proposal_workflow",
         "Use this tool to generate a list of instructions to make a successful schema change for a Supergraph.",
         { change: z.string(), supergraph: z.string(), namespace: z.string().optional() },
         async ({ change, supergraph, namespace }) => ({

@@ -6,7 +6,7 @@ import { SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platfo
 
 export const registerSubgraphVerifySchemaChangesTool = ({ server, opts }: ToolContext) => {
     server.tool(
-        "verify_subgraph_schema_changes",
+        "mcp_cosmo_verify_subgraph_schema_changes",
         "When making changes to a Subgraph Schema, this command can validate if the schema is valid GraphQL SDL, if it composes with all other subgraphs into a valid supergraph, and if there are any breaking changes.",
         {
             name: z.string().describe("The name of the subgraph"),

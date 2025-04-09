@@ -11,7 +11,7 @@ import type { BaseCommandOptions } from '../../../core/types/types.js';
  */
 export const registerDreamQueryWorkflowTool = ({ server, opts }: { server: McpServer, opts: BaseCommandOptions }) => {
     server.tool(
-        "dream_query_workflow",
+        "mcp_cosmo_dream_query_workflow",
         "Use this tool to generate a list of instructions to make the necessary changes to a Supergraph to support a given GraphQL query. Ask the user to provide the Supergraph name and namespace if it's not clear.",
         { query: z.string(), supergraph: z.string(), namespace: z.string().optional() },
         async ({ query, supergraph, namespace }) => ({

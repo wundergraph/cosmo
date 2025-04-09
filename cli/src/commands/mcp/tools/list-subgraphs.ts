@@ -4,7 +4,7 @@ import { ToolContext } from './types.js';
 
 export const registerListSubgraphsTool = ({ server, opts }: ToolContext) => {
     server.tool(
-        "list_subgraphs",
+        "mcp_cosmo_list_subgraphs",
         "List all subgraphs",
         async () => {
             const resp = await opts.client.platform.getSubgraphs(

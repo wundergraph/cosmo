@@ -7,7 +7,7 @@ import { fetchRouterConfig, getFederatedGraphSchemas, getSubgraphSDL, getSubgrap
 export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
     // List federated graphs tool
     server.tool(
-        "list-supergraphs",
+        "mcp_cosmo_list_supergraphs",
         "List all federated graphs / Supergraphs",
         {
             namespace: z.string().optional().describe("Filter to get graphs in this namespace only")
@@ -57,7 +57,7 @@ export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
 
     // Fetch federated graph details tool
     server.tool(
-        "fetch_supergraph",
+        "mcp_cosmo_fetch_supergraph",
         "Fetch the schemas and configuration of a federated graph / Supergraph",
         {
             name: z.string().describe("The name of the federated graph to fetch"),
@@ -91,7 +91,7 @@ export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
 
     // Fetch router config tool
     server.tool(
-        "fetch-supergraph-router-config",
+        "mcp_cosmo_fetch_supergraph_router_config",
         "Fetch the router configuration for a federated graph / Supergraph",
         {
             name: z.string().describe("The name of the federated graph to fetch"),
@@ -116,7 +116,7 @@ export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
 
     // Fetch subgraphs tool
     server.tool(
-        "fetch-supergraph-subgraphs",
+        "mcp_cosmo_fetch_supergraph_subgraphs",
         "Fetch all subgraphs and their schemas for a federated graph / Supergraph",
         {
             name: z.string().describe("The name of the federated graph to fetch"),
