@@ -1,7 +1,7 @@
-import { z } from "zod";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { BaseCommandOptions } from "../../../core/types/types.js";
-import { introspectSubgraph } from "../../../utils.js";
+import { z } from 'zod';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { BaseCommandOptions } from '../../../core/types/types.js';
+import { introspectSubgraph } from '../../../utils.js';
 
 /**
  * Zod schema for the introspect subgraph tool input.
@@ -10,9 +10,12 @@ import { introspectSubgraph } from "../../../utils.js";
  * @property useRawIntrospection - Optional flag to use raw introspection query.
  */
 export const introspectSubgraphInputSchema = z.object({
-    routingUrl: z.string().describe("The routing url of your subgraph."),
-    header: z.array(z.object({ key: z.string(), value: z.string() })).optional().describe("Headers to apply during introspection"),
-    useRawIntrospection: z.boolean().optional().describe("Use the standard introspection query."),
+  routingUrl: z.string().describe('The routing url of your subgraph.'),
+  header: z
+    .array(z.object({ key: z.string(), value: z.string() }))
+    .optional()
+    .describe('Headers to apply during introspection'),
+  useRawIntrospection: z.boolean().optional().describe('Use the standard introspection query.'),
 });
 
 /**
@@ -28,31 +31,32 @@ export type IntrospectSubgraphInput = z.infer<typeof introspectSubgraphInputSche
  * @param config.opts - Base command options.
  */
 export const registerIntrospectSubgraphTool = ({ server, opts }: { server: McpServer; opts: BaseCommandOptions }) => {
-    server.tool(
-        "mcp_cosmo_introspect_subgraph", // Tool name
-        "Introspects a subgraph and returns its GraphQL schema (SDL).", // Tool description
-        introspectSubgraphInputSchema.shape, // Pass the raw shape
-        async ({ routingUrl, header, useRawIntrospection }: IntrospectSubgraphInput) => { // Destructure input fields directly
-            try {
-                const resp = await introspectSubgraph({
-                    subgraphURL: routingUrl, // Use destructured variable
-                    additionalHeaders: header || [],
-                    rawIntrospection: useRawIntrospection, // Use destructured variable
-                });
+  server.tool(
+    'mcp_cosmo_introspect_subgraph', // Tool name
+    'Introspects a subgraph and returns its GraphQL schema (SDL).', // Tool description
+    introspectSubgraphInputSchema.shape, // Pass the raw shape
+    async ({ routingUrl, header, useRawIntrospection }: IntrospectSubgraphInput) => {
+      // Destructure input fields directly
+      try {
+        const resp = await introspectSubgraph({
+          subgraphURL: routingUrl, // Use destructured variable
+          additionalHeaders: header || [],
+          rawIntrospection: useRawIntrospection, // Use destructured variable
+        });
 
-                if (resp.success !== true || !resp.sdl) {
-                    // Throw error on failure
-                    throw new Error(`Could not introspect subgraph at ${routingUrl}. ${resp.errorMessage || 'Unknown error'}`); // Use destructured variable
-                }
-
-                // Return result wrapped in content object
-                return {
-                    content: [{ type: "text", text: resp.sdl }]
-                };
-            } catch (error: any) {
-                // Rethrow caught errors
-                throw new Error(`Failed to introspect subgraph: ${error.message || error}`);
-            }
+        if (resp.success !== true || !resp.sdl) {
+          // Throw error on failure
+          throw new Error(`Could not introspect subgraph at ${routingUrl}. ${resp.errorMessage || 'Unknown error'}`); // Use destructured variable
         }
-    );
-}; 
+
+        // Return result wrapped in content object
+        return {
+          content: [{ type: 'text', text: resp.sdl }],
+        };
+      } catch (error: any) {
+        // Rethrow caught errors
+        throw new Error(`Failed to introspect subgraph: ${error.message || error}`);
+      }
+    },
+  );
+};

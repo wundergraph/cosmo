@@ -29,6 +29,6 @@ Update the `cli/src/commands/mcp/README.md` file to reflect the new tool.
 Example:
 
 ```md
--   **`schema-change-proposal-workflow`**: Generates a step-by-step guide or set of instructions for making a specific schema change to a Supergraph safely and effectively.
-    -   *Use Case*: Assisting developers in planning and executing schema changes.
+- **`schema-change-proposal-workflow`**: Generates a step-by-step guide or set of instructions for making a specific schema change to a Supergraph safely and effectively.
+  - _Use Case_: Assisting developers in planning and executing schema changes.
 ```

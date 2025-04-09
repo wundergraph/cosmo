@@ -18,9 +18,7 @@ To configure Cosmo MCP, e.g. for tools like Cursor, you need to modify your Curs
   "mcpServers": {
     "cosmo": {
       "command": "npx wgc",
-      "args": [
-        "mcp"
-      ],
+      "args": ["mcp"],
       "env": {
         "COSMO_API_KEY": "cosmo_<redacted>"
       }
@@ -40,40 +38,40 @@ The MCP server exposes several tools that an AI model can utilize:
 
 ### Subgraph Management
 
--   **`mcp_cosmo_list_subgraphs`**: Lists all subgraphs registered in your Cosmo Platform instance.
-    -   *Use Case*: Discovering available subgraphs.
--   **`mcp_cosmo_get_subgraphs`**: Retrieves detailed information for specified subgraphs, including their GraphQL Schema Definition Language (SDL).
-    -   *Use Case*: Inspecting the schema or configuration of specific subgraphs.
--   **`mcp_cosmo_introspect_subgraph`**: Introspects a running subgraph endpoint to retrieve its current GraphQL schema.
-    -   *Use Case*: Fetching the latest schema directly from a subgraph instance, useful for verifying deployments or comparing against registered schemas.
--   **`mcp_cosmo_subgraph_verify_schema_changes`**: Validates proposed changes to a subgraph's schema. It checks for valid GraphQL SDL, composition compatibility with other subgraphs, and potential breaking changes against client traffic (optional).
-    -   *Use Case*: Safely validating schema modifications before deployment.
+- **`mcp_cosmo_list_subgraphs`**: Lists all subgraphs registered in your Cosmo Platform instance.
+  - _Use Case_: Discovering available subgraphs.
+- **`mcp_cosmo_get_subgraphs`**: Retrieves detailed information for specified subgraphs, including their GraphQL Schema Definition Language (SDL).
+  - _Use Case_: Inspecting the schema or configuration of specific subgraphs.
+- **`mcp_cosmo_introspect_subgraph`**: Introspects a running subgraph endpoint to retrieve its current GraphQL schema.
+  - _Use Case_: Fetching the latest schema directly from a subgraph instance, useful for verifying deployments or comparing against registered schemas.
+- **`mcp_cosmo_subgraph_verify_schema_changes`**: Validates proposed changes to a subgraph's schema. It checks for valid GraphQL SDL, composition compatibility with other subgraphs, and potential breaking changes against client traffic (optional).
+  - _Use Case_: Safely validating schema modifications before deployment.
 
 ### Supergraph (Federated Graph) Management
 
--   **`mcp_cosmo_list_supergraphs`**: Lists all federated graphs (Supergraphs) in your Cosmo Platform instance, optionally filtered by namespace.
-    -   *Use Case*: Discovering available Supergraphs.
--   **`mcp_cosmo_fetch_supergraph`**: Fetches the composed schema (SDL and client schema) and configuration details for a specific Supergraph.
-    -   *Use Case*: Examining the structure and configuration of a Supergraph.
--   **`mcp_cosmo_fetch_supergraph_router_config`**: Retrieves the router configuration (e.g., for WunderGraph Cosmo Router) for a specific Supergraph.
-    -   *Use Case*: Obtaining the necessary configuration to run a compatible router instance.
--   **`mcp_cosmo_fetch_supergraph_subgraphs`**: Fetches a list of all subgraphs that are part of a specific Supergraph, including their individual schemas and routing information.
-    -   *Use Case*: Understanding the composition of a Supergraph and its constituent subgraphs.
+- **`mcp_cosmo_list_supergraphs`**: Lists all federated graphs (Supergraphs) in your Cosmo Platform instance, optionally filtered by namespace.
+  - _Use Case_: Discovering available Supergraphs.
+- **`mcp_cosmo_fetch_supergraph`**: Fetches the composed schema (SDL and client schema) and configuration details for a specific Supergraph.
+  - _Use Case_: Examining the structure and configuration of a Supergraph.
+- **`mcp_cosmo_fetch_supergraph_router_config`**: Retrieves the router configuration (e.g., for WunderGraph Cosmo Router) for a specific Supergraph.
+  - _Use Case_: Obtaining the necessary configuration to run a compatible router instance.
+- **`mcp_cosmo_fetch_supergraph_subgraphs`**: Fetches a list of all subgraphs that are part of a specific Supergraph, including their individual schemas and routing information.
+  - _Use Case_: Understanding the composition of a Supergraph and its constituent subgraphs.
 
 ### Schema Evolution & Query Workflows
 
--   **`mcp_cosmo_schema_change_proposal_workflow`**: Generates a step-by-step guide or set of instructions for making a specific schema change to a Supergraph safely and effectively.
-    -   *Use Case*: Assisting developers in planning and executing schema changes.
--   **`mcp_cosmo_dream_query_workflow`**: Takes a desired GraphQL query and generates instructions on the necessary schema modifications across relevant subgraphs to support that query within a Supergraph.
-    -   *Use Case*: Streamlining the process of evolving the Supergraph schema to meet new data requirements expressed via GraphQL queries.
--   **`mcp_cosmo_verify_query_against_remote_schema`**: Validates a given GraphQL query against the schema of a deployed Supergraph in your Cosmo Platform instance.
-    -   *Use Case*: Checking if a query is valid before integrating it into an application.
--   **`mcp_cosmo_verify_query_against_in_memory_schema`**: Validates a given GraphQL query against a provided Supergraph schema string (e.g., a locally composed schema).
-    -   *Use Case*: Testing queries against local or proposed schema changes without needing a deployed Supergraph.
+- **`mcp_cosmo_schema_change_proposal_workflow`**: Generates a step-by-step guide or set of instructions for making a specific schema change to a Supergraph safely and effectively.
+  - _Use Case_: Assisting developers in planning and executing schema changes.
+- **`mcp_cosmo_dream_query_workflow`**: Takes a desired GraphQL query and generates instructions on the necessary schema modifications across relevant subgraphs to support that query within a Supergraph.
+  - _Use Case_: Streamlining the process of evolving the Supergraph schema to meet new data requirements expressed via GraphQL queries.
+- **`mcp_cosmo_verify_query_against_remote_schema`**: Validates a given GraphQL query against the schema of a deployed Supergraph in your Cosmo Platform instance.
+  - _Use Case_: Checking if a query is valid before integrating it into an application.
+- **`mcp_cosmo_verify_query_against_in_memory_schema`**: Validates a given GraphQL query against a provided Supergraph schema string (e.g., a locally composed schema).
+  - _Use Case_: Testing queries against local or proposed schema changes without needing a deployed Supergraph.
 
 ### Supergraph Changelog
 
--   **`mcp_cosmo_supergraph_changelog`**: Fetches the changelog for a federated graph / Supergraph.
-    -   *Use Case*: Reviewing the history of schema changes and composition updates for a Supergraph.
+- **`mcp_cosmo_supergraph_changelog`**: Fetches the changelog for a federated graph / Supergraph.
+  - _Use Case_: Reviewing the history of schema changes and composition updates for a Supergraph.
 
 These tools enable AI models to interact with and manage your federated GraphQL architecture through the MCP server interface.
