@@ -1149,7 +1149,9 @@ describe('Create proposal tests', () => {
 
     // Expect an error response
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(createProposalResponse.response?.details).toContain(`Duplicate subgraph name: ${newSubgraphName}`);
+    expect(createProposalResponse.response?.details).toContain(
+      `The subgraphs provided in the proposal have to be unique. Please check the names of the subgraphs and try again.`,
+    );
 
     await server.close();
   });

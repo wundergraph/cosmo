@@ -1899,7 +1899,9 @@ describe('Update proposal tests', () => {
 
     // Expect an error response due to duplicate subgraphs
     expect(updateProposalResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(updateProposalResponse.response?.details).toContain(`Duplicate subgraph name: ${subgraphName}`);
+    expect(updateProposalResponse.response?.details).toContain(
+      `The subgraphs provided in the proposal have to be unique. Please check the names of the subgraphs and try again.`,
+    );
 
     // Verify the proposal wasn't updated
     const getProposalResponse = await client.getProposal({
@@ -2009,7 +2011,9 @@ describe('Update proposal tests', () => {
 
     // Expect an error response
     expect(updateProposalResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(updateProposalResponse.response?.details).toContain(`Duplicate subgraph name: ${newSubgraphName}`);
+    expect(updateProposalResponse.response?.details).toContain(
+      `The subgraphs provided in the proposal have to be unique. Please check the names of the subgraphs and try again.`,
+    );
 
     // Verify the proposal wasn't updated
     const getProposalResponse = await client.getProposal({
