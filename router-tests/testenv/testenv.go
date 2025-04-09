@@ -85,10 +85,6 @@ var (
 	demoKafkaProviders             = []string{myKafkaProviderID}
 )
 
-func init() {
-	freeport.SetLogLevel(freeport.ERROR)
-}
-
 // Run runs the test and fails the test if an error occurs
 func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	t.Helper()
