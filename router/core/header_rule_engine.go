@@ -22,7 +22,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	"go.uber.org/zap"
 )
 
 var (
@@ -402,7 +401,7 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 		if rule.Expression != "" {
 			value, err := h.getRequestRuleExpressionValue(rule, reqCtx)
 			if err != nil {
-				ctx.Logger().Warn("error applying expression for header rule", zap.String("rule", rule.Name), zap.Error(err))
+				reqCtx.SetError(err)
 			} else if value != "" {
 				request.Header.Set(rule.Name, value)
 			}
@@ -593,11 +592,11 @@ func (h *HeaderPropagation) getRequestRuleExpressionValue(rule *config.RequestHe
 	}
 	program, ok := h.compiledRules[rule.Expression]
 	if !ok {
-		return "", fmt.Errorf("expression %s not found", rule.Expression)
+		return "", fmt.Errorf("expression %s not found in compiled rules for header rule %s", rule.Expression, rule.Name)
 	}
 	value, err = expr.ResolveStringExpression(program, reqCtx.expressionContext)
 	if err != nil {
-		return "", fmt.Errorf("error resolving expression %q for header rule %+v: %w", rule.Expression, rule, err)
+		return "", fmt.Errorf("unable to resolve expression %q for header rule %s: %s", rule.Expression, rule.Name, err.Error())
 	}
 	return
 }
