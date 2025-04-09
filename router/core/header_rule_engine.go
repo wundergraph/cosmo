@@ -588,19 +588,17 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 }
 
 func (h *HeaderPropagation) getRequestRuleExpressionValue(rule *config.RequestHeaderRule, reqCtx *requestContext) (value string, err error) {
+	if reqCtx == nil {
+		return "", fmt.Errorf("context cannot be nil")
+	}
 	program, ok := h.compiledRules[rule.Expression]
 	if !ok {
 		return "", fmt.Errorf("expression %s not found", rule.Expression)
 	}
-	if reqCtx != nil {
-		value, err = expr.ResolveStringExpression(program, reqCtx.expressionContext)
-		if err != nil {
-			return "", fmt.Errorf("error resolving expression %q for header rule %+v: %w", rule.Expression, rule, err)
-		}
-	} else {
-		return "", fmt.Errorf("invalid context")
+	value, err = expr.ResolveStringExpression(program, reqCtx.expressionContext)
+	if err != nil {
+		return "", fmt.Errorf("error resolving expression %q for header rule %+v: %w", rule.Expression, rule, err)
 	}
-
 	return
 }
 
