@@ -827,27 +827,6 @@
       "when": 1743969155589,
       "tag": "0117_calm_raider",
       "breakpoints": true
-    },
-    {
-      "idx": 118,
-      "version": "7",
-      "when": 1744041216596,
-      "tag": "0118_breezy_boom_boom",
-      "breakpoints": true
-    },
-    {
-      "idx": 119,
-      "version": "7",
-      "when": 1744139655943,
-      "tag": "0119_colossal_shard",
-      "breakpoints": true
-    },
-    {
-      "idx": 120,
-      "version": "7",
-      "when": 1744209168159,
-      "tag": "0120_vengeful_bishop",
-      "breakpoints": true
     }
   ]
 }
