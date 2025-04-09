@@ -10,7 +10,6 @@ import (
 	"maps"
 	"net/http"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -603,27 +602,8 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	requestContext.operation.name = operationKit.parsedOperation.Request.OperationName
 	requestContext.operation.opType = operationKit.parsedOperation.Type
 
-	requestContext.expressionContext.Request.Operation = expr.Operation{
-		Name: requestContext.operation.name,
-		Type: requestContext.operation.opType,
-	}
-
-	clientName := requestContext.operation.clientInfo.Name
-	if clientName == "unknown" {
-		clientName = ""
-	}
-
-	clientVersion := requestContext.operation.clientInfo.Version
-	if clientVersion == "missing" {
-		clientVersion = ""
-	}
-
-	if clientName != "" || clientVersion != "" {
-		requestContext.expressionContext.Request.Client = expr.Client{
-			Name:    clientName,
-			Version: clientVersion,
-		}
-	}
+	setExpressionContextOperation(requestContext)
+	setExpressionContextClient(requestContext)
 
 	attributesAfterParse := []attribute.KeyValue{
 		otel.WgOperationName.String(operationKit.parsedOperation.Request.OperationName),
@@ -769,7 +749,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 	operationHash := ""
 	if requestContext.operation.hash != 0 {
-		operationHash = strconv.FormatUint(requestContext.operation.hash, 10)
+		operationHash = requestContext.operation.HashString()
 	}
 	requestContext.expressionContext.Request.Operation.Hash = operationHash
 
@@ -811,7 +791,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 	}
 
-	operationHashString := strconv.FormatUint(operationKit.parsedOperation.ID, 10)
+	operationHashString := operationKit.parsedOperation.IDString()
 
 	operationHashAttribute := otel.WgOperationHash.String(operationHashString)
 	requestContext.telemetry.addCommonAttribute(operationHashAttribute)
@@ -1116,4 +1096,30 @@ func (h *PreHandler) parseRequestExecutionOptions(r *http.Request) resolve.Execu
 		options.IncludeQueryPlanInResponse = true
 	}
 	return options
+}
+
+func setExpressionContextOperation(requestContext *requestContext) {
+	requestContext.expressionContext.Request.Operation = expr.Operation{
+		Name: requestContext.operation.name,
+		Type: requestContext.operation.opType,
+	}
+}
+
+func setExpressionContextClient(requestContext *requestContext) {
+	clientName := requestContext.operation.clientInfo.Name
+	if clientName == "unknown" {
+		clientName = ""
+	}
+
+	clientVersion := requestContext.operation.clientInfo.Version
+	if clientVersion == "missing" {
+		clientVersion = ""
+	}
+
+	if clientName != "" || clientVersion != "" {
+		requestContext.expressionContext.Request.Client = expr.Client{
+			Name:    clientName,
+			Version: clientVersion,
+		}
+	}
 }
