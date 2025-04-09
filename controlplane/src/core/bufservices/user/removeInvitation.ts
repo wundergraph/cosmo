@@ -113,6 +113,7 @@ export function removeInvitation(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'organization_invitation.deleted',
       action: 'deleted',
       actorId: authContext.userId,

@@ -1,5 +1,5 @@
 {
-  "id": "8c96e5d8-c172-49fd-b854-41d501b50f39",
+  "id": "f8fae6f7-44a6-4172-be35-636e9d89c0c0",
   "prevId": "116b5e0b-d914-427c-bdc7-dc49310e00c2",
   "version": "7",
   "dialect": "postgresql",
@@ -316,6 +316,12 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
+        },
+        "organization_slug": {
+          "name": "organization_slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "action": {
           "name": "action",

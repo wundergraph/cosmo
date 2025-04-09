@@ -124,6 +124,7 @@ export function removeOrganizationMember(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'organization_member.deleted',
       action: 'deleted',
       actorId: authContext.userId,

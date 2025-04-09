@@ -313,6 +313,7 @@ export function publishFederatedSubgraph(
 
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
         auditAction: 'subgraph.created',
         action: 'created',
         actorId: authContext.userId,
@@ -372,6 +373,7 @@ export function publishFederatedSubgraph(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: subgraph.isFeatureSubgraph ? 'feature_subgraph.updated' : 'subgraph.updated',
       action: 'updated',
       actorId: authContext.userId,

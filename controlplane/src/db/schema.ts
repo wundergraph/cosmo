@@ -1189,6 +1189,13 @@ export const organizationBilling = pgTable(
   },
 );
 
+export const organizationBillingRelations = relations(organizationBilling, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [organizationBilling.organizationId],
+    references: [organizations.id],
+  })
+}));
+
 export type Feature = {
   id: FeatureIds;
   description?: string;
@@ -1255,6 +1262,13 @@ export const billingSubscriptions = pgTable(
     };
   },
 );
+
+export const billingSubscriptionsRelations = relations(billingSubscriptions, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [billingSubscriptions.organizationId],
+    references: [organizations.id],
+  })
+}));
 
 export const organizationsMembers = pgTable(
   'organization_members', // orgm
@@ -1622,6 +1636,7 @@ export const auditLogs = pgTable(
   {
     id: uuid('id').notNull().primaryKey().defaultRandom(),
     organizationId: uuid('organization_id').notNull(), // we don't want the audit log to be dropped when the organization is deleted
+    organizationSlug: text('organization_slug'),
 
     // Information about the action
     action: text('action').$type<AuditLogAction>().notNull(), // e.g. created
