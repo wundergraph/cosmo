@@ -1786,7 +1786,7 @@ describe('Update proposal tests', () => {
 
     expect(updateProposalResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(updateProposalResponse.response?.details).toContain(
-      'No subgraphs provided. At least one subgraph is required to create a proposal.',
+      'No subgraphs provided. At least one subgraph is required to update a proposal.',
     );
 
     // Verify the proposal wasn't updated
