@@ -77,6 +77,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
+import { useUser } from "@/hooks/use-user";
 
 export const ProposalDetails = ({
   proposal,
@@ -88,7 +89,10 @@ export const ProposalDetails = ({
   refetch: () => void;
 }) => {
   const router = useRouter();
-  const organizationSlug = router.query.organizationSlug as string;
+  const user = useUser();
+  const graphData = useContext(GraphContext);
+
+
   const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
   const id = router.query.proposalId as string;
@@ -104,7 +108,6 @@ export const ProposalDetails = ({
     "APPROVED" | "CLOSED" | null
   >(null);
 
-  const graphData = useContext(GraphContext);
 
   const {
     data: checksData,
@@ -469,7 +472,7 @@ export const ProposalDetails = ({
                                 proposalMatch === "error",
                               );
 
-                              const path = `/${organizationSlug}/${namespace}/graph/${slug}/checks/${id}`;
+                              const path = `/${user?.currentOrganization.slug}/${graphData?.graph?.namespace}/graph/${graphData?.graph?.name}/checks/${id}`;
 
                               return (
                                 <TableRow
@@ -779,10 +782,12 @@ export const ProposalDetails = ({
 
 const ProposalDetailsPage: NextPageWithLayout = () => {
   const router = useRouter();
+  const user = useUser();
+  const graphData = useContext(GraphContext);
 
-  const organizationSlug = router.query.organizationSlug as string;
-  const namespace = router.query.namespace as string;
-  const slug = router.query.slug as string;
+  const organizationSlug = user?.currentOrganization.slug;
+  const namespace = graphData?.graph?.namespace;
+  const slug = graphData?.graph?.name;
   const id = router.query.proposalId as string;
 
   const { data, isLoading, error, refetch } = useQuery(getProposal, {
