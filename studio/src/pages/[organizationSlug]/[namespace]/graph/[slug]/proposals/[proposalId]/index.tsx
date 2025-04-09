@@ -92,7 +92,6 @@ export const ProposalDetails = ({
   const user = useUser();
   const graphData = useContext(GraphContext);
 
-
   const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
   const id = router.query.proposalId as string;
@@ -107,7 +106,6 @@ export const ProposalDetails = ({
   const [reviewAction, setReviewAction] = useState<
     "APPROVED" | "CLOSED" | null
   >(null);
-
 
   const {
     data: checksData,
@@ -214,7 +212,7 @@ export const ProposalDetails = ({
 
   const activeSubgraph = proposalSubgraph || proposal.subgraphs?.[0];
   const activeSubgraphName = activeSubgraph?.name;
-  const activeSubgraphSdl = activeSubgraph?.schemaSDL;
+  const activeSubgraphSdl = activeSubgraph?.schemaSDL || " ";
 
   const currentSubgraph = currentSubgraphs.find(
     (subgraph) => subgraph.name === activeSubgraphName,
@@ -301,6 +299,108 @@ export const ProposalDetails = ({
               </div>
             </dd>
           </div>
+
+          <div className="flex flex-1 items-center justify-end gap-1">
+            {state === "DRAFT" && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="ml-4" disabled={isApproving || isClosing}>
+                    Review Changes
+                    <ChevronDownIcon className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[500px] p-3">
+                  <div className="flex flex-col space-y-4 px-2 py-1">
+                    <div className="flex border-b">
+                      <span className="text-md mb-3 font-medium text-muted-foreground">
+                        Finish your review
+                      </span>
+                    </div>
+
+                    <RadioGroup
+                      value={reviewAction || ""}
+                      onValueChange={(value: string) => {
+                        if (value === "APPROVED" || value === "CLOSED") {
+                          setReviewAction(value as "APPROVED" | "CLOSED");
+                        } else {
+                          setReviewAction(null);
+                        }
+                      }}
+                      className="space-y-4"
+                    >
+                      <div
+                        className={cn(
+                          "flex cursor-pointer items-start space-x-2",
+                          !latestCheckSuccess &&
+                            "cursor-not-allowed opacity-50",
+                        )}
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                      >
+                        <RadioGroupItem
+                          value="APPROVED"
+                          id="approve-option"
+                          disabled={!latestCheckSuccess}
+                          className="h-[14px] w-[14px]"
+                        />
+                        <div className="grid gap-1.5">
+                          <Label
+                            htmlFor="approve-option"
+                            className={cn(
+                              "cursor-pointer font-semibold",
+                              !latestCheckSuccess
+                                ? "cursor-not-allowed text-muted-foreground"
+                                : "",
+                            )}
+                          >
+                            Approve
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            Approve the changes made by the proposal.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div
+                        className="flex cursor-pointer items-start space-x-2"
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                      >
+                        <RadioGroupItem
+                          value="CLOSED"
+                          id="close-option"
+                          className="h-[14px] w-[14px]"
+                        />
+                        <div className="grid gap-1.5">
+                          <Label
+                            htmlFor="close-option"
+                            className="cursor-pointer font-semibold"
+                          >
+                            Close
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            Close the proposal without approving the changes.
+                          </p>
+                        </div>
+                      </div>
+                    </RadioGroup>
+
+                    <div className="mt-4 flex justify-end border-t pt-3">
+                      <Button
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          handleSubmitReview();
+                        }}
+                        isLoading={isApproving || isClosing}
+                        disabled={!reviewAction}
+                        size="sm"
+                      >
+                        Submit review
+                      </Button>
+                    </div>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </dl>
       </div>
       <div className="flex min-h-0 flex-1 flex-col">
@@ -341,78 +441,77 @@ export const ProposalDetails = ({
                     title="No subgraph schemas in this proposal. "
                   />
                 ) : (
-                  activeSubgraphSdl && (
-                    <div className="relative flex h-full min-h-[60vh] flex-col">
-                      <div className="-top-[60px] right-8 px-5 md:absolute md:px-0">
-                        <div className="flex gap-x-2">
-                          <Select
+                  <div className="relative flex h-full min-h-[60vh] flex-col">
+                    <div className="-top-[60px] right-8 px-5 md:absolute md:px-0">
+                      <div className="flex gap-x-2">
+                        <Select
+                          value={activeSubgraphName}
+                          onValueChange={(subgraph) =>
+                            router.push({
+                              pathname: router.pathname,
+                              query: {
+                                ...router.query,
+                                subgraph,
+                              },
+                            })
+                          }
+                        >
+                          <SelectTrigger
                             value={activeSubgraphName}
-                            onValueChange={(subgraph) =>
-                              router.push({
-                                pathname: router.pathname,
-                                query: {
-                                  ...router.query,
-                                  subgraph,
-                                },
-                              })
-                            }
+                            className="w-full md:ml-auto md:w-[200px]"
                           >
-                            <SelectTrigger
-                              value={activeSubgraphName}
-                              className="w-full md:ml-auto md:w-[200px]"
-                            >
-                              <SelectValue aria-label={activeSubgraphName}>
-                                <span
-                                  className={cn({
-                                    "!text-success": activeSubgraph?.isNew,
-                                    "!text-destructive":
-                                      activeSubgraph?.isDeleted,
-                                  })}
-                                >
-                                  {activeSubgraphName}
-                                </span>
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectGroup>
-                                <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
-                                  <Component2Icon className="h-3 w-3" />{" "}
-                                  Subgraphs
-                                </SelectLabel>
-                                {subgraphs.map((sg) => {
-                                  return (
-                                    <SelectItem key={sg.name} value={sg.name}>
-                                      <div
-                                        className={cn({
-                                          "text-destructive": sg.isDeleted,
-                                          "text-success": sg.isNew,
-                                        })}
-                                      >
-                                        <p>{sg.name}</p>
-                                        {sg.isDeleted && (
-                                          <p className="text-xs">(deleted)</p>
-                                        )}
-                                      </div>
-                                    </SelectItem>
-                                  );
+                            <SelectValue aria-label={activeSubgraphName}>
+                              <span
+                                className={cn({
+                                  "!text-success": activeSubgraph?.isNew,
+                                  "!text-destructive":
+                                    activeSubgraph?.isDeleted,
                                 })}
-                              </SelectGroup>
-                            </SelectContent>
-                          </Select>
+                              >
+                                {activeSubgraphName}
+                              </span>
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectLabel className="mb-1 flex flex-row items-center justify-start gap-x-1 text-[0.7rem] uppercase tracking-wider">
+                                <Component2Icon className="h-3 w-3" /> Subgraphs
+                              </SelectLabel>
+                              {subgraphs.map((sg) => {
+                                return (
+                                  <SelectItem key={sg.name} value={sg.name}>
+                                    <div
+                                      className={cn({
+                                        "text-destructive": sg.isDeleted,
+                                        "text-success": sg.isNew,
+                                      })}
+                                    >
+                                      <p>{sg.name}</p>
+                                      {sg.isDeleted && (
+                                        <p className="text-xs">(deleted)</p>
+                                      )}
+                                    </div>
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
 
+                        {!activeSubgraph?.isDeleted && (
                           <SDLViewerActions
                             sdl={activeSubgraphSdl}
                             size="icon"
                             targetName={activeSubgraphName}
                           />
-                        </div>
+                        )}
                       </div>
-                      <SDLViewerMonaco
-                        schema={currentSubgraphSdl}
-                        newSchema={activeSubgraphSdl}
-                      />
                     </div>
-                  )
+                    <SDLViewerMonaco
+                      schema={currentSubgraphSdl}
+                      newSchema={activeSubgraphSdl}
+                    />
+                  </div>
                 )}
               </TabsContent>
               <TabsContent value="checks" className="relative w-full flex-1">
@@ -658,123 +757,6 @@ export const ProposalDetails = ({
             </div>
           </Tabs>
         </div>
-        {state === "DRAFT" && (
-          <div className="border-t px-4 py-4 lg:px-8">
-            <div className="flex items-center justify-between">
-              <div>
-                {latestCheckSuccess ? (
-                  <>
-                    <h3 className="text-sm font-medium">Ready for Approval</h3>
-                    <p className="text-sm text-muted-foreground">
-                      All checks have passed. You can approve this proposal now.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <h3 className="text-sm font-medium">
-                      Some checks were not successful
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      Please fix the issues to be able to approve the proposal.
-                    </p>
-                  </>
-                )}
-              </div>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className="ml-4" disabled={isApproving || isClosing}>
-                    Review Changes
-                    <ChevronDownIcon className="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[500px] p-3">
-                  <div className="space-y-4 px-2 py-1.5">
-                    <RadioGroup
-                      value={reviewAction || ""}
-                      onValueChange={(value: string) => {
-                        if (value === "APPROVED" || value === "CLOSED") {
-                          setReviewAction(value as "APPROVED" | "CLOSED");
-                        } else {
-                          setReviewAction(null);
-                        }
-                      }}
-                      className="space-y-4"
-                    >
-                      <div
-                        className={cn(
-                          "flex cursor-pointer items-start space-x-2",
-                          !latestCheckSuccess &&
-                            "cursor-not-allowed opacity-50",
-                        )}
-                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                      >
-                        <RadioGroupItem
-                          value="APPROVED"
-                          id="approve-option"
-                          disabled={!latestCheckSuccess}
-                          className="h-[14px] w-[14px]"
-                        />
-                        <div className="grid gap-1.5">
-                          <Label
-                            htmlFor="approve-option"
-                            className={cn(
-                              "cursor-pointer font-semibold",
-                              !latestCheckSuccess
-                                ? "cursor-not-allowed text-muted-foreground"
-                                : "",
-                            )}
-                          >
-                            Approve
-                          </Label>
-                          <p className="text-sm text-muted-foreground">
-                            Approve the changes made by the proposal.
-                          </p>
-                        </div>
-                      </div>
-
-                      <div
-                        className="flex cursor-pointer items-start space-x-2"
-                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                      >
-                        <RadioGroupItem
-                          value="CLOSED"
-                          id="close-option"
-                          className="h-[14px] w-[14px]"
-                        />
-                        <div className="grid gap-1.5">
-                          <Label
-                            htmlFor="close-option"
-                            className="cursor-pointer font-semibold"
-                          >
-                            Close
-                          </Label>
-                          <p className="text-sm text-muted-foreground">
-                            Close the proposal without approving the changes.
-                          </p>
-                        </div>
-                      </div>
-                    </RadioGroup>
-
-                    <div className="mt-4 flex justify-end border-t pt-3">
-                      <Button
-                        onClick={(e: React.MouseEvent) => {
-                          e.stopPropagation();
-                          handleSubmitReview();
-                        }}
-                        isLoading={isApproving || isClosing}
-                        disabled={!reviewAction}
-                        size="sm"
-                      >
-                        Submit review
-                      </Button>
-                    </div>
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
