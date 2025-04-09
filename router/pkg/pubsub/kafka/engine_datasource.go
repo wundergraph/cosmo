@@ -29,7 +29,7 @@ func (s *PublishEventConfiguration) MarshalJSONTemplate() string {
 }
 
 type SubscriptionSource struct {
-	pubSub *Adapter
+	pubSub AdapterInterface
 }
 
 func (s *SubscriptionSource) UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
@@ -63,7 +63,7 @@ func (s *SubscriptionSource) Start(ctx *resolve.Context, input []byte, updater r
 }
 
 type KafkaPublishDataSource struct {
-	pubSub *Adapter
+	pubSub AdapterInterface
 }
 
 func (s *KafkaPublishDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {

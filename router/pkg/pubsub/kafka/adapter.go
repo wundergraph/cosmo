@@ -49,7 +49,7 @@ func NewLazyClient(opts ...kgo.Opt) *LazyClient {
 	}
 }
 
-func NewAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt) (*Adapter, error) {
+func NewAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt) (AdapterInterface, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	if logger == nil {
 		logger = zap.NewNop()
@@ -70,6 +70,12 @@ func NewAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt) (*Adapt
 	}, nil
 }
 
+// AdapterInterface defines the interface for Kafka adapter operations
+type AdapterInterface interface {
+	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error
+	Publish(ctx context.Context, event PublishEventConfiguration) error
+}
+
 // Adapter is a Kafka pubsub implementation.
 // It uses the franz-go Kafka client to consume and produce messages.
 // The pubsub is stateless and does not store any messages.
@@ -83,6 +89,9 @@ type Adapter struct {
 	closeWg     sync.WaitGroup
 	cancel      context.CancelFunc
 }
+
+// Ensure Adapter implements AdapterInterface
+var _ AdapterInterface = (*Adapter)(nil)
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
 func (p *Adapter) topicPoller(ctx context.Context, client *kgo.Client, updater resolve.SubscriptionUpdater) error {

@@ -7,7 +7,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 )
 
-func NewSchema(natsPubSubByProviderID map[string]*nats.Adapter) graphql.ExecutableSchema {
+func NewSchema(natsPubSubByProviderID map[string]nats.AdapterInterface) graphql.ExecutableSchema {
 	return generated.NewExecutableSchema(generated.Config{Resolvers: &subgraph.Resolver{
 		NatsPubSubByProviderID: natsPubSubByProviderID,
 		EmployeesData:          subgraph.Employees,

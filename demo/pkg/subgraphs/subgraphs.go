@@ -161,7 +161,7 @@ func subgraphHandler(schema graphql.ExecutableSchema) http.Handler {
 }
 
 type SubgraphOptions struct {
-	NatsPubSubByProviderID map[string]*natsPubsub.Adapter
+	NatsPubSubByProviderID map[string]natsPubsub.AdapterInterface
 	GetPubSubName          func(string) string
 }
 
@@ -207,7 +207,7 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 		url = defaultSourceNameURL
 	}
 
-	natsPubSubByProviderID := map[string]*natsPubsub.Adapter{}
+	natsPubSubByProviderID := map[string]natsPubsub.AdapterInterface{}
 
 	defaultAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test")
 	if err != nil {

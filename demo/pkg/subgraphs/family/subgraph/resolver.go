@@ -9,5 +9,5 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	NatsPubSubByProviderID map[string]*nats.Adapter
+	NatsPubSubByProviderID map[string]nats.AdapterInterface
 }

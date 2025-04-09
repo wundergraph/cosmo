@@ -59,7 +59,7 @@ func NewLazyClient(url string, opts ...nats.Option) *LazyClient {
 
 type PubSubDataSource struct {
 	EventConfiguration *nodev1.NatsEventConfiguration
-	NatsAdapter        *Adapter
+	NatsAdapter        AdapterInterface
 }
 
 func (c *PubSubDataSource) GetEngineEventConfiguration() *nodev1.EngineEventConfiguration {

@@ -16,6 +16,19 @@ import (
 	"go.uber.org/zap"
 )
 
+// AdapterInterface defines the methods that a NATS adapter should implement
+type AdapterInterface interface {
+	// Subscribe subscribes to the given events and sends updates to the updater
+	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error
+	// Publish publishes the given event to the specified subject
+	Publish(ctx context.Context, event PublishAndRequestEventConfiguration) error
+	// Request sends a request to the specified subject and writes the response to the given writer
+	Request(ctx context.Context, event PublishAndRequestEventConfiguration, w io.Writer) error
+	// Shutdown gracefully shuts down the adapter
+	Shutdown(ctx context.Context) error
+}
+
+// Adapter implements the AdapterInterface for NATS pub/sub
 type Adapter struct {
 	ctx              context.Context
 	client           *LazyClient
@@ -275,7 +288,7 @@ func (p *Adapter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats.Option, hostName string, routerListenAddr string) (*Adapter, error) {
+func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats.Option, hostName string, routerListenAddr string) (AdapterInterface, error) {
 	if logger == nil {
 		logger = zap.NewNop()
 	}

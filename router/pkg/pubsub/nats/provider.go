@@ -91,7 +91,7 @@ func transformEventConfig(cfg *nodev1.NatsEventConfiguration, fn datasource.Argu
 type PubSubProvider struct {
 	EventConfiguration []*nodev1.NatsEventConfiguration
 	Logger             *zap.Logger
-	Providers          map[string]*Adapter
+	Providers          map[string]AdapterInterface
 }
 
 func (c *PubSubProvider) FindPubSubDataSource(typeName string, fieldName string, extractFn datasource.ArgumentTemplateCallback) (datasource.PubSubDataSource, error) {
@@ -111,7 +111,7 @@ func (c *PubSubProvider) FindPubSubDataSource(typeName string, fieldName string,
 }
 
 func GetProvider(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger, hostName string, routerListenAddr string) (datasource.PubSubProvider, error) {
-	var providers map[string]*Adapter
+	var providers map[string]AdapterInterface
 	if natsData := in.GetCustomEvents().GetNats(); natsData != nil {
 		definedProviders := make(map[string]bool)
 		for _, provider := range config.Providers.Nats {
@@ -124,7 +124,7 @@ func GetProvider(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta
 			}
 			usedProviders[event.EngineEventConfiguration.ProviderId] = true
 		}
-		providers = map[string]*Adapter{}
+		providers = map[string]AdapterInterface{}
 		for _, provider := range config.Providers.Nats {
 			if !usedProviders[provider.ID] {
 				continue

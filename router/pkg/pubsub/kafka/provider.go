@@ -45,7 +45,7 @@ func buildKafkaOptions(eventSource config.KafkaEventSource) ([]kgo.Opt, error) {
 }
 
 func GetProvider(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger, hostName string, routerListenAddr string) (datasource.PubSubProvider, error) {
-	providers := make(map[string]*Adapter)
+	providers := make(map[string]AdapterInterface)
 	definedProviders := make(map[string]bool)
 	for _, provider := range config.Providers.Kafka {
 		definedProviders[provider.ID] = true
@@ -87,7 +87,7 @@ func GetProvider(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta
 type PubSubProvider struct {
 	EventConfiguration []*nodev1.KafkaEventConfiguration
 	Logger             *zap.Logger
-	Providers          map[string]*Adapter
+	Providers          map[string]AdapterInterface
 }
 
 func (c *PubSubProvider) FindPubSubDataSource(typeName string, fieldName string, extractFn datasource.ArgumentTemplateCallback) (datasource.PubSubDataSource, error) {

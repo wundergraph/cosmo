@@ -13,6 +13,6 @@ import (
 
 type Resolver struct {
 	mux                          sync.Mutex
-	NatsPubSubByProviderID       map[string]*nats.Adapter
+	NatsPubSubByProviderID       map[string]nats.AdapterInterface
 	TopSecretFederationFactsData []model.TopSecretFact
 }

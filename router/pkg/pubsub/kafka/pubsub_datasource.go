@@ -10,7 +10,7 @@ import (
 
 type PubSubDataSource struct {
 	EventConfiguration *nodev1.KafkaEventConfiguration
-	KafkaAdapter       *Adapter
+	KafkaAdapter       AdapterInterface
 }
 
 func (c *PubSubDataSource) GetEngineEventConfiguration() *nodev1.EngineEventConfiguration {
