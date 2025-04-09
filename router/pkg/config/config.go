@@ -757,7 +757,7 @@ type AccessLogsConfig struct {
 type BatchingConfig struct {
 	Enabled            bool `yaml:"enabled" env:"BATCHING_ENABLED" envDefault:"false"`
 	MaxConcurrency     int  `yaml:"max_concurrency" env:"BATCHING_MAX_CONCURRENCY" envDefault:"10"`
-	MaxEntriesPerBatch int  `yaml:"max_entries_per_batch" env:"BATCHING_MAX_ENTRIES" envDefault:"10"`
+	MaxEntriesPerBatch int  `yaml:"max_entries_per_batch" env:"BATCHING_MAX_ENTRIES" envDefault:"100"`
 	OmitExtensions     bool `yaml:"omit_extensions" env:"BATCHING_OMIT_EXTENSIONS" envDefault:"false"`
 }
 

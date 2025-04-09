@@ -167,7 +167,7 @@
   "Batching": {
     "Enabled": false,
     "MaxConcurrency": 10,
-    "MaxEntriesPerBatch": 10,
+    "MaxEntriesPerBatch": 100,
     "OmitExtensions": false
   },
   "ListenAddr": "localhost:3002",

@@ -169,7 +169,7 @@ func processBatchedRequest(w http.ResponseWriter, r *http.Request, handlerOpts H
 	close(sem)
 
 	// Write out the batched response as a JSON array.
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	if err := json.NewEncoder(w).Encode(responses); err != nil {
 		return &httpGraphqlError{
 			message:    "failed to encode batched response",
