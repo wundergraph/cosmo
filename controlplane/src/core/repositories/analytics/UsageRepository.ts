@@ -6,6 +6,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
 import { DateRange, Field, TimeFilters } from '../../../types/index.js';
+import { flipDateRangeValuesIfNeeded } from '../../util.js';
 import { parseTimeFilters } from './util.js';
 
 export class UsageRepository {
@@ -16,11 +17,7 @@ export class UsageRepository {
     timeFilters: TimeFilters,
   ): Promise<PlainMessage<RequestSeriesItem>[]> {
     const { dateRange, granule } = timeFilters;
-    if (dateRange.start > dateRange.end) {
-      const tmp = dateRange.start;
-      dateRange.start = dateRange.end;
-      dateRange.end = tmp;
-    }
+    flipDateRangeValuesIfNeeded(dateRange);
 
     const query = `
       WITH 
