@@ -359,7 +359,15 @@ export const ProposalDetails = ({
                               className="w-full md:ml-auto md:w-[200px]"
                             >
                               <SelectValue aria-label={activeSubgraphName}>
-                                {activeSubgraphName}
+                                <span
+                                  className={cn({
+                                    "!text-success": activeSubgraph?.isNew,
+                                    "!text-destructive":
+                                      activeSubgraph?.isDeleted,
+                                  })}
+                                >
+                                  {activeSubgraphName}
+                                </span>
                               </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
@@ -374,6 +382,7 @@ export const ProposalDetails = ({
                                       <div
                                         className={cn({
                                           "text-destructive": sg.isDeleted,
+                                          "text-success": sg.isNew,
                                         })}
                                       >
                                         <p>{sg.name}</p>
