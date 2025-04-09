@@ -1,0 +1,43 @@
+name: Check PR Description
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - edited
+      - synchronize
+
+permissions:
+  pull-requests: read
+
+jobs:
+  build_test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate PR description
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prDescription = context.payload.pull_request.body || '';
+            const minLength = 20; // Minimum required length for PR description
+            
+            if (!prDescription || prDescription.trim().length < minLength) {
+              core.setFailed(`PR description is too short or missing. Please add a proper description of at least ${minLength} characters that explains the purpose of your changes. You can also use GitHub Copilot pull request summaries to help you write a good description.`);
+              return;
+            }
+            
+            // Check if description only contains comments
+            const descWithoutComments = prDescription
+              .replace(/<!--[\s\S]*?-->/g, '') // Remove HTML comments
+              .trim();
+              
+            if (descWithoutComments.length < minLength) {
+              core.setFailed('PR description contains mostly comments. Please add a proper description that explains the purpose of your changes.');
+              return;
+            }
+            
+            console.log('PR description is valid! ✅'); 
