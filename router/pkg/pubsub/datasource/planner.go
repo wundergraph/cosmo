@@ -50,7 +50,6 @@ func (p *Planner) Register(visitor *plan.Visitor, configuration plan.DataSourceC
 
 func (p *Planner) ConfigureFetch() resolve.FetchConfiguration {
 	if p.pubSubDataSource == nil {
-		// p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to configure fetch: event config is nil"))
 		return resolve.FetchConfiguration{}
 	}
 
