@@ -17,13 +17,13 @@ import {
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('mcp');
-  command.description('Start the MCP server');
+  command.description('Start the Cosmo MCP server');
 
   command.action(async () => {
     // Create an MCP server
     const server = new McpServer({
-      name: 'Demo',
-      version: '1.0.0',
+      name: 'Cosmo MCP Server',
+      version: '0.0.1',
     });
 
     // Register all tools
