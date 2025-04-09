@@ -1193,7 +1193,7 @@ export const organizationBillingRelations = relations(organizationBilling, ({ on
   organization: one(organizations, {
     fields: [organizationBilling.organizationId],
     references: [organizations.id],
-  })
+  }),
 }));
 
 export type Feature = {
@@ -1267,7 +1267,7 @@ export const billingSubscriptionsRelations = relations(billingSubscriptions, ({ 
   organization: one(organizations, {
     fields: [billingSubscriptions.organizationId],
     references: [organizations.id],
-  })
+  }),
 }));
 
 export const organizationsMembers = pgTable(
