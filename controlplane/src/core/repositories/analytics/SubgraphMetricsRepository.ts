@@ -82,6 +82,11 @@ export class SubgraphMetricsRepository {
   }: GetSubgraphMetricsProps) {
     // to minutes
     const multiplier = rangeInHours * 60;
+    if (dateRange.start > dateRange.end) {
+      const tmp = dateRange.start;
+      dateRange.start = dateRange.end;
+      dateRange.end = tmp;
+    }
 
     // get request rate in last [range]h
     const queryRate = (start: number, end: number) => {
@@ -196,6 +201,12 @@ export class SubgraphMetricsRepository {
     whereSql,
     queryParams,
   }: GetSubgraphMetricsProps) {
+    if (dateRange.start > dateRange.end) {
+      const tmp = dateRange.start;
+      dateRange.start = dateRange.end;
+      dateRange.end = tmp;
+    }
+
     const queryLatency = (quantile: string, start: number, end: number) => {
       return this.client.queryPromise<{ value: number }>(
         `
@@ -365,6 +376,12 @@ export class SubgraphMetricsRepository {
     whereSql,
     queryParams,
   }: GetSubgraphMetricsProps) {
+    if (dateRange.start > dateRange.end) {
+      const tmp = dateRange.start;
+      dateRange.start = dateRange.end;
+      dateRange.end = tmp;
+    }
+
     // get request rate in last [range]h
     const queryPercentage = (start: number, end: number) => {
       return this.client.queryPromise<{ errorPercentage: number }>(
@@ -491,6 +508,12 @@ export class SubgraphMetricsRepository {
     whereSql,
     queryParams,
   }: GetSubgraphMetricsProps) {
+    if (dateRange.start > dateRange.end) {
+      const tmp = dateRange.start;
+      dateRange.start = dateRange.end;
+      dateRange.end = tmp;
+    }
+
     // get requests in last [range] hours in series of [step]
     const series = await this.client.queryPromise<{ timestamp: string; requestRate: string; errorRate: string }>(
       `
@@ -569,6 +592,12 @@ export class SubgraphMetricsRepository {
       subgraphLabels,
       namespaceId,
     } = props;
+
+    if (dateRange && dateRange.start > dateRange.end) {
+      const tmp = dateRange.start;
+      dateRange.start = dateRange.end;
+      dateRange.end = tmp;
+    }
 
     const parsedDateRange = isoDateRangeToTimestamps(dateRange, range);
     const [start, end] = getDateRange(parsedDateRange);
@@ -660,6 +689,11 @@ export class SubgraphMetricsRepository {
     namespaceId,
   }: GetSubgraphMetricsProps) {
     const filters = { ...this.baseFilters };
+    if (dateRange.start > dateRange.end) {
+      const tmp = dateRange.start;
+      dateRange.start = dateRange.end;
+      dateRange.end = tmp;
+    }
 
     const query = `
       WITH
