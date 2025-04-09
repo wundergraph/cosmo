@@ -6,7 +6,7 @@ import { Subgraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_p
 
 export const registerGetSubgraphsTool = ({ server, opts }: ToolContext) => {
     server.tool(
-        "get-subgraphs",
+        "get_subgraphs",
         "Get details for one or more subgraphs, including the SDL/GraphQL Schema for each.",
         {
             names: z.array(z.string()).describe("The names of the subgraphs"),

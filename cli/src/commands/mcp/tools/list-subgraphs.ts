@@ -4,9 +4,8 @@ import { ToolContext } from './types.js';
 
 export const registerListSubgraphsTool = ({ server, opts }: ToolContext) => {
     server.tool(
-        "list-subgraphs",
+        "list_subgraphs",
         "List all subgraphs",
-        {},
         async () => {
             const resp = await opts.client.platform.getSubgraphs(
                 {

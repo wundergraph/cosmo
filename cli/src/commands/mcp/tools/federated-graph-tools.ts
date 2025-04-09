@@ -57,7 +57,7 @@ export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
 
     // Fetch federated graph details tool
     server.tool(
-        "fetch-supergraph",
+        "fetch_supergraph",
         "Fetch the schemas and configuration of a federated graph / Supergraph",
         {
             name: z.string().describe("The name of the federated graph to fetch"),
