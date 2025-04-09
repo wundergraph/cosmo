@@ -127,7 +127,6 @@ func processBatchedRequest(w http.ResponseWriter, r *http.Request, handlerOpts H
 	sem := make(chan struct{}, handlerOpts.MaxRoutines)
 	// Process each operation in parallel.
 	for i, singleOp := range batchOperations {
-		// print the pointer value of the above
 		sem <- struct{}{}
 		go func() {
 			defer func() {
