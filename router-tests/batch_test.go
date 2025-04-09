@@ -1,18 +1,21 @@
 package integration
 
 import (
+	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.19.0"
+	"go.opentelemetry.io/otel/trace"
 	"net/http"
 	"testing"
 )
@@ -37,7 +40,7 @@ func TestBatch(t *testing.T) {
 					{
 						Query: `query employee { employees { isAvailable } }`,
 					},
-				})
+				}, nil)
 				require.NoError(t, err)
 				require.Equal(t, http.StatusOK, res.Response.StatusCode)
 				entries := getBatchedEntriesForLength(t, res.Body, 2)
@@ -68,7 +71,7 @@ func TestBatch(t *testing.T) {
 					{
 						Query: `query employee { employees { isAvailable } }`,
 					},
-				})
+				}, nil)
 				require.NoError(t, err)
 				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
 				require.JSONEq(t, `{"errors":[{"message":"error parsing request body"}]}`, res.Body)
@@ -76,15 +79,22 @@ func TestBatch(t *testing.T) {
 		)
 	})
 
-	t.Run("send batch request over max allowed count", func(t *testing.T) {
+	t.Run("send batch request over max allowed count validate trace", func(t *testing.T) {
 		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+		defer exporter.Reset()
 
 		testenv.Run(t,
 			&testenv.Config{
+				TraceExporter: exporter,
+				MetricReader:  metricReader,
 				BatchingConfig: config.BatchingConfig{
 					Enabled:            true,
 					MaxConcurrency:     10,
 					MaxEntriesPerBatch: 5,
+					OmitExtensions:     true,
 				},
 			},
 			func(t *testing.T, xEnv *testenv.Environment) {
@@ -110,10 +120,111 @@ func TestBatch(t *testing.T) {
 					{
 						Query: `query employee { employees { isAvailable } }`,
 					},
-				})
+				}, nil)
 				require.NoError(t, err)
-				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-				require.Equal(t, "unable to process request", res.Body)
+				require.Equal(t, http.StatusOK, res.Response.StatusCode)
+
+				sn := exporter.GetSpans().Snapshots()
+				rootSpan := sn[len(sn)-1]
+
+				events := rootSpan.Events()
+				require.Len(t, events, 1)
+				event := events[0]
+				require.Equal(t, "exception", event.Name)
+
+				require.Equal(t, event.Attributes[0], attribute.String("exception.type", "*core.httpGraphqlError"))
+				require.Equal(t, trace.SpanKindServer, rootSpan.SpanKind())
+
+				require.Equal(t, codes.Error, rootSpan.Status().Code)
+				require.Contains(t, rootSpan.Status().Description, "Invalid GraphQL request")
+			},
+		)
+	})
+
+	t.Run("send batch request over max allowed count with omit extensions true", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t,
+			&testenv.Config{
+				BatchingConfig: config.BatchingConfig{
+					Enabled:            true,
+					MaxConcurrency:     10,
+					MaxEntriesPerBatch: 5,
+					OmitExtensions:     true,
+				},
+			},
+			func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLBatchedRequestRequest([]testenv.GraphQLRequest{
+					{
+						Query: `query employees { employees { id } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+				}, nil)
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, res.Response.StatusCode)
+				require.Equal(t, "application/json", res.Response.Header.Get("Content-Type"))
+				require.JSONEq(t, `{"errors":[{"message":"Invalid GraphQL request"}]}`, res.Body)
+			},
+		)
+	})
+
+	t.Run("send batch request over max allowed count with omit extensions false", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t,
+			&testenv.Config{
+				BatchingConfig: config.BatchingConfig{
+					Enabled:            true,
+					MaxConcurrency:     10,
+					MaxEntriesPerBatch: 5,
+					OmitExtensions:     false,
+				},
+			},
+			func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLBatchedRequestRequest([]testenv.GraphQLRequest{
+					{
+						Query: `query employees { employees { id } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+				}, nil)
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, res.Response.StatusCode)
+				require.Equal(t, "application/json", res.Response.Header.Get("Content-Type"))
+				require.JSONEq(t, `{"errors":[{"message":"Invalid GraphQL request","extensions":{"code":"BATCH_LIMIT_EXCEEDED"}}]}`, res.Body)
 			},
 		)
 	})
@@ -148,7 +259,7 @@ func TestBatch(t *testing.T) {
 		assert.Error(t, err, "maxEntriesPerBatch must be greater than 0")
 	})
 
-	t.Run("prevent running a subscription", func(t *testing.T) {
+	t.Run("prevent running a subscription with omit extensions false", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t,
@@ -157,6 +268,7 @@ func TestBatch(t *testing.T) {
 					Enabled:            true,
 					MaxConcurrency:     10,
 					MaxEntriesPerBatch: 100,
+					OmitExtensions:     false,
 				},
 			},
 			func(t *testing.T, xEnv *testenv.Environment) {
@@ -167,20 +279,20 @@ func TestBatch(t *testing.T) {
 					{
 						Query: `subscription SubscriptionSuccess { countEmp2(max: 3, intervalMilliseconds: 500) }`,
 					},
-				})
+				}, nil)
 				require.NoError(t, err)
 				require.Equal(t, http.StatusOK, res.Response.StatusCode)
 
 				entries := getBatchedEntriesForLength(t, res.Body, 2)
 				expected1 := `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
-				expected2 := `{"errors":[{"message":"Batched requests can only contain queries"}]}`
+				expected2 := `{"errors":[{"message":"Subscriptions aren't supported in batch operations","extensions":{"code":"BATCHING_SUBSCRIPTION_UNSUPPORTED"}}]}`
 				require.Equal(t, expected1, entries[0])
 				require.Equal(t, expected2, entries[1])
 			},
 		)
 	})
 
-	t.Run("prevent running a mutation", func(t *testing.T) {
+	t.Run("prevent running a subscription with omit extensions true", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t,
@@ -189,6 +301,7 @@ func TestBatch(t *testing.T) {
 					Enabled:            true,
 					MaxConcurrency:     10,
 					MaxEntriesPerBatch: 100,
+					OmitExtensions:     true,
 				},
 			},
 			func(t *testing.T, xEnv *testenv.Environment) {
@@ -197,18 +310,60 @@ func TestBatch(t *testing.T) {
 						Query: `query employees { employees { id } }`,
 					},
 					{
-						Query: `mutation AddFact { addFact(fact: { title: "re2", factType: DIRECTIVE, description: "werwer" }) { description } }`,
+						Query: `subscription SubscriptionSuccess { countEmp2(max: 3, intervalMilliseconds: 500) }`,
+					},
+				}, nil)
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, res.Response.StatusCode)
+
+				entries := getBatchedEntriesForLength(t, res.Body, 2)
+				expected1 := `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
+				expected2 := `{"errors":[{"message":"Subscriptions aren't supported in batch operations"}]}`
+				require.Equal(t, expected1, entries[0])
+				require.Equal(t, expected2, entries[1])
+			},
+		)
+	})
+
+	t.Run("run a mutation in a batch request", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, authServer := ConfigureAuth(t)
+
+		testenv.Run(t,
+			&testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, false)),
+				},
+				BatchingConfig: config.BatchingConfig{
+					Enabled:            true,
+					MaxConcurrency:     10,
+					MaxEntriesPerBatch: 100,
+				},
+			},
+			func(t *testing.T, xEnv *testenv.Environment) {
+				token, err := authServer.Token(map[string]any{
+					"scope": "write:fact read:miscellaneous read:all",
+				})
+				require.NoError(t, err)
+				headers := map[string]string{"Authorization": "Bearer " + token}
+				res, err := xEnv.MakeGraphQLBatchedRequestRequest([]testenv.GraphQLRequest{
+					{
+						Query: `query employees { employees { id } }`,
+					},
+					{
+						Query: "mutation { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }",
 					},
 					{
 						Query: `query employees { employees { id } }`,
 					},
-				})
+				}, headers)
 				require.NoError(t, err)
 				require.Equal(t, http.StatusOK, res.Response.StatusCode)
 
 				entries := getBatchedEntriesForLength(t, res.Body, 3)
 				expected1 := `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
-				expected2 := `{"errors":[{"message":"Batched requests can only contain queries"}]}`
+				expected2 := `{"data":{"addFact":{"title":"title","description":"description"}}}`
 				expected3 := `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
 				require.Equal(t, expected1, entries[0])
 				require.Equal(t, expected2, entries[1])
@@ -239,7 +394,7 @@ func TestBatch(t *testing.T) {
 					{
 						Query: `query employee { employee(id: "4") { id, isAvailable } }`,
 					},
-				})
+				}, nil)
 				require.NoError(t, err)
 				require.Equal(t, http.StatusOK, res.Response.StatusCode)
 
@@ -288,7 +443,7 @@ func TestBatch(t *testing.T) {
 				{
 					Query: `query employee { employee(id: "5") { id, isAvailable } }`,
 				},
-			})
+			}, nil)
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, res.Response.StatusCode)
 
@@ -336,12 +491,11 @@ func TestBatch(t *testing.T) {
 				{
 					Query: `query employee { employee(id: "5") { id, isAvailable } }`,
 				},
-			})
+			}, nil)
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, res.Response.StatusCode)
 
 			entries := getBatchedEntriesForLength(t, res.Body, 3)
-			fmt.Println(entries[1])
 			expected1 := `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
 			expected2 := `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":403}}],"data":{"employees":[{"notes":null},{"notes":null},{"notes":null},{"notes":null},{"notes":null},{"notes":null},{"notes":null},{"notes":null},{"notes":null},{"notes":null}]}}`
 			expected3 := `{"errors":[{"message":"Variable \"$a\" got invalid value \"5\"; Int cannot represent non-integer value: \"5\""}]}`
@@ -349,6 +503,56 @@ func TestBatch(t *testing.T) {
 			require.Equal(t, expected2, entries[1])
 			require.Equal(t, expected3, entries[2])
 		})
+	})
+
+	t.Run("check when start character is [ and request body is malformed", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+		defer exporter.Reset()
+
+		testenv.Run(t,
+			&testenv.Config{
+				TraceExporter: exporter,
+				MetricReader:  metricReader,
+				BatchingConfig: config.BatchingConfig{
+					Enabled:            true,
+					MaxConcurrency:     10,
+					MaxEntriesPerBatch: 5,
+					OmitExtensions:     false,
+				},
+			},
+			func(t *testing.T, xEnv *testenv.Environment) {
+				malformedRequestBody := `[{}`
+				req, err := http.NewRequestWithContext(
+					xEnv.Context,
+					http.MethodPost,
+					xEnv.GraphQLRequestURL(),
+					bytes.NewReader([]byte(malformedRequestBody)),
+				)
+				require.NoError(t, err)
+
+				res, err := xEnv.MakeGraphQLRequestRaw(req)
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, res.Response.StatusCode)
+				require.JSONEq(t, `{"errors":[{"message":"failed to read request body"}]}`, res.Body)
+
+				sn := exporter.GetSpans().Snapshots()
+				rootSpan := sn[len(sn)-1]
+
+				events := rootSpan.Events()
+				require.Len(t, events, 1)
+				event := events[0]
+				require.Equal(t, "exception", event.Name)
+
+				require.Equal(t, event.Attributes[0], attribute.String("exception.type", "*core.httpGraphqlError"))
+				require.Equal(t, trace.SpanKindServer, rootSpan.SpanKind())
+
+				require.Equal(t, codes.Error, rootSpan.Status().Code)
+				require.Contains(t, rootSpan.Status().Description, "failed to read request body")
+			},
+		)
 	})
 
 	t.Run("Batch Tracing", func(t *testing.T) {
@@ -381,7 +585,7 @@ func TestBatch(t *testing.T) {
 						Query: `query employee { employees { isAvailable } }`,
 					},
 				}
-				_, err := xEnv.MakeGraphQLBatchedRequestRequest(operations)
+				_, err := xEnv.MakeGraphQLBatchedRequestRequest(operations, nil)
 				require.NoError(t, err)
 
 				sn := exporter.GetSpans().Snapshots()
@@ -427,7 +631,7 @@ func TestBatch(t *testing.T) {
 						Query: `query employee { employees { isAvailable } }`,
 					},
 				}
-				_, err := xEnv.MakeGraphQLBatchedRequestRequest(operations)
+				_, err := xEnv.MakeGraphQLBatchedRequestRequest(operations, nil)
 				require.NoError(t, err)
 
 				sn := exporter.GetSpans().Snapshots()
@@ -500,7 +704,7 @@ func TestBatch(t *testing.T) {
 						Query: spanNames[2] + ` { employees { isAvailable } }`,
 					},
 				}
-				_, err := xEnv.MakeGraphQLBatchedRequestRequest(operations)
+				_, err := xEnv.MakeGraphQLBatchedRequestRequest(operations, nil)
 				require.NoError(t, err)
 
 				sn := exporter.GetSpans().Snapshots()

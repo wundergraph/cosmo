@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/batch"
 	"maps"
 	"net/http"
 	"slices"
@@ -70,6 +69,7 @@ type PreHandlerOptions struct {
 	ApolloCompatibilityFlags    *config.ApolloCompatibilityFlags
 	DisableVariablesRemapping   bool
 	ExprManager                 *expr.Manager
+	OmitBatchExtensions         bool
 }
 
 type PreHandler struct {
@@ -102,6 +102,7 @@ type PreHandler struct {
 	variableParsePool           astjson.ParserPool
 	disableVariablesRemapping   bool
 	exprManager                 *expr.Manager
+	omitBatchExtensions         bool
 }
 
 type httpOperation struct {
@@ -147,6 +148,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
 		disableVariablesRemapping: opts.DisableVariablesRemapping,
 		exprManager:               opts.ExprManager,
+		omitBatchExtensions:       opts.OmitBatchExtensions,
 	}
 }
 
@@ -610,13 +612,16 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	}
 	requestContext.telemetry.addCommonAttribute(attributesAfterParse...)
 
-	if isBatchedRequest, _ := req.Context().Value(batch.IsBatchedRequestKey{}).(bool); isBatchedRequest {
-		if requestContext.operation.opType != "query" {
-			return &httpGraphqlError{
-				message:       "Batched requests can only contain queries",
-				statusCode:    http.StatusBadRequest,
-				extensionCode: batch.ExtensionQueriesOnlyAllowedInBatching,
+	if _, ok := req.Context().Value(BatchedOperationId{}).(string); ok {
+		if requestContext.operation.opType == "subscription" {
+			unsupportedErr := &httpGraphqlError{
+				message:    "Subscriptions aren't supported in batch operations",
+				statusCode: http.StatusBadRequest,
 			}
+			if !h.omitBatchExtensions {
+				unsupportedErr.extensionCode = ExtensionCodeBatchSubscriptionsUnsupported
+			}
+			return unsupportedErr
 		}
 	}
 

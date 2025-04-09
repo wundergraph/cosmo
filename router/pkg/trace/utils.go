@@ -80,6 +80,15 @@ func AttachErrToSpan(span trace.Span, err error) {
 	}
 }
 
+func AttachErrToSpanFromContext(ctx context.Context, err error) {
+	span := trace.SpanFromContext(ctx)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.SetAttributes(rotel.WgRequestError.Bool(true))
+		span.RecordError(err)
+	}
+}
+
 func GetTraceID(ctx context.Context) string {
 	if ctx == nil {
 		return ""

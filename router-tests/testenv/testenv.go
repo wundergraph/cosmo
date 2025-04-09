@@ -857,6 +857,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			Enabled:               testConfig.BatchingConfig.Enabled,
 			MaxConcurrentRoutines: testConfig.BatchingConfig.MaxConcurrency,
 			MaxEntriesPerBatch:    testConfig.BatchingConfig.MaxEntriesPerBatch,
+			OmitExtensions:        testConfig.BatchingConfig.OmitExtensions,
 		}),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithTLSConfig(testConfig.TLSConfig),
@@ -1317,11 +1318,18 @@ func (e *Environment) MakeGraphQLRequestWithContext(ctx context.Context, request
 	return e.MakeGraphQLRequestRaw(req)
 }
 
-func (e *Environment) MakeGraphQLBatchedRequestRequest(request []GraphQLRequest) (*TestResponse, error) {
-	return e.MakeGraphQLBatchedRequestRequestWithContext(e.Context, request)
+func (e *Environment) MakeGraphQLBatchedRequestRequest(
+	request []GraphQLRequest,
+	headers map[string]string,
+) (*TestResponse, error) {
+	return e.MakeGraphQLBatchedRequestRequestWithContext(e.Context, request, headers)
 }
 
-func (e *Environment) MakeGraphQLBatchedRequestRequestWithContext(ctx context.Context, request []GraphQLRequest) (*TestResponse, error) {
+func (e *Environment) MakeGraphQLBatchedRequestRequestWithContext(
+	ctx context.Context,
+	request []GraphQLRequest,
+	headers map[string]string,
+) (*TestResponse, error) {
 	data, err := json.Marshal(request)
 	require.NoError(e.t, err)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.GraphQLRequestURL(), bytes.NewReader(data))
@@ -1329,6 +1337,10 @@ func (e *Environment) MakeGraphQLBatchedRequestRequestWithContext(ctx context.Co
 		return nil, err
 	}
 	req.Header.Set("Accept-Encoding", "identity")
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+
 	return e.MakeGraphQLRequestRaw(req)
 }
 

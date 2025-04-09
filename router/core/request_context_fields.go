@@ -128,6 +128,11 @@ func processRequestIDField(request *http.Request, resFields []zapcore.Field) (*r
 
 	reqContext = getRequestContext(request.Context())
 	resFields = append(resFields, logging.WithRequestID(middleware.GetReqID(request.Context())))
+
+	if batchedOperationId, ok := request.Context().Value(BatchedOperationId{}).(string); ok {
+		resFields = append(resFields, logging.WithBatchedRequestOperationID(batchedOperationId))
+	}
+
 	return reqContext, resFields
 }
 

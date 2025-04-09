@@ -1,4 +1,4 @@
-package batch
+package core
 
 import (
 	"bytes"

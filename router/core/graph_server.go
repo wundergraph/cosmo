@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/cespare/xxhash/v2"
-	"github.com/wundergraph/cosmo/router/internal/batch"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -264,8 +263,8 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
 		if s.batchingConfig.Enabled {
-			handler := batch.Handler(
-				batch.HandlerOpts{
+			handler := Handler(
+				HandlerOpts{
 					MaxEntriesPerBatch: s.batchingConfig.MaxEntriesPerBatch,
 					MaxRoutines:        s.batchingConfig.MaxConcurrentRoutines,
 					OmitExtensions:     s.batchingConfig.OmitExtensions,
@@ -278,6 +277,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 					ClientHeader:        s.clientHeader,
 					BaseOtelAttributes:  s.baseOtelAttributes,
 					RouterConfigVersion: s.baseRouterConfigVersion,
+					Logger:              s.logger,
 				},
 			)
 			cr.Handle(r.graphqlPath, handler)
@@ -742,9 +742,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	subgraphResolver := NewSubgraphResolver(subgraphs)
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
-
+			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
+			// If this is a batched request attach id to the logger
+			if batchedOperationId, ok := r.Context().Value(BatchedOperationId{}).(string); ok {
+				requestLogger = requestLogger.With(logging.WithBatchedRequestOperationID(batchedOperationId))
+			}
 			reqContext := buildRequestContext(requestContextOptions{
 				operationContext:              nil,
 				requestLogger:                 requestLogger,
@@ -1133,6 +1136,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		ApolloCompatibilityFlags:    &s.apolloCompatibilityFlags,
 		DisableVariablesRemapping:   s.engineExecutionConfiguration.DisableVariablesRemapping,
 		ExprManager:                 exprManager,
+		OmitBatchExtensions:         s.batchingConfig.OmitExtensions,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
