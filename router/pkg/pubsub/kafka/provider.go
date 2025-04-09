@@ -69,7 +69,7 @@ func GetProvider(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta
 			}
 			adapter, err := NewAdapter(ctx, logger, options)
 			if err != nil {
-				return nil, fmt.Errorf("failed to create connection for Kafka provider with ID \"%s\": %w", provider.ID, err)
+				return nil, fmt.Errorf("failed to create adapter for Kafka provider with ID \"%s\": %w", provider.ID, err)
 			}
 			providers[provider.ID] = adapter
 		}
