@@ -2,6 +2,10 @@
 
 This directory contains the implementation for the `wgc mcp` command, which starts a Model Context Protocol (MCP) server. This server allows AI models (like large language models) to interact with your WunderGraph Cosmo Platform data and perform specific actions related to your GraphQL APIs.
 
+## Note
+
+The MCP server is currently in beta and may change at any time. Please be aware that features and functionality might be updated frequently or even be removed.
+
 ## Setup
 
 The MCP server is designed to be run directly via the WunderGraph Cosmo CLI.
