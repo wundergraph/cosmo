@@ -3,14 +3,15 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router-tests/testenv"
-	"github.com/wundergraph/cosmo/router/core"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 func TestBlockOperations(t *testing.T) {
@@ -483,7 +484,7 @@ func TestBlockOperations(t *testing.T) {
 					Query: `mutation { updateEmployeeTag(id: 1, tag: "test") { id tag } }`,
 				})
 				require.Equal(t, http.StatusOK, res.Response.StatusCode)
-				require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json")
+				require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json; charset=utf-8")
 				require.Equal(t, `{"errors":[{"message":"non-persisted operation is blocked"}]}`, res.Body)
 
 				// Positive test
@@ -529,7 +530,7 @@ func TestBlockOperations(t *testing.T) {
 					Query: `mutation { updateEmployeeTag(id: 1, tag: "test") { id tag } }`,
 				})
 				require.Equal(t, http.StatusOK, res.Response.StatusCode)
-				require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json")
+				require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json; charset=utf-8")
 				require.Equal(t, `{"errors":[{"message":"non-persisted operation is blocked"}]}`, res.Body)
 			})
 		})
