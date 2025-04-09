@@ -40,6 +40,8 @@ The MCP server exposes several tools that an AI model can utilize:
     -   *Use Case*: Discovering available subgraphs.
 -   **`get-subgraphs`**: Retrieves detailed information for specified subgraphs, including their GraphQL Schema Definition Language (SDL).
     -   *Use Case*: Inspecting the schema or configuration of specific subgraphs.
+-   **`introspect-subgraph`**: Introspects a running subgraph endpoint to retrieve its current GraphQL schema.
+    -   *Use Case*: Fetching the latest schema directly from a subgraph instance, useful for verifying deployments or comparing against registered schemas.
 -   **`subgraph-verify-schema-changes`**: Validates proposed changes to a subgraph's schema. It checks for valid GraphQL SDL, composition compatibility with other subgraphs, and potential breaking changes against client traffic (optional).
     -   *Use Case*: Safely validating schema modifications before deployment.
 

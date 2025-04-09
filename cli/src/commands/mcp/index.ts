@@ -11,6 +11,7 @@ import {
     registerDreamQueryWorkflowTool,
     registerVerifyQueryAgainstRemoteSchemaTool,
     registerVerifyQueryAgainstInMemorySchemaTool,
+    registerIntrospectSubgraphTool,
 } from './tools/index.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -33,6 +34,7 @@ export default (opts: BaseCommandOptions) => {
         registerDreamQueryWorkflowTool({ server, opts });
         registerVerifyQueryAgainstRemoteSchemaTool({ server, opts });
         registerVerifyQueryAgainstInMemorySchemaTool({ server, opts });
+        registerIntrospectSubgraphTool({ server, opts });
 
         // Start receiving messages on stdin and sending messages on stdout
         const transport = new StdioServerTransport();

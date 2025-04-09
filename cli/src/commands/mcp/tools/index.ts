@@ -6,4 +6,5 @@ export * from './federated-graph-tools.js';
 export * from './schema-change-proposal-workflow.js';
 export * from './dream-query-workflow.js';
 export * from './verify-query-against-remote-schema.js';
-export * from './verify-query-against-in-memory-schema.js'; 
+export * from './verify-query-against-in-memory-schema.js';
+export * from './introspect-subgraph.js'; 
