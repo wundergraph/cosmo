@@ -166,8 +166,9 @@
   },
   "Batching": {
     "Enabled": false,
-    "MaxConcurrent": 10,
-    "MaxEntriesPerBatch": 100
+    "MaxConcurrency": 10,
+    "MaxEntriesPerBatch": 100,
+    "OmitExtensions": false
   },
   "ListenAddr": "localhost:3002",
   "ControlplaneURL": "https://cosmo-cp.wundergraph.com",

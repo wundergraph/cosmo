@@ -346,7 +346,7 @@
   },
   "Batching": {
     "Enabled": false,
-    "MaxConcurrent": 10,
+    "MaxConcurrency": 10,
     "MaxEntriesPerBatch": 100,
     "OmitExtensions": false
   },
