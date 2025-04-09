@@ -58,10 +58,6 @@ describe('Create proposal tests', () => {
       setupBilling: { plan: 'enterprise' },
     });
 
-    // Enable proposals for the namespace
-    const enableResponse = await enableProposalsForNamespace(client);
-    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
-
     // Setup a federated graph with a single subgraph
     const subgraphName = genID('subgraph1');
     const fedGraphName = genID('fedGraph');
@@ -84,6 +80,10 @@ describe('Create proposal tests', () => {
     );
 
     await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
 
     // Create a proposal with a schema change to the subgraph
     const updatedSubgraphSDL = `
@@ -137,10 +137,6 @@ describe('Create proposal tests', () => {
       setupBilling: { plan: 'enterprise' },
     });
 
-    // Enable proposals for the namespace
-    const enableResponse = await enableProposalsForNamespace(client);
-    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
-
     // Setup a federated graph with multiple subgraphs
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -189,6 +185,10 @@ describe('Create proposal tests', () => {
     );
 
     await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
 
     // Create proposal with changes to both subgraphs
     const updatedSubgraph1SDL = `
@@ -270,10 +270,6 @@ describe('Create proposal tests', () => {
       setupBilling: { plan: 'enterprise' },
     });
 
-    // Enable proposals for the namespace
-    const enableResponse = await enableProposalsForNamespace(client);
-    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
-
     // Setup a federated graph with a single subgraph
     const existingSubgraphName = genID('subgraph1');
     const newSubgraphName = genID('subgraph2');
@@ -302,6 +298,10 @@ describe('Create proposal tests', () => {
     );
 
     await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
 
     // Create a proposal that adds a new subgraph
     const newSubgraphSDL = `
@@ -364,10 +364,6 @@ describe('Create proposal tests', () => {
       setupBilling: { plan: 'enterprise' },
     });
 
-    // Enable proposals for the namespace
-    const enableResponse = await enableProposalsForNamespace(client);
-    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
-
     // Setup a federated graph with multiple subgraphs
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -417,6 +413,10 @@ describe('Create proposal tests', () => {
     );
 
     await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
 
     // Create a proposal that removes subgraph2
     const createProposalResponse = await client.createProposal({
@@ -493,10 +493,6 @@ describe('Create proposal tests', () => {
       setupBilling: { plan: 'enterprise' },
     });
 
-    // Enable proposals for the namespace
-    const enableResponse = await enableProposalsForNamespace(client);
-    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
-
     // Setup a federated graph with multiple subgraphs
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -547,6 +543,10 @@ describe('Create proposal tests', () => {
     );
 
     await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
 
     // Create a proposal that:
     // 1. Updates subgraph1
@@ -734,10 +734,6 @@ describe('Create proposal tests', () => {
       setupBilling: { plan: 'enterprise' },
     });
 
-    // Enable proposals for the namespace
-    const enableResponse = await enableProposalsForNamespace(client);
-    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
-
     // Setup a federated graph with a single subgraph
     const subgraphName = genID('subgraph1');
     const fedGraphName = genID('fedGraph');
@@ -760,6 +756,10 @@ describe('Create proposal tests', () => {
     );
 
     await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
 
     // Create first proposal
     const updatedSubgraphSDL = `
@@ -824,10 +824,6 @@ describe('Create proposal tests', () => {
       setupBilling: { plan: 'enterprise' },
     });
 
-    // Enable proposals for the namespace
-    const enableResponse = await enableProposalsForNamespace(client);
-    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
-
     // Setup common test data
     const subgraphName = genID('subgraph');
     const fedGraph1Name = genID('fedGraph1');
@@ -865,6 +861,10 @@ describe('Create proposal tests', () => {
     );
 
     await createFederatedGraph(client, fedGraph2Name, DEFAULT_NAMESPACE, [joinLabel(label2)], DEFAULT_ROUTER_URL);
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
 
     // Create first proposal for fedGraph1
     const updatedSubgraphSDL1 = `
@@ -949,10 +949,6 @@ describe('Create proposal tests', () => {
       setupBilling: { plan: 'enterprise' },
     });
 
-    // Enable proposals for the namespace
-    const enableResponse = await enableProposalsForNamespace(client);
-    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
-
     // Setup a federated graph
     const fedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph');
@@ -975,6 +971,10 @@ describe('Create proposal tests', () => {
     );
 
     await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
 
     // Try to create a proposal without any subgraphs
     const createProposalResponse = await client.createProposal({
