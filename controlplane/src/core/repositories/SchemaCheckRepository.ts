@@ -981,7 +981,7 @@ export class SchemaCheckRepository {
   }
 
   public async createSchemaCheckProposal({ schemaCheckID, proposalID }: { schemaCheckID: string; proposalID: string }) {
-    await this.db.insert(schema.schemaCheckProposals).values({
+    await this.db.insert(schema.proposalChecks).values({
       schemaCheckId: schemaCheckID,
       proposalId: proposalID,
     });

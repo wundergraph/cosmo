@@ -487,11 +487,11 @@ export class ProposalRepository {
   ): Promise<{ checkId: string; isSuccessful: boolean } | null> {
     const latestCheck = await this.db
       .select({
-        schemaCheckId: schema.schemaCheckProposals.schemaCheckId,
+        schemaCheckId: schema.proposalChecks.schemaCheckId,
       })
-      .from(schema.schemaCheckProposals)
-      .where(eq(schema.schemaCheckProposals.proposalId, proposalId))
-      .orderBy(desc(schema.schemaCheckProposals.createdAt))
+      .from(schema.proposalChecks)
+      .where(eq(schema.proposalChecks.proposalId, proposalId))
+      .orderBy(desc(schema.proposalChecks.createdAt))
       .limit(1);
 
     if (latestCheck.length === 0) {
@@ -551,13 +551,13 @@ export class ProposalRepository {
     startDate?: string;
     endDate?: string;
   }): Promise<GetChecksResponse> {
-    let whereCondition: any = eq(schema.schemaCheckProposals.proposalId, proposalId);
+    let whereCondition: any = eq(schema.proposalChecks.proposalId, proposalId);
 
     if (startDate && endDate) {
       whereCondition = and(
         whereCondition,
-        gt(schema.schemaCheckProposals.createdAt, new Date(startDate)),
-        lt(schema.schemaCheckProposals.createdAt, new Date(endDate)),
+        gt(schema.proposalChecks.createdAt, new Date(startDate)),
+        lt(schema.proposalChecks.createdAt, new Date(endDate)),
       );
     }
 
@@ -578,10 +578,10 @@ export class ProposalRepository {
         isDeleted: schema.schemaChecks.isDeleted,
         proposalMatch: schema.schemaChecks.proposalMatch,
       })
-      .from(schema.schemaCheckProposals)
-      .innerJoin(schema.schemaChecks, eq(schema.schemaCheckProposals.schemaCheckId, schema.schemaChecks.id))
+      .from(schema.proposalChecks)
+      .innerJoin(schema.schemaChecks, eq(schema.proposalChecks.schemaCheckId, schema.schemaChecks.id))
       .where(whereCondition)
-      .orderBy(desc(schema.schemaCheckProposals.createdAt));
+      .orderBy(desc(schema.proposalChecks.createdAt));
 
     if (limit) {
       checksListQuery.limit(limit);
@@ -596,9 +596,9 @@ export class ProposalRepository {
     // Get the total count of checks for this proposal
     const checksCount = await this.db
       .select({
-        schemaCheckId: schema.schemaCheckProposals.schemaCheckId,
+        schemaCheckId: schema.proposalChecks.schemaCheckId,
       })
-      .from(schema.schemaCheckProposals)
+      .from(schema.proposalChecks)
       .where(whereCondition);
 
     const schemaCheckRepo = new SchemaCheckRepository(this.db);
@@ -682,9 +682,9 @@ export class ProposalRepository {
         proposalId: schema.proposals.id,
         proposalName: schema.proposals.name,
       })
-      .from(schema.schemaCheckProposals)
-      .innerJoin(schema.proposals, eq(schema.schemaCheckProposals.proposalId, schema.proposals.id))
-      .where(eq(schema.schemaCheckProposals.schemaCheckId, checkId));
+      .from(schema.proposalChecks)
+      .innerJoin(schema.proposals, eq(schema.proposalChecks.proposalId, schema.proposals.id))
+      .where(eq(schema.proposalChecks.schemaCheckId, checkId));
 
     if (proposal.length === 0) {
       return undefined;

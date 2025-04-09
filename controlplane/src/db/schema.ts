@@ -912,8 +912,8 @@ export const schemaCheckSubgraphsFederatedGraphs = pgTable(
 
 // This table is used to track the checks that are associated with a proposal
 // so the checks that are run when the proposal is created, updated.
-export const schemaCheckProposals = pgTable(
-  'schema_check_proposals', // scp
+export const proposalChecks = pgTable(
+  'proposal_checks', // pc
   {
     id: uuid('id').primaryKey().defaultRandom(),
     schemaCheckId: uuid('schema_check_id')
@@ -931,7 +931,7 @@ export const schemaCheckProposals = pgTable(
   },
   (t) => {
     return {
-      uniqueCheckIdProposalId: uniqueIndex('scp_check_id_proposal_id_idx').on(t.schemaCheckId, t.proposalId),
+      uniqueCheckIdProposalId: uniqueIndex('pc_check_id_proposal_id_idx').on(t.schemaCheckId, t.proposalId),
     };
   },
 );
