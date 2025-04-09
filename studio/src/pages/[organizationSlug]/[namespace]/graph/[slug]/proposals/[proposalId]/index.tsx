@@ -701,6 +701,7 @@ export const ProposalDetails = ({
                           value="APPROVED"
                           id="approve-option"
                           disabled={!latestCheckSuccess}
+                          className="h-[14px] w-[14px]"
                         />
                         <div className="grid gap-1.5">
                           <Label
@@ -724,11 +725,15 @@ export const ProposalDetails = ({
                         className="flex cursor-pointer items-start space-x-2"
                         onClick={(e: React.MouseEvent) => e.stopPropagation()}
                       >
-                        <RadioGroupItem value="CLOSED" id="close-option" />
+                        <RadioGroupItem
+                          value="CLOSED"
+                          id="close-option"
+                          className="h-[14px] w-[14px]"
+                        />
                         <div className="grid gap-1.5">
                           <Label
                             htmlFor="close-option"
-                            className="cursor-pointer font-semibold text-destructive"
+                            className="cursor-pointer font-semibold"
                           >
                             Close
                           </Label>
