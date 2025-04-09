@@ -45,6 +45,7 @@ func TestSimpleQuery(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `query { employees { id } }`,
 		})
+		require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json; charset=utf-8")
 		require.JSONEq(t, employeesIDData, res.Body)
 	})
 }
@@ -83,6 +84,7 @@ func TestContentTypes(t *testing.T) {
 			}, bytes.NewReader([]byte(`{"query":"{ employees { id } }"}`)))
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, res.Header.Get("Content-Type"), "application/json; charset=utf-8")
 
 			body, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
@@ -1183,7 +1185,7 @@ func TestRequestBodySizeLimit(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, http.StatusRequestEntityTooLarge, res.Response.StatusCode)
-		require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json")
+		require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json; charset=utf-8")
 		require.Equal(t, `{"errors":[{"message":"request body too large, max size is 10 bytes"}]}`, res.Body)
 	})
 }
@@ -1201,7 +1203,7 @@ func TestDataNotSetOnPreExecutionErrors(t *testing.T) {
 			Query: `{ employees { rootFieldThrowWithErrorCode(ex }}`,
 		})
 		require.NoError(t, err)
-		require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json")
+		require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json; charset=utf-8")
 		require.Equal(t, `{"errors":[{"message":"unexpected token - got: RBRACE want one of: [COLON]","locations":[{"line":1,"column":46}]}]}`, res.Body)
 	})
 }
