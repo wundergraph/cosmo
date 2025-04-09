@@ -179,6 +179,30 @@ export function createProposal(
       };
     }
 
+    const subgraphNames = req.subgraphs.map((subgraph) => subgraph.name);
+    const uniqueSubgraphNames = new Set(subgraphNames);
+    if (uniqueSubgraphNames.size !== subgraphNames.length) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `The subgraphs provided in the proposal have to be unique. Please check the names of the subgraphs and try again.`,
+        },
+        proposalId: '',
+        breakingChanges: [],
+        nonBreakingChanges: [],
+        compositionErrors: [],
+        checkId: '',
+        lintWarnings: [],
+        lintErrors: [],
+        graphPruneWarnings: [],
+        graphPruneErrors: [],
+        compositionWarnings: [],
+        lintingSkipped: false,
+        graphPruningSkipped: false,
+        checkUrl: '',
+      };
+    }
+
     const subgraphsOfFedGraph = await subgraphRepo.listByFederatedGraph({
       federatedGraphTargetId: federatedGraph.targetId,
     });

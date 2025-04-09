@@ -992,4 +992,165 @@ describe('Create proposal tests', () => {
 
     await server.close();
   });
+
+  test('should fail to create a proposal when subgraphs are duplicated', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+    });
+
+    // Setup a federated graph with a single subgraph
+    const subgraphName = genID('subgraph1');
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName = genID('proposal');
+
+    const subgraphSchemaSDL = `
+      type Query {
+        hello: String!
+      }
+    `;
+
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create a proposal with the same subgraph listed twice with different schemas
+    const updatedSubgraphSDL1 = `
+      type Query {
+        hello: String!
+        newField: Int!
+      }
+    `;
+
+    const updatedSubgraphSDL2 = `
+      type Query {
+        hello: String!
+        anotherField: Boolean!
+      }
+    `;
+
+    // Try to create a proposal with the same subgraph appearing twice
+    const createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      subgraphs: [
+        {
+          name: subgraphName, // Same subgraph name used twice
+          schemaSDL: updatedSubgraphSDL1,
+          isDeleted: false,
+          isNew: false,
+          labels: [],
+        },
+        {
+          name: subgraphName, // Duplicate subgraph name
+          schemaSDL: updatedSubgraphSDL2,
+          isDeleted: false,
+          isNew: false,
+          labels: [],
+        },
+      ],
+      didHubCreate: false,
+    });
+
+    // Expect an error response due to duplicate subgraphs
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(createProposalResponse.response?.details).toContain(
+      `The subgraphs provided in the proposal have to be unique. Please check the names of the subgraphs and try again.`,
+    );
+
+    await server.close();
+  });
+
+  test('should fail to create a proposal with a subgraph that is both new and marked for deletion', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+    });
+
+    // Setup a federated graph with a single subgraph
+    const existingSubgraphName = genID('existing-subgraph');
+    const newSubgraphName = genID('new-subgraph');
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName = genID('proposal');
+
+    const subgraphSchemaSDL = `
+      type Query {
+        hello: String!
+      }
+    `;
+
+    await createThenPublishSubgraph(
+      client,
+      existingSubgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Define a schema for the new subgraph
+    const newSubgraphSchemaSDL = `
+      type Query {
+        products: [Product!]!
+      }
+      
+      type Product {
+        id: ID!
+        name: String!
+        price: Float!
+      }
+    `;
+
+    // Try to create a proposal where the same subgraph is both new and marked for deletion
+    const createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      subgraphs: [
+        {
+          name: newSubgraphName,
+          schemaSDL: newSubgraphSchemaSDL,
+          isDeleted: false,
+          isNew: true,
+          labels: [label],
+        },
+        {
+          name: newSubgraphName, // Same subgraph name
+          schemaSDL: newSubgraphSchemaSDL,
+          isDeleted: true, // Marked for deletion
+          isNew: false, // Not marked as new in this entry
+          labels: [],
+        },
+      ],
+      didHubCreate: false,
+    });
+
+    // Expect an error response
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(createProposalResponse.response?.details).toContain(`Duplicate subgraph name: ${newSubgraphName}`);
+
+    await server.close();
+  });
 });

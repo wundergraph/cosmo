@@ -183,6 +183,17 @@ export default (opts: BaseCommandOptions) => {
       });
     }
 
+    const subgraphNames = subgraphs.map((subgraph) => subgraph.name);
+
+    const uniqueSubgraphNames = new Set(subgraphNames);
+    if (uniqueSubgraphNames.size !== subgraphNames.length) {
+      program.error(
+        pc.red(
+          pc.bold('Subgraphs to be updated have to be unique. Please check the names of the subgraphs and try again.'),
+        ),
+      );
+    }
+
     const spinner = ora('Creating proposal...').start();
 
     const resp = await opts.client.platform.createProposal(
