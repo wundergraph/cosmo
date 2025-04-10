@@ -9,6 +9,7 @@ import { ClickHouseClient } from '../../clickhouse/index.js';
 import { DateRange, Label } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../FederatedGraphRepository.js';
 import * as schema from '../../../db/schema.js';
+import { flipDateRangeValuesIfNeeded } from '../../util.js';
 import {
   BaseFilters,
   buildAnalyticsViewFilters,
@@ -82,6 +83,7 @@ export class SubgraphMetricsRepository {
   }: GetSubgraphMetricsProps) {
     // to minutes
     const multiplier = rangeInHours * 60;
+    flipDateRangeValuesIfNeeded(dateRange);
 
     // get request rate in last [range]h
     const queryRate = (start: number, end: number) => {
@@ -196,6 +198,8 @@ export class SubgraphMetricsRepository {
     whereSql,
     queryParams,
   }: GetSubgraphMetricsProps) {
+    flipDateRangeValuesIfNeeded(dateRange);
+
     const queryLatency = (quantile: string, start: number, end: number) => {
       return this.client.queryPromise<{ value: number }>(
         `
@@ -365,6 +369,8 @@ export class SubgraphMetricsRepository {
     whereSql,
     queryParams,
   }: GetSubgraphMetricsProps) {
+    flipDateRangeValuesIfNeeded(dateRange);
+
     // get request rate in last [range]h
     const queryPercentage = (start: number, end: number) => {
       return this.client.queryPromise<{ errorPercentage: number }>(
@@ -491,6 +497,8 @@ export class SubgraphMetricsRepository {
     whereSql,
     queryParams,
   }: GetSubgraphMetricsProps) {
+    flipDateRangeValuesIfNeeded(dateRange);
+
     // get requests in last [range] hours in series of [step]
     const series = await this.client.queryPromise<{ timestamp: string; requestRate: string; errorRate: string }>(
       `
@@ -569,6 +577,12 @@ export class SubgraphMetricsRepository {
       subgraphLabels,
       namespaceId,
     } = props;
+
+    if (dateRange && dateRange.start > dateRange.end) {
+      const tmp = dateRange.start;
+      dateRange.start = dateRange.end;
+      dateRange.end = tmp;
+    }
 
     const parsedDateRange = isoDateRangeToTimestamps(dateRange, range);
     const [start, end] = getDateRange(parsedDateRange);
@@ -660,6 +674,7 @@ export class SubgraphMetricsRepository {
     namespaceId,
   }: GetSubgraphMetricsProps) {
     const filters = { ...this.baseFilters };
+    flipDateRangeValuesIfNeeded(dateRange);
 
     const query = `
       WITH

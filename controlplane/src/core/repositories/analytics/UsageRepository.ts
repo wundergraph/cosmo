@@ -6,6 +6,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ClickHouseClient } from '../../clickhouse/index.js';
 import { DateRange, Field, TimeFilters } from '../../../types/index.js';
+import { flipDateRangeValuesIfNeeded } from '../../util.js';
 import { parseTimeFilters } from './util.js';
 
 export class UsageRepository {
@@ -15,15 +16,13 @@ export class UsageRepository {
     whereSql: string,
     timeFilters: TimeFilters,
   ): Promise<PlainMessage<RequestSeriesItem>[]> {
-    const {
-      dateRange: { start, end },
-      granule,
-    } = timeFilters;
+    const { dateRange, granule } = timeFilters;
+    flipDateRangeValuesIfNeeded(dateRange);
 
     const query = `
       WITH 
-        toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
-        toDateTime('${end}') AS endDate
+        toStartOfInterval(toDateTime('${dateRange.start}'), INTERVAL ${granule} MINUTE) AS startDate,
+        toDateTime('${dateRange.end}') AS endDate
       SELECT
           toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
           SUM(TotalUsages) AS totalRequests,
@@ -32,8 +31,8 @@ export class UsageRepository {
       WHERE Timestamp >= startDate AND Timestamp <= endDate AND ${whereSql}
       GROUP BY timestamp
       ORDER BY timestamp WITH FILL 
-      FROM toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE)
-      TO toDateTime('${end}')
+      FROM toStartOfInterval(toDateTime('${dateRange.start}'), INTERVAL ${granule} MINUTE)
+      TO toDateTime('${dateRange.end}')
       STEP INTERVAL ${granule} minute
     `;
 

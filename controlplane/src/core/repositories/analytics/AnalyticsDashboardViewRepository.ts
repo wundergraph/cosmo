@@ -60,6 +60,12 @@ export class AnalyticsDashboardViewRepository {
     organizationId: string,
     filter: TimeFilters,
   ): Promise<PlainMessage<RequestSeriesItem>[]> {
+    if (filter?.dateRange && filter.dateRange.start > filter.dateRange.end) {
+      const tmp = filter.dateRange.start;
+      filter.dateRange.start = filter.dateRange.end;
+      filter.dateRange.end = tmp;
+    }
+
     const query = `
      WITH
         toStartOfInterval(toDateTime('${filter.dateRange.start}'), INTERVAL ${filter.granule} MINUTE) AS startDate,
