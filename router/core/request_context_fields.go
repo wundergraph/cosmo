@@ -2,15 +2,16 @@ package core
 
 import (
 	"fmt"
+	"net/http"
+	"strconv"
+	"time"
+
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"net/http"
-	"strconv"
-	"time"
 )
 
 // Context field names used to expose information about the operation being executed.
@@ -256,7 +257,7 @@ func getCustomDynamicAttributeValue(
 			return ""
 		}
 		if reqContext.operation.hash != 0 {
-			return strconv.FormatUint(reqContext.operation.hash, 10)
+			return reqContext.operation.HashString()
 		}
 		return reqContext.operation.Hash()
 	case ContextFieldPersistedOperationSha256:

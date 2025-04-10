@@ -3,7 +3,6 @@ package core
 import (
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
-	"strconv"
 
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
@@ -102,7 +101,7 @@ func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext
 		InputMetrics:     operationContext.inputUsageInfo,
 		OperationInfo: &graphqlmetricsv1.OperationInfo{
 			Type: opType,
-			Hash: strconv.FormatUint(operationContext.hash, 10),
+			Hash: operationContext.HashString(),
 			// parsed operation names are re-used across requests
 			// for that reason, we need to copy the name, or it might get corrupted
 			Name: m.strCopy(operationContext.name),
