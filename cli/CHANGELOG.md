@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.77.0](https://github.com/wundergraph/cosmo/compare/wgc@0.76.3...wgc@0.77.0) (2025-04-10)
+
+### Features
+
+* add initial mcp server implementation to wgc ([#1764](https://github.com/wundergraph/cosmo/issues/1764)) ([34c1365](https://github.com/wundergraph/cosmo/commit/34c1365e30da7491e2a4e7fac0d157d002da1481)) (@jensneuse)
+
 ## [0.76.3](https://github.com/wundergraph/cosmo/compare/wgc@0.76.2...wgc@0.76.3) (2025-04-07)
 
 **Note:** Version bump only for package wgc
