@@ -45,6 +45,7 @@ const (
 	WgResponseCacheControlExpiration   = attribute.Key("wg.operation.cache_control_expiration")
 	WgIsBatchedOperation               = attribute.Key("wg.operation.batched.is_batched")
 	WgBatchedOperationsCount           = attribute.Key("wg.operation.batched.operations_count")
+	WgBatchedOperationId               = attribute.Key("wg.operation.batched.operation_id")
 	// HTTPRequestUploadFileCount is the number of files uploaded in a request (Not specified in the OpenTelemetry specification)
 	HTTPRequestUploadFileCount = attribute.Key("http.request.upload.file_count")
 )

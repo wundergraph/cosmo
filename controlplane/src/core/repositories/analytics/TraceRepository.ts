@@ -46,7 +46,10 @@ export class TraceRepository {
         SpanAttributes['wg.organization.id'] as organizationId,
         SpanAttributes['wg.router.version'] as attrRouterVersion,
         SpanAttributes['wg.operation.persisted_id'] as attrOperationPersistedId,
-        SpanAttributes['wg.federated_graph.id'] as attrFederatedGraphId
+        SpanAttributes['wg.federated_graph.id'] as attrFederatedGraphId,
+        SpanAttributes['wg.operation.batched.is_batched'] as attrIsBatched,
+        SpanAttributes['wg.operation.batched.operations_count'] as attrBatchedOperationsCount,
+        SpanAttributes['wg.operation.batched.operation_id'] as attrWgBatchedOperationId
     `;
 
     const query = `
@@ -132,6 +135,9 @@ export class TraceRepository {
         routerVersion: result.attrRouterVersion,
         operationPersistedID: result.attrOperationPersistedId,
         federatedGraphID: result.attrFederatedGraphId,
+        isBatched: result.attrIsBatched,
+        batchedOperationsCount: result.attrBatchedOperationsCount,
+        batchedOperationId: result.attrWgBatchedOperationId,
       },
     }));
   }

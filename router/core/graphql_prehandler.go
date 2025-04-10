@@ -610,19 +610,27 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		otel.WgOperationName.String(operationKit.parsedOperation.Request.OperationName),
 		otel.WgOperationType.String(operationKit.parsedOperation.Type),
 	}
+
+	// Add the batched operation id even if we error out if its a subscription later
+	var batchedOperationId string
+	if opVal, ok := req.Context().Value(BatchedOperationId{}).(string); ok {
+		batchedOperationId = opVal
+		attributesAfterParse = append(
+			attributesAfterParse, otel.WgBatchedOperationId.String(batchedOperationId),
+		)
+	}
+
 	requestContext.telemetry.addCommonAttribute(attributesAfterParse...)
 
-	if _, ok := req.Context().Value(BatchedOperationId{}).(string); ok {
-		if requestContext.operation.opType == "subscription" {
-			unsupportedErr := &httpGraphqlError{
-				message:    "Subscriptions aren't supported in batch operations",
-				statusCode: http.StatusBadRequest,
-			}
-			if !h.omitBatchExtensions {
-				unsupportedErr.extensionCode = ExtensionCodeBatchSubscriptionsUnsupported
-			}
-			return unsupportedErr
+	if batchedOperationId != "" && operationKit.parsedOperation.Type == "subscription" {
+		unsupportedErr := &httpGraphqlError{
+			message:    "Subscriptions aren't supported in batch operations",
+			statusCode: http.StatusBadRequest,
 		}
+		if !h.omitBatchExtensions {
+			unsupportedErr.extensionCode = ExtensionCodeBatchSubscriptionsUnsupported
+		}
+		return unsupportedErr
 	}
 
 	// Set the router span name after we have the operation name
