@@ -78,6 +78,8 @@ The MCP server exposes several tools that an AI model can utilize:
 
 - **`verify_router_config`**: Verifies a provided Cosmo Router configuration (JSON or YAML) for validity.
   - _Use Case_: Ensuring a proposed router configuration is syntactically correct and valid before deployment.
+- **`cosmo_router_config_reference`**: Provides a reference for the Cosmo Router configuration.
+  - _Use Case_: Understanding the syntax and structure of the Cosmo Router configuration.
 
 ### Documentation Search
 

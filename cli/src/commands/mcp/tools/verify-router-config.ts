@@ -91,6 +91,28 @@ export async function validateRouterConfig(config: string): Promise<ValidationRe
 
 export const registerVerifyRouterConfigTool = ({ server }: ToolContext) => {
   server.tool(
+    'cosmo-router-config-reference',
+    'Cosmo Router Configuration Reference helps you to understand how to configure the Router.',
+    async () => {
+      const getSchema = await axios.get(
+        'https://raw.githubusercontent.com/wundergraph/cosmo/refs/heads/main/router/pkg/config/config.schema.json',
+      );
+      const text = `
+      # Cosmo Router Configuration Reference
+      
+      ${JSON.stringify(getSchema.data, null, 2)}
+      
+      If you need further information about the router config, you can use the "search_docs" tool to search the documentation for more information about the router config.
+      Ask specific questions mentioning the "router config" or "cosmo router config" keywords alongside your query.
+      
+      If you're proposing a new configuration, you can use the "verify_router_config" tool to validate that the configuration is valid.`;
+      return {
+        content: [{ type: 'text', text }],
+      };
+    },
+  );
+
+  server.tool(
     'verify_router_config',
     'Verify Cosmo Router Configurations. The config can be provided as JSON or YAML. This tool helps you to validate that a proposed configuration is valid.',
     {
