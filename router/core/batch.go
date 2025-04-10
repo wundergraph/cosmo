@@ -201,7 +201,6 @@ func processBatchError(w http.ResponseWriter, r *http.Request, err error, reques
 }
 
 func getFirstNonWhitespaceChar(r io.Reader, readerSize int) (*byte, *bufio.Reader, error) {
-	// This uses the default buffer of 4 kb
 	bufReader := bufio.NewReaderSize(r, readerSize)
 
 	for {
