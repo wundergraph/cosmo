@@ -11,18 +11,16 @@ export const registerSubgraphVerifySchemaChangesTool = ({ server, opts }: ToolCo
     {
       name: z.string().describe('The name of the subgraph'),
       namespace: z.string().optional().describe('The namespace of the subgraph'),
-      schema: z.string().optional().describe('The new schema SDL to check'),
+      schema: z.string().describe('The new schema SDL to check'),
       delete: z.boolean().optional().describe('Run checks in case the subgraph should be deleted'),
       skipTrafficCheck: z.boolean().optional().describe('Skip checking for client traffic'),
     },
     async (params) => {
-      const schema = params.schema ? Buffer.from(params.schema) : Buffer.from('');
-
       const resp = await opts.client.platform.checkSubgraphSchema(
         {
           subgraphName: params.name,
           namespace: params.namespace,
-          schema: new Uint8Array(schema),
+          schema: new Uint8Array(Buffer.from(params.schema)),
           delete: params.delete,
           skipTrafficCheck: params.skipTrafficCheck,
         },
@@ -31,48 +29,46 @@ export const registerSubgraphVerifySchemaChangesTool = ({ server, opts }: ToolCo
         },
       );
 
-      // Format the check results in a readable way
-      const formatResults = () => {
-        const results: string[] = [];
-
-        if (resp.compositionErrors?.length) {
-          results.push('Composition Errors:');
-          for (const error of resp.compositionErrors) {
-            results.push(`- ${error.message}`);
-          }
-        }
-
-        if (resp.breakingChanges?.length) {
-          results.push('\nBreaking Changes:');
-          for (const change of resp.breakingChanges) {
-            results.push(`- ${change.message} (${change.changeType})`);
-          }
-        }
-
-        if (resp.nonBreakingChanges?.length) {
-          results.push('\nNon-Breaking Changes:');
-          for (const change of resp.nonBreakingChanges) {
-            results.push(`- ${change.message} (${change.changeType})`);
-          }
-        }
-
-        if (resp.compositionWarnings?.length) {
-          results.push('\nComposition Warnings:');
-          for (const warning of resp.compositionWarnings) {
-            results.push(`- ${warning.message}`);
-          }
-        }
-
-        if (results.length === 0) {
-          results.push('No issues found - schema is valid!');
-        }
-
-        return results.join('\n');
-      };
-
       return {
-        content: [{ type: 'text', text: formatResults() }],
+        content: [{
+          type: 'text', text: JSON.stringify({
+            ...resp,
+            isCheckSuccessful: isCheckSuccessful({
+              isComposable: resp.compositionErrors.length === 0,
+              isBreaking: resp.breakingChanges.length > 0,
+              hasClientTraffic: (resp.operationUsageStats?.totalOperations ?? 0) > 0 && (resp.operationUsageStats?.totalOperations ?? 0) !== (resp.operationUsageStats?.safeOperations ?? 0),
+              hasLintErrors: resp.lintErrors.length > 0,
+              hasGraphPruningErrors: resp.graphPruneErrors.length > 0,
+              clientTrafficCheckSkipped: resp.clientTrafficCheckSkipped === true,
+            }),
+          }, null, 2)
+        }],
       };
     },
+  );
+};
+
+const isCheckSuccessful = ({
+  isComposable,
+  isBreaking,
+  hasClientTraffic,
+  hasLintErrors,
+  hasGraphPruningErrors,
+  clientTrafficCheckSkipped,
+}: {
+  isComposable: boolean;
+  isBreaking: boolean;
+  hasClientTraffic: boolean;
+  hasLintErrors: boolean;
+  hasGraphPruningErrors: boolean;
+  clientTrafficCheckSkipped: boolean;
+}) => {
+  return (
+    isComposable &&
+    // If no breaking changes found
+    // OR Breaking changes are found, but no client traffic is found and traffic check is not skipped
+    (!isBreaking || (isBreaking && !hasClientTraffic && !clientTrafficCheckSkipped)) &&
+    !hasLintErrors &&
+    !hasGraphPruningErrors
   );
 };
