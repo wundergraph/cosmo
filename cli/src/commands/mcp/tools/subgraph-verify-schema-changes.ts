@@ -30,19 +30,29 @@ export const registerSubgraphVerifySchemaChangesTool = ({ server, opts }: ToolCo
       );
 
       return {
-        content: [{
-          type: 'text', text: JSON.stringify({
-            ...resp,
-            isCheckSuccessful: isCheckSuccessful({
-              isComposable: resp.compositionErrors.length === 0,
-              isBreaking: resp.breakingChanges.length > 0,
-              hasClientTraffic: (resp.operationUsageStats?.totalOperations ?? 0) > 0 && (resp.operationUsageStats?.totalOperations ?? 0) !== (resp.operationUsageStats?.safeOperations ?? 0),
-              hasLintErrors: resp.lintErrors.length > 0,
-              hasGraphPruningErrors: resp.graphPruneErrors.length > 0,
-              clientTrafficCheckSkipped: resp.clientTrafficCheckSkipped === true,
-            }),
-          }, null, 2)
-        }],
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(
+              {
+                ...resp,
+                isCheckSuccessful: isCheckSuccessful({
+                  isComposable: resp.compositionErrors.length === 0,
+                  isBreaking: resp.breakingChanges.length > 0,
+                  hasClientTraffic:
+                    (resp.operationUsageStats?.totalOperations ?? 0) > 0 &&
+                    (resp.operationUsageStats?.totalOperations ?? 0) !==
+                      (resp.operationUsageStats?.safeOperations ?? 0),
+                  hasLintErrors: resp.lintErrors.length > 0,
+                  hasGraphPruningErrors: resp.graphPruneErrors.length > 0,
+                  clientTrafficCheckSkipped: resp.clientTrafficCheckSkipped === true,
+                }),
+              },
+              null,
+              2,
+            ),
+          },
+        ],
       };
     },
   );
