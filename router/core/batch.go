@@ -72,6 +72,7 @@ func processBatchedRequest(w http.ResponseWriter, r *http.Request, handlerOpts H
 	if firstChar == nil || *firstChar != '[' {
 		// if firstChar is nil we have downstream handle it
 		// which is the current behaviour
+		fmt.Println("NORMAL REQUEST")
 		r.Body = io.NopCloser(bufReader)
 		handlerOpts.HandlerSent.ServeHTTP(w, r)
 		return nil
