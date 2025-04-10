@@ -601,7 +601,6 @@ func TestBatch(t *testing.T) {
 				require.Contains(t, rootSpanAttributes, otel.WgOperationHash.String("12924042114100782429"))
 				require.Contains(t, rootSpanAttributes, otel.WgClientName.String("unknown"))
 				require.Contains(t, rootSpanAttributes, otel.WgClientVersion.String("missing"))
-				require.Contains(t, rootSpanAttributes, otel.WgOperationType.String("batched"))
 			})
 		})
 
@@ -640,7 +639,7 @@ func TestBatch(t *testing.T) {
 				rootSpan := sn[len(sn)-1]
 
 				rootSpanAttributes := rootSpan.Attributes()
-				require.Len(t, rootSpanAttributes, 25)
+				require.Len(t, rootSpanAttributes, 24)
 
 				sa := attribute.NewSet(rootSpanAttributes...)
 				require.True(t, sa.HasValue(semconv.NetHostPortKey))
@@ -670,7 +669,6 @@ func TestBatch(t *testing.T) {
 				require.Contains(t, rootSpanAttributes, otel.WgOperationHash.String("12924042114100782429"))
 				require.Contains(t, rootSpanAttributes, otel.WgClientName.String("unknown"))
 				require.Contains(t, rootSpanAttributes, otel.WgClientVersion.String("missing"))
-				require.Contains(t, rootSpanAttributes, otel.WgOperationType.String("batched"))
 			})
 		})
 
@@ -745,7 +743,6 @@ func getChildSpanDetails(directChildSpans []sdktrace.ReadOnlySpan) ([]string, []
 				operationNumberAttrs = append(operationNumberAttrs, attr.Value.AsString())
 			}
 		}
-		operationNumberAttrs = append(operationNumberAttrs)
 	}
 	return retrievedSpanNames, operationNumberAttrs
 }
