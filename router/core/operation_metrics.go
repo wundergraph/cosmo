@@ -98,7 +98,7 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 
 			fieldAttrs := []attribute.KeyValue{
 				rotel.WgGraphQLFieldName.String(field.Path[len(field.Path)-1]),
-				rotel.WgGraphQLFieldParentType.String(field.ExactParentTypeName),
+				rotel.WgGraphQLParentType.String(field.ExactParentTypeName),
 			}
 
 			// fieldSliceAttrs := []attribute.KeyValue{
