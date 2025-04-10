@@ -92,15 +92,20 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 		}
 
 		for _, field := range reqContext.operation.typeFieldUsageInfo {
+			if field.ExactParentTypeName == "" {
+				continue
+			}
+
 			fieldAttrs := []attribute.KeyValue{
 				rotel.WgGraphQLFieldName.String(field.Path[len(field.Path)-1]),
+				rotel.WgGraphQLFieldParentType.String(field.ExactParentTypeName),
 			}
 
-			fieldSliceAttrs := []attribute.KeyValue{
-				rotel.WgGraphQLFieldParentType.StringSlice(field.TypeNames),
-			}
+			// fieldSliceAttrs := []attribute.KeyValue{
+			// 	rotel.WgGraphQLFieldParentType.StringSlice(field.ParentTypeNames),
+			// }
 
-			rm.MeasureSchemaFieldUsage(ctx, 1, fieldSliceAttrs, otelmetric.WithAttributeSet(attribute.NewSet(slices.Concat(opAttrs, fieldAttrs)...)))
+			rm.MeasureSchemaFieldUsage(ctx, 1, []attribute.KeyValue{}, otelmetric.WithAttributeSet(attribute.NewSet(slices.Concat(opAttrs, fieldAttrs)...)))
 		}
 	}
 }
