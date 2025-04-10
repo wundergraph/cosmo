@@ -95,25 +95,25 @@ query myQuery {
 			}
 
 			assertLabelValue(t, schemaUsageMetrics[0].Label, otel.WgGraphQLFieldName, "currentMood")
-			assertLabelValue(t, schemaUsageMetrics[0].Label, otel.WgGraphQLFieldParentType, "Employee")
+			assertLabelValue(t, schemaUsageMetrics[0].Label, otel.WgGraphQLParentType, "Employee")
 
 			assertLabelValue(t, schemaUsageMetrics[1].Label, otel.WgGraphQLFieldName, "departments")
-			assertLabelValue(t, schemaUsageMetrics[1].Label, otel.WgGraphQLFieldParentType, "RoleType")
+			assertLabelValue(t, schemaUsageMetrics[1].Label, otel.WgGraphQLParentType, "RoleType")
 
 			assertLabelValue(t, schemaUsageMetrics[2].Label, otel.WgGraphQLFieldName, "employee")
-			assertLabelValue(t, schemaUsageMetrics[2].Label, otel.WgGraphQLFieldParentType, "Query")
+			assertLabelValue(t, schemaUsageMetrics[2].Label, otel.WgGraphQLParentType, "Query")
 
 			assertLabelValue(t, schemaUsageMetrics[3].Label, otel.WgGraphQLFieldName, "id")
-			assertLabelValue(t, schemaUsageMetrics[3].Label, otel.WgGraphQLFieldParentType, "Employee")
+			assertLabelValue(t, schemaUsageMetrics[3].Label, otel.WgGraphQLParentType, "Employee")
 
 			assertLabelValue(t, schemaUsageMetrics[4].Label, otel.WgGraphQLFieldName, "role")
-			assertLabelValue(t, schemaUsageMetrics[4].Label, otel.WgGraphQLFieldParentType, "Employee")
+			assertLabelValue(t, schemaUsageMetrics[4].Label, otel.WgGraphQLParentType, "Employee")
 
 			assertLabelValue(t, schemaUsageMetrics[5].Label, otel.WgGraphQLFieldName, "title")
-			assertLabelValue(t, schemaUsageMetrics[5].Label, otel.WgGraphQLFieldParentType, "Engineer")
+			assertLabelValue(t, schemaUsageMetrics[5].Label, otel.WgGraphQLParentType, "Engineer")
 
 			assertLabelValue(t, schemaUsageMetrics[6].Label, otel.WgGraphQLFieldName, "title")
-			assertLabelValue(t, schemaUsageMetrics[6].Label, otel.WgGraphQLFieldParentType, "Operator")
+			assertLabelValue(t, schemaUsageMetrics[6].Label, otel.WgGraphQLParentType, "Operator")
 		})
 	})
 
@@ -169,17 +169,17 @@ query myQuery {
 			}
 
 			assertLabelValue(t, schemaUsageMetrics[0].Label, otel.WgGraphQLFieldName, "currentMood")
-			assertLabelValue(t, schemaUsageMetrics[0].Label, otel.WgGraphQLFieldParentType, "Employee")
+			assertLabelValue(t, schemaUsageMetrics[0].Label, otel.WgGraphQLParentType, "Employee")
 
 			assert.InEpsilon(t, 1.0, *schemaUsageMetrics[0].Counter.Value, 0.0001)
 
 			assertLabelValue(t, schemaUsageMetrics[1].Label, otel.WgGraphQLFieldName, "employee")
-			assertLabelValue(t, schemaUsageMetrics[1].Label, otel.WgGraphQLFieldParentType, "Query")
+			assertLabelValue(t, schemaUsageMetrics[1].Label, otel.WgGraphQLParentType, "Query")
 
 			assert.InEpsilon(t, 2.0, *schemaUsageMetrics[1].Counter.Value, 0.0001)
 
 			assertLabelValue(t, schemaUsageMetrics[2].Label, otel.WgGraphQLFieldName, "id")
-			assertLabelValue(t, schemaUsageMetrics[2].Label, otel.WgGraphQLFieldParentType, "Employee")
+			assertLabelValue(t, schemaUsageMetrics[2].Label, otel.WgGraphQLParentType, "Employee")
 
 			assert.InEpsilon(t, 2.0, *schemaUsageMetrics[2].Counter.Value, 0.0001)
 		})
