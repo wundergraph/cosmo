@@ -9,6 +9,7 @@ overrides:
   graphql: 16.9.0
   cross-spawn: 7.0.6
   next: 15.2.4
+  zod: 3.24.2
 
 patchedDependencies:
   graphql@16.9.0:
@@ -255,7 +256,7 @@ importers:
         specifier: ^6.21.1
         version: 6.21.2
       zod:
-        specifier: ^3.22.4
+        specifier: 3.24.2
         version: 3.24.2
     devDependencies:
       '@types/bun':
@@ -535,11 +536,11 @@ importers:
         specifier: ^10.0.0
         version: 10.0.0
       zod:
-        specifier: ^3.22.4
-        version: 3.22.4
+        specifier: 3.24.2
+        version: 3.24.2
       zod-to-json-schema:
         specifier: ^3.22.4
-        version: 3.22.4(zod@3.22.4)
+        version: 3.22.4(zod@3.24.2)
     devDependencies:
       '@bufbuild/protobuf':
         specifier: ^1.9.0
@@ -932,7 +933,7 @@ importers:
         version: 2.2.2
       '@t3-oss/env-nextjs':
         specifier: ^0.4.1
-        version: 0.4.1(typescript@5.5.2)(zod@3.22.4)
+        version: 0.4.1(typescript@5.5.2)(zod@3.24.2)
       '@tanstack/react-query':
         specifier: ^5.37.1
         version: 5.37.1(react@18.3.1)
@@ -1099,8 +1100,8 @@ importers:
         specifier: ^1.8.1
         version: 1.8.1(react@18.3.1)
       zod:
-        specifier: ^3.22.4
-        version: 3.22.4
+        specifier: 3.24.2
+        version: 3.24.2
     devDependencies:
       '@tailwindcss/typography':
         specifier: ^0.5.9
@@ -6472,13 +6473,13 @@ packages:
     resolution: {integrity: sha512-JZI8vxlHwtiZO7OYS3qSX9Ngt7UcdqsugLwhBwx7UVi5wp1PtRo2tzMyNoBEGbfHdmkd2QU9IbvYjqtaLUA7TQ==}
     peerDependencies:
       typescript: '>=4.7.2'
-      zod: ^3.0.0
+      zod: 3.24.2
 
   '@t3-oss/env-nextjs@0.4.1':
     resolution: {integrity: sha512-lDbewJvZwOW7bFwHzdKtAH4+YcVTvGU7UEJfHwlb1RqVe9ejPrKn6ax2OGv/nFji1JXGKecKYHz3Xkpru6TFbw==}
     peerDependencies:
       typescript: '>=4.7.2'
-      zod: ^3.0.0
+      zod: 3.24.2
 
   '@tailwindcss/typography@0.5.13':
     resolution: {integrity: sha512-ADGcJ8dX21dVVHIwTRgzrcunY6YY9uSlAHHGVKvkA+vLc5qLwEszvKts40lx7z0qc4clpjclwLeK5rVCV2P/uw==}
@@ -13977,15 +13978,12 @@ packages:
   zod-to-json-schema@3.22.4:
     resolution: {integrity: sha512-2Ed5dJ+n/O3cU383xSY28cuVi0BCQhF8nYqWU5paEpl7fVdqdAmiLdqLyfblbNdfOFwFfi/mqU4O1pwc60iBhQ==}
     peerDependencies:
-      zod: ^3.22.4
+      zod: 3.24.2
 
   zod-to-json-schema@3.24.5:
     resolution: {integrity: sha512-/AuWwMP+YqiPbsJx5D6TfgRTc4kTLjsh5SOcd4bLsfUg2RcEXrFMJl1DGgdHy2aCfsIA/cr/1JM0xcB2GZji8g==}
     peerDependencies:
-      zod: ^3.24.1
-
-  zod@3.22.4:
-    resolution: {integrity: sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==}
+      zod: 3.24.2
 
   zod@3.24.2:
     resolution: {integrity: sha512-lY7CDW43ECgW9u1TcT3IoXHflywfVqDYze4waEz812jR/bZ8FHDsl7pFQoSZTz5N+2NqRXs8GBwnAwo3ZNxqhQ==}
@@ -20486,16 +20484,16 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@t3-oss/env-core@0.4.1(typescript@5.5.2)(zod@3.22.4)':
+  '@t3-oss/env-core@0.4.1(typescript@5.5.2)(zod@3.24.2)':
     dependencies:
       typescript: 5.5.2
-      zod: 3.22.4
+      zod: 3.24.2
 
-  '@t3-oss/env-nextjs@0.4.1(typescript@5.5.2)(zod@3.22.4)':
+  '@t3-oss/env-nextjs@0.4.1(typescript@5.5.2)(zod@3.24.2)':
     dependencies:
-      '@t3-oss/env-core': 0.4.1(typescript@5.5.2)(zod@3.22.4)
+      '@t3-oss/env-core': 0.4.1(typescript@5.5.2)(zod@3.24.2)
       typescript: 5.5.2
-      zod: 3.22.4
+      zod: 3.24.2
 
   '@tailwindcss/typography@0.5.13(tailwindcss@3.4.15)':
     dependencies:
@@ -29446,15 +29444,13 @@ snapshots:
 
   yoctocolors@2.1.1: {}
 
-  zod-to-json-schema@3.22.4(zod@3.22.4):
+  zod-to-json-schema@3.22.4(zod@3.24.2):
     dependencies:
-      zod: 3.22.4
+      zod: 3.24.2
 
   zod-to-json-schema@3.24.5(zod@3.24.2):
     dependencies:
       zod: 3.24.2
-
-  zod@3.22.4: {}
 
   zod@3.24.2: {}
 
