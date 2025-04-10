@@ -615,13 +615,13 @@
         "max_concurrency": {
           "type": "integer",
           "description": "The maximum number of batches that can be processed concurrently",
-          "default": 100,
+          "default": 10,
           "minimum": 1
         },
         "max_entries_per_batch": {
           "type": "integer",
           "description": "The maximum number of entries allowed in a batch",
-          "default": 10,
+          "default": 100,
           "minimum": 1
         },
         "omit_extensions": {

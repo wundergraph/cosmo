@@ -616,7 +616,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	if opIndex, ok := req.Context().Value(BatchedOperationId{}).(string); ok {
 		batchedOperationIndex = opIndex
 		attributesAfterParse = append(
-			attributesAfterParse, otel.WgBatchedOperationIndex.String(batchedOperationIndex),
+			attributesAfterParse, otel.WgBatchingOperationIndex.String(batchedOperationIndex),
 		)
 	}
 

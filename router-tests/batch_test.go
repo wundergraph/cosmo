@@ -595,8 +595,8 @@ func TestBatch(t *testing.T) {
 				rootSpanAttributes := rootSpan.Attributes()
 				require.Contains(t, rootSpanAttributes, otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
 				require.Contains(t, rootSpanAttributes, otel.WgRouterRootSpan.Bool(true))
-				require.Contains(t, rootSpanAttributes, otel.WgIsBatchedOperation.Bool(true))
-				require.Contains(t, rootSpanAttributes, otel.WgBatchedOperationsCount.Int(len(operations)))
+				require.Contains(t, rootSpanAttributes, otel.WgIsBatchingOperation.Bool(true))
+				require.Contains(t, rootSpanAttributes, otel.WgBatchingOperationsCount.Int(len(operations)))
 
 				require.Contains(t, rootSpanAttributes, otel.WgOperationHash.String("12924042114100782429"))
 				require.Contains(t, rootSpanAttributes, otel.WgClientName.String("unknown"))
@@ -666,7 +666,7 @@ func TestBatch(t *testing.T) {
 
 				require.Contains(t, rootSpanAttributes, otel.WgRouterRootSpan.Bool(true))
 				require.Contains(t, rootSpanAttributes, otel.WgIsBatchRequest.Bool(true))
-				require.Contains(t, rootSpanAttributes, otel.WgBatchedOperationsCount.Int(len(operations)))
+				require.Contains(t, rootSpanAttributes, otel.WgBatchingOperationsCount.Int(len(operations)))
 				require.Contains(t, rootSpanAttributes, otel.WgOperationHash.String("12924042114100782429"))
 				require.Contains(t, rootSpanAttributes, otel.WgClientName.String("unknown"))
 				require.Contains(t, rootSpanAttributes, otel.WgClientVersion.String("missing"))
@@ -741,7 +741,7 @@ func getChildSpanDetails(directChildSpans []sdktrace.ReadOnlySpan) ([]string, []
 		attributes := span.Attributes()
 		retrievedSpanNames = append(retrievedSpanNames, span.Name())
 		for _, attr := range attributes {
-			if attr.Key == otel.WgBatchedOperationIndex {
+			if attr.Key == otel.WgBatchingOperationIndex {
 				operationNumberAttrs = append(operationNumberAttrs, attr.Value.AsString())
 			}
 		}

@@ -31,11 +31,11 @@ func AddBatchTracing(
 
 	rootSpan.SetAttributes(baseOtelAttributes...)
 	rootSpan.SetAttributes(
-		otel.WgIsBatchedOperation.Bool(true),
+		otel.WgIsBatchingOperation.Bool(true),
 		otel.WgOperationHash.String(operationHashBatch),
 		otel.WgClientName.String(clientName),
 		otel.WgClientVersion.String(clientVersion),
-		otel.WgBatchedOperationsCount.Int(batchOperationsLength),
+		otel.WgBatchingOperationsCount.Int(batchOperationsLength),
 		otel.WgRouterConfigVersion.String(version),
 	)
 }

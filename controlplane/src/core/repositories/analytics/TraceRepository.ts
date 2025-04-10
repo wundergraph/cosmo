@@ -47,9 +47,9 @@ export class TraceRepository {
         SpanAttributes['wg.router.version'] as attrRouterVersion,
         SpanAttributes['wg.operation.persisted_id'] as attrOperationPersistedId,
         SpanAttributes['wg.federated_graph.id'] as attrFederatedGraphId,
-        SpanAttributes['wg.operation.batched.is_batched'] as attrIsBatched,
-        SpanAttributes['wg.operation.batched.operations_count'] as attrBatchedOperationsCount,
-        SpanAttributes['wg.operation.batched.operation_index'] as attrWgBatchedOperationIndex
+        SpanAttributes['wg.operation.batching.is_batched'] as attrIsBatched,
+        SpanAttributes['wg.operation.batching.operations_count'] as attrBatchedOperationsCount,
+        SpanAttributes['wg.operation.batching.operation_index'] as attrWgBatchedOperationIndex
     `;
 
     const query = `
