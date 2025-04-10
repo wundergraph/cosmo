@@ -665,7 +665,7 @@ func TestBatch(t *testing.T) {
 				require.Contains(t, rootSpanAttributes, otel.WgRouterClusterName.String(""))
 
 				require.Contains(t, rootSpanAttributes, otel.WgRouterRootSpan.Bool(true))
-				require.Contains(t, rootSpanAttributes, otel.WgIsBatchRequest.Bool(true))
+				require.Contains(t, rootSpanAttributes, otel.WgIsBatchingOperation.Bool(true))
 				require.Contains(t, rootSpanAttributes, otel.WgBatchingOperationsCount.Int(len(operations)))
 				require.Contains(t, rootSpanAttributes, otel.WgOperationHash.String("12924042114100782429"))
 				require.Contains(t, rootSpanAttributes, otel.WgClientName.String("unknown"))
