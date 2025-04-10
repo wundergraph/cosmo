@@ -1,8 +1,6 @@
 package core
 
 import (
-	"strconv"
-
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 
@@ -110,7 +108,7 @@ func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext
 	// which seems to be efficient in terms of memory usage and CPU
 	item := &graphqlmetricsv1.SchemaUsageInfo{
 		RequestDocument:  operationContext.content,
-		TypeFieldMetrics: operationContext.typeFieldUsageInfo,
+		TypeFieldMetrics: operationContext.typeFieldUsageInfo.IntoGraphQLMetrics(),
 		ArgumentMetrics:  operationContext.argumentUsageInfo,
 		InputMetrics:     operationContext.inputUsageInfo,
 		OperationInfo: &graphqlmetricsv1.OperationInfo{

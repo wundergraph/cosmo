@@ -41,9 +41,41 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query myQuery { employee(id: 1) { id currentMood role { title } } }`,
+				Query: `
+query myQuery {
+	employee(id: 1) {
+		id
+		currentMood
+
+		role {
+			departments
+
+			... on Engineer {
+				title
+			}
+
+			... on Operator {
+				title
+			}
+		}
+	}
+}`,
 			})
-			require.JSONEq(t, `{"data":{"employee":{"id":1,"currentMood":"HAPPY","role":{"title":["Founder","CEO"]}}}}`, res.Body)
+			require.JSONEq(t, `{
+				"data": {
+					"employee": {
+						"id": 1,
+						"currentMood": "HAPPY",
+						"role": {
+							"departments": ["ENGINEERING", "MARKETING"],
+							"title": [
+								"Founder",
+								"CEO"
+							]
+						}
+					}
+				}
+			}`, res.Body)
 
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
@@ -53,7 +85,7 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 
 			schemaUsageMetrics := schemaUsage.GetMetric()
 
-			require.Len(t, schemaUsageMetrics, 8)
+			require.Len(t, schemaUsageMetrics, 7)
 
 			for _, metric := range schemaUsageMetrics {
 				assertLabelValue(t, metric.Label, otel.WgOperationName, "myQuery")
@@ -65,27 +97,23 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 			assertLabelValue(t, schemaUsageMetrics[0].Label, otel.WgGraphQLFieldName, "currentMood")
 			assertLabelValue(t, schemaUsageMetrics[0].Label, otel.WgGraphQLFieldParentType, "Employee")
 
-			assertLabelValue(t, schemaUsageMetrics[1].Label, otel.WgGraphQLFieldName, "employee")
-			assertLabelValue(t, schemaUsageMetrics[1].Label, otel.WgGraphQLFieldParentType, "Query")
+			assertLabelValue(t, schemaUsageMetrics[1].Label, otel.WgGraphQLFieldName, "departments")
+			assertLabelValue(t, schemaUsageMetrics[1].Label, otel.WgGraphQLFieldParentType, "RoleType")
 
-			assertLabelValue(t, schemaUsageMetrics[2].Label, otel.WgGraphQLFieldName, "id")
-			assertLabelValue(t, schemaUsageMetrics[2].Label, otel.WgGraphQLFieldParentType, "Employee")
+			assertLabelValue(t, schemaUsageMetrics[2].Label, otel.WgGraphQLFieldName, "employee")
+			assertLabelValue(t, schemaUsageMetrics[2].Label, otel.WgGraphQLFieldParentType, "Query")
 
-			assertLabelValue(t, schemaUsageMetrics[3].Label, otel.WgGraphQLFieldName, "role")
+			assertLabelValue(t, schemaUsageMetrics[3].Label, otel.WgGraphQLFieldName, "id")
 			assertLabelValue(t, schemaUsageMetrics[3].Label, otel.WgGraphQLFieldParentType, "Employee")
 
-			// 'role' is an interface, so it counts for each implementing type, and the interface itself
-			assertLabelValue(t, schemaUsageMetrics[4].Label, otel.WgGraphQLFieldName, "title")
-			assertLabelValue(t, schemaUsageMetrics[4].Label, otel.WgGraphQLFieldParentType, "Engineer")
+			assertLabelValue(t, schemaUsageMetrics[4].Label, otel.WgGraphQLFieldName, "role")
+			assertLabelValue(t, schemaUsageMetrics[4].Label, otel.WgGraphQLFieldParentType, "Employee")
 
 			assertLabelValue(t, schemaUsageMetrics[5].Label, otel.WgGraphQLFieldName, "title")
-			assertLabelValue(t, schemaUsageMetrics[5].Label, otel.WgGraphQLFieldParentType, "Marketer")
+			assertLabelValue(t, schemaUsageMetrics[5].Label, otel.WgGraphQLFieldParentType, "Engineer")
 
 			assertLabelValue(t, schemaUsageMetrics[6].Label, otel.WgGraphQLFieldName, "title")
 			assertLabelValue(t, schemaUsageMetrics[6].Label, otel.WgGraphQLFieldParentType, "Operator")
-
-			assertLabelValue(t, schemaUsageMetrics[7].Label, otel.WgGraphQLFieldName, "title")
-			assertLabelValue(t, schemaUsageMetrics[7].Label, otel.WgGraphQLFieldParentType, "RoleType")
 		})
 	})
 
@@ -191,7 +219,7 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 
 			schemaUsageMetrics := schemaUsage.GetMetric()
 
-			require.Len(t, schemaUsageMetrics, 8)
+			require.Len(t, schemaUsageMetrics, 5)
 
 			for _, metric := range schemaUsageMetrics {
 				assertLabelNotPresent(t, metric.Label, otel.WgOperationSha256)
@@ -228,7 +256,7 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 
 			schemaUsageMetrics := schemaUsage.GetMetric()
 
-			require.Len(t, schemaUsageMetrics, 8)
+			require.Len(t, schemaUsageMetrics, 5)
 
 			for _, metric := range schemaUsageMetrics {
 				assertLabelValue(t, metric.Label, otel.WgOperationSha256, "f46b2e72054341523989a788e798ec5c922517e6106646120d2ff23984cfed4b")
@@ -271,7 +299,7 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 
 			schemaUsageMetrics := schemaUsage.GetMetric()
 
-			require.Len(t, schemaUsageMetrics, 8)
+			require.Len(t, schemaUsageMetrics, 5)
 
 			for _, metric := range schemaUsageMetrics {
 				assertLabelValue(t, metric.Label, otel.WgOperationType, "query")
