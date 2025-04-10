@@ -26,10 +26,7 @@
     "coverage": "vitest run --coverage",
     "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
     "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && prettier --write -c src",
-    "e2e": "bun test e2e/",
-    "mcp:build": "bun build --compile src/mcp/index.ts --outfile cosmo-mcp-server",
-    "mcp:run": "npm run mcp:build && ./cosmo-mcp-server",
-    "mcp:debug": "npm run mcp:build && npx @modelcontextprotocol/inspector ./cosmo-mcp-server"
+    "e2e": "bun test e2e/"
   },
   "keywords": [
     "wundergraph",
