@@ -665,7 +665,7 @@ func TestBatch(t *testing.T) {
 				require.Contains(t, rootSpanAttributes, otel.WgRouterClusterName.String(""))
 
 				require.Contains(t, rootSpanAttributes, otel.WgRouterRootSpan.Bool(true))
-				require.Contains(t, rootSpanAttributes, otel.WgIsBatchedOperation.Bool(true))
+				require.Contains(t, rootSpanAttributes, otel.WgIsBatchRequest.Bool(true))
 				require.Contains(t, rootSpanAttributes, otel.WgBatchedOperationsCount.Int(len(operations)))
 				require.Contains(t, rootSpanAttributes, otel.WgOperationHash.String("12924042114100782429"))
 				require.Contains(t, rootSpanAttributes, otel.WgClientName.String("unknown"))
@@ -741,7 +741,7 @@ func getChildSpanDetails(directChildSpans []sdktrace.ReadOnlySpan) ([]string, []
 		attributes := span.Attributes()
 		retrievedSpanNames = append(retrievedSpanNames, span.Name())
 		for _, attr := range attributes {
-			if attr.Key == otel.WgBatchedOperationId {
+			if attr.Key == otel.WgBatchedOperationIndex {
 				operationNumberAttrs = append(operationNumberAttrs, attr.Value.AsString())
 			}
 		}

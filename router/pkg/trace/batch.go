@@ -37,6 +37,5 @@ func AddBatchTracing(
 		otel.WgClientVersion.String(clientVersion),
 		otel.WgBatchedOperationsCount.Int(batchOperationsLength),
 		otel.WgRouterConfigVersion.String(version),
-		otel.WgOperationType.String("batched"),
 	)
 }

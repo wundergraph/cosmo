@@ -611,18 +611,18 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		otel.WgOperationType.String(operationKit.parsedOperation.Type),
 	}
 
-	// Add the batched operation id even if we error out if its a subscription later
-	var batchedOperationId string
-	if opVal, ok := req.Context().Value(BatchedOperationId{}).(string); ok {
-		batchedOperationId = opVal
+	// Add the batched operation index even if we error out later
+	var batchedOperationIndex string
+	if opIndex, ok := req.Context().Value(BatchedOperationId{}).(string); ok {
+		batchedOperationIndex = opIndex
 		attributesAfterParse = append(
-			attributesAfterParse, otel.WgBatchedOperationId.String(batchedOperationId),
+			attributesAfterParse, otel.WgBatchedOperationIndex.String(batchedOperationIndex),
 		)
 	}
 
 	requestContext.telemetry.addCommonAttribute(attributesAfterParse...)
 
-	if batchedOperationId != "" && operationKit.parsedOperation.Type == "subscription" {
+	if batchedOperationIndex != "" && operationKit.parsedOperation.Type == "subscription" {
 		unsupportedErr := &httpGraphqlError{
 			message:    "Subscriptions aren't supported in batch operations",
 			statusCode: http.StatusBadRequest,
