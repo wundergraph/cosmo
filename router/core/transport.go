@@ -331,7 +331,6 @@ type TransportOptions struct {
 	PreHandlers                   []TransportPreHandler
 	PostHandlers                  []TransportPostHandler
 	SubgraphTransportOptions      *SubgraphTransportOptions
-	Proxy                         ProxyFunc
 	RetryOptions                  retrytransport.RetryOptions
 	LocalhostFallbackInsideDocker bool
 	MetricStore                   metric.Store
@@ -349,21 +348,15 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		preHandlers:                   opts.PreHandlers,
 		postHandlers:                  opts.PostHandlers,
 		retryOptions:                  opts.RetryOptions,
-		subgraphTransportOptions:      opts.SubgraphTransportOptions,
 		localhostFallbackInsideDocker: opts.LocalhostFallbackInsideDocker,
 		metricStore:                   opts.MetricStore,
 		logger:                        opts.Logger,
 		tracerProvider:                opts.TracerProvider,
-		proxy:                         opts.Proxy,
 		tracePropagators:              opts.TracePropagators,
 	}
 }
 
 func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport http.RoundTripper) http.RoundTripper {
-	if t.subgraphTransportOptions != nil && t.subgraphTransportOptions.SubgraphMap != nil && len(t.subgraphTransportOptions.SubgraphMap) > 0 {
-		baseTransport = NewSubgraphTransport(t.subgraphTransportOptions, baseTransport, t.logger, t.proxy)
-	}
-
 	if t.localhostFallbackInsideDocker && docker.Inside() {
 		baseTransport = docker.NewLocalhostFallbackRoundTripper(baseTransport)
 	}
