@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -8,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/stretchr/testify/assert"
@@ -969,4 +971,88 @@ func TestInvalidRegex(t *testing.T) {
 		},
 	})
 	assert.Error(t, err)
+}
+
+func TestExpression(t *testing.T) {
+	t.Run("Should return error when expression is invalid", func(t *testing.T) {
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{
+						Operation:  "propagate",
+						Expression: "invalid",
+					},
+				},
+			},
+		})
+		assert.Nil(t, ht)
+		assert.Error(t, err)
+	})
+
+	t.Run("Should set header value when expression is static value", func(t *testing.T) {
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{
+						Name:       "X-Test-Subgraph",
+						Operation:  "set",
+						Expression: "\"static\"",
+					},
+				},
+			},
+		})
+		assert.NotNil(t, ht)
+		assert.NoError(t, err)
+
+		rr := httptest.NewRecorder()
+
+		clientCtx := withRequestContext(context.Background(), &requestContext{})
+		clientReq, err := http.NewRequestWithContext(clientCtx, "POST", "http://localhost", nil)
+		require.NoError(t, err)
+
+		updatedClientReq, _ := ht.OnOriginRequest(clientReq, &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			request:          clientReq,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver([]Subgraph{}),
+		})
+
+		assert.Equal(t, "static", updatedClientReq.Header.Get("X-Test-Subgraph"))
+	})
+
+	t.Run("Should set header value when expression is from another header value", func(t *testing.T) {
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{
+						Name:       "X-Test-Header",
+						Operation:  "set",
+						Expression: "request.header.Get(\"X-Other-Header\")",
+					},
+				},
+			},
+		})
+		require.NotNil(t, ht)
+		assert.NoError(t, err)
+
+		rr := httptest.NewRecorder()
+
+		reqCtx := &requestContext{}
+		clientCtx := withRequestContext(context.Background(), reqCtx)
+		clientReq, err := http.NewRequestWithContext(clientCtx, "POST", "http://localhost", nil)
+		require.NoError(t, err)
+		clientReq.Header.Set("X-Other-Header", "Other-Value")
+		reqCtx.expressionContext = expr.Context{Request: expr.LoadRequest(clientReq)}
+
+		updatedClientReq, _ := ht.OnOriginRequest(clientReq, &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			request:          clientReq,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver([]Subgraph{}),
+		})
+
+		assert.Equal(t, "Other-Value", updatedClientReq.Header.Get("X-Test-Header"))
+	})
 }

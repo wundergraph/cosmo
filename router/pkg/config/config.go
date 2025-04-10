@@ -252,9 +252,11 @@ type RequestHeaderRule struct {
 	// Set header options
 	// Name is the name of the header to set
 	Name string `yaml:"name"`
-	// Value is the value of the header to set
+	// Value is the static value to set for the header
 	Value string `yaml:"value"`
-	// ValueFrom is the context field to get the value from, in propagating to subgraphs
+	// Expression is the Expr Lang expression to evaluate for dynamic header values
+	Expression string `yaml:"expression"`
+	// ValueFrom is deprecated in favor of Expression. Use Expression instead.
 	ValueFrom *CustomDynamicAttribute `yaml:"value_from,omitempty"`
 }
 

@@ -2943,9 +2943,13 @@
           ],
           "description": "The value to set for the header. This can include environment variables."
         },
+        "expression": {
+          "type": "string",
+          "description": "The template expression to evaluate. The expression must return a string value."
+        },
         "value_from": {
           "type": "object",
-          "description": "The configuration for the value from. The value from is used to extract a value from a request context and propagate it to subgraphs. This is currently only valid in requests",
+          "description": "DEPRECATED: Use expression instead. The configuration for the value from. The value from is used to extract a value from a request context and propagate it to subgraphs. This is currently only valid in requests",
           "additionalProperties": false,
           "required": [
             "context_field"
@@ -2964,6 +2968,17 @@
       "required": [
         "op",
         "name"
+      ],
+      "oneOf": [
+        {
+          "required": ["value"]
+        },
+        {
+          "required": ["expression"]
+        },
+        {
+          "required": ["value_from"]
+        }
       ]
     },
     "context_fields": {

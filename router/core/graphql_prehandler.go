@@ -10,7 +10,6 @@ import (
 	"maps"
 	"net/http"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -603,6 +602,9 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	requestContext.operation.name = operationKit.parsedOperation.Request.OperationName
 	requestContext.operation.opType = operationKit.parsedOperation.Type
 
+	setExpressionContextOperation(requestContext)
+	setExpressionContextClient(requestContext)
+
 	attributesAfterParse := []attribute.KeyValue{
 		otel.WgOperationName.String(operationKit.parsedOperation.Request.OperationName),
 		otel.WgOperationType.String(operationKit.parsedOperation.Type),
@@ -745,6 +747,12 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	requestContext.operation.internalHash = operationKit.parsedOperation.InternalID
 	requestContext.operation.remapVariables = operationKit.parsedOperation.RemapVariables
 
+	operationHash := ""
+	if requestContext.operation.hash != 0 {
+		operationHash = requestContext.operation.HashString()
+	}
+	requestContext.expressionContext.Request.Operation.Hash = operationHash
+
 	if !h.disableVariablesRemapping && len(uploadsMapping) > 0 {
 		// after variables remapping we need to update the file uploads path because variables relative path has changed
 		// but files still references the old uploads locations
@@ -783,7 +791,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 	}
 
-	operationHashString := strconv.FormatUint(operationKit.parsedOperation.ID, 10)
+	operationHashString := operationKit.parsedOperation.IDString()
 
 	operationHashAttribute := otel.WgOperationHash.String(operationHashString)
 	requestContext.telemetry.addCommonAttribute(operationHashAttribute)
@@ -1088,4 +1096,30 @@ func (h *PreHandler) parseRequestExecutionOptions(r *http.Request) resolve.Execu
 		options.IncludeQueryPlanInResponse = true
 	}
 	return options
+}
+
+func setExpressionContextOperation(requestContext *requestContext) {
+	requestContext.expressionContext.Request.Operation = expr.Operation{
+		Name: requestContext.operation.name,
+		Type: requestContext.operation.opType,
+	}
+}
+
+func setExpressionContextClient(requestContext *requestContext) {
+	clientName := requestContext.operation.clientInfo.Name
+	if clientName == "unknown" {
+		clientName = ""
+	}
+
+	clientVersion := requestContext.operation.clientInfo.Version
+	if clientVersion == "missing" {
+		clientVersion = ""
+	}
+
+	if clientName != "" || clientVersion != "" {
+		requestContext.expressionContext.Request.Client = expr.Client{
+			Name:    clientName,
+			Version: clientVersion,
+		}
+	}
 }
