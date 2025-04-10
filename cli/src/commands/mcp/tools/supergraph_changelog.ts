@@ -44,7 +44,7 @@ export default async function main(opts: BaseCommandOptions, input: SupergraphCh
 
 export function registerSupergraphChangelogTool({ server, opts }: ToolContext) {
   server.tool(
-    'mcp_cosmo_supergraph_changelog',
+    'supergraph_changelog',
     'Fetch the changelog for a federated graph / Supergraph.',
     SupergraphChangelogInputSchema.shape,
     async (toolInput: SupergraphChangelogInput) => {

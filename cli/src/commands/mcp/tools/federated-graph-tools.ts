@@ -12,7 +12,7 @@ import { ToolContext } from './types.js';
 export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
   // List federated graphs tool
   server.tool(
-    'mcp_cosmo_list_supergraphs',
+    'list_supergraphs',
     'List all federated graphs / Supergraphs',
     {
       namespace: z.string().optional().describe('Filter to get graphs in this namespace only'),
@@ -64,7 +64,7 @@ export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
 
   // Fetch federated graph details tool
   server.tool(
-    'mcp_cosmo_fetch_supergraph',
+    'fetch_supergraph',
     'Fetch the schemas and configuration of a federated graph / Supergraph',
     {
       name: z.string().describe('The name of the federated graph to fetch'),
@@ -105,7 +105,7 @@ export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
 
   // Fetch router config tool
   server.tool(
-    'mcp_cosmo_fetch_supergraph_router_config',
+    'fetch_supergraph_router_config',
     'Fetch the router configuration for a federated graph / Supergraph',
     {
       name: z.string().describe('The name of the federated graph to fetch'),
@@ -130,7 +130,7 @@ export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
 
   // Fetch subgraphs tool
   server.tool(
-    'mcp_cosmo_fetch_supergraph_subgraphs',
+    'fetch_supergraph_subgraphs',
     'Fetch all subgraphs and their schemas for a federated graph / Supergraph',
     {
       name: z.string().describe('The name of the federated graph to fetch'),

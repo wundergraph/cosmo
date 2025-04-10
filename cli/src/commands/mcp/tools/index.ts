@@ -9,3 +9,5 @@ export * from './verify-query-against-remote-schema.js';
 export * from './verify-query-against-in-memory-schema.js';
 export * from './introspect-subgraph.js';
 export * from './supergraph_changelog.js';
+export * from './search-docs.js';
+export * from './verify-router-config.js';

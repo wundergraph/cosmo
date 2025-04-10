@@ -3,7 +3,7 @@ import { getBaseHeaders } from '../../../core/config.js';
 import { ToolContext } from './types.js';
 
 export const registerListSubgraphsTool = ({ server, opts }: ToolContext) => {
-  server.tool('mcp_cosmo_list_subgraphs', 'List all subgraphs', async () => {
+  server.tool('list_subgraphs', 'List all subgraphs', async () => {
     const resp = await opts.client.platform.getSubgraphs(
       {
         limit: 0,

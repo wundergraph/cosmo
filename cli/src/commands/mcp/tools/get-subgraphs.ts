@@ -6,7 +6,7 @@ import { ToolContext } from './types.js';
 
 export const registerGetSubgraphsTool = ({ server, opts }: ToolContext) => {
   server.tool(
-    'mcp_cosmo_get_subgraphs',
+    'get_subgraphs',
     'Get details for one or more subgraphs, including the SDL/GraphQL Schema for each.',
     {
       names: z.array(z.string()).describe('The names of the subgraphs'),

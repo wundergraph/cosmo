@@ -13,6 +13,8 @@ import {
   registerVerifyQueryAgainstInMemorySchemaTool,
   registerIntrospectSubgraphTool,
   registerSupergraphChangelogTool,
+  registerSearchDocsTool,
+  registerVerifyRouterConfigTool,
 } from './tools/index.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -37,7 +39,8 @@ export default (opts: BaseCommandOptions) => {
     registerVerifyQueryAgainstInMemorySchemaTool({ server, opts });
     registerIntrospectSubgraphTool({ server, opts });
     registerSupergraphChangelogTool({ server, opts });
-
+    registerSearchDocsTool({ server, opts });
+    registerVerifyRouterConfigTool({ server, opts });
     // Start receiving messages on stdin and sending messages on stdout
     const transport = new StdioServerTransport();
     await server.connect(transport);

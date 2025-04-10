@@ -19,7 +19,7 @@ export const registerVerifyQueryAgainstRemoteSchemaTool = ({
   opts: BaseCommandOptions;
 }) => {
   server.tool(
-    'mcp_cosmo_verify_query_against_remote_schema',
+    'verify_query_against_remote_schema',
     'Verify if a GraphQL query is valid against a remote Supergraph.',
     { query: z.string(), supergraph: z.string(), namespace: z.string().optional() },
     async ({ query, supergraph, namespace }) => {

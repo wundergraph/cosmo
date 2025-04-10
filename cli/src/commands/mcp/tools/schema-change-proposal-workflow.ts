@@ -17,7 +17,7 @@ export const registerSchemaChangeProposalWorkflowTool = ({
   opts: BaseCommandOptions;
 }) => {
   server.tool(
-    'mcp_cosmo_schema_change_proposal_workflow',
+    'schema_change_proposal_workflow',
     'Use this tool to generate a list of instructions to make a successful schema change for a Supergraph.',
     { change: z.string(), supergraph: z.string(), namespace: z.string().optional() },
     ({ change, supergraph, namespace }) => ({

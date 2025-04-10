@@ -48,6 +48,8 @@
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-connect": "workspace:*",
     "@wundergraph/cosmo-shared": "workspace:*",
+    "ajv": "^8.17.1",
+    "axios": "^1.8.4",
     "boxen": "^7.1.1",
     "cli-progress": "^3.12.0",
     "cli-table3": "^0.6.3",
@@ -68,6 +70,7 @@
     "ora": "^8.0.1",
     "pathe": "^1.1.1",
     "picocolors": "^1.0.0",
+    "trieve-ts-sdk": "^0.0.80",
     "undici": "^6.21.1",
     "zod": "^3.22.4"
   },

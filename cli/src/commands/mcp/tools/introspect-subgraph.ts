@@ -32,7 +32,7 @@ export type IntrospectSubgraphInput = z.infer<typeof introspectSubgraphInputSche
  */
 export const registerIntrospectSubgraphTool = ({ server, opts }: { server: McpServer; opts: BaseCommandOptions }) => {
   server.tool(
-    'mcp_cosmo_introspect_subgraph', // Tool name
+    'introspect_subgraph', // Tool name
     'Introspects a subgraph and returns its GraphQL schema (SDL).', // Tool description
     introspectSubgraphInputSchema.shape, // Pass the raw shape
     async ({ routingUrl, header, useRawIntrospection }: IntrospectSubgraphInput) => {

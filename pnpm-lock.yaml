@@ -182,6 +182,12 @@ importers:
       '@wundergraph/cosmo-shared':
         specifier: workspace:*
         version: link:../shared
+      ajv:
+        specifier: ^8.17.1
+        version: 8.17.1
+      axios:
+        specifier: ^1.8.4
+        version: 1.8.4
       boxen:
         specifier: ^7.1.1
         version: 7.1.1
@@ -242,6 +248,9 @@ importers:
       picocolors:
         specifier: ^1.0.0
         version: 1.0.0
+      trieve-ts-sdk:
+        specifier: ^0.0.80
+        version: 0.0.80
       undici:
         specifier: ^6.21.1
         version: 6.21.2
@@ -13144,6 +13153,9 @@ packages:
     resolution: {integrity: sha512-gcANaAnd2QDZFmHFEOF4k7uc1J/6a6z3DJMd/QwEyxLoKGiptJRwid582r7QIsFlFMIZ3SnxfS52S4hm2DHkuQ==}
     engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
 
+  trieve-ts-sdk@0.0.80:
+    resolution: {integrity: sha512-BzjOKAvRwvTvvc6q/SmFkPxm9XSJO/mzJ8G0RvZ/I2NoHKwqu7O3Kd2620sT+46FFvQi2/cOfOzHepd6qKfyvA==}
+
   trim-lines@3.0.1:
     resolution: {integrity: sha512-kRj8B+YHZCc9kQYdWfJB2/oUl9rA99qbowYYBtr4ui4mZyAQ2JpvVBd/6U2YloATfqBhBTSMhTpgBHtU0Mf3Rg==}
 
@@ -15657,7 +15669,7 @@ snapshots:
   '@commitlint/config-validator@19.0.3':
     dependencies:
       '@commitlint/types': 19.0.3
-      ajv: 8.13.0
+      ajv: 8.17.1
 
   '@commitlint/ensure@19.0.3':
     dependencies:
@@ -28427,6 +28439,8 @@ snapshots:
   tree-kill@1.2.2: {}
 
   treeverse@3.0.0: {}
+
+  trieve-ts-sdk@0.0.80: {}
 
   trim-lines@3.0.1: {}
 

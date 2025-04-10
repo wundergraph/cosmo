@@ -7,7 +7,7 @@ Instructions to add a new tool to the Cosmo MCP server
 Add a new file to the `tools` directory, e.g. `cli/src/commands/mcp/tools/my-tool.ts`.
 The tool name should be in snake_case and can be typically derived from the instructions of the use case.
 
-Tool name template: `mcp_cosmo_<use_case>`
+Tool name template: `<use_case>`
 
 ## Step 2: Implement the tool
 
