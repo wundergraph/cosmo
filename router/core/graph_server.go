@@ -82,8 +82,8 @@ type (
 		engineStats             statistics.EngineStatistics
 		playgroundHandler       func(http.Handler) http.Handler
 		publicKey               *ecdsa.PublicKey
-		executionTransport      *http.Transport
-		executionTransportProxy ProxyFunc
+		baseTransport           *http.Transport
+		subgraphTransports      map[string]*http.Transport
 		baseOtelAttributes      []attribute.KeyValue
 		baseRouterConfigVersion string
 		mux                     *chi.Mux
@@ -112,14 +112,24 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		return nil, fmt.Errorf(`the compatibility version "%s" is not compatible with this router version`, routerConfig.CompatibilityVersion)
 	}
 
+	// Base transport
+	baseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy)
+
+	// Subgraph transports
+	subgraphTransports := map[string]*http.Transport{}
+	for subgraph, subgraphOpts := range r.subgraphTransportOptions.SubgraphMap {
+		subgraphBaseTransport := newHTTPTransport(subgraphOpts, proxy)
+		subgraphTransports[subgraph] = subgraphBaseTransport
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	s := &graphServer{
 		context:                 ctx,
 		cancelFunc:              cancel,
 		Config:                  &r.Config,
 		engineStats:             r.EngineStats,
-		executionTransport:      newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy),
-		executionTransportProxy: proxy,
+		baseTransport:           baseTransport,
+		subgraphTransports:      subgraphTransports,
 		playgroundHandler:       r.playgroundHandler,
 		baseRouterConfigVersion: routerConfig.GetVersion(),
 		inFlightRequests:        &atomic.Uint64{},
@@ -915,17 +925,23 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return nil, fmt.Errorf("failed to build pubsub configuration: %w", err)
 	}
 
+	// map[string]*http.Transport cannot be coerced into map[string]http.RoundTripper, unfortunately
+	subgraphTippers := map[string]http.RoundTripper{}
+	for subgraph, subgraphTransport := range s.subgraphTransports {
+		subgraphTippers[subgraph] = subgraphTransport
+	}
+
 	ecb := &ExecutorConfigurationBuilder{
-		introspection:  s.introspection,
-		baseURL:        s.baseURL,
-		transport:      s.executionTransport,
-		logger:         s.logger,
-		trackUsageInfo: s.graphqlMetricsConfig.Enabled,
+		introspection:    s.introspection,
+		baseURL:          s.baseURL,
+		baseTripper:      s.baseTransport,
+		subgraphTrippers: subgraphTippers,
+		logger:           s.logger,
+		trackUsageInfo:   s.graphqlMetricsConfig.Enabled,
 		subscriptionClientOptions: &SubscriptionClientOptions{
 			PingInterval: s.engineExecutionConfiguration.WebSocketClientPingInterval,
 		},
 		transportOptions: &TransportOptions{
-			Proxy:                    s.executionTransportProxy,
 			SubgraphTransportOptions: s.subgraphTransportOptions,
 			PreHandlers:              s.preOriginHandlers,
 			PostHandlers:             s.postOriginHandlers,
@@ -1390,6 +1406,12 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		if err := mux.Shutdown(ctx); err != nil {
 			finalErr = errors.Join(finalErr, err)
 		}
+	}
+
+	// Close idle connections on base and subgraph transports
+	s.baseTransport.CloseIdleConnections()
+	for _, subgraphTransport := range s.subgraphTransports {
+		subgraphTransport.CloseIdleConnections()
 	}
 
 	return finalErr

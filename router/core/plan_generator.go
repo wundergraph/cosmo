@@ -23,8 +23,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"go.uber.org/zap"
 
-	"github.com/wundergraph/cosmo/router/pkg/config"
-
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 )
 
@@ -273,7 +271,6 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 		httpClient:         http.DefaultClient,
 		streamingClient:    http.DefaultClient,
 		subscriptionClient: subscriptionClient,
-		transportOptions:   &TransportOptions{SubgraphTransportOptions: NewSubgraphTransportOptions(config.TrafficShapingRules{})},
 		pubsub:             pubSubFactory,
 	})
 
