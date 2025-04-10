@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"errors"
-	"strconv"
 	"time"
 
 	"go.uber.org/ratelimit"
@@ -262,7 +261,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 			Extensions:    s,
 		},
 		Client: &ClientInfo{
-			Name: operation.GetClient().GetName(),
+			Name:    operation.GetClient().GetName(),
 			Version: operation.GetClient().GetVersion(),
 		},
 	}
@@ -350,7 +349,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 	}
 
 	return &CacheWarmupOperationPlanResult{
-		OperationHash: strconv.FormatUint(k.parsedOperation.ID, 10),
+		OperationHash: k.parsedOperation.IDString(),
 		OperationName: k.parsedOperation.Request.OperationName,
 		OperationType: k.parsedOperation.Type,
 		ClientName:    item.Client.Name,

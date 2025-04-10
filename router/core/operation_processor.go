@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"sync"
 	"time"
 
@@ -67,6 +68,10 @@ type ParsedOperation struct {
 	PersistedOperationCacheHit bool
 	// NormalizationCacheHit is set to true if the request is a non-persisted operation and the normalized operation was loaded from cache
 	NormalizationCacheHit bool
+}
+
+func (o *ParsedOperation) IDString() string {
+	return strconv.FormatUint(o.ID, 10)
 }
 
 type invalidExtensionsTypeError jsonparser.ValueType

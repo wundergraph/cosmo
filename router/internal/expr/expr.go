@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/expr-lang/expr/file"
-	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"net/http"
 	"net/url"
+
+	"github.com/expr-lang/expr/file"
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
 )
 
 /**
@@ -37,12 +38,26 @@ type Context struct {
 // Request is the context for the request object in expressions. Be aware, that only value receiver methods
 // are exported in the expr environment. This is because the expressions are evaluated in a read-only context.
 type Request struct {
-	Auth   RequestAuth    `expr:"auth"` // if changing the expr tag, the ExprRequestAuthKey should be updated
-	URL    RequestURL     `expr:"url"`
-	Header RequestHeaders `expr:"header"`
-	Body   RequestBody    `expr:"body"`
-	Error  error          `expr:"error"`
-	Trace  Trace          `expr:"trace"`
+	Auth      RequestAuth    `expr:"auth"` // if changing the expr tag, the ExprRequestAuthKey should be updated
+	URL       RequestURL     `expr:"url"`
+	Header    RequestHeaders `expr:"header"`
+	Body      RequestBody    `expr:"body"`
+	Error     error          `expr:"error"`
+	Trace     Trace          `expr:"trace"`
+	Operation Operation      `expr:"operation"`
+	Client    Client         `expr:"client"`
+}
+
+type Operation struct {
+	Name string `expr:"name"`
+	Type string `expr:"type"`
+	Hash string `expr:"hash"`
+}
+
+type Client struct {
+	Name    string `expr:"name"`
+	Version string `expr:"version"`
+	IP      string `expr:"ip"`
 }
 
 type RequestBody struct {
