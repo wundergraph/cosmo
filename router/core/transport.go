@@ -315,14 +315,12 @@ func (ct *CustomTransport) singleFlightKey(req *http.Request) uint64 {
 type TransportFactory struct {
 	preHandlers                   []TransportPreHandler
 	postHandlers                  []TransportPostHandler
-	subgraphTransportOptions      *SubgraphTransportOptions
 	retryOptions                  retrytransport.RetryOptions
 	localhostFallbackInsideDocker bool
 	metricStore                   metric.Store
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
 	tracePropagators              propagation.TextMapPropagator
-	proxy                         ProxyFunc
 }
 
 var _ ApiTransportFactory = TransportFactory{}
