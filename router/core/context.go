@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -560,6 +561,10 @@ func (o *operationContext) Type() string {
 
 func (o *operationContext) Hash() uint64 {
 	return o.hash
+}
+
+func (o *operationContext) HashString() string {
+	return strconv.FormatUint(o.hash, 10)
 }
 
 func (o *operationContext) Content() string {
