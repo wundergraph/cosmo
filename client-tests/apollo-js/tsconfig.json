@@ -8,7 +8,9 @@
     "forceConsistentCasingInFileNames": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "types": ["node", "jest"]
+    "types": ["node", "vitest"],
+    "moduleResolution": "node",
+    "resolveJsonModule": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]

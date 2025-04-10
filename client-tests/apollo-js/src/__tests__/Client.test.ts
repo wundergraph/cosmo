@@ -1,6 +1,5 @@
-import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client/core';
-import { gql } from '@apollo/client/core';
-import {BatchHttpLink} from "@apollo/client/link/batch-http";
+import { ApolloClient, InMemoryCache, createHttpLink, gql } from '@apollo/client';
+import { BatchHttpLink } from '@apollo/client/link/batch-http';
 
 const serverUrl = process.env.ROUTER_URL || 'http://localhost:3002/graphql';
 
