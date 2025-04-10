@@ -1182,12 +1182,12 @@ func (e *Environment) Shutdown() {
 		}
 	}
 
-	// // Close all test servers
-	// if !e.cfg.NoShutdownTestServer {
-	// 	for _, s := range e.Servers {
-	// 		s.CloseClientConnections()
-	// 	}
-	// }
+	// Close all test servers
+	if !e.cfg.NoShutdownTestServer {
+		for _, s := range e.Servers {
+			s.CloseClientConnections()
+		}
+	}
 
 	for _, s := range e.Servers {
 		// Do not call s.Close() here, as it will get stuck on connections left open!
