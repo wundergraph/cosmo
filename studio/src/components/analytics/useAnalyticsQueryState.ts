@@ -71,7 +71,7 @@ export const useAnalyticsQueryState = (customDefaultRange?: Range) => {
       })
       .flat();
 
-    const limit = Number(query.pageSize) || 20;
+    const limit = Math.min(Number(query.pageSize) || 20, 50);
     const offset = (Number(query.page) || 0) * limit;
 
     const name = query.group
@@ -104,7 +104,7 @@ export const useAnalyticsQueryState = (customDefaultRange?: Range) => {
     return {
       name,
       filters,
-      pagination: { limit: limit > 50 ? 50 : limit, offset },
+      pagination: { limit, offset },
       dateRange,
       range,
       page: query.page,

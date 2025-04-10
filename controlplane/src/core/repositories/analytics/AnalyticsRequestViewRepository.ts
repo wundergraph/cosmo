@@ -691,7 +691,7 @@ export class AnalyticsRequestViewRepository {
   ): Promise<PlainMessage<AnalyticsViewResult>> {
     const inputFilters = this.omitGroupedFilters(name, opts?.filters ?? []);
     const columnMetaData = fillColumnMetaData(this.columnMetadata);
-    const paginationSql = `LIMIT {limit:Int16} OFFSET {offset:Int16}`;
+    const paginationSql = `LIMIT {limit:Int16} OFFSET {offset:Int64}`;
     const orderSql = this.getSortOrder(opts?.sort?.id, opts?.sort?.desc);
 
     const { result: coercedQueryParams, filterMapper } = coerceFilterValues(
