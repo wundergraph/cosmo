@@ -1716,7 +1716,7 @@ func DefaultTransportRequestOptions() *TransportRequestOptions {
 		ResponseHeaderTimeout:  0 * time.Second,
 		ExpectContinueTimeout:  0 * time.Second,
 		KeepAliveProbeInterval: 30 * time.Second,
-		KeepAliveIdleTimeout:   0 * time.Second,
+		KeepAliveIdleTimeout:   90 * time.Second,
 		DialTimeout:            30 * time.Second,
 
 		MaxConnsPerHost:     100,
