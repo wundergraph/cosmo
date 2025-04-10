@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.77.1](https://github.com/wundergraph/cosmo/compare/wgc@0.77.0...wgc@0.77.1) (2025-04-10)
+
+### Bug Fixes
+
+* improve subgraph change verification ([#1772](https://github.com/wundergraph/cosmo/issues/1772)) ([4f7d438](https://github.com/wundergraph/cosmo/commit/4f7d438ea77cbcbbd1dfb5c2c13752658f2edd62)) (@jensneuse)
+
 # [0.77.0](https://github.com/wundergraph/cosmo/compare/wgc@0.76.3...wgc@0.77.0) (2025-04-10)
 
 ### Features
