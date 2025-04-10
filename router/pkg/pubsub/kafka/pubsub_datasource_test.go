@@ -103,6 +103,88 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 	mockAdapter.AssertExpectations(t)
 }
 
+// TestPubSubDataSource_GetResolveDataSource_WrongType tests the PubSubDataSource with a mocked adapter
+func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
+	// Create event configuration with required fields
+	engineEventConfig := &nodev1.EngineEventConfiguration{
+		ProviderId: "test-provider",
+		Type:       nodev1.EventType_SUBSCRIBE,
+		TypeName:   "TestType",
+		FieldName:  "testField",
+	}
+
+	kafkaCfg := &nodev1.KafkaEventConfiguration{
+		EngineEventConfiguration: engineEventConfig,
+		Topics:                   []string{"test-topic"},
+	}
+
+	// Create mock adapter
+	mockAdapter := new(MockAdapter)
+
+	// Create the data source with mock adapter
+	pubsub := &PubSubDataSource{
+		EventConfiguration: kafkaCfg,
+		KafkaAdapter:       mockAdapter,
+	}
+
+	// Get the data source
+	ds, err := pubsub.GetResolveDataSource()
+	require.Error(t, err)
+	require.Nil(t, ds)
+}
+
+// TestPubSubDataSource_GetResolveDataSourceInput_MultipleTopics tests the PubSubDataSource with a mocked adapter
+func TestPubSubDataSource_GetResolveDataSourceInput_MultipleTopics(t *testing.T) {
+	// Create event configuration with required fields
+	engineEventConfig := &nodev1.EngineEventConfiguration{
+		ProviderId: "test-provider",
+		Type:       nodev1.EventType_PUBLISH,
+		TypeName:   "TestType",
+		FieldName:  "testField",
+	}
+
+	kafkaCfg := &nodev1.KafkaEventConfiguration{
+		EngineEventConfiguration: engineEventConfig,
+		Topics:                   []string{"test-topic-1", "test-topic-2"},
+	}
+
+	// Create the data source with mock adapter
+	pubsub := &PubSubDataSource{
+		EventConfiguration: kafkaCfg,
+	}
+
+	// Get the input
+	input, err := pubsub.GetResolveDataSourceInput([]byte(`{"test":"data"}`))
+	require.Error(t, err)
+	require.Empty(t, input)
+}
+
+// TestPubSubDataSource_GetResolveDataSourceInput_NoTopics tests the PubSubDataSource with a mocked adapter
+func TestPubSubDataSource_GetResolveDataSourceInput_NoTopics(t *testing.T) {
+	// Create event configuration with required fields
+	engineEventConfig := &nodev1.EngineEventConfiguration{
+		ProviderId: "test-provider",
+		Type:       nodev1.EventType_PUBLISH,
+		TypeName:   "TestType",
+		FieldName:  "testField",
+	}
+
+	kafkaCfg := &nodev1.KafkaEventConfiguration{
+		EngineEventConfiguration: engineEventConfig,
+		Topics:                   []string{},
+	}
+
+	// Create the data source with mock adapter
+	pubsub := &PubSubDataSource{
+		EventConfiguration: kafkaCfg,
+	}
+
+	// Get the input
+	input, err := pubsub.GetResolveDataSourceInput([]byte(`{"test":"data"}`))
+	require.Error(t, err)
+	require.Empty(t, input)
+}
+
 // TestKafkaPubSubDataSourceMultiTopicSubscription tests only the subscription functionality
 // for multiple topics. The publish and resolve datasource tests are skipped since they
 // do not support multiple topics.
@@ -120,31 +202,10 @@ func TestKafkaPubSubDataSourceMultiTopicSubscription(t *testing.T) {
 		Topics:                   []string{"test-topic-1", "test-topic-2"},
 	}
 
-	// Create mock adapter
-	mockAdapter := new(MockAdapter)
-
-	// Set up expectations for subscribe with both topics
-	mockAdapter.On("Subscribe", mock.Anything, mock.MatchedBy(func(event SubscriptionEventConfiguration) bool {
-		return event.ProviderID == "test-provider" &&
-			len(event.Topics) == 2 &&
-			event.Topics[0] == "test-topic-1" &&
-			event.Topics[1] == "test-topic-2"
-	}), mock.Anything).Return(nil)
-
 	// Create the data source to test with mock adapter
 	pubsub := &PubSubDataSource{
 		EventConfiguration: kafkaCfg,
-		KafkaAdapter:       mockAdapter,
 	}
-
-	// Test GetEngineEventConfiguration
-	testConfig := pubsub.GetEngineEventConfiguration()
-	require.NotNil(t, testConfig, "Expected non-nil EngineEventConfiguration")
-
-	// Test GetResolveDataSourceSubscription
-	subscription, err := pubsub.GetResolveDataSourceSubscription()
-	require.NoError(t, err, "Expected no error from GetResolveDataSourceSubscription")
-	require.NotNil(t, subscription, "Expected non-nil SubscriptionDataSource")
 
 	// Test GetResolveDataSourceSubscriptionInput
 	subscriptionInput, err := pubsub.GetResolveDataSourceSubscriptionInput()

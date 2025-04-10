@@ -1,6 +1,8 @@
 package nats
 
-import "strings"
+import (
+	"strings"
+)
 
 const (
 	fwc  = '>'

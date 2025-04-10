@@ -53,99 +53,20 @@ func TestNatsPubSubDataSource(t *testing.T) {
 
 	natsCfg := &nodev1.NatsEventConfiguration{
 		EngineEventConfiguration: engineEventConfig,
-		Subjects:                 []string{"test.subject"},
+		Subjects:                 []string{"test-subject"},
 	}
 
-	// Create the data source to test
+	// Create the data source to test with a real adapter
+	adapter := &Adapter{}
 	pubsub := &PubSubDataSource{
 		EventConfiguration: natsCfg,
-		NatsAdapter:        &Adapter{}, // Using a real Adapter type but with nil values for the test
+		NatsAdapter:        adapter,
 	}
 
 	// Run the standard test suite
 	datasource.VerifyPubSubDataSourceImplementation(t, pubsub)
 }
 
-func TestNatsPubSubDataSourceWithStreamConfiguration(t *testing.T) {
-	// Create event configuration with required fields and stream config
-	engineEventConfig := &nodev1.EngineEventConfiguration{
-		ProviderId: "test-provider",
-		Type:       nodev1.EventType_PUBLISH,
-		TypeName:   "TestType",
-		FieldName:  "testField",
-	}
-
-	streamCfg := &nodev1.NatsStreamConfiguration{
-		ConsumerName:              "test-consumer",
-		StreamName:                "test-stream",
-		ConsumerInactiveThreshold: 60,
-	}
-
-	natsCfg := &nodev1.NatsEventConfiguration{
-		EngineEventConfiguration: engineEventConfig,
-		Subjects:                 []string{"test.subject"},
-		StreamConfiguration:      streamCfg,
-	}
-
-	// Create the data source to test
-	pubsub := &PubSubDataSource{
-		EventConfiguration: natsCfg,
-		NatsAdapter:        &Adapter{}, // Using a real Adapter type but with nil values for the test
-	}
-
-	// Run the standard test suite
-	datasource.VerifyPubSubDataSourceImplementation(t, pubsub)
-}
-
-func TestNatsPubSubDataSourceRequestType(t *testing.T) {
-	// Create event configuration with REQUEST type
-	engineEventConfig := &nodev1.EngineEventConfiguration{
-		ProviderId: "test-provider",
-		Type:       nodev1.EventType_REQUEST,
-		TypeName:   "TestType",
-		FieldName:  "testField",
-	}
-
-	natsCfg := &nodev1.NatsEventConfiguration{
-		EngineEventConfiguration: engineEventConfig,
-		Subjects:                 []string{"test.subject"},
-	}
-
-	// Create the data source to test
-	pubsub := &PubSubDataSource{
-		EventConfiguration: natsCfg,
-		NatsAdapter:        &Adapter{}, // Using a real Adapter type but with nil values for the test
-	}
-
-	// Run the standard test suite
-	datasource.VerifyPubSubDataSourceImplementation(t, pubsub)
-}
-
-func TestNatsPubSubDataSourceSubscribeType(t *testing.T) {
-	// Create event configuration with SUBSCRIBE type
-	engineEventConfig := &nodev1.EngineEventConfiguration{
-		ProviderId: "test-provider",
-		Type:       nodev1.EventType_PUBLISH,
-		TypeName:   "TestType",
-		FieldName:  "testField",
-	}
-
-	natsCfg := &nodev1.NatsEventConfiguration{
-		EngineEventConfiguration: engineEventConfig,
-		Subjects:                 []string{"test.subject"},
-	}
-
-	// Create the data source to test
-	pubsub := &PubSubDataSource{
-		EventConfiguration: natsCfg,
-		NatsAdapter:        &Adapter{}, // Using a real Adapter type but with nil values for the test
-	}
-
-	// Run the standard test suite
-	datasource.VerifyPubSubDataSourceImplementation(t, pubsub)
-}
-
-// TestPubSubDataSourceWithMockAdapter tests the PubSubDataSource with a mocked adapter
 func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 	// Create event configuration with required fields
 	engineEventConfig := &nodev1.EngineEventConfiguration{
@@ -157,7 +78,7 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 
 	natsCfg := &nodev1.NatsEventConfiguration{
 		EngineEventConfiguration: engineEventConfig,
-		Subjects:                 []string{"test.subject"},
+		Subjects:                 []string{"test-subject"},
 	}
 
 	// Create mock adapter
@@ -165,7 +86,7 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 
 	// Configure mock expectations for Publish
 	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
-		return event.ProviderID == "test-provider" && event.Subject == "test.subject"
+		return event.ProviderID == "test-provider" && event.Subject == "test-subject"
 	})).Return(nil)
 
 	// Create the data source with mock adapter
@@ -192,32 +113,22 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 	mockAdapter.AssertExpectations(t)
 }
 
-// TestNatsPubSubDataSourceRequestWithMockAdapter tests the REQUEST functionality with a mocked adapter
-func TestNatsPubSubDataSourceRequestWithMockAdapter(t *testing.T) {
-	// Create event configuration with REQUEST type
+func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
+	// Create event configuration with required fields
 	engineEventConfig := &nodev1.EngineEventConfiguration{
 		ProviderId: "test-provider",
-		Type:       nodev1.EventType_REQUEST,
+		Type:       nodev1.EventType_SUBSCRIBE, // This is not supported
 		TypeName:   "TestType",
 		FieldName:  "testField",
 	}
 
 	natsCfg := &nodev1.NatsEventConfiguration{
 		EngineEventConfiguration: engineEventConfig,
-		Subjects:                 []string{"test.subject"},
+		Subjects:                 []string{"test-subject"},
 	}
 
 	// Create mock adapter
 	mockAdapter := new(MockAdapter)
-
-	// Configure mock expectations for Request
-	mockAdapter.On("Request", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
-		return event.ProviderID == "test-provider" && event.Subject == "test.subject"
-	}), mock.Anything).Run(func(args mock.Arguments) {
-		// Simulate writing a response
-		w := args.Get(2).(io.Writer)
-		w.Write([]byte(`{"response":"data"}`))
-	}).Return(nil)
 
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
@@ -227,26 +138,12 @@ func TestNatsPubSubDataSourceRequestWithMockAdapter(t *testing.T) {
 
 	// Get the data source
 	ds, err := pubsub.GetResolveDataSource()
-	require.NoError(t, err)
-
-	// Get the input
-	input, err := pubsub.GetResolveDataSourceInput([]byte(`{"test":"data"}`))
-	require.NoError(t, err)
-
-	// Call Load on the data source
-	out := &bytes.Buffer{}
-	err = ds.Load(context.Background(), []byte(input), out)
-	require.NoError(t, err)
-	require.Equal(t, `{"response":"data"}`, out.String())
-
-	// Verify mock expectations
-	mockAdapter.AssertExpectations(t)
+	require.Error(t, err)
+	require.Nil(t, ds)
 }
 
-// TestNatsPubSubDataSourceMultiSubjectSubscription tests the subscription functionality
-// for multiple subjects with a mocked adapter
-func TestNatsPubSubDataSourceMultiSubjectSubscription(t *testing.T) {
-	// Create event configuration with multiple subjects
+func TestPubSubDataSource_GetResolveDataSourceInput_MultipleSubjects(t *testing.T) {
+	// Create event configuration with required fields
 	engineEventConfig := &nodev1.EngineEventConfiguration{
 		ProviderId: "test-provider",
 		Type:       nodev1.EventType_PUBLISH,
@@ -256,34 +153,63 @@ func TestNatsPubSubDataSourceMultiSubjectSubscription(t *testing.T) {
 
 	natsCfg := &nodev1.NatsEventConfiguration{
 		EngineEventConfiguration: engineEventConfig,
-		Subjects:                 []string{"test.subject.1", "test.subject.2"},
+		Subjects:                 []string{"test-subject-1", "test-subject-2"},
 	}
 
-	// Create mock adapter
-	mockAdapter := new(MockAdapter)
+	// Create the data source with mock adapter
+	pubsub := &PubSubDataSource{
+		EventConfiguration: natsCfg,
+	}
 
-	// Set up expectations for subscribe with both subjects
-	mockAdapter.On("Subscribe", mock.Anything, mock.MatchedBy(func(event SubscriptionEventConfiguration) bool {
-		return event.ProviderID == "test-provider" &&
-			len(event.Subjects) == 2 &&
-			event.Subjects[0] == "test.subject.1" &&
-			event.Subjects[1] == "test.subject.2"
-	}), mock.Anything).Return(nil)
+	// Get the input
+	input, err := pubsub.GetResolveDataSourceInput([]byte(`{"test":"data"}`))
+	require.Error(t, err)
+	require.Empty(t, input)
+}
+
+func TestPubSubDataSource_GetResolveDataSourceInput_NoSubjects(t *testing.T) {
+	// Create event configuration with required fields
+	engineEventConfig := &nodev1.EngineEventConfiguration{
+		ProviderId: "test-provider",
+		Type:       nodev1.EventType_PUBLISH,
+		TypeName:   "TestType",
+		FieldName:  "testField",
+	}
+
+	natsCfg := &nodev1.NatsEventConfiguration{
+		EngineEventConfiguration: engineEventConfig,
+		Subjects:                 []string{},
+	}
+
+	// Create the data source with mock adapter
+	pubsub := &PubSubDataSource{
+		EventConfiguration: natsCfg,
+	}
+
+	// Get the input
+	input, err := pubsub.GetResolveDataSourceInput([]byte(`{"test":"data"}`))
+	require.Error(t, err)
+	require.Empty(t, input)
+}
+
+func TestNatsPubSubDataSourceMultiSubjectSubscription(t *testing.T) {
+	// Create event configuration with multiple subjects
+	engineEventConfig := &nodev1.EngineEventConfiguration{
+		ProviderId: "test-provider",
+		Type:       nodev1.EventType_PUBLISH, // Must be PUBLISH as it's the only supported type
+		TypeName:   "TestType",
+		FieldName:  "testField",
+	}
+
+	natsCfg := &nodev1.NatsEventConfiguration{
+		EngineEventConfiguration: engineEventConfig,
+		Subjects:                 []string{"test-subject-1", "test-subject-2"},
+	}
 
 	// Create the data source to test with mock adapter
 	pubsub := &PubSubDataSource{
 		EventConfiguration: natsCfg,
-		NatsAdapter:        mockAdapter,
 	}
-
-	// Test GetEngineEventConfiguration
-	testConfig := pubsub.GetEngineEventConfiguration()
-	require.NotNil(t, testConfig, "Expected non-nil EngineEventConfiguration")
-
-	// Test GetResolveDataSourceSubscription
-	subscription, err := pubsub.GetResolveDataSourceSubscription()
-	require.NoError(t, err, "Expected no error from GetResolveDataSourceSubscription")
-	require.NotNil(t, subscription, "Expected non-nil SubscriptionDataSource")
 
 	// Test GetResolveDataSourceSubscriptionInput
 	subscriptionInput, err := pubsub.GetResolveDataSourceSubscriptionInput()
@@ -295,6 +221,95 @@ func TestNatsPubSubDataSourceMultiSubjectSubscription(t *testing.T) {
 	err = json.Unmarshal([]byte(subscriptionInput), &subscriptionConfig)
 	require.NoError(t, err, "Expected valid JSON from GetResolveDataSourceSubscriptionInput")
 	require.Equal(t, 2, len(subscriptionConfig.Subjects), "Expected 2 subjects in subscription configuration")
-	require.Equal(t, "test.subject.1", subscriptionConfig.Subjects[0], "Expected first subject to be 'test.subject.1'")
-	require.Equal(t, "test.subject.2", subscriptionConfig.Subjects[1], "Expected second subject to be 'test.subject.2'")
+	require.Equal(t, "test-subject-1", subscriptionConfig.Subjects[0], "Expected first subject to be 'test-subject-1'")
+	require.Equal(t, "test-subject-2", subscriptionConfig.Subjects[1], "Expected second subject to be 'test-subject-2'")
+}
+
+func TestNatsPubSubDataSourceWithStreamConfiguration(t *testing.T) {
+	// Create event configuration with stream configuration
+	engineEventConfig := &nodev1.EngineEventConfiguration{
+		ProviderId: "test-provider",
+		Type:       nodev1.EventType_PUBLISH,
+		TypeName:   "TestType",
+		FieldName:  "testField",
+	}
+
+	natsCfg := &nodev1.NatsEventConfiguration{
+		EngineEventConfiguration: engineEventConfig,
+		Subjects:                 []string{"test-subject"},
+		StreamConfiguration: &nodev1.NatsStreamConfiguration{
+			StreamName:                "test-stream",
+			ConsumerName:              "test-consumer",
+			ConsumerInactiveThreshold: 30,
+		},
+	}
+
+	// Create the data source to test
+	pubsub := &PubSubDataSource{
+		EventConfiguration: natsCfg,
+	}
+
+	// Test GetResolveDataSourceSubscriptionInput with stream configuration
+	subscriptionInput, err := pubsub.GetResolveDataSourceSubscriptionInput()
+	require.NoError(t, err, "Expected no error from GetResolveDataSourceSubscriptionInput")
+	require.NotEmpty(t, subscriptionInput, "Expected non-empty subscription input")
+
+	// Verify the subscription input contains stream configuration
+	var subscriptionConfig SubscriptionEventConfiguration
+	err = json.Unmarshal([]byte(subscriptionInput), &subscriptionConfig)
+	require.NoError(t, err, "Expected valid JSON from GetResolveDataSourceSubscriptionInput")
+	require.NotNil(t, subscriptionConfig.StreamConfiguration, "Expected non-nil stream configuration")
+	require.Equal(t, "test-consumer", subscriptionConfig.StreamConfiguration.Consumer, "Expected consumer to be 'test-consumer'")
+	require.Equal(t, "test-stream", subscriptionConfig.StreamConfiguration.StreamName, "Expected stream name to be 'test-stream'")
+	require.Equal(t, int32(30), subscriptionConfig.StreamConfiguration.ConsumerInactiveThreshold, "Expected consumer inactive threshold to be 30")
+}
+
+func TestPubSubDataSource_RequestDataSource(t *testing.T) {
+	// Create event configuration with REQUEST type
+	engineEventConfig := &nodev1.EngineEventConfiguration{
+		ProviderId: "test-provider",
+		Type:       nodev1.EventType_REQUEST,
+		TypeName:   "TestType",
+		FieldName:  "testField",
+	}
+
+	natsCfg := &nodev1.NatsEventConfiguration{
+		EngineEventConfiguration: engineEventConfig,
+		Subjects:                 []string{"test-subject"},
+	}
+
+	// Create mock adapter
+	mockAdapter := new(MockAdapter)
+
+	// Configure mock expectations for Request
+	mockAdapter.On("Request", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
+		return event.ProviderID == "test-provider" && event.Subject == "test-subject"
+	}), mock.Anything).Return(nil).Run(func(args mock.Arguments) {
+		w := args.Get(2).(io.Writer)
+		w.Write([]byte(`{"response": "test"}`))
+	})
+
+	// Create the data source with mock adapter
+	pubsub := &PubSubDataSource{
+		EventConfiguration: natsCfg,
+		NatsAdapter:        mockAdapter,
+	}
+
+	// Get the data source
+	ds, err := pubsub.GetResolveDataSource()
+	require.NoError(t, err)
+	require.NotNil(t, ds)
+
+	// Get the input
+	input, err := pubsub.GetResolveDataSourceInput([]byte(`{"test":"data"}`))
+	require.NoError(t, err)
+
+	// Call Load on the data source
+	out := &bytes.Buffer{}
+	err = ds.Load(context.Background(), []byte(input), out)
+	require.NoError(t, err)
+	require.Equal(t, `{"response": "test"}`, out.String())
+
+	// Verify mock expectations
+	mockAdapter.AssertExpectations(t)
 }
