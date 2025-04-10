@@ -20,8 +20,6 @@ func TestShutdownGoroutineLeaks(t *testing.T) {
 		goleak.IgnoreAnyFunction("net/http.(*conn).serve"),                                   // HTTPTest server I can't close if I want to keep the problematic goroutine open for the test
 	)
 
-	var number = 10
-
 	xEnv, err := testenv.CreateTestEnv(t, &testenv.Config{
 		NoRetryClient:        true, // No need for this, just complicates the checks
 		NoShutdownTestServer: true, // Shutting down test server will close idle connections
@@ -30,13 +28,13 @@ func TestShutdownGoroutineLeaks(t *testing.T) {
 			core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(config.TrafficShapingRules{
 				Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
 					"employees": {
-						MaxIdleConns: &number,
+						MaxIdleConns: ToPtr(10),
 					},
 					"products": {
-						MaxIdleConns: &number,
+						MaxIdleConns: ToPtr(10),
 					},
 					"mood": {
-						MaxIdleConns: &number,
+						MaxIdleConns: ToPtr(10),
 					},
 				},
 			})),
@@ -67,6 +65,4 @@ func TestShutdownGoroutineLeaks(t *testing.T) {
 		}
 		require.Nil(t, res)
 	}
-
-	t.Fail()
 }
