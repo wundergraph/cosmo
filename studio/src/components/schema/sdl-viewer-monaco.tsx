@@ -46,6 +46,18 @@ export interface DecorationCollection {
   };
 }
 
+const set = async (source: string, setter: (val: string) => void) => {
+  try {
+    const res = await prettier.format(source, {
+      parser: "graphql",
+      plugins: [graphQLPlugin, estreePlugin, babelPlugin],
+    });
+    setter(res);
+  } catch {
+    setter("INVALID CONTENT");
+  }
+};
+
 export const SDLViewerMonaco = ({
   schema,
   newSchema,
@@ -68,28 +80,20 @@ export const SDLViewerMonaco = ({
   const [didMoveToLine, setDidMoveToLine] = useState(false);
 
   useEffect(() => {
+    if (newSchema !== undefined) {
+      if (disablePrettier) {
+        setNewContent(newSchema);
+      } else {
+        set(newSchema, setNewContent);
+      }
+    }
     if (!schema) return;
     if (disablePrettier) {
       setContent(schema);
       return;
     }
-    const set = async (source: string, setter: (val: string) => void) => {
-      try {
-        const res = await prettier.format(source, {
-          parser: "graphql",
-          plugins: [graphQLPlugin, estreePlugin, babelPlugin],
-        });
-        setter(res);
-      } catch {
-        setter("INVALID CONTENT");
-      }
-    };
 
     set(schema, setContent);
-
-    if (newSchema) {
-      set(newSchema, setNewContent);
-    }
   }, [schema, newSchema, disablePrettier]);
 
   const monaco = useMonaco();

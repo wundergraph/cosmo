@@ -23,24 +23,25 @@ const (
 type EnumStatusCode int32
 
 const (
-	EnumStatusCode_OK                              EnumStatusCode = 0
-	EnumStatusCode_ERR                             EnumStatusCode = 1
-	EnumStatusCode_ERR_NOT_FOUND                   EnumStatusCode = 2
-	EnumStatusCode_ERR_ALREADY_EXISTS              EnumStatusCode = 3
-	EnumStatusCode_ERR_INVALID_SUBGRAPH_SCHEMA     EnumStatusCode = 4
-	EnumStatusCode_ERR_SUBGRAPH_COMPOSITION_FAILED EnumStatusCode = 5
-	EnumStatusCode_ERR_SUBGRAPH_CHECK_FAILED       EnumStatusCode = 6
-	EnumStatusCode_ERR_INVALID_LABELS              EnumStatusCode = 7
-	EnumStatusCode_ERR_ANALYTICS_DISABLED          EnumStatusCode = 8
-	EnumStatusCode_ERROR_NOT_AUTHENTICATED         EnumStatusCode = 9
-	EnumStatusCode_ERR_OPENAI_DISABLED             EnumStatusCode = 10
-	EnumStatusCode_ERR_FREE_TRIAL_EXPIRED          EnumStatusCode = 11
-	EnumStatusCode_ERROR_NOT_AUTHORIZED            EnumStatusCode = 12
-	EnumStatusCode_ERR_LIMIT_REACHED               EnumStatusCode = 13
-	EnumStatusCode_ERR_DEPLOYMENT_FAILED           EnumStatusCode = 14
-	EnumStatusCode_ERR_INVALID_NAME                EnumStatusCode = 15
-	EnumStatusCode_ERR_UPGRADE_PLAN                EnumStatusCode = 16
-	EnumStatusCode_ERR_BAD_REQUEST                 EnumStatusCode = 17
+	EnumStatusCode_OK                                         EnumStatusCode = 0
+	EnumStatusCode_ERR                                        EnumStatusCode = 1
+	EnumStatusCode_ERR_NOT_FOUND                              EnumStatusCode = 2
+	EnumStatusCode_ERR_ALREADY_EXISTS                         EnumStatusCode = 3
+	EnumStatusCode_ERR_INVALID_SUBGRAPH_SCHEMA                EnumStatusCode = 4
+	EnumStatusCode_ERR_SUBGRAPH_COMPOSITION_FAILED            EnumStatusCode = 5
+	EnumStatusCode_ERR_SUBGRAPH_CHECK_FAILED                  EnumStatusCode = 6
+	EnumStatusCode_ERR_INVALID_LABELS                         EnumStatusCode = 7
+	EnumStatusCode_ERR_ANALYTICS_DISABLED                     EnumStatusCode = 8
+	EnumStatusCode_ERROR_NOT_AUTHENTICATED                    EnumStatusCode = 9
+	EnumStatusCode_ERR_OPENAI_DISABLED                        EnumStatusCode = 10
+	EnumStatusCode_ERR_FREE_TRIAL_EXPIRED                     EnumStatusCode = 11
+	EnumStatusCode_ERROR_NOT_AUTHORIZED                       EnumStatusCode = 12
+	EnumStatusCode_ERR_LIMIT_REACHED                          EnumStatusCode = 13
+	EnumStatusCode_ERR_DEPLOYMENT_FAILED                      EnumStatusCode = 14
+	EnumStatusCode_ERR_INVALID_NAME                           EnumStatusCode = 15
+	EnumStatusCode_ERR_UPGRADE_PLAN                           EnumStatusCode = 16
+	EnumStatusCode_ERR_BAD_REQUEST                            EnumStatusCode = 17
+	EnumStatusCode_ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL EnumStatusCode = 18
 )
 
 // Enum value maps for EnumStatusCode.
@@ -64,26 +65,28 @@ var (
 		15: "ERR_INVALID_NAME",
 		16: "ERR_UPGRADE_PLAN",
 		17: "ERR_BAD_REQUEST",
+		18: "ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL",
 	}
 	EnumStatusCode_value = map[string]int32{
-		"OK":                              0,
-		"ERR":                             1,
-		"ERR_NOT_FOUND":                   2,
-		"ERR_ALREADY_EXISTS":              3,
-		"ERR_INVALID_SUBGRAPH_SCHEMA":     4,
-		"ERR_SUBGRAPH_COMPOSITION_FAILED": 5,
-		"ERR_SUBGRAPH_CHECK_FAILED":       6,
-		"ERR_INVALID_LABELS":              7,
-		"ERR_ANALYTICS_DISABLED":          8,
-		"ERROR_NOT_AUTHENTICATED":         9,
-		"ERR_OPENAI_DISABLED":             10,
-		"ERR_FREE_TRIAL_EXPIRED":          11,
-		"ERROR_NOT_AUTHORIZED":            12,
-		"ERR_LIMIT_REACHED":               13,
-		"ERR_DEPLOYMENT_FAILED":           14,
-		"ERR_INVALID_NAME":                15,
-		"ERR_UPGRADE_PLAN":                16,
-		"ERR_BAD_REQUEST":                 17,
+		"OK":                                         0,
+		"ERR":                                        1,
+		"ERR_NOT_FOUND":                              2,
+		"ERR_ALREADY_EXISTS":                         3,
+		"ERR_INVALID_SUBGRAPH_SCHEMA":                4,
+		"ERR_SUBGRAPH_COMPOSITION_FAILED":            5,
+		"ERR_SUBGRAPH_CHECK_FAILED":                  6,
+		"ERR_INVALID_LABELS":                         7,
+		"ERR_ANALYTICS_DISABLED":                     8,
+		"ERROR_NOT_AUTHENTICATED":                    9,
+		"ERR_OPENAI_DISABLED":                        10,
+		"ERR_FREE_TRIAL_EXPIRED":                     11,
+		"ERROR_NOT_AUTHORIZED":                       12,
+		"ERR_LIMIT_REACHED":                          13,
+		"ERR_DEPLOYMENT_FAILED":                      14,
+		"ERR_INVALID_NAME":                           15,
+		"ERR_UPGRADE_PLAN":                           16,
+		"ERR_BAD_REQUEST":                            17,
+		"ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL": 18,
 	}
 )
 
@@ -221,7 +224,7 @@ var file_wg_cosmo_common_common_proto_rawDesc = []byte{
 	0x0a, 0x1c, 0x77, 0x67, 0x2f, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2f, 0x63, 0x6f, 0x6d, 0x6d, 0x6f,
 	0x6e, 0x2f, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x0f,
 	0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2a,
-	0xc4, 0x03, 0x0a, 0x0e, 0x45, 0x6e, 0x75, 0x6d, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x43, 0x6f,
+	0xf4, 0x03, 0x0a, 0x0e, 0x45, 0x6e, 0x75, 0x6d, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x43, 0x6f,
 	0x64, 0x65, 0x12, 0x06, 0x0a, 0x02, 0x4f, 0x4b, 0x10, 0x00, 0x12, 0x07, 0x0a, 0x03, 0x45, 0x52,
 	0x52, 0x10, 0x01, 0x12, 0x11, 0x0a, 0x0d, 0x45, 0x52, 0x52, 0x5f, 0x4e, 0x4f, 0x54, 0x5f, 0x46,
 	0x4f, 0x55, 0x4e, 0x44, 0x10, 0x02, 0x12, 0x16, 0x0a, 0x12, 0x45, 0x52, 0x52, 0x5f, 0x41, 0x4c,
@@ -249,7 +252,10 @@ var file_wg_cosmo_common_common_proto_rawDesc = []byte{
 	0x41, 0x4c, 0x49, 0x44, 0x5f, 0x4e, 0x41, 0x4d, 0x45, 0x10, 0x0f, 0x12, 0x14, 0x0a, 0x10, 0x45,
 	0x52, 0x52, 0x5f, 0x55, 0x50, 0x47, 0x52, 0x41, 0x44, 0x45, 0x5f, 0x50, 0x4c, 0x41, 0x4e, 0x10,
 	0x10, 0x12, 0x13, 0x0a, 0x0f, 0x45, 0x52, 0x52, 0x5f, 0x42, 0x41, 0x44, 0x5f, 0x52, 0x45, 0x51,
-	0x55, 0x45, 0x53, 0x54, 0x10, 0x11, 0x2a, 0x96, 0x01, 0x0a, 0x1b, 0x47, 0x72, 0x61, 0x70, 0x68,
+	0x55, 0x45, 0x53, 0x54, 0x10, 0x11, 0x12, 0x2e, 0x0a, 0x2a, 0x45, 0x52, 0x52, 0x5f, 0x53, 0x43,
+	0x48, 0x45, 0x4d, 0x41, 0x5f, 0x4d, 0x49, 0x53, 0x4d, 0x41, 0x54, 0x43, 0x48, 0x5f, 0x57, 0x49,
+	0x54, 0x48, 0x5f, 0x41, 0x50, 0x50, 0x52, 0x4f, 0x56, 0x45, 0x44, 0x5f, 0x50, 0x52, 0x4f, 0x50,
+	0x4f, 0x53, 0x41, 0x4c, 0x10, 0x12, 0x2a, 0x96, 0x01, 0x0a, 0x1b, 0x47, 0x72, 0x61, 0x70, 0x68,
 	0x51, 0x4c, 0x53, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x50, 0x72,
 	0x6f, 0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x12, 0x24, 0x0a, 0x20, 0x47, 0x52, 0x41, 0x50, 0x48, 0x51,
 	0x4c, 0x5f, 0x53, 0x55, 0x42, 0x53, 0x43, 0x52, 0x49, 0x50, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x50,

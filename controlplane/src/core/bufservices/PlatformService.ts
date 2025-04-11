@@ -152,6 +152,14 @@ import { setGraphRouterCompatibilityVersion } from './graph/setGraphRouterCompat
 import { getOrganizationBySlug } from './organization/getOrganizationBySlug.js';
 import { checkSubgraphSchemas } from './check/checkSubgraphSchemas.js';
 import { getProposedSchemaOfCheckedSubgraph } from './check/getProposedSchemaOfCheckedSubgraph.js';
+import { getProposalsByFederatedGraph } from './proposal/getProposalsByFederatedGraph.js';
+import { getProposalChecks } from './proposal/getProposalChecks.js';
+import { updateProposal } from './proposal/updateProposal.js';
+import { createProposal } from './proposal/createProposal.js';
+import { getProposal } from './proposal/getProposal.js';
+import { enableProposalsForNamespace } from './proposal/enableProposalsForNamespace.js';
+import { getNamespaceProposalConfig } from './proposal/getNamespaceProposalConfig.js';
+import { configureNamespaceProposalConfig } from './proposal/configureNamespaceProposalConfig.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -768,6 +776,38 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     setGraphRouterCompatibilityVersion: (req, ctx) => {
       return setGraphRouterCompatibilityVersion(opts, req, ctx);
+    },
+
+    getProposalsByFederatedGraph: (req, ctx) => {
+      return getProposalsByFederatedGraph(opts, req, ctx);
+    },
+
+    getProposalChecks: (req, ctx) => {
+      return getProposalChecks(opts, req, ctx);
+    },
+
+    updateProposal: (req, ctx) => {
+      return updateProposal(opts, req, ctx);
+    },
+
+    createProposal: (req, ctx) => {
+      return createProposal(opts, req, ctx);
+    },
+
+    getProposal: (req, ctx) => {
+      return getProposal(opts, req, ctx);
+    },
+
+    enableProposalsForNamespace: (req, ctx) => {
+      return enableProposalsForNamespace(opts, req, ctx);
+    },
+
+    configureNamespaceProposalConfig: (req, ctx) => {
+      return configureNamespaceProposalConfig(opts, req, ctx);
+    },
+
+    getNamespaceProposalConfig: (req, ctx) => {
+      return getNamespaceProposalConfig(opts, req, ctx);
     },
   };
 }

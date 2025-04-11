@@ -8,6 +8,7 @@ import { ChangesTable } from "@/components/checks/changes-table";
 import { GraphPruningIssuesTable } from "@/components/checks/graph-pruning-issues-table";
 import { LintIssuesTable } from "@/components/checks/lint-issues-table";
 import { CheckOperations } from "@/components/checks/operations";
+import { ProposalMatchesTable } from "@/components/checks/proposal-matches-table";
 import { EmptyState } from "@/components/empty-state";
 import { InfoTooltip } from "@/components/info-tooltip";
 import {
@@ -66,9 +67,11 @@ import {
 import {
   ArrowLeftIcon,
   CheckCircledIcon,
+  ClipboardIcon,
   Component2Icon,
   CrossCircledIcon,
   CubeIcon,
+  LightningBoltIcon,
   ReaderIcon,
   UpdateIcon,
 } from "@radix-ui/react-icons";
@@ -446,6 +449,7 @@ const CheckDetails = ({
     data.check.hasLintErrors,
     data.check.hasGraphPruningErrors,
     data.check.clientTrafficCheckSkipped,
+    data.check.proposalMatch === "error",
   );
 
   const currentAffectedGraph = data.affectedGraphs.find(
@@ -455,23 +459,25 @@ const CheckDetails = ({
   const ghDetails = data.check.ghDetails;
   const vcsContext = data.check.vcsContext;
 
-  const reason = !data.check.isComposable
-    ? "Composition errors were found"
-    : data.check.isBreaking && data.check?.clientTrafficCheckSkipped
-    ? "Breaking changes were detected"
-    : data.check.isBreaking && data.check.hasClientTraffic
-    ? "Operations were affected by breaking changes"
-    : data.check.isBreaking && !data.check.hasClientTraffic
-    ? "No operations were affected by breaking changes"
-    : "All tasks were successful";
+  const reason = data.check.proposalMatch === "error"
+    ? "Proposal match check failed"
+    : !data.check.isComposable
+      ? "Composition errors were found"
+      : data.check.isBreaking && data.check?.clientTrafficCheckSkipped
+        ? "Breaking changes were detected"
+      : data.check.isBreaking && data.check.hasClientTraffic
+        ? "Operations were affected by breaking changes"
+        : data.check.isBreaking && !data.check.hasClientTraffic
+          ? "No operations were affected by breaking changes"
+          : "All tasks were successful";
 
   const subgraphName =
     data.check.subgraphName ||
     (data.check.checkedSubgraphs.length > 1
       ? "Multiple Subgraphs"
       : data.check.checkedSubgraphs.length > 0
-      ? data.check.checkedSubgraphs[0].subgraphName
-      : "Subgraph");
+        ? data.check.checkedSubgraphs[0].subgraphName
+        : "Subgraph");
 
   const setTab = (tab: string) => {
     const query: Record<string, any> = {
@@ -527,6 +533,23 @@ const CheckDetails = ({
                   <div className="flex items-center gap-x-1">
                     <CubeIcon />
                     {subgraphName}
+                  </div>
+                </Link>
+              </dd>
+            </div>
+          )}
+
+          {data.proposalId && data.proposalName && (
+            <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1 ">
+              <dt className="text-sm text-muted-foreground">Proposal</dt>
+              <dd className="whitespace-nowrap text-sm">
+                <Link
+                  key={data.proposalId}
+                  href={`/${organizationSlug}/${namespace}/graph/${slug}/proposals/${data.proposalId}`}
+                >
+                  <div className="flex items-center gap-x-1">
+                    <ClipboardIcon />
+                    {data.proposalName}
                   </div>
                 </Link>
               </dd>
@@ -658,6 +681,31 @@ const CheckDetails = ({
                     <InfoTooltip>
                       Indicates if the proposed schema contains graph pruning
                       errors.
+                    </InfoTooltip>
+                  </>
+                )}
+              </Badge>
+
+              <Badge
+                variant="outline"
+                className={cn("flex items-center space-x-1.5 py-2", {
+                  "text-muted-foreground": !data.check?.proposalMatch,
+                })}
+              >
+                {!data.check?.proposalMatch ? (
+                  <>
+                    <NoSymbolIcon className="h-4 w-4" />
+                    <span className="flex-1 truncate">Proposal Match</span>
+                    <InfoTooltip>
+                      Indicates if the proposed schema matches a proposal.
+                    </InfoTooltip>
+                  </>
+                ) : (
+                  <>
+                    {getCheckIcon(data.check.proposalMatch !== "error")}
+                    <span className="flex-1 truncate">Proposal Match</span>
+                    <InfoTooltip>
+                      Indicates if the proposed schema matches a proposal.
                     </InfoTooltip>
                   </>
                 )}
@@ -923,6 +971,21 @@ const CheckDetails = ({
                     ) : null}
                   </Link>
                 </TabsTrigger>
+                <TabsTrigger
+                  value="proposalMatches"
+                  className="flex items-center gap-x-2"
+                  asChild
+                >
+                  <Link
+                    href={{
+                      query: { ...router.query, tab: "proposalMatches" },
+                    }}
+                  >
+                    <LightningBoltIcon className="flex-shrink-0" />
+                    Proposal Matches
+                  </Link>
+                </TabsTrigger>
+                
                 {(data.check.checkedSubgraphs.length > 1 ||
                   (data.check.checkedSubgraphs.length === 1 &&
                     !data.check.checkedSubgraphs[0].isDeleted) ||
@@ -1111,6 +1174,17 @@ const CheckDetails = ({
                   caption={`${data.graphPruningIssues.length} issues found`}
                   isGraphPruningEnabled={!data.check?.graphPruningSkipped}
                   hasGraphPruningErrors={data.check.hasGraphPruningErrors}
+                />
+              </TabsContent>
+              <TabsContent
+                value="proposalMatches"
+                className="w-full space-y-4 px-4 lg:px-6"
+              >
+                <ProposalMatchesTable
+                  proposalMatches={data.proposalMatches}
+                  caption={`${data.proposalMatches.length} matches found`}
+                  isProposalsEnabled={data.isProposalsEnabled}
+                  proposalMatch={data.check.proposalMatch}
                 />
               </TabsContent>
               <TabsContent value="schema" className="relative w-full flex-1">

@@ -904,6 +904,7 @@ export class SubgraphRepository {
         lintSkipped: schemaChecks.lintSkipped,
         graphPruningSkipped: schemaChecks.graphPruningSkipped,
         vcsContext: schemaChecks.vcsContext,
+        proposalMatch: schemaChecks.proposalMatch,
       })
       .from(schemaChecks)
       .where(
@@ -951,6 +952,7 @@ export class SubgraphRepository {
           lintSkipped: c.lintSkipped ?? false,
           graphPruningSkipped: c.graphPruningSkipped ?? false,
           checkedSubgraphs,
+          proposalMatch: c.proposalMatch || undefined,
         };
       }),
     );
@@ -1090,6 +1092,7 @@ export class SubgraphRepository {
           }
         : undefined,
       checkedSubgraphs,
+      proposalMatch: check.proposalMatch || undefined,
     };
   }
 
@@ -1268,6 +1271,23 @@ export class SubgraphRepository {
       schema: latestValidVersion[0].schemaSDL,
       schemaVersionId: latestValidVersion[0].schemaVersionId,
     };
+  }
+
+  public async getSDLBySchemaVersionId(data: { schemaVersionId: string }) {
+    const latestValidVersion = await this.db
+      .select({
+        schemaSDL: schemaVersion.schemaSDL,
+      })
+      .from(schemaVersion)
+      .innerJoin(targets, eq(schemaVersion.targetId, targets.id))
+      .where(and(eq(targets.organizationId, this.organizationId), eq(schemaVersion.id, data.schemaVersionId)))
+      .execute();
+
+    if (latestValidVersion.length === 0) {
+      return undefined;
+    }
+
+    return latestValidVersion[0].schemaSDL;
   }
 
   public async getAccessibleSubgraphs(userId: string): Promise<SubgraphDTO[]> {

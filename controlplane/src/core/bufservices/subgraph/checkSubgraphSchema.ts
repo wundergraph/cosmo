@@ -37,6 +37,7 @@ import {
   handleError,
   clamp,
 } from '../../util.js';
+import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 
 export function checkSubgraphSchema(
   opts: RouterOptions,
@@ -58,7 +59,7 @@ export function checkSubgraphSchema(
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
     const graphCompostionRepo = new GraphCompositionRepository(logger, opts.db);
-
+    const proposalRepo = new ProposalRepository(opts.db);
     req.namespace = req.namespace || DefaultNamespace;
 
     if (!authContext.hasWriteAccess) {
@@ -242,6 +243,51 @@ export function checkSubgraphSchema(
       },
     });
 
+    let proposalMatchMessage: string | undefined;
+    if (namespace.enableProposals) {
+      const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
+      if (proposalConfig) {
+        const match = await proposalRepo.matchSchemaWithProposal({
+          subgraphName: subgraph.name,
+          namespaceId: namespace.id,
+          schemaSDL: newSchemaSDL,
+          routerCompatibilityVersion,
+          schemaCheckId: schemaCheckID,
+          isDeleted: !!req.delete,
+        });
+        await schemaCheckRepo.update({
+          schemaCheckID,
+          proposalMatch: match ? 'success' : proposalConfig.checkSeverityLevel === 'warn' ? 'warn' : 'error',
+        });
+        if (!match) {
+          const message = req.delete
+            ? `The subgraph ${req.subgraphName} is not proposed to be deleted in any of the approved proposals.`
+            : `The subgraph ${req.subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`;
+          if (proposalConfig.checkSeverityLevel === 'warn') {
+            proposalMatchMessage = message;
+          } else {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL,
+                details: message,
+              },
+              breakingChanges: [],
+              nonBreakingChanges: [],
+              compositionErrors: [],
+              checkId: '',
+              checkedFederatedGraphs: [],
+              lintWarnings: [],
+              lintErrors: [],
+              graphPruneWarnings: [],
+              graphPruneErrors: [],
+              compositionWarnings: [],
+              proposalMatchMessage: message,
+            };
+          }
+        }
+      }
+    }
+
     const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL, routerCompatibilityVersion);
     if (schemaChanges.kind === 'failure') {
       logger.warn(`Error finding diff between graphs: ${schemaChanges.error}`);
@@ -260,6 +306,7 @@ export function checkSubgraphSchema(
         graphPruneWarnings: [],
         graphPruneErrors: [],
         compositionWarnings: [],
+        proposalMatchMessage,
       };
     }
 
@@ -296,6 +343,7 @@ export function checkSubgraphSchema(
       schemaChanges,
       storedBreakingChanges,
       inspectorChanges: [],
+      routerCompatibilityVersion,
     });
 
     const { composedGraphs } = await composer.composeWithProposedSchemas({
@@ -472,6 +520,7 @@ export function checkSubgraphSchema(
       graphPruneErrors: graphPruningIssues.errors,
       clientTrafficCheckSkipped: req.skipTrafficCheck,
       compositionWarnings,
+      proposalMatchMessage,
     };
   });
 }

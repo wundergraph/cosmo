@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
 import {
   ChartBarIcon,
+  ClipboardIcon,
   ExclamationTriangleIcon,
   ServerStackIcon,
 } from "@heroicons/react/24/outline";
@@ -177,6 +178,12 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         href: basePath + "/cache-operations",
         matchExact: false,
         icon: <PiBracketsCurlyBold className="h-4 w-4" />,
+      },
+      {
+        title: "Proposals",
+        href: basePath + "/proposals",
+        matchExact: false,
+        icon: <ClipboardIcon className="h-4 w-4" />,
       },
     ];
   }, [organizationSlug, namespace, slug]);

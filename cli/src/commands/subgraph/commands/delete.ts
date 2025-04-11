@@ -42,7 +42,16 @@ export default (opts: BaseCommandOptions) => {
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
         spinner.succeed(`The subgraph "${name}" was deleted successfully.`);
-
+        if (resp.proposalMatchMessage) {
+          console.log(pc.yellow(`Warning: Proposal match failed`));
+          console.log(pc.yellow(resp.proposalMatchMessage));
+        }
+        break;
+      }
+      case EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL: {
+        spinner.fail(`Failed to delete subgraph "${name}".`);
+        console.log(pc.red(`Error: Proposal match failed`));
+        console.log(pc.red(resp.proposalMatchMessage));
         break;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {

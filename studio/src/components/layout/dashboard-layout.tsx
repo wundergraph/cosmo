@@ -39,6 +39,7 @@ import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
 import { TitleLayout } from "./title-layout";
 import { FaGripfire } from "react-icons/fa";
+import { DocumentPlusIcon } from "@heroicons/react/24/outline";
 
 export const StarBanner = ({
   isDisabled,
