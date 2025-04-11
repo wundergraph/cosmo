@@ -5,6 +5,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { DateRange } from '../../../types/index.js';
 import { ClickHouseClient } from '../../clickhouse/index.js';
+import { flipDateRangeValuesIfNeeded } from '../../util.js';
 import {
   BaseFilters,
   buildAnalyticsViewFilters,
@@ -70,6 +71,7 @@ export class MetricsRepository {
   }: GetMetricsProps) {
     // to minutes
     const multiplier = rangeInHours * 60;
+    flipDateRangeValuesIfNeeded(dateRange);
 
     // get request rate in last [range]h
     const queryRate = (start: number, end: number) => {
@@ -184,6 +186,8 @@ export class MetricsRepository {
     whereSql,
     queryParams,
   }: GetMetricsProps) {
+    flipDateRangeValuesIfNeeded(dateRange);
+
     const queryLatency = (quantile: string, start: number, end: number) => {
       return this.client.queryPromise<{ value: number }>(
         `
@@ -353,6 +357,8 @@ export class MetricsRepository {
     whereSql,
     queryParams,
   }: GetMetricsProps) {
+    flipDateRangeValuesIfNeeded(dateRange);
+
     // get request rate in last [range]h
     const queryPercentage = (start: number, end: number) => {
       return this.client.queryPromise<{ errorPercentage: number }>(
@@ -479,6 +485,8 @@ export class MetricsRepository {
     whereSql,
     queryParams,
   }: GetMetricsProps) {
+    flipDateRangeValuesIfNeeded(dateRange);
+
     // get requests in last [range] hours in series of [step]
     const series = await this.client.queryPromise<{ timestamp: string; requestRate: string; errorRate: string }>(
       `
@@ -549,6 +557,11 @@ export class MetricsRepository {
 
   protected getMetricsProps(props: GetMetricsViewProps): GetMetricsProps {
     const { range, dateRange, filters: selectedFilters, organizationId, graphId } = props;
+    if (dateRange && dateRange.start > dateRange.end) {
+      const tmp = dateRange.start;
+      dateRange.start = dateRange.end;
+      dateRange.end = tmp;
+    }
 
     const parsedDateRange = isoDateRangeToTimestamps(dateRange, range);
     const [start, end] = getDateRange(parsedDateRange);
@@ -625,6 +638,7 @@ export class MetricsRepository {
 
   public async getMetricFilters({ dateRange, organizationId, graphId }: GetMetricsProps) {
     const filters = { ...this.baseFilters };
+    flipDateRangeValuesIfNeeded(dateRange);
 
     const query = `
       WITH

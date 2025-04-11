@@ -2424,7 +2424,7 @@
         "websocket_client_write_timeout": {
             "type": "string",
             "format": "go-duration",
-            "default": "5s",
+            "default": "10s",
             "description": "Defines the timeout for the websocket write of the WebSocket client implementation. This is used to set the write deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         },
         "websocket_client_ping_interval": {
@@ -2943,9 +2943,13 @@
           ],
           "description": "The value to set for the header. This can include environment variables."
         },
+        "expression": {
+          "type": "string",
+          "description": "The template expression to evaluate. The expression must return a string value."
+        },
         "value_from": {
           "type": "object",
-          "description": "The configuration for the value from. The value from is used to extract a value from a request context and propagate it to subgraphs. This is currently only valid in requests",
+          "description": "DEPRECATED: Use expression instead. The configuration for the value from. The value from is used to extract a value from a request context and propagate it to subgraphs. This is currently only valid in requests",
           "additionalProperties": false,
           "required": [
             "context_field"
@@ -2964,6 +2968,17 @@
       "required": [
         "op",
         "name"
+      ],
+      "oneOf": [
+        {
+          "required": ["value"]
+        },
+        {
+          "required": ["expression"]
+        },
+        {
+          "required": ["value_from"]
+        }
       ]
     },
     "context_fields": {
