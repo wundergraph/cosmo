@@ -537,21 +537,20 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 	if s.planCache != nil {
 		s.planCache.Close()
 	}
-
 	if s.persistedOperationCache != nil {
 		s.persistedOperationCache.Close()
 	}
-
 	if s.normalizationCache != nil {
 		s.normalizationCache.Close()
 	}
-
+	if s.complexityCalculationCache != nil {
+		s.complexityCalculationCache.Close()
+	}
 	if s.validationCache != nil {
 		s.validationCache.Close()
 	}
-
-	if s.complexityCalculationCache != nil {
-		s.complexityCalculationCache.Close()
+	if s.operationHashCache != nil {
+		s.operationHashCache.Close()
 	}
 
 	if s.accessLogsFileLogger != nil {

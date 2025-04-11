@@ -302,7 +302,11 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           opts.authUtils.createSsoCookie(res, ssoSlug);
         }
         if (redirectURL) {
-          res.redirect(redirectURL);
+          if (redirectURL.startsWith(opts.webBaseUrl)) {
+            res.redirect(redirectURL);
+          } else {
+            res.redirect(opts.webBaseUrl);
+          }
         } else if (orgs.length === 0) {
           res.redirect(opts.webBaseUrl + '?migrate=true');
         } else {
