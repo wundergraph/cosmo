@@ -1083,7 +1083,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			return nil, fmt.Errorf("failed to create mcp server: %w", err)
 		}
 
-		if err := mcpss.Start(ctx); err != nil {
+		if err := mcpss.Start(); err != nil {
 			return nil, fmt.Errorf("failed to start MCP server: %w", err)
 		}
 
