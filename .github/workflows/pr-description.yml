@@ -8,7 +8,7 @@ on:
       - synchronize
     branches-ignore:
       # release-please PRs are not required to have a manual description
-      - 'release-please**'
+      - 'release-please*'
 
 permissions:
   pull-requests: read
