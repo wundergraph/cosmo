@@ -344,7 +344,7 @@ func TestNatsEvents(t *testing.T) {
 					require.Equal(t, http.StatusOK, resp.StatusCode)
 					defer resp.Body.Close()
 
-					require.Equal(t, "multipart/mixed; boundary=graphql", resp.Header.Get("Content-Type"))
+					require.Equal(t, "multipart/mixed; subscriptionSpec=1.0; boundary=graphql", resp.Header.Get("Content-Type"))
 					require.Equal(t, "no-cache", resp.Header.Get("Cache-Control"))
 					require.Equal(t, "no", resp.Header.Get("X-Accel-Buffering"))
 
