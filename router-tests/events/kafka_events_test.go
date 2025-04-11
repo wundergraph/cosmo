@@ -323,7 +323,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			require.Eventually(t, func() bool {
 				return counter.Load() == 4
-			}, KafkaWaitTimeout, time.Millisecond*100)
+			}, KafkaWaitTimeout, time.Millisecond*100, "expected 4 events, got %d", counter.Load())
 
 			require.NoError(t, client.Close())
 
