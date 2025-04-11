@@ -275,8 +275,9 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 		graphql_datasource.WithNetPollConfiguration(netPollConfig),
 	)
 
-	loader := NewLoader(false, &DefaultFactoryResolver{
-		engineCtx:          context.Background(),
+	ctx := context.Background()
+	loader := NewLoader(ctx, false, &DefaultFactoryResolver{
+		engineCtx:          ctx,
 		httpClient:         http.DefaultClient,
 		streamingClient:    http.DefaultClient,
 		subscriptionClient: subscriptionClient,

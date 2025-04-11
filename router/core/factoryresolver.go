@@ -27,6 +27,7 @@ import (
 )
 
 type Loader struct {
+	ctx      context.Context
 	resolver FactoryResolver
 	// includeInfo controls whether additional information like type usage and field usage is included in the plan de
 	includeInfo bool
@@ -158,8 +159,9 @@ func (d *DefaultFactoryResolver) InstanceData() InstanceData {
 	return d.instanceData
 }
 
-func NewLoader(includeInfo bool, resolver FactoryResolver, logger *zap.Logger) *Loader {
+func NewLoader(ctx context.Context, includeInfo bool, resolver FactoryResolver, logger *zap.Logger) *Loader {
 	return &Loader{
+		ctx:         ctx,
 		resolver:    resolver,
 		includeInfo: includeInfo,
 		logger:      logger,
@@ -413,7 +415,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			var err error
 
 			out, err = pubsub.GetDataSourceFromConfig(
-				context.Background(),
+				l.ctx,
 				in,
 				l.dataSourceMetaData(in),
 				routerEngineConfig.Events,

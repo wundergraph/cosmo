@@ -118,7 +118,7 @@ func GetProvider(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta
 			definedProviders[provider.ID] = true
 		}
 		usedProviders := make(map[string]bool)
-		for _, event := range in.CustomEvents.GetNats() {
+		for _, event := range natsData {
 			if _, found := definedProviders[event.EngineEventConfiguration.ProviderId]; !found {
 				return nil, fmt.Errorf("failed to find Nats provider with ID %s", event.EngineEventConfiguration.ProviderId)
 			}
@@ -141,7 +141,7 @@ func GetProvider(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta
 			providers[provider.ID] = adapter
 		}
 		return &PubSubProvider{
-			EventConfiguration: in.CustomEvents.GetNats(),
+			EventConfiguration: natsData,
 			Logger:             logger,
 			Providers:          providers,
 		}, nil

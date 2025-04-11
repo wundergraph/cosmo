@@ -23,7 +23,7 @@ func (c *PubSubDataSource) GetResolveDataSource() (resolve.DataSource, error) {
 	typeName := c.EventConfiguration.GetEngineEventConfiguration().GetType()
 	switch typeName {
 	case nodev1.EventType_PUBLISH:
-		dataSource = &KafkaPublishDataSource{
+		dataSource = &PublishDataSource{
 			pubSub: c.KafkaAdapter,
 		}
 	default:
@@ -54,7 +54,7 @@ func (c *PubSubDataSource) GetResolveDataSourceInput(event []byte) (string, erro
 }
 
 func (c *PubSubDataSource) GetResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error) {
-	return &SubscriptionSource{
+	return &SubscriptionDataSource{
 		pubSub: c.KafkaAdapter,
 	}, nil
 }
@@ -74,4 +74,19 @@ func (c *PubSubDataSource) GetResolveDataSourceSubscriptionInput() (string, erro
 
 func (c *PubSubDataSource) GetProviderId() string {
 	return c.EventConfiguration.GetEngineEventConfiguration().GetProviderId()
+}
+
+type SubscriptionEventConfiguration struct {
+	ProviderID string   `json:"providerId"`
+	Topics     []string `json:"topics"`
+}
+
+type PublishEventConfiguration struct {
+	ProviderID string          `json:"providerId"`
+	Topic      string          `json:"topic"`
+	Data       json.RawMessage `json:"data"`
+}
+
+func (s *PublishEventConfiguration) MarshalJSONTemplate() string {
+	return fmt.Sprintf(`{"topic":"%s", "data": %s, "providerId":"%s"}`, s.Topic, s.Data, s.ProviderID)
 }

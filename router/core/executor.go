@@ -198,7 +198,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
 
-	loader := NewLoader(b.trackUsageInfo, NewDefaultFactoryResolver(
+	loader := NewLoader(ctx, b.trackUsageInfo, NewDefaultFactoryResolver(
 		ctx,
 		b.transportOptions,
 		b.subscriptionClientOptions,

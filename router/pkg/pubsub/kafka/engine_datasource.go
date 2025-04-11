@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 
 	"github.com/buger/jsonparser"
@@ -13,26 +12,11 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-type SubscriptionEventConfiguration struct {
-	ProviderID string   `json:"providerId"`
-	Topics     []string `json:"topics"`
-}
-
-type PublishEventConfiguration struct {
-	ProviderID string          `json:"providerId"`
-	Topic      string          `json:"topic"`
-	Data       json.RawMessage `json:"data"`
-}
-
-func (s *PublishEventConfiguration) MarshalJSONTemplate() string {
-	return fmt.Sprintf(`{"topic":"%s", "data": %s, "providerId":"%s"}`, s.Topic, s.Data, s.ProviderID)
-}
-
-type SubscriptionSource struct {
+type SubscriptionDataSource struct {
 	pubSub AdapterInterface
 }
 
-func (s *SubscriptionSource) UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+func (s *SubscriptionDataSource) UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
 	val, _, _, err := jsonparser.Get(input, "topics")
 	if err != nil {
 		return err
@@ -52,7 +36,7 @@ func (s *SubscriptionSource) UniqueRequestID(ctx *resolve.Context, input []byte,
 	return err
 }
 
-func (s *SubscriptionSource) Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error {
+func (s *SubscriptionDataSource) Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error {
 	var subscriptionConfiguration SubscriptionEventConfiguration
 	err := json.Unmarshal(input, &subscriptionConfiguration)
 	if err != nil {
@@ -62,11 +46,11 @@ func (s *SubscriptionSource) Start(ctx *resolve.Context, input []byte, updater r
 	return s.pubSub.Subscribe(ctx.Context(), subscriptionConfiguration, updater)
 }
 
-type KafkaPublishDataSource struct {
+type PublishDataSource struct {
 	pubSub AdapterInterface
 }
 
-func (s *KafkaPublishDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
+func (s *PublishDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
 	var publishConfiguration PublishEventConfiguration
 	err := json.Unmarshal(input, &publishConfiguration)
 	if err != nil {
@@ -81,6 +65,6 @@ func (s *KafkaPublishDataSource) Load(ctx context.Context, input []byte, out *by
 	return err
 }
 
-func (s *KafkaPublishDataSource) LoadWithFiles(ctx context.Context, input []byte, files []*httpclient.FileUpload, out *bytes.Buffer) (err error) {
+func (s *PublishDataSource) LoadWithFiles(ctx context.Context, input []byte, files []*httpclient.FileUpload, out *bytes.Buffer) (err error) {
 	panic("not implemented")
 }

@@ -88,3 +88,35 @@ func (c *PubSubDataSource) GetResolveDataSourceSubscriptionInput() (string, erro
 func (c *PubSubDataSource) GetProviderId() string {
 	return c.EventConfiguration.GetEngineEventConfiguration().GetProviderId()
 }
+
+type StreamConfiguration struct {
+	Consumer                  string `json:"consumer"`
+	ConsumerInactiveThreshold int32  `json:"consumerInactiveThreshold"`
+	StreamName                string `json:"streamName"`
+}
+
+type SubscriptionEventConfiguration struct {
+	ProviderID          string               `json:"providerId"`
+	Subjects            []string             `json:"subjects"`
+	StreamConfiguration *StreamConfiguration `json:"streamConfiguration,omitempty"`
+}
+
+type PublishAndRequestEventConfiguration struct {
+	ProviderID string          `json:"providerId"`
+	Subject    string          `json:"subject"`
+	Data       json.RawMessage `json:"data"`
+}
+
+func (s *PublishAndRequestEventConfiguration) MarshalJSONTemplate() string {
+	return fmt.Sprintf(`{"subject":"%s", "data": %s, "providerId":"%s"}`, s.Subject, s.Data, s.ProviderID)
+}
+
+type PublishEventConfiguration struct {
+	ProviderID string          `json:"providerId"`
+	Subject    string          `json:"subject"`
+	Data       json.RawMessage `json:"data"`
+}
+
+func (s *PublishEventConfiguration) MarshalJSONTemplate() string {
+	return fmt.Sprintf(`{"subject":"%s", "data": %s, "providerId":"%s"}`, s.Subject, s.Data, s.ProviderID)
+}

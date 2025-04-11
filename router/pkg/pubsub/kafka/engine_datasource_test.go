@@ -104,7 +104,7 @@ func TestSubscriptionSource_UniqueRequestID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			source := &SubscriptionSource{
+			source := &SubscriptionDataSource{
 				pubSub: &EngineDataSourceMockAdapter{},
 			}
 			ctx := &resolve.Context{}
@@ -170,7 +170,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 			mockAdapter := new(EngineDataSourceMockAdapter)
 			tt.mockSetup(mockAdapter)
 
-			source := &SubscriptionSource{
+			source := &SubscriptionDataSource{
 				pubSub: mockAdapter,
 			}
 
@@ -245,7 +245,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 			mockAdapter := new(EngineDataSourceMockAdapter)
 			tt.mockSetup(mockAdapter)
 
-			dataSource := &KafkaPublishDataSource{
+			dataSource := &PublishDataSource{
 				pubSub: mockAdapter,
 			}
 			ctx := context.Background()
@@ -270,7 +270,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 
 func TestKafkaPublishDataSource_LoadWithFiles(t *testing.T) {
 	t.Run("panic on not implemented", func(t *testing.T) {
-		dataSource := &KafkaPublishDataSource{
+		dataSource := &PublishDataSource{
 			pubSub: &EngineDataSourceMockAdapter{},
 		}
 

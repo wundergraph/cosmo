@@ -52,7 +52,7 @@ func GetProvider(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta
 	}
 	usedProviders := make(map[string]bool)
 	if kafkaData := in.GetCustomEvents().GetKafka(); kafkaData != nil {
-		for _, event := range in.CustomEvents.GetKafka() {
+		for _, event := range kafkaData {
 			if !definedProviders[event.EngineEventConfiguration.ProviderId] {
 				return nil, fmt.Errorf("failed to find Kafka provider with ID %s", event.EngineEventConfiguration.ProviderId)
 			}
@@ -75,7 +75,7 @@ func GetProvider(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta
 		}
 
 		return &PubSubProvider{
-			EventConfiguration: in.CustomEvents.GetKafka(),
+			EventConfiguration: kafkaData,
 			Logger:             logger,
 			Providers:          providers,
 		}, nil
