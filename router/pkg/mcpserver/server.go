@@ -48,6 +48,8 @@ type GraphQLSchemaServer struct {
 	httpClient            *http.Client
 	requestTimeout        time.Duration
 	routerGraphQLEndpoint string
+	httpServer            *http.Server
+	sseServer             *server.SSEServer
 }
 
 type graphqlRequest struct {
@@ -196,6 +198,14 @@ func (s *GraphQLSchemaServer) ServeSSE() (*server.SSEServer, *http.Server, error
 		server.WithBaseURL(fmt.Sprintf("http://localhost%s", s.listenAddr)),
 		server.WithHTTPServer(httpServer),
 	)
+
+	go func() {
+		err := sseServer.Start(s.listenAddr)
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			s.logger.Error("failed to start SSE server", zap.Error(err))
+		}
+	}()
+
 	return sseServer, httpServer, nil
 }
 
@@ -211,37 +221,29 @@ func (s *GraphQLSchemaServer) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to create SSE server: %w", err)
 	}
 
-	// Start server in a goroutine
-	serverErrChan := make(chan error, 1)
-	go func() {
-		err := sseServer.Start(s.listenAddr)
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			s.logger.Error("failed to start SSE server", zap.Error(err))
-		}
-		serverErrChan <- err
-	}()
+	// Store server references for Stop method
+	s.sseServer = sseServer
+	s.httpServer = httpServer
 
-	// Handle graceful shutdown on context cancellation
-	go func() {
-		select {
-		case <-ctx.Done():
-			s.logger.Info("context canceled, shutting down SSE server")
+	return nil
+}
 
-			// Create a shutdown context with timeout
-			shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
+// Stop gracefully shuts down the MCP server
+func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
+	if s.httpServer == nil {
+		return nil
+	}
 
-			// Shutdown the HTTP server
-			if err := httpServer.Shutdown(shutdownCtx); err != nil {
-				s.logger.Error("failed to gracefully shutdown server", zap.Error(err))
-			}
+	s.logger.Debug("shutting down MCP server")
 
-		case err := <-serverErrChan:
-			if err != nil && !errors.Is(err, http.ErrServerClosed) {
-				s.logger.Error("SSE server error", zap.Error(err))
-			}
-		}
-	}()
+	// Create a shutdown context with timeout
+	shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	// Shutdown the HTTP server
+	if err := s.httpServer.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("failed to gracefully shutdown MCP server: %w", err)
+	}
 
 	return nil
 }

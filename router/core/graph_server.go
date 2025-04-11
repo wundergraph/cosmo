@@ -100,6 +100,7 @@ type (
 		prometheusEngineMetrics *rmetric.EngineMetrics
 		hostName                string
 		routerListenAddr        string
+		mcpServer               *mcpserver.GraphQLSchemaServer
 	}
 )
 
@@ -1001,7 +1002,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 						otel.WgOperationName.String(item.OperationName),
 						otel.WgClientName.String(item.ClientName),
 						otel.WgClientVersion.String(item.ClientVersion),
-						otel.WgFeatureFlag.String(featureFlagName),
 						otel.WgOperationHash.String(item.OperationHash),
 						otel.WgOperationType.String(item.OperationType),
 						otel.WgEnginePlanCacheHit.Bool(false),
@@ -1086,6 +1086,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		if err := mcpss.Start(ctx); err != nil {
 			return nil, fmt.Errorf("failed to start MCP server: %w", err)
 		}
+
+		// Store the MCP server for later shutdown
+		s.mcpServer = mcpss
 
 		s.logger.Info("MCP server started",
 			zap.String("listen_addr", s.MCP.ListenAddr),
@@ -1352,6 +1355,13 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		defer cancel()
 
 		ctx = newCtx
+	}
+
+	// Shutdown the MCP server if it exists
+	if s.mcpServer != nil {
+		if err := s.mcpServer.Stop(ctx); err != nil {
+			finalErr = errors.Join(finalErr, fmt.Errorf("failed to stop MCP server: %w", err))
+		}
 	}
 
 	if s.runtimeMetrics != nil {
