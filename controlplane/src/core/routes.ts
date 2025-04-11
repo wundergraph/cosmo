@@ -20,6 +20,7 @@ import { DeleteOrganizationQueue } from './workers/DeleteOrganizationWorker.js';
 import { DeactivateOrganizationQueue } from './workers/DeactivateOrganizationWorker.js';
 import { DeleteUserQueue } from './workers/DeleteUserQueue.js';
 import { ReactivateOrganizationQueue } from './workers/ReactivateOrganizationWorker.js';
+import { DeleteOrganizationAuditLogsQueue } from './workers/DeleteOrganizationAuditLogsWorker.js';
 
 export interface RouterOptions {
   db: PostgresJsDatabase<typeof schema>;
@@ -43,6 +44,7 @@ export interface RouterOptions {
   queues: {
     readmeQueue: AIGraphReadmeQueue;
     deleteOrganizationQueue: DeleteOrganizationQueue;
+    deleteOrganizationAuditLogsQueue: DeleteOrganizationAuditLogsQueue;
     deactivateOrganizationQueue: DeactivateOrganizationQueue;
     reactivateOrganizationQueue: ReactivateOrganizationQueue;
     deleteUserQueue: DeleteUserQueue;

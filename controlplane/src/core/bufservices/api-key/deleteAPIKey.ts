@@ -63,6 +63,7 @@ export function deleteAPIKey(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'api_key.deleted',
       action: 'deleted',
       actorId: authContext.userId,

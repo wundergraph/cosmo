@@ -70,6 +70,7 @@ export function deleteRouterToken(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'graph_token.deleted',
       action: 'deleted',
       actorId: authContext.userId,

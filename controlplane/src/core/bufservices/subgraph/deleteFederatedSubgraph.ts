@@ -104,6 +104,7 @@ export function deleteFederatedSubgraph(
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
+          organizationSlug: authContext.organizationSlug,
           auditAction: subgraph.isFeatureSubgraph ? 'feature_subgraph.deleted' : 'subgraph.deleted',
           action: 'deleted',
           actorId: authContext.userId,

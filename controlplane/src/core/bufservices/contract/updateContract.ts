@@ -177,6 +177,7 @@ export function updateContract(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'federated_graph.updated',
       action: 'updated',
       actorId: authContext.userId,

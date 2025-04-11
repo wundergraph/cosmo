@@ -118,11 +118,13 @@ export function removeOrganizationMember(
           keycloakRealm: opts.keycloakRealm,
         },
         opts.blobStorage,
+        opts.queues.deleteOrganizationAuditLogsQueue,
       );
     }
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'organization_member.deleted',
       action: 'deleted',
       actorId: authContext.userId,

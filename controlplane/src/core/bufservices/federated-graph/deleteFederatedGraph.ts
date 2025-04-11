@@ -76,6 +76,7 @@ export function deleteFederatedGraph(
       for (const deletedGraph of deletedGraphs) {
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
+          organizationSlug: authContext.organizationSlug,
           auditAction: 'federated_graph.deleted',
           action: 'deleted',
           actorId: authContext.userId,

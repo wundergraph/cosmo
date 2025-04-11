@@ -9,6 +9,7 @@ import { UserRepository } from '../repositories/UserRepository.js';
 import Keycloak from '../services/Keycloak.js';
 import { PlatformWebhookService } from '../webhooks/PlatformWebhookService.js';
 import { IQueue, IWorker } from './Worker.js';
+import { DeleteOrganizationAuditLogsQueue } from './DeleteOrganizationAuditLogsWorker.js';
 
 const QueueName = 'user.delete';
 const WorkerName = 'DeleteUserWorker';
@@ -72,6 +73,7 @@ class DeleteUserWorker implements IWorker {
       keycloakRealm: string;
       blobStorage: BlobStorage;
       platformWebhooks: PlatformWebhookService;
+      deleteOrganizationAuditLogsQueue: DeleteOrganizationAuditLogsQueue;
     },
   ) {
     this.input.logger = input.logger.child({ worker: WorkerName });
@@ -107,6 +109,7 @@ class DeleteUserWorker implements IWorker {
             keycloakRealm: this.input.keycloakRealm,
           },
           this.input.blobStorage,
+          this.input.deleteOrganizationAuditLogsQueue,
         );
       }
 
@@ -129,6 +132,7 @@ export const createDeleteUserWorker = (input: {
   keycloakRealm: string;
   blobStorage: BlobStorage;
   platformWebhooks: PlatformWebhookService;
+  deleteOrganizationAuditLogsQueue: DeleteOrganizationAuditLogsQueue;
 }) => {
   const log = input.logger.child({ worker: WorkerName });
   const worker = new Worker<DeleteUserInput>(QueueName, (job) => new DeleteUserWorker(input).handler(job), {

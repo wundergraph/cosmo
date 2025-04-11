@@ -118,6 +118,7 @@ export function updateOrganizationDetails(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'organization_details.updated',
       action: 'updated',
       actorId: authContext.userId,

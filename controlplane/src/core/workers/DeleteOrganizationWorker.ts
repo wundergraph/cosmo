@@ -8,6 +8,7 @@ import { OidcRepository } from '../repositories/OidcRepository.js';
 import OidcProvider from '../services/OidcProvider.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { IQueue, IWorker } from './Worker.js';
+import { DeleteOrganizationAuditLogsQueue } from './DeleteOrganizationAuditLogsWorker.js';
 
 const QueueName = 'organization.delete';
 const WorkerName = 'DeleteOrganizationWorker';
@@ -69,6 +70,7 @@ class DeleteOrganizationWorker implements IWorker {
       keycloakClient: Keycloak;
       keycloakRealm: string;
       blobStorage: BlobStorage;
+      deleteOrganizationAuditLogsQueue: DeleteOrganizationAuditLogsQueue;
     },
   ) {
     this.input.logger = input.logger.child({ worker: WorkerName });
@@ -97,7 +99,11 @@ class DeleteOrganizationWorker implements IWorker {
         });
       }
 
-      await orgRepo.deleteOrganization(job.data.organizationId, this.input.blobStorage);
+      await orgRepo.deleteOrganization(
+        job.data.organizationId,
+        this.input.blobStorage,
+        this.input.deleteOrganizationAuditLogsQueue,
+      );
 
       await this.input.keycloakClient.deleteOrganizationGroup({
         realm: this.input.keycloakRealm,
@@ -120,6 +126,7 @@ export const createDeleteOrganizationWorker = (input: {
   keycloakClient: Keycloak;
   keycloakRealm: string;
   blobStorage: BlobStorage;
+  deleteOrganizationAuditLogsQueue: DeleteOrganizationAuditLogsQueue;
 }) => {
   const log = input.logger.child({ worker: WorkerName });
   const worker = new Worker<DeleteOrganizationInput>(

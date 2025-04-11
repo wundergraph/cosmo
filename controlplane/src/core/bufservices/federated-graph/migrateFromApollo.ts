@@ -178,6 +178,7 @@ export function migrateFromApollo(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'federated_graph.created',
       action: 'created',
       actorId: authContext.userId,
@@ -197,6 +198,7 @@ export function migrateFromApollo(
     for (const subgraph of subgraphs) {
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
         auditAction: 'subgraph.created',
         action: 'created',
         actorId: authContext.userId,
@@ -250,6 +252,7 @@ export function migrateFromApollo(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'graph_token.created',
       action: 'created',
       actorId: authContext.userId,

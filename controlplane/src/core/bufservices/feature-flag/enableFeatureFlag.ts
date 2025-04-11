@@ -153,6 +153,7 @@ export function enableFeatureFlag(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: req.enabled ? 'feature_flag.enabled' : 'feature_flag.disabled',
       action: req.enabled ? 'enabled' : 'disabled',
       actorId: authContext.userId,
