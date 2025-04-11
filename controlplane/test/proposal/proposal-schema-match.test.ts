@@ -76,7 +76,6 @@ async function createTestProposal(
         labels: [],
       },
     ],
-    didHubCreate: false,
   });
 
   return createProposalResponse;
@@ -107,7 +106,6 @@ async function createTestProposalWithDeletedSubgraph(
         labels: [],
       },
     ],
-    didHubCreate: false,
   });
 
   return createProposalResponse;
@@ -1427,7 +1425,6 @@ describe('Proposal schema matching tests', () => {
           labels: [label],
         },
       ],
-      didHubCreate: false,
     });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);

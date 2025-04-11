@@ -106,7 +106,6 @@ describe('Create proposal tests', () => {
           labels: [],
         },
       ],
-      didHubCreate: false,
     });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -237,7 +236,6 @@ describe('Create proposal tests', () => {
           labels: [],
         },
       ],
-      didHubCreate: false,
     });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -330,7 +328,6 @@ describe('Create proposal tests', () => {
           isNew: true,
         },
       ],
-      didHubCreate: false,
     });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -432,7 +429,6 @@ describe('Create proposal tests', () => {
           labels: [],
         },
       ],
-      didHubCreate: false,
     });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -477,7 +473,6 @@ describe('Create proposal tests', () => {
           labels: [],
         },
       ],
-      didHubCreate: false,
     });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
@@ -604,7 +599,6 @@ describe('Create proposal tests', () => {
           labels: [label],
         },
       ],
-      didHubCreate: false,
     });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -718,7 +712,6 @@ describe('Create proposal tests', () => {
           labels: [],
         },
       ],
-      didHubCreate: false,
     });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.ERR);
@@ -782,7 +775,6 @@ describe('Create proposal tests', () => {
           labels: [],
         },
       ],
-      didHubCreate: false,
     });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -807,7 +799,6 @@ describe('Create proposal tests', () => {
           labels: [],
         },
       ],
-      didHubCreate: false,
     });
 
     // Expect an error response
@@ -887,7 +878,6 @@ describe('Create proposal tests', () => {
           labels: [],
         },
       ],
-      didHubCreate: false,
     });
 
     expect(createProposalResponse1.response?.code).toBe(EnumStatusCode.OK);
@@ -914,7 +904,6 @@ describe('Create proposal tests', () => {
           labels: [],
         },
       ],
-      didHubCreate: false,
     });
 
     // Expect success for the second proposal as well
@@ -982,7 +971,6 @@ describe('Create proposal tests', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
       subgraphs: [], // empty array
-      didHubCreate: false,
     });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.ERR);
@@ -1063,7 +1051,6 @@ describe('Create proposal tests', () => {
           labels: [],
         },
       ],
-      didHubCreate: false,
     });
 
     // Expect an error response due to duplicate subgraphs
@@ -1144,7 +1131,6 @@ describe('Create proposal tests', () => {
           labels: [],
         },
       ],
-      didHubCreate: false,
     });
 
     // Expect an error response

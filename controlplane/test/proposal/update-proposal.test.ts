@@ -58,7 +58,6 @@ async function createTestProposal(
         labels: [],
       },
     ],
-    didHubCreate: false,
   });
 
   return createProposalResponse;
@@ -418,7 +417,6 @@ describe('Update proposal tests', () => {
           labels: [],
         },
       ],
-      didHubCreate: false,
     });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -591,7 +589,6 @@ describe('Update proposal tests', () => {
           labels: [],
         },
       ],
-      didHubCreate: false,
     });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -1409,7 +1406,6 @@ describe('Update proposal tests', () => {
           labels: [],
         },
       ],
-      didHubCreate: false,
     });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -1556,7 +1552,6 @@ describe('Update proposal tests', () => {
           labels: [],
         },
       ],
-      didHubCreate: false,
     });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -1676,7 +1671,6 @@ describe('Update proposal tests', () => {
           labels: [label],
         },
       ],
-      didHubCreate: false,
     });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
