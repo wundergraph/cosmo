@@ -552,3 +552,13 @@ export const isCheckSuccessful = ({
     !hasProposalMatchError
   );
 };
+
+export const flipDateRangeValuesIfNeeded = (dateRange?: { start: number; end: number }) => {
+  if (!dateRange || dateRange.start <= dateRange.end) {
+    return;
+  }
+
+  const tmp = dateRange.start;
+  dateRange.start = dateRange.end;
+  dateRange.end = tmp;
+};
