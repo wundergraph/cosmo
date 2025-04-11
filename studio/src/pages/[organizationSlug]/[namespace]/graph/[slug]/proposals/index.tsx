@@ -40,7 +40,7 @@ import { useQuery } from "@connectrpc/connect-query";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { getProposalsOfFederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { getProposalsByFederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { formatDistanceToNow, formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -66,7 +66,7 @@ const ProposalsPage: NextPageWithLayout = () => {
   const endDate = range ? createDateRange(range).end : end;
 
   const { data, isLoading, error, refetch } = useQuery(
-    getProposalsOfFederatedGraph,
+    getProposalsByFederatedGraph,
     {
       federatedGraphName,
       namespace,

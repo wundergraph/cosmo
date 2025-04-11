@@ -1165,7 +1165,7 @@ describe('Update proposal tests', () => {
     expect(updateProposalResponse.checkId).toBeDefined();
 
     // Fetch checks for the proposal
-    const checksResponse = await client.getChecksOfProposal({
+    const checksResponse = await client.getProposalChecks({
       proposalId: createProposalResponse.proposalId,
       limit: 10,
       offset: 0,
@@ -1285,7 +1285,7 @@ describe('Update proposal tests', () => {
     expect(proposalResponse.proposal?.subgraphs[0].schemaSDL).toBe(enhancedSubgraphSDL);
 
     // 4. Get all proposals for the federated graph
-    const allProposalsResponse = await client.getProposalsOfFederatedGraph({
+    const allProposalsResponse = await client.getProposalsByFederatedGraph({
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
     });

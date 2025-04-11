@@ -2,8 +2,8 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  GetProposalsOfFederatedGraphRequest,
-  GetProposalsOfFederatedGraphResponse,
+  GetProposalsByFederatedGraphRequest,
+  GetProposalsByFederatedGraphResponse,
   Proposal,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -13,14 +13,14 @@ import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 
-export function getProposalsOfFederatedGraph(
+export function getProposalsByFederatedGraph(
   opts: RouterOptions,
-  req: GetProposalsOfFederatedGraphRequest,
+  req: GetProposalsByFederatedGraphRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetProposalsOfFederatedGraphResponse>> {
+): Promise<PlainMessage<GetProposalsByFederatedGraphResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetProposalsOfFederatedGraphResponse>>(ctx, logger, async () => {
+  return handleError<PlainMessage<GetProposalsByFederatedGraphResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

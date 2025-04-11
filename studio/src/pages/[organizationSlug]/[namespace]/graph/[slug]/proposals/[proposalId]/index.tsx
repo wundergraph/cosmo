@@ -58,7 +58,7 @@ import {
 } from "@radix-ui/react-icons";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
-  getChecksOfProposal,
+  getProposalChecks,
   getProposal,
   updateProposal,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
@@ -112,7 +112,7 @@ export const ProposalDetails = ({
     isLoading: isChecksLoading,
     error: checksError,
   } = useQuery(
-    getChecksOfProposal,
+    getProposalChecks,
     {
       proposalId: id,
       limit: limit > 50 ? 50 : limit,

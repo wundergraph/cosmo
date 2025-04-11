@@ -342,7 +342,7 @@ describe('Create proposal tests', () => {
     expect(proposalResponse.proposal?.subgraphs[0].name).toBe(newSubgraphName);
     expect(proposalResponse.proposal?.subgraphs[0].schemaSDL).toBe(newSubgraphSDL);
 
-    const checksResponse = await client.getChecksOfProposal({
+    const checksResponse = await client.getProposalChecks({
       proposalId: createProposalResponse.proposalId,
     });
 

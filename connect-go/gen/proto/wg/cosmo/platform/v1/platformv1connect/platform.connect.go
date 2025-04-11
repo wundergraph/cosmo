@@ -505,12 +505,12 @@ const (
 	// PlatformServiceGetNamespaceProposalConfigProcedure is the fully-qualified name of the
 	// PlatformService's GetNamespaceProposalConfig RPC.
 	PlatformServiceGetNamespaceProposalConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/GetNamespaceProposalConfig"
-	// PlatformServiceGetProposalsOfFederatedGraphProcedure is the fully-qualified name of the
-	// PlatformService's GetProposalsOfFederatedGraph RPC.
-	PlatformServiceGetProposalsOfFederatedGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetProposalsOfFederatedGraph"
-	// PlatformServiceGetChecksOfProposalProcedure is the fully-qualified name of the PlatformService's
-	// GetChecksOfProposal RPC.
-	PlatformServiceGetChecksOfProposalProcedure = "/wg.cosmo.platform.v1.PlatformService/GetChecksOfProposal"
+	// PlatformServiceGetProposalsByFederatedGraphProcedure is the fully-qualified name of the
+	// PlatformService's GetProposalsByFederatedGraph RPC.
+	PlatformServiceGetProposalsByFederatedGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetProposalsByFederatedGraph"
+	// PlatformServiceGetProposalChecksProcedure is the fully-qualified name of the PlatformService's
+	// GetProposalChecks RPC.
+	PlatformServiceGetProposalChecksProcedure = "/wg.cosmo.platform.v1.PlatformService/GetProposalChecks"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -673,8 +673,8 @@ var (
 	platformServiceEnableProposalsForNamespaceMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("EnableProposalsForNamespace")
 	platformServiceConfigureNamespaceProposalConfigMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("ConfigureNamespaceProposalConfig")
 	platformServiceGetNamespaceProposalConfigMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceProposalConfig")
-	platformServiceGetProposalsOfFederatedGraphMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetProposalsOfFederatedGraph")
-	platformServiceGetChecksOfProposalMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("GetChecksOfProposal")
+	platformServiceGetProposalsByFederatedGraphMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetProposalsByFederatedGraph")
+	platformServiceGetProposalChecksMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("GetProposalChecks")
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -973,10 +973,10 @@ type PlatformServiceClient interface {
 	ConfigureNamespaceProposalConfig(context.Context, *connect.Request[v1.ConfigureNamespaceProposalConfigRequest]) (*connect.Response[v1.ConfigureNamespaceProposalConfigResponse], error)
 	// GetNamespaceProposalConfig returns the proposal config of the namespace passed.
 	GetNamespaceProposalConfig(context.Context, *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error)
-	// GetProposalsOfFederatedGraph returns proposals for a federated graph.
-	GetProposalsOfFederatedGraph(context.Context, *connect.Request[v1.GetProposalsOfFederatedGraphRequest]) (*connect.Response[v1.GetProposalsOfFederatedGraphResponse], error)
-	// GetChecksOfProposal returns checks for a proposal.
-	GetChecksOfProposal(context.Context, *connect.Request[v1.GetChecksOfProposalRequest]) (*connect.Response[v1.GetChecksOfProposalResponse], error)
+	// GetProposalsByFederatedGraph returns proposals for a federated graph.
+	GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error)
+	// GetProposalChecks returns checks for a proposal.
+	GetProposalChecks(context.Context, *connect.Request[v1.GetProposalChecksRequest]) (*connect.Response[v1.GetProposalChecksResponse], error)
 }
 
 // NewPlatformServiceClient constructs a client for the wg.cosmo.platform.v1.PlatformService
@@ -1938,16 +1938,16 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceGetNamespaceProposalConfigMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		getProposalsOfFederatedGraph: connect.NewClient[v1.GetProposalsOfFederatedGraphRequest, v1.GetProposalsOfFederatedGraphResponse](
+		getProposalsByFederatedGraph: connect.NewClient[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse](
 			httpClient,
-			baseURL+PlatformServiceGetProposalsOfFederatedGraphProcedure,
-			connect.WithSchema(platformServiceGetProposalsOfFederatedGraphMethodDescriptor),
+			baseURL+PlatformServiceGetProposalsByFederatedGraphProcedure,
+			connect.WithSchema(platformServiceGetProposalsByFederatedGraphMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		getChecksOfProposal: connect.NewClient[v1.GetChecksOfProposalRequest, v1.GetChecksOfProposalResponse](
+		getProposalChecks: connect.NewClient[v1.GetProposalChecksRequest, v1.GetProposalChecksResponse](
 			httpClient,
-			baseURL+PlatformServiceGetChecksOfProposalProcedure,
-			connect.WithSchema(platformServiceGetChecksOfProposalMethodDescriptor),
+			baseURL+PlatformServiceGetProposalChecksProcedure,
+			connect.WithSchema(platformServiceGetProposalChecksMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -2112,8 +2112,8 @@ type platformServiceClient struct {
 	enableProposalsForNamespace           *connect.Client[v1.EnableProposalsForNamespaceRequest, v1.EnableProposalsForNamespaceResponse]
 	configureNamespaceProposalConfig      *connect.Client[v1.ConfigureNamespaceProposalConfigRequest, v1.ConfigureNamespaceProposalConfigResponse]
 	getNamespaceProposalConfig            *connect.Client[v1.GetNamespaceProposalConfigRequest, v1.GetNamespaceProposalConfigResponse]
-	getProposalsOfFederatedGraph          *connect.Client[v1.GetProposalsOfFederatedGraphRequest, v1.GetProposalsOfFederatedGraphResponse]
-	getChecksOfProposal                   *connect.Client[v1.GetChecksOfProposalRequest, v1.GetChecksOfProposalResponse]
+	getProposalsByFederatedGraph          *connect.Client[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse]
+	getProposalChecks                     *connect.Client[v1.GetProposalChecksRequest, v1.GetProposalChecksResponse]
 }
 
 // CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
@@ -2932,15 +2932,15 @@ func (c *platformServiceClient) GetNamespaceProposalConfig(ctx context.Context, 
 	return c.getNamespaceProposalConfig.CallUnary(ctx, req)
 }
 
-// GetProposalsOfFederatedGraph calls
-// wg.cosmo.platform.v1.PlatformService.GetProposalsOfFederatedGraph.
-func (c *platformServiceClient) GetProposalsOfFederatedGraph(ctx context.Context, req *connect.Request[v1.GetProposalsOfFederatedGraphRequest]) (*connect.Response[v1.GetProposalsOfFederatedGraphResponse], error) {
-	return c.getProposalsOfFederatedGraph.CallUnary(ctx, req)
+// GetProposalsByFederatedGraph calls
+// wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph.
+func (c *platformServiceClient) GetProposalsByFederatedGraph(ctx context.Context, req *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error) {
+	return c.getProposalsByFederatedGraph.CallUnary(ctx, req)
 }
 
-// GetChecksOfProposal calls wg.cosmo.platform.v1.PlatformService.GetChecksOfProposal.
-func (c *platformServiceClient) GetChecksOfProposal(ctx context.Context, req *connect.Request[v1.GetChecksOfProposalRequest]) (*connect.Response[v1.GetChecksOfProposalResponse], error) {
-	return c.getChecksOfProposal.CallUnary(ctx, req)
+// GetProposalChecks calls wg.cosmo.platform.v1.PlatformService.GetProposalChecks.
+func (c *platformServiceClient) GetProposalChecks(ctx context.Context, req *connect.Request[v1.GetProposalChecksRequest]) (*connect.Response[v1.GetProposalChecksResponse], error) {
+	return c.getProposalChecks.CallUnary(ctx, req)
 }
 
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
@@ -3239,10 +3239,10 @@ type PlatformServiceHandler interface {
 	ConfigureNamespaceProposalConfig(context.Context, *connect.Request[v1.ConfigureNamespaceProposalConfigRequest]) (*connect.Response[v1.ConfigureNamespaceProposalConfigResponse], error)
 	// GetNamespaceProposalConfig returns the proposal config of the namespace passed.
 	GetNamespaceProposalConfig(context.Context, *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error)
-	// GetProposalsOfFederatedGraph returns proposals for a federated graph.
-	GetProposalsOfFederatedGraph(context.Context, *connect.Request[v1.GetProposalsOfFederatedGraphRequest]) (*connect.Response[v1.GetProposalsOfFederatedGraphResponse], error)
-	// GetChecksOfProposal returns checks for a proposal.
-	GetChecksOfProposal(context.Context, *connect.Request[v1.GetChecksOfProposalRequest]) (*connect.Response[v1.GetChecksOfProposalResponse], error)
+	// GetProposalsByFederatedGraph returns proposals for a federated graph.
+	GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error)
+	// GetProposalChecks returns checks for a proposal.
+	GetProposalChecks(context.Context, *connect.Request[v1.GetProposalChecksRequest]) (*connect.Response[v1.GetProposalChecksResponse], error)
 }
 
 // NewPlatformServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -4200,16 +4200,16 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceGetNamespaceProposalConfigMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	platformServiceGetProposalsOfFederatedGraphHandler := connect.NewUnaryHandler(
-		PlatformServiceGetProposalsOfFederatedGraphProcedure,
-		svc.GetProposalsOfFederatedGraph,
-		connect.WithSchema(platformServiceGetProposalsOfFederatedGraphMethodDescriptor),
+	platformServiceGetProposalsByFederatedGraphHandler := connect.NewUnaryHandler(
+		PlatformServiceGetProposalsByFederatedGraphProcedure,
+		svc.GetProposalsByFederatedGraph,
+		connect.WithSchema(platformServiceGetProposalsByFederatedGraphMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	platformServiceGetChecksOfProposalHandler := connect.NewUnaryHandler(
-		PlatformServiceGetChecksOfProposalProcedure,
-		svc.GetChecksOfProposal,
-		connect.WithSchema(platformServiceGetChecksOfProposalMethodDescriptor),
+	platformServiceGetProposalChecksHandler := connect.NewUnaryHandler(
+		PlatformServiceGetProposalChecksProcedure,
+		svc.GetProposalChecks,
+		connect.WithSchema(platformServiceGetProposalChecksMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -4528,10 +4528,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceConfigureNamespaceProposalConfigHandler.ServeHTTP(w, r)
 		case PlatformServiceGetNamespaceProposalConfigProcedure:
 			platformServiceGetNamespaceProposalConfigHandler.ServeHTTP(w, r)
-		case PlatformServiceGetProposalsOfFederatedGraphProcedure:
-			platformServiceGetProposalsOfFederatedGraphHandler.ServeHTTP(w, r)
-		case PlatformServiceGetChecksOfProposalProcedure:
-			platformServiceGetChecksOfProposalHandler.ServeHTTP(w, r)
+		case PlatformServiceGetProposalsByFederatedGraphProcedure:
+			platformServiceGetProposalsByFederatedGraphHandler.ServeHTTP(w, r)
+		case PlatformServiceGetProposalChecksProcedure:
+			platformServiceGetProposalChecksHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -5169,10 +5169,10 @@ func (UnimplementedPlatformServiceHandler) GetNamespaceProposalConfig(context.Co
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig is not implemented"))
 }
 
-func (UnimplementedPlatformServiceHandler) GetProposalsOfFederatedGraph(context.Context, *connect.Request[v1.GetProposalsOfFederatedGraphRequest]) (*connect.Response[v1.GetProposalsOfFederatedGraphResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetProposalsOfFederatedGraph is not implemented"))
+func (UnimplementedPlatformServiceHandler) GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph is not implemented"))
 }
 
-func (UnimplementedPlatformServiceHandler) GetChecksOfProposal(context.Context, *connect.Request[v1.GetChecksOfProposalRequest]) (*connect.Response[v1.GetChecksOfProposalResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetChecksOfProposal is not implemented"))
+func (UnimplementedPlatformServiceHandler) GetProposalChecks(context.Context, *connect.Request[v1.GetProposalChecksRequest]) (*connect.Response[v1.GetProposalChecksResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetProposalChecks is not implemented"))
 }

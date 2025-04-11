@@ -2587,7 +2587,7 @@ message GetProposalResponse {
   repeated CurrentSubgraph currentSubgraphs = 3;
 }
 
-message GetProposalsOfFederatedGraphRequest {
+message GetProposalsByFederatedGraphRequest {
   string federatedGraphName = 1;
   string namespace = 2;
   string startDate = 3;
@@ -2596,13 +2596,13 @@ message GetProposalsOfFederatedGraphRequest {
   int32 offset = 6;
 }   
 
-message GetProposalsOfFederatedGraphResponse {
+message GetProposalsByFederatedGraphResponse {
   Response response = 1;
   repeated Proposal proposals = 2;
   bool isProposalsEnabled = 3;
 }
 
-message GetChecksOfProposalRequest {
+message GetProposalChecksRequest {
   string proposalId = 1;
   int32 limit = 2;
   int32 offset = 3;
@@ -2610,7 +2610,7 @@ message GetChecksOfProposalRequest {
   string endDate = 5;
 }
 
-message GetChecksOfProposalResponse {
+message GetProposalChecksResponse {
   Response response = 1;
   repeated SchemaCheck checks = 2;
   int32 totalChecksCount = 3;
@@ -3022,8 +3022,8 @@ service PlatformService {
   rpc ConfigureNamespaceProposalConfig(ConfigureNamespaceProposalConfigRequest) returns (ConfigureNamespaceProposalConfigResponse) {}
   // GetNamespaceProposalConfig returns the proposal config of the namespace passed.
   rpc GetNamespaceProposalConfig(GetNamespaceProposalConfigRequest) returns (GetNamespaceProposalConfigResponse) {}
-  // GetProposalsOfFederatedGraph returns proposals for a federated graph.
-  rpc GetProposalsOfFederatedGraph(GetProposalsOfFederatedGraphRequest) returns (GetProposalsOfFederatedGraphResponse) {}
-  // GetChecksOfProposal returns checks for a proposal.
-  rpc GetChecksOfProposal(GetChecksOfProposalRequest) returns (GetChecksOfProposalResponse) {}
+  // GetProposalsByFederatedGraph returns proposals for a federated graph.
+  rpc GetProposalsByFederatedGraph(GetProposalsByFederatedGraphRequest) returns (GetProposalsByFederatedGraphResponse) {}
+  // GetProposalChecks returns checks for a proposal.
+  rpc GetProposalChecks(GetProposalChecksRequest) returns (GetProposalChecksResponse) {}
 }
