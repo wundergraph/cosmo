@@ -1841,6 +1841,33 @@
         }
       }
     },
+    "mcp": {
+      "type": "object",
+      "description": "The configuration for the Model Context Protocol (MCP) server. MCP allows AI models to interact with your GraphQL APIs. By exposing individual GraphQL operations to the model, you can open your graph to empower AI agents working with your data. See https://cosmo-docs.wundergraph.com/router/mcp for more information.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the MCP server. If the value is true, the MCP server will be started."
+        },
+        "listen_addr": {
+          "type": "string",
+          "default": ":5025",
+          "description": "The address where the MCP server will listen for requests. Specifying the protocol or host is not supported. The default value is ':5025'."
+        },
+        "operations_dir": {
+          "type": "string",
+          "default": "operations",
+          "description": "The directory where the MCP server will load GrapQL operations from. The directory is relative to the working directory of the router."
+        },
+        "graph_name": {
+          "type": "string",
+          "default": "cosmo",
+          "description": "The name of the graph to be used by the MCP server."
+        }
+      }
+    },
     "events": {
       "type": "object",
       "description": "The configuration for EDFS. See https://cosmo-docs.wundergraph.com/router/event-driven-federated-subscriptions-edfs for more information.",
@@ -2613,7 +2640,7 @@
         },
         "suppress_fetch_errors": {
           "type": "object",
-          "description": "Suppresses fetch errors. When enabled, only the ‘data’ object is returned, suppressing errors. If disabled, fetch errors are included in the ‘errors’ array.",
+          "description": "Suppresses fetch errors. When enabled, only the 'data' object is returned, suppressing errors. If disabled, fetch errors are included in the 'errors' array.",
           "additionalProperties": false,
           "properties": {
             "enabled": {
@@ -2657,7 +2684,7 @@
         },
         "subscription_multipart_print_boundary": {
           "type": "object",
-          "description": "Prints the multipart boundary right after the message in multipart subscriptions. Without this flag, the Apollo client wouldn’t parse a message until the next one is pushed.",
+          "description": "Prints the multipart boundary right after the message in multipart subscriptions. Without this flag, the Apollo client wouldn't parse a message until the next one is pushed.",
           "additionalProperties": false,
           "properties": {
             "enabled": {

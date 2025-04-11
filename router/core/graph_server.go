@@ -7,11 +7,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto/v2"
@@ -23,6 +22,8 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
+	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -1067,6 +1068,30 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	if s.apolloCompatibilityFlags.SubscriptionMultipartPrintBoundary.Enabled {
 		handlerOpts.ApolloSubscriptionMultipartPrintBoundary = s.apolloCompatibilityFlags.SubscriptionMultipartPrintBoundary.Enabled
+	}
+
+	if s.MCP.Enabled {
+		mcpss, err := mcpserver.NewGraphQLSchemaServer(
+			path.Join(s.routerListenAddr, s.graphqlPath),
+			executor.RouterSchema,
+			mcpserver.WithGraphName(s.MCP.GraphName),
+			mcpserver.WithOperationsDir(s.MCP.OperationsDir),
+			mcpserver.WithListenAddr(s.MCP.ListenAddr),
+			mcpserver.WithLogger(s.logger),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create mcp server: %w", err)
+		}
+
+		if err := mcpss.Start(ctx); err != nil {
+			return nil, fmt.Errorf("failed to start MCP server: %w", err)
+		}
+
+		s.logger.Info("MCP server started",
+			zap.String("listen_addr", s.MCP.ListenAddr),
+			zap.String("operations_dir", s.MCP.OperationsDir),
+			zap.String("graph_name", s.MCP.GraphName),
+		)
 	}
 
 	graphqlHandler := NewGraphQLHandler(handlerOpts)

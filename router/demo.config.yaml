@@ -5,6 +5,12 @@
 
 version: "1"
 
+mcp:
+  enabled: true
+  operations_dir: operations
+  graph_name: my-graph
+  listen_addr: :5025
+
 events:
   providers:
     nats:

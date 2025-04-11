@@ -862,6 +862,13 @@ type CacheWarmupConfiguration struct {
 	Timeout        time.Duration     `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
 }
 
+type MCPConfiguration struct {
+	Enabled       bool   `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
+	ListenAddr    string `yaml:"listen_addr" envDefault:":5025" env:"MCP_LISTEN_ADDR"`
+	OperationsDir string `yaml:"operations_dir" envDefault:"operations" env:"MCP_OPERATIONS_DIR"`
+	GraphName     string `yaml:"graph_name" envDefault:"cosmo" env:"MCP_GRAPH_NAME"`
+}
+
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
@@ -874,6 +881,7 @@ type Config struct {
 	Compliance     ComplianceConfig   `yaml:"compliance,omitempty"`
 	TLS            TLSConfiguration   `yaml:"tls,omitempty"`
 	CacheControl   CacheControlPolicy `yaml:"cache_control_policy"`
+	MCP            MCPConfiguration   `yaml:"mcp,omitempty"`
 
 	Modules        map[string]interface{} `yaml:"modules,omitempty"`
 	Headers        HeaderRules            `yaml:"headers,omitempty"`
