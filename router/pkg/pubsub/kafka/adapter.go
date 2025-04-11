@@ -10,75 +10,91 @@ import (
 
 	"github.com/twmb/franz-go/pkg/kerr"
 	"github.com/twmb/franz-go/pkg/kgo"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 )
 
 var (
-	_ pubsub_datasource.KafkaConnector = (*connector)(nil)
-	_ pubsub_datasource.KafkaPubSub    = (*kafkaPubSub)(nil)
-	_ pubsub.Lifecycle                 = (*kafkaPubSub)(nil)
-
 	errClientClosed = errors.New("client closed")
 )
 
-type connector struct {
-	writeClient *kgo.Client
-	opts        []kgo.Opt
-	logger      *zap.Logger
+type LazyClient struct {
+	once   sync.Once
+	client *kgo.Client
+	opts   []kgo.Opt
 }
 
-func NewConnector(logger *zap.Logger, opts []kgo.Opt) (pubsub_datasource.KafkaConnector, error) {
+func (c *LazyClient) Connect() (err error) {
+	c.once.Do(func() {
+		c.client, err = kgo.NewClient(append(c.opts,
+			// For observability, we set the client ID to "router"
+			kgo.ClientID("cosmo.router.producer"))...,
+		)
+	})
 
-	writeClient, err := kgo.NewClient(append(opts,
+	return
+}
+
+func (c *LazyClient) GetClient() *kgo.Client {
+	if c.client == nil {
+		c.Connect()
+	}
+	return c.client
+}
+
+func NewLazyClient(opts ...kgo.Opt) *LazyClient {
+	return &LazyClient{
+		opts: opts,
+	}
+}
+
+func NewAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt) (AdapterInterface, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
+	client := NewLazyClient(append(opts,
 		// For observability, we set the client ID to "router"
 		kgo.ClientID("cosmo.router.producer"))...,
 	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create write client for Kafka: %w", err)
-	}
 
-	return &connector{
-		writeClient: writeClient,
+	return &Adapter{
+		ctx:         ctx,
+		logger:      logger.With(zap.String("pubsub", "kafka")),
 		opts:        opts,
-		logger:      logger,
+		writeClient: client,
+		closeWg:     sync.WaitGroup{},
+		cancel:      cancel,
 	}, nil
 }
 
-func (c *connector) New(ctx context.Context) pubsub_datasource.KafkaPubSub {
-
-	ctx, cancel := context.WithCancel(ctx)
-
-	ps := &kafkaPubSub{
-		ctx:         ctx,
-		logger:      c.logger.With(zap.String("pubsub", "kafka")),
-		opts:        c.opts,
-		writeClient: c.writeClient,
-		closeWg:     sync.WaitGroup{},
-		cancel:      cancel,
-	}
-
-	return ps
+// AdapterInterface defines the interface for Kafka adapter operations
+type AdapterInterface interface {
+	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error
+	Publish(ctx context.Context, event PublishEventConfiguration) error
 }
 
-// kafkaPubSub is a Kafka pubsub implementation.
+// Adapter is a Kafka pubsub implementation.
 // It uses the franz-go Kafka client to consume and produce messages.
 // The pubsub is stateless and does not store any messages.
 // It uses a single write client to produce messages and a client per topic to consume messages.
 // Each client polls the Kafka topic for new records and updates the subscriptions with the new data.
-type kafkaPubSub struct {
+type Adapter struct {
 	ctx         context.Context
 	opts        []kgo.Opt
 	logger      *zap.Logger
-	writeClient *kgo.Client
+	writeClient *LazyClient
 	closeWg     sync.WaitGroup
 	cancel      context.CancelFunc
 }
 
+// Ensure Adapter implements AdapterInterface
+var _ AdapterInterface = (*Adapter)(nil)
+
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
-func (p *kafkaPubSub) topicPoller(ctx context.Context, client *kgo.Client, updater resolve.SubscriptionUpdater) error {
+func (p *Adapter) topicPoller(ctx context.Context, client *kgo.Client, updater resolve.SubscriptionUpdater) error {
 	for {
 		select {
 		case <-p.ctx.Done(): // Close the poller if the application context was canceled
@@ -132,15 +148,13 @@ func (p *kafkaPubSub) topicPoller(ctx context.Context, client *kgo.Client, updat
 
 // Subscribe subscribes to the given topics and updates the subscription updater.
 // The engine already deduplicates subscriptions with the same topics, stream configuration, extensions, headers, etc.
-func (p *kafkaPubSub) Subscribe(ctx context.Context, event pubsub_datasource.KafkaSubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
+func (p *Adapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
 
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "subscribe"),
 		zap.Strings("topics", event.Topics),
 	)
-
-	log.Debug("subscribe")
 
 	// Create a new client for the topic
 	client, err := kgo.NewClient(append(p.opts,
@@ -151,6 +165,9 @@ func (p *kafkaPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Kaf
 		kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(time.Now().UnixMilli())),
 		// For observability, we set the client ID to "router"
 		kgo.ClientID(fmt.Sprintf("cosmo.router.consumer.%s", strings.Join(event.Topics, "-"))),
+		// FIXME: the client id should have some unique identifier, like in nats
+		// What if we have multiple subscriptions for the same topics?
+		// What if we have more router instances?
 	)...)
 	if err != nil {
 		log.Error("failed to create client", zap.Error(err))
@@ -181,7 +198,7 @@ func (p *kafkaPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Kaf
 // Publish publishes the given event to the Kafka topic in a non-blocking way.
 // Publish errors are logged and returned as a pubsub error.
 // The event is written with a dedicated write client.
-func (p *kafkaPubSub) Publish(ctx context.Context, event pubsub_datasource.KafkaPublishEventConfiguration) error {
+func (p *Adapter) Publish(ctx context.Context, event PublishEventConfiguration) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "publish"),
@@ -195,7 +212,7 @@ func (p *kafkaPubSub) Publish(ctx context.Context, event pubsub_datasource.Kafka
 
 	var pErr error
 
-	p.writeClient.Produce(ctx, &kgo.Record{
+	p.writeClient.GetClient().Produce(ctx, &kgo.Record{
 		Topic: event.Topic,
 		Value: event.Data,
 	}, func(record *kgo.Record, err error) {
@@ -209,20 +226,20 @@ func (p *kafkaPubSub) Publish(ctx context.Context, event pubsub_datasource.Kafka
 
 	if pErr != nil {
 		log.Error("publish error", zap.Error(pErr))
-		return pubsub.NewError(fmt.Sprintf("error publishing to Kafka topic %s", event.Topic), pErr)
+		return datasource.NewError(fmt.Sprintf("error publishing to Kafka topic %s", event.Topic), pErr)
 	}
 
 	return nil
 }
 
-func (p *kafkaPubSub) Shutdown(ctx context.Context) error {
+func (p *Adapter) Shutdown(ctx context.Context) error {
 
-	err := p.writeClient.Flush(ctx)
+	err := p.writeClient.GetClient().Flush(ctx)
 	if err != nil {
 		p.logger.Error("flushing write client", zap.Error(err))
 	}
 
-	p.writeClient.Close()
+	p.writeClient.GetClient().Close()
 
 	// Cancel the context to stop all pollers
 	p.cancel()

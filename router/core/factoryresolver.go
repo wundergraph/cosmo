@@ -9,9 +9,9 @@ import (
 	"net/url"
 	"slices"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
-
 	"github.com/buger/jsonparser"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
@@ -19,7 +19,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/staticdatasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 
@@ -28,15 +27,22 @@ import (
 )
 
 type Loader struct {
+	ctx      context.Context
 	resolver FactoryResolver
 	// includeInfo controls whether additional information like type usage and field usage is included in the plan de
 	includeInfo bool
+	logger      *zap.Logger
+}
+
+type InstanceData struct {
+	hostName      string
+	listenAddress string
 }
 
 type FactoryResolver interface {
 	ResolveGraphqlFactory(subgraphName string) (plan.PlannerFactory[graphql_datasource.Configuration], error)
 	ResolveStaticFactory() (plan.PlannerFactory[staticdatasource.Configuration], error)
-	ResolvePubsubFactory() (plan.PlannerFactory[pubsub_datasource.Configuration], error)
+	InstanceData() InstanceData
 }
 
 type ApiTransportFactory interface {
@@ -50,7 +56,6 @@ type DefaultFactoryResolver struct {
 	transportOptions *TransportOptions
 
 	static *staticdatasource.Factory[staticdatasource.Configuration]
-	pubsub *pubsub_datasource.Factory[pubsub_datasource.Configuration]
 	log    *zap.Logger
 
 	engineCtx          context.Context
@@ -60,6 +65,7 @@ type DefaultFactoryResolver struct {
 	subscriptionClient graphql_datasource.GraphQLSubscriptionClient
 
 	factoryLogger abstractlogger.Logger
+	instanceData  InstanceData
 }
 
 func NewDefaultFactoryResolver(
@@ -70,8 +76,7 @@ func NewDefaultFactoryResolver(
 	log *zap.Logger,
 	enableSingleFlight bool,
 	enableNetPoll bool,
-	natsPubSubBySourceID map[string]pubsub_datasource.NatsPubSub,
-	kafkaPubSubBySourceID map[string]pubsub_datasource.KafkaPubSub,
+	instanceData InstanceData,
 ) *DefaultFactoryResolver {
 	transportFactory := NewTransport(transportOptions)
 
@@ -117,7 +122,6 @@ func NewDefaultFactoryResolver(
 		transportFactory:   transportFactory,
 		transportOptions:   transportOptions,
 		static:             &staticdatasource.Factory[staticdatasource.Configuration]{},
-		pubsub:             pubsub_datasource.NewFactory(ctx, natsPubSubBySourceID, kafkaPubSubBySourceID),
 		log:                log,
 		factoryLogger:      factoryLogger,
 		engineCtx:          ctx,
@@ -151,14 +155,16 @@ func (d *DefaultFactoryResolver) ResolveStaticFactory() (factory plan.PlannerFac
 	return d.static, nil
 }
 
-func (d *DefaultFactoryResolver) ResolvePubsubFactory() (factory plan.PlannerFactory[pubsub_datasource.Configuration], err error) {
-	return d.pubsub, nil
+func (d *DefaultFactoryResolver) InstanceData() InstanceData {
+	return d.instanceData
 }
 
-func NewLoader(includeInfo bool, resolver FactoryResolver) *Loader {
+func NewLoader(ctx context.Context, includeInfo bool, resolver FactoryResolver, logger *zap.Logger) *Loader {
 	return &Loader{
+		ctx:         ctx,
 		resolver:    resolver,
 		includeInfo: includeInfo,
+		logger:      logger,
 	}
 }
 
@@ -406,71 +412,19 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			}
 
 		case nodev1.DataSourceKind_PUBSUB:
-			var eventConfigurations []pubsub_datasource.EventConfiguration
+			var err error
 
-			for _, eventConfiguration := range in.GetCustomEvents().GetNats() {
-				eventType, err := pubsub_datasource.EventTypeFromString(eventConfiguration.EngineEventConfiguration.Type.String())
-				if err != nil {
-					return nil, fmt.Errorf("invalid event type %q for data source %q: %w", eventConfiguration.EngineEventConfiguration.Type.String(), in.Id, err)
-				}
-
-				var streamConfiguration *pubsub_datasource.NatsStreamConfiguration
-				if eventConfiguration.StreamConfiguration != nil {
-					streamConfiguration = &pubsub_datasource.NatsStreamConfiguration{
-						Consumer:                  eventConfiguration.StreamConfiguration.GetConsumerName(),
-						StreamName:                eventConfiguration.StreamConfiguration.GetStreamName(),
-						ConsumerInactiveThreshold: eventConfiguration.StreamConfiguration.GetConsumerInactiveThreshold(),
-					}
-				}
-
-				eventConfigurations = append(eventConfigurations, pubsub_datasource.EventConfiguration{
-					Metadata: &pubsub_datasource.EventMetadata{
-						ProviderID: eventConfiguration.EngineEventConfiguration.GetProviderId(),
-						Type:       eventType,
-						TypeName:   eventConfiguration.EngineEventConfiguration.GetTypeName(),
-						FieldName:  eventConfiguration.EngineEventConfiguration.GetFieldName(),
-					},
-					Configuration: &pubsub_datasource.NatsEventConfiguration{
-						StreamConfiguration: streamConfiguration,
-						Subjects:            eventConfiguration.GetSubjects(),
-					},
-				})
-			}
-
-			for _, eventConfiguration := range in.GetCustomEvents().GetKafka() {
-				eventType, err := pubsub_datasource.EventTypeFromString(eventConfiguration.EngineEventConfiguration.Type.String())
-				if err != nil {
-					return nil, fmt.Errorf("invalid event type %q for data source %q: %w", eventConfiguration.EngineEventConfiguration.Type.String(), in.Id, err)
-				}
-
-				eventConfigurations = append(eventConfigurations, pubsub_datasource.EventConfiguration{
-					Metadata: &pubsub_datasource.EventMetadata{
-						ProviderID: eventConfiguration.EngineEventConfiguration.GetProviderId(),
-						Type:       eventType,
-						TypeName:   eventConfiguration.EngineEventConfiguration.GetTypeName(),
-						FieldName:  eventConfiguration.EngineEventConfiguration.GetFieldName(),
-					},
-					Configuration: &pubsub_datasource.KafkaEventConfiguration{
-						Topics: eventConfiguration.GetTopics(),
-					},
-				})
-			}
-
-			factory, err := l.resolver.ResolvePubsubFactory()
-			if err != nil {
-				return nil, err
-			}
-
-			out, err = plan.NewDataSourceConfiguration[pubsub_datasource.Configuration](
-				in.Id,
-				factory,
+			out, err = pubsub.GetDataSourceFromConfig(
+				l.ctx,
+				in,
 				l.dataSourceMetaData(in),
-				pubsub_datasource.Configuration{
-					Events: eventConfigurations,
-				},
+				routerEngineConfig.Events,
+				l.logger,
+				l.resolver.InstanceData().hostName,
+				l.resolver.InstanceData().listenAddress,
 			)
 			if err != nil {
-				return nil, fmt.Errorf("error creating data source configuration for data source %s: %w", in.Id, err)
+				return nil, err
 			}
 		default:
 			return nil, fmt.Errorf("unknown data source type %q", in.Kind)

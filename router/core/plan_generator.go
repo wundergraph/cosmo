@@ -16,7 +16,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/introspection_datasource"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -24,6 +23,8 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 )
@@ -236,8 +237,9 @@ func (pg *PlanGenerator) buildRouterConfig(configFilePath string) (*nodev1.Route
 }
 
 func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, logger *zap.Logger, maxDataSourceCollectorsConcurrency uint) error {
-	natSources := map[string]pubsub_datasource.NatsPubSub{}
-	kafkaSources := map[string]pubsub_datasource.KafkaPubSub{}
+	routerEngineConfig := RouterEngineConfiguration{}
+	natSources := map[string]*nats.Adapter{}
+	kafkaSources := map[string]*kafka.Adapter{}
 	for _, ds := range routerConfig.GetEngineConfig().GetDatasourceConfigurations() {
 		if ds.GetKind() != nodev1.DataSourceKind_PUBSUB || ds.GetCustomEvents() == nil {
 			continue
@@ -246,16 +248,21 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 			providerId := natConfig.GetEngineEventConfiguration().GetProviderId()
 			if _, ok := natSources[providerId]; !ok {
 				natSources[providerId] = nil
+				routerEngineConfig.Events.Providers.Nats = append(routerEngineConfig.Events.Providers.Nats, config.NatsEventSource{
+					ID: providerId,
+				})
 			}
 		}
 		for _, kafkaConfig := range ds.GetCustomEvents().GetKafka() {
 			providerId := kafkaConfig.GetEngineEventConfiguration().GetProviderId()
 			if _, ok := kafkaSources[providerId]; !ok {
 				kafkaSources[providerId] = nil
+				routerEngineConfig.Events.Providers.Kafka = append(routerEngineConfig.Events.Providers.Kafka, config.KafkaEventSource{
+					ID: providerId,
+				})
 			}
 		}
 	}
-	pubSubFactory := pubsub_datasource.NewFactory(context.Background(), natSources, kafkaSources)
 
 	var netPollConfig graphql_datasource.NetPollConfiguration
 	netPollConfig.ApplyDefaults()
@@ -268,17 +275,17 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 		graphql_datasource.WithNetPollConfiguration(netPollConfig),
 	)
 
-	loader := NewLoader(false, &DefaultFactoryResolver{
-		engineCtx:          context.Background(),
+	ctx := context.Background()
+	loader := NewLoader(ctx, false, &DefaultFactoryResolver{
+		engineCtx:          ctx,
 		httpClient:         http.DefaultClient,
 		streamingClient:    http.DefaultClient,
 		subscriptionClient: subscriptionClient,
 		transportOptions:   &TransportOptions{SubgraphTransportOptions: NewSubgraphTransportOptions(config.TrafficShapingRules{})},
-		pubsub:             pubSubFactory,
-	})
+	}, logger)
 
 	// this generates the plan configuration using the data source factories from the config package
-	planConfig, err := loader.Load(routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs(), &RouterEngineConfiguration{})
+	planConfig, err := loader.Load(routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs(), &routerEngineConfig)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}

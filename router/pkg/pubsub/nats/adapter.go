@@ -4,59 +4,35 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cespare/xxhash/v2"
-	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"go.uber.org/zap"
 	"io"
 	"sync"
 	"time"
+
+	"github.com/cespare/xxhash/v2"
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
 )
 
-var (
-	_ pubsub_datasource.NatsConnector = (*connector)(nil)
-	_ pubsub_datasource.NatsPubSub    = (*natsPubSub)(nil)
-	_ pubsub.Lifecycle                = (*natsPubSub)(nil)
-)
-
-type connector struct {
-	conn             *nats.Conn
-	logger           *zap.Logger
-	js               jetstream.JetStream
-	hostName         string
-	routerListenAddr string
+// AdapterInterface defines the methods that a NATS adapter should implement
+type AdapterInterface interface {
+	// Subscribe subscribes to the given events and sends updates to the updater
+	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error
+	// Publish publishes the given event to the specified subject
+	Publish(ctx context.Context, event PublishAndRequestEventConfiguration) error
+	// Request sends a request to the specified subject and writes the response to the given writer
+	Request(ctx context.Context, event PublishAndRequestEventConfiguration, w io.Writer) error
+	// Shutdown gracefully shuts down the adapter
+	Shutdown(ctx context.Context) error
 }
 
-func NewConnector(logger *zap.Logger, conn *nats.Conn, js jetstream.JetStream, hostName string, routerListenAddr string) pubsub_datasource.NatsConnector {
-	return &connector{
-		conn:             conn,
-		logger:           logger,
-		js:               js,
-		hostName:         hostName,
-		routerListenAddr: routerListenAddr,
-	}
-}
-
-func (c *connector) New(ctx context.Context) pubsub_datasource.NatsPubSub {
-	return &natsPubSub{
-		ctx:              ctx,
-		conn:             c.conn,
-		js:               c.js,
-		logger:           c.logger.With(zap.String("pubsub", "nats")),
-		closeWg:          sync.WaitGroup{},
-		hostName:         c.hostName,
-		routerListenAddr: c.routerListenAddr,
-	}
-}
-
-type natsPubSub struct {
+// Adapter implements the AdapterInterface for NATS pub/sub
+type Adapter struct {
 	ctx              context.Context
-	conn             *nats.Conn
+	client           *LazyClient
 	logger           *zap.Logger
-	js               jetstream.JetStream
 	closeWg          sync.WaitGroup
 	hostName         string
 	routerListenAddr string
@@ -66,7 +42,7 @@ type natsPubSub struct {
 // We use the hostname and the address the router is listening on, which should provide a good representation
 // of what a unique instance is from the perspective of the client that has started a subscription to this instance
 // and want to restart the subscription after a failure on the client or router side.
-func (p *natsPubSub) getInstanceIdentifier() string {
+func (p *Adapter) getInstanceIdentifier() string {
 	return fmt.Sprintf("%s-%s", p.hostName, p.routerListenAddr)
 }
 
@@ -74,7 +50,7 @@ func (p *natsPubSub) getInstanceIdentifier() string {
 // we need to make sure that the durable consumer name is unique for each instance and subjects to prevent
 // multiple routers from changing the same consumer, which would lead to message loss and wrong messages delivered
 // to the subscribers
-func (p *natsPubSub) getDurableConsumerName(durableName string, subjects []string) (string, error) {
+func (p *Adapter) getDurableConsumerName(durableName string, subjects []string) (string, error) {
 	subjHash := xxhash.New()
 	_, err := subjHash.WriteString(p.getInstanceIdentifier())
 	if err != nil {
@@ -90,7 +66,7 @@ func (p *natsPubSub) getDurableConsumerName(durableName string, subjects []strin
 	return fmt.Sprintf("%s-%x", durableName, subjHash.Sum64()), nil
 }
 
-func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.NatsSubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
+func (p *Adapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "subscribe"),
@@ -110,10 +86,16 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 		if event.StreamConfiguration.ConsumerInactiveThreshold > 0 {
 			consumerConfig.InactiveThreshold = time.Duration(event.StreamConfiguration.ConsumerInactiveThreshold) * time.Second
 		}
-		consumer, err := p.js.CreateOrUpdateConsumer(ctx, event.StreamConfiguration.StreamName, consumerConfig)
+		js, err := p.client.GetJetStream()
+		if err != nil {
+			log.Error("getting jetstream client", zap.Error(err))
+			return datasource.NewError("failed to get jetstream client", err)
+		}
+
+		consumer, err := js.CreateOrUpdateConsumer(ctx, event.StreamConfiguration.StreamName, consumerConfig)
 		if err != nil {
 			log.Error("creating or updating consumer", zap.Error(err))
-			return pubsub.NewError(fmt.Sprintf(`failed to create or update consumer for stream "%s"`, event.StreamConfiguration.StreamName), err)
+			return datasource.NewError(fmt.Sprintf(`failed to create or update consumer for stream "%s"`, event.StreamConfiguration.StreamName), err)
 		}
 
 		p.closeWg.Add(1)
@@ -158,13 +140,19 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 		return nil
 	}
 
+	nc, err := p.client.GetClient()
+	if err != nil {
+		log.Error("getting nats client", zap.Error(err))
+		return datasource.NewError("failed to get nats client", err)
+	}
+
 	msgChan := make(chan *nats.Msg)
 	subscriptions := make([]*nats.Subscription, len(event.Subjects))
 	for i, subject := range event.Subjects {
-		subscription, err := p.conn.ChanSubscribe(subject, msgChan)
+		subscription, err := nc.ChanSubscribe(subject, msgChan)
 		if err != nil {
 			log.Error("subscribing to NATS subject", zap.Error(err), zap.String("subscription_subject", subject))
-			return pubsub.NewError(fmt.Sprintf(`failed to subscribe to NATS subject "%s"`, subject), err)
+			return datasource.NewError(fmt.Sprintf(`failed to subscribe to NATS subject "%s"`, subject), err)
 		}
 		subscriptions[i] = subscription
 	}
@@ -206,7 +194,7 @@ func (p *natsPubSub) Subscribe(ctx context.Context, event pubsub_datasource.Nats
 	return nil
 }
 
-func (p *natsPubSub) Publish(_ context.Context, event pubsub_datasource.NatsPublishAndRequestEventConfiguration) error {
+func (p *Adapter) Publish(_ context.Context, event PublishAndRequestEventConfiguration) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "publish"),
@@ -215,16 +203,22 @@ func (p *natsPubSub) Publish(_ context.Context, event pubsub_datasource.NatsPubl
 
 	log.Debug("publish", zap.ByteString("data", event.Data))
 
-	err := p.conn.Publish(event.Subject, event.Data)
+	nc, err := p.client.GetClient()
+	if err != nil {
+		log.Error("getting nats client", zap.Error(err))
+		return datasource.NewError("failed to get nats client", err)
+	}
+
+	err = nc.Publish(event.Subject, event.Data)
 	if err != nil {
 		log.Error("publish error", zap.Error(err))
-		return pubsub.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
+		return datasource.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
 	}
 
 	return nil
 }
 
-func (p *natsPubSub) Request(ctx context.Context, event pubsub_datasource.NatsPublishAndRequestEventConfiguration, w io.Writer) error {
+func (p *Adapter) Request(ctx context.Context, event PublishAndRequestEventConfiguration, w io.Writer) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "request"),
@@ -233,10 +227,16 @@ func (p *natsPubSub) Request(ctx context.Context, event pubsub_datasource.NatsPu
 
 	log.Debug("request", zap.ByteString("data", event.Data))
 
-	msg, err := p.conn.RequestWithContext(ctx, event.Subject, event.Data)
+	nc, err := p.client.GetClient()
+	if err != nil {
+		log.Error("getting nats client", zap.Error(err))
+		return datasource.NewError("failed to get nats client", err)
+	}
+
+	msg, err := nc.RequestWithContext(ctx, event.Subject, event.Data)
 	if err != nil {
 		log.Error("request error", zap.Error(err))
-		return pubsub.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)
+		return datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)
 	}
 
 	_, err = w.Write(msg.Data)
@@ -248,34 +248,59 @@ func (p *natsPubSub) Request(ctx context.Context, event pubsub_datasource.NatsPu
 	return err
 }
 
-func (p *natsPubSub) flush(ctx context.Context) error {
-	return p.conn.FlushWithContext(ctx)
+func (p *Adapter) flush(ctx context.Context) error {
+	nc, err := p.client.GetClient()
+	if err != nil {
+		return err
+	}
+	return nc.FlushWithContext(ctx)
 }
 
-func (p *natsPubSub) Shutdown(ctx context.Context) error {
+func (p *Adapter) Shutdown(ctx context.Context) error {
+	nc, err := p.client.GetClient()
+	if err != nil {
+		return nil // Already disconnected or failed to connect
+	}
 
-	if p.conn.IsClosed() {
+	if nc.IsClosed() {
 		return nil
 	}
 
-	var err error
+	var shutdownErr error
 
 	fErr := p.flush(ctx)
 	if fErr != nil {
-		err = errors.Join(err, fErr)
+		shutdownErr = errors.Join(shutdownErr, fErr)
 	}
 
-	drainErr := p.conn.Drain()
+	drainErr := nc.Drain()
 	if drainErr != nil {
-		err = errors.Join(err, drainErr)
+		shutdownErr = errors.Join(shutdownErr, drainErr)
 	}
 
 	// Wait for all subscriptions to be closed
 	p.closeWg.Wait()
 
-	if err != nil {
-		return fmt.Errorf("nats pubsub shutdown: %w", err)
+	if shutdownErr != nil {
+		return fmt.Errorf("nats pubsub shutdown: %w", shutdownErr)
 	}
 
 	return nil
+}
+
+func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats.Option, hostName string, routerListenAddr string) (AdapterInterface, error) {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
+	client := NewLazyClient(url, opts...)
+
+	return &Adapter{
+		ctx:              ctx,
+		client:           client,
+		logger:           logger.With(zap.String("pubsub", "nats")),
+		closeWg:          sync.WaitGroup{},
+		hostName:         hostName,
+		routerListenAddr: routerListenAddr,
+	}, nil
 }
