@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.197.1](https://github.com/wundergraph/cosmo/compare/router@0.197.0...router@0.197.1) (2025-04-11)
+
+### Bug Fixes
+
+* **router:** graceful shutdown blocked by in-flight requests due to lock ([#1771](https://github.com/wundergraph/cosmo/issues/1771)) ([c98453b](https://github.com/wundergraph/cosmo/commit/c98453bda9dc411dd611f4c141dae314ec5ea5f9)) (@Noroth)
+
 # [0.197.0](https://github.com/wundergraph/cosmo/compare/router@0.196.1...router@0.197.0) (2025-04-10)
 
 ### Bug Fixes
