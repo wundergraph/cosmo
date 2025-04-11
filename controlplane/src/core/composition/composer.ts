@@ -691,7 +691,7 @@ export class Composer {
               url: subgraph.routingUrl,
               definitions: parse(inputSubgraph.newSchemaSDL),
             });
-          } else {
+          } else if (subgraph.schemaSDL !== '') {
             subgraphsToBeComposed.push({
               name: subgraph.name,
               url: subgraph.routingUrl,
