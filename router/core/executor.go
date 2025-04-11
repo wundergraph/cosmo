@@ -235,6 +235,8 @@ func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([
 			opts = append(opts, nats.Token(*eventSource.Authentication.Token))
 		} else if eventSource.Authentication.UserInfo.Username != nil && eventSource.Authentication.UserInfo.Password != nil {
 			opts = append(opts, nats.UserInfo(*eventSource.Authentication.UserInfo.Username, *eventSource.Authentication.UserInfo.Password))
+		} else if eventSource.Authentication.NatsCredentialsFileAuthentication.CredentialsFile != nil {
+			opts = append(opts, nats.UserCredentials(*eventSource.Authentication.NatsCredentialsFileAuthentication.CredentialsFile))
 		}
 	}
 

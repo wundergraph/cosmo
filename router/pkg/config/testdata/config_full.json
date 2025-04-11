@@ -477,7 +477,8 @@
               "Password": "admin",
               "Username": "admin"
             },
-            "Token": null
+            "Token": null,
+            "CredentialsFile": null
           }
         }
       ],
