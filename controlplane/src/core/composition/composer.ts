@@ -659,26 +659,6 @@ export class Composer {
     });
   }
 
-  composeWithDeletedSubgraph(subgraphLabels: Label[], subgraphName: string, namespaceId: string) {
-    return this.composeWithLabels(subgraphLabels, namespaceId, (subgraphs) => {
-      const subgraphsToBeComposed: Array<Subgraph> = [];
-
-      const filteredSubgraphs = subgraphs.filter((s) => s.name !== subgraphName);
-
-      for (const subgraph of subgraphs) {
-        if (subgraph.name !== subgraphName && subgraph.schemaSDL !== '') {
-          subgraphsToBeComposed.push({
-            name: subgraph.name,
-            url: subgraph.routingUrl,
-            definitions: parse(subgraph.schemaSDL),
-          });
-        }
-      }
-
-      return [filteredSubgraphs, subgraphsToBeComposed];
-    });
-  }
-
   async composeWithProposedSchemas({
     inputSubgraphs,
     graphs,
