@@ -138,4 +138,7 @@ export type AuditLogFullAction =
   | 'proposal.updated'
   | 'proposal.approved'
   | 'proposal.published'
-  | 'proposal.closed';
+  | 'proposal.closed'
+  | 'proposal.enabled'
+  | 'proposal.disabled'
+  | 'namespace_proposal_config.updated';

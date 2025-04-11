@@ -79,11 +79,12 @@ const PoliciesPage: NextPageWithLayout = () => {
     !data ||
     !graphPruningConfig ||
     !checksConfig ||
-    !proposalConfig ||
     data?.response?.code !== EnumStatusCode.OK ||
     graphPruningConfig?.response?.code !== EnumStatusCode.OK ||
     checksConfig?.response?.code !== EnumStatusCode.OK ||
-    proposalConfig?.response?.code !== EnumStatusCode.OK
+    !proposalConfig ||
+    (proposalConfig?.response?.code !== EnumStatusCode.OK &&
+      proposalConfig?.response?.code !== EnumStatusCode.ERR_UPGRADE_PLAN)
   ) {
     return (
       <EmptyState

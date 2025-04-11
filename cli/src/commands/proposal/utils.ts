@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { program } from 'commander';
 import pc from 'picocolors';
 import { resolve } from 'pathe';
-import { Label } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb.js';
+import { Label } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { splitLabel } from '@wundergraph/cosmo-shared';
 
 // Define interfaces for parsing parameters

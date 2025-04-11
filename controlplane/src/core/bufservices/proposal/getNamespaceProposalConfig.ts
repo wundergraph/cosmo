@@ -38,8 +38,8 @@ export function getNamespaceProposalConfig(
           details: `Upgrade to a enterprise plan to enable proposals.`,
         },
         enabled: false,
-        checkSeverityLevel: LintSeverity.warn,
-        publishSeverityLevel: LintSeverity.warn,
+        checkSeverityLevel: LintSeverity.error,
+        publishSeverityLevel: LintSeverity.error,
       };
     }
 
@@ -51,8 +51,8 @@ export function getNamespaceProposalConfig(
           details: `Namespace '${req.namespace}' not found`,
         },
         enabled: false,
-        checkSeverityLevel: LintSeverity.warn,
-        publishSeverityLevel: LintSeverity.warn,
+        checkSeverityLevel: LintSeverity.error,
+        publishSeverityLevel: LintSeverity.error,
       };
     }
 
@@ -62,8 +62,8 @@ export function getNamespaceProposalConfig(
           code: EnumStatusCode.OK,
         },
         enabled: false,
-        checkSeverityLevel: LintSeverity.warn,
-        publishSeverityLevel: LintSeverity.warn,
+        checkSeverityLevel: LintSeverity.error,
+        publishSeverityLevel: LintSeverity.error,
       };
     }
 
@@ -74,8 +74,8 @@ export function getNamespaceProposalConfig(
           code: EnumStatusCode.ERR,
         },
         enabled: true,
-        checkSeverityLevel: LintSeverity.warn,
-        publishSeverityLevel: LintSeverity.warn,
+        checkSeverityLevel: LintSeverity.error,
+        publishSeverityLevel: LintSeverity.error,
       };
     }
 

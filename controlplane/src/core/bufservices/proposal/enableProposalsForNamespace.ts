@@ -11,6 +11,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
+import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 
 export function enableProposalsForNamespace(
   opts: RouterOptions,
@@ -26,6 +27,7 @@ export function enableProposalsForNamespace(
     const organizationRepo = new OrganizationRepository(logger, opts.db);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const proposalRepo = new ProposalRepository(opts.db);
+    const auditLogRepo = new AuditLogRepository(opts.db);
 
     if (!authContext.hasWriteAccess) {
       return {
@@ -69,6 +71,20 @@ export function enableProposalsForNamespace(
     } else {
       await proposalRepo.deleteProposalConfig({ namespaceId: namespace.id });
     }
+
+    await auditLogRepo.addAuditLog({
+      organizationId: authContext.organizationId,
+      auditAction: req.enableProposals ? 'proposal.enabled' : 'proposal.disabled',
+      action: req.enableProposals ? 'enabled' : 'disabled',
+      actorId: authContext.userId,
+      auditableType: 'namespace',
+      auditableDisplayName: namespace.name,
+      actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
+      actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+      targetNamespaceId: namespace.id,
+      targetNamespaceDisplayName: namespace.name,
+    });
 
     return {
       response: {
