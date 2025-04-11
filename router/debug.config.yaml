@@ -5,7 +5,18 @@
 
 version: "1"
 
-router_config_path: "./__schemas/config.json"
+execution_config:
+  file:
+    path: "./__schemas/config.json"
+
+log_level: debug
+
+telemetry:
+  metrics:
+    prometheus:
+      schema_usage:
+        enabled: true
+        include_operation_sha: true
 
 engine:
   max_concurrent_resolvers: 1024
