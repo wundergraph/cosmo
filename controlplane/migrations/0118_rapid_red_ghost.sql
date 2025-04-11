@@ -39,7 +39,6 @@ CREATE TABLE IF NOT EXISTS "proposals" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"created_by_id" uuid,
 	"state" "proposal_state" NOT NULL,
-	"did_hub_create" boolean DEFAULT false NOT NULL,
 	CONSTRAINT "federated_graph_proposal_name" UNIQUE("federated_graph_id","name")
 );
 --> statement-breakpoint

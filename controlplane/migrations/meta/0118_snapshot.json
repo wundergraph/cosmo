@@ -1,5 +1,5 @@
 {
-  "id": "81ea0697-4421-4712-a67a-73c0de6d7320",
+  "id": "5b0a1f02-c9bb-438b-8682-adb3c56ca198",
   "prevId": "116b5e0b-d914-427c-bdc7-dc49310e00c2",
   "version": "7",
   "dialect": "postgresql",
@@ -4726,13 +4726,6 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
-        },
-        "did_hub_create": {
-          "name": "did_hub_create",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         }
       },
       "indexes": {

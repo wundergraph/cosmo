@@ -19,7 +19,6 @@ export class ProposalRepository {
     name,
     userId,
     proposalSubgraphs,
-    didHubCreate,
   }: {
     federatedGraphId: string;
     name: string;
@@ -33,7 +32,6 @@ export class ProposalRepository {
       currentSchemaVersionId?: string;
       labels: Label[];
     }[];
-    didHubCreate: boolean;
   }): Promise<ProposalDTO> {
     const proposal = await this.db
       .insert(schema.proposals)
@@ -42,7 +40,6 @@ export class ProposalRepository {
         name,
         createdById: userId,
         state: 'DRAFT',
-        didHubCreate,
       })
       .returning();
 

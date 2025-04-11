@@ -202,7 +202,6 @@ export default (opts: BaseCommandOptions) => {
         namespace: options.namespace,
         name,
         subgraphs,
-        didHubCreate: false,
       },
       {
         headers: getBaseHeaders(),

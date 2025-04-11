@@ -2186,7 +2186,6 @@ export const proposals = pgTable(
       onDelete: 'set null',
     }),
     state: proposalStateEnum('state').notNull(),
-    didHubCreate: boolean('did_hub_create').default(false).notNull(),
   },
   (t) => ({
     uniqueFederatedGraphClientName: unique('federated_graph_proposal_name').on(t.federatedGraphId, t.name),

@@ -283,7 +283,6 @@ export function createProposal(
       name: req.name,
       userId: authContext.userId,
       proposalSubgraphs,
-      didHubCreate: req.didHubCreate,
     });
 
     await auditLogRepo.addAuditLog({
