@@ -26,6 +26,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -1148,6 +1149,25 @@ func (e *Environment) Observer() *observer.ObservedLogs {
 	}
 
 	return e.logObserver
+}
+
+func (e *Environment) SignalRouterProcess(signal syscall.Signal) {
+	if e.routerCmd == nil {
+		e.t.Errorf("cannot send signal, router is not run by command")
+	}
+
+	err := e.routerCmd.Process.Signal(signal)
+	if err != nil {
+		e.t.Errorf("could not signal router process: %s", err)
+	}
+}
+
+func (e *Environment) GetRouterProcessCwd() string {
+	if e.routerCmd == nil {
+		e.t.Errorf("cannot get cwd, router is not run by command")
+	}
+
+	return e.routerCmd.Dir
 }
 
 // Shutdown closes all resources associated with the test environment. Can be called multiple times but will only
