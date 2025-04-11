@@ -6,6 +6,9 @@ on:
       - reopened
       - edited
       - synchronize
+    branches-ignore:
+      # release-please PRs are not required to have a manual description
+      - 'release-please**'
 
 permissions:
   pull-requests: read
@@ -25,24 +28,19 @@ jobs:
             const prDescription = context.payload.pull_request.body || '';
             const minLength = 20; // Minimum required length for PR description
             
-            // Extract content between "## Motivation and Context" and "## Checklist"
-            const motivationRegex = /## Motivation and Context\s*([\s\S]*?)(?=## Checklist|$)/;
-            const motivationMatch = prDescription.match(motivationRegex);
-            const motivationContent = motivationMatch ? motivationMatch[1].trim() : '';
+            // Try to isolate content before the checklist
+            const checklistHeader = '## Checklist';
+            const checklistIndex = prDescription.indexOf(checklistHeader);
+            const relevantDescription = checklistIndex !== -1 ? prDescription.substring(0, checklistIndex) : prDescription;
             
-            if (!motivationContent || motivationContent.length < minLength) {
-              core.setFailed(`The "Motivation and Context" section of your PR description is too short or missing. Please add a proper description of at least ${minLength} characters that explains the purpose of your changes. You can also use GitHub Copilot pull request summaries to help you write a good description.`);
-              return;
-            }
-            
-            // Check if description only contains comments
-            const contentWithoutComments = motivationContent
+            // Remove common boilerplate like HTML comments from the relevant section
+            const contentWithoutComments = relevantDescription
               .replace(/<!--[\s\S]*?-->/g, '') // Remove HTML comments
               .trim();
               
             if (contentWithoutComments.length < minLength) {
-              core.setFailed('The "Motivation and Context" section of your PR description contains mostly comments. Please add a proper description that explains the purpose of your changes.');
+              core.setFailed(`Your PR description before the '## Checklist' section is too short or contains mainly boilerplate/comments. Please add a proper description of at least ${minLength} characters that explains the purpose of your changes, excluding comments. You can also use GitHub Copilot pull request summaries to help you write a good description.`);
               return;
             }
             
-            console.log('PR description "Motivation and Context" section is valid! ✅'); 
+            console.log('PR description has sufficient content before the checklist! ✅'); 
