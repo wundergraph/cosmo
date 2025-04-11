@@ -298,11 +298,10 @@ export function checkSubgraphSchema(
       inspectorChanges: [],
     });
 
-    const result = req.delete
-      ? await composer.composeWithDeletedSubgraph(subgraph.labels, subgraph.name, subgraph.namespaceId)
-      : await composer.composeWithProposedSDL(subgraph.labels, subgraph.name, subgraph.namespaceId, newSchemaSDL);
-
-    const composedGraphs = result.compositions;
+    const { composedGraphs } = await composer.composeWithProposedSchemas({
+      inputSubgraphs: checkSubgraphs,
+      graphs: federatedGraphs,
+    });
 
     await schemaCheckRepo.createSchemaCheckCompositions({
       schemaCheckID,
