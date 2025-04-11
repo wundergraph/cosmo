@@ -400,7 +400,7 @@ export class SchemaCheckRepository {
   }: {
     data: {
       schemaCheckId: string;
-      subgraphId: string;
+      subgraphId?: string;
       subgraphName: string;
       proposedSubgraphSchemaSDL: string;
       isDeleted: boolean;

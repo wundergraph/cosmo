@@ -191,7 +191,7 @@ export class RouterConfigUploadError extends Error {
 export type ComposeDeploymentError = RouterConfigUploadError | AdmissionError | Error;
 
 export type CheckSubgraph = {
-  subgraph: SubgraphDTO;
+  subgraph?: SubgraphDTO;
   checkSubgraphId: string;
   newSchemaSDL: string;
   newGraphQLSchema?: GraphQLSchema;
@@ -698,6 +698,22 @@ export class Composer {
               definitions: parse(subgraph.schemaSDL),
             });
           }
+        }
+
+        // Handles new subgraphs
+        for (const [subgraphName, subgraph] of inputSubgraphs.entries()) {
+          if (subgraph.subgraph) {
+            continue;
+          }
+          checkSubgraphsByFedGraph.set(graph.id, [
+            ...(checkSubgraphsByFedGraph.get(graph.id) || []),
+            subgraph.checkSubgraphId,
+          ]);
+          subgraphsToBeComposed.push({
+            name: subgraphName,
+            url: '',
+            definitions: parse(subgraph.newSchemaSDL),
+          });
         }
 
         const contracts = await this.contractRepo.bySourceFederatedGraphId(graph.id);

@@ -89,6 +89,7 @@ message CheckSubgraphSchemaRequest {
   string namespace = 5;
   optional bool skip_traffic_check = 6;
   optional VCSContext vcsContext = 7;
+  repeated Label labels = 8;
 }
 
 message FixSubgraphSchemaRequest {
