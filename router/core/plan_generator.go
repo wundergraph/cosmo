@@ -23,6 +23,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 
@@ -282,7 +283,7 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 		streamingClient:    http.DefaultClient,
 		subscriptionClient: subscriptionClient,
 		transportOptions:   &TransportOptions{SubgraphTransportOptions: NewSubgraphTransportOptions(config.TrafficShapingRules{})},
-	}, logger)
+	}, logger, func(provider datasource.PubSubProvider) {})
 
 	// this generates the plan configuration using the data source factories from the config package
 	planConfig, err := loader.Load(routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs(), &routerEngineConfig)

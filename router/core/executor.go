@@ -18,6 +18,7 @@ import (
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 )
 
 type ExecutorConfigurationBuilder struct {
@@ -30,6 +31,8 @@ type ExecutorConfigurationBuilder struct {
 	transportOptions          *TransportOptions
 	subscriptionClientOptions *SubscriptionClientOptions
 	instanceData              InstanceData
+
+	addPubSubProviderCallback func(provider datasource.PubSubProvider)
 }
 
 type Executor struct {
@@ -207,7 +210,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		routerEngineCfg.Execution.EnableSingleFlight,
 		routerEngineCfg.Execution.EnableNetPoll,
 		b.instanceData,
-	), b.logger)
+	), b.logger, b.addPubSubProviderCallback)
 
 	// this generates the plan config using the data source factories from the config package
 	planConfig, err := loader.Load(engineConfig, subgraphs, routerEngineCfg)

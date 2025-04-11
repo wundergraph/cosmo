@@ -29,6 +29,11 @@ func (m *EngineDataSourceMockAdapter) Publish(ctx context.Context, event Publish
 	return args.Error(0)
 }
 
+func (m *EngineDataSourceMockAdapter) Shutdown(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
 // MockSubscriptionUpdater implements resolve.SubscriptionUpdater
 type MockSubscriptionUpdater struct {
 	mock.Mock

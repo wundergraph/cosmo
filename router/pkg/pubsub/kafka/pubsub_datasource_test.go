@@ -31,6 +31,11 @@ func (m *MockAdapter) Publish(ctx context.Context, event PublishEventConfigurati
 	return args.Error(0)
 }
 
+func (m *MockAdapter) Shutdown(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
 func TestKafkaPubSubDataSource(t *testing.T) {
 	// Create event configuration with required fields
 	engineEventConfig := &nodev1.EngineEventConfiguration{

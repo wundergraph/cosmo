@@ -74,6 +74,7 @@ func NewAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt) (Adapte
 type AdapterInterface interface {
 	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error
 	Publish(ctx context.Context, event PublishEventConfiguration) error
+	Shutdown(ctx context.Context) error
 }
 
 // Adapter is a Kafka pubsub implementation.

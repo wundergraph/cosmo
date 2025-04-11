@@ -44,6 +44,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
@@ -85,6 +86,7 @@ type (
 		otlpEngineMetrics       *rmetric.EngineMetrics
 		prometheusEngineMetrics *rmetric.EngineMetrics
 		instanceData            InstanceData
+		pubSubProviders         []datasource.PubSubProvider
 	}
 )
 
@@ -880,6 +882,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		SubgraphErrorPropagation: s.subgraphErrorPropagation,
 	}
 
+	var pubSubProviders []datasource.PubSubProvider
+
+	addPubSubProviderCallback := func(provider datasource.PubSubProvider) {
+		pubSubProviders = append(pubSubProviders, provider)
+	}
+
 	ecb := &ExecutorConfigurationBuilder{
 		introspection:  s.introspection,
 		baseURL:        s.baseURL,
@@ -909,6 +917,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
 		},
+		addPubSubProviderCallback: addPubSubProviderCallback,
 	}
 
 	executor, err := ecb.Build(
@@ -926,6 +935,16 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
+	}
+
+	if len(pubSubProviders) > 0 {
+		for _, provider := range pubSubProviders {
+			if err := provider.Startup(ctx); err != nil {
+				return nil, fmt.Errorf("failed to startup pubsub provider: %w", err)
+			}
+		}
+
+		s.pubSubProviders = pubSubProviders
 	}
 
 	operationProcessor := NewOperationProcessor(OperationProcessorOptions{
@@ -1243,6 +1262,12 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	if s.prometheusEngineMetrics != nil {
 		if err := s.prometheusEngineMetrics.Shutdown(); err != nil {
 			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
+	for _, provider := range s.pubSubProviders {
+		if providerErr := provider.Shutdown(ctx); providerErr != nil {
+			finalErr = errors.Join(finalErr, providerErr)
 		}
 	}
 

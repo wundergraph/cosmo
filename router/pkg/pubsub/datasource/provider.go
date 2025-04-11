@@ -14,5 +14,7 @@ type ProviderFactory func(ctx context.Context, in *nodev1.DataSourceConfiguratio
 type ArgumentTemplateCallback func(tpl string) (string, error)
 
 type PubSubProvider interface {
+	Startup(ctx context.Context) error
+	Shutdown(ctx context.Context) error
 	FindPubSubDataSource(typeName string, fieldName string, extractFn ArgumentTemplateCallback) (PubSubDataSource, error)
 }

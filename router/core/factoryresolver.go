@@ -11,6 +11,7 @@ import (
 
 	"github.com/buger/jsonparser"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -30,8 +31,9 @@ type Loader struct {
 	ctx      context.Context
 	resolver FactoryResolver
 	// includeInfo controls whether additional information like type usage and field usage is included in the plan de
-	includeInfo bool
-	logger      *zap.Logger
+	includeInfo               bool
+	logger                    *zap.Logger
+	addPubSubProviderCallback func(provider datasource.PubSubProvider)
 }
 
 type InstanceData struct {
@@ -159,12 +161,13 @@ func (d *DefaultFactoryResolver) InstanceData() InstanceData {
 	return d.instanceData
 }
 
-func NewLoader(ctx context.Context, includeInfo bool, resolver FactoryResolver, logger *zap.Logger) *Loader {
+func NewLoader(ctx context.Context, includeInfo bool, resolver FactoryResolver, logger *zap.Logger, addPubSubProviderCallback func(provider datasource.PubSubProvider)) *Loader {
 	return &Loader{
-		ctx:         ctx,
-		resolver:    resolver,
-		includeInfo: includeInfo,
-		logger:      logger,
+		ctx:                       ctx,
+		resolver:                  resolver,
+		includeInfo:               includeInfo,
+		logger:                    logger,
+		addPubSubProviderCallback: addPubSubProviderCallback,
 	}
 }
 
@@ -414,14 +417,33 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		case nodev1.DataSourceKind_PUBSUB:
 			var err error
 
-			out, err = pubsub.GetDataSourceFromConfig(
-				l.ctx,
-				in,
-				l.dataSourceMetaData(in),
-				routerEngineConfig.Events,
-				l.logger,
-				l.resolver.InstanceData().hostName,
-				l.resolver.InstanceData().listenAddress,
+			var providers []datasource.PubSubProvider
+
+			dsMeta := l.dataSourceMetaData(in)
+			for _, providerFactory := range pubsub.GetProviderFactories() {
+				provider, err := providerFactory(
+					l.ctx,
+					in,
+					dsMeta,
+					routerEngineConfig.Events,
+					l.logger,
+					l.resolver.InstanceData().hostName,
+					l.resolver.InstanceData().listenAddress,
+				)
+				if err != nil {
+					return nil, err
+				}
+				if provider != nil {
+					providers = append(providers, provider)
+					l.addPubSubProviderCallback(provider)
+				}
+			}
+
+			out, err = plan.NewDataSourceConfiguration(
+				in.Id,
+				datasource.NewFactory(l.ctx, routerEngineConfig.Events, providers),
+				dsMeta,
+				providers,
 			)
 			if err != nil {
 				return nil, err

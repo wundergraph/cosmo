@@ -101,3 +101,16 @@ func (c *PubSubProvider) FindPubSubDataSource(typeName string, fieldName string,
 	}
 	return nil, nil
 }
+
+func (c *PubSubProvider) Startup(ctx context.Context) error {
+	return nil
+}
+
+func (c *PubSubProvider) Shutdown(ctx context.Context) error {
+	for _, provider := range c.Providers {
+		if err := provider.Shutdown(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}

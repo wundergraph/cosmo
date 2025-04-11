@@ -31,6 +31,11 @@ func (m *mockAdapter) Publish(ctx context.Context, event PublishEventConfigurati
 	return args.Error(0)
 }
 
+func (m *mockAdapter) Shutdown(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
 func TestBuildKafkaOptions(t *testing.T) {
 	t.Run("basic configuration", func(t *testing.T) {
 		cfg := config.KafkaEventSource{
