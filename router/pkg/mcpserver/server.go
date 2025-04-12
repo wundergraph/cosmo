@@ -444,6 +444,8 @@ func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ct
 			return nil, fmt.Errorf("failed to create request: %w", err)
 		}
 
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
 		resp, err := s.httpClient.Do(req)
 		if err != nil {
 			return nil, fmt.Errorf("failed to send request: %w", err)
@@ -530,15 +532,16 @@ func (s *GraphQLSchemaServer) handleGraphQLOperationInfo() func(ctx context.Cont
 		executionTips := []string{
 			fmt.Sprintf("Use the exact 'query' string provided for the '%s' operation.", targetOp.Name),
 			"The 'schema' describes the expected JSON format for the input variables. If 'schema' is null or empty, no variables are needed.",
-			"Send a POST request to " + s.routerGraphQLEndpoint + " with 'Content-Type: application/json'.",
-			fmt.Sprintf("The request body should follow this structure: {\"query\": \"<operation_query>\", \"variables\": <your_variables_object>}"),
-			"If the operation requires no variables (schema is empty/null), send: {\"query\": \"<operation_query>\", \"variables\": {}}",
+			"Send a POST request to " + s.routerGraphQLEndpoint + " with 'Content-Type: application/json; charset=utf-8'.",
+			"The request body should follow this structure: {\"query\": \"<operation_query>\", \"variables\": <your_variables_object>}",
+			"If the operation requires no variables (schema is empty/null), send: {\"query\": \"<operation_query>\"}",
+			"IMPORTANT: Do not modify, reformat, or manipulate the query string in any way. Use it exactly as provided.",
 		}
 
 		// Add warning about side effects for mutations
 		if hasSideEffects {
 			executionTips = append(executionTips,
-				fmt.Sprintf("WARNING: This is a mutation operation that will modify data. Make sure you understand the consequences before executing it."))
+				"WARNING: This is a mutation operation that will modify data. Make sure you understand the consequences before executing it.")
 		}
 
 		response := GraphQLOperationInfoResponse{
