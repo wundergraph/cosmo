@@ -21,6 +21,7 @@ type Operation struct {
 	OperationString string
 	Description     string
 	JSONSchema      json.RawMessage
+	OperationType   string // "query", "mutation", or "subscription"
 }
 
 // OperationLoader loads GraphQL operations from files in a directory
@@ -70,8 +71,8 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 			return fmt.Errorf("failed to parse operation in file %s: %w", path, err)
 		}
 
-		// Extract the operation name
-		opName, err := getOperationName(&opDoc)
+		// Extract the operation name and type
+		opName, opType, err := getOperationNameAndType(&opDoc)
 		if err != nil {
 			return fmt.Errorf("failed to get operation name from file %s: %w", path, err)
 		}
@@ -87,6 +88,7 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 			FilePath:        path,
 			Document:        opDoc,
 			OperationString: operationString,
+			OperationType:   opType,
 		})
 
 		return nil
@@ -130,16 +132,35 @@ func parseOperation(path string, operation string, report *operationreport.Repor
 	return opDoc, nil
 }
 
-// getOperationName extracts the name of the first operation in a document
-func getOperationName(doc *ast.Document) (string, error) {
+// getOperationNameAndType extracts the name and type of the first operation in a document
+func getOperationNameAndType(doc *ast.Document) (string, string, error) {
 	for _, ref := range doc.RootNodes {
 		if ref.Kind == ast.NodeKindOperationDefinition {
 			opDef := doc.OperationDefinitions[ref.Ref]
-			if opDef.Name.Length() > 0 {
-				return doc.Input.ByteSliceString(opDef.Name), nil
+			opType := ""
+			switch opDef.OperationType {
+			case ast.OperationTypeQuery:
+				opType = "query"
+			case ast.OperationTypeMutation:
+				opType = "mutation"
+			case ast.OperationTypeSubscription:
+				opType = "subscription" // Not supported yet
+			default:
+				return "", "", fmt.Errorf("unknown operation type %d", opDef.OperationType)
 			}
-			return "", nil
+
+			if opDef.Name.Length() > 0 {
+				return doc.Input.ByteSliceString(opDef.Name), opType, nil
+			}
+			return "", opType, nil
 		}
 	}
-	return "", fmt.Errorf("no operation found in document")
+	return "", "", fmt.Errorf("no operation found in document")
+}
+
+// getOperationName extracts the name of the first operation in a document
+// Kept for backward compatibility
+func getOperationName(doc *ast.Document) (string, error) {
+	name, _, err := getOperationNameAndType(doc)
+	return name, err
 }

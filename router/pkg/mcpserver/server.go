@@ -81,8 +81,10 @@ type OperationsResponse struct {
 
 // SimpleOperationInfo contains basic information about a GraphQL operation for listing.
 type SimpleOperationInfo struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Name           string `json:"name"`
+	Description    string `json:"description"`
+	OperationType  string `json:"operationType"`
+	HasSideEffects bool   `json:"hasSideEffects"`
 }
 
 // ListOperationsResponse is the response structure for the list_graphql_operations tool.
@@ -93,12 +95,14 @@ type ListOperationsResponse struct {
 
 // GraphQLOperationInfoResponse is the response structure for the graphql_operation_info tool.
 type GraphQLOperationInfoResponse struct {
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	Schema      json.RawMessage `json:"schema,omitempty"`
-	Query       string          `json:"query"`
-	LLMGuidance LLMGuidance     `json:"llmGuidance"`
-	Endpoint    string          `json:"endpoint"`
+	Name           string          `json:"name"`
+	Description    string          `json:"description"`
+	OperationType  string          `json:"operationType"`
+	HasSideEffects bool            `json:"hasSideEffects"`
+	Schema         json.RawMessage `json:"schema,omitempty"`
+	Query          string          `json:"query"`
+	LLMGuidance    LLMGuidance     `json:"llmGuidance"`
+	Endpoint       string          `json:"endpoint"`
 }
 
 // GraphQLOperationInfoInput defines the input structure for the graphql_operation_info tool.
@@ -305,7 +309,7 @@ func (s *GraphQLSchemaServer) registerTools() {
 	s.server.AddTool(
 		mcp.NewTool(
 			"list_graphql_operations",
-			mcp.WithDescription("Lists all available GraphQL operations with their names and descriptions."),
+			mcp.WithDescription("Lists all available GraphQL operations with their names and description about their purpose."),
 		),
 		s.handleListGraphQLOperations(),
 	)
@@ -313,7 +317,7 @@ func (s *GraphQLSchemaServer) registerTools() {
 	s.server.AddTool(
 		mcp.NewTool(
 			"get_graphql_operation_info",
-			mcp.WithDescription("Retrieves detailed information about a specific GraphQL operation, including its input schema, query structure, and execution guidance. You can't pass an arbitrary name here, you first need to call the 'list_graphql_operations' tool to get the matching operation name."),
+			mcp.WithDescription("Retrieves detailed information about a specific GraphQL operation, including its input schema, query structure, and execution guidance."),
 			mcp.WithString("operationName",
 				mcp.Required(),
 				mcp.Description("The exact name of the GraphQL operation to retrieve information for."),
@@ -359,10 +363,17 @@ func (s *GraphQLSchemaServer) registerTools() {
 		// Convert operation name to snake_case for consistent tool naming
 		toolName := toSnakeCase(op.Name)
 
+		toolDescription := fmt.Sprintf("Executes the GraphQL operation '%s' with the provided input.", op.Name)
+
+		// Add a warning for mutations
+		if op.OperationType == "mutation" {
+			toolDescription = fmt.Sprintf("Executes the GraphQL operation '%s' with the provided input. WARNING: This is a mutation operation that has side effects and can modify data.", op.Name)
+		}
+
 		s.server.AddTool(
 			mcp.NewToolWithRawSchema(
 				fmt.Sprintf("execute_graphql_operation_%s", toolName),
-				fmt.Sprintf("Executes the GraphQL operation '%s' with the provided input.", op.Name),
+				toolDescription,
 				op.JSONSchema,
 			),
 			s.handleOperation(handler),
@@ -384,15 +395,18 @@ func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ct
 		if handler.compiledSchema != nil {
 			var v interface{}
 			if err := json.Unmarshal(jsonBytes, &v); err != nil {
+				s.logger.Debug("failed to unmarshal JSON input", zap.Error(err))
 				return nil, fmt.Errorf("failed to parse JSON input: %w", err)
 			}
 
 			if err := handler.compiledSchema.Validate(v); err != nil {
 				var validationErr *jsonschema.ValidationError
 				if errors.As(err, &validationErr) {
+					s.logger.Debug("failed to validate JSON input", zap.Error(validationErr))
 					// This helps the LLM to understand the error better
 					return nil, fmt.Errorf("validation error: %s", validationErr.Error())
 				}
+				s.logger.Error("failed to validate JSON input", zap.Any("error", err))
 				return nil, fmt.Errorf("schema validation failed: %w", err)
 			}
 		}
@@ -433,15 +447,18 @@ func (s *GraphQLSchemaServer) handleListGraphQLOperations() func(ctx context.Con
 		operations := make([]SimpleOperationInfo, 0, len(s.operations))
 
 		for _, op := range s.operations {
+			hasSideEffects := op.OperationType == "mutation"
 			operations = append(operations, SimpleOperationInfo{
-				Name:        op.Name,
-				Description: op.Description,
+				Name:           op.Name,
+				Description:    op.Description,
+				OperationType:  op.OperationType,
+				HasSideEffects: hasSideEffects,
 			})
 		}
 
 		response := ListOperationsResponse{
 			Operations: operations,
-			LLMNote:    "This list contains operation names and descriptions. To get execution details (query, schema, instructions) for a specific operation, use the 'graphql_operation_info' tool with the exact operation's name.",
+			LLMNote:    "This list contains operation names and descriptions. To get execution details (query, schema, instructions) for a specific operation, use the 'graphql_operation_info' tool with the exact operation's name. Operations of type 'mutation' have side effects and can modify data.",
 		}
 
 		responseJSON, err := json.Marshal(response)
@@ -481,21 +498,32 @@ func (s *GraphQLSchemaServer) handleGraphQLOperationInfo() func(ctx context.Cont
 			return nil, fmt.Errorf("operation '%s' not found", input.OperationName)
 		}
 
+		hasSideEffects := targetOp.OperationType == "mutation"
+		executionTips := []string{
+			fmt.Sprintf("Use the exact 'query' string provided for the '%s' operation.", targetOp.Name),
+			"The 'schema' describes the expected JSON format for the input variables. If 'schema' is null or empty, no variables are needed.",
+			"Send a POST request to " + s.routerGraphQLEndpoint + " with 'Content-Type: application/json'.",
+			fmt.Sprintf("The request body should follow this structure: {\"query\": \"<operation_query>\", \"variables\": <your_variables_object>}"),
+			"If the operation requires no variables (schema is empty/null), send: {\"query\": \"<operation_query>\", \"variables\": {}}",
+		}
+
+		// Add warning about side effects for mutations
+		if hasSideEffects {
+			executionTips = append(executionTips,
+				fmt.Sprintf("WARNING: This is a mutation operation that will modify data. Make sure you understand the consequences before executing it."))
+		}
+
 		response := GraphQLOperationInfoResponse{
-			Name:        targetOp.Name,
-			Description: targetOp.Description,
-			Schema:      targetOp.JSONSchema,
-			Query:       targetOp.OperationString,
+			Name:           targetOp.Name,
+			Description:    targetOp.Description,
+			OperationType:  targetOp.OperationType,
+			HasSideEffects: hasSideEffects,
+			Schema:         targetOp.JSONSchema,
+			Query:          targetOp.OperationString,
 			LLMGuidance: LLMGuidance{
 				HTTPUsage:      fmt.Sprintf("To execute this GraphQL operation ('%s'), send a POST request to the endpoint with a JSON body containing the query and variables.", targetOp.Name),
 				GraphQLRequest: "The GraphQL request requires:\n1. The query string (provided in the 'query' field below)\n2. Variables matching the JSON schema structure (provided in the 'schema' field below, if applicable)",
-				ExecutionTips: []string{
-					fmt.Sprintf("Use the exact 'query' string provided for the '%s' operation.", targetOp.Name),
-					"The 'schema' describes the expected JSON format for the input variables. If 'schema' is null or empty, no variables are needed.",
-					"Send a POST request to " + s.routerGraphQLEndpoint + " with 'Content-Type: application/json'.",
-					fmt.Sprintf("The request body should follow this structure: {\"query\": \"<operation_query>\", \"variables\": <your_variables_object>}"),
-					"If the operation requires no variables (schema is empty/null), send: {\"query\": \"<operation_query>\", \"variables\": {}}",
-				},
+				ExecutionTips:  executionTips,
 			},
 			Endpoint: s.routerGraphQLEndpoint,
 		}
