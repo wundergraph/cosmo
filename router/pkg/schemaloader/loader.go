@@ -157,10 +157,3 @@ func getOperationNameAndType(doc *ast.Document) (string, string, error) {
 	}
 	return "", "", fmt.Errorf("no operation found in document")
 }
-
-// getOperationName extracts the name of the first operation in a document
-// Kept for backward compatibility
-func getOperationName(doc *ast.Document) (string, error) {
-	name, _, err := getOperationNameAndType(doc)
-	return name, err
-}

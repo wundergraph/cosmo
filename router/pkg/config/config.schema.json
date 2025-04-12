@@ -1865,6 +1865,11 @@
           "type": "string",
           "default": "cosmo",
           "description": "The name of the graph to be used by the MCP server."
+        },
+        "exclude_mutations": {
+          "type": "boolean",
+          "default": false,
+          "description": "Exclude mutation operations from being exposed via MCP. This provides an additional security layer to prevent AI models from modifying data."
         }
       }
     },

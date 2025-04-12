@@ -34,6 +34,8 @@ type Options struct {
 	Logger *zap.Logger
 	// RequestTimeout is the timeout for HTTP requests
 	RequestTimeout time.Duration
+	// ExcludeMutations determines whether mutation operations should be excluded
+	ExcludeMutations bool
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
@@ -50,6 +52,7 @@ type GraphQLSchemaServer struct {
 	routerGraphQLEndpoint string
 	httpServer            *http.Server
 	sseServer             *server.SSEServer
+	excludeMutations      bool
 }
 
 type graphqlRequest struct {
@@ -170,6 +173,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, schema *ast.Document, 
 		httpClient:            httpClient,
 		requestTimeout:        options.RequestTimeout,
 		routerGraphQLEndpoint: routerGraphQLEndpoint,
+		excludeMutations:      options.ExcludeMutations,
 	}
 
 	return gs, nil
@@ -205,6 +209,13 @@ func WithRequestTimeout(timeout time.Duration) func(*Options) {
 func WithLogger(logger *zap.Logger) func(*Options) {
 	return func(o *Options) {
 		o.Logger = logger
+	}
+}
+
+// WithExcludeMutations sets the exclude mutations option
+func WithExcludeMutations(excludeMutations bool) func(*Options) {
+	return func(o *Options) {
+		o.ExcludeMutations = excludeMutations
 	}
 }
 
@@ -327,6 +338,13 @@ func (s *GraphQLSchemaServer) registerTools() {
 	)
 
 	for _, op := range s.operations {
+		// Skip mutation operations if ExcludeMutations is enabled
+		if op.OperationType == "mutation" && s.excludeMutations {
+			s.logger.Debug("skipping mutation operation due to ExcludeMutations setting",
+				zap.String("operation", op.Name))
+			continue
+		}
+
 		var compiledSchema *jsonschema.Schema
 
 		if len(op.JSONSchema) > 0 {
@@ -372,7 +390,7 @@ func (s *GraphQLSchemaServer) registerTools() {
 
 		s.server.AddTool(
 			mcp.NewToolWithRawSchema(
-				fmt.Sprintf("execute_graphql_operation_%s", toolName),
+				fmt.Sprintf("%s_%s", op.OperationType, toolName), //  Allows for tool filtering on the client side
 				toolDescription,
 				op.JSONSchema,
 			),
@@ -441,13 +459,18 @@ func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ct
 	}
 }
 
-// handleListGraphQLOperations returns a handler function that lists available operation names and descriptions.
+// handleListGraphQLOperations returns a handler function that provides a list of all available operations.
 func (s *GraphQLSchemaServer) handleListGraphQLOperations() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		operations := make([]SimpleOperationInfo, 0, len(s.operations))
-
 		for _, op := range s.operations {
 			hasSideEffects := op.OperationType == "mutation"
+
+			// Skip mutation operations if ExcludeMutations is enabled
+			if hasSideEffects && s.excludeMutations {
+				continue
+			}
+
 			operations = append(operations, SimpleOperationInfo{
 				Name:           op.Name,
 				Description:    op.Description,
@@ -479,7 +502,7 @@ func (s *GraphQLSchemaServer) handleGraphQLOperationInfo() func(ctx context.Cont
 			return nil, fmt.Errorf("failed to marshal input arguments: %w", err)
 		}
 		if err := json.Unmarshal(inputBytes, &input); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal input arguments: %w. Ensure you provide {\"operationName\": \"<name>\"}", err)
+			return nil, fmt.Errorf("failed to unmarshal input arguments: %w. Ensure you provide {\"operationName\": \"<n>\"}", err)
 		}
 
 		if input.OperationName == "" {
@@ -496,6 +519,11 @@ func (s *GraphQLSchemaServer) handleGraphQLOperationInfo() func(ctx context.Cont
 
 		if targetOp == nil {
 			return nil, fmt.Errorf("operation '%s' not found", input.OperationName)
+		}
+
+		// If ExcludeMutations is enabled, prevent access to mutation operations
+		if targetOp.OperationType == "mutation" && s.excludeMutations {
+			return nil, fmt.Errorf("mutation operations are excluded by configuration")
 		}
 
 		hasSideEffects := targetOp.OperationType == "mutation"

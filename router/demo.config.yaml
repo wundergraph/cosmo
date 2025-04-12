@@ -8,6 +8,7 @@ version: "1"
 mcp:
   enabled: true
   operations_dir: operations
+  exclude_mutations: false
   graph_name: my-graph
   listen_addr: :5025
 
