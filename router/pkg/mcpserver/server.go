@@ -79,6 +79,33 @@ type OperationsResponse struct {
 	Endpoint    string          `json:"endpoint"`
 }
 
+// SimpleOperationInfo contains basic information about a GraphQL operation for listing.
+type SimpleOperationInfo struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+// ListOperationsResponse is the response structure for the list_graphql_operations tool.
+type ListOperationsResponse struct {
+	Operations []SimpleOperationInfo `json:"operations"`
+	LLMNote    string                `json:"llmNote"`
+}
+
+// GraphQLOperationInfoResponse is the response structure for the graphql_operation_info tool.
+type GraphQLOperationInfoResponse struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Schema      json.RawMessage `json:"schema,omitempty"`
+	Query       string          `json:"query"`
+	LLMGuidance LLMGuidance     `json:"llmGuidance"`
+	Endpoint    string          `json:"endpoint"`
+}
+
+// GraphQLOperationInfoInput defines the input structure for the graphql_operation_info tool.
+type GraphQLOperationInfoInput struct {
+	OperationName string `json:"operationName"`
+}
+
 // LLMGuidance provides guidance for LLMs on how to use the GraphQL operations
 type LLMGuidance struct {
 	HTTPUsage      string   `json:"httpUsage"`
@@ -274,13 +301,25 @@ func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
 // registerTools registers all tools for the MCP server
 func (s *GraphQLSchemaServer) registerTools() {
 
-	// Add a tool to list all available operations
+	// Add a tool to list all available operations (names and descriptions only)
 	s.server.AddTool(
 		mcp.NewTool(
-			"list_graphql_operations", // Snake case is best practice for tool names
-			mcp.WithDescription("Returns detailed information about all available GraphQL operations, including their descriptions, schemas, query structures, and instructions on how to execute them via direct HTTP requests to the GraphQL endpoint"),
+			"list_graphql_operations",
+			mcp.WithDescription("Lists all available GraphQL operations with their names and descriptions."),
 		),
 		s.handleListGraphQLOperations(),
+	)
+
+	s.server.AddTool(
+		mcp.NewTool(
+			"get_graphql_operation_info",
+			mcp.WithDescription("Retrieves detailed information about a specific GraphQL operation, including its input schema, query structure, and execution guidance. You can't pass an arbitrary name here, you first need to call the 'list_graphql_operations' tool to get the matching operation name."),
+			mcp.WithString("operationName",
+				mcp.Required(),
+				mcp.Description("The exact name of the GraphQL operation to retrieve information for."),
+			),
+		),
+		s.handleGraphQLOperationInfo(),
 	)
 
 	for _, op := range s.operations {
@@ -322,8 +361,8 @@ func (s *GraphQLSchemaServer) registerTools() {
 
 		s.server.AddTool(
 			mcp.NewToolWithRawSchema(
-				toolName,
-				op.Description,
+				fmt.Sprintf("execute_graphql_operation_%s", toolName),
+				fmt.Sprintf("Executes the GraphQL operation '%s' with the provided input.", op.Name),
 				op.JSONSchema,
 			),
 			s.handleOperation(handler),
@@ -388,41 +427,82 @@ func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ct
 	}
 }
 
-// handleListGraphQLOperations returns a handler function that lists all available operations
+// handleListGraphQLOperations returns a handler function that lists available operation names and descriptions.
 func (s *GraphQLSchemaServer) handleListGraphQLOperations() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		operations := make([]OperationInfo, 0, len(s.operations))
+		operations := make([]SimpleOperationInfo, 0, len(s.operations))
 
 		for _, op := range s.operations {
-			operations = append(operations, OperationInfo{
+			operations = append(operations, SimpleOperationInfo{
 				Name:        op.Name,
 				Description: op.Description,
-				Schema:      op.JSONSchema,
-				Query:       op.OperationString,
 			})
 		}
 
-		response := OperationsResponse{
+		response := ListOperationsResponse{
 			Operations: operations,
-			Usage: "Each operation listed here represents a GraphQL query or mutation that can be executed " +
-				"against the GraphQL endpoint.",
-			LLMGuidance: LLMGuidance{
-				HTTPUsage:      "To execute a GraphQL operation, send a POST request to the endpoint with a JSON body containing the query and variables.",
-				GraphQLRequest: "GraphQL requests require:\n1. The query string (found in the 'query' field of each operation)\n2. Variables that match the schema structure (if needed)",
-				ExecutionTips: []string{
-					"The 'query' field contains the exact GraphQL operation to send to the server",
-					"The 'schema' describes the expected format of input variables",
-					"Send a POST request to " + s.routerGraphQLEndpoint + " with Content-Type: application/json",
-					"Request body should be: {\"query\": \"<operation query>\", \"variables\": <variables object>}",
-					"Examine each operation's metadata to understand its purpose and required parameters",
-				},
-			},
-			Endpoint: s.routerGraphQLEndpoint,
+			LLMNote:    "This list contains operation names and descriptions. To get execution details (query, schema, instructions) for a specific operation, use the 'graphql_operation_info' tool with the exact operation's name.",
 		}
 
 		responseJSON, err := json.Marshal(response)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal operations list: %w", err)
+		}
+
+		return mcp.NewToolResultText(string(responseJSON)), nil
+	}
+}
+
+// handleGraphQLOperationInfo returns a handler function that provides detailed info for a specific operation.
+func (s *GraphQLSchemaServer) handleGraphQLOperationInfo() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		var input GraphQLOperationInfoInput
+		inputBytes, err := json.Marshal(request.Params.Arguments)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal input arguments: %w", err)
+		}
+		if err := json.Unmarshal(inputBytes, &input); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal input arguments: %w. Ensure you provide {\"operationName\": \"<name>\"}", err)
+		}
+
+		if input.OperationName == "" {
+			return nil, fmt.Errorf("input validation failed: operationName is required")
+		}
+
+		var targetOp *schemaloader.Operation
+		for i := range s.operations {
+			if s.operations[i].Name == input.OperationName {
+				targetOp = &s.operations[i]
+				break
+			}
+		}
+
+		if targetOp == nil {
+			return nil, fmt.Errorf("operation '%s' not found", input.OperationName)
+		}
+
+		response := GraphQLOperationInfoResponse{
+			Name:        targetOp.Name,
+			Description: targetOp.Description,
+			Schema:      targetOp.JSONSchema,
+			Query:       targetOp.OperationString,
+			LLMGuidance: LLMGuidance{
+				HTTPUsage:      fmt.Sprintf("To execute this GraphQL operation ('%s'), send a POST request to the endpoint with a JSON body containing the query and variables.", targetOp.Name),
+				GraphQLRequest: "The GraphQL request requires:\n1. The query string (provided in the 'query' field below)\n2. Variables matching the JSON schema structure (provided in the 'schema' field below, if applicable)",
+				ExecutionTips: []string{
+					fmt.Sprintf("Use the exact 'query' string provided for the '%s' operation.", targetOp.Name),
+					"The 'schema' describes the expected JSON format for the input variables. If 'schema' is null or empty, no variables are needed.",
+					"Send a POST request to " + s.routerGraphQLEndpoint + " with 'Content-Type: application/json'.",
+					fmt.Sprintf("The request body should follow this structure: {\"query\": \"<operation_query>\", \"variables\": <your_variables_object>}"),
+					"If the operation requires no variables (schema is empty/null), send: {\"query\": \"<operation_query>\", \"variables\": {}}",
+				},
+			},
+			Endpoint: s.routerGraphQLEndpoint,
+		}
+
+		responseJSON, err := json.MarshalIndent(response, "", "  ") // Use indent for better readability
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal operation info for '%s': %w", input.OperationName, err)
 		}
 
 		return mcp.NewToolResultText(string(responseJSON)), nil
