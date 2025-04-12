@@ -467,7 +467,7 @@ type Employee {
     await server.close();
   });
 
-  test('Should handle composition with empty and valid schemas', async () => {
+  test('Should handle composition when one of the subgraphs has an empty schema', async () => {
     const { client, server } = await SetupTest({ dbname, chClient });
 
     const emptySubgraphName = genID('empty-subgraph');
