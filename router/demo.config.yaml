@@ -5,31 +5,6 @@
 
 version: "1"
 
-dev_mode: true
-
-access_logs:
-  enabled: true
-  output:
-    stdout:
-      enabled: true
-  router:
-    fields:
-      - key: "req-content-length"
-        value_from:
-          request_header: "Content-Length"
-      - key: "res-content-length"
-        value_from:
-          response_header: "Content-Length"
-#  subgraphs:
-#    enabled: true
-#    fields:
-#      - key: "req-content-length"
-#        value_from:
-#          request_header: "Content-Length"
-#      - key: "res-content-length"
-#        value_from:
-#          response_header: "Content-Length"
-
 events:
   providers:
     nats:
