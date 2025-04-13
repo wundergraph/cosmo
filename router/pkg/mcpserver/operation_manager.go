@@ -106,3 +106,8 @@ func (om *OperationsManager) GetOperation(name string) *schemaloader.Operation {
 	}
 	return nil
 }
+
+// GetSchema returns the schema document used by the operations manager
+func (om *OperationsManager) GetSchema() *ast.Document {
+	return om.schemaDoc
+}

@@ -1079,6 +1079,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			mcpserver.WithListenAddr(s.MCP.ListenAddr),
 			mcpserver.WithLogger(s.logger),
 			mcpserver.WithExcludeMutations(s.MCP.ExcludeMutations),
+			mcpserver.WithEnableArbitraryOperations(s.MCP.EnableArbitraryOperations),
+			mcpserver.WithExposeSchema(s.MCP.ExposeSchema),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create mcp server: %w", err)
@@ -1096,6 +1098,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			zap.String("operations_dir", s.MCP.OperationsDir),
 			zap.String("graph_name", s.MCP.GraphName),
 			zap.Bool("exclude_mutations", s.MCP.ExcludeMutations),
+			zap.Bool("enable_arbitrary_operations", s.MCP.EnableArbitraryOperations),
+			zap.Bool("expose_schema", s.MCP.ExposeSchema),
 		)
 	}
 

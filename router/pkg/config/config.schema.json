@@ -1870,6 +1870,16 @@
           "type": "boolean",
           "default": false,
           "description": "Exclude mutation operations from being exposed via MCP. This provides an additional security layer to prevent AI models from modifying data."
+        },
+        "enable_arbitrary_operations": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable arbitrary GraphQL operation execution through MCP. This allows AI models to execute any valid GraphQL query, mutation, or subscription against your API, not just predefined operations."
+        },
+        "expose_schema": {
+          "type": "boolean",
+          "default": false,
+          "description": "Expose the full GraphQL schema through MCP. When enabled, AI models can request the complete schema of your API."
         }
       }
     },

@@ -10,6 +10,8 @@ mcp:
   operations_dir: operations
   exclude_mutations: false
   graph_name: my-graph
+  expose_schema: true
+  enable_arbitrary_operations: true
   listen_addr: :5025
 
 events:

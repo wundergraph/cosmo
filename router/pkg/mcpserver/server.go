@@ -17,6 +17,7 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 	"go.uber.org/zap"
 )
 
@@ -36,6 +37,10 @@ type Options struct {
 	RequestTimeout time.Duration
 	// ExcludeMutations determines whether mutation operations should be excluded
 	ExcludeMutations bool
+	// EnableArbitraryOperations determines whether arbitrary GraphQL operations can be executed
+	EnableArbitraryOperations bool
+	// ExposeSchema determines whether the GraphQL schema is exposed
+	ExposeSchema bool
 }
 
 // SimpleOperationInfo contains basic information about a GraphQL operation for listing.
@@ -48,24 +53,32 @@ type SimpleOperationInfo struct {
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
 type GraphQLSchemaServer struct {
-	server                *server.MCPServer
-	graphName             string
-	operationsDir         string
-	listenAddr            string
-	logger                *zap.Logger
-	httpClient            *http.Client
-	requestTimeout        time.Duration
-	routerGraphQLEndpoint string
-	httpServer            *http.Server
-	sseServer             *server.SSEServer
-	excludeMutations      bool
-	operationsManager     *OperationsManager
-	schemaCompiler        *SchemaCompiler
+	server                    *server.MCPServer
+	graphName                 string
+	operationsDir             string
+	listenAddr                string
+	logger                    *zap.Logger
+	httpClient                *http.Client
+	requestTimeout            time.Duration
+	routerGraphQLEndpoint     string
+	httpServer                *http.Server
+	sseServer                 *server.SSEServer
+	excludeMutations          bool
+	enableArbitraryOperations bool
+	exposeSchema              bool
+	operationsManager         *OperationsManager
+	schemaCompiler            *SchemaCompiler
 }
 
 type graphqlRequest struct {
 	Query     string          `json:"query"`
 	Variables json.RawMessage `json:"variables"`
+}
+
+// ExecuteGraphQLInput defines the input structure for the execute_graphql tool
+type ExecuteGraphQLInput struct {
+	Query     string          `json:"query"`
+	Variables json.RawMessage `json:"variables,omitempty"`
 }
 
 // operationHandler holds an operation and its compiled JSON schema
@@ -143,6 +156,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, schema *ast.Document, 
 		Enabled:        false,
 		Logger:         zap.NewNop(),
 		RequestTimeout: 30 * time.Second,
+		ExposeSchema:   true,
 	}
 
 	// Apply all option functions
@@ -169,17 +183,19 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, schema *ast.Document, 
 	operationsManager := NewOperationsManager(schema, options.Logger, options.ExcludeMutations)
 
 	gs := &GraphQLSchemaServer{
-		server:                mcpServer,
-		graphName:             options.GraphName,
-		operationsDir:         options.OperationsDir,
-		listenAddr:            options.ListenAddr,
-		logger:                options.Logger,
-		httpClient:            httpClient,
-		requestTimeout:        options.RequestTimeout,
-		routerGraphQLEndpoint: routerGraphQLEndpoint,
-		excludeMutations:      options.ExcludeMutations,
-		operationsManager:     operationsManager,
-		schemaCompiler:        schemaCompiler,
+		server:                    mcpServer,
+		graphName:                 options.GraphName,
+		operationsDir:             options.OperationsDir,
+		listenAddr:                options.ListenAddr,
+		logger:                    options.Logger,
+		httpClient:                httpClient,
+		requestTimeout:            options.RequestTimeout,
+		routerGraphQLEndpoint:     routerGraphQLEndpoint,
+		excludeMutations:          options.ExcludeMutations,
+		enableArbitraryOperations: options.EnableArbitraryOperations,
+		exposeSchema:              options.ExposeSchema,
+		operationsManager:         operationsManager,
+		schemaCompiler:            schemaCompiler,
 	}
 
 	return gs, nil
@@ -222,6 +238,20 @@ func WithLogger(logger *zap.Logger) func(*Options) {
 func WithExcludeMutations(excludeMutations bool) func(*Options) {
 	return func(o *Options) {
 		o.ExcludeMutations = excludeMutations
+	}
+}
+
+// WithEnableArbitraryOperations sets the enable arbitrary operations option
+func WithEnableArbitraryOperations(enableArbitraryOperations bool) func(*Options) {
+	return func(o *Options) {
+		o.EnableArbitraryOperations = enableArbitraryOperations
+	}
+}
+
+// WithExposeSchema sets the expose schema option
+func WithExposeSchema(exposeSchema bool) func(*Options) {
+	return func(o *Options) {
+		o.ExposeSchema = exposeSchema
 	}
 }
 
@@ -309,16 +339,16 @@ func (s *GraphQLSchemaServer) registerTools() {
 	// Add a tool to list all available operations (names and descriptions only)
 	s.server.AddTool(
 		mcp.NewTool(
-			"list_graphql_operations",
-			mcp.WithDescription("Lists all available GraphQL operations with their names and description about their purpose."),
+			"list_operations",
+			mcp.WithDescription("Lists all available GraphQL operations."),
 		),
 		s.handleListGraphQLOperations(),
 	)
 
 	s.server.AddTool(
 		mcp.NewTool(
-			"get_graphql_operation_info",
-			mcp.WithDescription("Retrieves detailed information about a specific GraphQL operation, including its input schema, query structure, and execution guidance."),
+			"get_operation_info",
+			mcp.WithDescription("Retrieve detailed metadata and execution instructions for a specific GraphQL operation by its name. Use this function to gather all necessary information required to execute the operation using execute_<operation_name>."),
 			mcp.WithString("operationName",
 				mcp.Required(),
 				mcp.Description("The exact name of the GraphQL operation to retrieve information for."),
@@ -326,6 +356,48 @@ func (s *GraphQLSchemaServer) registerTools() {
 		),
 		s.handleGraphQLOperationInfo(),
 	)
+
+	// Only register the schema tool if exposeSchema is enabled
+	if s.exposeSchema {
+		s.server.AddTool(
+			mcp.NewTool(
+				"get_schema",
+				mcp.WithDescription("Use this function to obtain the full introspection-based schema of the GraphQL API. This is useful for understanding the structure, available types, queries, mutations, and overall capabilities of the API."),
+			),
+			s.handleGetGraphQLSchema(),
+		)
+	}
+
+	// Only register the execute_graphql tool if enableArbitraryOperations is enabled
+	if s.enableArbitraryOperations {
+		// Add a tool to execute arbitrary GraphQL queries
+		executeGraphQLSchema := []byte(`{
+			"type": "object",
+			"description": "The query and variables to execute.",
+			"properties": {
+				"query": {
+					"type": "string",
+					"description": "The GraphQL query or mutation string to execute."
+				},
+				"variables": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "The variables to pass to the GraphQL query as a JSON object."
+				}
+			},
+			"additionalProperties": false,
+			"required": ["query"]
+		}`)
+
+		s.server.AddTool(
+			mcp.NewToolWithRawSchema(
+				"execute",
+				"Executes a GraphQL query or mutation.",
+				executeGraphQLSchema,
+			),
+			s.handleExecuteGraphQL(),
+		)
+	}
 
 	// Get operations filtered by the excludeMutations setting
 	operations := s.operationsManager.GetFilteredOperations()
@@ -362,7 +434,7 @@ func (s *GraphQLSchemaServer) registerTools() {
 
 		s.server.AddTool(
 			mcp.NewToolWithRawSchema(
-				fmt.Sprintf("%s_%s", op.OperationType, toolName), //  Allows for tool filtering on the client side
+				fmt.Sprintf("execute_%s", toolName),
 				toolDescription,
 				op.JSONSchema,
 			),
@@ -389,35 +461,8 @@ func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ct
 			}
 		}
 
-		graphqlRequest := graphqlRequest{
-			Query:     handler.operation.OperationString,
-			Variables: json.RawMessage(jsonBytes),
-		}
-
-		graphqlRequestBytes, err := json.Marshal(graphqlRequest)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal GraphQL request: %w", err)
-		}
-
-		req, err := http.NewRequest("POST", s.routerGraphQLEndpoint, bytes.NewReader(graphqlRequestBytes))
-		if err != nil {
-			return nil, fmt.Errorf("failed to create request: %w", err)
-		}
-
-		req.Header.Set("Content-Type", "application/json; charset=utf-8")
-
-		resp, err := s.httpClient.Do(req)
-		if err != nil {
-			return nil, fmt.Errorf("failed to send request: %w", err)
-		}
-		defer resp.Body.Close()
-
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read response body: %w", err)
-		}
-
-		return mcp.NewToolResultText(string(body)), nil
+		// Execute the operation with the provided variables
+		return s.executeGraphQLQuery(handler.operation.OperationString, json.RawMessage(jsonBytes))
 	}
 }
 
@@ -496,6 +541,90 @@ func (s *GraphQLSchemaServer) handleGraphQLOperationInfo() func(ctx context.Cont
 		responseJSON, err := json.MarshalIndent(response, "", "  ") // Use indent for better readability
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal operation info for '%s': %w", input.OperationName, err)
+		}
+
+		return mcp.NewToolResultText(string(responseJSON)), nil
+	}
+}
+
+// executeGraphQLQuery executes a GraphQL query against the router endpoint
+func (s *GraphQLSchemaServer) executeGraphQLQuery(query string, variables json.RawMessage) (*mcp.CallToolResult, error) {
+	// Create the GraphQL request
+	graphqlRequest := graphqlRequest{
+		Query:     query,
+		Variables: variables,
+	}
+
+	graphqlRequestBytes, err := json.Marshal(graphqlRequest)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal GraphQL request: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", s.routerGraphQLEndpoint, bytes.NewReader(graphqlRequestBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	return mcp.NewToolResultText(string(body)), nil
+}
+
+// handleExecuteGraphQL returns a handler function that executes arbitrary GraphQL queries
+func (s *GraphQLSchemaServer) handleExecuteGraphQL() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		// Parse the JSON input
+		jsonBytes, err := json.Marshal(request.Params.Arguments)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal arguments: %w", err)
+		}
+
+		var input ExecuteGraphQLInput
+		if err := json.Unmarshal(jsonBytes, &input); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal input arguments: %w", err)
+		}
+
+		if input.Query == "" {
+			return nil, fmt.Errorf("input validation failed: query is required")
+		}
+
+		return s.executeGraphQLQuery(input.Query, input.Variables)
+	}
+}
+
+// handleGetGraphQLSchema returns a handler function that returns the full GraphQL schema
+func (s *GraphQLSchemaServer) handleGetGraphQLSchema() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		// Get the schema from the operations manager
+		schema := s.operationsManager.GetSchema()
+		if schema == nil {
+			return nil, fmt.Errorf("GraphQL schema is not available")
+		}
+
+		// Convert the AST document to a string representation
+		schemaStr, err := astprinter.PrintString(schema)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert schema to string: %w", err)
+		}
+
+		response := map[string]interface{}{
+			"schema": schemaStr,
+		}
+
+		responseJSON, err := json.MarshalIndent(response, "", "  ")
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal GraphQL schema: %w", err)
 		}
 
 		return mcp.NewToolResultText(string(responseJSON)), nil

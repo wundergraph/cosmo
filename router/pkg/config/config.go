@@ -863,11 +863,13 @@ type CacheWarmupConfiguration struct {
 }
 
 type MCPConfiguration struct {
-	Enabled          bool   `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
-	ListenAddr       string `yaml:"listen_addr" envDefault:":5025" env:"MCP_LISTEN_ADDR"`
-	OperationsDir    string `yaml:"operations_dir" envDefault:"operations" env:"MCP_OPERATIONS_DIR"`
-	GraphName        string `yaml:"graph_name" envDefault:"cosmo" env:"MCP_GRAPH_NAME"`
-	ExcludeMutations bool   `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
+	Enabled                   bool   `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
+	ListenAddr                string `yaml:"listen_addr" envDefault:":5025" env:"MCP_LISTEN_ADDR"`
+	OperationsDir             string `yaml:"operations_dir" envDefault:"operations" env:"MCP_OPERATIONS_DIR"`
+	GraphName                 string `yaml:"graph_name" envDefault:"cosmo" env:"MCP_GRAPH_NAME"`
+	ExcludeMutations          bool   `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
+	EnableArbitraryOperations bool   `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
+	ExposeSchema              bool   `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
 }
 
 type Config struct {
