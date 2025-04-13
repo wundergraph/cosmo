@@ -38,11 +38,17 @@ type Options struct {
 	ExcludeMutations bool
 }
 
+// SimpleOperationInfo contains basic information about a GraphQL operation for listing.
+type SimpleOperationInfo struct {
+	Name           string `json:"name"`
+	Description    string `json:"description"`
+	OperationType  string `json:"operationType"`
+	HasSideEffects bool   `json:"hasSideEffects"`
+}
+
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
 type GraphQLSchemaServer struct {
 	server                *server.MCPServer
-	schemaDoc             *ast.Document
-	operations            []schemaloader.Operation
 	graphName             string
 	operationsDir         string
 	listenAddr            string
@@ -53,6 +59,8 @@ type GraphQLSchemaServer struct {
 	httpServer            *http.Server
 	sseServer             *server.SSEServer
 	excludeMutations      bool
+	operationsManager     *OperationsManager
+	schemaCompiler        *SchemaCompiler
 }
 
 type graphqlRequest struct {
@@ -80,14 +88,6 @@ type OperationsResponse struct {
 	Usage       string          `json:"usage"`
 	LLMGuidance LLMGuidance     `json:"llmGuidance"`
 	Endpoint    string          `json:"endpoint"`
-}
-
-// SimpleOperationInfo contains basic information about a GraphQL operation for listing.
-type SimpleOperationInfo struct {
-	Name           string `json:"name"`
-	Description    string `json:"description"`
-	OperationType  string `json:"operationType"`
-	HasSideEffects bool   `json:"hasSideEffects"`
 }
 
 // ListOperationsResponse is the response structure for the list_graphql_operations tool.
@@ -165,9 +165,11 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, schema *ast.Document, 
 	httpClient := retryClient.StandardClient()
 	httpClient.Timeout = 60 * time.Second
 
+	schemaCompiler := NewSchemaCompiler(options.Logger)
+	operationsManager := NewOperationsManager(schema, options.Logger, options.ExcludeMutations)
+
 	gs := &GraphQLSchemaServer{
 		server:                mcpServer,
-		schemaDoc:             schema,
 		graphName:             options.GraphName,
 		operationsDir:         options.OperationsDir,
 		listenAddr:            options.ListenAddr,
@@ -176,6 +178,8 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, schema *ast.Document, 
 		requestTimeout:        options.RequestTimeout,
 		routerGraphQLEndpoint: routerGraphQLEndpoint,
 		excludeMutations:      options.ExcludeMutations,
+		operationsManager:     operationsManager,
+		schemaCompiler:        schemaCompiler,
 	}
 
 	return gs, nil
@@ -223,31 +227,12 @@ func WithExcludeMutations(excludeMutations bool) func(*Options) {
 
 // LoadOperations loads operations from the configured operations directory
 func (s *GraphQLSchemaServer) LoadOperations() error {
-	return s.LoadOperationsFromDirectory(s.operationsDir)
+	return s.operationsManager.LoadOperationsFromDirectory(s.operationsDir)
 }
 
 // LoadOperationsFromDirectory loads operations from a specified directory
 func (s *GraphQLSchemaServer) LoadOperationsFromDirectory(operationsDir string) error {
-	// Load operations
-	loader := schemaloader.NewOperationLoader(s.schemaDoc)
-	operations, err := loader.LoadOperationsFromDirectory(operationsDir)
-	if err != nil {
-		return fmt.Errorf("failed to load operations: %w", err)
-	}
-
-	// Build schemas for operations
-	builder := schemaloader.NewSchemaBuilder(s.schemaDoc)
-	err = builder.BuildSchemasForOperations(operations)
-	if err != nil {
-		return fmt.Errorf("failed to build schemas: %w", err)
-	}
-
-	s.operations = operations
-
-	// Register tools
-	s.registerTools()
-
-	return nil
+	return s.operationsManager.LoadOperationsFromDirectory(operationsDir)
 }
 
 // ServeSSE starts the server with SSE transport
@@ -291,6 +276,9 @@ func (s *GraphQLSchemaServer) Start() error {
 	// Store server references for Stop method
 	s.sseServer = sseServer
 	s.httpServer = httpServer
+
+	// Register tools
+	s.registerTools()
 
 	return nil
 }
@@ -339,39 +327,21 @@ func (s *GraphQLSchemaServer) registerTools() {
 		s.handleGraphQLOperationInfo(),
 	)
 
-	for _, op := range s.operations {
-		// Skip mutation operations if ExcludeMutations is enabled
-		if op.OperationType == "mutation" && s.excludeMutations {
-			s.logger.Debug("skipping mutation operation due to ExcludeMutations setting",
-				zap.String("operation", op.Name))
-			continue
-		}
+	// Get operations filtered by the excludeMutations setting
+	operations := s.operationsManager.GetFilteredOperations()
 
+	for _, op := range operations {
 		var compiledSchema *jsonschema.Schema
+		var err error
 
 		if len(op.JSONSchema) > 0 {
-			c := jsonschema.NewCompiler()
-			// Load the JSON schema from the operation
-			schema, err := jsonschema.UnmarshalJSON(io.NopCloser(bytes.NewReader(op.JSONSchema)))
+			compiledSchema, err = s.schemaCompiler.CompileSchema(op)
 			if err != nil {
-				s.logger.Error("failed to unmarshal JSON schema", zap.String("operation", op.Name), zap.Error(err))
+				s.logger.Error("failed to compile schema for operation",
+					zap.String("operation", op.Name),
+					zap.Error(err))
 				continue
 			}
-
-			sn := fmt.Sprintf("schema-%s.json", op.Name)
-			err = c.AddResource(sn, schema)
-			if err != nil {
-				s.logger.Error("failed to add resource to JSON schema compiler", zap.String("operation", op.Name), zap.Error(err))
-				continue
-			}
-
-			sch, err := c.Compile(sn)
-			if err != nil {
-				s.logger.Error("failed to compile JSON schema", zap.String("operation", op.Name), zap.Error(err))
-				continue
-			}
-
-			compiledSchema = sch
 		}
 
 		// Create handler with pre-compiled schema
@@ -413,21 +383,9 @@ func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ct
 
 		// Validate the JSON input against the pre-compiled schema derived from the operation input type
 		if handler.compiledSchema != nil {
-			var v interface{}
-			if err := json.Unmarshal(jsonBytes, &v); err != nil {
-				s.logger.Debug("failed to unmarshal JSON input", zap.Error(err))
-				return nil, fmt.Errorf("failed to parse JSON input: %w", err)
-			}
-
-			if err := handler.compiledSchema.Validate(v); err != nil {
-				var validationErr *jsonschema.ValidationError
-				if errors.As(err, &validationErr) {
-					s.logger.Debug("failed to validate JSON input", zap.Error(validationErr))
-					// This helps the LLM to understand the error better
-					return nil, fmt.Errorf("validation error: %s", validationErr.Error())
-				}
-				s.logger.Error("failed to validate JSON input", zap.Any("error", err))
-				return nil, fmt.Errorf("schema validation failed: %w", err)
+			if err := s.schemaCompiler.ValidateInput(jsonBytes, handler.compiledSchema); err != nil {
+				s.logger.Debug("validation failed", zap.Error(err))
+				return nil, err
 			}
 		}
 
@@ -465,23 +423,9 @@ func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ct
 
 // handleListGraphQLOperations returns a handler function that provides a list of all available operations.
 func (s *GraphQLSchemaServer) handleListGraphQLOperations() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	operations := s.operationsManager.GetSimpleOperationInfoList()
+
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		operations := make([]SimpleOperationInfo, 0, len(s.operations))
-		for _, op := range s.operations {
-			hasSideEffects := op.OperationType == "mutation"
-
-			// Skip mutation operations if ExcludeMutations is enabled
-			if hasSideEffects && s.excludeMutations {
-				continue
-			}
-
-			operations = append(operations, SimpleOperationInfo{
-				Name:           op.Name,
-				Description:    op.Description,
-				OperationType:  op.OperationType,
-				HasSideEffects: hasSideEffects,
-			})
-		}
 
 		response := ListOperationsResponse{
 			Operations: operations,
@@ -513,21 +457,9 @@ func (s *GraphQLSchemaServer) handleGraphQLOperationInfo() func(ctx context.Cont
 			return nil, fmt.Errorf("input validation failed: operationName is required")
 		}
 
-		var targetOp *schemaloader.Operation
-		for i := range s.operations {
-			if s.operations[i].Name == input.OperationName {
-				targetOp = &s.operations[i]
-				break
-			}
-		}
-
+		targetOp := s.operationsManager.GetOperation(input.OperationName)
 		if targetOp == nil {
-			return nil, fmt.Errorf("operation '%s' not found", input.OperationName)
-		}
-
-		// If ExcludeMutations is enabled, prevent access to mutation operations
-		if targetOp.OperationType == "mutation" && s.excludeMutations {
-			return nil, fmt.Errorf("mutation operations are excluded by configuration")
+			return nil, fmt.Errorf("operation '%s' not found or excluded by configuration", input.OperationName)
 		}
 
 		hasSideEffects := targetOp.OperationType == "mutation"
