@@ -156,6 +156,8 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, schema *ast.Document, 
 		"0.0.1",
 		// Prompt, Resources aren't supported yet in any of the popular platforms
 		server.WithToolCapabilities(true),
+		server.WithPaginationLimit(100),
+		server.WithRecovery(),
 	)
 
 	retryClient := retryablehttp.NewClient()
