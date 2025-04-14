@@ -56,7 +56,6 @@ export class SchemaCheckRepository {
   public async create(data: {
     targetId?: string;
     isComposable?: boolean;
-    isDeleted?: boolean;
     // TODO: remove proposedSubgraphSchemaSDL as we will be storing those in the schema_check_subgraphs table
     proposedSubgraphSchemaSDL: string;
     trafficCheckSkipped?: boolean;
@@ -69,7 +68,7 @@ export class SchemaCheckRepository {
       .values({
         targetId: data.targetId,
         isComposable: data.isComposable,
-        isDeleted: data.isDeleted,
+        isDeleted: null,
         proposedSubgraphSchemaSDL: data.proposedSubgraphSchemaSDL,
         clientTrafficCheckSkipped: data.trafficCheckSkipped || false,
         lintSkipped: data.lintSkipped || false,
@@ -95,6 +94,12 @@ export class SchemaCheckRepository {
     hasLintErrors?: boolean;
     hasGraphPruningErrors?: boolean;
     proposalMatch?: ProposalMatch;
+    lintSkipped?: boolean;
+    graphPruningSkipped?: boolean;
+    trafficCheckSkipped?: boolean;
+    compositionSkipped?: boolean;
+    breakingChangesSkipped?: boolean;
+    errorMessage?: string;
   }): Promise<string | undefined> {
     const updatedSchemaCheck = await this.db
       .update(schemaChecks)
@@ -105,6 +110,12 @@ export class SchemaCheckRepository {
         hasLintErrors: data.hasLintErrors,
         hasGraphPruningErrors: data.hasGraphPruningErrors,
         proposalMatch: data.proposalMatch,
+        lintSkipped: data.lintSkipped,
+        graphPruningSkipped: data.graphPruningSkipped,
+        clientTrafficCheckSkipped: data.trafficCheckSkipped,
+        compositionSkipped: data.compositionSkipped,
+        breakingChangesSkipped: data.breakingChangesSkipped,
+        errorMessage: data.errorMessage,
       })
       .where(eq(schemaChecks.id, data.schemaCheckID))
       .returning()
@@ -278,6 +289,17 @@ export class SchemaCheckRepository {
   }
 
   public async createCheckedFederatedGraph(schemaCheckId: string, federatedGraphId: string, trafficCheckDays: number) {
+    const existing = await this.db.query.schemaCheckFederatedGraphs.findFirst({
+      where: and(
+        eq(schema.schemaCheckFederatedGraphs.checkId, schemaCheckId),
+        eq(schema.schemaCheckFederatedGraphs.federatedGraphId, federatedGraphId),
+      ),
+    });
+
+    if (existing) {
+      return existing.id;
+    }
+
     const result = await this.db
       .insert(schema.schemaCheckFederatedGraphs)
       .values({
@@ -550,6 +572,7 @@ export class SchemaCheckRepository {
     proposalRepo: ProposalRepository;
     trafficInspector: SchemaUsageTrafficInspector;
     composer: Composer;
+    // proposal subgraphs do not contain feature subgraphs
     subgraphs: ProposalSubgraph[];
     namespace: NamespaceDTO;
     logger: FastifyBaseLogger;
@@ -586,26 +609,8 @@ export class SchemaCheckRepository {
 
     for (const s of subgraphs) {
       const subgraph = await subgraphRepo.byName(s.name, namespace.name);
-
-      if (subgraph && subgraph.isFeatureSubgraph) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details:
-              `The subgraph "${s.name}" is a feature subgraph.` +
-              ` Feature subgraphs do not currently support check operations.`,
-          },
-          breakingChanges: [],
-          nonBreakingChanges: [],
-          compositionErrors: [],
-          checkId: schemaCheckID,
-          lintWarnings: [],
-          lintErrors: [],
-          graphPruneWarnings: [],
-          graphPruneErrors: [],
-          compositionWarnings: [],
-        };
-      }
+      const newSchemaSDL = s.isDeleted ? '' : s.schemaSDL;
+      const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion(federatedGraphs);
 
       const graphs = await fedGraphRepo.bySubgraphLabels({
         labels: subgraph?.labels || s.labels,
@@ -613,16 +618,44 @@ export class SchemaCheckRepository {
         excludeContracts: true,
       });
 
+      const schemaCheckSubgraphId = await this.createSchemaCheckSubgraph({
+        data: {
+          schemaCheckId: schemaCheckID,
+          subgraphId: subgraph?.id,
+          subgraphName: s.name,
+          proposedSubgraphSchemaSDL: newSchemaSDL,
+          isDeleted: newSchemaSDL === '',
+          isNew: !subgraph,
+        },
+      });
+
+      for (const graph of graphs) {
+        // if the check federated graph already exists, we don't need to create a new one
+        const checkFederatedGraphId = await this.createCheckedFederatedGraph(schemaCheckID, graph.id, limit);
+        await this.createSchemaCheckSubgraphFederatedGraphs({
+          schemaCheckFederatedGraphId: checkFederatedGraphId,
+          checkSubgraphIds: [schemaCheckSubgraphId],
+        });
+      }
+
       federatedGraphs.push(...graphs.filter((g) => !federatedGraphs.some((fg) => fg.id === g.id)));
 
-      const newSchemaSDL = s.isDeleted ? '' : s.schemaSDL;
-      const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion(federatedGraphs);
       let newGraphQLSchema: GraphQLSchema | undefined;
       if (newSchemaSDL) {
         try {
           // Here we check if the schema is valid as a subgraph SDL
           const result = buildSchema(newSchemaSDL, true, routerCompatibilityVersion);
           if (!result.success) {
+            await this.update({
+              schemaCheckID,
+              compositionSkipped: true,
+              breakingChangesSkipped: true,
+              trafficCheckSkipped: true,
+              graphPruningSkipped: true,
+              lintSkipped: true,
+              errorMessage: `Invalid schema of subgraph '${s.name}'`,
+            });
+
             return {
               response: {
                 code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA,
@@ -645,6 +678,16 @@ export class SchemaCheckRepository {
             newGraphQLSchema = buildASTSchema(parsedSchema, { assumeValid: true, assumeValidSDL: true });
           }
         } catch (e: any) {
+          await this.update({
+            schemaCheckID,
+            compositionSkipped: true,
+            breakingChangesSkipped: true,
+            trafficCheckSkipped: true,
+            graphPruningSkipped: true,
+            lintSkipped: true,
+            errorMessage: `Invalid schema of subgraph '${s.name}'`,
+          });
+
           return {
             response: {
               code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA,
@@ -670,6 +713,17 @@ export class SchemaCheckRepository {
       );
       if (schemaChanges.kind === 'failure') {
         logger.warn(`Error finding diff between graphs of the subgraph ${s.name}: ${schemaChanges.error}`);
+
+        await this.update({
+          schemaCheckID,
+          compositionSkipped: true,
+          breakingChangesSkipped: true,
+          trafficCheckSkipped: true,
+          graphPruningSkipped: true,
+          lintSkipped: true,
+          errorMessage: `Breaking change detection failed for the subgraph '${s.name}'`,
+        });
+
         return {
           response: {
             code: schemaChanges.errorCode,
@@ -679,7 +733,6 @@ export class SchemaCheckRepository {
           nonBreakingChanges: [],
           compositionErrors: [],
           checkId: schemaCheckID,
-          checkedFederatedGraphs: [],
           lintWarnings: [],
           lintErrors: [],
           graphPruneWarnings: [],
@@ -695,7 +748,7 @@ export class SchemaCheckRepository {
         schemaChanges,
         inspectorChanges: [],
         storedBreakingChanges: [],
-        checkSubgraphId: '',
+        checkSubgraphId: schemaCheckSubgraphId,
         routerCompatibilityVersion,
         labels: s.isNew ? s.labels : undefined,
       });
@@ -703,7 +756,14 @@ export class SchemaCheckRepository {
 
     let proposalMatchMessage: string | undefined;
     for (const [subgraphName, checkSubgraph] of checkSubgraphs.entries()) {
-      const { subgraph, newSchemaSDL, newGraphQLSchema, schemaChanges, routerCompatibilityVersion } = checkSubgraph;
+      const {
+        subgraph,
+        newSchemaSDL,
+        newGraphQLSchema,
+        schemaChanges,
+        routerCompatibilityVersion,
+        checkSubgraphId: schemaCheckSubgraphId,
+      } = checkSubgraph;
       if (namespace.enableProposals && !skipProposalMatchCheck) {
         const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
         // currently matching only with the subgraph that is already present in the namespace
@@ -726,6 +786,15 @@ export class SchemaCheckRepository {
             if (proposalConfig.checkSeverityLevel === 'warn') {
               proposalMatchMessage += `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.\n`;
             } else {
+              await this.update({
+                schemaCheckID,
+                compositionSkipped: true,
+                breakingChangesSkipped: true,
+                trafficCheckSkipped: true,
+                graphPruningSkipped: true,
+                lintSkipped: true,
+              });
+
               return {
                 response: {
                   code: EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL,
@@ -746,17 +815,6 @@ export class SchemaCheckRepository {
           }
         }
       }
-
-      const schemaCheckSubgraphId = await this.createSchemaCheckSubgraph({
-        data: {
-          schemaCheckId: schemaCheckID,
-          subgraphId: subgraph?.id,
-          subgraphName,
-          proposedSubgraphSchemaSDL: newSchemaSDL,
-          isDeleted: newSchemaSDL === '',
-          isNew: false,
-        },
-      });
 
       await this.createSchemaCheckChanges({
         changes: schemaChanges.nonBreakingChanges,
@@ -869,7 +927,7 @@ export class SchemaCheckRepository {
       );
     }
 
-    const { composedGraphs, checkSubgraphsByFedGraph } = await composer.composeWithProposedSchemas({
+    const { composedGraphs } = await composer.composeWithProposedSchemas({
       inputSubgraphs: checkSubgraphs,
       graphs: federatedGraphs,
     });
@@ -882,15 +940,6 @@ export class SchemaCheckRepository {
     let hasClientTraffic = false;
 
     for (const composition of composedGraphs) {
-      const checkFederatedGraphId = await this.createCheckedFederatedGraph(schemaCheckID, composition.id, limit);
-      const checkSubgraphsUsedForComposition = checkSubgraphsByFedGraph.get(composition.id);
-      if (checkSubgraphsUsedForComposition && checkSubgraphsUsedForComposition.length > 0) {
-        await this.createSchemaCheckSubgraphFederatedGraphs({
-          schemaCheckFederatedGraphId: checkFederatedGraphId,
-          checkSubgraphIds: checkSubgraphsUsedForComposition,
-        });
-      }
-
       for (const error of composition.errors) {
         compositionErrors.push({
           message: error.message,

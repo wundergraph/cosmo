@@ -765,6 +765,8 @@ export const schemaChecks = pgTable(
     clientTrafficCheckSkipped: boolean('client_traffic_check_skipped').default(false),
     lintSkipped: boolean('lint_skipped'),
     graphPruningSkipped: boolean('graph_pruning_skipped'),
+    compositionSkipped: boolean('composition_skipped').default(false),
+    breakingChangesSkipped: boolean('breaking_changes_skipped').default(false),
     proposedSubgraphSchemaSDL: text('proposed_subgraph_schema_sdl'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     ghDetails: json('gh_details').$type<{
@@ -780,6 +782,8 @@ export const schemaChecks = pgTable(
       commitSha: string;
       branch: string;
     }>(),
+    // this is used to store the error message of a non check policy
+    errorMessage: text('error_message'),
   },
   (t) => {
     return {

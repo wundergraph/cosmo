@@ -1,0 +1,1 @@
+ALTER TABLE "schema_checks" ADD COLUMN "error_message" text;

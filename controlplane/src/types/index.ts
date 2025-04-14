@@ -182,6 +182,9 @@ export interface SchemaCheckDTO {
   };
   checkedSubgraphs: CheckedSubgraphDTO[];
   proposalMatch?: ProposalMatch;
+  compositionSkipped: boolean;
+  breakingChangesSkipped: boolean;
+  errorMessage?: string;
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {

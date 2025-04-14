@@ -129,7 +129,9 @@ export function publishFederatedSubgraph(
           proposalSubgraphId: string;
         }
       | undefined;
-    if (namespace.enableProposals) {
+
+    // if the subgraph is a feature subgraph, we don't need to check for proposal matches for now.
+    if (namespace.enableProposals && !subgraph?.isFeatureSubgraph) {
       const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
       if (proposalConfig) {
         const match = await proposalRepo.matchSchemaWithProposal({

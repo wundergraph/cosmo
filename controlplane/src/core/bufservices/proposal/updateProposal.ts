@@ -3,6 +3,7 @@ import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   Label,
+  ProposalSubgraph,
   UpdateProposalRequest,
   UpdateProposalResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -342,6 +343,29 @@ export function updateProposal(
             };
           }
 
+          if (subgraph.isFeatureSubgraph) {
+            return {
+              response: {
+                code: EnumStatusCode.ERR,
+                details:
+                  `The subgraph "${subgraph.name}" is a feature subgraph.` +
+                  ` Feature subgraphs are not currently supported for proposals.`,
+              },
+              breakingChanges: [],
+              nonBreakingChanges: [],
+              compositionErrors: [],
+              checkId: '',
+              lintWarnings: [],
+              lintErrors: [],
+              graphPruneWarnings: [],
+              graphPruneErrors: [],
+              compositionWarnings: [],
+              lintingSkipped: false,
+              graphPruningSkipped: false,
+              checkUrl: '',
+            };
+          }
+
           if (proposalSubgraph.isNew) {
             return {
               response: {
@@ -435,17 +459,28 @@ export function updateProposal(
         proposalRepo,
         trafficInspector,
         composer,
-        subgraphs: updatedSubgraphs,
+        subgraphs: proposalSubgraphs.map(
+          (subgraph) =>
+            new ProposalSubgraph({
+              name: subgraph.subgraphName,
+              schemaSDL: subgraph.schemaSDL,
+              labels: subgraph.labels,
+              isDeleted: subgraph.isDeleted,
+              isNew: subgraph.isNew,
+            }),
+        ),
         namespace,
         logger,
         chClient: opts.chClient,
         skipProposalMatchCheck: true,
       });
 
-      await schemaCheckRepo.createSchemaCheckProposal({
-        schemaCheckID: checkId,
-        proposalID: proposal.proposal.id,
-      });
+      if (checkId) {
+        await schemaCheckRepo.createSchemaCheckProposal({
+          schemaCheckID: checkId,
+          proposalID: proposal.proposal.id,
+        });
+      }
 
       return {
         response,

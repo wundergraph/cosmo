@@ -224,6 +224,14 @@ export function checkSubgraphSchema(
       }
     }
 
+    const changeRetention = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'breaking-change-retention',
+    });
+
+    let limit = changeRetention?.limit ?? 7;
+    limit = clamp(namespace?.checksTimeframeInDays ?? limit, 1, limit);
+
     const schemaCheckID = await schemaCheckRepo.create({
       proposedSubgraphSchemaSDL: '',
       trafficCheckSkipped: req.skipTrafficCheck,
@@ -243,6 +251,14 @@ export function checkSubgraphSchema(
       },
     });
 
+    for (const graph of federatedGraphs) {
+      const checkFederatedGraphId = await schemaCheckRepo.createCheckedFederatedGraph(schemaCheckID, graph.id, limit);
+      await schemaCheckRepo.createSchemaCheckSubgraphFederatedGraphs({
+        schemaCheckFederatedGraphId: checkFederatedGraphId,
+        checkSubgraphIds: [schemaCheckSubgraphId],
+      });
+    }
+
     let proposalMatchMessage: string | undefined;
     if (namespace.enableProposals) {
       const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
@@ -255,6 +271,7 @@ export function checkSubgraphSchema(
           schemaCheckId: schemaCheckID,
           isDeleted: !!req.delete,
         });
+
         await schemaCheckRepo.update({
           schemaCheckID,
           proposalMatch: match ? 'success' : proposalConfig.checkSeverityLevel === 'warn' ? 'warn' : 'error',
@@ -266,6 +283,15 @@ export function checkSubgraphSchema(
           if (proposalConfig.checkSeverityLevel === 'warn') {
             proposalMatchMessage = message;
           } else {
+            await schemaCheckRepo.update({
+              schemaCheckID,
+              compositionSkipped: true,
+              breakingChangesSkipped: true,
+              trafficCheckSkipped: true,
+              graphPruningSkipped: true,
+              lintSkipped: true,
+            });
+
             return {
               response: {
                 code: EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL,
@@ -291,6 +317,15 @@ export function checkSubgraphSchema(
     const schemaChanges = await getDiffBetweenGraphs(subgraph.schemaSDL, newSchemaSDL, routerCompatibilityVersion);
     if (schemaChanges.kind === 'failure') {
       logger.warn(`Error finding diff between graphs: ${schemaChanges.error}`);
+      await schemaCheckRepo.update({
+        schemaCheckID,
+        compositionSkipped: true,
+        breakingChangesSkipped: true,
+        trafficCheckSkipped: true,
+        graphPruningSkipped: true,
+        lintSkipped: true,
+        errorMessage: `Breaking change detection failed for the subgraph '${subgraph.name}'`,
+      });
       return {
         response: {
           code: schemaChanges.errorCode,
@@ -371,25 +406,7 @@ export function checkSubgraphSchema(
       storedBreakingChanges,
     );
 
-    const changeRetention = await orgRepo.getFeature({
-      organizationId: authContext.organizationId,
-      featureId: 'breaking-change-retention',
-    });
-
-    let limit = changeRetention?.limit ?? 7;
-    limit = clamp(namespace?.checksTimeframeInDays ?? limit, 1, limit);
-
     for (const composedGraph of composedGraphs) {
-      const checkFederatedGraphId = await schemaCheckRepo.createCheckedFederatedGraph(
-        schemaCheckID,
-        composedGraph.id,
-        limit,
-      );
-      await schemaCheckRepo.createSchemaCheckSubgraphFederatedGraphs({
-        schemaCheckFederatedGraphId: checkFederatedGraphId,
-        checkSubgraphIds: [schemaCheckSubgraphId],
-      });
-
       for (const error of composedGraph.errors) {
         compositionErrors.push({
           message: error.message,

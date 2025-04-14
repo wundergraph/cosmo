@@ -489,6 +489,9 @@ message SchemaCheck {
   optional VCSContext vcsContext = 16;
   repeated CheckedSubgraph checkedSubgraphs = 17;
   optional string proposalMatch = 18;
+  bool composition_skipped = 19;
+  bool breaking_changes_skipped = 20;
+  optional string errorMessage = 21;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -2491,31 +2494,6 @@ message SetGraphRouterCompatibilityVersionResponse {
   repeated CompositionWarning compositionWarnings = 6;
 }
 
-message CheckSubgraphSchemasRequest {
-  string namespace = 1;
-  repeated ProposalSubgraph subgraphs = 2;
-  GitInfo gitInfo = 3;
-  optional VCSContext vcsContext = 4;
-}
-
-message CheckSubgraphSchemasResponse {
-  Response response = 1;
-  string checkId = 2;
-  repeated SchemaChange breakingChanges = 3;
-  repeated SchemaChange nonBreakingChanges = 4;
-  repeated CompositionError compositionErrors = 5;
-  repeated CompositionWarning compositionWarnings = 6;
-  repeated LintIssue lintErrors = 7;
-  repeated LintIssue lintWarnings = 8;
-  repeated GraphPruningIssue graphPruneErrors = 9;
-  repeated GraphPruningIssue graphPruneWarnings = 10;
-  CheckOperationUsageStats operationUsageStats = 11;
-  bool lintingSkipped = 12;
-  bool graphPruningSkipped = 13;
-  string checkUrl = 14;
-  optional string proposalMatchMessage = 15;
-}
-
 message GetProposedSchemaOfCheckedSubgraphRequest {
   string checkId = 1;
   string checkedSubgraphId = 2;
@@ -2721,7 +2699,6 @@ service PlatformService {
   rpc DeleteFederatedSubgraph(DeleteFederatedSubgraphRequest) returns (DeleteFederatedSubgraphResponse) {}
   // CheckSubgraphSchema checks if the schema is valid and if it can be composed without conflicts with the provided new subgraph schema.
   rpc CheckSubgraphSchema(CheckSubgraphSchemaRequest) returns (CheckSubgraphSchemaResponse) {}
-  rpc CheckSubgraphSchemas(CheckSubgraphSchemasRequest) returns (CheckSubgraphSchemasResponse) {}
   rpc GetProposedSchemaOfCheckedSubgraph(GetProposedSchemaOfCheckedSubgraphRequest) returns (GetProposedSchemaOfCheckedSubgraphResponse) {}
   rpc FixSubgraphSchema(FixSubgraphSchemaRequest) returns (FixSubgraphSchemaResponse) {}
   // UpdateFederatedGraph updates a federated graph with new labels and routing url

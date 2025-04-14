@@ -60,7 +60,6 @@ import { cn } from "@/lib/utils";
 import { useMutation, useQuery } from "@connectrpc/connect-query";
 import {
   CheckCircleIcon,
-  ExclamationCircleIcon,
   ExclamationTriangleIcon,
   NoSymbolIcon,
 } from "@heroicons/react/24/outline";
@@ -92,7 +91,7 @@ import { formatDistanceToNow, subDays } from "date-fns";
 import { useRouter } from "next/router";
 import React, { useContext, useMemo } from "react";
 import { HiOutlineScissors } from "react-icons/hi2";
-import { PiBracketsCurlyBold, PiCubeFocus, PiGraphLight } from "react-icons/pi";
+import { PiBracketsCurlyBold, PiCubeFocus } from "react-icons/pi";
 import { SiLintcode } from "react-icons/si";
 
 const ForceSuccess: React.FC<{ onSubmit: () => void }> = (props) => {
@@ -164,8 +163,20 @@ const ProposedSchemas = ({
   if (fetchingSdl) return <Loader fullscreen />;
 
   return (
-    <>
-      <div className="-top-[60px] right-8 px-4 md:absolute md:px-0">
+    <div className="scrollbar-custom h-full min-h-[300px] w-full overflow-auto">
+      <SDLViewerMonaco
+        schema={
+          (checkedSubgraphs.length > 0 ? sdlData?.proposedSchema : sdl) || ""
+        }
+        disablePrettier
+        decorationCollections={getDecorationCollection(
+          lintIssues,
+          graphPruningIssues,
+        )}
+        line={hash ? Number(hash.slice(1)) : undefined}
+      />
+
+      <div className="right-8 top-0 px-4 md:absolute md:px-0">
         <div className="flex gap-x-2">
           {checkedSubgraphs.length > 0 && (
             <Select
@@ -182,7 +193,7 @@ const ProposedSchemas = ({
             >
               <SelectTrigger
                 value={activeSubgraphName}
-                className="w-full md:ml-auto md:w-[200px]"
+                className="w-full bg-background md:ml-auto md:w-[200px]"
               >
                 <SelectValue aria-label={activeSubgraphName}>
                   {activeSubgraphName}
@@ -223,20 +234,7 @@ const ProposedSchemas = ({
           />
         </div>
       </div>
-      <div className="scrollbar-custom h-full min-h-[300px] w-full overflow-auto">
-        <SDLViewerMonaco
-          schema={
-            (checkedSubgraphs.length > 0 ? sdlData?.proposedSchema : sdl) || ""
-          }
-          disablePrettier
-          decorationCollections={getDecorationCollection(
-            lintIssues,
-            graphPruningIssues,
-          )}
-          line={hash ? Number(hash.slice(1)) : undefined}
-        />
-      </div>
-    </>
+    </div>
   );
 };
 
@@ -459,25 +457,27 @@ const CheckDetails = ({
   const ghDetails = data.check.ghDetails;
   const vcsContext = data.check.vcsContext;
 
-  const reason = data.check.proposalMatch === "error"
-    ? "Proposal match check failed"
-    : !data.check.isComposable
+  const reason = data.check.errorMessage
+    ? data.check.errorMessage
+    : data.check.proposalMatch === "error"
+      ? "Proposal match check failed"
+      : !data.check.isComposable
       ? "Composition errors were found"
       : data.check.isBreaking && data.check?.clientTrafficCheckSkipped
-        ? "Breaking changes were detected"
+      ? "Breaking changes were detected"
       : data.check.isBreaking && data.check.hasClientTraffic
-        ? "Operations were affected by breaking changes"
-        : data.check.isBreaking && !data.check.hasClientTraffic
-          ? "No operations were affected by breaking changes"
-          : "All tasks were successful";
+      ? "Operations were affected by breaking changes"
+      : data.check.isBreaking && !data.check.hasClientTraffic
+      ? "No operations were affected by breaking changes"
+      : "All tasks were successful";
 
   const subgraphName =
     data.check.subgraphName ||
     (data.check.checkedSubgraphs.length > 1
       ? "Multiple Subgraphs"
       : data.check.checkedSubgraphs.length > 0
-        ? data.check.checkedSubgraphs[0].subgraphName
-        : "Subgraph");
+      ? data.check.checkedSubgraphs[0].subgraphName
+      : "Subgraph");
 
   const setTab = (tab: string) => {
     const query: Record<string, any> = {
@@ -580,9 +580,16 @@ const CheckDetails = ({
             <dd className="flex flex-row flex-wrap gap-2 lg:flex lg:flex-col">
               <Badge
                 variant="outline"
-                className="flex items-center space-x-1.5 py-2"
+                className={cn(
+                  "flex items-center space-x-1.5 py-2",
+                  data.check?.compositionSkipped && "text-muted-foreground",
+                )}
               >
-                {getCheckIcon(data.check.isComposable)}
+                {data.check?.compositionSkipped ? (
+                  <NoSymbolIcon className="h-4 w-4" />
+                ) : (
+                  getCheckIcon(data.check.isComposable)
+                )}
                 <span className="flex-1 truncate">Composition</span>
                 <InfoTooltip>
                   Describes if the proposed schema can be composed with all
@@ -592,9 +599,16 @@ const CheckDetails = ({
 
               <Badge
                 variant="outline"
-                className="flex items-center space-x-1.5  py-2"
+                className={cn(
+                  "flex items-center space-x-1.5 py-2",
+                  data.check?.breakingChangesSkipped && "text-muted-foreground",
+                )}
               >
-                {getCheckIcon(!data.check.isBreaking)}
+                {data.check?.breakingChangesSkipped ? (
+                  <NoSymbolIcon className="h-4 w-4" />
+                ) : (
+                  getCheckIcon(!data.check.isBreaking)
+                )}
                 <span className="flex-1 truncate">Breaking Changes</span>
                 <InfoTooltip>
                   Describes if the proposed schema is free of changes that break
@@ -985,7 +999,7 @@ const CheckDetails = ({
                     Proposal Matches
                   </Link>
                 </TabsTrigger>
-                
+
                 {(data.check.checkedSubgraphs.length > 1 ||
                   (data.check.checkedSubgraphs.length === 1 &&
                     !data.check.checkedSubgraphs[0].isDeleted) ||
@@ -1010,147 +1024,168 @@ const CheckDetails = ({
                 value="composition"
                 className="w-full space-y-4 px-4 lg:px-6"
               >
-                {data.compositionErrors?.length ? (
-                  <Alert variant="destructive">
-                    <AlertTitle>Composition Errors</AlertTitle>
-                    <AlertDescription>
-                      <pre className="whitespace-pre-wrap">
-                        {data.compositionErrors.length > 0
-                          ? data.compositionErrors
-                              .join("\n")
-                              .split("Error: ")
-                              .join("\n")
-                          : "No composition errors"}
-                      </pre>
-                    </AlertDescription>
-                  </Alert>
-                ) : null}
-
-                {data.compositionWarnings?.length ? (
-                  <Alert variant="warn">
-                    <AlertTitle>Composition Warnings</AlertTitle>
-                    <AlertDescription>
-                      <pre className="whitespace-pre-wrap">
-                        {data.compositionWarnings.length > 0
-                          ? data.compositionWarnings
-                              .join("\n")
-                              .split("Warning: ")
-                              .join("\n")
-                          : "No composition wanings"}
-                      </pre>
-                    </AlertDescription>
-                  </Alert>
-                ) : null}
-
-                {data.compositionErrors.length === 0 &&
-                data.compositionWarnings.length === 0 &&
-                !data.check.isComposable ? (
+                {data.check?.compositionSkipped ? (
                   <EmptyState
-                    icon={
-                      <CrossCircledIcon className="h-16 w-16 text-destructive" />
-                    }
-                    title="Composition Check Failed"
-                    description='This check succeeded for the current federated graph, but it failed in one or more other affected federated graphs. Please check the "Affected Graphs" section to identify which graphs encountered composition errors.'
+                    icon={<NoSymbolIcon className="text-gray-400" />}
+                    title="Composition Check Skipped"
+                    description="The composition check was skipped for this run."
                   />
-                ) : data.compositionErrors.length === 0 &&
-                  data.compositionWarnings.length === 0 ? (
-                  <EmptyState
-                    icon={<CheckCircleIcon className="text-success" />}
-                    title="Composition Check Successful"
-                    description="There are no composition errors or warnings."
-                  />
-                ) : null}
+                ) : (
+                  <>
+                    {data.compositionErrors?.length ? (
+                      <Alert variant="destructive">
+                        <AlertTitle>Composition Errors</AlertTitle>
+                        <AlertDescription>
+                          <pre className="whitespace-pre-wrap">
+                            {data.compositionErrors.length > 0
+                              ? data.compositionErrors
+                                  .join("\n")
+                                  .split("Error: ")
+                                  .join("\n")
+                              : "No composition errors"}
+                          </pre>
+                        </AlertDescription>
+                      </Alert>
+                    ) : null}
+
+                    {data.compositionWarnings?.length ? (
+                      <Alert variant="warn">
+                        <AlertTitle>Composition Warnings</AlertTitle>
+                        <AlertDescription>
+                          <pre className="whitespace-pre-wrap">
+                            {data.compositionWarnings.length > 0
+                              ? data.compositionWarnings
+                                  .join("\n")
+                                  .split("Warning: ")
+                                  .join("\n")
+                              : "No composition wanings"}
+                          </pre>
+                        </AlertDescription>
+                      </Alert>
+                    ) : null}
+
+                    {data.compositionErrors.length === 0 &&
+                    data.compositionWarnings.length === 0 &&
+                    !data.check.isComposable ? (
+                      <EmptyState
+                        icon={
+                          <CrossCircledIcon className="h-16 w-16 text-destructive" />
+                        }
+                        title="Composition Check Failed"
+                        description='This check succeeded for the current federated graph, but it failed in one or more other affected federated graphs. Please check the "Affected Graphs" section to identify which graphs encountered composition errors.'
+                      />
+                    ) : data.compositionErrors.length === 0 &&
+                      data.compositionWarnings.length === 0 ? (
+                      <EmptyState
+                        icon={<CheckCircleIcon className="text-success" />}
+                        title="Composition Check Successful"
+                        description="There are no composition errors or warnings."
+                      />
+                    ) : null}
+                  </>
+                )}
               </TabsContent>
 
               <TabsContent
                 value="changes"
                 className="w-full space-y-4 px-4 lg:px-6"
               >
-                {data.check.isBreaking &&
-                data.check.isComposable &&
-                data.check.hasClientTraffic ? (
-                  <Alert variant="default">
-                    {data.check.isForcedSuccess ? (
-                      <CheckCircledIcon className="h-4 w-4" />
-                    ) : (
-                      <CrossCircledIcon className="h-4 w-4" />
-                    )}
-
-                    <AlertTitle>
-                      {data.check.isForcedSuccess
-                        ? "Forced Success"
-                        : "Checks Failed"}
-                    </AlertTitle>
-                    <AlertDescription>
-                      {data.check.isForcedSuccess ? (
-                        <>This check was manually marked as successful.</>
-                      ) : (
-                        <>
-                          The proposed schema changes can be composed, but there
-                          are breaking changes affecting client operations.
-                          <br />
-                          You can manually override the state of this check to
-                          accept the changes.
-                        </>
-                      )}
-                    </AlertDescription>
-                    {data.check.isForcedSuccess ? (
-                      <div className="mt-2 flex space-x-2">
-                        <ForceSuccess
-                          onSubmit={() =>
-                            forceSuccess({
-                              checkId: id,
-                              graphName: slug,
-                              namespace,
-                            })
-                          }
-                        />
-                      </div>
-                    ) : null}
-                  </Alert>
-                ) : null}
-
-                {isSuccessful ? (
-                  <Alert variant="default">
-                    <CheckCircledIcon className="h-4 w-4" />
-
-                    <AlertTitle>Schema check passed</AlertTitle>
-                    <AlertDescription>
-                      {data.changes.length
-                        ? "This schema change didn't affect any operations from existing client traffic."
-                        : "There were no schema changes detected."}
-                    </AlertDescription>
-                    {data.check.isForcedSuccess ? (
-                      <div className="mt-2 flex space-x-2">
-                        <ForceSuccess
-                          onSubmit={() =>
-                            forceSuccess({
-                              checkId: id,
-                              graphName: slug,
-                            })
-                          }
-                        />
-                      </div>
-                    ) : null}
-                  </Alert>
-                ) : null}
-
-                {data.changes.length ? (
-                  <ChangesTable
-                    changes={data.changes}
-                    caption={`${data.changes.length} changes found`}
-                    trafficCheckDays={data.trafficCheckDays}
-                    createdAt={data.check.timestamp}
+                {data.check?.breakingChangesSkipped ? (
+                  <EmptyState
+                    icon={<NoSymbolIcon className="text-gray-400" />}
+                    title="Breaking Changes Check Skipped"
+                    description="The breaking changes check was skipped for this run."
                   />
                 ) : (
-                  <EmptyState
-                    icon={<CheckCircleIcon className="text-success" />}
-                    title="No changes found."
-                    description="There are no changes in the proposed schema."
-                  />
-                )}
+                  <>
+                    {data.check.isBreaking &&
+                    data.check.isComposable &&
+                    data.check.hasClientTraffic ? (
+                      <Alert variant="default">
+                        {data.check.isForcedSuccess ? (
+                          <CheckCircledIcon className="h-4 w-4" />
+                        ) : (
+                          <CrossCircledIcon className="h-4 w-4" />
+                        )}
 
-                <FieldUsageSheet />
+                        <AlertTitle>
+                          {data.check.isForcedSuccess
+                            ? "Forced Success"
+                            : "Checks Failed"}
+                        </AlertTitle>
+                        <AlertDescription>
+                          {data.check.isForcedSuccess ? (
+                            <>This check was manually marked as successful.</>
+                          ) : (
+                            <>
+                              The proposed schema changes can be composed, but
+                              there are breaking changes affecting client
+                              operations.
+                              <br />
+                              You can manually override the state of this check
+                              to accept the changes.
+                            </>
+                          )}
+                        </AlertDescription>
+                        {data.check.isForcedSuccess ? (
+                          <div className="mt-2 flex space-x-2">
+                            <ForceSuccess
+                              onSubmit={() =>
+                                forceSuccess({
+                                  checkId: id,
+                                  graphName: slug,
+                                  namespace,
+                                })
+                              }
+                            />
+                          </div>
+                        ) : null}
+                      </Alert>
+                    ) : null}
+
+                    {isSuccessful ? (
+                      <Alert variant="default">
+                        <CheckCircledIcon className="h-4 w-4" />
+
+                        <AlertTitle>Schema check passed</AlertTitle>
+                        <AlertDescription>
+                          {data.changes.length
+                            ? "This schema change didn't affect any operations from existing client traffic."
+                            : "There were no schema changes detected."}
+                        </AlertDescription>
+                        {data.check.isForcedSuccess ? (
+                          <div className="mt-2 flex space-x-2">
+                            <ForceSuccess
+                              onSubmit={() =>
+                                forceSuccess({
+                                  checkId: id,
+                                  graphName: slug,
+                                })
+                              }
+                            />
+                          </div>
+                        ) : null}
+                      </Alert>
+                    ) : null}
+
+                    {data.changes.length ? (
+                      <ChangesTable
+                        changes={data.changes}
+                        caption={`${data.changes.length} changes found`}
+                        trafficCheckDays={data.trafficCheckDays}
+                        createdAt={data.check.timestamp}
+                      />
+                    ) : (
+                      <EmptyState
+                        icon={<CheckCircleIcon className="text-success" />}
+                        title="No changes found."
+                        description="There are no changes in the proposed schema."
+                      />
+                    )}
+
+                    <FieldUsageSheet />
+                  </>
+                )}
               </TabsContent>
               <TabsContent value="operations" className="w-full">
                 <CheckOperations />

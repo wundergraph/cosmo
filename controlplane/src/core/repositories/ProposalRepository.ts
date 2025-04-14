@@ -574,6 +574,9 @@ export class ProposalRepository {
         ghDetails: schema.schemaChecks.ghDetails,
         isDeleted: schema.schemaChecks.isDeleted,
         proposalMatch: schema.schemaChecks.proposalMatch,
+        compositionSkipped: schema.schemaChecks.compositionSkipped,
+        breakingChangesSkipped: schema.schemaChecks.breakingChangesSkipped,
+        errorMessage: schema.schemaChecks.errorMessage,
       })
       .from(schema.proposalChecks)
       .innerJoin(schema.schemaChecks, eq(schema.proposalChecks.schemaCheckId, schema.schemaChecks.id))
@@ -630,6 +633,9 @@ export class ProposalRepository {
           graphPruningSkipped: c.graphPruningSkipped ?? false,
           checkedSubgraphs,
           proposalMatch: c.proposalMatch || undefined,
+          compositionSkipped: c.compositionSkipped ?? false,
+          breakingChangesSkipped: c.breakingChangesSkipped ?? false,
+          errorMessage: c.errorMessage || undefined,
         };
       }),
     );
