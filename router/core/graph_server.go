@@ -82,6 +82,7 @@ type (
 		context                 context.Context
 		cancelFunc              context.CancelFunc
 		pubSubProviders         *EnginePubSubProviders
+		storageProviders        *config.StorageProviders
 		engineStats             statistics.EngineStatistics
 		playgroundHandler       func(http.Handler) http.Handler
 		publicKey               *ecdsa.PublicKey
@@ -134,6 +135,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			nats:  map[string]pubsub_datasource.NatsPubSub{},
 			kafka: map[string]pubsub_datasource.KafkaPubSub{},
 		},
+		storageProviders: &r.storageProviders,
 	}
 
 	baseOtelAttributes := []attribute.KeyValue{
@@ -1071,16 +1073,50 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	if s.MCP.Enabled {
-		mcpss, err := mcpserver.NewGraphQLSchemaServer(
-			path.Join(s.routerListenAddr, s.graphqlPath),
-			executor.RouterSchema,
+		var operationsDir string
+
+		// If storage provider ID is set, resolve it to a directory path
+		if s.MCP.Storage.ProviderID != "" {
+			s.logger.Info("Resolving storage provider for MCP operations",
+				zap.String("provider_id", s.MCP.Storage.ProviderID))
+
+			// Find the provider in storage_providers
+			found := false
+
+			// Check for file_system providers
+			for _, provider := range s.storageProviders.FileSystem {
+				if provider.ID == s.MCP.Storage.ProviderID {
+					s.logger.Info("Found file_system storage provider for MCP",
+						zap.String("id", provider.ID),
+						zap.String("path", provider.Path))
+
+					// Use the resolved file system path
+					operationsDir = provider.Path
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				return nil, fmt.Errorf("storage provider with id %s not found", s.MCP.Storage.ProviderID)
+			}
+		}
+
+		// Initialize the MCP server with the resolved operations directory
+		mcpOpts := []func(*mcpserver.Options){
 			mcpserver.WithGraphName(s.MCP.GraphName),
-			mcpserver.WithOperationsDir(s.MCP.OperationsDir),
-			mcpserver.WithListenAddr(s.MCP.ListenAddr),
+			mcpserver.WithOperationsDir(operationsDir),
+			mcpserver.WithPort(s.MCP.Server.Port),
 			mcpserver.WithLogger(s.logger),
 			mcpserver.WithExcludeMutations(s.MCP.ExcludeMutations),
 			mcpserver.WithEnableArbitraryOperations(s.MCP.EnableArbitraryOperations),
 			mcpserver.WithExposeSchema(s.MCP.ExposeSchema),
+		}
+
+		mcpss, err := mcpserver.NewGraphQLSchemaServer(
+			path.Join(s.routerListenAddr, s.graphqlPath),
+			executor.RouterSchema,
+			mcpOpts...,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create mcp server: %w", err)
@@ -1093,14 +1129,20 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		// Store the MCP server for later shutdown
 		s.mcpServer = mcpss
 
-		s.logger.Info("MCP server started",
-			zap.String("listen_addr", s.MCP.ListenAddr),
-			zap.String("operations_dir", s.MCP.OperationsDir),
+		logFields := []zap.Field{
+			zap.String("port", s.MCP.Server.Port),
+			zap.String("operations_dir", operationsDir),
 			zap.String("graph_name", s.MCP.GraphName),
 			zap.Bool("exclude_mutations", s.MCP.ExcludeMutations),
 			zap.Bool("enable_arbitrary_operations", s.MCP.EnableArbitraryOperations),
 			zap.Bool("expose_schema", s.MCP.ExposeSchema),
-		)
+		}
+
+		if s.MCP.Storage.ProviderID != "" {
+			logFields = append(logFields, zap.String("storage_provider_id", s.MCP.Storage.ProviderID))
+		}
+
+		s.logger.Info("MCP server started", logFields...)
 	}
 
 	graphqlHandler := NewGraphQLHandler(handlerOpts)

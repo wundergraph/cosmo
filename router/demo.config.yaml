@@ -7,12 +7,19 @@ version: "1"
 
 mcp:
   enabled: true
-  operations_dir: operations
+  server:
+    port: "5025"
+  storage:
+    provider_id: "mcp"
   exclude_mutations: false
   graph_name: my-graph
   expose_schema: true
   enable_arbitrary_operations: true
-  listen_addr: :5025
+
+storage_providers:
+  file_system:
+    - path: "operations"
+      id: "mcp"
 
 events:
   providers:

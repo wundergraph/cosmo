@@ -659,9 +659,10 @@ type SubgraphErrorPropagationConfiguration struct {
 }
 
 type StorageProviders struct {
-	S3    []S3StorageProvider    `yaml:"s3,omitempty"`
-	CDN   []BaseStorageProvider  `yaml:"cdn,omitempty"`
-	Redis []RedisStorageProvider `yaml:"redis,omitempty"`
+	S3         []S3StorageProvider         `yaml:"s3,omitempty"`
+	CDN        []BaseStorageProvider       `yaml:"cdn,omitempty"`
+	Redis      []RedisStorageProvider      `yaml:"redis,omitempty"`
+	FileSystem []FileSystemStorageProvider `yaml:"file_system,omitempty"`
 }
 
 type PersistedOperationsStorageConfig struct {
@@ -863,13 +864,21 @@ type CacheWarmupConfiguration struct {
 }
 
 type MCPConfiguration struct {
-	Enabled                   bool   `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
-	ListenAddr                string `yaml:"listen_addr" envDefault:":5025" env:"MCP_LISTEN_ADDR"`
-	OperationsDir             string `yaml:"operations_dir" envDefault:"operations" env:"MCP_OPERATIONS_DIR"`
-	GraphName                 string `yaml:"graph_name" envDefault:"cosmo" env:"MCP_GRAPH_NAME"`
-	ExcludeMutations          bool   `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
-	EnableArbitraryOperations bool   `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
-	ExposeSchema              bool   `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
+	Enabled                   bool             `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
+	Server                    MCPServer        `yaml:"server,omitempty"`
+	Storage                   MCPStorageConfig `yaml:"storage,omitempty"`
+	GraphName                 string           `yaml:"graph_name" envDefault:"cosmo" env:"MCP_GRAPH_NAME"`
+	ExcludeMutations          bool             `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
+	EnableArbitraryOperations bool             `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
+	ExposeSchema              bool             `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
+}
+
+type MCPStorageConfig struct {
+	ProviderID string `yaml:"provider_id,omitempty" env:"MCP_STORAGE_PROVIDER_ID"`
+}
+
+type MCPServer struct {
+	Port string `yaml:"port" envDefault:"5025" env:"MCP_SERVER_PORT"`
 }
 
 type Config struct {
@@ -1030,4 +1039,9 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 	}
 
 	return cfg, nil
+}
+
+type FileSystemStorageProvider struct {
+	ID   string `yaml:"id,omitempty" env:"STORAGE_PROVIDER_FS_ID"`
+	Path string `yaml:"path,omitempty" env:"STORAGE_PROVIDER_FS_PATH"`
 }

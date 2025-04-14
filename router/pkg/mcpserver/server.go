@@ -27,8 +27,8 @@ type Options struct {
 	GraphName string
 	// OperationsDir is the directory where GraphQL operations are stored
 	OperationsDir string
-	// ListenAddr is the address where the SSE server should listen
-	ListenAddr string
+	// Server contains server configuration options
+	Server ServerOptions
 	// Enabled determines whether the MCP server should be started
 	Enabled bool
 	// Logger is the logger to be used
@@ -41,6 +41,12 @@ type Options struct {
 	EnableArbitraryOperations bool
 	// ExposeSchema determines whether the GraphQL schema is exposed
 	ExposeSchema bool
+}
+
+// ServerOptions represents the server-specific configuration options
+type ServerOptions struct {
+	// Port is the port where the SSE server should listen
+	Port string
 }
 
 // SimpleOperationInfo contains basic information about a GraphQL operation for listing.
@@ -150,9 +156,11 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, schema *ast.Document, 
 
 	// Default options
 	options := &Options{
-		GraphName:      "graph",
-		OperationsDir:  "operations",
-		ListenAddr:     ":5025",
+		GraphName:     "graph",
+		OperationsDir: "operations",
+		Server: ServerOptions{
+			Port: "5025",
+		},
 		Enabled:        false,
 		Logger:         zap.NewNop(),
 		RequestTimeout: 30 * time.Second,
@@ -186,7 +194,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, schema *ast.Document, 
 		server:                    mcpServer,
 		graphName:                 options.GraphName,
 		operationsDir:             options.OperationsDir,
-		listenAddr:                options.ListenAddr,
+		listenAddr:                options.Server.Port,
 		logger:                    options.Logger,
 		httpClient:                httpClient,
 		requestTimeout:            options.RequestTimeout,
@@ -215,10 +223,17 @@ func WithOperationsDir(operationsDir string) func(*Options) {
 	}
 }
 
-// WithListenAddr sets the listen address
-func WithListenAddr(listenAddr string) func(*Options) {
+// WithServer sets the server configuration
+func WithServer(server ServerOptions) func(*Options) {
 	return func(o *Options) {
-		o.ListenAddr = listenAddr
+		o.Server = server
+	}
+}
+
+// WithPort sets just the port
+func WithPort(port string) func(*Options) {
+	return func(o *Options) {
+		o.Server.Port = port
 	}
 }
 
@@ -267,22 +282,24 @@ func (s *GraphQLSchemaServer) LoadOperationsFromDirectory(operationsDir string) 
 
 // ServeSSE starts the server with SSE transport
 func (s *GraphQLSchemaServer) ServeSSE() (*server.SSEServer, *http.Server, error) {
+	// Add ":" prefix to port for listening address
+	listenAddr := ":" + s.listenAddr
 
 	// Create HTTP server with timeouts
 	httpServer := &http.Server{
-		Addr:         s.listenAddr,
+		Addr:         listenAddr,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  30 * time.Second,
 	}
 
 	sseServer := server.NewSSEServer(s.server,
-		server.WithBaseURL(fmt.Sprintf("http://localhost%s", s.listenAddr)),
+		server.WithBaseURL(fmt.Sprintf("http://localhost%s", listenAddr)),
 		server.WithHTTPServer(httpServer),
 	)
 
 	go func() {
-		err := sseServer.Start(s.listenAddr)
+		err := sseServer.Start(listenAddr)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.logger.Error("failed to start SSE server", zap.Error(err))
 		}
@@ -335,6 +352,7 @@ func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
 
 // registerTools registers all tools for the MCP server
 func (s *GraphQLSchemaServer) registerTools() {
+	// TODO: Support tool annotations when available in MCP Go SDK
 
 	// Add a tool to list all available operations (names and descriptions only)
 	s.server.AddTool(
@@ -509,11 +527,12 @@ func (s *GraphQLSchemaServer) handleGraphQLOperationInfo() func(ctx context.Cont
 
 		hasSideEffects := targetOp.OperationType == "mutation"
 		executionTips := []string{
-			fmt.Sprintf("Use the exact 'query' string provided for the '%s' operation.", targetOp.Name),
+			fmt.Sprintf("Use the exact 'query' string provided for the '%s' operation.", input.OperationName),
 			"The 'schema' describes the expected JSON format for the input variables. If 'schema' is null or empty, no variables are needed.",
 			"Send a POST request to " + s.routerGraphQLEndpoint + " with 'Content-Type: application/json; charset=utf-8'.",
 			"The request body should follow this structure: {\"query\": \"<operation_query>\", \"variables\": <your_variables_object>}",
 			"If the operation requires no variables (schema is empty/null), send: {\"query\": \"<operation_query>\"}",
+			fmt.Sprintf("You can also execute this operation by calling the tool 'execute_%s' in the context of the session.", toSnakeCase(input.OperationName)),
 			"IMPORTANT: Do not modify, reformat, or manipulate the query string in any way. Use it exactly as provided.",
 		}
 
