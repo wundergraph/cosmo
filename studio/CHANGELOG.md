@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.111.1](https://github.com/wundergraph/cosmo/compare/studio@0.111.0...studio@0.111.1) (2025-04-14)
+
+### Bug Fixes
+
+* solve issue caused by improper use of `useDayPicker` ([#1787](https://github.com/wundergraph/cosmo/issues/1787)) ([88cb122](https://github.com/wundergraph/cosmo/commit/88cb122b65eebc87d8ffa06bacf57fc7808c3a7e)) (@wilsonrivera)
+
 # [0.111.0](https://github.com/wundergraph/cosmo/compare/studio@0.110.0...studio@0.111.0) (2025-04-11)
 
 ### Bug Fixes
