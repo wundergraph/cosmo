@@ -12,7 +12,7 @@ import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb
 import { getFeatureFlagByName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { Button } from "react-day-picker";
+import { Button } from "@/components/ui/button";
 
 const FeatureFlagDetailsPage: NextPageWithLayout = () => {
   const router = useRouter();

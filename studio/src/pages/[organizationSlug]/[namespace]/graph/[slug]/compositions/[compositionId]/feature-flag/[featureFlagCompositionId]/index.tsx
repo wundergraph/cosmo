@@ -9,7 +9,7 @@ import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { Button } from "react-day-picker";
+import { Button } from "@/components/ui/button";
 import { CompositionDetails } from "../..";
 import { getCompositionDetails } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useQuery } from "@connectrpc/connect-query";
