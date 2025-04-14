@@ -103,6 +103,11 @@ func (c *PubSubProvider) FindPubSubDataSource(typeName string, fieldName string,
 }
 
 func (c *PubSubProvider) Startup(ctx context.Context) error {
+	for _, provider := range c.Providers {
+		if err := provider.Startup(ctx); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

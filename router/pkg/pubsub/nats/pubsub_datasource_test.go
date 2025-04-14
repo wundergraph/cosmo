@@ -11,36 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
-
-// MockAdapter mocks the required functionality from the Adapter for testing
-type MockAdapter struct {
-	mock.Mock
-}
-
-// Ensure MockAdapter implements AdapterInterface
-var _ AdapterInterface = (*MockAdapter)(nil)
-
-func (m *MockAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
-	args := m.Called(ctx, event, updater)
-	return args.Error(0)
-}
-
-func (m *MockAdapter) Publish(ctx context.Context, event PublishAndRequestEventConfiguration) error {
-	args := m.Called(ctx, event)
-	return args.Error(0)
-}
-
-func (m *MockAdapter) Request(ctx context.Context, event PublishAndRequestEventConfiguration, w io.Writer) error {
-	args := m.Called(ctx, event, w)
-	return args.Error(0)
-}
-
-func (m *MockAdapter) Shutdown(ctx context.Context) error {
-	args := m.Called(ctx)
-	return args.Error(0)
-}
 
 func TestNatsPubSubDataSource(t *testing.T) {
 	// Create event configuration with required fields
@@ -82,7 +53,7 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 	}
 
 	// Create mock adapter
-	mockAdapter := new(MockAdapter)
+	mockAdapter := new(mockAdapter)
 
 	// Configure mock expectations for Publish
 	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
@@ -128,7 +99,7 @@ func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
 	}
 
 	// Create mock adapter
-	mockAdapter := new(MockAdapter)
+	mockAdapter := new(mockAdapter)
 
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
@@ -279,7 +250,7 @@ func TestPubSubDataSource_RequestDataSource(t *testing.T) {
 	}
 
 	// Create mock adapter
-	mockAdapter := new(MockAdapter)
+	mockAdapter := new(mockAdapter)
 
 	// Configure mock expectations for Request
 	mockAdapter.On("Request", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {

@@ -10,31 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
-
-// MockAdapter mocks the required functionality from the Adapter for testing
-type MockAdapter struct {
-	mock.Mock
-}
-
-// Ensure MockAdapter implements KafkaAdapterInterface
-var _ AdapterInterface = (*MockAdapter)(nil)
-
-func (m *MockAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
-	args := m.Called(ctx, event, updater)
-	return args.Error(0)
-}
-
-func (m *MockAdapter) Publish(ctx context.Context, event PublishEventConfiguration) error {
-	args := m.Called(ctx, event)
-	return args.Error(0)
-}
-
-func (m *MockAdapter) Shutdown(ctx context.Context) error {
-	args := m.Called(ctx)
-	return args.Error(0)
-}
 
 func TestKafkaPubSubDataSource(t *testing.T) {
 	// Create event configuration with required fields
@@ -77,7 +53,7 @@ func TestPubSubDataSourceWithMockAdapter(t *testing.T) {
 	}
 
 	// Create mock adapter
-	mockAdapter := new(MockAdapter)
+	mockAdapter := new(mockAdapter)
 
 	// Configure mock expectations for Publish
 	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishEventConfiguration) bool {
@@ -124,7 +100,7 @@ func TestPubSubDataSource_GetResolveDataSource_WrongType(t *testing.T) {
 	}
 
 	// Create mock adapter
-	mockAdapter := new(MockAdapter)
+	mockAdapter := new(mockAdapter)
 
 	// Create the data source with mock adapter
 	pubsub := &PubSubDataSource{
@@ -224,5 +200,4 @@ func TestKafkaPubSubDataSourceMultiTopicSubscription(t *testing.T) {
 	require.Equal(t, 2, len(subscriptionConfig.Topics), "Expected 2 topics in subscription configuration")
 	require.Equal(t, "test-topic-1", subscriptionConfig.Topics[0], "Expected first topic to be 'test-topic-1'")
 	require.Equal(t, "test-topic-2", subscriptionConfig.Topics[1], "Expected second topic to be 'test-topic-2'")
-
 }

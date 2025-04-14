@@ -14,26 +14,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-// EngineDataSourceMockAdapter is a mock implementation of AdapterInterface for testing
-type EngineDataSourceMockAdapter struct {
-	mock.Mock
-}
-
-func (m *EngineDataSourceMockAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
-	args := m.Called(ctx, event, updater)
-	return args.Error(0)
-}
-
-func (m *EngineDataSourceMockAdapter) Publish(ctx context.Context, event PublishEventConfiguration) error {
-	args := m.Called(ctx, event)
-	return args.Error(0)
-}
-
-func (m *EngineDataSourceMockAdapter) Shutdown(ctx context.Context) error {
-	args := m.Called(ctx)
-	return args.Error(0)
-}
-
 // MockSubscriptionUpdater implements resolve.SubscriptionUpdater
 type MockSubscriptionUpdater struct {
 	mock.Mock
@@ -110,7 +90,7 @@ func TestSubscriptionSource_UniqueRequestID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			source := &SubscriptionDataSource{
-				pubSub: &EngineDataSourceMockAdapter{},
+				pubSub: &mockAdapter{},
 			}
 			ctx := &resolve.Context{}
 			input := []byte(tt.input)
@@ -137,13 +117,13 @@ func TestSubscriptionSource_Start(t *testing.T) {
 	tests := []struct {
 		name        string
 		input       string
-		mockSetup   func(*EngineDataSourceMockAdapter)
+		mockSetup   func(*mockAdapter)
 		expectError bool
 	}{
 		{
 			name:  "successful subscription",
 			input: `{"topics":["topic1", "topic2"], "providerId":"test-provider"}`,
-			mockSetup: func(m *EngineDataSourceMockAdapter) {
+			mockSetup: func(m *mockAdapter) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
 					ProviderID: "test-provider",
 					Topics:     []string{"topic1", "topic2"},
@@ -154,7 +134,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 		{
 			name:  "adapter returns error",
 			input: `{"topics":["topic1"], "providerId":"test-provider"}`,
-			mockSetup: func(m *EngineDataSourceMockAdapter) {
+			mockSetup: func(m *mockAdapter) {
 				m.On("Subscribe", mock.Anything, SubscriptionEventConfiguration{
 					ProviderID: "test-provider",
 					Topics:     []string{"topic1"},
@@ -165,14 +145,14 @@ func TestSubscriptionSource_Start(t *testing.T) {
 		{
 			name:        "invalid input json",
 			input:       `{"invalid json":`,
-			mockSetup:   func(m *EngineDataSourceMockAdapter) {},
+			mockSetup:   func(m *mockAdapter) {},
 			expectError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAdapter := new(EngineDataSourceMockAdapter)
+			mockAdapter := new(mockAdapter)
 			tt.mockSetup(mockAdapter)
 
 			source := &SubscriptionDataSource{
@@ -207,7 +187,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 	tests := []struct {
 		name            string
 		input           string
-		mockSetup       func(*EngineDataSourceMockAdapter)
+		mockSetup       func(*mockAdapter)
 		expectError     bool
 		expectedOutput  string
 		expectPublished bool
@@ -215,7 +195,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 		{
 			name:  "successful publish",
 			input: `{"topic":"test-topic", "data":{"message":"hello"}, "providerId":"test-provider"}`,
-			mockSetup: func(m *EngineDataSourceMockAdapter) {
+			mockSetup: func(m *mockAdapter) {
 				m.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishEventConfiguration) bool {
 					return event.ProviderID == "test-provider" &&
 						event.Topic == "test-topic" &&
@@ -229,7 +209,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 		{
 			name:  "publish error",
 			input: `{"topic":"test-topic", "data":{"message":"hello"}, "providerId":"test-provider"}`,
-			mockSetup: func(m *EngineDataSourceMockAdapter) {
+			mockSetup: func(m *mockAdapter) {
 				m.On("Publish", mock.Anything, mock.Anything).Return(errors.New("publish error"))
 			},
 			expectError:     false, // The Load method doesn't return the publish error directly
@@ -239,7 +219,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 		{
 			name:            "invalid input json",
 			input:           `{"invalid json":`,
-			mockSetup:       func(m *EngineDataSourceMockAdapter) {},
+			mockSetup:       func(m *mockAdapter) {},
 			expectError:     true,
 			expectPublished: false,
 		},
@@ -247,7 +227,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAdapter := new(EngineDataSourceMockAdapter)
+			mockAdapter := new(mockAdapter)
 			tt.mockSetup(mockAdapter)
 
 			dataSource := &PublishDataSource{
@@ -276,7 +256,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 func TestKafkaPublishDataSource_LoadWithFiles(t *testing.T) {
 	t.Run("panic on not implemented", func(t *testing.T) {
 		dataSource := &PublishDataSource{
-			pubSub: &EngineDataSourceMockAdapter{},
+			pubSub: &mockAdapter{},
 		}
 
 		assert.Panics(t, func() {

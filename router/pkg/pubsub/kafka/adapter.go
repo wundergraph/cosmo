@@ -19,54 +19,18 @@ var (
 	errClientClosed = errors.New("client closed")
 )
 
-type LazyClient struct {
-	once   sync.Once
-	client *kgo.Client
-	opts   []kgo.Opt
-}
-
-func (c *LazyClient) Connect() (err error) {
-	c.once.Do(func() {
-		c.client, err = kgo.NewClient(append(c.opts,
-			// For observability, we set the client ID to "router"
-			kgo.ClientID("cosmo.router.producer"))...,
-		)
-	})
-
-	return
-}
-
-func (c *LazyClient) GetClient() *kgo.Client {
-	if c.client == nil {
-		c.Connect()
-	}
-	return c.client
-}
-
-func NewLazyClient(opts ...kgo.Opt) *LazyClient {
-	return &LazyClient{
-		opts: opts,
-	}
-}
-
 func NewAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt) (AdapterInterface, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	if logger == nil {
 		logger = zap.NewNop()
 	}
 
-	client := NewLazyClient(append(opts,
-		// For observability, we set the client ID to "router"
-		kgo.ClientID("cosmo.router.producer"))...,
-	)
-
 	return &Adapter{
-		ctx:         ctx,
-		logger:      logger.With(zap.String("pubsub", "kafka")),
-		opts:        opts,
-		writeClient: client,
-		closeWg:     sync.WaitGroup{},
-		cancel:      cancel,
+		ctx:     ctx,
+		logger:  logger.With(zap.String("pubsub", "kafka")),
+		opts:    opts,
+		closeWg: sync.WaitGroup{},
+		cancel:  cancel,
 	}, nil
 }
 
@@ -74,6 +38,7 @@ func NewAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt) (Adapte
 type AdapterInterface interface {
 	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error
 	Publish(ctx context.Context, event PublishEventConfiguration) error
+	Startup(ctx context.Context) error
 	Shutdown(ctx context.Context) error
 }
 
@@ -86,7 +51,7 @@ type Adapter struct {
 	ctx         context.Context
 	opts        []kgo.Opt
 	logger      *zap.Logger
-	writeClient *LazyClient
+	writeClient *kgo.Client
 	closeWg     sync.WaitGroup
 	cancel      context.CancelFunc
 }
@@ -206,6 +171,10 @@ func (p *Adapter) Publish(ctx context.Context, event PublishEventConfiguration) 
 		zap.String("topic", event.Topic),
 	)
 
+	if p.writeClient == nil {
+		return datasource.NewError("kafka write client not initialized", nil)
+	}
+
 	log.Debug("publish", zap.ByteString("data", event.Data))
 
 	var wg sync.WaitGroup
@@ -213,7 +182,7 @@ func (p *Adapter) Publish(ctx context.Context, event PublishEventConfiguration) 
 
 	var pErr error
 
-	p.writeClient.GetClient().Produce(ctx, &kgo.Record{
+	p.writeClient.Produce(ctx, &kgo.Record{
 		Topic: event.Topic,
 		Value: event.Data,
 	}, func(record *kgo.Record, err error) {
@@ -233,14 +202,30 @@ func (p *Adapter) Publish(ctx context.Context, event PublishEventConfiguration) 
 	return nil
 }
 
+func (p *Adapter) Startup(ctx context.Context) (err error) {
+	p.writeClient, err = kgo.NewClient(append(p.opts,
+		// For observability, we set the client ID to "router"
+		kgo.ClientID("cosmo.router.producer"))...,
+	)
+	if err != nil {
+		return err
+	}
+
+	return
+}
+
 func (p *Adapter) Shutdown(ctx context.Context) error {
 
-	err := p.writeClient.GetClient().Flush(ctx)
+	if p.writeClient == nil {
+		return nil
+	}
+
+	err := p.writeClient.Flush(ctx)
 	if err != nil {
 		p.logger.Error("flushing write client", zap.Error(err))
 	}
 
-	p.writeClient.GetClient().Close()
+	p.writeClient.Close()
 
 	// Cancel the context to stop all pollers
 	p.cancel()

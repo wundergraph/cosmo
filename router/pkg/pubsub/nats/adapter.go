@@ -24,6 +24,8 @@ type AdapterInterface interface {
 	Publish(ctx context.Context, event PublishAndRequestEventConfiguration) error
 	// Request sends a request to the specified subject and writes the response to the given writer
 	Request(ctx context.Context, event PublishAndRequestEventConfiguration, w io.Writer) error
+	// Startup initializes the adapter
+	Startup(ctx context.Context) error
 	// Shutdown gracefully shuts down the adapter
 	Shutdown(ctx context.Context) error
 }
@@ -31,11 +33,14 @@ type AdapterInterface interface {
 // Adapter implements the AdapterInterface for NATS pub/sub
 type Adapter struct {
 	ctx              context.Context
-	client           *LazyClient
+	client           *nats.Conn
+	js               jetstream.JetStream
 	logger           *zap.Logger
 	closeWg          sync.WaitGroup
 	hostName         string
 	routerListenAddr string
+	url              string
+	opts             []nats.Option
 }
 
 // getInstanceIdentifier returns an identifier for the current instance.
@@ -73,6 +78,14 @@ func (p *Adapter) Subscribe(ctx context.Context, event SubscriptionEventConfigur
 		zap.Strings("subjects", event.Subjects),
 	)
 
+	if p.client == nil {
+		return datasource.NewError("nats client not initialized", nil)
+	}
+
+	if p.js == nil {
+		return datasource.NewError("nats jetstream not initialized", nil)
+	}
+
 	if event.StreamConfiguration != nil {
 		durableConsumerName, err := p.getDurableConsumerName(event.StreamConfiguration.Consumer, event.Subjects)
 		if err != nil {
@@ -86,13 +99,8 @@ func (p *Adapter) Subscribe(ctx context.Context, event SubscriptionEventConfigur
 		if event.StreamConfiguration.ConsumerInactiveThreshold > 0 {
 			consumerConfig.InactiveThreshold = time.Duration(event.StreamConfiguration.ConsumerInactiveThreshold) * time.Second
 		}
-		js, err := p.client.GetJetStream()
-		if err != nil {
-			log.Error("getting jetstream client", zap.Error(err))
-			return datasource.NewError("failed to get jetstream client", err)
-		}
 
-		consumer, err := js.CreateOrUpdateConsumer(ctx, event.StreamConfiguration.StreamName, consumerConfig)
+		consumer, err := p.js.CreateOrUpdateConsumer(ctx, event.StreamConfiguration.StreamName, consumerConfig)
 		if err != nil {
 			log.Error("creating or updating consumer", zap.Error(err))
 			return datasource.NewError(fmt.Sprintf(`failed to create or update consumer for stream "%s"`, event.StreamConfiguration.StreamName), err)
@@ -140,16 +148,10 @@ func (p *Adapter) Subscribe(ctx context.Context, event SubscriptionEventConfigur
 		return nil
 	}
 
-	nc, err := p.client.GetClient()
-	if err != nil {
-		log.Error("getting nats client", zap.Error(err))
-		return datasource.NewError("failed to get nats client", err)
-	}
-
 	msgChan := make(chan *nats.Msg)
 	subscriptions := make([]*nats.Subscription, len(event.Subjects))
 	for i, subject := range event.Subjects {
-		subscription, err := nc.ChanSubscribe(subject, msgChan)
+		subscription, err := p.client.ChanSubscribe(subject, msgChan)
 		if err != nil {
 			log.Error("subscribing to NATS subject", zap.Error(err), zap.String("subscription_subject", subject))
 			return datasource.NewError(fmt.Sprintf(`failed to subscribe to NATS subject "%s"`, subject), err)
@@ -201,15 +203,13 @@ func (p *Adapter) Publish(_ context.Context, event PublishAndRequestEventConfigu
 		zap.String("subject", event.Subject),
 	)
 
-	log.Debug("publish", zap.ByteString("data", event.Data))
-
-	nc, err := p.client.GetClient()
-	if err != nil {
-		log.Error("getting nats client", zap.Error(err))
-		return datasource.NewError("failed to get nats client", err)
+	if p.client == nil {
+		return datasource.NewError("nats client not initialized", nil)
 	}
 
-	err = nc.Publish(event.Subject, event.Data)
+	log.Debug("publish", zap.ByteString("data", event.Data))
+
+	err := p.client.Publish(event.Subject, event.Data)
 	if err != nil {
 		log.Error("publish error", zap.Error(err))
 		return datasource.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
@@ -225,15 +225,13 @@ func (p *Adapter) Request(ctx context.Context, event PublishAndRequestEventConfi
 		zap.String("subject", event.Subject),
 	)
 
-	log.Debug("request", zap.ByteString("data", event.Data))
-
-	nc, err := p.client.GetClient()
-	if err != nil {
-		log.Error("getting nats client", zap.Error(err))
-		return datasource.NewError("failed to get nats client", err)
+	if p.client == nil {
+		return datasource.NewError("nats client not initialized", nil)
 	}
 
-	msg, err := nc.RequestWithContext(ctx, event.Subject, event.Data)
+	log.Debug("request", zap.ByteString("data", event.Data))
+
+	msg, err := p.client.RequestWithContext(ctx, event.Subject, event.Data)
 	if err != nil {
 		log.Error("request error", zap.Error(err))
 		return datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)
@@ -249,21 +247,31 @@ func (p *Adapter) Request(ctx context.Context, event PublishAndRequestEventConfi
 }
 
 func (p *Adapter) flush(ctx context.Context) error {
-	nc, err := p.client.GetClient()
+	if p.client == nil {
+		return nil
+	}
+	return p.client.FlushWithContext(ctx)
+}
+
+func (p *Adapter) Startup(ctx context.Context) (err error) {
+	p.client, err = nats.Connect(p.url, p.opts...)
 	if err != nil {
 		return err
 	}
-	return nc.FlushWithContext(ctx)
+	p.js, err = jetstream.New(p.client)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (p *Adapter) Shutdown(ctx context.Context) error {
-	nc, err := p.client.GetClient()
-	if err != nil {
-		return nil // Already disconnected or failed to connect
+	if p.client == nil {
+		return nil
 	}
 
-	if nc.IsClosed() {
-		return nil
+	if p.client.IsClosed() {
+		return nil // Already disconnected or failed to connect
 	}
 
 	var shutdownErr error
@@ -273,7 +281,7 @@ func (p *Adapter) Shutdown(ctx context.Context) error {
 		shutdownErr = errors.Join(shutdownErr, fErr)
 	}
 
-	drainErr := nc.Drain()
+	drainErr := p.client.Drain()
 	if drainErr != nil {
 		shutdownErr = errors.Join(shutdownErr, drainErr)
 	}
@@ -293,14 +301,13 @@ func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats
 		logger = zap.NewNop()
 	}
 
-	client := NewLazyClient(url, opts...)
-
 	return &Adapter{
 		ctx:              ctx,
-		client:           client,
 		logger:           logger.With(zap.String("pubsub", "nats")),
 		closeWg:          sync.WaitGroup{},
 		hostName:         hostName,
 		routerListenAddr: routerListenAddr,
+		url:              url,
+		opts:             opts,
 	}, nil
 }

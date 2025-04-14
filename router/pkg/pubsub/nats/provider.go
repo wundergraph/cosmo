@@ -151,6 +151,11 @@ func GetProvider(ctx context.Context, in *nodev1.DataSourceConfiguration, dsMeta
 }
 
 func (c *PubSubProvider) Startup(ctx context.Context) error {
+	for _, provider := range c.Providers {
+		if err := provider.Startup(ctx); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

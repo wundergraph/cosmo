@@ -36,6 +36,11 @@ func (m *mockAdapter) Request(ctx context.Context, event PublishAndRequestEventC
 	return args.Error(0)
 }
 
+func (m *mockAdapter) Startup(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
 func (m *mockAdapter) Shutdown(ctx context.Context) error {
 	args := m.Called(ctx)
 	return args.Error(0)
