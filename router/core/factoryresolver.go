@@ -420,7 +420,8 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			var providers []datasource.PubSubProvider
 
 			dsMeta := l.dataSourceMetaData(in)
-			for _, providerFactory := range pubsub.GetProviderFactories() {
+			providersFactories := pubsub.GetProviderFactories()
+			for _, providerFactory := range providersFactories {
 				provider, err := providerFactory(
 					l.ctx,
 					in,

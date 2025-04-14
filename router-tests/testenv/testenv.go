@@ -2098,6 +2098,10 @@ func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, nats
 	for _, sourceName := range demoNatsProviders {
 		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr")
 		require.NoError(t, err)
+		require.NoError(t, adapter.Startup(ctx))
+		t.Cleanup(func() {
+			require.NoError(t, adapter.Shutdown(context.Background()))
+		})
 		natsPubSubByProviderID[sourceName] = adapter
 	}
 

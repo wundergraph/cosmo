@@ -164,11 +164,13 @@ func TestRouterStartLogs(t *testing.T) {
 		},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 		logEntries := xEnv.Observer().All()
-		require.Len(t, logEntries, 11)
+		require.Len(t, logEntries, 15)
 		natsLogs := xEnv.Observer().FilterMessageSnippet("Nats Event source enabled").All()
 		require.Len(t, natsLogs, 4)
+		natsConnectedLogs := xEnv.Observer().FilterMessageSnippet("NATS connection established").All()
+		require.Len(t, natsConnectedLogs, 4)
 		providerIDFields := xEnv.Observer().FilterField(zap.String("provider_id", "default")).All()
-		require.Len(t, providerIDFields, 1)
+		require.Len(t, providerIDFields, 3)
 		kafkaLogs := xEnv.Observer().FilterMessageSnippet("Kafka Event source enabled").All()
 		require.Len(t, kafkaLogs, 2)
 		playgroundLog := xEnv.Observer().FilterMessage("Serving GraphQL playground")

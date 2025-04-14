@@ -41,6 +41,7 @@ type Adapter struct {
 	routerListenAddr string
 	url              string
 	opts             []nats.Option
+	flushTimeout     time.Duration
 }
 
 // getInstanceIdentifier returns an identifier for the current instance.
@@ -250,6 +251,12 @@ func (p *Adapter) flush(ctx context.Context) error {
 	if p.client == nil {
 		return nil
 	}
+	_, ok := ctx.Deadline()
+	if !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, p.flushTimeout)
+		defer cancel()
+	}
 	return p.client.FlushWithContext(ctx)
 }
 
@@ -309,5 +316,6 @@ func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats
 		routerListenAddr: routerListenAddr,
 		url:              url,
 		opts:             opts,
+		flushTimeout:     10 * time.Second,
 	}, nil
 }
