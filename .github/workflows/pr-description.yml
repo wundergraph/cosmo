@@ -22,6 +22,12 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const branchName = context.payload.pull_request.head.ref;
+            if (branchName.startsWith('release-please')) {
+              console.log('Skipping PR description check for release-please branch.');
+              return; // Exit successfully
+            }
+            
             const prDescription = context.payload.pull_request.body || '';
             const minLength = 20; // Minimum required length for PR description
             
