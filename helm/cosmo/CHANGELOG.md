@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.13.0...helm-cosmo@0.13.1) (2025-04-14)
+
+
+### Bug Fixes
+
+* bump umbrella version ([#1776](https://github.com/wundergraph/cosmo/issues/1776)) ([d5e8bab](https://github.com/wundergraph/cosmo/commit/d5e8bab892ef052370273f1db46617fc291317d8))
+
 ## [0.13.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.12.3...helm-cosmo@0.13.0) (2025-03-11)
 
 
