@@ -1545,6 +1545,18 @@ type WebSocketMessage struct {
 	Payload json.RawMessage `json:"payload,omitempty"`
 }
 
+func (t *WebSocketMessage) UnmarshalJSON(data []byte) error {
+	err := json.Unmarshal(data, (*struct {
+		ID      string          `json:"id,omitempty"`
+		Type    string          `json:"type"`
+		Payload json.RawMessage `json:"payload,omitempty"`
+	})(t))
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal WebSocketMessage: %w (data: %s)", err, string(data))
+	}
+	return nil
+}
+
 type GraphQLResponse struct {
 	Data   json.RawMessage `json:"data,omitempty"`
 	Errors []GraphQLError  `json:"errors,omitempty"`
