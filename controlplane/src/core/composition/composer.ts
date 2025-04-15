@@ -705,7 +705,7 @@ export class Composer {
 
         // Handles new subgraphs
         for (const [subgraphName, subgraph] of inputSubgraphs.entries()) {
-          if (subgraph.subgraph) {
+          if (subgraph.subgraph || subgraph.newSchemaSDL === '') {
             continue;
           }
           // get the fed graphs which match the labels of the new subgraph
