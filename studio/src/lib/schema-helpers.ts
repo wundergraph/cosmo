@@ -569,7 +569,7 @@ const parseField = (
 ): ParsedGraphQLField => {
   directives ??= extractDirectives(field);
 
-  let args: ParsedGraphQLField['args'] = [];
+  let args: ParsedGraphQLField['args'] = undefined;
   if (field.kind === Kind.FIELD_DEFINITION && field.arguments) {
     args = field.arguments.map((arg) => ({
       name: arg.name.value,
