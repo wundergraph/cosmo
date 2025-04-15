@@ -827,27 +827,6 @@
       "when": 1743969155589,
       "tag": "0117_calm_raider",
       "breakpoints": true
-    },
-    {
-      "idx": 118,
-      "version": "7",
-      "when": 1744346902570,
-      "tag": "0118_rapid_red_ghost",
-      "breakpoints": true
-    },
-    {
-      "idx": 119,
-      "version": "7",
-      "when": 1744376934240,
-      "tag": "0119_empty_vector",
-      "breakpoints": true
-    },
-    {
-      "idx": 120,
-      "version": "7",
-      "when": 1744662996097,
-      "tag": "0120_ordinary_toad",
-      "breakpoints": true
     }
   ]
 }
