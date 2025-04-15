@@ -757,6 +757,13 @@ type AccessLogsConfig struct {
 	Subgraphs AccessLogsSubgraphsConfig `yaml:"subgraphs,omitempty" env:"ACCESS_LOGS_SUBGRAPH"`
 }
 
+type BatchingConfig struct {
+	Enabled            bool `yaml:"enabled" env:"BATCHING_ENABLED" envDefault:"false"`
+	MaxConcurrency     int  `yaml:"max_concurrency" env:"BATCHING_MAX_CONCURRENCY" envDefault:"10"`
+	MaxEntriesPerBatch int  `yaml:"max_entries_per_batch" env:"BATCHING_MAX_ENTRIES" envDefault:"100"`
+	OmitExtensions     bool `yaml:"omit_extensions" env:"BATCHING_OMIT_EXTENSIONS" envDefault:"false"`
+}
+
 type AccessLogsBufferConfig struct {
 	Enabled bool `yaml:"enabled" env:"ACCESS_LOGS_BUFFER_ENABLED" envDefault:"false"`
 	// Size is the maximum number of log entries to buffer before flushing
@@ -881,6 +888,7 @@ type Config struct {
 	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping,omitempty"`
 	FileUpload     FileUpload             `yaml:"file_upload,omitempty"`
 	AccessLogs     AccessLogsConfig       `yaml:"access_logs,omitempty"`
+	Batching       BatchingConfig         `yaml:"batching,omitempty"`
 
 	ListenAddr                    string                      `yaml:"listen_addr" envDefault:"localhost:3002" env:"LISTEN_ADDR"`
 	ControlplaneURL               string                      `yaml:"controlplane_url" envDefault:"https://cosmo-cp.wundergraph.com" env:"CONTROLPLANE_URL"`

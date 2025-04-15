@@ -1,0 +1,441 @@
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
+
+directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+
+directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
+
+directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+
+scalar openfed__Scope
+
+type Query {
+  employee(id: Int!): Employee
+  employeeAsList(id: Int!): [Employee]
+  employees: [Employee]
+  products: [Products!]!
+  teammates(team: Department!): [Employee!]!
+  firstEmployee: Employee! @tag(name: "internal")
+  findEmployees(criteria: SearchInput): [Employee!]!
+  productTypes: [Products!]!
+  topSecretFederationFacts: [TopSecretFact!]! @requiresScopes(scopes: [["read:fact"], ["read:all"]])
+  factTypes: [TopSecretFactType!] @authenticated
+  sharedThings(numOfA: Int!, numOfB: Int!): [Thing!]!
+  employeeFromEvent(id: Int!): Employee!
+  employeeFromEventMyNats(employeeID: Int!): Employee!
+}
+
+scalar Upload
+
+type Mutation {
+  updateEmployeeTag(id: Int!, tag: String!): Employee
+  singleUpload(file: Upload!): Boolean!
+  multipleUpload(files: [Upload!]!): Boolean!
+  addFact(fact: TopSecretFactInput!): TopSecretFact! @requiresScopes(scopes: [["write:fact"], ["write:all"]])
+  updateAvailability(employeeID: Int!, isAvailable: Boolean!): Employee!
+  updateMood(employeeID: Int!, mood: Mood!): Employee!
+  updateEmployeeMyKafka(employeeID: Int!, update: UpdateEmployeeInput!): edfs__PublishResult!
+  updateEmployeeMyNats(id: Int!, update: UpdateEmployeeInput!): edfs__PublishResult!
+}
+
+type Subscription {
+  """`currentTime` will return a stream of `Time` objects."""
+  currentTime: Time!
+  countEmp(max: Int!, intervalMilliseconds: Int!): Int!
+  countEmp2(max: Int!, intervalMilliseconds: Int!): Int!
+  countEmpTest2(max: Int!, intervalMilliseconds: Int!): Int!
+  countFor(count: Int!): Int!
+  countHob(max: Int!, intervalMilliseconds: Int!): Int!
+  employeeUpdated(employeeID: Int!): Employee!
+  employeeUpdatedMyKafka(employeeID: Int!): Employee!
+  employeeUpdatedMyNats(id: Int!): Employee!
+  employeeUpdatedNatsStream(id: Int!): Employee!
+  filteredEmployeeUpdated(id: Int!): Employee!
+  filteredEmployeeUpdatedMyKafka(employeeID: ID!): Employee!
+  filteredEmployeeUpdatedMyKafkaWithListFieldArguments(firstIds: [ID!]!, secondIds: [ID!]!): Employee!
+  filteredEmployeeUpdatedMyKafkaWithNestedListFieldArgument(input: KafkaInput!): Employee!
+}
+
+enum Department {
+  ENGINEERING
+  MARKETING
+  OPERATIONS
+}
+
+interface RoleType {
+  departments: [Department!]!
+  title: [String!]!
+  employees: [Employee!]!
+}
+
+enum EngineerType {
+  BACKEND
+  FRONTEND
+  FULLSTACK
+}
+
+interface Identifiable {
+  id: Int!
+}
+
+enum OperationType {
+  FINANCE
+  HUMAN_RESOURCES
+}
+
+type Details {
+  forename: String!
+  location: Country!
+  surname: String!
+  pastLocations: [City!]!
+  middlename: String @deprecated(reason: "No longer supported")
+  hasChildren: Boolean!
+  maritalStatus: MaritalStatus
+  nationality: Nationality!
+  pets: [Pet]
+}
+
+type City {
+  type: String!
+  name: String!
+  country: Country
+}
+
+type Country {
+  key: CountryKey!
+}
+
+type CountryKey {
+  name: String!
+}
+
+enum Mood {
+  HAPPY
+  SAD
+}
+
+type ErrorWrapper {
+  okField: String
+  errorField: String
+}
+
+type Time {
+  unixTime: Int!
+  timeStamp: String!
+}
+
+union Products = Consultancy | Cosmo | SDK | Documentation
+
+interface IProduct {
+  upc: ID!
+  engineers: [Employee!]!
+}
+
+type Consultancy {
+  upc: ID!
+  lead: Employee!
+  isLeadAvailable: Boolean
+  name: ProductName!
+}
+
+enum Class {
+  FISH
+  MAMMAL
+  REPTILE
+}
+
+enum Gender {
+  FEMALE
+  MALE
+  UNKNOWN
+}
+
+interface Animal {
+  class: Class!
+  gender: Gender!
+}
+
+enum CatType {
+  HOME
+  STREET
+}
+
+enum DogBreed {
+  GOLDEN_RETRIEVER
+  POODLE
+  ROTTWEILER
+  YORKSHIRE_TERRIER
+}
+
+enum MaritalStatus {
+  ENGAGED
+  MARRIED
+}
+
+enum Nationality {
+  AMERICAN
+  DUTCH
+  ENGLISH
+  GERMAN
+  INDIAN
+  SPANISH
+  UKRAINIAN
+}
+
+input SearchInput {
+  hasPets: Boolean
+  nationality: Nationality
+  nested: NestedSearchInput
+}
+
+input NestedSearchInput {
+  maritalStatus: MaritalStatus
+  hasChildren: Boolean
+}
+
+enum ExerciseType {
+  CALISTHENICS
+  HIKING
+  SPORT
+  STRENGTH_TRAINING
+}
+
+interface Experience {
+  yearsOfExperience: Float!
+}
+
+enum GameGenre {
+  ADVENTURE
+  BOARD
+  FPS
+  CARD
+  RPG
+  ROGUELITE
+  SIMULATION
+  STRATEGY
+}
+
+enum ProgrammingLanguage {
+  CSHARP
+  GO
+  RUST
+  TYPESCRIPT
+}
+
+interface Hobby {
+  employees: [Employee!]!
+}
+
+type Thing {
+  a: String!
+}
+
+input TopSecretFactInput {
+  title: String!
+  description: FactContent!
+  factType: TopSecretFactType!
+}
+
+enum TopSecretFactType {
+  DIRECTIVE
+  ENTITY
+  MISCELLANEOUS
+}
+
+interface TopSecretFact {
+  description: FactContent! @authenticated @requiresScopes(scopes: [["read:scalar"], ["read:all"]])
+  factType: TopSecretFactType @authenticated
+}
+
+scalar FactContent
+
+enum ProductName {
+  CONSULTANCY
+  COSMO
+  ENGINE
+  FINANCE
+  HUMAN_RESOURCES
+  MARKETING
+  SDK
+}
+
+type Documentation {
+  url(product: ProductName!): String!
+  urls(products: [ProductName!]!): [String!]!
+}
+
+scalar openfed__SubscriptionFilterValue
+
+input openfed__SubscriptionFieldCondition {
+  fieldPath: String!
+  values: [openfed__SubscriptionFilterValue]!
+}
+
+input openfed__SubscriptionFilterCondition {
+  AND: [openfed__SubscriptionFilterCondition!]
+  IN: openfed__SubscriptionFieldCondition
+  NOT: openfed__SubscriptionFilterCondition
+  OR: [openfed__SubscriptionFilterCondition!]
+}
+
+input UpdateEmployeeInput {
+  name: String
+  email: String
+}
+
+input KafkaInput {
+  ids: [Int!]!
+}
+
+type edfs__PublishResult {
+  success: Boolean!
+}
+
+type Engineer implements RoleType {
+  departments: [Department!]!
+  title: [String!]!
+  employees: [Employee!]!
+  engineerType: EngineerType!
+}
+
+type Marketer implements RoleType {
+  departments: [Department!]!
+  title: [String!]!
+  employees: [Employee!]!
+}
+
+type Operator implements RoleType {
+  departments: [Department!]!
+  title: [String!]!
+  employees: [Employee!]!
+  operatorType: [OperationType!]!
+}
+
+type Employee implements Identifiable {
+  details: Details
+  id: Int!
+  tag: String!
+  role: RoleType!
+  notes: String
+  updatedAt: String!
+  startDate: String! @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
+  currentMood: Mood!
+  derivedMood: Mood!
+  isAvailable: Boolean!
+  isAvailable2: Boolean!
+  rootFieldThrowsError: String
+  rootFieldErrorWrapper: ErrorWrapper
+  hobbies: [Hobby!]
+  products: [ProductName!]!
+}
+
+type Cosmo implements IProduct {
+  upc: ID!
+  engineers: [Employee!]!
+  lead: Employee!
+  name: ProductName!
+  repositoryURL: String!
+}
+
+type SDK implements IProduct {
+  upc: ID!
+  engineers: [Employee!]!
+  owner: Employee!
+  unicode: String!
+  clientLanguages: [ProgrammingLanguage!]!
+}
+
+interface Pet implements Animal {
+  class: Class!
+  gender: Gender!
+  name: String!
+}
+
+type Alligator implements Pet & Animal {
+  class: Class!
+  dangerous: String!
+  gender: Gender!
+  name: String!
+}
+
+type Cat implements Pet & Animal {
+  class: Class!
+  gender: Gender!
+  name: String!
+  type: CatType!
+}
+
+type Dog implements Pet & Animal {
+  breed: DogBreed!
+  class: Class!
+  gender: Gender!
+  name: String!
+}
+
+type Mouse implements Pet & Animal {
+  class: Class!
+  gender: Gender!
+  name: String!
+}
+
+type Pony implements Pet & Animal {
+  class: Class!
+  gender: Gender!
+  name: String!
+}
+
+type Exercise implements Hobby {
+  employees: [Employee!]!
+  category: ExerciseType!
+}
+
+type Flying implements Experience & Hobby {
+  employees: [Employee!]!
+  planeModels: [String!]!
+  yearsOfExperience: Float!
+}
+
+type Gaming implements Experience & Hobby {
+  employees: [Employee!]!
+  genres: [GameGenre!]!
+  name: String!
+  yearsOfExperience: Float!
+}
+
+type Other implements Hobby {
+  employees: [Employee!]!
+  name: String!
+}
+
+type Programming implements Hobby {
+  employees: [Employee!]!
+  languages: [ProgrammingLanguage!]!
+}
+
+type Travelling implements Hobby {
+  employees: [Employee!]!
+  countriesLived: [Country!]!
+}
+
+type DirectiveFact implements TopSecretFact {
+  title: String! @authenticated
+  description: FactContent! @authenticated @requiresScopes(scopes: [["read:scalar"], ["read:all"]])
+  factType: TopSecretFactType @authenticated
+}
+
+type EntityFact implements TopSecretFact {
+  title: String! @requiresScopes(scopes: [["read:entity"]])
+  description: FactContent! @authenticated @requiresScopes(scopes: [["read:entity", "read:scalar"], ["read:entity", "read:all"]])
+  factType: TopSecretFactType @authenticated @requiresScopes(scopes: [["read:entity"]])
+}
+
+type MiscellaneousFact implements TopSecretFact {
+  title: String!
+  description: FactContent! @requiresScopes(scopes: [["read:miscellaneous", "read:scalar"], ["read:miscellaneous", "read:all"]]) @authenticated
+  factType: TopSecretFactType @authenticated
+}
