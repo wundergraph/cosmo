@@ -695,6 +695,19 @@ export class OrganizationRepository {
             );
             break;
           }
+          case 'proposalStateUpdated': {
+            const ids = eventMeta.meta.value.graphIds;
+            if (ids.length === 0) {
+              break;
+            }
+            await tx.insert(schema.webhookProposalStateUpdate).values(
+              ids.map((id) => ({
+                webhookId: createWebhookResult[0].id,
+                federatedGraphId: id,
+              })),
+            );
+            break;
+          }
         }
       }
 
@@ -739,6 +752,32 @@ export class OrganizationRepository {
       }
     }
 
+    const proposalStateUpdates = await this.db
+      .select({
+        graphId: schema.webhookProposalStateUpdate.federatedGraphId,
+      })
+      .from(schema.webhookProposalStateUpdate)
+      .innerJoin(
+        schema.organizationWebhooks,
+        eq(schema.organizationWebhooks.id, schema.webhookProposalStateUpdate.webhookId),
+      )
+      .where(
+        and(
+          eq(schema.organizationWebhooks.organizationId, organizationId),
+          eq(schema.webhookProposalStateUpdate.webhookId, id),
+        ),
+      );
+
+    const proposalStateUpdateGraphIds = [];
+    for (const graphId of proposalStateUpdates.map((r) => r.graphId)) {
+      const graph = await fedGraphRepo.byId(graphId);
+
+      if (!graph) {
+        continue;
+      }
+      proposalStateUpdateGraphIds.push(graph.id);
+    }
+
     meta.push({
       eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
       meta: {
@@ -756,6 +795,14 @@ export class OrganizationRepository {
         value: {
           graphIds: monographIds,
         },
+      },
+    });
+
+    meta.push({
+      eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+      meta: {
+        case: 'proposalStateUpdated',
+        value: { graphIds: proposalStateUpdateGraphIds },
       },
     });
 
@@ -816,44 +863,45 @@ export class OrganizationRepository {
           and(eq(organizationWebhooks.id, input.id), eq(organizationWebhooks.organizationId, input.organizationId)),
         );
 
-      const graphIds: string[] = [];
       for (const eventMeta of input.eventsMeta) {
         switch (eventMeta.meta.case) {
           case 'federatedGraphSchemaUpdated':
           case 'monographSchemaUpdated': {
-            graphIds.push(...eventMeta.meta.value.graphIds);
-          }
-        }
-      }
-
-      await tx
-        .delete(schema.webhookGraphSchemaUpdate)
-        .where(
-          and(
-            eq(schema.webhookGraphSchemaUpdate.webhookId, input.id),
-            graphIds.length > 0 ? not(inArray(schema.webhookGraphSchemaUpdate.federatedGraphId, graphIds)) : undefined,
-          ),
-        );
-
-      for (const eventMeta of input.eventsMeta) {
-        switch (eventMeta.meta.case) {
-          case 'federatedGraphSchemaUpdated':
-          case 'monographSchemaUpdated': {
-            const ids = eventMeta.meta.value.graphIds;
-            if (ids.length === 0) {
-              continue;
-            }
-
+            const graphIds = eventMeta.meta.value.graphIds;
             await tx
-              .insert(schema.webhookGraphSchemaUpdate)
-              .values(
-                ids.map((id) => ({
-                  webhookId: input.id,
-                  federatedGraphId: id,
-                })),
-              )
-              .onConflictDoNothing()
-              .execute();
+              .delete(schema.webhookGraphSchemaUpdate)
+              .where(and(eq(schema.webhookGraphSchemaUpdate.webhookId, input.id)));
+
+            if (graphIds.length > 0) {
+              await tx
+                .insert(schema.webhookGraphSchemaUpdate)
+                .values(
+                  graphIds.map((id) => ({
+                    webhookId: input.id,
+                    federatedGraphId: id,
+                  })),
+                )
+                .onConflictDoNothing()
+                .execute();
+            }
+            break;
+          }
+          case 'proposalStateUpdated': {
+            const graphIds = eventMeta.meta.value.graphIds;
+            await tx.delete(schema.webhookProposalStateUpdate).where(eq(schema.webhookProposalStateUpdate.webhookId, input.id));
+
+            if (graphIds.length > 0) {
+              await tx
+                .insert(schema.webhookProposalStateUpdate)
+                .values(
+                  graphIds.map((id) => ({
+                    webhookId: input.id,
+                    federatedGraphId: id,
+                  })),
+                )
+                .onConflictDoNothing()
+                .execute();
+            }
             break;
           }
         }
