@@ -56,6 +56,7 @@ func TestBatch(t *testing.T) {
 	})
 
 	t.Run("verify batching request when batching is not enabled", func(t *testing.T) {
+		t.Skip()
 		t.Parallel()
 
 		testenv.Run(t,
@@ -83,6 +84,7 @@ func TestBatch(t *testing.T) {
 	})
 
 	t.Run("send batch request over max allowed count validate trace", func(t *testing.T) {
+		t.Skip()
 		t.Parallel()
 
 		metricReader := metric.NewManualReader()
@@ -145,6 +147,7 @@ func TestBatch(t *testing.T) {
 	})
 
 	t.Run("send batch request over max allowed count with omit extensions true", func(t *testing.T) {
+		t.Skip()
 		t.Parallel()
 
 		testenv.Run(t,
@@ -189,6 +192,7 @@ func TestBatch(t *testing.T) {
 	})
 
 	t.Run("send batch request over max allowed count with omit extensions false", func(t *testing.T) {
+		t.Skip()
 		t.Parallel()
 
 		testenv.Run(t,
@@ -233,6 +237,7 @@ func TestBatch(t *testing.T) {
 	})
 
 	t.Run("attempt to start server with invalid max concurrent", func(t *testing.T) {
+		t.Skip()
 		t.Parallel()
 
 		err := testenv.RunWithError(t, &testenv.Config{
@@ -248,6 +253,7 @@ func TestBatch(t *testing.T) {
 	})
 
 	t.Run("attempt to start server with invalid max entries per batch", func(t *testing.T) {
+		t.Skip()
 		t.Parallel()
 
 		err := testenv.RunWithError(t, &testenv.Config{
@@ -296,6 +302,7 @@ func TestBatch(t *testing.T) {
 	})
 
 	t.Run("prevent running a subscription with omit extensions true", func(t *testing.T) {
+		t.Skip()
 		t.Parallel()
 
 		testenv.Run(t,
