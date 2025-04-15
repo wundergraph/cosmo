@@ -61,6 +61,7 @@ import {
   LINK_DEFINITION,
   LINK_IMPORT_DEFINITION,
   LINK_PURPOSE_DEFINITION,
+  MAX_OR_SCOPES,
   SCOPE_SCALAR_DEFINITION,
   SUBSCRIPTION_FIELD_CONDITION_DEFINITION,
   SUBSCRIPTION_FILTER_CONDITION_DEFINITION,
@@ -70,21 +71,16 @@ import {
   VERSION_TWO_DIRECTIVE_DEFINITIONS,
 } from '../utils/constants';
 import {
+  addScopes,
   fieldDatasToSimpleFieldDatas,
-  getAuthorizationDataToUpdate,
-  isNodeKindInterface,
   isNodeKindObject,
   kindToConvertedTypeString,
   mapToArrayOfValues,
-  maxOrScopes,
-  mergeAuthorizationDataByAND,
   newAuthorizationData,
-  resetAuthorizationData,
-  setAndGetValue,
-  subtractSourceSetFromTargetSet,
+  newFieldAuthorizationData,
+  subtractSet,
   upsertAuthorizationData,
   upsertEntityData,
-  upsertFieldAuthorizationData,
 } from '../utils/utils';
 import {
   configureDescriptionNoDescriptionError,
@@ -198,11 +194,7 @@ import {
   nonExternalConditionalFieldWarning,
   unimplementedInterfaceOutputTypeWarning,
 } from '../warnings/warnings';
-import {
-  consolidateAuthorizationDirectives,
-  upsertDirectiveSchemaAndEntityDefinitions,
-  upsertParentsAndChildren,
-} from './walkers';
+import { upsertDirectiveSchemaAndEntityDefinitions, upsertParentsAndChildren } from './walkers';
 import {
   ArgumentData,
   AuthorizationData,
@@ -215,7 +207,6 @@ import {
   EnumValueData,
   ExtensionType,
   ExternalFieldData,
-  FieldAuthorizationData,
   FieldData,
   InputObjectDefinitionData,
   InputValueData,
@@ -238,7 +229,6 @@ import {
   newConditionalFieldData,
   newExternalFieldData,
   newPersistedDirectivesData,
-  removeIgnoredDirectives,
   removeInheritableDirectivesFromObjectParent,
 } from '../../schema-building/utils';
 import {
@@ -392,8 +382,6 @@ export class NormalizationFactory {
   entityInterfaceDataByTypeName = new Map<string, EntityInterfaceSubgraphData>();
   eventsConfigurations = new Map<string, EventConfiguration[]>();
   fieldSetDataByTypeName = new Map<string, FieldSetData>();
-  heirFieldAuthorizationDataByTypeName = new Map<string, FieldAuthorizationData[]>();
-  interfaceTypeNamesWithAuthorizationDirectives = new Set<string>();
   internalGraph: Graph;
   invalidConfigureDescriptionNodeDatas: Array<NodeData> = [];
   invalidRepeatedDirectiveNameByCoords = new Map<string, Set<string>>();
@@ -405,17 +393,18 @@ export class NormalizationFactory {
   keyFieldSetDatasByTypeName = new Map<string, Map<string, KeyFieldSetData>>();
   lastParentNodeKind: Kind = Kind.NULL;
   lastChildNodeKind: Kind = Kind.NULL;
-  leafTypeNamesWithAuthorizationDirectives = new Set<string>();
+  parentTypeNamesWithAuthDirectives = new Set<string>();
   keyFieldSetDataByTypeName = new Map<string, KeyFieldSetData>();
   keyFieldSetsByEntityTypeNameByFieldCoords = new Map<string, Map<string, Set<string>>>();
   keyFieldNamesByParentTypeName = new Map<string, Set<string>>();
+  fieldCoordsByNamedTypeName = new Map<string, Set<string>>();
   operationTypeNodeByTypeName = new Map<string, OperationTypeNode>();
   originalParentTypeName = '';
   originalTypeNameByRenamedTypeName = new Map<string, string>();
   parentDefinitionDataByTypeName = new Map<string, ParentDefinitionData>();
   parentsWithChildArguments = new Set<string>();
   overridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
-  invalidOrScopesHostPaths = new Set<string>();
+  invalidORScopesCoords = new Set<string>();
   schemaData: SchemaData;
   referencedDirectiveNames = new Set<string>();
   referencedTypeNames = new Set<string>();
@@ -423,7 +412,7 @@ export class NormalizationFactory {
   subgraphName: string;
   unvalidatedExternalFieldCoords = new Set<string>();
   usesEdfsNatsStreamConfiguration: boolean = false;
-  warnings: Warning[] = [];
+  warnings: Array<Warning> = [];
 
   constructor(internalGraph: Graph, subgraphName?: string) {
     for (const [baseDirectiveName, baseDirectiveDefinition] of BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME) {
@@ -478,88 +467,6 @@ export class NormalizationFactory {
     if (invalidArguments.length > 0) {
       this.errors.push(invalidArgumentsError(fieldPath, invalidArguments));
     }
-  }
-
-  // Note that directive validation errors are handled elsewhere
-  getAuthorizationData(node: InterfaceTypeNode | ObjectTypeNode): AuthorizationData | undefined {
-    const parentTypeName = this.renamedParentTypeName || this.originalParentTypeName;
-    let authorizationData = this.authorizationDataByParentTypeName.get(parentTypeName);
-    resetAuthorizationData(authorizationData);
-    if (!node.directives) {
-      return authorizationData;
-    }
-    let requiresAuthentication = false;
-    const requiresScopes: ConstDirectiveNode[] = [];
-    for (const directiveNode of node.directives) {
-      const directiveName = directiveNode.name.value;
-      if (directiveName === AUTHENTICATED) {
-        // @authenticated is not repeatable
-        if (requiresAuthentication) {
-          return;
-        }
-        requiresAuthentication = true;
-        continue;
-      }
-      if (directiveName !== REQUIRES_SCOPES) {
-        continue;
-      }
-      // @requiresScopes is not repeatable
-      if (requiresScopes.length > 0) {
-        return;
-      }
-      requiresScopes.push(directiveNode);
-    }
-    if (!requiresAuthentication && requiresScopes.length < 1) {
-      return authorizationData;
-    }
-    if (isNodeKindInterface(node.kind)) {
-      this.interfaceTypeNamesWithAuthorizationDirectives.add(parentTypeName);
-    }
-    if (!authorizationData) {
-      authorizationData = setAndGetValue(
-        this.authorizationDataByParentTypeName,
-        this.renamedParentTypeName || this.originalParentTypeName,
-        newAuthorizationData(parentTypeName),
-      );
-    }
-    authorizationData.hasParentLevelAuthorization = true;
-    authorizationData.requiresAuthentication = requiresAuthentication;
-    if (requiresScopes.length !== 1) {
-      return authorizationData;
-    }
-    const directiveNode = requiresScopes[0];
-    if (!directiveNode.arguments || directiveNode.arguments.length !== 1) {
-      return;
-    }
-    const scopesArgument = directiveNode.arguments[0];
-    // @TODO list coercion
-    if (scopesArgument.name.value !== SCOPES || scopesArgument.value.kind !== Kind.LIST) {
-      return;
-    }
-    const orScopes = scopesArgument.value.values;
-    if (orScopes.length < 1) {
-      return authorizationData;
-    }
-    if (orScopes.length > maxOrScopes) {
-      this.invalidOrScopesHostPaths.add(this.originalParentTypeName);
-      return;
-    }
-    for (const scopes of orScopes) {
-      if (scopes.kind !== Kind.LIST) {
-        return;
-      }
-      const andScopes = new Set<string>();
-      for (const scope of scopes.values) {
-        if (scope.kind !== Kind.STRING) {
-          return;
-        }
-        andScopes.add(scope.value);
-      }
-      if (andScopes.size) {
-        authorizationData.requiredScopes.push(andScopes);
-      }
-    }
-    return authorizationData;
   }
 
   isTypeNameRootType(typeName: string): boolean {
@@ -753,7 +660,7 @@ export class NormalizationFactory {
       if (!isRequiresScopes || argumentName !== SCOPES) {
         continue;
       }
-      this.handleRequiresScopesDirective({
+      this.extractRequiredScopes({
         directiveCoords,
         // Casts are safe because invalid arguments would short circuit
         orScopes: (argumentNode.value as ListValueNode).values,
@@ -775,21 +682,19 @@ export class NormalizationFactory {
     if (errorMessages.length > 0 || !isRequiresScopes) {
       return errorMessages;
     }
-    if (
-      data.kind !== Kind.ENUM_TYPE_DEFINITION &&
-      data.kind !== Kind.FIELD_DEFINITION &&
-      data.kind !== Kind.SCALAR_TYPE_DEFINITION
-    ) {
-      return errorMessages;
-    }
-    if (data.kind !== Kind.FIELD_DEFINITION) {
-      this.leafTypeNamesWithAuthorizationDirectives.add(parentTypeName);
-    }
     const parentAuthorizationData = getValueOrDefault(this.authorizationDataByParentTypeName, parentTypeName, () =>
       newAuthorizationData(parentTypeName),
     );
-    const authorizationData = getAuthorizationDataToUpdate(parentAuthorizationData, data.node);
-    authorizationData.requiredScopes.push(...requiredScopes);
+    if (data.kind !== Kind.FIELD_DEFINITION) {
+      this.parentTypeNamesWithAuthDirectives.add(parentTypeName);
+      parentAuthorizationData.requiredScopes.push(...requiredScopes);
+    } else {
+      const fieldAuthData = getValueOrDefault(parentAuthorizationData.fieldAuthDataByFieldName, data.name, () =>
+        newFieldAuthorizationData(data.name),
+      );
+      fieldAuthData.inheritedData.requiredScopes.push(...requiredScopes);
+      fieldAuthData.originalData.requiredScopes.push(...requiredScopes);
+    }
     return errorMessages;
   }
 
@@ -1478,6 +1383,7 @@ export class NormalizationFactory {
       }
       this.setParentDataExtensionType(parentData, extensionType);
       parentData.description ||= formatDescription('description' in node ? node.description : undefined);
+      parentData.subgraphNames.add(this.subgraphName);
       this.extractConfigureDescriptionsData(parentData);
       return;
     }
@@ -1489,6 +1395,7 @@ export class NormalizationFactory {
       name: typeName,
       node: getMutableScalarNode(node.name),
       persistedDirectivesData: newPersistedDirectivesData(),
+      subgraphNames: new Set([this.subgraphName]),
       description: formatDescription('description' in node ? node.description : undefined),
     };
     this.extractConfigureDescriptionsData(newParentData);
@@ -1550,6 +1457,7 @@ export class NormalizationFactory {
       this.setParentDataExtensionType(parentData, extensionType);
       this.extractUnionMembers(node, parentData.memberByMemberTypeName);
       parentData.description ||= formatDescription('description' in node ? node.description : undefined);
+      parentData.subgraphNames.add(this.subgraphName);
       this.extractConfigureDescriptionsData(parentData);
       return;
     }
@@ -1562,6 +1470,7 @@ export class NormalizationFactory {
       name: typeName,
       node: getMutableUnionNode(node.name),
       persistedDirectivesData: newPersistedDirectivesData(),
+      subgraphNames: new Set([this.subgraphName]),
       description: formatDescription('description' in node ? node.description : undefined),
     };
     this.extractConfigureDescriptionsData(newParentData);
@@ -2171,20 +2080,19 @@ export class NormalizationFactory {
   }
 
   handleAuthenticatedDirective(data: NodeData | SchemaData, parentTypeName: string) {
-    if (
-      data.kind !== Kind.ENUM_TYPE_DEFINITION &&
-      data.kind !== Kind.FIELD_DEFINITION &&
-      data.kind !== Kind.SCALAR_TYPE_DEFINITION
-    ) {
-      return;
-    }
-    if (data.kind !== Kind.FIELD_DEFINITION) {
-      this.leafTypeNamesWithAuthorizationDirectives.add(parentTypeName);
-    }
-    const parentAuthorizationData = getValueOrDefault(this.authorizationDataByParentTypeName, parentTypeName, () =>
+    const parentAuthData = getValueOrDefault(this.authorizationDataByParentTypeName, parentTypeName, () =>
       newAuthorizationData(parentTypeName),
     );
-    getAuthorizationDataToUpdate(parentAuthorizationData, data.node).requiresAuthentication = true;
+    if (data.kind === Kind.FIELD_DEFINITION) {
+      const fieldAuthData = getValueOrDefault(parentAuthData.fieldAuthDataByFieldName, data.name, () =>
+        newFieldAuthorizationData(data.name),
+      );
+      fieldAuthData.inheritedData.requiresAuthentication = true;
+      fieldAuthData.originalData.requiresAuthentication = true;
+    } else {
+      parentAuthData.requiresAuthentication = true;
+      this.parentTypeNamesWithAuthDirectives.add(parentTypeName);
+    }
   }
 
   handleOverrideDirective({ data, directiveCoords, errorMessages, targetSubgraphName }: HandleOverrideDirectiveParams) {
@@ -2200,19 +2108,20 @@ export class NormalizationFactory {
     getValueOrDefault(overrideDataForSubgraph, data.renamedParentTypeName, () => new Set<string>()).add(data.name);
   }
 
-  handleRequiresScopesDirective({ directiveCoords, orScopes, requiredScopes }: HandleRequiresScopesDirectiveParams) {
-    if (orScopes.length > maxOrScopes) {
-      this.invalidOrScopesHostPaths.add(directiveCoords);
+  extractRequiredScopes({ directiveCoords, orScopes, requiredScopes }: HandleRequiresScopesDirectiveParams) {
+    if (orScopes.length > MAX_OR_SCOPES) {
+      this.invalidORScopesCoords.add(directiveCoords);
       return;
     }
     for (const scopes of orScopes) {
-      const andScopes = new Set<string>();
+      const newANDScopes = new Set<string>();
       for (const scope of (scopes as ListValueNode).values) {
-        andScopes.add((scope as StringValueNode).value);
+        newANDScopes.add((scope as StringValueNode).value);
       }
-      if (andScopes.size > 0) {
-        requiredScopes.push(andScopes);
+      if (newANDScopes.size < 1) {
+        continue;
       }
+      addScopes(requiredScopes, newANDScopes);
     }
   }
 
@@ -2992,10 +2901,7 @@ export class NormalizationFactory {
       enumDefinitionData.directivesByDirectiveName,
       enumDefinitionData.name,
     );
-    enumDefinitionData.node.values = childMapToValueArray(
-      enumDefinitionData.enumValueDataByValueName,
-      this.authorizationDataByParentTypeName,
-    );
+    enumDefinitionData.node.values = childMapToValueArray(enumDefinitionData.enumValueDataByValueName);
     return enumDefinitionData.node;
   }
 
@@ -3005,10 +2911,7 @@ export class NormalizationFactory {
       inputObjectDefinitionData.directivesByDirectiveName,
       inputObjectDefinitionData.name,
     );
-    inputObjectDefinitionData.node.fields = childMapToValueArray(
-      inputObjectDefinitionData.inputValueDataByValueName,
-      this.authorizationDataByParentTypeName,
-    );
+    inputObjectDefinitionData.node.fields = childMapToValueArray(inputObjectDefinitionData.inputValueDataByValueName);
     return inputObjectDefinitionData.node;
   }
 
@@ -3018,10 +2921,7 @@ export class NormalizationFactory {
       compositeOutputData.directivesByDirectiveName,
       compositeOutputData.name,
     );
-    compositeOutputData.node.fields = childMapToValueArray(
-      compositeOutputData.fieldDataByFieldName,
-      this.authorizationDataByParentTypeName,
-    );
+    compositeOutputData.node.fields = childMapToValueArray(compositeOutputData.fieldDataByFieldName);
     compositeOutputData.node.interfaces = setToNamedTypeNodeArray(compositeOutputData.implementedInterfaceTypeNames);
     return compositeOutputData.node;
   }
@@ -3263,48 +3163,8 @@ export class NormalizationFactory {
     for (const [parentTypeName, parentData] of this.parentDefinitionDataByTypeName) {
       this.validateDirectives(parentData, parentTypeName);
     }
-    consolidateAuthorizationDirectives(this, document);
-    for (const interfaceTypeName of this.interfaceTypeNamesWithAuthorizationDirectives) {
-      const interfaceAuthorizationData = this.authorizationDataByParentTypeName.get(interfaceTypeName);
-      if (!interfaceAuthorizationData) {
-        continue;
-      }
-      const concreteTypeNames = this.concreteTypeNamesByAbstractTypeName.get(interfaceTypeName);
-      for (const concreteTypeName of concreteTypeNames || []) {
-        const concreteAuthorizationData = getValueOrDefault(
-          this.authorizationDataByParentTypeName,
-          concreteTypeName,
-          () => newAuthorizationData(concreteTypeName),
-        );
-        for (const [
-          fieldName,
-          interfaceFieldAuthorizationData,
-        ] of interfaceAuthorizationData.fieldAuthorizationDataByFieldName) {
-          if (
-            !upsertFieldAuthorizationData(
-              concreteAuthorizationData.fieldAuthorizationDataByFieldName,
-              interfaceFieldAuthorizationData,
-            )
-          ) {
-            this.invalidOrScopesHostPaths.add(`${concreteTypeName}.${fieldName}`);
-          }
-        }
-      }
-    }
-    // Apply inherited leaf authorization that was not applied to interface fields of that type earlier
-    for (const [typeName, fieldAuthorizationDatas] of this.heirFieldAuthorizationDataByTypeName) {
-      const authorizationData = this.authorizationDataByParentTypeName.get(typeName);
-      if (!authorizationData) {
-        continue;
-      }
-      for (const fieldAuthorizationData of fieldAuthorizationDatas) {
-        if (!mergeAuthorizationDataByAND(authorizationData, fieldAuthorizationData)) {
-          this.invalidOrScopesHostPaths.add(`${typeName}.${fieldAuthorizationData.fieldName}`);
-        }
-      }
-    }
-    if (this.invalidOrScopesHostPaths.size > 0) {
-      this.errors.push(orScopesLimitError(maxOrScopes, [...this.invalidOrScopesHostPaths]));
+    if (this.invalidORScopesCoords.size > 0) {
+      this.errors.push(orScopesLimitError(MAX_OR_SCOPES, [...this.invalidORScopesCoords]));
     }
     const definitions: DefinitionNode[] = [];
     for (const directiveDefinition of BASE_DIRECTIVE_DEFINITIONS) {
@@ -3364,7 +3224,6 @@ export class NormalizationFactory {
             this.errors.push(noDefinedEnumValuesError(parentTypeName));
             break;
           }
-          removeIgnoredDirectives(parentDefinitionData);
           definitions.push(this.getEnumNodeByData(parentDefinitionData));
           break;
         case Kind.INPUT_OBJECT_TYPE_DEFINITION:
@@ -3388,7 +3247,6 @@ export class NormalizationFactory {
             parentDefinitionData.fieldDataByFieldName.delete(SERVICE_FIELD);
             parentDefinitionData.fieldDataByFieldName.delete(ENTITIES_FIELD);
           }
-          removeIgnoredDirectives(parentDefinitionData);
           removeInheritableDirectivesFromObjectParent(parentDefinitionData);
           if (this.parentsWithChildArguments.has(parentTypeName) || !isObject) {
             const externalInterfaceFieldNames: Array<string> = [];
@@ -3441,7 +3299,6 @@ export class NormalizationFactory {
             this.errors.push(noBaseScalarDefinitionError(parentTypeName));
             break;
           }
-          removeIgnoredDirectives(parentDefinitionData);
           definitions.push(this.getScalarNodeByData(parentDefinitionData));
           break;
         case Kind.UNION_TYPE_DEFINITION:
@@ -3554,6 +3411,7 @@ export class NormalizationFactory {
       configurationDataByTypeName: this.configurationDataByTypeName,
       entityDataByTypeName: this.entityDataByTypeName,
       entityInterfaces: this.entityInterfaceDataByTypeName,
+      fieldCoordsByNamedTypeName: this.fieldCoordsByNamedTypeName,
       isEventDrivenGraph: this.isSubgraphEventDrivenGraph,
       isVersionTwo: this.isSubgraphVersionTwo,
       keyFieldNamesByParentTypeName: this.keyFieldNamesByParentTypeName,
@@ -3584,7 +3442,8 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationResult 
   const subgraphNames = new Set<string>();
   const nonUniqueSubgraphNames = new Set<string>();
   const invalidNameErrorMessages: string[] = [];
-  const invalidOrScopesHostPaths = new Set<string>();
+  const invalidORScopesCoords = new Set<string>();
+  const fieldCoordsByNamedTypeName = new Map<string, Set<string>>();
   const warnings: Array<Warning> = [];
   const validationErrors: Array<Error> = [];
   // Record the subgraph names first, so that subgraph references can be validated
@@ -3616,7 +3475,13 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationResult 
     parentDefinitionDataMapsBySubgraphName.set(subgraphName, normalizationResult.parentDefinitionDataByTypeName);
 
     for (const authorizationData of normalizationResult.authorizationDataByParentTypeName.values()) {
-      upsertAuthorizationData(authorizationDataByParentTypeName, authorizationData, invalidOrScopesHostPaths);
+      upsertAuthorizationData(authorizationDataByParentTypeName, authorizationData, invalidORScopesCoords);
+    }
+    for (const [namedTypeName, fieldCoords] of normalizationResult.fieldCoordsByNamedTypeName) {
+      addIterableValuesToSet(
+        fieldCoords,
+        getValueOrDefault(fieldCoordsByNamedTypeName, namedTypeName, () => new Set<string>()),
+      );
     }
     for (const [
       abstractTypeName,
@@ -3705,8 +3570,8 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationResult 
     }
   }
   const allErrors: Array<Error> = [];
-  if (invalidOrScopesHostPaths.size > 0) {
-    allErrors.push(orScopesLimitError(maxOrScopes, [...invalidOrScopesHostPaths]));
+  if (invalidORScopesCoords.size > 0) {
+    allErrors.push(orScopesLimitError(MAX_OR_SCOPES, [...invalidORScopesCoords]));
   }
   if (invalidNameErrorMessages.length > 0 || nonUniqueSubgraphNames.size > 0) {
     allErrors.push(invalidSubgraphNamesError([...nonUniqueSubgraphNames], invalidNameErrorMessages));
@@ -3743,7 +3608,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationResult 
       if (!configurationData) {
         continue;
       }
-      subtractSourceSetFromTargetSet(fieldNames, configurationData.fieldNames);
+      subtractSet(fieldNames, configurationData.fieldNames);
       if (configurationData.fieldNames.size < 1) {
         internalSubgraph.configurationDataByTypeName.delete(parentTypeName);
       }
@@ -3754,6 +3619,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationResult 
     authorizationDataByParentTypeName,
     concreteTypeNamesByAbstractTypeName,
     entityDataByTypeName,
+    fieldCoordsByNamedTypeName,
     internalSubgraphBySubgraphName: internalSubgraphBySubgraphName,
     internalGraph,
     success: true,

@@ -252,9 +252,11 @@ type RequestHeaderRule struct {
 	// Set header options
 	// Name is the name of the header to set
 	Name string `yaml:"name"`
-	// Value is the value of the header to set
+	// Value is the static value to set for the header
 	Value string `yaml:"value"`
-	// ValueFrom is the context field to get the value from, in propagating to subgraphs
+	// Expression is the Expr Lang expression to evaluate for dynamic header values
+	Expression string `yaml:"expression"`
+	// ValueFrom is deprecated in favor of Expression. Use Expression instead.
 	ValueFrom *CustomDynamicAttribute `yaml:"value_from,omitempty"`
 }
 
@@ -328,28 +330,31 @@ type EngineDebugConfiguration struct {
 }
 
 type EngineExecutionConfiguration struct {
-	Debug                                  EngineDebugConfiguration `yaml:"debug"`
-	EnableSingleFlight                     bool                     `envDefault:"true" env:"ENGINE_ENABLE_SINGLE_FLIGHT" yaml:"enable_single_flight"`
-	EnableRequestTracing                   bool                     `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
-	EnableExecutionPlanCacheResponseHeader bool                     `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
-	MaxConcurrentResolvers                 int                      `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
-	EnableNetPoll                          bool                     `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
-	WebSocketClientPollTimeout             time.Duration            `envDefault:"1s" env:"ENGINE_WEBSOCKET_CLIENT_POLL_TIMEOUT" yaml:"websocket_client_poll_timeout,omitempty"`
-	WebSocketClientConnBufferSize          int                      `envDefault:"128" env:"ENGINE_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE" yaml:"websocket_client_conn_buffer_size,omitempty"`
-	WebSocketClientReadTimeout             time.Duration            `envDefault:"5s" env:"ENGINE_WEBSOCKET_CLIENT_READ_TIMEOUT" yaml:"websocket_client_read_timeout,omitempty"`
-	ExecutionPlanCacheSize                 int64                    `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
-	MinifySubgraphOperations               bool                     `envDefault:"true" env:"ENGINE_MINIFY_SUBGRAPH_OPERATIONS" yaml:"minify_subgraph_operations"`
-	EnablePersistedOperationsCache         bool                     `envDefault:"true" env:"ENGINE_ENABLE_PERSISTED_OPERATIONS_CACHE" yaml:"enable_persisted_operations_cache"`
-	EnableNormalizationCache               bool                     `envDefault:"true" env:"ENGINE_ENABLE_NORMALIZATION_CACHE" yaml:"enable_normalization_cache"`
-	NormalizationCacheSize                 int64                    `envDefault:"1024" env:"ENGINE_NORMALIZATION_CACHE_SIZE" yaml:"normalization_cache_size,omitempty"`
-	OperationHashCacheSize                 int64                    `envDefault:"2048" env:"ENGINE_OPERATION_HASH_CACHE_SIZE" yaml:"operation_hash_cache_size,omitempty"`
-	ParseKitPoolSize                       int                      `envDefault:"16" env:"ENGINE_PARSEKIT_POOL_SIZE" yaml:"parsekit_pool_size,omitempty"`
-	EnableValidationCache                  bool                     `envDefault:"true" env:"ENGINE_ENABLE_VALIDATION_CACHE" yaml:"enable_validation_cache"`
-	ValidationCacheSize                    int64                    `envDefault:"1024" env:"ENGINE_VALIDATION_CACHE_SIZE" yaml:"validation_cache_size,omitempty"`
-	ResolverMaxRecyclableParserSize        int                      `envDefault:"32768" env:"ENGINE_RESOLVER_MAX_RECYCLABLE_PARSER_SIZE" yaml:"resolver_max_recyclable_parser_size,omitempty"`
-	EnableSubgraphFetchOperationName       bool                     `envDefault:"false" env:"ENGINE_ENABLE_SUBGRAPH_FETCH_OPERATION_NAME" yaml:"enable_subgraph_fetch_operation_name"`
-	DisableVariablesRemapping              bool                     `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping"`
-	SubscriptionFetchTimeout               time.Duration            `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
+	Debug                                            EngineDebugConfiguration `yaml:"debug"`
+	EnableSingleFlight                               bool                     `envDefault:"true" env:"ENGINE_ENABLE_SINGLE_FLIGHT" yaml:"enable_single_flight"`
+	EnableRequestTracing                             bool                     `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
+	EnableExecutionPlanCacheResponseHeader           bool                     `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
+	MaxConcurrentResolvers                           int                      `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
+	EnableNetPoll                                    bool                     `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
+	WebSocketClientPollTimeout                       time.Duration            `envDefault:"1s" env:"ENGINE_WEBSOCKET_CLIENT_POLL_TIMEOUT" yaml:"websocket_client_poll_timeout,omitempty"`
+	WebSocketClientConnBufferSize                    int                      `envDefault:"128" env:"ENGINE_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE" yaml:"websocket_client_conn_buffer_size,omitempty"`
+	WebSocketClientReadTimeout                       time.Duration            `envDefault:"5s" env:"ENGINE_WEBSOCKET_CLIENT_READ_TIMEOUT" yaml:"websocket_client_read_timeout,omitempty"`
+	WebSocketClientWriteTimeout                      time.Duration            `envDefault:"10s" env:"ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT" yaml:"websocket_client_write_timeout,omitempty"`
+	WebSocketClientPingInterval                      time.Duration            `envDefault:"10s" env:"ENGINE_WEBSOCKET_CLIENT_PING_INTERVAL" yaml:"websocket_client_ping_interval,omitempty"`
+	ExecutionPlanCacheSize                           int64                    `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
+	MinifySubgraphOperations                         bool                     `envDefault:"true" env:"ENGINE_MINIFY_SUBGRAPH_OPERATIONS" yaml:"minify_subgraph_operations"`
+	EnablePersistedOperationsCache                   bool                     `envDefault:"true" env:"ENGINE_ENABLE_PERSISTED_OPERATIONS_CACHE" yaml:"enable_persisted_operations_cache"`
+	EnableNormalizationCache                         bool                     `envDefault:"true" env:"ENGINE_ENABLE_NORMALIZATION_CACHE" yaml:"enable_normalization_cache"`
+	NormalizationCacheSize                           int64                    `envDefault:"1024" env:"ENGINE_NORMALIZATION_CACHE_SIZE" yaml:"normalization_cache_size,omitempty"`
+	OperationHashCacheSize                           int64                    `envDefault:"2048" env:"ENGINE_OPERATION_HASH_CACHE_SIZE" yaml:"operation_hash_cache_size,omitempty"`
+	ParseKitPoolSize                                 int                      `envDefault:"16" env:"ENGINE_PARSEKIT_POOL_SIZE" yaml:"parsekit_pool_size,omitempty"`
+	EnableValidationCache                            bool                     `envDefault:"true" env:"ENGINE_ENABLE_VALIDATION_CACHE" yaml:"enable_validation_cache"`
+	ValidationCacheSize                              int64                    `envDefault:"1024" env:"ENGINE_VALIDATION_CACHE_SIZE" yaml:"validation_cache_size,omitempty"`
+	DisableExposingVariablesContentOnValidationError bool                     `envDefault:"false" env:"ENGINE_DISABLE_EXPOSING_VARIABLES_CONTENT_ON_VALIDATION_ERROR" yaml:"disable_exposing_variables_content_on_validation_error"`
+	ResolverMaxRecyclableParserSize                  int                      `envDefault:"32768" env:"ENGINE_RESOLVER_MAX_RECYCLABLE_PARSER_SIZE" yaml:"resolver_max_recyclable_parser_size,omitempty"`
+	EnableSubgraphFetchOperationName                 bool                     `envDefault:"false" env:"ENGINE_ENABLE_SUBGRAPH_FETCH_OPERATION_NAME" yaml:"enable_subgraph_fetch_operation_name"`
+	DisableVariablesRemapping                        bool                     `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping"`
+	SubscriptionFetchTimeout                         time.Duration            `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
 }
 
 type BlockOperationConfiguration struct {
@@ -577,6 +582,28 @@ type WebSocketConfiguration struct {
 	ForwardInitialPayload bool `yaml:"forward_initial_payload" envDefault:"true" env:"WEBSOCKETS_FORWARD_INITIAL_PAYLOAD"`
 	// Authentication configuration for the WebSocket Connection
 	Authentication WebSocketAuthenticationConfiguration `yaml:"authentication,omitempty"`
+	// SetClientInfoFromInitialPayload configuration for the WebSocket Connection
+	ClientInfoFromInitialPayload WebSocketClientInfoFromInitialPayloadConfiguration `yaml:"client_info_from_initial_payload"`
+}
+
+type WebSocketClientInfoFromInitialPayloadConfiguration struct {
+	// Enabled true if the Router should set the client info from the initial payload of a Subscription Request to the Subgraph
+	Enabled bool `yaml:"enabled" envDefault:"true" env:"WEBSOCKETS_CLIENT_INFO_FROM_INITIAL_PAYLOAD_ENABLED"`
+	// NameField is the name of the field in the initial payload that will have the client name
+	NameField string `yaml:"name_field" envDefault:"graphql-client-name" env:"WEBSOCKETS_CLIENT_INFO_FROM_INITIAL_PAYLOAD_NAME_FIELD"`
+	// VersionField is the name of the field in the initial payload that will have the client version
+	VersionField string `yaml:"version_field" envDefault:"graphql-client-version" env:"WEBSOCKETS_CLIENT_INFO_FROM_INITIAL_PAYLOAD_VERSION_FIELD"`
+	// ForwardToRequestHeaders configuration for the WebSocket Connection
+	ForwardToRequestHeaders ForwardToRequestHeadersConfiguration `yaml:"forward_to_request_headers"`
+}
+
+type ForwardToRequestHeadersConfiguration struct {
+	// Enabled true if the Router should forward the client info to the request headers
+	Enabled bool `yaml:"enabled" envDefault:"true" env:"WEBSOCKETS_CLIENT_INFO_FROM_INITIAL_PAYLOAD_FORWARD_TO_REQUEST_HEADERS_ENABLED"`
+	// NameTargetHeader is the name of the header where the client name should be forwarded to
+	NameTargetHeader string `yaml:"name_target_header" envDefault:"graphql-client-name" env:"WEBSOCKETS_CLIENT_INFO_FROM_INITIAL_PAYLOAD_NAME_TARGET_HEADER"`
+	// VersionTargetHeader is the name of the header where the client version should be forwarded to
+	VersionTargetHeader string `yaml:"version_target_header" envDefault:"graphql-client-version" env:"WEBSOCKETS_CLIENT_INFO_FROM_INITIAL_PAYLOAD_VERSION_TARGET_HEADER"`
 }
 
 type ForwardUpgradeHeadersConfiguration struct {
@@ -729,6 +756,13 @@ type AccessLogsConfig struct {
 	Subgraphs AccessLogsSubgraphsConfig `yaml:"subgraphs,omitempty" env:"ACCESS_LOGS_SUBGRAPH"`
 }
 
+type BatchingConfig struct {
+	Enabled            bool `yaml:"enabled" env:"BATCHING_ENABLED" envDefault:"false"`
+	MaxConcurrency     int  `yaml:"max_concurrency" env:"BATCHING_MAX_CONCURRENCY" envDefault:"10"`
+	MaxEntriesPerBatch int  `yaml:"max_entries_per_batch" env:"BATCHING_MAX_ENTRIES" envDefault:"100"`
+	OmitExtensions     bool `yaml:"omit_extensions" env:"BATCHING_OMIT_EXTENSIONS" envDefault:"false"`
+}
+
 type AccessLogsBufferConfig struct {
 	Enabled bool `yaml:"enabled" env:"ACCESS_LOGS_BUFFER_ENABLED" envDefault:"false"`
 	// Size is the maximum number of log entries to buffer before flushing
@@ -853,6 +887,7 @@ type Config struct {
 	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping,omitempty"`
 	FileUpload     FileUpload             `yaml:"file_upload,omitempty"`
 	AccessLogs     AccessLogsConfig       `yaml:"access_logs,omitempty"`
+	Batching       BatchingConfig         `yaml:"batching,omitempty"`
 
 	ListenAddr                    string                      `yaml:"listen_addr" envDefault:"localhost:3002" env:"LISTEN_ADDR"`
 	ControlplaneURL               string                      `yaml:"controlplane_url" envDefault:"https://cosmo-cp.wundergraph.com" env:"CONTROLPLANE_URL"`

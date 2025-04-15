@@ -8,6 +8,7 @@ const isCheckSuccessful = (
   hasLintErrors: boolean,
   hasGraphPruningErrors: boolean,
   clientTrafficCheckSkipped: boolean,
+  hasProposalMatchError: boolean,
 ) => {
   return (
     isComposable &&
@@ -16,7 +17,8 @@ const isCheckSuccessful = (
     (!isBreaking ||
       (isBreaking && !hasClientTraffic && !clientTrafficCheckSkipped)) &&
     !hasLintErrors &&
-    !hasGraphPruningErrors
+    !hasGraphPruningErrors &&
+    !hasProposalMatchError
   );
 };
 

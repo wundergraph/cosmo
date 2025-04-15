@@ -9,6 +9,7 @@ import {
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SCALAR,
   Subgraph,
+  ScalarDefinitionData,
 } from '../../src';
 import { parse } from 'graphql';
 import { baseDirectiveDefinitions, versionOneRouterDefinitions } from './utils/utils';
@@ -108,6 +109,19 @@ describe('Scalar tests', () => {
         `,
         ),
       );
+    });
+
+    test('that a Scalar has subgraphs data', () => {
+      const result = federateSubgraphs([subgraphA, subgraphB, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
+
+      expect(result.success).toBe(true);
+
+      if (result.success) {
+        const scalarDef = result.parentDefinitionDataByTypeName.get('Scalar') as ScalarDefinitionData;
+        expect(scalarDef.subgraphNames.size).toBe(2);
+        expect(scalarDef.subgraphNames).toContain(subgraphA.name);
+        expect(scalarDef.subgraphNames).toContain(subgraphB.name);
+      }
     });
   });
 });

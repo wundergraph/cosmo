@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel/propagation"
 
@@ -337,6 +338,10 @@ type TransportOptions struct {
 	Logger                        *zap.Logger
 	TracerProvider                *sdktrace.TracerProvider
 	TracePropagators              propagation.TextMapPropagator
+}
+
+type SubscriptionClientOptions struct {
+	PingInterval time.Duration
 }
 
 func NewTransport(opts *TransportOptions) *TransportFactory {

@@ -66,7 +66,9 @@
     "overrides": {
       "react": "18.3.1",
       "graphql": "16.9.0",
-      "cross-spawn": "7.0.6"
+      "cross-spawn": "7.0.6",
+      "next": "15.2.4",
+      "zod": "3.24.2"
     },
     "patchedDependencies": {
       "graphql@16.9.0": "patches/graphql@16.9.0.patch"

@@ -493,6 +493,7 @@ export const namespaceConfig = pgTable(
     enableGraphPruning: boolean('enable_graph_pruning').default(false).notNull(),
     enableCacheWarming: boolean('enable_cache_warming').default(false).notNull(),
     checksTimeframeInDays: integer('checks_timeframe_in_days'),
+    enableProposals: boolean('enable_proposals').default(false).notNull(),
   },
   (t) => {
     return {
@@ -745,24 +746,27 @@ export const schemaVersionRelations = relations(schemaVersion, ({ many, one }) =
   }),
 }));
 
+export const proposalMatchEnum = pgEnum('proposal_match', ['success', 'warn', 'error'] as const);
+
 export const schemaChecks = pgTable(
   'schema_checks', // sc
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    targetId: uuid('target_id')
-      .notNull()
-      .references(() => targets.id, {
-        onDelete: 'cascade',
-      }),
+    targetId: uuid('target_id').references(() => targets.id, {
+      onDelete: 'cascade',
+    }),
     isComposable: boolean('is_composable').default(false),
     isDeleted: boolean('is_deleted').default(false),
     hasBreakingChanges: boolean('has_breaking_changes').default(false),
     hasLintErrors: boolean('has_lint_errors').default(false),
     hasGraphPruningErrors: boolean('has_graph_pruning_errors').default(false),
     hasClientTraffic: boolean('has_client_traffic').default(false),
+    proposalMatch: proposalMatchEnum('proposal_match'),
     clientTrafficCheckSkipped: boolean('client_traffic_check_skipped').default(false),
     lintSkipped: boolean('lint_skipped'),
     graphPruningSkipped: boolean('graph_pruning_skipped'),
+    compositionSkipped: boolean('composition_skipped').default(false),
+    breakingChangesSkipped: boolean('breaking_changes_skipped').default(false),
     proposedSubgraphSchemaSDL: text('proposed_subgraph_schema_sdl'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     ghDetails: json('gh_details').$type<{
@@ -778,10 +782,37 @@ export const schemaChecks = pgTable(
       commitSha: string;
       branch: string;
     }>(),
+    // this is used to store the error message of a non check policy
+    errorMessage: text('error_message'),
   },
   (t) => {
     return {
       targetIdIndex: index('sc_target_id_idx').on(t.targetId),
+    };
+  },
+);
+
+export const schemaCheckSubgraphs = pgTable(
+  'schema_check_subgraphs', // scs
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    schemaCheckId: uuid('schema_check_id')
+      .notNull()
+      .references(() => schemaChecks.id, {
+        onDelete: 'cascade',
+      }),
+    subgraphId: uuid('subgraph_id').references(() => subgraphs.id, {
+      onDelete: 'set null',
+    }),
+    subgraphName: text('subgraph_name').notNull(),
+    proposedSubgraphSchemaSDL: text('proposed_subgraph_schema_sdl'),
+    isDeleted: boolean('is_deleted').default(false).notNull(),
+    isNew: boolean('is_new').default(false).notNull(),
+  },
+  (t) => {
+    return {
+      schemaCheckIdIndex: index('scs_schema_check_id_idx').on(t.schemaCheckId),
+      subgraphIdIndex: index('scs_subgraph_id_idx').on(t.subgraphId),
     };
   },
 );
@@ -827,6 +858,7 @@ export const schemaCheckChangeActionOperationUsageRelations = relations(
 export const schemaCheckFederatedGraphs = pgTable(
   'schema_check_federated_graphs', // scfg
   {
+    id: uuid('id').primaryKey().defaultRandom(),
     checkId: uuid('check_id')
       .notNull()
       .references(() => schemaChecks.id, {
@@ -858,6 +890,56 @@ export const schemaCheckFederatedGraphsRelations = relations(schemaCheckFederate
   }),
 }));
 
+// a join table between schema check subgraphs and schema check fed graphs
+export const schemaCheckSubgraphsFederatedGraphs = pgTable(
+  'schema_check_subgraphs_federated_graphs', // scsfg
+  {
+    schemaCheckFederatedGraphId: uuid('schema_check_federated_graph_id').references(
+      () => schemaCheckFederatedGraphs.id,
+      {
+        onDelete: 'cascade',
+      },
+    ),
+    schemaCheckSubgraphId: uuid('schema_check_subgraph_id').references(() => schemaCheckSubgraphs.id, {
+      onDelete: 'cascade',
+    }),
+  },
+  (t) => {
+    return {
+      schemaCheckSubgraphIdIndex: index('scsfg_schema_check_subgraph_id_idx').on(t.schemaCheckSubgraphId),
+      schemaCheckFederatedGraphIdIndex: index('scsfg_schema_check_federated_graph_id_idx').on(
+        t.schemaCheckFederatedGraphId,
+      ),
+    };
+  },
+);
+
+// This table is used to track the checks that are associated with a proposal
+// so the checks that are run when the proposal is created, updated.
+export const proposalChecks = pgTable(
+  'proposal_checks', // pc
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    schemaCheckId: uuid('schema_check_id')
+      .notNull()
+      .references(() => schemaChecks.id, {
+        onDelete: 'cascade',
+      }),
+    proposalId: uuid('proposal_id')
+      .notNull()
+      .references(() => proposals.id, {
+        // cascade as delete proposal will not be allowed
+        onDelete: 'cascade',
+      }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => {
+    return {
+      uniqueCheckIdProposalId: uniqueIndex('pc_check_id_proposal_id_idx').on(t.schemaCheckId, t.proposalId),
+    };
+  },
+);
+
 export const schemaCheckChangeAction = pgTable(
   'schema_check_change_action', // scca
   {
@@ -872,6 +954,9 @@ export const schemaCheckChangeAction = pgTable(
     isBreaking: boolean('is_breaking').default(false),
     path: text('path'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    schemaCheckSubgraphId: uuid('schema_check_subgraph_id').references(() => schemaCheckSubgraphs.id, {
+      onDelete: 'set null',
+    }),
   },
   (t) => {
     return {
@@ -886,6 +971,10 @@ export const schemaCheckChangeActionRelations = relations(schemaCheckChangeActio
     references: [schemaChecks.id],
   }),
   operationUsage: many(schemaCheckChangeActionOperationUsage),
+  checkSubgraph: one(schemaCheckSubgraphs, {
+    fields: [schemaCheckChangeAction.schemaCheckSubgraphId],
+    references: [schemaCheckSubgraphs.id],
+  }),
 }));
 
 export const operationChangeOverrides = pgTable(
@@ -962,6 +1051,8 @@ export const schemaCheckRelations = relations(schemaChecks, ({ many }) => ({
   changes: many(schemaCheckChangeAction),
   compositions: many(schemaCheckComposition),
   affectedGraphs: many(schemaCheckFederatedGraphs),
+  subgraphs: many(schemaCheckSubgraphs),
+  federatedGraphs: many(schemaCheckFederatedGraphs),
 }));
 
 export const users = pgTable('users', {
@@ -1102,6 +1193,8 @@ export const organizations = pgTable(
     isDeactivated: boolean('is_deactivated').default(false),
     deactivationReason: text('deactivation_reason'),
     deactivatedAt: timestamp('deactivated_at', { withTimezone: true }),
+    queuedForDeletionAt: timestamp('queued_for_deletion_at', { withTimezone: true }),
+    queuedForDeletionBy: text('queued_for_deletion_by'), // display name in case the member is removed
   },
   (t) => {
     return {
@@ -1738,78 +1831,6 @@ export const subgraphMembers = pgTable(
   },
 );
 
-export const discussions = pgTable(
-  'discussions', // dis
-  {
-    id: uuid('id').notNull().primaryKey().defaultRandom(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    targetId: uuid('target_id')
-      .references(() => targets.id, {
-        onDelete: 'cascade',
-      })
-      .notNull(),
-    schemaVersionId: uuid('schema_version_id')
-      .notNull()
-      .references(() => schemaVersion.id, {
-        onDelete: 'cascade',
-      }),
-    referenceLine: integer('reference_line').notNull(),
-    isResolved: boolean('is_resolved').default(false).notNull(),
-  },
-  (t) => {
-    return {
-      targetIdIndex: index('dis_target_id_idx').on(t.targetId),
-      schemaVersionIdIndex: index('dis_schema_version_id_idx').on(t.schemaVersionId),
-    };
-  },
-);
-
-export const discussionThread = pgTable(
-  'discussion_thread', // dist
-  {
-    id: uuid('id').notNull().primaryKey().defaultRandom(),
-    discussionId: uuid('discussion_id')
-      .notNull()
-      .references(() => discussions.id, {
-        onDelete: 'cascade',
-      }),
-    contentMarkdown: text('content_markdown'),
-    contentJson: json('content_json').$type<JSONContent>(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { withTimezone: true }),
-    createdById: uuid('created_by_id').references(() => users.id, {
-      onDelete: 'set null',
-    }),
-    isDeleted: boolean('is_deleted').default(false).notNull(),
-  },
-  (t) => {
-    return {
-      discussionIdIndex: index('dist_discussion_id_idx').on(t.discussionId),
-      createdByIdIndex: index('dist_created_by_id_idx').on(t.createdById),
-    };
-  },
-);
-
-export const discussionRelations = relations(discussions, ({ one, many }) => ({
-  target: one(targets, {
-    fields: [discussions.targetId],
-    references: [targets.id],
-  }),
-  schemaVersion: one(schemaVersion),
-  thread: many(discussionThread),
-}));
-
-export const discussionThreadRelations = relations(discussionThread, ({ one }) => ({
-  createdBy: one(users, {
-    fields: [discussionThread.createdById],
-    references: [users.id],
-  }),
-  discussion: one(discussions, {
-    fields: [discussionThread.discussionId],
-    references: [discussions.id],
-  }),
-}));
-
 export const lintRulesEnum = pgEnum('lint_rules', [
   'FIELD_NAMES_SHOULD_BE_CAMEL_CASE',
   'TYPE_NAMES_SHOULD_BE_PASCAL_CASE',
@@ -1895,6 +1916,33 @@ export const namespaceGraphPruningCheckConfigRelations = relations(namespaceGrap
   }),
 }));
 
+export const namespaceProposalConfig = pgTable(
+  'namespace_proposal_config', // npc
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    namespaceId: uuid('namespace_id')
+      .notNull()
+      .references(() => namespaces.id, {
+        onDelete: 'cascade',
+      }),
+    checkSeverityLevel: lintSeverityEnum('check_severity_level').notNull(),
+    publishSeverityLevel: lintSeverityEnum('publish_severity_level').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => {
+    return {
+      uniqueNamespace: unique('npc_namespace_id_idx').on(t.namespaceId),
+    };
+  },
+);
+
+export const namespaceProposalConfigRelations = relations(namespaceProposalConfig, ({ one }) => ({
+  namespace: one(namespaces, {
+    fields: [namespaceProposalConfig.namespaceId],
+    references: [namespaces.id],
+  }),
+}));
+
 export const schemaCheckLintAction = pgTable(
   'schema_check_lint_action', // sclact
   {
@@ -1911,6 +1959,9 @@ export const schemaCheckLintAction = pgTable(
       .$type<{ line: number; column: number; endLine?: number; endColumn?: number }>()
       .notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    schemaCheckSubgraphId: uuid('schema_check_subgraph_id').references(() => schemaCheckSubgraphs.id, {
+      onDelete: 'set null',
+    }),
   },
   (t) => {
     return {
@@ -1923,6 +1974,10 @@ export const schemaCheckLintActionRelations = relations(schemaCheckLintAction, (
   check: one(schemaChecks, {
     fields: [schemaCheckLintAction.schemaCheckId],
     references: [schemaChecks.id],
+  }),
+  checkSubgraph: one(schemaCheckSubgraphs, {
+    fields: [schemaCheckLintAction.schemaCheckSubgraphId],
+    references: [schemaCheckSubgraphs.id],
   }),
 }));
 
@@ -1948,6 +2003,9 @@ export const schemaCheckGraphPruningAction = pgTable(
       .references(() => federatedGraphs.id, {
         onDelete: 'cascade',
       }),
+    schemaCheckSubgraphId: uuid('schema_check_subgraph_id').references(() => schemaCheckSubgraphs.id, {
+      onDelete: 'set null',
+    }),
   },
   (t) => {
     return {
@@ -1965,6 +2023,10 @@ export const schemaCheckGraphPruningActionRelations = relations(schemaCheckGraph
   federatedGraph: one(federatedGraphs, {
     fields: [schemaCheckGraphPruningAction.federatedGraphId],
     references: [federatedGraphs.id],
+  }),
+  checkSubgraph: one(schemaCheckSubgraphs, {
+    fields: [schemaCheckGraphPruningAction.schemaCheckSubgraphId],
+    references: [schemaCheckSubgraphs.id],
   }),
 }));
 
@@ -2109,4 +2171,104 @@ export const namespaceCacheWarmerConfig = pgTable(
 
 export const namespaceCacheWarmerConfigRelations = relations(namespaceCacheWarmerConfig, ({ one }) => ({
   namespace: one(namespaces),
+}));
+
+export const proposalStateEnum = pgEnum('proposal_state', ['DRAFT', 'APPROVED', 'PUBLISHED', 'CLOSED'] as const);
+
+export const proposals = pgTable(
+  'proposals', // pr
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    name: text('name').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdById: uuid('created_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    state: proposalStateEnum('state').notNull(),
+  },
+  (t) => ({
+    uniqueFederatedGraphClientName: unique('federated_graph_proposal_name').on(t.federatedGraphId, t.name),
+    createdByIdIndex: index('pr_created_by_id_idx').on(t.createdById),
+  }),
+);
+
+export const proposalRelations = relations(proposals, ({ one }) => ({
+  federatedGraph: one(federatedGraphs, {
+    fields: [proposals.federatedGraphId],
+    references: [federatedGraphs.id],
+  }),
+}));
+
+export const proposalSubgraphs = pgTable(
+  'proposal_subgraphs', // prs
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    proposalId: uuid('proposal_id')
+      .notNull()
+      .references(() => proposals.id, { onDelete: 'cascade' }),
+    subgraphId: uuid('subgraph_id').references(() => subgraphs.id, {
+      onDelete: 'set null',
+    }),
+    subgraphName: text('subgraph_name').notNull(),
+    schemaSDL: text('schema_sdl'),
+    isDeleted: boolean('is_deleted').default(false).notNull(),
+    isNew: boolean('is_new').default(false).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }),
+    isPublished: boolean('is_published').default(false).notNull(),
+    // This is the schema version that is currently being used by the subgraph when the proposal was created
+    currentSchemaVersionId: uuid('current_schema_version_id').references(() => schemaVersion.id, {
+      onDelete: 'set null',
+    }),
+    labels: text('labels').array(),
+  },
+  (t) => ({
+    uniqueProposalSubgraph: unique('proposal_subgraph').on(t.proposalId, t.subgraphName),
+  }),
+);
+
+export const proposalSubgraphsRelations = relations(proposalSubgraphs, ({ one }) => ({
+  proposal: one(proposals, { fields: [proposalSubgraphs.proposalId], references: [proposals.id] }),
+  subgraph: one(subgraphs, { fields: [proposalSubgraphs.subgraphId], references: [subgraphs.id] }),
+}));
+
+export const schemaCheckProposalMatch = pgTable(
+  'schema_check_proposal_match', // scpm
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    schemaCheckId: uuid('schema_check_id')
+      .notNull()
+      .references(() => schemaChecks.id, {
+        onDelete: 'cascade',
+      }),
+    proposalId: uuid('proposal_id')
+      .notNull()
+      .references(() => proposals.id, {
+        onDelete: 'cascade',
+      }),
+    proposalMatch: boolean('proposal_match').notNull(),
+  },
+  (t) => {
+    return {
+      schemaCheckIdIndex: index('scpm_schema_check_id_idx').on(t.schemaCheckId),
+      proposalIdIndex: index('scpm_proposal_id_idx').on(t.proposalId),
+      uniqueSchemaCheckProposalMatch: unique('unique_schema_check_proposal_match').on(t.schemaCheckId, t.proposalId),
+    };
+  },
+);
+
+export const schemaCheckProposalMatchRelations = relations(schemaCheckProposalMatch, ({ one }) => ({
+  check: one(schemaChecks, {
+    fields: [schemaCheckProposalMatch.schemaCheckId],
+    references: [schemaChecks.id],
+  }),
+  proposal: one(proposals, {
+    fields: [schemaCheckProposalMatch.proposalId],
+    references: [proposals.id],
+  }),
 }));

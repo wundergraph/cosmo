@@ -57,7 +57,7 @@ export default (opts: BaseCommandOptions) => {
       {
         subgraphName: name,
         namespace: options.namespace,
-        schema,
+        schema: new Uint8Array(schema),
         gitInfo,
         delete: options.delete,
         skipTrafficCheck: options.skipTrafficCheck,

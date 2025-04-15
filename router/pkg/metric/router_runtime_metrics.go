@@ -3,6 +3,7 @@ package metric
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/shirou/gopsutil/v3/process"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -312,7 +313,11 @@ func (r *RuntimeMetrics) Shutdown() error {
 		}
 	}
 
-	return err
+	if err != nil {
+		return fmt.Errorf("shutdown runtime metrics: %w", err)
+	}
+
+	return nil
 }
 
 func computeGCPauses(

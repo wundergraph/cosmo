@@ -531,6 +531,48 @@
               }
             }
           }
+        },
+        "client_info_from_initial_payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "This configuration indicates if the Router should set the client info from the initial payload of the WebSocket Connection. The default value is 'false'.",
+              "default": true
+            },
+            "name_field": {
+              "type": "string",
+              "description": "The name of the field in the initial payload that will have the client name. The default value is 'graphql-client-name'.",
+              "default": "graphql-client-name"
+            },
+            "version_field": {
+              "type": "string",
+              "description": "The name of the field in the initial payload that will have the client version. The default value is 'graphql-client-version'.",
+              "default": "graphql-client-version"
+            },
+            "forward_to_request_headers": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "This configuration indicates if the Router should forward the client info to the request headers. The default value is 'false'.",
+                  "default": true
+                },
+                "name_target_header": {
+                  "type": "string",
+                  "description": "The name of the header property that will have the client name. The default value is 'graphql-client-name'.",
+                  "default": "graphql-client-name"
+                },
+                "version_target_header": {
+                  "type": "string",
+                  "description": "The name of the header property that will have the client version. The default value is 'graphql-client-version'.",
+                  "default": "graphql-client-version"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -558,6 +600,34 @@
               ]
             }
           }
+        }
+      }
+    },
+    "batching": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the batching. The batching is used to batch an incoming query array in a request. The default value is false.",
+          "default": false
+        },
+        "max_concurrency": {
+          "type": "integer",
+          "description": "The maximum number of batches that can be processed concurrently",
+          "default": 10,
+          "minimum": 1
+        },
+        "max_entries_per_batch": {
+          "type": "integer",
+          "description": "The maximum number of entries allowed in a batch",
+          "default": 100,
+          "minimum": 1
+        },
+        "omit_extensions": {
+          "type": "boolean",
+          "description": "omit extensions on any batch processing errors",
+          "default": false
         }
       }
     },
@@ -2366,7 +2436,7 @@
           "type": "string",
           "format": "go-duration",
           "default": "1s",
-          "description": "The timeout for the poll loop of the WebSocket client implementation. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+          "description": "The timeout for the poll loop of the WebSocket client implementation. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         },
         "websocket_client_conn_buffer_size": {
           "type": "integer",
@@ -2377,7 +2447,21 @@
           "type": "string",
           "format": "go-duration",
           "default": "5s",
-          "description": "The timeout for the websocket read of the WebSocket client implementation. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+          "description": "Defines the timeout for the websocket read of the WebSocket client implementation. This is used to set the read deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "websocket_client_write_timeout": {
+            "type": "string",
+            "format": "go-duration",
+            "default": "10s",
+            "description": "Defines the timeout for the websocket write of the WebSocket client implementation. This is used to set the write deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "websocket_client_ping_interval": {
+          "type": "string",
+          "description": "The Websocket client ping interval to the subgraph. Defines how often the router will ping the subgraph to signal that the connection is still alive. Timeout needs to be coordinated with the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "10s",
+          "duration": {
+            "minimum": "10s"
+          }
         },
         "execution_plan_cache_size": {
           "type": "integer",
@@ -2428,6 +2512,11 @@
           "type": "integer",
           "default": 1024,
           "description": "The size of the validation cache."
+        },
+        "disable_exposing_variables_content_on_validation_error": {
+          "type": "boolean",
+          "default": false,
+          "description": "Disables exposing the variables content in the error response. This is useful to avoid leaking sensitive information in the error response."
         },
         "enable_subgraph_fetch_operation_name": {
           "type": "boolean",
@@ -2882,9 +2971,13 @@
           ],
           "description": "The value to set for the header. This can include environment variables."
         },
+        "expression": {
+          "type": "string",
+          "description": "The template expression to evaluate. The expression must return a string value."
+        },
         "value_from": {
           "type": "object",
-          "description": "The configuration for the value from. The value from is used to extract a value from a request context and propagate it to subgraphs. This is currently only valid in requests",
+          "description": "DEPRECATED: Use expression instead. The configuration for the value from. The value from is used to extract a value from a request context and propagate it to subgraphs. This is currently only valid in requests",
           "additionalProperties": false,
           "required": [
             "context_field"
@@ -2903,6 +2996,17 @@
       "required": [
         "op",
         "name"
+      ],
+      "oneOf": [
+        {
+          "required": ["value"]
+        },
+        {
+          "required": ["expression"]
+        },
+        {
+          "required": ["value_from"]
+        }
       ]
     },
     "context_fields": {

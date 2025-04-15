@@ -110,6 +110,9 @@ const (
 	// PlatformServiceCheckSubgraphSchemaProcedure is the fully-qualified name of the PlatformService's
 	// CheckSubgraphSchema RPC.
 	PlatformServiceCheckSubgraphSchemaProcedure = "/wg.cosmo.platform.v1.PlatformService/CheckSubgraphSchema"
+	// PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure is the fully-qualified name of the
+	// PlatformService's GetProposedSchemaOfCheckedSubgraph RPC.
+	PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetProposedSchemaOfCheckedSubgraph"
 	// PlatformServiceFixSubgraphSchemaProcedure is the fully-qualified name of the PlatformService's
 	// FixSubgraphSchema RPC.
 	PlatformServiceFixSubgraphSchemaProcedure = "/wg.cosmo.platform.v1.PlatformService/FixSubgraphSchema"
@@ -286,6 +289,9 @@ const (
 	// PlatformServiceDeleteOrganizationProcedure is the fully-qualified name of the PlatformService's
 	// DeleteOrganization RPC.
 	PlatformServiceDeleteOrganizationProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteOrganization"
+	// PlatformServiceRestoreOrganizationProcedure is the fully-qualified name of the PlatformService's
+	// RestoreOrganization RPC.
+	PlatformServiceRestoreOrganizationProcedure = "/wg.cosmo.platform.v1.PlatformService/RestoreOrganization"
 	// PlatformServiceLeaveOrganizationProcedure is the fully-qualified name of the PlatformService's
 	// LeaveOrganization RPC.
 	PlatformServiceLeaveOrganizationProcedure = "/wg.cosmo.platform.v1.PlatformService/LeaveOrganization"
@@ -349,30 +355,6 @@ const (
 	// PlatformServiceGetSubgraphMembersProcedure is the fully-qualified name of the PlatformService's
 	// GetSubgraphMembers RPC.
 	PlatformServiceGetSubgraphMembersProcedure = "/wg.cosmo.platform.v1.PlatformService/GetSubgraphMembers"
-	// PlatformServiceCreateDiscussionProcedure is the fully-qualified name of the PlatformService's
-	// CreateDiscussion RPC.
-	PlatformServiceCreateDiscussionProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateDiscussion"
-	// PlatformServiceReplyToDiscussionProcedure is the fully-qualified name of the PlatformService's
-	// ReplyToDiscussion RPC.
-	PlatformServiceReplyToDiscussionProcedure = "/wg.cosmo.platform.v1.PlatformService/ReplyToDiscussion"
-	// PlatformServiceGetAllDiscussionsProcedure is the fully-qualified name of the PlatformService's
-	// GetAllDiscussions RPC.
-	PlatformServiceGetAllDiscussionsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetAllDiscussions"
-	// PlatformServiceUpdateDiscussionCommentProcedure is the fully-qualified name of the
-	// PlatformService's UpdateDiscussionComment RPC.
-	PlatformServiceUpdateDiscussionCommentProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateDiscussionComment"
-	// PlatformServiceDeleteDiscussionCommentProcedure is the fully-qualified name of the
-	// PlatformService's DeleteDiscussionComment RPC.
-	PlatformServiceDeleteDiscussionCommentProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteDiscussionComment"
-	// PlatformServiceGetDiscussionProcedure is the fully-qualified name of the PlatformService's
-	// GetDiscussion RPC.
-	PlatformServiceGetDiscussionProcedure = "/wg.cosmo.platform.v1.PlatformService/GetDiscussion"
-	// PlatformServiceGetDiscussionSchemasProcedure is the fully-qualified name of the PlatformService's
-	// GetDiscussionSchemas RPC.
-	PlatformServiceGetDiscussionSchemasProcedure = "/wg.cosmo.platform.v1.PlatformService/GetDiscussionSchemas"
-	// PlatformServiceSetDiscussionResolutionProcedure is the fully-qualified name of the
-	// PlatformService's SetDiscussionResolution RPC.
-	PlatformServiceSetDiscussionResolutionProcedure = "/wg.cosmo.platform.v1.PlatformService/SetDiscussionResolution"
 	// PlatformServiceAddReadmeProcedure is the fully-qualified name of the PlatformService's AddReadme
 	// RPC.
 	PlatformServiceAddReadmeProcedure = "/wg.cosmo.platform.v1.PlatformService/AddReadme"
@@ -502,6 +484,30 @@ const (
 	// PlatformServiceSetGraphRouterCompatibilityVersionProcedure is the fully-qualified name of the
 	// PlatformService's SetGraphRouterCompatibilityVersion RPC.
 	PlatformServiceSetGraphRouterCompatibilityVersionProcedure = "/wg.cosmo.platform.v1.PlatformService/SetGraphRouterCompatibilityVersion"
+	// PlatformServiceCreateProposalProcedure is the fully-qualified name of the PlatformService's
+	// CreateProposal RPC.
+	PlatformServiceCreateProposalProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateProposal"
+	// PlatformServiceGetProposalProcedure is the fully-qualified name of the PlatformService's
+	// GetProposal RPC.
+	PlatformServiceGetProposalProcedure = "/wg.cosmo.platform.v1.PlatformService/GetProposal"
+	// PlatformServiceUpdateProposalProcedure is the fully-qualified name of the PlatformService's
+	// UpdateProposal RPC.
+	PlatformServiceUpdateProposalProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateProposal"
+	// PlatformServiceEnableProposalsForNamespaceProcedure is the fully-qualified name of the
+	// PlatformService's EnableProposalsForNamespace RPC.
+	PlatformServiceEnableProposalsForNamespaceProcedure = "/wg.cosmo.platform.v1.PlatformService/EnableProposalsForNamespace"
+	// PlatformServiceConfigureNamespaceProposalConfigProcedure is the fully-qualified name of the
+	// PlatformService's ConfigureNamespaceProposalConfig RPC.
+	PlatformServiceConfigureNamespaceProposalConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/ConfigureNamespaceProposalConfig"
+	// PlatformServiceGetNamespaceProposalConfigProcedure is the fully-qualified name of the
+	// PlatformService's GetNamespaceProposalConfig RPC.
+	PlatformServiceGetNamespaceProposalConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/GetNamespaceProposalConfig"
+	// PlatformServiceGetProposalsByFederatedGraphProcedure is the fully-qualified name of the
+	// PlatformService's GetProposalsByFederatedGraph RPC.
+	PlatformServiceGetProposalsByFederatedGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/GetProposalsByFederatedGraph"
+	// PlatformServiceGetProposalChecksProcedure is the fully-qualified name of the PlatformService's
+	// GetProposalChecks RPC.
+	PlatformServiceGetProposalChecksProcedure = "/wg.cosmo.platform.v1.PlatformService/GetProposalChecks"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -532,6 +538,7 @@ var (
 	platformServiceDeleteFederatedGraphMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("DeleteFederatedGraph")
 	platformServiceDeleteFederatedSubgraphMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("DeleteFederatedSubgraph")
 	platformServiceCheckSubgraphSchemaMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("CheckSubgraphSchema")
+	platformServiceGetProposedSchemaOfCheckedSubgraphMethodDescriptor    = platformServiceServiceDescriptor.Methods().ByName("GetProposedSchemaOfCheckedSubgraph")
 	platformServiceFixSubgraphSchemaMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("FixSubgraphSchema")
 	platformServiceUpdateFederatedGraphMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("UpdateFederatedGraph")
 	platformServiceUpdateSubgraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UpdateSubgraph")
@@ -591,6 +598,7 @@ var (
 	platformServiceDeleteIntegrationMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("DeleteIntegration")
 	platformServiceDeleteUserMethodDescriptor                            = platformServiceServiceDescriptor.Methods().ByName("DeleteUser")
 	platformServiceDeleteOrganizationMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("DeleteOrganization")
+	platformServiceRestoreOrganizationMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("RestoreOrganization")
 	platformServiceLeaveOrganizationMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("LeaveOrganization")
 	platformServiceUpdateOrganizationDetailsMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("UpdateOrganizationDetails")
 	platformServiceUpdateOrgMemberRoleMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("UpdateOrgMemberRole")
@@ -612,14 +620,6 @@ var (
 	platformServiceAddSubgraphMemberMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("AddSubgraphMember")
 	platformServiceRemoveSubgraphMemberMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("RemoveSubgraphMember")
 	platformServiceGetSubgraphMembersMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphMembers")
-	platformServiceCreateDiscussionMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("CreateDiscussion")
-	platformServiceReplyToDiscussionMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("ReplyToDiscussion")
-	platformServiceGetAllDiscussionsMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("GetAllDiscussions")
-	platformServiceUpdateDiscussionCommentMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("UpdateDiscussionComment")
-	platformServiceDeleteDiscussionCommentMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("DeleteDiscussionComment")
-	platformServiceGetDiscussionMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetDiscussion")
-	platformServiceGetDiscussionSchemasMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("GetDiscussionSchemas")
-	platformServiceSetDiscussionResolutionMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("SetDiscussionResolution")
 	platformServiceAddReadmeMethodDescriptor                             = platformServiceServiceDescriptor.Methods().ByName("AddReadme")
 	platformServiceGetUserAccessiblePermissionsMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetUserAccessiblePermissions")
 	platformServiceCreateFeatureFlagMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("CreateFeatureFlag")
@@ -663,6 +663,14 @@ var (
 	platformServiceUpgradePlanMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("UpgradePlan")
 	platformServiceListRouterCompatibilityVersionsMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("ListRouterCompatibilityVersions")
 	platformServiceSetGraphRouterCompatibilityVersionMethodDescriptor    = platformServiceServiceDescriptor.Methods().ByName("SetGraphRouterCompatibilityVersion")
+	platformServiceCreateProposalMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("CreateProposal")
+	platformServiceGetProposalMethodDescriptor                           = platformServiceServiceDescriptor.Methods().ByName("GetProposal")
+	platformServiceUpdateProposalMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UpdateProposal")
+	platformServiceEnableProposalsForNamespaceMethodDescriptor           = platformServiceServiceDescriptor.Methods().ByName("EnableProposalsForNamespace")
+	platformServiceConfigureNamespaceProposalConfigMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("ConfigureNamespaceProposalConfig")
+	platformServiceGetNamespaceProposalConfigMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("GetNamespaceProposalConfig")
+	platformServiceGetProposalsByFederatedGraphMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetProposalsByFederatedGraph")
+	platformServiceGetProposalChecksMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("GetProposalChecks")
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -706,6 +714,7 @@ type PlatformServiceClient interface {
 	DeleteFederatedSubgraph(context.Context, *connect.Request[v1.DeleteFederatedSubgraphRequest]) (*connect.Response[v1.DeleteFederatedSubgraphResponse], error)
 	// CheckSubgraphSchema checks if the schema is valid and if it can be composed without conflicts with the provided new subgraph schema.
 	CheckSubgraphSchema(context.Context, *connect.Request[v1.CheckSubgraphSchemaRequest]) (*connect.Response[v1.CheckSubgraphSchemaResponse], error)
+	GetProposedSchemaOfCheckedSubgraph(context.Context, *connect.Request[v1.GetProposedSchemaOfCheckedSubgraphRequest]) (*connect.Response[v1.GetProposedSchemaOfCheckedSubgraphResponse], error)
 	FixSubgraphSchema(context.Context, *connect.Request[v1.FixSubgraphSchemaRequest]) (*connect.Response[v1.FixSubgraphSchemaResponse], error)
 	// UpdateFederatedGraph updates a federated graph with new labels and routing url
 	UpdateFederatedGraph(context.Context, *connect.Request[v1.UpdateFederatedGraphRequest]) (*connect.Response[v1.UpdateFederatedGraphResponse], error)
@@ -823,6 +832,8 @@ type PlatformServiceClient interface {
 	DeleteUser(context.Context, *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error)
 	// DeleteOrganization deletes an organization
 	DeleteOrganization(context.Context, *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error)
+	// RestoreOrganization restore an organization pending deletion
+	RestoreOrganization(context.Context, *connect.Request[v1.RestoreOrganizationRequest]) (*connect.Response[v1.RestoreOrganizationResponse], error)
 	// LeaveOrganization removes a member from the organization
 	LeaveOrganization(context.Context, *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error)
 	// UpdateOrganizationDetails updates the name and slug of the organization
@@ -865,22 +876,6 @@ type PlatformServiceClient interface {
 	RemoveSubgraphMember(context.Context, *connect.Request[v1.RemoveSubgraphMemberRequest]) (*connect.Response[v1.RemoveSubgraphMemberResponse], error)
 	// GetSubgraphMembers gets all the members of the subgraph
 	GetSubgraphMembers(context.Context, *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error)
-	// CreateDiscussion creates a new discussion with an opening comment
-	CreateDiscussion(context.Context, *connect.Request[v1.CreateDiscussionRequest]) (*connect.Response[v1.CreateDiscussionResponse], error)
-	// ReplyToDiscussion creates a new comment in the discussion
-	ReplyToDiscussion(context.Context, *connect.Request[v1.ReplyToDiscussionRequest]) (*connect.Response[v1.ReplyToDiscussionResponse], error)
-	// GetAllDiscussions fetches all discussions which may be scoped to a schema version if passed
-	GetAllDiscussions(context.Context, *connect.Request[v1.GetAllDiscussionsRequest]) (*connect.Response[v1.GetAllDiscussionsResponse], error)
-	// UpdateDiscussionComment edits the comment in the discussion
-	UpdateDiscussionComment(context.Context, *connect.Request[v1.UpdateDiscussionCommentRequest]) (*connect.Response[v1.UpdateDiscussionCommentResponse], error)
-	// DeleteDiscussionComment deletes the comment or the discussion if it is an opening comment
-	DeleteDiscussionComment(context.Context, *connect.Request[v1.DeleteDiscussionCommentRequest]) (*connect.Response[v1.DeleteDiscussionCommentResponse], error)
-	// GetDiscussion gets the entire discussion thread
-	GetDiscussion(context.Context, *connect.Request[v1.GetDiscussionRequest]) (*connect.Response[v1.GetDiscussionResponse], error)
-	// GetDiscussionSchemas gets the reference and latest schema of the target graph in which the discussion was created
-	GetDiscussionSchemas(context.Context, *connect.Request[v1.GetDiscussionSchemasRequest]) (*connect.Response[v1.GetDiscussionSchemasResponse], error)
-	// SetDiscussionResolutionRequest marks the discussion as resolved or not
-	SetDiscussionResolution(context.Context, *connect.Request[v1.SetDiscussionResolutionRequest]) (*connect.Response[v1.SetDiscussionResolutionResponse], error)
 	// AddReadme adds a readme of a target, can be a subgraph or a federated graph
 	AddReadme(context.Context, *connect.Request[v1.AddReadmeRequest]) (*connect.Response[v1.AddReadmeResponse], error)
 	// GetUserAccessiblePermissions returns all the federated and subgraphs where the user has write permissions
@@ -960,6 +955,23 @@ type PlatformServiceClient interface {
 	ListRouterCompatibilityVersions(context.Context, *connect.Request[v1.ListRouterCompatibilityVersionsRequest]) (*connect.Response[v1.ListRouterCompatibilityVersionsResponse], error)
 	// Graph
 	SetGraphRouterCompatibilityVersion(context.Context, *connect.Request[v1.SetGraphRouterCompatibilityVersionRequest]) (*connect.Response[v1.SetGraphRouterCompatibilityVersionResponse], error)
+	// Proposal
+	// Create a proposal for a federated graph
+	CreateProposal(context.Context, *connect.Request[v1.CreateProposalRequest]) (*connect.Response[v1.CreateProposalResponse], error)
+	// Get a proposal by id
+	GetProposal(context.Context, *connect.Request[v1.GetProposalRequest]) (*connect.Response[v1.GetProposalResponse], error)
+	// Update a proposal
+	UpdateProposal(context.Context, *connect.Request[v1.UpdateProposalRequest]) (*connect.Response[v1.UpdateProposalResponse], error)
+	// EnableProposalsForNamespace enables the proposals for the namespace passed.
+	EnableProposalsForNamespace(context.Context, *connect.Request[v1.EnableProposalsForNamespaceRequest]) (*connect.Response[v1.EnableProposalsForNamespaceResponse], error)
+	// ConfigureNamespaceProposalConfig configures the proposal config of the namespace passed.
+	ConfigureNamespaceProposalConfig(context.Context, *connect.Request[v1.ConfigureNamespaceProposalConfigRequest]) (*connect.Response[v1.ConfigureNamespaceProposalConfigResponse], error)
+	// GetNamespaceProposalConfig returns the proposal config of the namespace passed.
+	GetNamespaceProposalConfig(context.Context, *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error)
+	// GetProposalsByFederatedGraph returns proposals for a federated graph.
+	GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error)
+	// GetProposalChecks returns checks for a proposal.
+	GetProposalChecks(context.Context, *connect.Request[v1.GetProposalChecksRequest]) (*connect.Response[v1.GetProposalChecksResponse], error)
 }
 
 // NewPlatformServiceClient constructs a client for the wg.cosmo.platform.v1.PlatformService
@@ -1120,6 +1132,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceCheckSubgraphSchemaProcedure,
 			connect.WithSchema(platformServiceCheckSubgraphSchemaMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getProposedSchemaOfCheckedSubgraph: connect.NewClient[v1.GetProposedSchemaOfCheckedSubgraphRequest, v1.GetProposedSchemaOfCheckedSubgraphResponse](
+			httpClient,
+			baseURL+PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure,
+			connect.WithSchema(platformServiceGetProposedSchemaOfCheckedSubgraphMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		fixSubgraphSchema: connect.NewClient[v1.FixSubgraphSchemaRequest, v1.FixSubgraphSchemaResponse](
@@ -1476,6 +1494,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceDeleteOrganizationMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		restoreOrganization: connect.NewClient[v1.RestoreOrganizationRequest, v1.RestoreOrganizationResponse](
+			httpClient,
+			baseURL+PlatformServiceRestoreOrganizationProcedure,
+			connect.WithSchema(platformServiceRestoreOrganizationMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		leaveOrganization: connect.NewClient[v1.LeaveOrganizationRequest, v1.LeaveOrganizationResponse](
 			httpClient,
 			baseURL+PlatformServiceLeaveOrganizationProcedure,
@@ -1600,54 +1624,6 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceGetSubgraphMembersProcedure,
 			connect.WithSchema(platformServiceGetSubgraphMembersMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		createDiscussion: connect.NewClient[v1.CreateDiscussionRequest, v1.CreateDiscussionResponse](
-			httpClient,
-			baseURL+PlatformServiceCreateDiscussionProcedure,
-			connect.WithSchema(platformServiceCreateDiscussionMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		replyToDiscussion: connect.NewClient[v1.ReplyToDiscussionRequest, v1.ReplyToDiscussionResponse](
-			httpClient,
-			baseURL+PlatformServiceReplyToDiscussionProcedure,
-			connect.WithSchema(platformServiceReplyToDiscussionMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		getAllDiscussions: connect.NewClient[v1.GetAllDiscussionsRequest, v1.GetAllDiscussionsResponse](
-			httpClient,
-			baseURL+PlatformServiceGetAllDiscussionsProcedure,
-			connect.WithSchema(platformServiceGetAllDiscussionsMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		updateDiscussionComment: connect.NewClient[v1.UpdateDiscussionCommentRequest, v1.UpdateDiscussionCommentResponse](
-			httpClient,
-			baseURL+PlatformServiceUpdateDiscussionCommentProcedure,
-			connect.WithSchema(platformServiceUpdateDiscussionCommentMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		deleteDiscussionComment: connect.NewClient[v1.DeleteDiscussionCommentRequest, v1.DeleteDiscussionCommentResponse](
-			httpClient,
-			baseURL+PlatformServiceDeleteDiscussionCommentProcedure,
-			connect.WithSchema(platformServiceDeleteDiscussionCommentMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		getDiscussion: connect.NewClient[v1.GetDiscussionRequest, v1.GetDiscussionResponse](
-			httpClient,
-			baseURL+PlatformServiceGetDiscussionProcedure,
-			connect.WithSchema(platformServiceGetDiscussionMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		getDiscussionSchemas: connect.NewClient[v1.GetDiscussionSchemasRequest, v1.GetDiscussionSchemasResponse](
-			httpClient,
-			baseURL+PlatformServiceGetDiscussionSchemasProcedure,
-			connect.WithSchema(platformServiceGetDiscussionSchemasMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		setDiscussionResolution: connect.NewClient[v1.SetDiscussionResolutionRequest, v1.SetDiscussionResolutionResponse](
-			httpClient,
-			baseURL+PlatformServiceSetDiscussionResolutionProcedure,
-			connect.WithSchema(platformServiceSetDiscussionResolutionMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		addReadme: connect.NewClient[v1.AddReadmeRequest, v1.AddReadmeResponse](
@@ -1915,6 +1891,54 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceSetGraphRouterCompatibilityVersionMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		createProposal: connect.NewClient[v1.CreateProposalRequest, v1.CreateProposalResponse](
+			httpClient,
+			baseURL+PlatformServiceCreateProposalProcedure,
+			connect.WithSchema(platformServiceCreateProposalMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getProposal: connect.NewClient[v1.GetProposalRequest, v1.GetProposalResponse](
+			httpClient,
+			baseURL+PlatformServiceGetProposalProcedure,
+			connect.WithSchema(platformServiceGetProposalMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		updateProposal: connect.NewClient[v1.UpdateProposalRequest, v1.UpdateProposalResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdateProposalProcedure,
+			connect.WithSchema(platformServiceUpdateProposalMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		enableProposalsForNamespace: connect.NewClient[v1.EnableProposalsForNamespaceRequest, v1.EnableProposalsForNamespaceResponse](
+			httpClient,
+			baseURL+PlatformServiceEnableProposalsForNamespaceProcedure,
+			connect.WithSchema(platformServiceEnableProposalsForNamespaceMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		configureNamespaceProposalConfig: connect.NewClient[v1.ConfigureNamespaceProposalConfigRequest, v1.ConfigureNamespaceProposalConfigResponse](
+			httpClient,
+			baseURL+PlatformServiceConfigureNamespaceProposalConfigProcedure,
+			connect.WithSchema(platformServiceConfigureNamespaceProposalConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getNamespaceProposalConfig: connect.NewClient[v1.GetNamespaceProposalConfigRequest, v1.GetNamespaceProposalConfigResponse](
+			httpClient,
+			baseURL+PlatformServiceGetNamespaceProposalConfigProcedure,
+			connect.WithSchema(platformServiceGetNamespaceProposalConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getProposalsByFederatedGraph: connect.NewClient[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse](
+			httpClient,
+			baseURL+PlatformServiceGetProposalsByFederatedGraphProcedure,
+			connect.WithSchema(platformServiceGetProposalsByFederatedGraphMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getProposalChecks: connect.NewClient[v1.GetProposalChecksRequest, v1.GetProposalChecksResponse](
+			httpClient,
+			baseURL+PlatformServiceGetProposalChecksProcedure,
+			connect.WithSchema(platformServiceGetProposalChecksMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -1945,6 +1969,7 @@ type platformServiceClient struct {
 	deleteFederatedGraph                  *connect.Client[v1.DeleteFederatedGraphRequest, v1.DeleteFederatedGraphResponse]
 	deleteFederatedSubgraph               *connect.Client[v1.DeleteFederatedSubgraphRequest, v1.DeleteFederatedSubgraphResponse]
 	checkSubgraphSchema                   *connect.Client[v1.CheckSubgraphSchemaRequest, v1.CheckSubgraphSchemaResponse]
+	getProposedSchemaOfCheckedSubgraph    *connect.Client[v1.GetProposedSchemaOfCheckedSubgraphRequest, v1.GetProposedSchemaOfCheckedSubgraphResponse]
 	fixSubgraphSchema                     *connect.Client[v1.FixSubgraphSchemaRequest, v1.FixSubgraphSchemaResponse]
 	updateFederatedGraph                  *connect.Client[v1.UpdateFederatedGraphRequest, v1.UpdateFederatedGraphResponse]
 	updateSubgraph                        *connect.Client[v1.UpdateSubgraphRequest, v1.UpdateSubgraphResponse]
@@ -2004,6 +2029,7 @@ type platformServiceClient struct {
 	deleteIntegration                     *connect.Client[v1.DeleteIntegrationRequest, v1.DeleteIntegrationResponse]
 	deleteUser                            *connect.Client[v1.DeleteUserRequest, v1.DeleteUserResponse]
 	deleteOrganization                    *connect.Client[v1.DeleteOrganizationRequest, v1.DeleteOrganizationResponse]
+	restoreOrganization                   *connect.Client[v1.RestoreOrganizationRequest, v1.RestoreOrganizationResponse]
 	leaveOrganization                     *connect.Client[v1.LeaveOrganizationRequest, v1.LeaveOrganizationResponse]
 	updateOrganizationDetails             *connect.Client[v1.UpdateOrganizationDetailsRequest, v1.UpdateOrganizationDetailsResponse]
 	updateOrgMemberRole                   *connect.Client[v1.UpdateOrgMemberRoleRequest, v1.UpdateOrgMemberRoleResponse]
@@ -2025,14 +2051,6 @@ type platformServiceClient struct {
 	addSubgraphMember                     *connect.Client[v1.AddSubgraphMemberRequest, v1.AddSubgraphMemberResponse]
 	removeSubgraphMember                  *connect.Client[v1.RemoveSubgraphMemberRequest, v1.RemoveSubgraphMemberResponse]
 	getSubgraphMembers                    *connect.Client[v1.GetSubgraphMembersRequest, v1.GetSubgraphMembersResponse]
-	createDiscussion                      *connect.Client[v1.CreateDiscussionRequest, v1.CreateDiscussionResponse]
-	replyToDiscussion                     *connect.Client[v1.ReplyToDiscussionRequest, v1.ReplyToDiscussionResponse]
-	getAllDiscussions                     *connect.Client[v1.GetAllDiscussionsRequest, v1.GetAllDiscussionsResponse]
-	updateDiscussionComment               *connect.Client[v1.UpdateDiscussionCommentRequest, v1.UpdateDiscussionCommentResponse]
-	deleteDiscussionComment               *connect.Client[v1.DeleteDiscussionCommentRequest, v1.DeleteDiscussionCommentResponse]
-	getDiscussion                         *connect.Client[v1.GetDiscussionRequest, v1.GetDiscussionResponse]
-	getDiscussionSchemas                  *connect.Client[v1.GetDiscussionSchemasRequest, v1.GetDiscussionSchemasResponse]
-	setDiscussionResolution               *connect.Client[v1.SetDiscussionResolutionRequest, v1.SetDiscussionResolutionResponse]
 	addReadme                             *connect.Client[v1.AddReadmeRequest, v1.AddReadmeResponse]
 	getUserAccessiblePermissions          *connect.Client[v1.GetUserAccessiblePermissionsRequest, v1.GetUserAccessiblePermissionsResponse]
 	createFeatureFlag                     *connect.Client[v1.CreateFeatureFlagRequest, v1.CreateFeatureFlagResponse]
@@ -2076,6 +2094,14 @@ type platformServiceClient struct {
 	upgradePlan                           *connect.Client[v1.UpgradePlanRequest, v1.UpgradePlanResponse]
 	listRouterCompatibilityVersions       *connect.Client[v1.ListRouterCompatibilityVersionsRequest, v1.ListRouterCompatibilityVersionsResponse]
 	setGraphRouterCompatibilityVersion    *connect.Client[v1.SetGraphRouterCompatibilityVersionRequest, v1.SetGraphRouterCompatibilityVersionResponse]
+	createProposal                        *connect.Client[v1.CreateProposalRequest, v1.CreateProposalResponse]
+	getProposal                           *connect.Client[v1.GetProposalRequest, v1.GetProposalResponse]
+	updateProposal                        *connect.Client[v1.UpdateProposalRequest, v1.UpdateProposalResponse]
+	enableProposalsForNamespace           *connect.Client[v1.EnableProposalsForNamespaceRequest, v1.EnableProposalsForNamespaceResponse]
+	configureNamespaceProposalConfig      *connect.Client[v1.ConfigureNamespaceProposalConfigRequest, v1.ConfigureNamespaceProposalConfigResponse]
+	getNamespaceProposalConfig            *connect.Client[v1.GetNamespaceProposalConfigRequest, v1.GetNamespaceProposalConfigResponse]
+	getProposalsByFederatedGraph          *connect.Client[v1.GetProposalsByFederatedGraphRequest, v1.GetProposalsByFederatedGraphResponse]
+	getProposalChecks                     *connect.Client[v1.GetProposalChecksRequest, v1.GetProposalChecksResponse]
 }
 
 // CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
@@ -2201,6 +2227,12 @@ func (c *platformServiceClient) DeleteFederatedSubgraph(ctx context.Context, req
 // CheckSubgraphSchema calls wg.cosmo.platform.v1.PlatformService.CheckSubgraphSchema.
 func (c *platformServiceClient) CheckSubgraphSchema(ctx context.Context, req *connect.Request[v1.CheckSubgraphSchemaRequest]) (*connect.Response[v1.CheckSubgraphSchemaResponse], error) {
 	return c.checkSubgraphSchema.CallUnary(ctx, req)
+}
+
+// GetProposedSchemaOfCheckedSubgraph calls
+// wg.cosmo.platform.v1.PlatformService.GetProposedSchemaOfCheckedSubgraph.
+func (c *platformServiceClient) GetProposedSchemaOfCheckedSubgraph(ctx context.Context, req *connect.Request[v1.GetProposedSchemaOfCheckedSubgraphRequest]) (*connect.Response[v1.GetProposedSchemaOfCheckedSubgraphResponse], error) {
+	return c.getProposedSchemaOfCheckedSubgraph.CallUnary(ctx, req)
 }
 
 // FixSubgraphSchema calls wg.cosmo.platform.v1.PlatformService.FixSubgraphSchema.
@@ -2512,6 +2544,11 @@ func (c *platformServiceClient) DeleteOrganization(ctx context.Context, req *con
 	return c.deleteOrganization.CallUnary(ctx, req)
 }
 
+// RestoreOrganization calls wg.cosmo.platform.v1.PlatformService.RestoreOrganization.
+func (c *platformServiceClient) RestoreOrganization(ctx context.Context, req *connect.Request[v1.RestoreOrganizationRequest]) (*connect.Response[v1.RestoreOrganizationResponse], error) {
+	return c.restoreOrganization.CallUnary(ctx, req)
+}
+
 // LeaveOrganization calls wg.cosmo.platform.v1.PlatformService.LeaveOrganization.
 func (c *platformServiceClient) LeaveOrganization(ctx context.Context, req *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error) {
 	return c.leaveOrganization.CallUnary(ctx, req)
@@ -2616,46 +2653,6 @@ func (c *platformServiceClient) RemoveSubgraphMember(ctx context.Context, req *c
 // GetSubgraphMembers calls wg.cosmo.platform.v1.PlatformService.GetSubgraphMembers.
 func (c *platformServiceClient) GetSubgraphMembers(ctx context.Context, req *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error) {
 	return c.getSubgraphMembers.CallUnary(ctx, req)
-}
-
-// CreateDiscussion calls wg.cosmo.platform.v1.PlatformService.CreateDiscussion.
-func (c *platformServiceClient) CreateDiscussion(ctx context.Context, req *connect.Request[v1.CreateDiscussionRequest]) (*connect.Response[v1.CreateDiscussionResponse], error) {
-	return c.createDiscussion.CallUnary(ctx, req)
-}
-
-// ReplyToDiscussion calls wg.cosmo.platform.v1.PlatformService.ReplyToDiscussion.
-func (c *platformServiceClient) ReplyToDiscussion(ctx context.Context, req *connect.Request[v1.ReplyToDiscussionRequest]) (*connect.Response[v1.ReplyToDiscussionResponse], error) {
-	return c.replyToDiscussion.CallUnary(ctx, req)
-}
-
-// GetAllDiscussions calls wg.cosmo.platform.v1.PlatformService.GetAllDiscussions.
-func (c *platformServiceClient) GetAllDiscussions(ctx context.Context, req *connect.Request[v1.GetAllDiscussionsRequest]) (*connect.Response[v1.GetAllDiscussionsResponse], error) {
-	return c.getAllDiscussions.CallUnary(ctx, req)
-}
-
-// UpdateDiscussionComment calls wg.cosmo.platform.v1.PlatformService.UpdateDiscussionComment.
-func (c *platformServiceClient) UpdateDiscussionComment(ctx context.Context, req *connect.Request[v1.UpdateDiscussionCommentRequest]) (*connect.Response[v1.UpdateDiscussionCommentResponse], error) {
-	return c.updateDiscussionComment.CallUnary(ctx, req)
-}
-
-// DeleteDiscussionComment calls wg.cosmo.platform.v1.PlatformService.DeleteDiscussionComment.
-func (c *platformServiceClient) DeleteDiscussionComment(ctx context.Context, req *connect.Request[v1.DeleteDiscussionCommentRequest]) (*connect.Response[v1.DeleteDiscussionCommentResponse], error) {
-	return c.deleteDiscussionComment.CallUnary(ctx, req)
-}
-
-// GetDiscussion calls wg.cosmo.platform.v1.PlatformService.GetDiscussion.
-func (c *platformServiceClient) GetDiscussion(ctx context.Context, req *connect.Request[v1.GetDiscussionRequest]) (*connect.Response[v1.GetDiscussionResponse], error) {
-	return c.getDiscussion.CallUnary(ctx, req)
-}
-
-// GetDiscussionSchemas calls wg.cosmo.platform.v1.PlatformService.GetDiscussionSchemas.
-func (c *platformServiceClient) GetDiscussionSchemas(ctx context.Context, req *connect.Request[v1.GetDiscussionSchemasRequest]) (*connect.Response[v1.GetDiscussionSchemasResponse], error) {
-	return c.getDiscussionSchemas.CallUnary(ctx, req)
-}
-
-// SetDiscussionResolution calls wg.cosmo.platform.v1.PlatformService.SetDiscussionResolution.
-func (c *platformServiceClient) SetDiscussionResolution(ctx context.Context, req *connect.Request[v1.SetDiscussionResolutionRequest]) (*connect.Response[v1.SetDiscussionResolutionResponse], error) {
-	return c.setDiscussionResolution.CallUnary(ctx, req)
 }
 
 // AddReadme calls wg.cosmo.platform.v1.PlatformService.AddReadme.
@@ -2886,6 +2883,49 @@ func (c *platformServiceClient) SetGraphRouterCompatibilityVersion(ctx context.C
 	return c.setGraphRouterCompatibilityVersion.CallUnary(ctx, req)
 }
 
+// CreateProposal calls wg.cosmo.platform.v1.PlatformService.CreateProposal.
+func (c *platformServiceClient) CreateProposal(ctx context.Context, req *connect.Request[v1.CreateProposalRequest]) (*connect.Response[v1.CreateProposalResponse], error) {
+	return c.createProposal.CallUnary(ctx, req)
+}
+
+// GetProposal calls wg.cosmo.platform.v1.PlatformService.GetProposal.
+func (c *platformServiceClient) GetProposal(ctx context.Context, req *connect.Request[v1.GetProposalRequest]) (*connect.Response[v1.GetProposalResponse], error) {
+	return c.getProposal.CallUnary(ctx, req)
+}
+
+// UpdateProposal calls wg.cosmo.platform.v1.PlatformService.UpdateProposal.
+func (c *platformServiceClient) UpdateProposal(ctx context.Context, req *connect.Request[v1.UpdateProposalRequest]) (*connect.Response[v1.UpdateProposalResponse], error) {
+	return c.updateProposal.CallUnary(ctx, req)
+}
+
+// EnableProposalsForNamespace calls
+// wg.cosmo.platform.v1.PlatformService.EnableProposalsForNamespace.
+func (c *platformServiceClient) EnableProposalsForNamespace(ctx context.Context, req *connect.Request[v1.EnableProposalsForNamespaceRequest]) (*connect.Response[v1.EnableProposalsForNamespaceResponse], error) {
+	return c.enableProposalsForNamespace.CallUnary(ctx, req)
+}
+
+// ConfigureNamespaceProposalConfig calls
+// wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceProposalConfig.
+func (c *platformServiceClient) ConfigureNamespaceProposalConfig(ctx context.Context, req *connect.Request[v1.ConfigureNamespaceProposalConfigRequest]) (*connect.Response[v1.ConfigureNamespaceProposalConfigResponse], error) {
+	return c.configureNamespaceProposalConfig.CallUnary(ctx, req)
+}
+
+// GetNamespaceProposalConfig calls wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig.
+func (c *platformServiceClient) GetNamespaceProposalConfig(ctx context.Context, req *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error) {
+	return c.getNamespaceProposalConfig.CallUnary(ctx, req)
+}
+
+// GetProposalsByFederatedGraph calls
+// wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph.
+func (c *platformServiceClient) GetProposalsByFederatedGraph(ctx context.Context, req *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error) {
+	return c.getProposalsByFederatedGraph.CallUnary(ctx, req)
+}
+
+// GetProposalChecks calls wg.cosmo.platform.v1.PlatformService.GetProposalChecks.
+func (c *platformServiceClient) GetProposalChecks(ctx context.Context, req *connect.Request[v1.GetProposalChecksRequest]) (*connect.Response[v1.GetProposalChecksResponse], error) {
+	return c.getProposalChecks.CallUnary(ctx, req)
+}
+
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
 type PlatformServiceHandler interface {
 	// PlaygroundScripts
@@ -2927,6 +2967,7 @@ type PlatformServiceHandler interface {
 	DeleteFederatedSubgraph(context.Context, *connect.Request[v1.DeleteFederatedSubgraphRequest]) (*connect.Response[v1.DeleteFederatedSubgraphResponse], error)
 	// CheckSubgraphSchema checks if the schema is valid and if it can be composed without conflicts with the provided new subgraph schema.
 	CheckSubgraphSchema(context.Context, *connect.Request[v1.CheckSubgraphSchemaRequest]) (*connect.Response[v1.CheckSubgraphSchemaResponse], error)
+	GetProposedSchemaOfCheckedSubgraph(context.Context, *connect.Request[v1.GetProposedSchemaOfCheckedSubgraphRequest]) (*connect.Response[v1.GetProposedSchemaOfCheckedSubgraphResponse], error)
 	FixSubgraphSchema(context.Context, *connect.Request[v1.FixSubgraphSchemaRequest]) (*connect.Response[v1.FixSubgraphSchemaResponse], error)
 	// UpdateFederatedGraph updates a federated graph with new labels and routing url
 	UpdateFederatedGraph(context.Context, *connect.Request[v1.UpdateFederatedGraphRequest]) (*connect.Response[v1.UpdateFederatedGraphResponse], error)
@@ -3044,6 +3085,8 @@ type PlatformServiceHandler interface {
 	DeleteUser(context.Context, *connect.Request[v1.DeleteUserRequest]) (*connect.Response[v1.DeleteUserResponse], error)
 	// DeleteOrganization deletes an organization
 	DeleteOrganization(context.Context, *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error)
+	// RestoreOrganization restore an organization pending deletion
+	RestoreOrganization(context.Context, *connect.Request[v1.RestoreOrganizationRequest]) (*connect.Response[v1.RestoreOrganizationResponse], error)
 	// LeaveOrganization removes a member from the organization
 	LeaveOrganization(context.Context, *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error)
 	// UpdateOrganizationDetails updates the name and slug of the organization
@@ -3086,22 +3129,6 @@ type PlatformServiceHandler interface {
 	RemoveSubgraphMember(context.Context, *connect.Request[v1.RemoveSubgraphMemberRequest]) (*connect.Response[v1.RemoveSubgraphMemberResponse], error)
 	// GetSubgraphMembers gets all the members of the subgraph
 	GetSubgraphMembers(context.Context, *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error)
-	// CreateDiscussion creates a new discussion with an opening comment
-	CreateDiscussion(context.Context, *connect.Request[v1.CreateDiscussionRequest]) (*connect.Response[v1.CreateDiscussionResponse], error)
-	// ReplyToDiscussion creates a new comment in the discussion
-	ReplyToDiscussion(context.Context, *connect.Request[v1.ReplyToDiscussionRequest]) (*connect.Response[v1.ReplyToDiscussionResponse], error)
-	// GetAllDiscussions fetches all discussions which may be scoped to a schema version if passed
-	GetAllDiscussions(context.Context, *connect.Request[v1.GetAllDiscussionsRequest]) (*connect.Response[v1.GetAllDiscussionsResponse], error)
-	// UpdateDiscussionComment edits the comment in the discussion
-	UpdateDiscussionComment(context.Context, *connect.Request[v1.UpdateDiscussionCommentRequest]) (*connect.Response[v1.UpdateDiscussionCommentResponse], error)
-	// DeleteDiscussionComment deletes the comment or the discussion if it is an opening comment
-	DeleteDiscussionComment(context.Context, *connect.Request[v1.DeleteDiscussionCommentRequest]) (*connect.Response[v1.DeleteDiscussionCommentResponse], error)
-	// GetDiscussion gets the entire discussion thread
-	GetDiscussion(context.Context, *connect.Request[v1.GetDiscussionRequest]) (*connect.Response[v1.GetDiscussionResponse], error)
-	// GetDiscussionSchemas gets the reference and latest schema of the target graph in which the discussion was created
-	GetDiscussionSchemas(context.Context, *connect.Request[v1.GetDiscussionSchemasRequest]) (*connect.Response[v1.GetDiscussionSchemasResponse], error)
-	// SetDiscussionResolutionRequest marks the discussion as resolved or not
-	SetDiscussionResolution(context.Context, *connect.Request[v1.SetDiscussionResolutionRequest]) (*connect.Response[v1.SetDiscussionResolutionResponse], error)
 	// AddReadme adds a readme of a target, can be a subgraph or a federated graph
 	AddReadme(context.Context, *connect.Request[v1.AddReadmeRequest]) (*connect.Response[v1.AddReadmeResponse], error)
 	// GetUserAccessiblePermissions returns all the federated and subgraphs where the user has write permissions
@@ -3181,6 +3208,23 @@ type PlatformServiceHandler interface {
 	ListRouterCompatibilityVersions(context.Context, *connect.Request[v1.ListRouterCompatibilityVersionsRequest]) (*connect.Response[v1.ListRouterCompatibilityVersionsResponse], error)
 	// Graph
 	SetGraphRouterCompatibilityVersion(context.Context, *connect.Request[v1.SetGraphRouterCompatibilityVersionRequest]) (*connect.Response[v1.SetGraphRouterCompatibilityVersionResponse], error)
+	// Proposal
+	// Create a proposal for a federated graph
+	CreateProposal(context.Context, *connect.Request[v1.CreateProposalRequest]) (*connect.Response[v1.CreateProposalResponse], error)
+	// Get a proposal by id
+	GetProposal(context.Context, *connect.Request[v1.GetProposalRequest]) (*connect.Response[v1.GetProposalResponse], error)
+	// Update a proposal
+	UpdateProposal(context.Context, *connect.Request[v1.UpdateProposalRequest]) (*connect.Response[v1.UpdateProposalResponse], error)
+	// EnableProposalsForNamespace enables the proposals for the namespace passed.
+	EnableProposalsForNamespace(context.Context, *connect.Request[v1.EnableProposalsForNamespaceRequest]) (*connect.Response[v1.EnableProposalsForNamespaceResponse], error)
+	// ConfigureNamespaceProposalConfig configures the proposal config of the namespace passed.
+	ConfigureNamespaceProposalConfig(context.Context, *connect.Request[v1.ConfigureNamespaceProposalConfigRequest]) (*connect.Response[v1.ConfigureNamespaceProposalConfigResponse], error)
+	// GetNamespaceProposalConfig returns the proposal config of the namespace passed.
+	GetNamespaceProposalConfig(context.Context, *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error)
+	// GetProposalsByFederatedGraph returns proposals for a federated graph.
+	GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error)
+	// GetProposalChecks returns checks for a proposal.
+	GetProposalChecks(context.Context, *connect.Request[v1.GetProposalChecksRequest]) (*connect.Response[v1.GetProposalChecksResponse], error)
 }
 
 // NewPlatformServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -3337,6 +3381,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceCheckSubgraphSchemaProcedure,
 		svc.CheckSubgraphSchema,
 		connect.WithSchema(platformServiceCheckSubgraphSchemaMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetProposedSchemaOfCheckedSubgraphHandler := connect.NewUnaryHandler(
+		PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure,
+		svc.GetProposedSchemaOfCheckedSubgraph,
+		connect.WithSchema(platformServiceGetProposedSchemaOfCheckedSubgraphMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceFixSubgraphSchemaHandler := connect.NewUnaryHandler(
@@ -3693,6 +3743,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceDeleteOrganizationMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceRestoreOrganizationHandler := connect.NewUnaryHandler(
+		PlatformServiceRestoreOrganizationProcedure,
+		svc.RestoreOrganization,
+		connect.WithSchema(platformServiceRestoreOrganizationMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceLeaveOrganizationHandler := connect.NewUnaryHandler(
 		PlatformServiceLeaveOrganizationProcedure,
 		svc.LeaveOrganization,
@@ -3817,54 +3873,6 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceGetSubgraphMembersProcedure,
 		svc.GetSubgraphMembers,
 		connect.WithSchema(platformServiceGetSubgraphMembersMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceCreateDiscussionHandler := connect.NewUnaryHandler(
-		PlatformServiceCreateDiscussionProcedure,
-		svc.CreateDiscussion,
-		connect.WithSchema(platformServiceCreateDiscussionMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceReplyToDiscussionHandler := connect.NewUnaryHandler(
-		PlatformServiceReplyToDiscussionProcedure,
-		svc.ReplyToDiscussion,
-		connect.WithSchema(platformServiceReplyToDiscussionMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceGetAllDiscussionsHandler := connect.NewUnaryHandler(
-		PlatformServiceGetAllDiscussionsProcedure,
-		svc.GetAllDiscussions,
-		connect.WithSchema(platformServiceGetAllDiscussionsMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceUpdateDiscussionCommentHandler := connect.NewUnaryHandler(
-		PlatformServiceUpdateDiscussionCommentProcedure,
-		svc.UpdateDiscussionComment,
-		connect.WithSchema(platformServiceUpdateDiscussionCommentMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceDeleteDiscussionCommentHandler := connect.NewUnaryHandler(
-		PlatformServiceDeleteDiscussionCommentProcedure,
-		svc.DeleteDiscussionComment,
-		connect.WithSchema(platformServiceDeleteDiscussionCommentMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceGetDiscussionHandler := connect.NewUnaryHandler(
-		PlatformServiceGetDiscussionProcedure,
-		svc.GetDiscussion,
-		connect.WithSchema(platformServiceGetDiscussionMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceGetDiscussionSchemasHandler := connect.NewUnaryHandler(
-		PlatformServiceGetDiscussionSchemasProcedure,
-		svc.GetDiscussionSchemas,
-		connect.WithSchema(platformServiceGetDiscussionSchemasMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceSetDiscussionResolutionHandler := connect.NewUnaryHandler(
-		PlatformServiceSetDiscussionResolutionProcedure,
-		svc.SetDiscussionResolution,
-		connect.WithSchema(platformServiceSetDiscussionResolutionMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceAddReadmeHandler := connect.NewUnaryHandler(
@@ -4132,6 +4140,54 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceSetGraphRouterCompatibilityVersionMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceCreateProposalHandler := connect.NewUnaryHandler(
+		PlatformServiceCreateProposalProcedure,
+		svc.CreateProposal,
+		connect.WithSchema(platformServiceCreateProposalMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetProposalHandler := connect.NewUnaryHandler(
+		PlatformServiceGetProposalProcedure,
+		svc.GetProposal,
+		connect.WithSchema(platformServiceGetProposalMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceUpdateProposalHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateProposalProcedure,
+		svc.UpdateProposal,
+		connect.WithSchema(platformServiceUpdateProposalMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceEnableProposalsForNamespaceHandler := connect.NewUnaryHandler(
+		PlatformServiceEnableProposalsForNamespaceProcedure,
+		svc.EnableProposalsForNamespace,
+		connect.WithSchema(platformServiceEnableProposalsForNamespaceMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceConfigureNamespaceProposalConfigHandler := connect.NewUnaryHandler(
+		PlatformServiceConfigureNamespaceProposalConfigProcedure,
+		svc.ConfigureNamespaceProposalConfig,
+		connect.WithSchema(platformServiceConfigureNamespaceProposalConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetNamespaceProposalConfigHandler := connect.NewUnaryHandler(
+		PlatformServiceGetNamespaceProposalConfigProcedure,
+		svc.GetNamespaceProposalConfig,
+		connect.WithSchema(platformServiceGetNamespaceProposalConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetProposalsByFederatedGraphHandler := connect.NewUnaryHandler(
+		PlatformServiceGetProposalsByFederatedGraphProcedure,
+		svc.GetProposalsByFederatedGraph,
+		connect.WithSchema(platformServiceGetProposalsByFederatedGraphMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetProposalChecksHandler := connect.NewUnaryHandler(
+		PlatformServiceGetProposalChecksProcedure,
+		svc.GetProposalChecks,
+		connect.WithSchema(platformServiceGetProposalChecksMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlatformServiceCreatePlaygroundScriptProcedure:
@@ -4184,6 +4240,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceDeleteFederatedSubgraphHandler.ServeHTTP(w, r)
 		case PlatformServiceCheckSubgraphSchemaProcedure:
 			platformServiceCheckSubgraphSchemaHandler.ServeHTTP(w, r)
+		case PlatformServiceGetProposedSchemaOfCheckedSubgraphProcedure:
+			platformServiceGetProposedSchemaOfCheckedSubgraphHandler.ServeHTTP(w, r)
 		case PlatformServiceFixSubgraphSchemaProcedure:
 			platformServiceFixSubgraphSchemaHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateFederatedGraphProcedure:
@@ -4302,6 +4360,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceDeleteUserHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteOrganizationProcedure:
 			platformServiceDeleteOrganizationHandler.ServeHTTP(w, r)
+		case PlatformServiceRestoreOrganizationProcedure:
+			platformServiceRestoreOrganizationHandler.ServeHTTP(w, r)
 		case PlatformServiceLeaveOrganizationProcedure:
 			platformServiceLeaveOrganizationHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateOrganizationDetailsProcedure:
@@ -4344,22 +4404,6 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceRemoveSubgraphMemberHandler.ServeHTTP(w, r)
 		case PlatformServiceGetSubgraphMembersProcedure:
 			platformServiceGetSubgraphMembersHandler.ServeHTTP(w, r)
-		case PlatformServiceCreateDiscussionProcedure:
-			platformServiceCreateDiscussionHandler.ServeHTTP(w, r)
-		case PlatformServiceReplyToDiscussionProcedure:
-			platformServiceReplyToDiscussionHandler.ServeHTTP(w, r)
-		case PlatformServiceGetAllDiscussionsProcedure:
-			platformServiceGetAllDiscussionsHandler.ServeHTTP(w, r)
-		case PlatformServiceUpdateDiscussionCommentProcedure:
-			platformServiceUpdateDiscussionCommentHandler.ServeHTTP(w, r)
-		case PlatformServiceDeleteDiscussionCommentProcedure:
-			platformServiceDeleteDiscussionCommentHandler.ServeHTTP(w, r)
-		case PlatformServiceGetDiscussionProcedure:
-			platformServiceGetDiscussionHandler.ServeHTTP(w, r)
-		case PlatformServiceGetDiscussionSchemasProcedure:
-			platformServiceGetDiscussionSchemasHandler.ServeHTTP(w, r)
-		case PlatformServiceSetDiscussionResolutionProcedure:
-			platformServiceSetDiscussionResolutionHandler.ServeHTTP(w, r)
 		case PlatformServiceAddReadmeProcedure:
 			platformServiceAddReadmeHandler.ServeHTTP(w, r)
 		case PlatformServiceGetUserAccessiblePermissionsProcedure:
@@ -4446,6 +4490,22 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceListRouterCompatibilityVersionsHandler.ServeHTTP(w, r)
 		case PlatformServiceSetGraphRouterCompatibilityVersionProcedure:
 			platformServiceSetGraphRouterCompatibilityVersionHandler.ServeHTTP(w, r)
+		case PlatformServiceCreateProposalProcedure:
+			platformServiceCreateProposalHandler.ServeHTTP(w, r)
+		case PlatformServiceGetProposalProcedure:
+			platformServiceGetProposalHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateProposalProcedure:
+			platformServiceUpdateProposalHandler.ServeHTTP(w, r)
+		case PlatformServiceEnableProposalsForNamespaceProcedure:
+			platformServiceEnableProposalsForNamespaceHandler.ServeHTTP(w, r)
+		case PlatformServiceConfigureNamespaceProposalConfigProcedure:
+			platformServiceConfigureNamespaceProposalConfigHandler.ServeHTTP(w, r)
+		case PlatformServiceGetNamespaceProposalConfigProcedure:
+			platformServiceGetNamespaceProposalConfigHandler.ServeHTTP(w, r)
+		case PlatformServiceGetProposalsByFederatedGraphProcedure:
+			platformServiceGetProposalsByFederatedGraphHandler.ServeHTTP(w, r)
+		case PlatformServiceGetProposalChecksProcedure:
+			platformServiceGetProposalChecksHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -4553,6 +4613,10 @@ func (UnimplementedPlatformServiceHandler) DeleteFederatedSubgraph(context.Conte
 
 func (UnimplementedPlatformServiceHandler) CheckSubgraphSchema(context.Context, *connect.Request[v1.CheckSubgraphSchemaRequest]) (*connect.Response[v1.CheckSubgraphSchemaResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CheckSubgraphSchema is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetProposedSchemaOfCheckedSubgraph(context.Context, *connect.Request[v1.GetProposedSchemaOfCheckedSubgraphRequest]) (*connect.Response[v1.GetProposedSchemaOfCheckedSubgraphResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetProposedSchemaOfCheckedSubgraph is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) FixSubgraphSchema(context.Context, *connect.Request[v1.FixSubgraphSchemaRequest]) (*connect.Response[v1.FixSubgraphSchemaResponse], error) {
@@ -4791,6 +4855,10 @@ func (UnimplementedPlatformServiceHandler) DeleteOrganization(context.Context, *
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteOrganization is not implemented"))
 }
 
+func (UnimplementedPlatformServiceHandler) RestoreOrganization(context.Context, *connect.Request[v1.RestoreOrganizationRequest]) (*connect.Response[v1.RestoreOrganizationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.RestoreOrganization is not implemented"))
+}
+
 func (UnimplementedPlatformServiceHandler) LeaveOrganization(context.Context, *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.LeaveOrganization is not implemented"))
 }
@@ -4873,38 +4941,6 @@ func (UnimplementedPlatformServiceHandler) RemoveSubgraphMember(context.Context,
 
 func (UnimplementedPlatformServiceHandler) GetSubgraphMembers(context.Context, *connect.Request[v1.GetSubgraphMembersRequest]) (*connect.Response[v1.GetSubgraphMembersResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetSubgraphMembers is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) CreateDiscussion(context.Context, *connect.Request[v1.CreateDiscussionRequest]) (*connect.Response[v1.CreateDiscussionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateDiscussion is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) ReplyToDiscussion(context.Context, *connect.Request[v1.ReplyToDiscussionRequest]) (*connect.Response[v1.ReplyToDiscussionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ReplyToDiscussion is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) GetAllDiscussions(context.Context, *connect.Request[v1.GetAllDiscussionsRequest]) (*connect.Response[v1.GetAllDiscussionsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetAllDiscussions is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) UpdateDiscussionComment(context.Context, *connect.Request[v1.UpdateDiscussionCommentRequest]) (*connect.Response[v1.UpdateDiscussionCommentResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateDiscussionComment is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) DeleteDiscussionComment(context.Context, *connect.Request[v1.DeleteDiscussionCommentRequest]) (*connect.Response[v1.DeleteDiscussionCommentResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteDiscussionComment is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) GetDiscussion(context.Context, *connect.Request[v1.GetDiscussionRequest]) (*connect.Response[v1.GetDiscussionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetDiscussion is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) GetDiscussionSchemas(context.Context, *connect.Request[v1.GetDiscussionSchemasRequest]) (*connect.Response[v1.GetDiscussionSchemasResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetDiscussionSchemas is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) SetDiscussionResolution(context.Context, *connect.Request[v1.SetDiscussionResolutionRequest]) (*connect.Response[v1.SetDiscussionResolutionResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.SetDiscussionResolution is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) AddReadme(context.Context, *connect.Request[v1.AddReadmeRequest]) (*connect.Response[v1.AddReadmeResponse], error) {
@@ -5077,4 +5113,36 @@ func (UnimplementedPlatformServiceHandler) ListRouterCompatibilityVersions(conte
 
 func (UnimplementedPlatformServiceHandler) SetGraphRouterCompatibilityVersion(context.Context, *connect.Request[v1.SetGraphRouterCompatibilityVersionRequest]) (*connect.Response[v1.SetGraphRouterCompatibilityVersionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.SetGraphRouterCompatibilityVersion is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) CreateProposal(context.Context, *connect.Request[v1.CreateProposalRequest]) (*connect.Response[v1.CreateProposalResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateProposal is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetProposal(context.Context, *connect.Request[v1.GetProposalRequest]) (*connect.Response[v1.GetProposalResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetProposal is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdateProposal(context.Context, *connect.Request[v1.UpdateProposalRequest]) (*connect.Response[v1.UpdateProposalResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateProposal is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) EnableProposalsForNamespace(context.Context, *connect.Request[v1.EnableProposalsForNamespaceRequest]) (*connect.Response[v1.EnableProposalsForNamespaceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.EnableProposalsForNamespace is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) ConfigureNamespaceProposalConfig(context.Context, *connect.Request[v1.ConfigureNamespaceProposalConfigRequest]) (*connect.Response[v1.ConfigureNamespaceProposalConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ConfigureNamespaceProposalConfig is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetNamespaceProposalConfig(context.Context, *connect.Request[v1.GetNamespaceProposalConfigRequest]) (*connect.Response[v1.GetNamespaceProposalConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetNamespaceProposalConfig is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetProposalsByFederatedGraph(context.Context, *connect.Request[v1.GetProposalsByFederatedGraphRequest]) (*connect.Response[v1.GetProposalsByFederatedGraphResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetProposalsByFederatedGraph is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetProposalChecks(context.Context, *connect.Request[v1.GetProposalChecksRequest]) (*connect.Response[v1.GetProposalChecksResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetProposalChecks is not implemented"))
 }

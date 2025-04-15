@@ -1,10 +1,12 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { QueueEvents } from "bullmq";
 import { OidcRepository } from '../src/core/repositories/OidcRepository.js';
 import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel, TestUser } from '../src/core/test-util.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
+import { createDeleteOrganizationWorker } from "../src/core/workers/DeleteOrganizationWorker.js";
 import { createFederatedGraph, createThenPublishSubgraph, DEFAULT_NAMESPACE, SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -35,8 +37,8 @@ describe('Delete Organization', (ctx) => {
     await afterAllSetup(dbname);
   });
 
-  test('Should delete all targets when deleting org', async (testContext) => {
-    const { client, server, users, authenticator, blobStorage } = await SetupTest({
+  test('should queue org deletion and delete after scheduled', async (testContext) => {
+    const { client, server, keycloakClient, realm, users, authenticator, queues, blobStorage } = await SetupTest({
       dbname,
       chClient,
     });
@@ -86,10 +88,23 @@ describe('Delete Organization', (ctx) => {
 
     expect(blobStorage.keys().includes(graphKey)).toEqual(true);
 
-    const deleteOrgRes = await client.deleteOrganization({
-      userID: mainUserContext.userId,
+    const worker = createDeleteOrganizationWorker({
+      redisConnection: server.redisForWorker,
+      db: server.db,
+      logger: server.log,
+      keycloakClient,
+      keycloakRealm: realm,
+      blobStorage,
     });
-    expect(deleteOrgRes.response?.code).toBe(EnumStatusCode.OK);
+
+    const job = await orgRepo.queueOrganizationDeletion({
+      organizationId: org!.id,
+      queuedBy: mainUserContext.userDisplayName,
+      deleteOrganizationQueue: queues.deleteOrganizationQueue,
+    });
+
+    await job.changeDelay(0);
+    await job.waitUntilFinished(new QueueEvents(job.queueName));
 
     const graphsRes = await client.getFederatedGraphs({});
     expect(graphsRes.response?.code).toBe(EnumStatusCode.OK);
@@ -103,11 +118,14 @@ describe('Delete Organization', (ctx) => {
     expect(orgAfterDeletion).toBeNull();
 
     expect(blobStorage.keys().includes(graphKey)).toEqual(false);
+
+    await worker.close();
+
     await server.close();
   });
 
   test('Should delete OIDC when deleting org', async (testContext) => {
-    const { client, server, keycloakClient, realm, users, authenticator } = await SetupTest({
+    const { client, server, keycloakClient, realm, users, authenticator, queues, blobStorage } = await SetupTest({
       dbname,
     });
     const mainUserContext = users[TestUser.adminAliceCompanyA];
@@ -141,10 +159,23 @@ describe('Delete Organization', (ctx) => {
     const provider = await oidcRepo.getOidcProvider({ organizationId: org!.id });
     expect(provider).toBeDefined();
 
-    const deleteOrgRes = await client.deleteOrganization({
-      userID: mainUserContext.userId,
+    const worker = createDeleteOrganizationWorker({
+      redisConnection: server.redisForWorker,
+      db: server.db,
+      logger: server.log,
+      keycloakClient,
+      keycloakRealm: realm,
+      blobStorage,
     });
-    expect(deleteOrgRes.response?.code).toBe(EnumStatusCode.OK);
+
+    const job = await orgRepo.queueOrganizationDeletion({
+      organizationId: org!.id,
+      queuedBy: mainUserContext.userDisplayName,
+      deleteOrganizationQueue: queues.deleteOrganizationQueue,
+    });
+
+    await job.changeDelay(0);
+    await job.waitUntilFinished(new QueueEvents(job.queueName));
 
     const provider2 = await oidcRepo.getOidcProvider({ organizationId: org!.id });
     expect(provider2).toBeUndefined();
@@ -156,6 +187,8 @@ describe('Delete Organization', (ctx) => {
 
     const orgAfterDeletion = await orgRepo.bySlug(orgName);
     expect(orgAfterDeletion).toBeNull();
+
+    await worker.close();
 
     await server.close();
   });
