@@ -2,6 +2,7 @@ package integration
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,7 +17,9 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.19.0"
 	"go.opentelemetry.io/otel/trace"
+	"io"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -727,6 +730,63 @@ func TestBatch(t *testing.T) {
 				require.ElementsMatch(t, operationNumberAttrs, operationIds)
 				require.ElementsMatch(t, retrievedSpanNames, spanNames)
 			})
+		})
+	})
+
+	t.Run("check batch request with gzip compression", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, authServer := ConfigureAuth(t)
+		testenv.Run(t, &testenv.Config{
+			BatchingConfig: config.BatchingConfig{
+				Enabled:            true,
+				MaxConcurrency:     10,
+				MaxEntriesPerBatch: 100,
+			},
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
+					MaxRequestBodyBytes:  5 << 20, // 5MiB
+					DecompressionEnabled: true,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(map[string]any{
+				"scope": "write:fact read:miscellaneous read:all",
+			})
+			require.NoError(t, err)
+
+			header := http.Header{
+				"Content-Type":     []string{"application/json"},
+				"Accept":           []string{"application/json"},
+				"Content-Encoding": []string{"gzip"},
+				"Authorization":    []string{"Bearer " + token},
+			}
+
+			body := []byte(
+				`[
+					{"query":"query Sauce {    employees {    id  }  }","operationName":"Sauce"},
+					{"query":"mutation Testing { addFact(fact: { title: \"title\", description: \"description\", factType: MISCELLANEOUS }) { ... on MiscellaneousFact { title description } } }", "operationName": "Testing"},
+					{"query":"query Sauce {    employees {    id  }  }","operationName":"Sauce"}
+				]`)
+
+			var builder strings.Builder
+			gzBody := gzip.NewWriter(&builder)
+			defer func() {}()
+
+			_, err = gzBody.Write(body)
+			require.NoError(t, err)
+			require.NoError(t, gzBody.Close())
+
+			res, err := xEnv.MakeRequest("POST", "/graphql", header, strings.NewReader(builder.String()))
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, res.Header.Get("Content-Type"), "application/json; charset=utf-8")
+			b, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+
+			expectedString := `[{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}},{"data":{"addFact":{"title":"title","description":"description"}}},{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}]`
+			require.JSONEq(t, expectedString, string(b))
 		})
 	})
 
