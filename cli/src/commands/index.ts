@@ -13,6 +13,7 @@ import SchemaCommands from './subgraph/index.js';
 import ContractCommands from './contract/index.js';
 import FeatureGraphCommands from './feature-subgraph/index.js';
 import FeatureFlagCommands from './feature-flag/index.js';
+import ProposalCommands from './proposal/index.js';
 import MCPCommands from './mcp/index.js';
 
 const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
@@ -96,6 +97,12 @@ program.addCommand(
 
 program.addCommand(
   MCPCommands({
+    client,
+  }),
+);
+
+program.addCommand(
+  ProposalCommands({
     client,
   }),
 );
