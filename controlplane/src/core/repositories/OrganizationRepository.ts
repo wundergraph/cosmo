@@ -888,7 +888,9 @@ export class OrganizationRepository {
           }
           case 'proposalStateUpdated': {
             const graphIds = eventMeta.meta.value.graphIds;
-            await tx.delete(schema.webhookProposalStateUpdate).where(eq(schema.webhookProposalStateUpdate.webhookId, input.id));
+            await tx
+              .delete(schema.webhookProposalStateUpdate)
+              .where(eq(schema.webhookProposalStateUpdate.webhookId, input.id));
 
             if (graphIds.length > 0) {
               await tx
