@@ -52,6 +52,7 @@ func NewRouterSupervisor(opts *RouterSupervisorOpts) *RouterSupervisor {
 		shutdownChan:   make(chan bool),
 		logger:         opts.Logger,
 		lifecycleHooks: opts.LifecycleHooks,
+		resources:      &RouterResources{},
 	}
 }
 
@@ -101,6 +102,7 @@ func (rs *RouterSupervisor) stopRouter() error {
 // Start starts the router supervisor.
 func (rs *RouterSupervisor) Start() error {
 	for {
+
 		if err := rs.lifecycleHooks.LoadResources(rs.resources); err != nil {
 			return fmt.Errorf("failed to load resources: %w", err)
 		}
