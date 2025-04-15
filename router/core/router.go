@@ -931,7 +931,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 // buildClients initializes the storage clients for persisted operations and router config.
 func (r *Router) buildClients() error {
 	s3Providers := map[string]config.S3StorageProvider{}
-	cdnProviders := map[string]config.BaseStorageProvider{}
+	cdnProviders := map[string]config.CDNStorageProvider{}
 	redisProviders := map[string]config.RedisStorageProvider{}
 
 	for _, provider := range r.storageProviders.S3 {

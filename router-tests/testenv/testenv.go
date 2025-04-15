@@ -30,6 +30,8 @@ import (
 	"time"
 
 	"github.com/cloudflare/backoff"
+	mcpclient "github.com/mark3labs/mcp-go/client"
+	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -303,6 +305,7 @@ type Config struct {
 	DisableSimulateCloudExporter       bool
 	CdnSever                           *httptest.Server
 	UseVersionedGraph                  bool
+	MCP                                config.MCPConfiguration
 }
 
 type CacheMetricsAssertions struct {
@@ -348,6 +351,11 @@ type LogObservationConfig struct {
 	LogLevel zapcore.Level
 }
 
+type MCPConfig struct {
+	Enabled bool
+	Port    int
+}
+
 func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	t.Helper()
 
@@ -356,6 +364,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		kafkaClient      *kgo.Client
 		natsSetup        *NatsData
 		pubSubPrefix     = strconv.FormatUint(rand.Uint64(), 16)
+		mcpClient        *mcpclient.SSEMCPClient
 	)
 
 	if cfg.EnableKafka {
@@ -586,6 +595,10 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		client = retryClient.StandardClient()
 	}
 
+	if cfg.MCP.Enabled {
+		cfg.MCP.Server.Port = freeport.GetOne(t)
+	}
+
 	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
 	if err != nil {
 		return nil, err
@@ -672,6 +685,26 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.ShutdownDelay = 30 * time.Second
 	}
 
+	var mcpAddr string
+
+	if cfg.MCP.Enabled {
+
+		// Create an MCP client that connects to the router's MCP server
+		mcpPort := cfg.MCP.Server.Port
+		if mcpPort == 0 {
+			mcpPort = 5025
+		}
+
+		// Create MCP client connecting to the MCP server
+		mcpAddr = fmt.Sprintf("http://localhost:%d/sse", mcpPort)
+		client, err := mcpclient.NewSSEMCPClient(mcpAddr)
+		if err != nil {
+			t.Fatalf("Failed to create MCP client: %v", err)
+		}
+
+		mcpClient = client
+	}
+
 	e := &Environment{
 		t:                       t,
 		cfg:                     cfg,
@@ -693,6 +726,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		logObserver:             logObserver,
 		getPubSubName:           getPubSubName,
 		metricReader:            cfg.MetricReader,
+		MCPClient:               mcpClient,
 		Servers: []*httptest.Server{
 			employeesServer,
 			familyServer,
@@ -718,9 +752,19 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		}
 	}
 
-	waitErr := e.WaitForServer(ctx, e.RouterURL+"/health/ready", 250, 30)
+	err = e.WaitForServer(ctx, e.RouterURL+"/health/ready", 250, 30)
+	if err != nil {
+		return nil, err
+	}
 
-	return e, waitErr
+	if cfg.MCP.Enabled {
+		err = e.WaitForMCPServer(e.Context, 1000, 10)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return e, err
 }
 
 func generateJwtToken() (string, error) {
@@ -872,6 +916,22 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		}
 	} else if routerConfig != nil {
 		routerOpts = append(routerOpts, core.WithStaticExecutionConfig(routerConfig))
+	}
+
+	if testConfig.MCP.Enabled {
+		// Add Storage provider
+		routerOpts = append(routerOpts, core.WithStorageProviders(config.StorageProviders{
+			FileSystem: []config.FileSystemStorageProvider{
+				{
+					ID:   "test",
+					Path: "testdata/mcp_operations",
+				},
+			},
+		}))
+
+		testConfig.MCP.Storage.ProviderID = "test"
+
+		routerOpts = append(routerOpts, core.WithMCP(testConfig.MCP))
 	}
 
 	if testConfig.TraceExporter != nil {
@@ -1107,6 +1167,7 @@ type Environment struct {
 	KafkaClient           *kgo.Client
 	logObserver           *observer.ObservedLogs
 	getPubSubName         func(name string) string
+	MCPClient             *mcpclient.SSEMCPClient
 
 	shutdownDelay       time.Duration
 	extraURLQueryValues url.Values
@@ -1164,6 +1225,11 @@ func (e *Environment) Shutdown() {
 
 	// Terminate test server resources
 	e.cancel(ErrEnvironmentClosed)
+
+	// Close MCP client if it exists
+	if e.MCPClient != nil {
+		e.MCPClient.Close()
+	}
 
 	// Gracefully shutdown router
 	if e.Router != nil {
@@ -1271,6 +1337,47 @@ func (e *Environment) WaitForServer(ctx context.Context, url string, timeoutMs i
 			if err == nil && resp.StatusCode == 200 {
 				return nil
 			}
+			time.Sleep(time.Millisecond * time.Duration(timeoutMs))
+			maxAttempts--
+		}
+	}
+}
+
+func (e *Environment) WaitForMCPServer(ctx context.Context, timeoutMs int, maxAttempts int) error {
+	if err := e.MCPClient.Start(ctx); err != nil {
+		e.t.Fatalf("Failed to start MCP client: %v", err)
+	}
+
+	for {
+		if maxAttempts == 0 {
+			return errors.New("timed out waiting for server to be ready")
+		}
+		select {
+		case <-ctx.Done():
+			return errors.New("timed out waiting for router to be ready")
+		default:
+			reqCtx, cancelFn := context.WithTimeout(context.Background(), time.Second)
+			initRequest := mcp.InitializeRequest{}
+			initRequest.Params.ProtocolVersion = mcp.LATEST_PROTOCOL_VERSION
+			initRequest.Params.ClientInfo = mcp.Implementation{
+				Name:    "testenv-client",
+				Version: "1.0.0",
+			}
+
+			_, err := e.MCPClient.Initialize(reqCtx, initRequest)
+			if err != nil {
+				e.t.Fatalf("Failed to initialize MCP client: %v", err)
+			}
+
+			cancelFn()
+
+			// Test Ping
+			if err := e.MCPClient.Ping(ctx); err != nil {
+				e.t.Logf("Ping failed: %v", err)
+			} else {
+				return nil
+			}
+
 			time.Sleep(time.Millisecond * time.Duration(timeoutMs))
 			maxAttempts--
 		}

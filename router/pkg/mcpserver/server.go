@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -46,7 +47,7 @@ type Options struct {
 // ServerOptions represents the server-specific configuration options
 type ServerOptions struct {
 	// Port is the port where the SSE server should listen
-	Port string
+	Port int
 }
 
 // SimpleOperationInfo contains basic information about a GraphQL operation for listing.
@@ -62,7 +63,7 @@ type GraphQLSchemaServer struct {
 	server                    *server.MCPServer
 	graphName                 string
 	operationsDir             string
-	listenAddr                string
+	port                      int
 	logger                    *zap.Logger
 	httpClient                *http.Client
 	requestTimeout            time.Duration
@@ -159,7 +160,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, schema *ast.Document, 
 		GraphName:     "graph",
 		OperationsDir: "operations",
 		Server: ServerOptions{
-			Port: "5025",
+			Port: 5025,
 		},
 		Enabled:        false,
 		Logger:         zap.NewNop(),
@@ -194,7 +195,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, schema *ast.Document, 
 		server:                    mcpServer,
 		graphName:                 options.GraphName,
 		operationsDir:             options.OperationsDir,
-		listenAddr:                options.Server.Port,
+		port:                      options.Server.Port,
 		logger:                    options.Logger,
 		httpClient:                httpClient,
 		requestTimeout:            options.RequestTimeout,
@@ -231,7 +232,7 @@ func WithServer(server ServerOptions) func(*Options) {
 }
 
 // WithPort sets just the port
-func WithPort(port string) func(*Options) {
+func WithPort(port int) func(*Options) {
 	return func(o *Options) {
 		o.Server.Port = port
 	}
@@ -282,8 +283,7 @@ func (s *GraphQLSchemaServer) LoadOperationsFromDirectory(operationsDir string) 
 
 // ServeSSE starts the server with SSE transport
 func (s *GraphQLSchemaServer) ServeSSE() (*server.SSEServer, *http.Server, error) {
-	// Add ":" prefix to port for listening address
-	listenAddr := ":" + s.listenAddr
+	listenAddr := "localhost:" + strconv.Itoa(s.port)
 
 	// Create HTTP server with timeouts
 	httpServer := &http.Server{
@@ -294,7 +294,7 @@ func (s *GraphQLSchemaServer) ServeSSE() (*server.SSEServer, *http.Server, error
 	}
 
 	sseServer := server.NewSSEServer(s.server,
-		server.WithBaseURL(fmt.Sprintf("http://localhost%s", listenAddr)),
+		server.WithBaseURL(fmt.Sprintf("http://%s", listenAddr)),
 		server.WithHTTPServer(httpServer),
 	)
 
@@ -443,11 +443,12 @@ func (s *GraphQLSchemaServer) registerTools() {
 		// Convert operation name to snake_case for consistent tool naming
 		toolName := toSnakeCase(op.Name)
 
-		toolDescription := fmt.Sprintf("Executes the GraphQL operation '%s' with the provided input.", op.Name)
+		var toolDescription string
 
-		// Add a warning for mutations
-		if op.OperationType == "mutation" {
-			toolDescription = fmt.Sprintf("Executes the GraphQL operation '%s' with the provided input. WARNING: This is a mutation operation that has side effects and can modify data.", op.Name)
+		if op.Description != "" {
+			toolDescription = fmt.Sprintf("Executes the GraphQL operation '%s' of type %s. %s", op.Name, op.OperationType, op.Description)
+		} else {
+			toolDescription = fmt.Sprintf("Executes the GraphQL operation '%s' of type %s.", op.Name, op.OperationType)
 		}
 
 		s.server.AddTool(
@@ -637,15 +638,6 @@ func (s *GraphQLSchemaServer) handleGetGraphQLSchema() func(ctx context.Context,
 			return nil, fmt.Errorf("failed to convert schema to string: %w", err)
 		}
 
-		response := map[string]interface{}{
-			"schema": schemaStr,
-		}
-
-		responseJSON, err := json.MarshalIndent(response, "", "  ")
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal GraphQL schema: %w", err)
-		}
-
-		return mcp.NewToolResultText(string(responseJSON)), nil
+		return mcp.NewToolResultText(schemaStr), nil
 	}
 }

@@ -660,7 +660,7 @@ type SubgraphErrorPropagationConfiguration struct {
 
 type StorageProviders struct {
 	S3         []S3StorageProvider         `yaml:"s3,omitempty"`
-	CDN        []BaseStorageProvider       `yaml:"cdn,omitempty"`
+	CDN        []CDNStorageProvider        `yaml:"cdn,omitempty"`
 	Redis      []RedisStorageProvider      `yaml:"redis,omitempty"`
 	FileSystem []FileSystemStorageProvider `yaml:"file_system,omitempty"`
 }
@@ -685,9 +685,14 @@ type S3StorageProvider struct {
 	Secure    bool   `yaml:"secure,omitempty"`
 }
 
-type BaseStorageProvider struct {
+type CDNStorageProvider struct {
 	ID  string `yaml:"id,omitempty"`
 	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com"`
+}
+
+type FileSystemStorageProvider struct {
+	ID   string `yaml:"id,omitempty" env:"STORAGE_PROVIDER_FS_ID"`
+	Path string `yaml:"path,omitempty" env:"STORAGE_PROVIDER_FS_PATH"`
 }
 
 type RedisStorageProvider struct {
@@ -878,7 +883,7 @@ type MCPStorageConfig struct {
 }
 
 type MCPServer struct {
-	Port string `yaml:"port" envDefault:"5025" env:"MCP_SERVER_PORT"`
+	Port int `yaml:"port" envDefault:"5025" env:"MCP_SERVER_PORT"`
 }
 
 type Config struct {
@@ -1039,9 +1044,4 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 	}
 
 	return cfg, nil
-}
-
-type FileSystemStorageProvider struct {
-	ID   string `yaml:"id,omitempty" env:"STORAGE_PROVIDER_FS_ID"`
-	Path string `yaml:"path,omitempty" env:"STORAGE_PROVIDER_FS_PATH"`
 }

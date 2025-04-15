@@ -11,10 +11,7 @@ mcp:
     port: "5025"
   storage:
     provider_id: "mcp"
-  exclude_mutations: false
   graph_name: my-graph
-  expose_schema: true
-  enable_arbitrary_operations: true
 
 storage_providers:
   file_system:

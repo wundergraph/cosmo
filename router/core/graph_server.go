@@ -1072,79 +1072,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		handlerOpts.ApolloSubscriptionMultipartPrintBoundary = s.apolloCompatibilityFlags.SubscriptionMultipartPrintBoundary.Enabled
 	}
 
-	if s.MCP.Enabled {
-		var operationsDir string
-
-		// If storage provider ID is set, resolve it to a directory path
-		if s.MCP.Storage.ProviderID != "" {
-			s.logger.Info("Resolving storage provider for MCP operations",
-				zap.String("provider_id", s.MCP.Storage.ProviderID))
-
-			// Find the provider in storage_providers
-			found := false
-
-			// Check for file_system providers
-			for _, provider := range s.storageProviders.FileSystem {
-				if provider.ID == s.MCP.Storage.ProviderID {
-					s.logger.Info("Found file_system storage provider for MCP",
-						zap.String("id", provider.ID),
-						zap.String("path", provider.Path))
-
-					// Use the resolved file system path
-					operationsDir = provider.Path
-					found = true
-					break
-				}
-			}
-
-			if !found {
-				return nil, fmt.Errorf("storage provider with id %s not found", s.MCP.Storage.ProviderID)
-			}
-		}
-
-		// Initialize the MCP server with the resolved operations directory
-		mcpOpts := []func(*mcpserver.Options){
-			mcpserver.WithGraphName(s.MCP.GraphName),
-			mcpserver.WithOperationsDir(operationsDir),
-			mcpserver.WithPort(s.MCP.Server.Port),
-			mcpserver.WithLogger(s.logger),
-			mcpserver.WithExcludeMutations(s.MCP.ExcludeMutations),
-			mcpserver.WithEnableArbitraryOperations(s.MCP.EnableArbitraryOperations),
-			mcpserver.WithExposeSchema(s.MCP.ExposeSchema),
-		}
-
-		mcpss, err := mcpserver.NewGraphQLSchemaServer(
-			path.Join(s.routerListenAddr, s.graphqlPath),
-			executor.RouterSchema,
-			mcpOpts...,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create mcp server: %w", err)
-		}
-
-		if err := mcpss.Start(); err != nil {
-			return nil, fmt.Errorf("failed to start MCP server: %w", err)
-		}
-
-		// Store the MCP server for later shutdown
-		s.mcpServer = mcpss
-
-		logFields := []zap.Field{
-			zap.String("port", s.MCP.Server.Port),
-			zap.String("operations_dir", operationsDir),
-			zap.String("graph_name", s.MCP.GraphName),
-			zap.Bool("exclude_mutations", s.MCP.ExcludeMutations),
-			zap.Bool("enable_arbitrary_operations", s.MCP.EnableArbitraryOperations),
-			zap.Bool("expose_schema", s.MCP.ExposeSchema),
-		}
-
-		if s.MCP.Storage.ProviderID != "" {
-			logFields = append(logFields, zap.String("storage_provider_id", s.MCP.Storage.ProviderID))
-		}
-
-		s.logger.Info("MCP server started", logFields...)
-	}
-
 	graphqlHandler := NewGraphQLHandler(handlerOpts)
 	executor.Resolver.SetAsyncErrorWriter(graphqlHandler)
 
@@ -1229,6 +1156,80 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		} else {
 			httpRouter.Use(wsMiddleware)
 		}
+	}
+
+	// We support MCP only on the base graph
+	if featureFlagName == "" && s.MCP.Enabled {
+		var operationsDir string
+
+		// If storage provider ID is set, resolve it to a directory path
+		if s.MCP.Storage.ProviderID != "" {
+			s.logger.Info("Resolving storage provider for MCP operations",
+				zap.String("provider_id", s.MCP.Storage.ProviderID))
+
+			// Find the provider in storage_providers
+			found := false
+
+			// Check for file_system providers
+			for _, provider := range s.storageProviders.FileSystem {
+				if provider.ID == s.MCP.Storage.ProviderID {
+					s.logger.Info("Found file_system storage provider for MCP",
+						zap.String("id", provider.ID),
+						zap.String("path", provider.Path))
+
+					// Use the resolved file system path
+					operationsDir = provider.Path
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				return nil, fmt.Errorf("storage provider with id %s not found", s.MCP.Storage.ProviderID)
+			}
+		}
+
+		// Initialize the MCP server with the resolved operations directory
+		mcpOpts := []func(*mcpserver.Options){
+			mcpserver.WithGraphName(s.MCP.GraphName),
+			mcpserver.WithOperationsDir(operationsDir),
+			mcpserver.WithPort(s.MCP.Server.Port),
+			mcpserver.WithLogger(s.logger),
+			mcpserver.WithExcludeMutations(s.MCP.ExcludeMutations),
+			mcpserver.WithEnableArbitraryOperations(s.MCP.EnableArbitraryOperations),
+			mcpserver.WithExposeSchema(s.MCP.ExposeSchema),
+		}
+
+		mcpss, err := mcpserver.NewGraphQLSchemaServer(
+			path.Join(s.routerListenAddr, s.graphqlPath),
+			executor.ClientSchema,
+			mcpOpts...,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create mcp server: %w", err)
+		}
+
+		if err := mcpss.Start(); err != nil {
+			return nil, fmt.Errorf("failed to start MCP server: %w", err)
+		}
+
+		// Store the MCP server for later shutdown
+		s.mcpServer = mcpss
+
+		logFields := []zap.Field{
+			zap.Int("port", s.MCP.Server.Port),
+			zap.String("operations_dir", operationsDir),
+			zap.String("graph_name", s.MCP.GraphName),
+			zap.Bool("exclude_mutations", s.MCP.ExcludeMutations),
+			zap.Bool("enable_arbitrary_operations", s.MCP.EnableArbitraryOperations),
+			zap.Bool("expose_schema", s.MCP.ExposeSchema),
+		}
+
+		if s.MCP.Storage.ProviderID != "" {
+			logFields = append(logFields, zap.String("storage_provider_id", s.MCP.Storage.ProviderID))
+		}
+
+		s.logger.Info("MCP server started", logFields...)
 	}
 
 	httpRouter.Use(
