@@ -138,11 +138,11 @@ func (s *server) Shutdown(ctx context.Context) error {
 	var err error
 
 	if s.httpServer != nil {
-		err = errors.Join(s.httpServer.Shutdown(ctx))
+		err = errors.Join(err, s.httpServer.Shutdown(ctx))
 	}
 
 	if s.graphServer != nil {
-		err = errors.Join(s.graphServer.Shutdown(ctx))
+		err = errors.Join(err, s.graphServer.Shutdown(ctx))
 	}
 
 	s.mu.Lock()
