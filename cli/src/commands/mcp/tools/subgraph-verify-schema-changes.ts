@@ -46,6 +46,8 @@ export const registerSubgraphVerifySchemaChangesTool = ({ server, opts }: ToolCo
                   hasLintErrors: resp.lintErrors.length > 0,
                   hasGraphPruningErrors: resp.graphPruneErrors.length > 0,
                   clientTrafficCheckSkipped: resp.clientTrafficCheckSkipped === true,
+                  hasProposalMatchError:
+                    resp.response?.code === EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL,
                 }),
               },
               null,
@@ -65,6 +67,7 @@ const isCheckSuccessful = ({
   hasLintErrors,
   hasGraphPruningErrors,
   clientTrafficCheckSkipped,
+  hasProposalMatchError,
 }: {
   isComposable: boolean;
   isBreaking: boolean;
@@ -72,6 +75,7 @@ const isCheckSuccessful = ({
   hasLintErrors: boolean;
   hasGraphPruningErrors: boolean;
   clientTrafficCheckSkipped: boolean;
+  hasProposalMatchError: boolean;
 }) => {
   return (
     isComposable &&
@@ -79,6 +83,7 @@ const isCheckSuccessful = ({
     // OR Breaking changes are found, but no client traffic is found and traffic check is not skipped
     (!isBreaking || (isBreaking && !hasClientTraffic && !clientTrafficCheckSkipped)) &&
     !hasLintErrors &&
-    !hasGraphPruningErrors
+    !hasGraphPruningErrors &&
+    !hasProposalMatchError
   );
 };

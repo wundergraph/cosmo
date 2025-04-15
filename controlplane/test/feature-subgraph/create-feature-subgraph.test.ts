@@ -1,15 +1,29 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.js';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../../src/core/test-util.js';
 import {
   createNamespace,
   createSubgraph,
   DEFAULT_SUBGRAPH_URL_ONE,
   DEFAULT_SUBGRAPH_URL_TWO,
   SetupTest,
+  createThenPublishSubgraph,
+  createFederatedGraph,
+  DEFAULT_ROUTER_URL,
 } from '../test-util.js';
 
 let dbname = '';
+
+// Helper function to enable proposals for namespace
+async function enableProposalsForNamespace(client: any, namespace = 'default') {
+  const enableResponse = await client.enableProposalsForNamespace({
+    namespace,
+    enableProposals: true,
+  });
+
+  return enableResponse;
+}
 
 describe('Create feature subgraph tests', () => {
   beforeAll(async () => {
@@ -254,6 +268,81 @@ describe('Create feature subgraph tests', () => {
     expect(featureSubgraphResponseOne.response?.details).toBe(
       `A valid, non-empty routing URL is required to create and publish a feature subgraph.`,
     );
+
+    await server.close();
+  });
+
+  test('that a feature subgraph can be published even without a proposal', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      setupBilling: { plan: 'enterprise' },
+    });
+
+    // Setup: create a base subgraph and a federated graph
+    const baseSubgraphName = genID('baseSubgraph');
+    const featureSubgraphName = genID('featureSubgraph');
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName = genID('proposal');
+
+    const baseSubgraphSDL = `
+      type Query {
+        products: [Product!]!
+      }
+      
+      type Product {
+        id: ID!
+        name: String!
+      }
+    `;
+
+    // Create and publish the base subgraph
+    await createThenPublishSubgraph(
+      client,
+      baseSubgraphName,
+      'default',
+      baseSubgraphSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    // Create federated graph
+    await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const featureSubgraphSDL = `
+      type Query {
+        products: [Product!]!
+        product(id: ID!): Product
+      }
+      
+      type Product {
+        id: ID!
+        name: String!
+        price: Float!
+        description: String
+      }
+    `;
+
+    // First, create the feature subgraph
+    const createFeatureSubgraphResponse = await client.createFederatedSubgraph({
+      name: featureSubgraphName,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: true,
+      baseSubgraphName,
+      labels: [label]
+    });
+    expect(createFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Publish the feature subgraph
+    const publishFeatureSubgraphResponse = await client.publishFederatedSubgraph({
+      name: featureSubgraphName,
+      schema: featureSubgraphSDL,
+    });
+    expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
 
     await server.close();
   });

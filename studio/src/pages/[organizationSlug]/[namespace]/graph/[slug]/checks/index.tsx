@@ -181,6 +181,9 @@ const ChecksPage: NextPageWithLayout = () => {
                   lintSkipped,
                   graphPruningSkipped,
                   checkedSubgraphs,
+                  proposalMatch,
+                  compositionSkipped,
+                  breakingChangesSkipped,
                 }) => {
                   const isSuccessful = isCheckSuccessful(
                     isComposable,
@@ -189,6 +192,7 @@ const ChecksPage: NextPageWithLayout = () => {
                     hasLintErrors,
                     hasGraphPruningErrors,
                     clientTrafficCheckSkipped,
+                    proposalMatch === "error",
                   );
 
                   const path = `${router.asPath.split("?")[0]}/${id}`;
@@ -239,12 +243,34 @@ const ChecksPage: NextPageWithLayout = () => {
                       )}
                       <TableCell>
                         <div className="flex flex-wrap items-start gap-2">
-                          <Badge variant="outline" className="gap-2 py-1.5">
-                            {getCheckIcon(isComposable)} <span>Composes</span>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "gap-2 py-1.5",
+                              compositionSkipped &&
+                                "text-muted-foreground",
+                            )}
+                          >
+                            {compositionSkipped ? (
+                              <NoSymbolIcon className="h-4 w-4" />
+                            ) : (
+                              getCheckIcon(isComposable)
+                            )}
+                            <span>Composes</span>
                           </Badge>
-
-                          <Badge variant="outline" className="gap-2 py-1.5">
-                            {getCheckIcon(!isBreaking)}
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "gap-2 py-1.5",
+                              breakingChangesSkipped &&
+                                "text-muted-foreground",
+                            )}
+                          >
+                            {breakingChangesSkipped ? (
+                              <NoSymbolIcon className="h-4 w-4" />
+                            ) : (
+                              getCheckIcon(!isBreaking)
+                            )}
                             <span>Breaking changes</span>
                           </Badge>
                           <Badge
@@ -290,6 +316,22 @@ const ChecksPage: NextPageWithLayout = () => {
                             )}
                             <span className="flex-1 truncate">
                               Pruning Errors
+                            </span>
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "gap-2 py-1.5",
+                              !proposalMatch && "text-muted-foreground",
+                            )}
+                          >
+                            {!proposalMatch ? (
+                              <NoSymbolIcon className="h-4 w-4" />
+                            ) : (
+                              getCheckIcon(proposalMatch !== "error")
+                            )}
+                            <span className="flex-1 truncate">
+                              Proposal Match
                             </span>
                           </Badge>
                         </div>

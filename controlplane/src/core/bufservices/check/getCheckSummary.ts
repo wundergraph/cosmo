@@ -10,6 +10,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
+import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { SchemaCheckRepository } from '../../repositories/SchemaCheckRepository.js';
 import { SchemaGraphPruningRepository } from '../../repositories/SchemaGraphPruningRepository.js';
 import { SchemaLintRepository } from '../../repositories/SchemaLintRepository.js';
@@ -34,6 +35,7 @@ export function getCheckSummary(
     const schemaLintRepo = new SchemaLintRepository(opts.db);
     const schemaGraphPruningRepo = new SchemaGraphPruningRepository(opts.db);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+    const proposalRepo = new ProposalRepository(opts.db);
 
     const namespace = await namespaceRepo.byName(req.namespace);
     if (!namespace) {
@@ -52,6 +54,8 @@ export function getCheckSummary(
         isGraphPruningEnabled: false,
         isLintingEnabled: false,
         checkedSubgraphs: [],
+        proposalMatches: [],
+        isProposalsEnabled: false,
       };
     }
 
@@ -73,6 +77,8 @@ export function getCheckSummary(
         isGraphPruningEnabled: false,
         isLintingEnabled: false,
         checkedSubgraphs: [],
+        proposalMatches: [],
+        isProposalsEnabled: false,
       };
     }
 
@@ -99,6 +105,8 @@ export function getCheckSummary(
         isGraphPruningEnabled: false,
         isLintingEnabled: false,
         checkedSubgraphs: [],
+        proposalMatches: [],
+        isProposalsEnabled: false,
       };
     }
 
@@ -134,6 +142,7 @@ export function getCheckSummary(
           hasLintErrors,
           hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
           clientTrafficCheckSkipped: check.clientTrafficCheckSkipped,
+          hasProposalMatchError: check.proposalMatch === 'error',
         }),
       }),
     );
@@ -175,10 +184,17 @@ export function getCheckSummary(
             hasLintErrors,
             hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
             clientTrafficCheckSkipped: check.clientTrafficCheckSkipped,
+            hasProposalMatchError: check.proposalMatch === 'error',
           }),
         }),
       );
     }
+
+    const proposal = await proposalRepo.getProposalByCheckId({ checkId: req.checkId });
+    const proposalSchemaMatches = await proposalRepo.getProposalSchemaMatchesOfCheck({
+      checkId: req.checkId,
+      federatedGraphId: graph.id,
+    });
 
     return {
       response: {
@@ -193,6 +209,10 @@ export function getCheckSummary(
       lintIssues,
       graphPruningIssues,
       compositionWarnings: checkDetails.compositionWarnings,
+      proposalId: proposal?.proposalId,
+      proposalName: proposal?.proposalName,
+      proposalMatches: proposalSchemaMatches,
+      isProposalsEnabled: namespace.enableProposals,
     };
   });
 }
