@@ -4,6 +4,23 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.111.1](https://github.com/wundergraph/cosmo/compare/studio@0.111.0...studio@0.111.1) (2025-04-14)
+
+### Bug Fixes
+
+* solve issue caused by improper use of `useDayPicker` ([#1787](https://github.com/wundergraph/cosmo/issues/1787)) ([88cb122](https://github.com/wundergraph/cosmo/commit/88cb122b65eebc87d8ffa06bacf57fc7808c3a7e)) (@wilsonrivera)
+
+# [0.111.0](https://github.com/wundergraph/cosmo/compare/studio@0.110.0...studio@0.111.0) (2025-04-11)
+
+### Bug Fixes
+
+* solve issue caused when receiving a date range where the start is greater than the end ([#1766](https://github.com/wundergraph/cosmo/issues/1766)) ([d646863](https://github.com/wundergraph/cosmo/commit/d64686372251a3f38f53046272b2c4311ff3efac)) (@wilsonrivera)
+* solves issue with Traces pagination ([#1767](https://github.com/wundergraph/cosmo/issues/1767)) ([4769680](https://github.com/wundergraph/cosmo/commit/4769680b55e88f6e1d3d056f5f1564fbb14a3212)) (@wilsonrivera)
+
+### Features
+
+* improve API key creation dialog ([#1768](https://github.com/wundergraph/cosmo/issues/1768)) ([71802fc](https://github.com/wundergraph/cosmo/commit/71802fc78eaf13a5f78e4515f0f74c01f034da4b)) (@wilsonrivera)
+
 # [0.110.0](https://github.com/wundergraph/cosmo/compare/studio@0.109.0...studio@0.110.0) (2025-04-07)
 
 ### Features

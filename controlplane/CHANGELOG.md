@@ -4,6 +4,29 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.133.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.133.3...controlplane@0.133.4) (2025-04-14)
+
+**Note:** Version bump only for package controlplane
+
+## [0.133.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.133.2...controlplane@0.133.3) (2025-04-11)
+
+### Bug Fixes
+
+* subgraph check compose ([#1779](https://github.com/wundergraph/cosmo/issues/1779)) ([d437840](https://github.com/wundergraph/cosmo/commit/d437840c1be862ca48b667ec1f46ef8f04ba9ada)) (@thisisnithin)
+
+## [0.133.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.133.1...controlplane@0.133.2) (2025-04-11)
+
+### Bug Fixes
+
+* only redirect to cosmo urls ([#1778](https://github.com/wundergraph/cosmo/issues/1778)) ([888529a](https://github.com/wundergraph/cosmo/commit/888529ad1f544f0a2d2cd9a79d18debc698d9ce2)) (@JivusAyrus)
+
+## [0.133.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.133.0...controlplane@0.133.1) (2025-04-11)
+
+### Bug Fixes
+
+* solve issue caused when receiving a date range where the start is greater than the end ([#1766](https://github.com/wundergraph/cosmo/issues/1766)) ([d646863](https://github.com/wundergraph/cosmo/commit/d64686372251a3f38f53046272b2c4311ff3efac)) (@wilsonrivera)
+* solves issue with Traces pagination ([#1767](https://github.com/wundergraph/cosmo/issues/1767)) ([4769680](https://github.com/wundergraph/cosmo/commit/4769680b55e88f6e1d3d056f5f1564fbb14a3212)) (@wilsonrivera)
+
 # [0.133.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.132.0...controlplane@0.133.0) (2025-04-07)
 
 ### Features
