@@ -871,8 +871,8 @@ export class SubgraphRepository {
           or(
             // This is to fetch the checks based on the new schema
             inArray(
-              schema.schemaCheckSubgraphs.subgraphName,
-              selectedSubgraphs.map(({ name }) => name),
+              schema.schemaCheckSubgraphs.subgraphId,
+              selectedSubgraphs.map(({ id }) => id),
             ),
             // This is to fetch the checks based on the old schema
             inArray(
@@ -990,8 +990,8 @@ export class SubgraphRepository {
         or(
           // This is to fetch the checks based on the new schema
           inArray(
-            schema.schemaCheckSubgraphs.subgraphName,
-            subgraphs.map(({ name }) => name),
+            schema.schemaCheckSubgraphs.subgraphId,
+            subgraphs.map(({ id }) => id),
           ),
           // This is to fetch the checks based on the old schema
           inArray(
@@ -1006,8 +1006,8 @@ export class SubgraphRepository {
       conditions = and(
         or(
           inArray(
-            schema.schemaCheckSubgraphs.subgraphName,
-            subgraphs.map(({ name }) => name),
+            schema.schemaCheckSubgraphs.subgraphId,
+            subgraphs.map(({ id }) => id),
           ),
           inArray(
             schemaChecks.targetId,
