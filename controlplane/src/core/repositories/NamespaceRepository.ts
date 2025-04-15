@@ -32,6 +32,7 @@ export class NamespaceRepository {
       createdBy: namespace.createdBy || undefined,
       enableCacheWarmer: namespace.namespaceConfig?.enableCacheWarming ?? false,
       checksTimeframeInDays: namespace.namespaceConfig?.checksTimeframeInDays || undefined,
+      enableProposals: namespace.namespaceConfig?.enableProposals ?? false,
     };
   }
 
@@ -56,6 +57,7 @@ export class NamespaceRepository {
       createdBy: namespace.createdBy || undefined,
       enableCacheWarmer: namespace.namespaceConfig?.enableCacheWarming ?? false,
       checksTimeframeInDays: namespace.namespaceConfig?.checksTimeframeInDays || undefined,
+      enableProposals: namespace.namespaceConfig?.enableProposals ?? false,
     };
   }
 
@@ -122,6 +124,7 @@ export class NamespaceRepository {
     enableGraphPruning?: boolean;
     enableCacheWarming?: boolean;
     checksTimeframeInDays?: number;
+    enableProposals?: boolean;
   }) {
     const values = {
       namespaceId: data.id,
@@ -129,6 +132,7 @@ export class NamespaceRepository {
       enableGraphPruning: data.enableGraphPruning,
       enableCacheWarming: data.enableCacheWarming,
       checksTimeframeInDays: data.checksTimeframeInDays,
+      enableProposals: data.enableProposals,
     };
 
     await this.db.insert(schema.namespaceConfig).values(values).onConflictDoUpdate({

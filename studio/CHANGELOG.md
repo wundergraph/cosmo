@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.112.0](https://github.com/wundergraph/cosmo/compare/studio@0.111.2...studio@0.112.0) (2025-04-15)
+
+### Features
+
+* implement proposals in cosmo ([#1727](https://github.com/wundergraph/cosmo/issues/1727)) ([1d36747](https://github.com/wundergraph/cosmo/commit/1d36747dda3f2f3c491092f0f02cefa22fc9c131)) (@JivusAyrus)
+
 ## [0.111.2](https://github.com/wundergraph/cosmo/compare/studio@0.111.1...studio@0.111.2) (2025-04-15)
 
 **Note:** Version bump only for package studio

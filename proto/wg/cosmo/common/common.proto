@@ -21,6 +21,7 @@ enum EnumStatusCode {
   ERR_INVALID_NAME = 15;
   ERR_UPGRADE_PLAN = 16;
   ERR_BAD_REQUEST = 17;
+  ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL = 18;
 }
 
 enum GraphQLSubscriptionProtocol {
