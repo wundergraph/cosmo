@@ -1,6 +1,6 @@
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
-import { GraphPruningRuleEnum, LintRuleEnum } from '../db/models.js';
+import { GraphPruningRuleEnum, LintRuleEnum, ProposalMatch } from '../db/models.js';
 
 export type FeatureIds =
   | 'users'
@@ -21,7 +21,8 @@ export type FeatureIds =
   | 'oidc'
   | 'scim'
   | 'field-pruning-grace-period'
-  | 'cache-warmer';
+  | 'cache-warmer'
+  | 'proposals';
 
 export type Features = {
   [key in FeatureIds]: Feature;
@@ -180,6 +181,10 @@ export interface SchemaCheckDTO {
     branch: string;
   };
   checkedSubgraphs: CheckedSubgraphDTO[];
+  proposalMatch?: ProposalMatch;
+  compositionSkipped: boolean;
+  breakingChangesSkipped: boolean;
+  errorMessage?: string;
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {
@@ -693,4 +698,26 @@ export interface NamespaceDTO {
   enableGraphPruning: boolean;
   enableCacheWarmer: boolean;
   checksTimeframeInDays?: number;
+  enableProposals: boolean;
+}
+
+export interface ProposalDTO {
+  id: string;
+  name: string;
+  federatedGraphId: string;
+  createdAt: string;
+  createdById: string;
+  createdByEmail?: string;
+  state: string;
+}
+
+export interface ProposalSubgraphDTO {
+  id: string;
+  subgraphName: string;
+  subgraphId?: string;
+  schemaSDL: string;
+  isDeleted: boolean;
+  currentSchemaVersionId?: string;
+  isNew: boolean;
+  labels: Label[];
 }
