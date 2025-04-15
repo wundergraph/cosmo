@@ -267,6 +267,9 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	requestContext := getRequestContext(r.Context())
 
 	requestLogger := h.logger.With(logging.WithRequestID(requestID), logging.WithTraceID(rtrace.GetTraceID(r.Context())))
+	if batchedOperationId, ok := r.Context().Value(BatchedOperationId{}).(string); ok {
+		requestLogger = requestLogger.With(logging.WithBatchedRequestOperationID(batchedOperationId))
+	}
 	clientInfo := NewClientInfoFromRequest(r, h.clientHeader)
 
 	if h.accessController != nil && !h.config.Authentication.FromInitialPayload.Enabled {
