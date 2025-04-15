@@ -4,9 +4,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"github.com/hashicorp/consul/sdk/freeport"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/atomic"
 	"io"
 	"net/http"
 	"os"
@@ -16,6 +13,10 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/consul/sdk/freeport"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/atomic"
 )
 
 const routerDir = "../router"
@@ -38,6 +39,14 @@ func RunRouterBinary(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Envir
 
 	// Execute the test case with the environment
 	f(t, env)
+}
+
+func (e *Environment) GetRouterProcessCwd() string {
+	return e.routerCmd.Dir
+}
+
+func (e *Environment) SignalRouterProcess(sig os.Signal) error {
+	return e.routerCmd.Process.Signal(sig)
 }
 
 // BuildRouter runs `make build` inside the router directory and fails the test on error.
