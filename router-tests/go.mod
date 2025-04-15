@@ -2,8 +2,6 @@ module github.com/wundergraph/cosmo/router-tests
 
 go 1.23.0
 
-toolchain go1.23.4
-
 require (
 	github.com/MicahParks/jwkset v0.9.0
 	github.com/buger/jsonparser v1.1.1

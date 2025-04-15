@@ -2,8 +2,6 @@ module github.com/wundergraph/cosmo/graphqlmetrics
 
 go 1.23.0
 
-toolchain go1.23.4
-
 require (
 	connectrpc.com/connect v1.16.2
 	github.com/ClickHouse/clickhouse-go/v2 v2.30.0

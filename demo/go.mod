@@ -2,8 +2,6 @@ module github.com/wundergraph/cosmo/demo
 
 go 1.23.0
 
-toolchain go1.23.4
-
 require (
 	github.com/99designs/gqlgen v0.17.63
 	github.com/google/uuid v1.6.0
