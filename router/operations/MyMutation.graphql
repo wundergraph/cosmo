@@ -1,5 +1,9 @@
-mutation UpdateAvailability($employeeID: Int! $isAvailable: Boolean!) {
-    updateAvailability(employeeID: $employeeID, isAvailable: $isAvailable) {
+mutation UpdateMood($employeeID: Int! $mood: Mood!) {
+    updateMood(employeeID: $employeeID mood: $mood) {
         id
+        details {
+            forename
+        }
+        currentMood
     }
 }

@@ -366,7 +366,7 @@ func (s *GraphQLSchemaServer) registerTools() {
 	s.server.AddTool(
 		mcp.NewTool(
 			"get_operation_info",
-			mcp.WithDescription("Retrieve detailed metadata and execution instructions for a specific GraphQL operation by its name. Use this function to gather all necessary information required to execute the operation using execute_<operation_name>."),
+			mcp.WithDescription("Retrieve comprehensive metadata and execution details for a specific GraphQL operation by its name. Use this to collect all required information needed to execute the operation via execute_<operation_name>."),
 			mcp.WithString("operationName",
 				mcp.Required(),
 				mcp.Description("The exact name of the GraphQL operation to retrieve information for."),

@@ -23,9 +23,8 @@ func TestMCP(t *testing.T) {
 
 				toolsRequest := mcp.ListToolsRequest{}
 				resp, err := xEnv.MCPClient.ListTools(xEnv.Context, toolsRequest)
-				if err != nil {
-					t.Errorf("ListTools failed: %v", err)
-				}
+				require.NoError(t, err)
+				require.NotNil(t, resp)
 
 				require.Contains(t, resp.Tools, mcp.Tool{
 					Name:        "list_operations",
@@ -40,7 +39,7 @@ func TestMCP(t *testing.T) {
 
 				require.Contains(t, resp.Tools, mcp.Tool{
 					Name:        "get_operation_info",
-					Description: "Retrieve detailed metadata and execution instructions for a specific GraphQL operation by its name. Use this function to gather all necessary information required to execute the operation using execute_<operation_name>.",
+					Description: "Retrieve comprehensive metadata and execution details for a specific GraphQL operation by its name. Use this to collect all required information needed to execute the operation via execute_<operation_name>.",
 					InputSchema: mcp.ToolInputSchema{
 						Type:       "object",
 						Properties: map[string]interface{}{"operationName": map[string]interface{}{"description": "The exact name of the GraphQL operation to retrieve information for.", "type": "string"}},
@@ -60,12 +59,10 @@ func TestMCP(t *testing.T) {
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 
-				// Test ListTools
 				toolsRequest := mcp.ListToolsRequest{}
 				resp, err := xEnv.MCPClient.ListTools(xEnv.Context, toolsRequest)
-				if err != nil {
-					t.Errorf("ListTools failed: %v", err)
-				}
+				require.NoError(t, err)
+				require.NotNil(t, resp)
 
 				// Verify get_schema tool with proper schema
 				require.Contains(t, resp.Tools, mcp.Tool{
@@ -128,7 +125,7 @@ func TestMCP(t *testing.T) {
 				require.Contains(t, resp.Tools, mcp.Tool{
 					Name:        "execute_update_mood",
 					Description: "Executes the GraphQL operation 'UpdateMood' of type mutation. This mutation update the mood of an employee.",
-					InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"employeeID": map[string]interface{}{"type": "integer"}, "mood": map[string]interface{}{"enum": []interface{}{"HAPPY", "SAD", "APATHETIC"}, "type": "string"}},
+					InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"employeeID": map[string]interface{}{"type": "integer"}, "mood": map[string]interface{}{"enum": []interface{}{"HAPPY", "SAD"}, "type": "string"}},
 						Required: []string{"employeeID", "mood"}},
 					RawInputSchema: json.RawMessage(nil)},
 				)
