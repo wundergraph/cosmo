@@ -613,7 +613,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		otel.WgOperationType.String(operationKit.parsedOperation.Type),
 	}
 
-	// Add the batched operation index even if we error out later
+	// Add the batched operation index even if we error out later test
 	var batchedOperationIndex string
 	if opIndex, ok := req.Context().Value(BatchedOperationId{}).(string); ok {
 		batchedOperationIndex = opIndex
