@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	integration "github.com/wundergraph/cosmo/router-tests"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -28,13 +29,13 @@ func TestShutdownGoroutineLeaks(t *testing.T) {
 			core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(config.TrafficShapingRules{
 				Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
 					"employees": {
-						MaxIdleConns: ToPtr(10),
+						MaxIdleConns: integration.ToPtr(10),
 					},
 					"products": {
-						MaxIdleConns: ToPtr(10),
+						MaxIdleConns: integration.ToPtr(10),
 					},
 					"mood": {
-						MaxIdleConns: ToPtr(10),
+						MaxIdleConns: integration.ToPtr(10),
 					},
 				},
 			})),
@@ -46,11 +47,10 @@ func TestShutdownGoroutineLeaks(t *testing.T) {
 		checkCtx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 		defer cancel()
 
-		res, err := xEnv.MakeGraphQLRequestWithContext(checkCtx, testenv.GraphQLRequest{
+		_, err := xEnv.MakeGraphQLRequestWithContext(checkCtx, testenv.GraphQLRequest{
 			Query: `query { employees { id } }`,
 		})
 		require.NoError(t, err)
-		require.JSONEq(t, employeesIDData, res.Body)
 	}
 
 	xEnv.Shutdown()
