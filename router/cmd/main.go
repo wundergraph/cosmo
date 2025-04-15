@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -18,6 +17,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/profile"
+	"github.com/wundergraph/cosmo/router/pkg/supervisor"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
 
 	"go.uber.org/zap"
@@ -80,14 +80,9 @@ func Main() {
 		log.Fatalf("Could not load config: %s", err)
 	}
 
-	logLevel, err := logging.ZapLogLevelFromString(result.Config.LogLevel)
-	if err != nil {
-		log.Fatalf("Could not parse log level: %s", err)
-	}
+	logLevelAtomic := zap.NewAtomicLevelAt(result.Config.LogLevel)
 
-	logLevelAtomic := zap.NewAtomicLevelAt(logLevel)
-
-	logger := logging.New(!result.Config.JSONLog, result.Config.DevelopmentMode, logLevelAtomic).
+	baseLogger := logging.New(!result.Config.JSONLog, result.Config.DevelopmentMode, logLevelAtomic).
 		With(
 			zap.String("service", "@wundergraph/router"),
 			zap.String("service_version", core.Version),
@@ -95,67 +90,107 @@ func Main() {
 
 	// Start pprof server if address is provided
 	if *pprofListenAddr != "" {
-		pprofSvr := profile.NewServer(*pprofListenAddr, logger)
+		pprofSvr := profile.NewServer(*pprofListenAddr, baseLogger)
 		defer pprofSvr.Close()
 		go pprofSvr.Listen()
 	}
 
 	// Start profiling if flags are set
-	profiler := profile.Start(logger, *cpuProfilePath, *memProfilePath)
+	profiler := profile.Start(baseLogger, *cpuProfilePath, *memProfilePath)
 	defer profiler.Finish()
 
-	// Handling shutdown
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt,
-		syscall.SIGTERM, // default for kill
-		syscall.SIGKILL,
-		syscall.SIGQUIT, // ctrl + \
-		syscall.SIGINT,  // ctrl+c
-	)
-	defer stop()
+	sl := baseLogger.With(zap.String("component", "supervisor"))
 
-	if result.DefaultLoaded {
-		if configPath == config.DefaultConfigPath {
-			logger.Info("Found default config file. Values in the config file have higher priority than environment variables",
-				zap.String("config_file", config.DefaultConfigPath),
-			)
-		} else {
-			logger.Info(
-				"Config file path provided. Values in the config file have higher priority than environment variables",
-				zap.String("config_file", configPath),
-			)
-		}
+	rs := supervisor.NewRouterSupervisor(&supervisor.RouterSupervisorOpts{
+		Logger: sl,
+
+		LifecycleHooks: &supervisor.LifecycleHooks{
+			LoadResources: func(rr *supervisor.RouterResources) error {
+				result, err := config.LoadConfig(configPath)
+				if err != nil {
+					return fmt.Errorf("could not load config: %w", err)
+				}
+
+				if result.DefaultLoaded {
+					if configPath == config.DefaultConfigPath {
+						sl.Info("Found default config file. Values in the config file have higher priority than environment variables",
+							zap.String("config_file", config.DefaultConfigPath),
+						)
+					} else {
+						sl.Info(
+							"Config file path provided. Values in the config file have higher priority than environment variables",
+							zap.String("config_file", configPath),
+						)
+					}
+				}
+
+				rr.Config = &result.Config
+				rr.Logger = baseLogger
+
+				logLevelAtomic.SetLevel(rr.Config.LogLevel)
+
+				return nil
+			},
+		},
+	})
+
+	// Handling shutdown signals
+	{
+		killChan := make(chan os.Signal, 1)
+
+		signal.Notify(killChan, os.Interrupt,
+			syscall.SIGTERM, // default for kill
+			syscall.SIGQUIT, // ctrl + \
+			syscall.SIGINT,  // ctrl+c
+		)
+
+		go func() {
+			<-killChan
+			rs.Stop()
+		}()
 	}
 
-	reloadChan := make(chan os.Signal, 1)
+	// Handling reload signal
+	{
+		reloadChan := make(chan os.Signal, 1)
 
-	signal.Notify(reloadChan, syscall.SIGHUP)
+		signal.Notify(reloadChan, os.Interrupt,
+			syscall.SIGHUP,
+		)
+
+		go func() {
+			<-reloadChan
+			rs.Reload()
+		}()
+	}
 
 	// Setup config file watcher if enabled
 	if result.Config.WatchConfig.Enabled {
+		ll := baseLogger.With(zap.String("watcher_label", "router_config"))
+
 		startupDelay := 0 * time.Second
 
 		// Apply startup delay if configured
 		if result.Config.WatchConfig.StartupDelay.Enabled {
 			startupDelay = timex.RandomDuration(result.Config.WatchConfig.StartupDelay.Maximum)
 
-			logger.Info("Using startup delay before initializing config watcher",
+			ll.Info("Using startup delay before initializing config watcher",
 				zap.Duration("delay", startupDelay),
 			)
 		}
 
 		watchFunc, err := watcher.New(watcher.Options{
 			Interval: result.Config.WatchConfig.Interval,
-			Logger:   logger.With(zap.String("watcher_label", "router_config")),
+			Logger:   ll,
 			Path:     configPath,
 			Callback: func() {
-				logger.Debug("Configuration changed, triggering reload")
+				ll.Debug("Configuration changed, triggering reload")
 
-				// Just a hack to make channel code simpler
-				reloadChan <- syscall.SIGHUP
+				rs.Reload()
 			},
 		})
 		if err != nil {
-			logger.Error("Could not create watcher", zap.Error(err))
+			baseLogger.Error("Could not create watcher", zap.Error(err))
 			return
 		}
 
@@ -169,85 +204,21 @@ func Main() {
 
 			if err := watchFunc(watcherCtx); err != nil {
 				if err != context.Canceled {
-					logger.Error("Error watching execution config", zap.Error(err))
+					ll.Error("Error watching execution config", zap.Error(err))
 				}
 			}
 		}()
 
-		logger.Info("Watching router config file",
+		ll.Info("Watching router config file",
 			zap.String("config_file", configPath),
 			zap.Duration("watch_interval", result.Config.WatchConfig.Interval),
 		)
 	} else {
-		logger.Info("Config file watching is disabled, you can still trigger reloads by sending SIGHUP to the router process")
+		baseLogger.Info("Config file watching is disabled, you can still trigger reloads by sending SIGHUP to the router process")
 	}
 
-	// Start the router
-	for {
-		logger.Debug("Starting router")
-
-		// Provide a way to cancel all running components of the router after graceful shutdown
-		// Don't use the parent context that is canceled by the signal handler
-		routerCtx, routerCancel := context.WithCancel(context.Background())
-		defer routerCancel()
-
-		// TODO: Test if this actually allows router failure and recovery
-		router, err := NewRouter(routerCtx, Params{
-			Config: &result.Config,
-			Logger: logger,
-		})
-		if err != nil {
-			logger.Error("Could not create router", zap.Error(err))
-		}
-
-		if err = router.Start(routerCtx); err != nil {
-			logger.Error("Could not start router", zap.Error(err))
-		}
-
-		shutdown := false
-
-		select {
-		case <-ctx.Done():
-			logger.Info("Graceful shutdown of router initiated", zap.String("shutdown_delay", result.Config.ShutdownDelay.String()))
-			shutdown = true
-		case <-reloadChan:
-			logger.Info("Reload channel triggered")
-		}
-
-		// Enforce a maximum shutdown delay to avoid waiting forever
-		// Don't use the parent context that is canceled by the signal handler
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), result.Config.ShutdownDelay)
-		defer cancel()
-
-		if err = router.Shutdown(shutdownCtx); err != nil {
-			if errors.Is(err, context.DeadlineExceeded) {
-				logger.Warn("Router shutdown deadline exceeded. Consider increasing the shutdown delay")
-			}
-			logger.Error("Could not shutdown router gracefully", zap.Error(err))
-		} else {
-			logger.Info("Router shutdown successfully")
-		}
-
-		if shutdown {
-			logger.Debug("Router exiting")
-			return
-		}
-
-		newConfig, err := config.LoadConfig(configPath)
-		if err != nil {
-			logger.Error("Could not load config", zap.Error(err))
-			continue
-		}
-
-		result = newConfig
-
-		logLevel, err := logging.ZapLogLevelFromString(result.Config.LogLevel)
-		if err != nil {
-			logger.Error("Could not parse log level", zap.Error(err))
-			continue
-		}
-
-		// Update the log level atom
-		logLevelAtomic.SetLevel(logLevel)
+	// Start the router supervisor (blocking)
+	if err := rs.Start(); err != nil {
+		baseLogger.Error("Error starting supervisor", zap.Error(err))
 	}
 }

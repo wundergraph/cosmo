@@ -1,4 +1,4 @@
-package cmd
+package supervisor
 
 import (
 	"context"
@@ -24,10 +24,10 @@ type Params struct {
 	Logger *zap.Logger
 }
 
-// NewRouter creates a new router instance.
+// newRouter creates a new router instance.
 //
 // additionalOptions can be used to override default options or options provided in the config.
-func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Option) (*core.Router, error) {
+func newRouter(ctx context.Context, params Params, additionalOptions ...core.Option) (*core.Router, error) {
 	// Automatically set GOMAXPROCS to avoid CPU throttling on containerized environments
 	_, err := maxprocs.Set(maxprocs.Logger(params.Logger.Sugar().Debugf))
 	if err != nil {
