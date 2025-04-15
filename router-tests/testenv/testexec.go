@@ -44,6 +44,14 @@ func RunRouterBinary(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Envir
 	return nil
 }
 
+func (e *Environment) GetRouterProcessCwd() string {
+	return e.routerCmd.Dir
+}
+
+func (e *Environment) SignalRouterProcess(sig os.Signal) error {
+	return e.routerCmd.Process.Signal(sig)
+}
+
 // BuildRouter runs `make build` inside the router directory and fails the test on error.
 func buildRouterBin(t *testing.T, ctx context.Context) {
 	t.Helper()
