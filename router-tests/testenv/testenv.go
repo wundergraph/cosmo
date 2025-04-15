@@ -696,7 +696,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		}
 
 		// Create MCP client connecting to the MCP server
-		mcpAddr = fmt.Sprintf("http://localhost:%d/sse", mcpPort)
+		mcpAddr = fmt.Sprintf("http://localhost:%d/mcp", mcpPort)
 		client, err := mcpclient.NewSSEMCPClient(mcpAddr)
 		if err != nil {
 			t.Fatalf("Failed to create MCP client: %v", err)

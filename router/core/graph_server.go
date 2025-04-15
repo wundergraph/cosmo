@@ -1164,7 +1164,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 		// If storage provider ID is set, resolve it to a directory path
 		if s.MCP.Storage.ProviderID != "" {
-			s.logger.Info("Resolving storage provider for MCP operations",
+			s.logger.Debug("Resolving storage provider for MCP operations",
 				zap.String("provider_id", s.MCP.Storage.ProviderID))
 
 			// Find the provider in storage_providers
@@ -1173,7 +1173,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			// Check for file_system providers
 			for _, provider := range s.storageProviders.FileSystem {
 				if provider.ID == s.MCP.Storage.ProviderID {
-					s.logger.Info("Found file_system storage provider for MCP",
+					s.logger.Debug("Found file_system storage provider for MCP",
 						zap.String("id", provider.ID),
 						zap.String("path", provider.Path))
 

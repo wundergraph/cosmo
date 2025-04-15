@@ -319,6 +319,7 @@ func (s *GraphQLSchemaServer) ServeSSE() (*server.SSEServer, *http.Server, error
 	sseServer := server.NewSSEServer(s.server,
 		server.WithBaseURL(fmt.Sprintf("http://%s", listenAddr)),
 		server.WithHTTPServer(httpServer),
+		server.WithSSEEndpoint("/mcp"),
 		server.WithSSEContextFunc(authFromRequest),
 	)
 

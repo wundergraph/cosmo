@@ -13,6 +13,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/hasura/go-graphql-client v0.12.2
+	github.com/mark3labs/mcp-go v0.20.1
 	github.com/nats-io/nats.go v1.35.0
 	github.com/ory/dockertest/v3 v3.11.0
 	github.com/prometheus/client_golang v1.19.1
@@ -91,7 +92,6 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/logrusorgru/aurora/v4 v4.0.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
-	github.com/mark3labs/mcp-go v0.20.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
