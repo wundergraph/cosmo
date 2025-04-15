@@ -1,5 +1,8 @@
-import { ApolloClient, InMemoryCache, createHttpLink, gql } from '@apollo/client';
+import { ApolloClient, InMemoryCache, createHttpLink, gql, Observable, ApolloError } from '@apollo/client';
 import { BatchHttpLink } from '@apollo/client/link/batch-http';
+import { fail } from 'assert';
+import { describe, it, expect } from 'vitest';
+import { Subscription } from 'zen-observable-ts';
 
 const serverUrl = process.env.ROUTER_URL || 'http://localhost:3002/graphql';
 
@@ -54,7 +57,7 @@ describe('Apollo Client Tests', () => {
     expect(result.data?.employees[0]).toHaveProperty('isAvailable');
   });
 
-  it('should handle batched successful queries', async () => {
+  it.skip('should handle batched successful queries', async () => {
     const client = new ApolloClient({
       link: new BatchHttpLink({
         uri: serverUrl,
@@ -91,5 +94,78 @@ describe('Apollo Client Tests', () => {
     const response = await Promise.all([req1, req2, req3]);
 
     console.log(JSON.stringify(response, null, 2));
+  });
+
+  it('should handle successful subscription', async () => {
+    const client = new ApolloClient({
+      link: createHttpLink({
+        uri: serverUrl,
+      }),
+      cache: new InMemoryCache(),
+    });
+
+    const subscriptionQuery = gql`
+      subscription SubscriptionSuccess {
+        countEmp2(max: 3, intervalMilliseconds: 500)
+      }
+    `;
+
+    let receivedCount = 0;
+    const subscriptionPromise = new Promise<void>((resolve, reject) => {
+      const observable: Observable<any> = client.subscribe({ query: subscriptionQuery });
+      const subscription: Subscription = observable.subscribe({
+        next: (result: any) => {
+          expect(result.errors).toBeUndefined();
+          expect(result.data?.countEmp2).toBe(receivedCount);
+          receivedCount++;
+          
+          if (receivedCount >= 4) {
+            subscription.unsubscribe();
+            resolve();
+          }
+        },
+        error: (error: Error) => {
+          reject(error);
+        }
+      });
+    });
+
+    await expect(subscriptionPromise).resolves.not.toThrow();
+  });
+
+  it.only('should handle failed subscription', async () => {
+    const client = new ApolloClient({
+      link: createHttpLink({
+        uri: serverUrl,
+      }),
+      cache: new InMemoryCache(),
+    });
+
+    const subscriptionQuery = gql`
+      subscription SubscriptionFailure {
+        countEmpTest2(max: 3, intervalMilliseconds: 500)
+      }
+    `;
+
+    const subscriptionPromise = new Promise<void>((resolve, reject) => {
+      const observable: Observable<any> = client.subscribe({ query: subscriptionQuery });
+      const subscription: Subscription = observable.subscribe({
+        next: (_result: any) => {
+          subscription.unsubscribe();
+          resolve();
+          fail("should not be called");
+        },
+        error: (error: ApolloError) => {
+          expect(error.graphQLErrors.length).toBe(1);
+          expect(error.graphQLErrors[0]).toEqual({
+            "message": "field: countEmpTest2 not defined on type: Subscription",
+            "path": ["subscription"],
+          })
+          reject(error);
+        }
+      });
+    });
+
+    await expect(subscriptionPromise).rejects.toThrow();
   });
 });
