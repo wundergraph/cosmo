@@ -1545,18 +1545,6 @@ type WebSocketMessage struct {
 	Payload json.RawMessage `json:"payload,omitempty"`
 }
 
-func (t *WebSocketMessage) UnmarshalJSON(data []byte) error {
-	err := json.Unmarshal(data, (*struct {
-		ID      string          `json:"id,omitempty"`
-		Type    string          `json:"type"`
-		Payload json.RawMessage `json:"payload,omitempty"`
-	})(t))
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal WebSocketMessage: %w (data: %s)", err, string(data))
-	}
-	return nil
-}
-
 type GraphQLResponse struct {
 	Data   json.RawMessage `json:"data,omitempty"`
 	Errors []GraphQLError  `json:"errors,omitempty"`
@@ -1624,8 +1612,14 @@ func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, query u
 	})
 	require.NoError(e.t, err)
 	var ack WebSocketMessage
-	err = conn.ReadJSON(&ack)
-	require.NoError(e.t, err)
+	_, payload, err := conn.ReadMessage()
+	if err != nil {
+		require.NoError(e.t, err)
+	}
+	if err := json.Unmarshal(payload, &ack); err != nil {
+		e.t.Logf("Failed to decode WebSocket message. Raw payload: %s", string(payload))
+		require.NoError(e.t, err)
+	}
 	require.Equal(e.t, "connection_ack", ack.Type)
 	return conn
 }
@@ -1986,7 +1980,14 @@ func WSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
 			return err
 		}
 
-		err = conn.ReadJSON(v)
+		_, payload, err := conn.ReadMessage()
+		if err != nil {
+			require.NoError(t, err)
+		}
+		if err := json.Unmarshal(payload, &v); err != nil {
+			t.Logf("Failed to decode WebSocket message. Raw payload: %s", string(payload))
+			require.NoError(t, err)
+		}
 
 		// Reset the deadline to prevent future operations from timing out
 		if resetErr := conn.SetReadDeadline(time.Time{}); resetErr != nil {
