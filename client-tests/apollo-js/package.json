@@ -4,7 +4,7 @@
   "description": "Apollo Client tests for GraphQL",
   "main": "index.js",
   "scripts": {
-    "test": "vitest",
+    "test": "vitest run",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage"
   },

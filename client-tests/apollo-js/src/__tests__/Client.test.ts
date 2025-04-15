@@ -57,7 +57,7 @@ describe('Apollo Client Tests', () => {
     expect(result.data?.employees[0]).toHaveProperty('isAvailable');
   });
 
-  it.skip('should handle batched successful queries', async () => {
+  it('should handle batched successful queries', async () => {
     const client = new ApolloClient({
       link: new BatchHttpLink({
         uri: serverUrl,
@@ -133,7 +133,7 @@ describe('Apollo Client Tests', () => {
     await expect(subscriptionPromise).resolves.not.toThrow();
   });
 
-  it.only('should handle failed subscription', async () => {
+  it('should handle failed subscription', async () => {
     const client = new ApolloClient({
       link: createHttpLink({
         uri: serverUrl,
