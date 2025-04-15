@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.39.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.38.1...@wundergraph/composition@0.39.0) (2025-04-15)
+
+### Features
+
+* track subgraph names for unions and scalars ([#1788](https://github.com/wundergraph/cosmo/issues/1788)) ([de8ae0c](https://github.com/wundergraph/cosmo/commit/de8ae0cfcbdfc296cbfc54448a540c4613fcb632)) (@thisisnithin)
+
 ## [0.38.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.38.0...@wundergraph/composition@0.38.1) (2025-03-28)
 
 ### Bug Fixes
