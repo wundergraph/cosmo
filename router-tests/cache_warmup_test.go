@@ -863,6 +863,7 @@ func TestCacheWarmup(t *testing.T) {
 								otel.WgRouterClusterName.String(""),
 								otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()),
 								otel.WgRouterVersion.String("dev"),
+								otel.WgFeatureFlag.String(""),
 							),
 							Count: 1,
 						},
