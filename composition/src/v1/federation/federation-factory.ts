@@ -1128,6 +1128,7 @@ export class FederationFactory {
             kind: sourceData.kind,
             name: stringToNameNode(sourceData.name),
           },
+          subgraphNames: new Set(sourceData.subgraphNames),
         };
       }
       case Kind.UNION_TYPE_DEFINITION: {
@@ -1139,6 +1140,7 @@ export class FederationFactory {
             name: stringToNameNode(sourceData.name),
           },
           memberByMemberTypeName: new Map(sourceData.memberByMemberTypeName),
+          subgraphNames: new Set(sourceData.subgraphNames),
         };
       }
     }
@@ -1261,9 +1263,11 @@ export class FederationFactory {
           return;
         }
         addMapEntries(incomingData.memberByMemberTypeName, targetData.memberByMemberTypeName);
+        addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
         return;
       default:
         // Scalar
+        addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
         return;
     }
   }

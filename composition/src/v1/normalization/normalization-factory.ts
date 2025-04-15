@@ -1383,6 +1383,7 @@ export class NormalizationFactory {
       }
       this.setParentDataExtensionType(parentData, extensionType);
       parentData.description ||= formatDescription('description' in node ? node.description : undefined);
+      parentData.subgraphNames.add(this.subgraphName);
       this.extractConfigureDescriptionsData(parentData);
       return;
     }
@@ -1394,6 +1395,7 @@ export class NormalizationFactory {
       name: typeName,
       node: getMutableScalarNode(node.name),
       persistedDirectivesData: newPersistedDirectivesData(),
+      subgraphNames: new Set([this.subgraphName]),
       description: formatDescription('description' in node ? node.description : undefined),
     };
     this.extractConfigureDescriptionsData(newParentData);
@@ -1455,6 +1457,7 @@ export class NormalizationFactory {
       this.setParentDataExtensionType(parentData, extensionType);
       this.extractUnionMembers(node, parentData.memberByMemberTypeName);
       parentData.description ||= formatDescription('description' in node ? node.description : undefined);
+      parentData.subgraphNames.add(this.subgraphName);
       this.extractConfigureDescriptionsData(parentData);
       return;
     }
@@ -1467,6 +1470,7 @@ export class NormalizationFactory {
       name: typeName,
       node: getMutableUnionNode(node.name),
       persistedDirectivesData: newPersistedDirectivesData(),
+      subgraphNames: new Set([this.subgraphName]),
       description: formatDescription('description' in node ? node.description : undefined),
     };
     this.extractConfigureDescriptionsData(newParentData);

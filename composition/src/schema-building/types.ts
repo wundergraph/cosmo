@@ -203,6 +203,7 @@ export type ScalarDefinitionData = {
   name: string;
   node: MutableScalarNode;
   persistedDirectivesData: PersistedDirectivesData;
+  subgraphNames: Set<string>;
   description?: StringValueNode;
 };
 
@@ -223,6 +224,7 @@ export type UnionDefinitionData = {
   memberByMemberTypeName: Map<string, NamedTypeNode>;
   node: MutableUnionNode;
   persistedDirectivesData: PersistedDirectivesData;
+  subgraphNames: Set<string>;
   description?: StringValueNode;
 };
 
