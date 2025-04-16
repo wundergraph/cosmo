@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.113.0](https://github.com/wundergraph/cosmo/compare/studio@0.112.0...studio@0.113.0) (2025-04-16)
+
+### Features
+
+* add webhook proposal state update functionality ([#1794](https://github.com/wundergraph/cosmo/issues/1794)) ([c5e1059](https://github.com/wundergraph/cosmo/commit/c5e10594087d93f63c8adeeedbc9fc3a9bb35198)) (@JivusAyrus)
+
 # [0.112.0](https://github.com/wundergraph/cosmo/compare/studio@0.111.2...studio@0.112.0) (2025-04-15)
 
 ### Features

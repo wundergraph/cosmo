@@ -496,7 +496,7 @@ export function updateProposal(
         operationUsageStats,
         lintingSkipped: !namespace.enableLinting,
         graphPruningSkipped: !namespace.enableGraphPruning,
-        checkUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/graph/$federatedGraphName/checks/${checkId}`,
+        checkUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/graph/${federatedGraph.name}/checks/${checkId}`,
       };
     } else {
       return {
