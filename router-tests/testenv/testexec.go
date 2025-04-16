@@ -29,6 +29,10 @@ var (
 func RunRouterBinary(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) error {
 	t.Helper()
 
+	if testing.Short() {
+		t.Skip("router binary tests are slow due to compilation time")
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
