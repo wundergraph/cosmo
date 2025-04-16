@@ -871,8 +871,8 @@ export class SubgraphRepository {
           or(
             // This is to fetch the checks based on the new schema
             inArray(
-              schema.schemaCheckSubgraphs.subgraphName,
-              selectedSubgraphs.map(({ name }) => name),
+              schema.schemaCheckSubgraphs.subgraphId,
+              selectedSubgraphs.map(({ id }) => id),
             ),
             // This is to fetch the checks based on the old schema
             inArray(
@@ -904,6 +904,10 @@ export class SubgraphRepository {
         lintSkipped: schemaChecks.lintSkipped,
         graphPruningSkipped: schemaChecks.graphPruningSkipped,
         vcsContext: schemaChecks.vcsContext,
+        proposalMatch: schemaChecks.proposalMatch,
+        compositionSkipped: schemaChecks.compositionSkipped,
+        breakingChangesSkipped: schemaChecks.breakingChangesSkipped,
+        errorMessage: schemaChecks.errorMessage,
       })
       .from(schemaChecks)
       .where(
@@ -951,6 +955,10 @@ export class SubgraphRepository {
           lintSkipped: c.lintSkipped ?? false,
           graphPruningSkipped: c.graphPruningSkipped ?? false,
           checkedSubgraphs,
+          proposalMatch: c.proposalMatch || undefined,
+          compositionSkipped: c.compositionSkipped ?? false,
+          breakingChangesSkipped: c.breakingChangesSkipped ?? false,
+          errorMessage: c.errorMessage || undefined,
         };
       }),
     );
@@ -990,8 +998,8 @@ export class SubgraphRepository {
         or(
           // This is to fetch the checks based on the new schema
           inArray(
-            schema.schemaCheckSubgraphs.subgraphName,
-            subgraphs.map(({ name }) => name),
+            schema.schemaCheckSubgraphs.subgraphId,
+            subgraphs.map(({ id }) => id),
           ),
           // This is to fetch the checks based on the old schema
           inArray(
@@ -1006,8 +1014,8 @@ export class SubgraphRepository {
       conditions = and(
         or(
           inArray(
-            schema.schemaCheckSubgraphs.subgraphName,
-            subgraphs.map(({ name }) => name),
+            schema.schemaCheckSubgraphs.subgraphId,
+            subgraphs.map(({ id }) => id),
           ),
           inArray(
             schemaChecks.targetId,
@@ -1090,6 +1098,10 @@ export class SubgraphRepository {
           }
         : undefined,
       checkedSubgraphs,
+      proposalMatch: check.proposalMatch || undefined,
+      compositionSkipped: check.compositionSkipped ?? false,
+      breakingChangesSkipped: check.breakingChangesSkipped ?? false,
+      errorMessage: check.errorMessage || undefined,
     };
   }
 
@@ -1268,6 +1280,23 @@ export class SubgraphRepository {
       schema: latestValidVersion[0].schemaSDL,
       schemaVersionId: latestValidVersion[0].schemaVersionId,
     };
+  }
+
+  public async getSDLBySchemaVersionId(data: { schemaVersionId: string }) {
+    const latestValidVersion = await this.db
+      .select({
+        schemaSDL: schemaVersion.schemaSDL,
+      })
+      .from(schemaVersion)
+      .innerJoin(targets, eq(schemaVersion.targetId, targets.id))
+      .where(and(eq(targets.organizationId, this.organizationId), eq(schemaVersion.id, data.schemaVersionId)))
+      .execute();
+
+    if (latestValidVersion.length === 0) {
+      return undefined;
+    }
+
+    return latestValidVersion[0].schemaSDL;
   }
 
   public async getAccessibleSubgraphs(userId: string): Promise<SubgraphDTO[]> {

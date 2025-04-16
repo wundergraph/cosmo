@@ -2707,7 +2707,84 @@ func TestFlakyAccessLogs(t *testing.T) {
 				},
 			)
 		})
-		
+
+	})
+
+	t.Run("verify batching operation id is printed", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t,
+			&testenv.Config{
+				BatchingConfig: config.BatchingConfig{
+					Enabled:            true,
+					MaxConcurrency:     10,
+					MaxEntriesPerBatch: 100,
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			},
+			func(t *testing.T, xEnv *testenv.Environment) {
+				queries := []testenv.GraphQLRequest{
+					{
+						Query: `query employees { employees { id } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+				}
+				res, err := xEnv.MakeGraphQLBatchedRequestRequest(queries, nil)
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, res.Response.StatusCode)
+
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+				require.Len(t, requestLogAll, len(queries))
+
+				batchedIds := make([]string, 0)
+				for i := 0; i < len(queries); i++ {
+					if actual, ok := requestLogAll[i].ContextMap()["batched_request_operation_id"].(string); ok {
+						batchedIds = append(batchedIds, actual)
+					}
+				}
+
+				expectedBatchIds := []string{
+					"batch-operation-0",
+					"batch-operation-1",
+					"batch-operation-2",
+				}
+
+				require.ElementsMatch(t, expectedBatchIds, batchedIds)
+			},
+		)
+	})
+	t.Run("verify batching operation id is not printed for normal requests", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t,
+			&testenv.Config{
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			},
+			func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query employee { employee(id: "7") { id } }`,
+				})
+
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+
+				batchOperationId, ok := requestLogAll[0].ContextMap()["batched_request_operation_id"].(string)
+				assert.False(t, ok)
+				assert.Empty(t, batchOperationId)
+			},
+		)
 	})
 
 }

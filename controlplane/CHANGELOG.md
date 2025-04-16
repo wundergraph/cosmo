@@ -4,6 +4,32 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.135.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.134.0...controlplane@0.135.0) (2025-04-15)
+
+### Features
+
+* implement proposals in cosmo ([#1727](https://github.com/wundergraph/cosmo/issues/1727)) ([1d36747](https://github.com/wundergraph/cosmo/commit/1d36747dda3f2f3c491092f0f02cefa22fc9c131)) (@JivusAyrus)
+
+# [0.134.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.133.6...controlplane@0.134.0) (2025-04-15)
+
+### Features
+
+* query batching ([#1749](https://github.com/wundergraph/cosmo/issues/1749)) ([b2a1d52](https://github.com/wundergraph/cosmo/commit/b2a1d523b6de9e7a6854e93464c47d6bbe1de06f)) (@SkArchon)
+
+## [0.133.6](https://github.com/wundergraph/cosmo/compare/controlplane@0.133.5...controlplane@0.133.6) (2025-04-15)
+
+### Bug Fixes
+
+* filter of checks ([#1792](https://github.com/wundergraph/cosmo/issues/1792)) ([ff172a1](https://github.com/wundergraph/cosmo/commit/ff172a11b0e538b3cc1996cdc14a09469f52cd45)) (@JivusAyrus)
+
+## [0.133.5](https://github.com/wundergraph/cosmo/compare/controlplane@0.133.4...controlplane@0.133.5) (2025-04-15)
+
+**Note:** Version bump only for package controlplane
+
+## [0.133.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.133.3...controlplane@0.133.4) (2025-04-14)
+
+**Note:** Version bump only for package controlplane
+
 ## [0.133.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.133.2...controlplane@0.133.3) (2025-04-11)
 
 ### Bug Fixes
