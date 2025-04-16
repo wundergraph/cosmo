@@ -1268,9 +1268,6 @@ func (e *concSafeErrorJoiner) Append(err error) {
 }
 
 func (e *concSafeErrorJoiner) ErrOrNil() error {
-	if len(e.errs) == 0 {
-		return nil
-	}
 	return errors.Join(e.errs...)
 }
 
