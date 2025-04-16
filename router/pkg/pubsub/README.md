@@ -30,6 +30,8 @@ The Adapter contains the logic that is actually calling the provider, usually it
 type AdapterInterface interface {
 	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error
 	Publish(ctx context.Context, event PublishEventConfiguration) error
+	Startup(ctx context.Context) error
+	Shutdown(ctx context.Context) error
 }
 ```
 
@@ -70,3 +72,16 @@ To complete the `PubSubDataSource` implementation you should also add the engine
 So you have to implement the SubscriptionDataSource, a structure that implements all the methods needed by the interface `resolve.SubscriptionDataSource`, like the [kafka implementation](./kafka/engine_datasource.go).
 
 And also, you have to implement the DataSource, a structure that implements all the methods needed by the interface `resolve.DataSource`, like `PublishDataSource` in the [kafka implementation](./kafka/pubsub_datasource.go).
+
+## How to use the new PubSub Provider
+
+After you have implemented all the above, you can use your PubSub Provider by adding the following to your router config:
+
+```yaml
+pubsub:
+  providers:
+    - name: provider-name
+      type: new-provider
+```
+
+But to use it in the schema you will have to work in the [composition](../../../composition) folder.
