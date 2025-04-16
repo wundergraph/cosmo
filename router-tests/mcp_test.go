@@ -28,7 +28,7 @@ func TestMCP(t *testing.T) {
 
 				require.Contains(t, resp.Tools, mcp.Tool{
 					Name:        "get_operation_info",
-					Description: "Retrieve comprehensive metadata and execution details for a specific GraphQL operation by its name. Use this to collect all required information needed to execute the operation via execute_operation_<operation_name>.",
+					Description: "Retrieve information about a specific GraphQL operation by name. It provides all the necessary details to understand how to execute the operation in a GraphQL request against the cosmo router. This is useful for custom app integration.",
 					InputSchema: mcp.ToolInputSchema{
 						Type:       "object",
 						Properties: map[string]interface{}{"operationName": map[string]interface{}{"description": "The exact name of the GraphQL operation to retrieve information for.", "type": "string"}},

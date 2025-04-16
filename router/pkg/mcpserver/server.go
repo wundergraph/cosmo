@@ -373,7 +373,7 @@ func (s *GraphQLSchemaServer) registerTools() {
 	s.server.AddTool(
 		mcp.NewTool(
 			"get_operation_info",
-			mcp.WithDescription("Retrieve comprehensive metadata and execution details for a specific GraphQL operation by its name. Use this to collect all required information needed to execute the operation via execute_operation_<operation_name>."),
+			mcp.WithDescription("Retrieve information about a specific GraphQL operation by name. It provides all the necessary details to understand how to execute the operation in a GraphQL request against the cosmo router. This is useful for custom app integration."),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title: "Get GraphQL Operation Info",
 			}),
