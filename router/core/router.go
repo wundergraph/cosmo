@@ -10,10 +10,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"sync"
 	"time"
 
 	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
+	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 
 	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
@@ -213,6 +215,7 @@ type (
 		accessController                *AccessController
 		retryOptions                    retrytransport.RetryOptions
 		redisClient                     rd.RDCloser
+		mcpServer                       *mcpserver.GraphQLSchemaServer
 		processStartTime                time.Time
 		developmentMode                 bool
 		healthcheck                     health.Checker
@@ -243,7 +246,7 @@ type (
 		cacheWarmup                *config.CacheWarmupConfiguration
 		multipartHeartbeatInterval time.Duration
 		hostName                   string
-		MCP                        config.MCPConfiguration
+		mcp                        config.MCPConfiguration
 	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
@@ -881,7 +884,76 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to create redis client: %w", err)
 		}
+	}
 
+	// We support MCP only on the base graph
+	if r.mcp.Enabled {
+		var operationsDir string
+
+		// If storage provider ID is set, resolve it to a directory path
+		if r.mcp.Storage.ProviderID != "" {
+			r.logger.Debug("Resolving storage provider for MCP operations",
+				zap.String("provider_id", r.mcp.Storage.ProviderID))
+
+			// Find the provider in storage_providers
+			found := false
+
+			// Check for file_system providers
+			for _, provider := range r.storageProviders.FileSystem {
+				if provider.ID == r.mcp.Storage.ProviderID {
+					r.logger.Debug("Found file_system storage provider for MCP",
+						zap.String("id", provider.ID),
+						zap.String("path", provider.Path))
+
+					// Use the resolved file system path
+					operationsDir = provider.Path
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				return fmt.Errorf("storage provider with id '%s' for mcp server not found", r.mcp.Storage.ProviderID)
+			}
+		}
+
+		// Initialize the MCP server with the resolved operations directory
+		mcpOpts := []func(*mcpserver.Options){
+			mcpserver.WithGraphName(r.mcp.GraphName),
+			mcpserver.WithOperationsDir(operationsDir),
+			mcpserver.WithPort(r.mcp.Server.Port),
+			mcpserver.WithLogger(r.logger),
+			mcpserver.WithExcludeMutations(r.mcp.ExcludeMutations),
+			mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
+			mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
+		}
+
+		mcpss, err := mcpserver.NewGraphQLSchemaServer(
+			path.Join(r.listenAddr, r.graphqlPath),
+			mcpOpts...,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to create mcp server: %w", err)
+		}
+
+		err = mcpss.Start()
+		if err != nil {
+			return fmt.Errorf("failed to start MCP server: %w", err)
+		}
+
+		r.mcpServer = mcpss
+
+		logFields := []zap.Field{
+			zap.Int("port", r.mcp.Server.Port),
+			zap.String("operations_dir", operationsDir),
+			zap.String("graph_name", r.mcp.GraphName),
+			zap.Bool("exclude_mutations", r.mcp.ExcludeMutations),
+			zap.String("storage_provider_id", r.mcp.Storage.ProviderID),
+			zap.Bool("enable_arbitrary_operations", r.mcp.EnableArbitraryOperations),
+			zap.Bool("expose_schema", r.mcp.ExposeSchema),
+		}
+
+		r.logger.Info("MCP server started", logFields...)
 	}
 
 	if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
@@ -1300,6 +1372,12 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 				err = errors.Join(err, fmt.Errorf("failed to shutdown prometheus server: %w", subErr))
 			}
 		}()
+	}
+
+	if r.mcpServer != nil {
+		if aErr := r.mcpServer.Stop(ctx); aErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to shutdown mcp server: %w", aErr))
+		}
 	}
 
 	if r.tracerProvider != nil {
@@ -1886,7 +1964,7 @@ func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 
 func WithMCP(cfg config.MCPConfiguration) Option {
 	return func(r *Router) {
-		r.MCP = cfg
+		r.mcp = cfg
 	}
 }
 

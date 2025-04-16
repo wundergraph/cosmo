@@ -99,6 +99,7 @@ type GraphQLSchemaServer struct {
 	exposeSchema              bool
 	operationsManager         *OperationsManager
 	schemaCompiler            *SchemaCompiler
+	registeredTools           []string
 }
 
 type graphqlRequest struct {
@@ -164,15 +165,22 @@ type LLMGuidance struct {
 	ExecutionTips  []string `json:"executionTips"`
 }
 
+// GraphQLError represents an error returned in a GraphQL response
+type GraphQLError struct {
+	Message string `json:"message"`
+}
+
+// GraphQLResponse represents a GraphQL response structure
+type GraphQLResponse struct {
+	Errors []GraphQLError  `json:"errors"`
+	Data   json.RawMessage `json:"data"`
+}
+
 // NewGraphQLSchemaServer creates a new GraphQL schema server
-func NewGraphQLSchemaServer(routerGraphQLEndpoint string, schema *ast.Document, opts ...func(*Options)) (*GraphQLSchemaServer, error) {
+func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)) (*GraphQLSchemaServer, error) {
 
 	if routerGraphQLEndpoint == "" {
 		return nil, fmt.Errorf("routerGraphQLEndpoint cannot be empty")
-	}
-
-	if schema == nil {
-		return nil, fmt.Errorf("schema cannot be nil")
 	}
 
 	if !strings.Contains(routerGraphQLEndpoint, "://") {
@@ -212,9 +220,6 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, schema *ast.Document, 
 	httpClient := retryClient.StandardClient()
 	httpClient.Timeout = 60 * time.Second
 
-	schemaCompiler := NewSchemaCompiler(options.Logger)
-	operationsManager := NewOperationsManager(schema, options.Logger, options.ExcludeMutations)
-
 	gs := &GraphQLSchemaServer{
 		server:                    mcpServer,
 		graphName:                 options.GraphName,
@@ -227,8 +232,6 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, schema *ast.Document, 
 		excludeMutations:          options.ExcludeMutations,
 		enableArbitraryOperations: options.EnableArbitraryOperations,
 		exposeSchema:              options.ExposeSchema,
-		operationsManager:         operationsManager,
-		schemaCompiler:            schemaCompiler,
 	}
 
 	return gs, nil
@@ -295,16 +298,6 @@ func WithExposeSchema(exposeSchema bool) func(*Options) {
 	}
 }
 
-// LoadOperations loads operations from the configured operations directory
-func (s *GraphQLSchemaServer) LoadOperations() error {
-	return s.operationsManager.LoadOperationsFromDirectory(s.operationsDir)
-}
-
-// LoadOperationsFromDirectory loads operations from a specified directory
-func (s *GraphQLSchemaServer) LoadOperationsFromDirectory(operationsDir string) error {
-	return s.operationsManager.LoadOperationsFromDirectory(operationsDir)
-}
-
 // ServeSSE starts the server with SSE transport
 func (s *GraphQLSchemaServer) ServeSSE() (*server.SSEServer, *http.Server, error) {
 	listenAddr := "localhost:" + strconv.Itoa(s.port)
@@ -337,20 +330,33 @@ func (s *GraphQLSchemaServer) ServeSSE() (*server.SSEServer, *http.Server, error
 // Start loads operations and starts the server
 func (s *GraphQLSchemaServer) Start() error {
 
-	if err := s.LoadOperations(); err != nil {
-		return fmt.Errorf("failed to load operations: %w", err)
-	}
-
 	sseServer, httpServer, err := s.ServeSSE()
 	if err != nil {
 		return fmt.Errorf("failed to create SSE server: %w", err)
 	}
 
-	// Store server references for Stop method
 	s.sseServer = sseServer
 	s.httpServer = httpServer
 
-	// Register tools
+	return nil
+}
+
+// Reload reloads the operations and schema
+func (s *GraphQLSchemaServer) Reload(schema *ast.Document) error {
+
+	if s.server == nil {
+		return fmt.Errorf("server is not started")
+	}
+
+	s.schemaCompiler = NewSchemaCompiler(s.logger)
+	s.operationsManager = NewOperationsManager(schema, s.logger, s.excludeMutations)
+
+	if err := s.operationsManager.LoadOperationsFromDirectory(s.operationsDir); err != nil {
+		return fmt.Errorf("failed to load operations: %w", err)
+	}
+
+	s.server.DeleteTools(s.registeredTools...)
+
 	s.registerTools()
 
 	return nil
@@ -368,9 +374,8 @@ func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
 	shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	// Shutdown the HTTP server
-	if err := s.httpServer.Shutdown(shutdownCtx); err != nil {
-		return fmt.Errorf("failed to gracefully shutdown MCP server: %w", err)
+	if err := s.sseServer.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("failed to gracefully shutdown SSE server: %w", err)
 	}
 
 	return nil
@@ -378,21 +383,27 @@ func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
 
 // registerTools registers all tools for the MCP server
 func (s *GraphQLSchemaServer) registerTools() {
-	// TODO: Support tool annotations when available in MCP Go SDK
-
 	// Add a tool to list all available operations (names and descriptions only)
 	s.server.AddTool(
 		mcp.NewTool(
 			"list_operations",
 			mcp.WithDescription("Lists all available GraphQL operations."),
+			mcp.WithToolAnnotation(mcp.ToolAnnotation{
+				Title: "List GraphQL Operations",
+			}),
 		),
 		s.handleListGraphQLOperations(),
 	)
+
+	s.registeredTools = []string{"list_operations"}
 
 	s.server.AddTool(
 		mcp.NewTool(
 			"get_operation_info",
 			mcp.WithDescription("Retrieve comprehensive metadata and execution details for a specific GraphQL operation by its name. Use this to collect all required information needed to execute the operation via execute_<operation_name>."),
+			mcp.WithToolAnnotation(mcp.ToolAnnotation{
+				Title: "Get GraphQL Operation Info",
+			}),
 			mcp.WithString("operationName",
 				mcp.Required(),
 				mcp.Description("The exact name of the GraphQL operation to retrieve information for."),
@@ -401,15 +412,22 @@ func (s *GraphQLSchemaServer) registerTools() {
 		s.handleGraphQLOperationInfo(),
 	)
 
+	s.registeredTools = append(s.registeredTools, "get_operation_info")
+
 	// Only register the schema tool if exposeSchema is enabled
 	if s.exposeSchema {
 		s.server.AddTool(
 			mcp.NewTool(
 				"get_schema",
 				mcp.WithDescription("Use this function to obtain the full introspection-based schema of the GraphQL API. This is useful for understanding the structure, available types, queries, mutations, and overall capabilities of the API."),
+				mcp.WithToolAnnotation(mcp.ToolAnnotation{
+					Title: "Get GraphQL Schema",
+				}),
 			),
 			s.handleGetGraphQLSchema(),
 		)
+
+		s.registeredTools = append(s.registeredTools, "get_schema")
 	}
 
 	// Only register the execute_graphql tool if enableArbitraryOperations is enabled
@@ -433,14 +451,23 @@ func (s *GraphQLSchemaServer) registerTools() {
 			"required": ["query"]
 		}`)
 
+		tool := mcp.NewToolWithRawSchema(
+			"execute",
+			"Executes a GraphQL query or mutation.",
+			executeGraphQLSchema,
+		)
+
+		tool.Annotations = mcp.ToolAnnotation{
+			Title:         "Execute GraphQL Query",
+			OpenWorldHint: true,
+		}
+
 		s.server.AddTool(
-			mcp.NewToolWithRawSchema(
-				"execute",
-				"Executes a GraphQL query or mutation.",
-				executeGraphQLSchema,
-			),
+			tool,
 			s.handleExecuteGraphQL(),
 		)
+
+		s.registeredTools = append(s.registeredTools, "execute")
 	}
 
 	// Get operations filtered by the excludeMutations setting
@@ -466,8 +493,8 @@ func (s *GraphQLSchemaServer) registerTools() {
 			compiledSchema: compiledSchema,
 		}
 
-		// Convert operation name to snake_case for consistent tool naming
-		toolName := strcase.ToSnake(op.Name)
+		// Convert the operation name to snake_case for consistent tool naming
+		operationToolName := strcase.ToSnake(op.Name)
 
 		var toolDescription string
 
@@ -477,21 +504,33 @@ func (s *GraphQLSchemaServer) registerTools() {
 			toolDescription = fmt.Sprintf("Executes the GraphQL operation '%s' of type %s.", op.Name, op.OperationType)
 		}
 
+		toolName := fmt.Sprintf("execute_%s", operationToolName)
+		tool := mcp.NewToolWithRawSchema(
+			toolName,
+			toolDescription,
+			op.JSONSchema,
+		)
+
+		tool.Annotations = mcp.ToolAnnotation{
+			IdempotentHint: op.OperationType != "mutation",
+			Title:          op.Name,
+			ReadOnlyHint:   op.OperationType == "query",
+			OpenWorldHint:  true,
+		}
+
 		s.server.AddTool(
-			mcp.NewToolWithRawSchema(
-				fmt.Sprintf("execute_%s", toolName),
-				toolDescription,
-				op.JSONSchema,
-			),
+			tool,
 			s.handleOperation(handler),
 		)
+
+		s.registeredTools = append(s.registeredTools, toolName)
 	}
 }
 
 // handleOperation handles a specific operation
 func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		// Parse the JSON input that was generated by the client from the operation input schema
+
 		jsonBytes, err := json.Marshal(request.Params.Arguments)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal arguments: %w", err)
@@ -500,8 +539,7 @@ func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ct
 		// Validate the JSON input against the pre-compiled schema derived from the operation input type
 		if handler.compiledSchema != nil {
 			if err := s.schemaCompiler.ValidateInput(jsonBytes, handler.compiledSchema); err != nil {
-				s.logger.Debug("validation failed", zap.Error(err))
-				return nil, err
+				return mcp.NewToolResultErrorFromErr("Input validation Error", err), nil
 			}
 		}
 
@@ -631,6 +669,29 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// Parse the GraphQL response
+	var graphqlResponse GraphQLResponse
+
+	if err := json.Unmarshal(body, &graphqlResponse); err == nil && len(graphqlResponse.Errors) > 0 {
+		// Concatenate all error messages
+		var errorMessages []string
+		for _, gqlErr := range graphqlResponse.Errors {
+			errorMessages = append(errorMessages, gqlErr.Message)
+		}
+
+		errorMessage := strings.Join(errorMessages, "; ")
+
+		// If there are errors but no data, return only the errors
+		if graphqlResponse.Data == nil || len(graphqlResponse.Data) == 0 || string(graphqlResponse.Data) == "null" {
+			return mcp.NewToolResultErrorFromErr("Response Error", err), nil
+		}
+
+		// If we have both errors and data, include data in the error message
+		dataString := string(graphqlResponse.Data)
+		combinedErrorMsg := fmt.Sprintf("Response error with partial success, Error: %s, Data: %s)", errorMessage, dataString)
+		return mcp.NewToolResultErrorFromErr(combinedErrorMsg, err), nil
 	}
 
 	return mcp.NewToolResultText(string(body)), nil

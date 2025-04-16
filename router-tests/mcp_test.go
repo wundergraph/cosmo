@@ -31,11 +31,11 @@ func TestMCP(t *testing.T) {
 					Description: "Lists all available GraphQL operations.",
 					InputSchema: mcp.ToolInputSchema{
 						Type:       "object",
-						Properties: make(map[string]interface{}),
-						Required:   nil,
+						Properties: map[string]interface{}(nil), Required: []string(nil),
 					},
-				},
-				)
+					RawInputSchema: json.RawMessage(nil),
+					Annotations:    mcp.ToolAnnotation{},
+				})
 
 				require.Contains(t, resp.Tools, mcp.Tool{
 					Name:        "get_operation_info",
@@ -66,12 +66,16 @@ func TestMCP(t *testing.T) {
 
 				// Verify get_schema tool with proper schema
 				require.Contains(t, resp.Tools, mcp.Tool{
-					Name:        "get_schema",
-					Description: "Use this function to obtain the full introspection-based schema of the GraphQL API. This is useful for understanding the structure, available types, queries, mutations, and overall capabilities of the API.",
-					InputSchema: mcp.ToolInputSchema{
-						Type:       "object",
-						Properties: make(map[string]interface{}),
-						Required:   nil,
+					Name:           "get_schema",
+					Description:    "Use this function to obtain the full introspection-based schema of the GraphQL API. This is useful for understanding the structure, available types, queries, mutations, and overall capabilities of the API.",
+					InputSchema:    mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}(nil), Required: []string(nil)},
+					RawInputSchema: json.RawMessage(nil),
+					Annotations: mcp.ToolAnnotation{
+						Title:           "",
+						ReadOnlyHint:    false,
+						DestructiveHint: false,
+						IdempotentHint:  false,
+						OpenWorldHint:   false,
 					},
 				})
 
@@ -118,8 +122,9 @@ func TestMCP(t *testing.T) {
 					Description: "Executes the GraphQL operation 'MyEmployees' of type query. This is a GraphQL query that retrieves a list of employees.",
 					InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"criteria": map[string]interface{}{"additionalProperties": false, "description": "Allows to filter employees by their details.", "nullable": false, "properties": map[string]interface{}{"hasPets": map[string]interface{}{"nullable": true, "type": "boolean"}, "nationality": map[string]interface{}{"enum": []interface{}{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN"}, "nullable": true, "type": "string"}, "nested": map[string]interface{}{"additionalProperties": false, "nullable": true, "properties": map[string]interface{}{"hasChildren": map[string]interface{}{"nullable": true, "type": "boolean"}, "maritalStatus": map[string]interface{}{"enum": []interface{}{"ENGAGED", "MARRIED"}, "nullable": true, "type": "string"}}, "type": "object"}}, "type": "object"}},
 						Required: []string(nil)},
-					RawInputSchema: json.RawMessage(nil)},
-				)
+					RawInputSchema: json.RawMessage(nil),
+					Annotations:    mcp.ToolAnnotation{},
+				})
 
 				// Verify UpdateMood operation
 				require.Contains(t, resp.Tools, mcp.Tool{
@@ -228,10 +233,14 @@ func TestMCP(t *testing.T) {
 					}
 
 					resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
-					assert.Error(t, err)
-					assert.Nil(t, resp)
+					assert.NoError(t, err)
+					assert.True(t, resp.IsError)
 
-					assert.Equal(t, "validation error: at '/criteria': got null, want object", err.Error())
+					content, ok := resp.Content[0].(mcp.TextContent)
+					assert.True(t, ok)
+
+					assert.Equal(t, content.Type, "text")
+					assert.Equal(t, content.Text, "Input validation Error: validation error: at '/criteria': got null, want object")
 				})
 			})
 		})

@@ -1168,7 +1168,7 @@ type Environment struct {
 	KafkaClient           *kgo.Client
 	logObserver           *observer.ObservedLogs
 	getPubSubName         func(name string) string
-	MCPClient             *mcpclient.SSEMCPClient
+	MCPClient             *mcpclient.Client
 
 	shutdownDelay       time.Duration
 	extraURLQueryValues url.Values

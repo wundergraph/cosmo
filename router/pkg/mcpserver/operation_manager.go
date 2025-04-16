@@ -13,7 +13,6 @@ type OperationsManager struct {
 	schemaDoc        *ast.Document
 	operations       []schemaloader.Operation
 	logger           *zap.Logger
-	schemaCompiler   *SchemaCompiler
 	excludeMutations bool
 }
 
@@ -26,7 +25,6 @@ func NewOperationsManager(schemaDoc *ast.Document, logger *zap.Logger, excludeMu
 	return &OperationsManager{
 		schemaDoc:        schemaDoc,
 		logger:           logger,
-		schemaCompiler:   NewSchemaCompiler(logger),
 		excludeMutations: excludeMutations,
 	}
 }
