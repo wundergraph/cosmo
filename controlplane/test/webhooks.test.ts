@@ -353,10 +353,218 @@ describe('Webhooks', (ctx) => {
             },
           },
         },
+        {
+          eventName: OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED,
+          meta: {
+            case: 'monographSchemaUpdated',
+            value: {
+              graphIds: [],
+            },
+          },
+        },
+        {
+          eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+          meta: {
+            case: 'proposalStateUpdated',
+            value: {
+              graphIds: [],
+            },
+          },
+        },
       ],
     });
 
     expect(updateAliceWebhook.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+
+    await server.close();
+  });
+
+  test('Should be able to create a webhook for proposal state updates', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const fedGraphName = genID('fedGraph');
+
+    const createFedGraphRes = await client.createFederatedGraph({
+      name: fedGraphName,
+      namespace: 'default',
+      routingUrl: 'http://localhost:8081',
+    });
+
+    expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+    const graph = await client.getFederatedGraphByName({
+      name: fedGraphName,
+      namespace: 'default',
+    });
+
+    if (!graph.graph) {
+      throw new Error('Graph could not be found');
+    }
+
+    expect(graph.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph.graph?.name).toBe(fedGraphName);
+
+    const createWebhook = await client.createOrganizationWebhookConfig({
+      endpoint: 'http://localhost:8081',
+      events: [OrganizationEventName[OrganizationEventName.PROPOSAL_STATE_UPDATED]],
+      eventsMeta: [
+        {
+          eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+          meta: {
+            case: 'proposalStateUpdated',
+            value: {
+              graphIds: [graph?.graph?.id],
+            },
+          },
+        },
+      ],
+    });
+
+    expect(createWebhook.response?.code).toBe(EnumStatusCode.OK);
+
+    // Retrieve all webhook configurations to verify the webhook was created
+    const getWebhooksRes = await client.getOrganizationWebhookConfigs({});
+
+    expect(getWebhooksRes.response?.code).toBe(EnumStatusCode.OK);
+    expect(getWebhooksRes.configs.length).toBe(1);
+    expect(getWebhooksRes.configs[0].events).toContain(
+      OrganizationEventName[OrganizationEventName.PROPOSAL_STATE_UPDATED],
+    );
+    expect(getWebhooksRes.configs[0].endpoint).toBe('http://localhost:8081');
+
+    // Now get the metadata for this webhook to verify the proposal state updated event
+    const getWebhookMetaRes = await client.getOrganizationWebhookMeta({
+      id: createWebhook.webhookConfigId,
+    });
+
+    expect(getWebhookMetaRes.response?.code).toBe(EnumStatusCode.OK);
+
+    // Verify the metadata contains our proposal state updated event
+    const proposalEvent = getWebhookMetaRes.eventsMeta?.find(
+      (event) => event.eventName === OrganizationEventName.PROPOSAL_STATE_UPDATED,
+    );
+
+    expect(proposalEvent).toBeDefined();
+    expect(proposalEvent?.meta.case).toBe('proposalStateUpdated');
+    expect(proposalEvent?.meta.value?.graphIds).toContain(graph.graph.id);
+
+    await server.close();
+  });
+
+  test('Should be able to update a webhook to include proposal state update events', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const fedGraphName = genID('fedGraph');
+
+    const createFedGraphRes = await client.createFederatedGraph({
+      name: fedGraphName,
+      namespace: 'default',
+      routingUrl: 'http://localhost:8081',
+    });
+
+    expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+    const graph = await client.getFederatedGraphByName({
+      name: fedGraphName,
+      namespace: 'default',
+    });
+
+    if (!graph.graph) {
+      throw new Error('Graph could not be found');
+    }
+
+    expect(graph.response?.code).toBe(EnumStatusCode.OK);
+    expect(graph.graph?.name).toBe(fedGraphName);
+
+    // First create a webhook for schema updates
+    const createWebhook = await client.createOrganizationWebhookConfig({
+      endpoint: 'http://localhost:8081',
+      events: [OrganizationEventName[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED]],
+      eventsMeta: [
+        {
+          eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+          meta: {
+            case: 'federatedGraphSchemaUpdated',
+            value: {
+              graphIds: [graph?.graph?.id],
+            },
+          },
+        },
+      ],
+    });
+
+    expect(createWebhook.response?.code).toBe(EnumStatusCode.OK);
+
+    // Now update the webhook to include proposal state updates
+    const updateWebhook = await client.updateOrganizationWebhookConfig({
+      id: createWebhook.webhookConfigId,
+      endpoint: 'http://localhost:8081',
+      events: [
+        OrganizationEventName[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED],
+        OrganizationEventName[OrganizationEventName.PROPOSAL_STATE_UPDATED],
+      ],
+      eventsMeta: [
+        {
+          eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+          meta: {
+            case: 'federatedGraphSchemaUpdated',
+            value: {
+              graphIds: [graph?.graph?.id],
+            },
+          },
+        },
+        {
+          eventName: OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED,
+          meta: {
+            case: 'monographSchemaUpdated',
+            value: {
+              graphIds: [],
+            },
+          },
+        },
+        {
+          eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+          meta: {
+            case: 'proposalStateUpdated',
+            value: {
+              graphIds: [graph?.graph?.id],
+            },
+          },
+        },
+      ],
+    });
+
+    expect(updateWebhook.response?.code).toBe(EnumStatusCode.OK);
+
+    // Retrieve all webhook configurations to verify the webhook was created
+    const getWebhooksRes = await client.getOrganizationWebhookConfigs({});
+    expect(getWebhooksRes.response?.code).toBe(EnumStatusCode.OK);
+    expect(getWebhooksRes.configs.length).toBe(1);
+
+    // Verify the updated webhook metadata includes both events
+    const getWebhookMetaRes = await client.getOrganizationWebhookMeta({
+      id: createWebhook.webhookConfigId,
+    });
+
+    expect(getWebhookMetaRes.response?.code).toBe(EnumStatusCode.OK);
+
+    // Check for the schema updated event
+    const schemaEvent = getWebhookMetaRes.eventsMeta?.find(
+      (event) => event.eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
+    );
+
+    expect(schemaEvent).toBeDefined();
+    expect(schemaEvent?.meta.case).toBe('federatedGraphSchemaUpdated');
+    expect(schemaEvent?.meta.value?.graphIds).toContain(graph.graph.id);
+
+    // Check for the proposal state updated event
+    const proposalEvent = getWebhookMetaRes.eventsMeta?.find(
+      (event) => event.eventName === OrganizationEventName.PROPOSAL_STATE_UPDATED,
+    );
+
+    expect(proposalEvent).toBeDefined();
+    expect(proposalEvent?.meta.case).toBe('proposalStateUpdated');
+    expect(proposalEvent?.meta.value?.graphIds).toContain(graph.graph.id);
 
     await server.close();
   });

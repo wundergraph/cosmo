@@ -1,0 +1,3 @@
+subscription SubscriptionFailure {
+    countEmpTest2(max: 4, intervalMilliseconds: 3000)
+}
