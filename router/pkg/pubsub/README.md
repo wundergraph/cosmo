@@ -73,7 +73,7 @@ So you have to implement the SubscriptionDataSource, a structure that implements
 
 And also, you have to implement the DataSource, a structure that implements all the methods needed by the interface `resolve.DataSource`, like `PublishDataSource` in the [kafka implementation](./kafka/pubsub_datasource.go).
 
-## How to use the new PubSub Provider
+# How to use the new PubSub Provider
 
 After you have implemented all the above, you can use your PubSub Provider by adding the following to your router config:
 
