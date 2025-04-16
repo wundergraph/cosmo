@@ -512,11 +512,6 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			}
 		}
 	} else if srv.persistedOperationsConfig.Safelist.Enabled || srv.persistedOperationsConfig.LogUnknown {
-		// THIS IS A BUG!! Tests in router-tests/safelist_test.go rely on the buggy functionality
-		// and maybe code related to safelist feature does as well. This doesn't get executed if either of the above
-		// two top-level conditions are met, which is the non-emptyness of the array/config, not the presence of the
-		// condition that enables computing sha256.
-
 		// In these case, we'll want to compute the sha256 for every operation, in order to check that the operation
 		// is present in the Persisted Operation cache
 		computeSha256 = true
