@@ -29,28 +29,6 @@ func NewOperationsManager(schemaDoc *ast.Document, logger *zap.Logger, excludeMu
 	}
 }
 
-// GetSimpleOperationInfoList gets the list of operations for the list_graphql_operations tool
-func (om *OperationsManager) GetSimpleOperationInfoList() []SimpleOperationInfo {
-	operations := make([]SimpleOperationInfo, 0, len(om.operations))
-	for _, op := range om.operations {
-		hasSideEffects := op.OperationType == "mutation"
-
-		// Skip mutation operations if ExcludeMutations is enabled
-		if hasSideEffects && om.excludeMutations {
-			continue
-		}
-
-		operations = append(operations, SimpleOperationInfo{
-			Name:           op.Name,
-			Description:    op.Description,
-			OperationType:  op.OperationType,
-			HasSideEffects: hasSideEffects,
-		})
-	}
-
-	return operations
-}
-
 // LoadOperationsFromDirectory loads operations from a specified directory
 func (om *OperationsManager) LoadOperationsFromDirectory(operationsDir string) error {
 	// Load operations

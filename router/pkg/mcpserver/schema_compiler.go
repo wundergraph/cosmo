@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
@@ -36,7 +35,7 @@ func (sc *SchemaCompiler) CompileSchema(op schemaloader.Operation) (*jsonschema.
 	c := jsonschema.NewCompiler()
 
 	// Load the JSON schema from the operation
-	schema, err := jsonschema.UnmarshalJSON(io.NopCloser(bytes.NewReader(op.JSONSchema)))
+	schema, err := jsonschema.UnmarshalJSON(bytes.NewReader(op.JSONSchema))
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON schema: %w", err)
 	}

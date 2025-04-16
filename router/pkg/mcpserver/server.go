@@ -74,14 +74,6 @@ type ServerOptions struct {
 	Port int
 }
 
-// SimpleOperationInfo contains basic information about a GraphQL operation for listing.
-type SimpleOperationInfo struct {
-	Name           string `json:"name"`
-	Description    string `json:"description"`
-	OperationType  string `json:"operationType"`
-	HasSideEffects bool   `json:"hasSideEffects"`
-}
-
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
 type GraphQLSchemaServer struct {
 	server                    *server.MCPServer
@@ -133,12 +125,6 @@ type OperationsResponse struct {
 	Usage       string          `json:"usage"`
 	LLMGuidance LLMGuidance     `json:"llmGuidance"`
 	Endpoint    string          `json:"endpoint"`
-}
-
-// ListOperationsResponse is the response structure for the list_graphql_operations tool.
-type ListOperationsResponse struct {
-	Operations []SimpleOperationInfo `json:"operations"`
-	LLMNote    string                `json:"llmNote"`
 }
 
 // GraphQLOperationInfoResponse is the response structure for the graphql_operation_info tool.
@@ -383,19 +369,6 @@ func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
 
 // registerTools registers all tools for the MCP server
 func (s *GraphQLSchemaServer) registerTools() {
-	// Add a tool to list all available operations (names and descriptions only)
-	s.server.AddTool(
-		mcp.NewTool(
-			"list_operations",
-			mcp.WithDescription("Lists all available GraphQL operations."),
-			mcp.WithToolAnnotation(mcp.ToolAnnotation{
-				Title: "List GraphQL Operations",
-			}),
-		),
-		s.handleListGraphQLOperations(),
-	)
-
-	s.registeredTools = []string{"list_operations"}
 
 	s.server.AddTool(
 		mcp.NewTool(
@@ -548,26 +521,6 @@ func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ct
 	}
 }
 
-// handleListGraphQLOperations returns a handler function that provides a list of all available operations.
-func (s *GraphQLSchemaServer) handleListGraphQLOperations() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	operations := s.operationsManager.GetSimpleOperationInfoList()
-
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-
-		response := ListOperationsResponse{
-			Operations: operations,
-			LLMNote:    "This list contains operation names and descriptions. To get execution details (query, schema, instructions) for a specific operation, use the 'graphql_operation_info' tool with the exact operation's name. Operations of type 'mutation' have side effects and can modify data.",
-		}
-
-		responseJSON, err := json.Marshal(response)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal operations list: %w", err)
-		}
-
-		return mcp.NewToolResultText(string(responseJSON)), nil
-	}
-}
-
 // handleGraphQLOperationInfo returns a handler function that provides detailed info for a specific operation.
 func (s *GraphQLSchemaServer) handleGraphQLOperationInfo() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -684,7 +637,7 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 		errorMessage := strings.Join(errorMessages, "; ")
 
 		// If there are errors but no data, return only the errors
-		if graphqlResponse.Data == nil || len(graphqlResponse.Data) == 0 || string(graphqlResponse.Data) == "null" {
+		if len(graphqlResponse.Data) == 0 || string(graphqlResponse.Data) == "null" {
 			return mcp.NewToolResultErrorFromErr("Response Error", err), nil
 		}
 

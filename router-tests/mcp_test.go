@@ -27,17 +27,6 @@ func TestMCP(t *testing.T) {
 				require.NotNil(t, resp)
 
 				require.Contains(t, resp.Tools, mcp.Tool{
-					Name:        "list_operations",
-					Description: "Lists all available GraphQL operations.",
-					InputSchema: mcp.ToolInputSchema{
-						Type:       "object",
-						Properties: map[string]interface{}(nil), Required: []string(nil),
-					},
-					RawInputSchema: json.RawMessage(nil),
-					Annotations:    mcp.ToolAnnotation{},
-				})
-
-				require.Contains(t, resp.Tools, mcp.Tool{
 					Name:        "get_operation_info",
 					Description: "Retrieve comprehensive metadata and execution details for a specific GraphQL operation by its name. Use this to collect all required information needed to execute the operation via execute_operation_<operation_name>.",
 					InputSchema: mcp.ToolInputSchema{
