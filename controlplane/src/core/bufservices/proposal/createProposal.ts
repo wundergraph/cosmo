@@ -312,6 +312,7 @@ export function createProposal(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'proposal.created',
       action: 'created',
       actorId: authContext.userId,
