@@ -113,7 +113,7 @@ export const mapGraphQLType = (
         graphqlType instanceof GraphQLObjectType ? "objects" : "interfaces",
       interfaces:
         graphqlType.getInterfaces?.().map((iface) => iface.name) || [],
-      fields: Object.values(graphqlType.getFields()).map(field => maybeParseField(field.astNode)!).filter(Boolean),
+      fields: Object.values(graphqlType.getFields()).map(field => parseField(field.astNode!)),
     };
   }
 
@@ -121,7 +121,7 @@ export const mapGraphQLType = (
     return {
       ...common,
       category: "inputs",
-      fields: Object.values(graphqlType.getFields()).map(field => maybeParseField(field.astNode)!).filter(Boolean),
+      fields: Object.values(graphqlType.getFields()).map(field => parseField(field.astNode!)),
     };
   }
 
@@ -544,14 +544,6 @@ export const getGraphQLTypeAtLineNumber = (
   return null;
 };
 
-const maybeParseField = (field: ASTNode | undefined | null): ParsedGraphQLField | null => {
-  if (field?.kind !== Kind.FIELD_DEFINITION && field?.kind !== Kind.INPUT_VALUE_DEFINITION) {
-    return null;
-  }
-
-  return parseField(field);
-}
-
 const getTypeName = (ast: TypeNode): string => {
   switch (ast.kind) {
     case Kind.NAMED_TYPE:
@@ -848,7 +840,7 @@ export const getAllFields = (schema: GraphQLSchema): FieldMatch[] => {
       fields.push({
         type,
         field,
-        parsed: maybeParseField(field.astNode),
+        parsed: parseField(field.astNode!),
       });
     }
   }
@@ -928,8 +920,8 @@ export const searchSchema = (searchValue: string, schema: GraphQLSchema) => {
 
       matches["fields"].push(
         ...(matchingArgs
-          ? matchingArgs.map((argument) => ({ type, field, parsed: maybeParseField(field.astNode), argument }))
-          : [{ type, field, parsed: maybeParseField(field.astNode) }]),
+          ? matchingArgs.map((argument) => ({ type, field, parsed: parseField(field.astNode!), argument }))
+          : [{ type, field, parsed: parseField(field.astNode!) }]),
       );
     }
   }
