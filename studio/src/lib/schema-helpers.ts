@@ -621,13 +621,10 @@ export const extractDirectives = (node: ASTNode | undefined | null): ExtractedDi
   for (const directive of node.directives) {
     switch (directive.name.value) {
       case "deprecated":
+        // In case the deprecation reason isn't set, we should fall back to the default message so we
+        // properly display a reason and don't exclude the field by accident
         const deprecatedDirValues = getArgumentValues(GraphQLDeprecatedDirective, directive);
-        result.deprecationReason = (deprecatedDirValues.reason ?? "") as string;
-        if (!result.deprecationReason) {
-          // In case the deprecation reason is an empty string, we should fall back to the default message so we
-          // properly display a reason and don't exclude
-          result.deprecationReason = "No longer supported";
-        }
+        result.deprecationReason = (deprecatedDirValues.reason || "No longer supported") as string;
         break;
       case "authenticated":
         result.authenticated = true;
