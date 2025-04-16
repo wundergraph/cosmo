@@ -1,5 +1,5 @@
 {
-  "id": "f8fae6f7-44a6-4172-be35-636e9d89c0c0",
+  "id": "59df05ab-6485-4207-99aa-48bdfe2651a5",
   "prevId": "116b5e0b-d914-427c-bdc7-dc49310e00c2",
   "version": "7",
   "dialect": "postgresql",
@@ -317,12 +317,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "organization_slug": {
-          "name": "organization_slug",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "action": {
           "name": "action",
           "type": "text",
@@ -441,7 +435,21 @@
           "with": {}
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "audit_logs_organization_id_organizations_id_fk": {
+          "name": "audit_logs_organization_id_organizations_id_fk",
+          "tableFrom": "audit_logs",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
@@ -2871,6 +2879,13 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false
+        },
+        "enable_proposals": {
+          "name": "enable_proposals",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         }
       },
       "indexes": {},
@@ -3061,6 +3076,73 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "public.namespace_proposal_config": {
+      "name": "namespace_proposal_config",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "namespace_id": {
+          "name": "namespace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "check_severity_level": {
+          "name": "check_severity_level",
+          "type": "lint_severity",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "publish_severity_level": {
+          "name": "publish_severity_level",
+          "type": "lint_severity",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "namespace_proposal_config_namespace_id_namespaces_id_fk": {
+          "name": "namespace_proposal_config_namespace_id_namespaces_id_fk",
+          "tableFrom": "namespace_proposal_config",
+          "tableTo": "namespaces",
+          "columnsFrom": [
+            "namespace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "npc_namespace_id_idx": {
+          "name": "npc_namespace_id_idx",
+          "nullsNotDistinct": false,
+          "columns": [
+            "namespace_id"
+          ]
+        }
+      },
       "checkConstraints": {}
     },
     "public.namespaces": {
@@ -4379,6 +4461,331 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "public.proposal_checks": {
+      "name": "proposal_checks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "schema_check_id": {
+          "name": "schema_check_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "proposal_id": {
+          "name": "proposal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "pc_check_id_proposal_id_idx": {
+          "name": "pc_check_id_proposal_id_idx",
+          "columns": [
+            {
+              "expression": "schema_check_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "proposal_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "proposal_checks_schema_check_id_schema_checks_id_fk": {
+          "name": "proposal_checks_schema_check_id_schema_checks_id_fk",
+          "tableFrom": "proposal_checks",
+          "tableTo": "schema_checks",
+          "columnsFrom": [
+            "schema_check_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "proposal_checks_proposal_id_proposals_id_fk": {
+          "name": "proposal_checks_proposal_id_proposals_id_fk",
+          "tableFrom": "proposal_checks",
+          "tableTo": "proposals",
+          "columnsFrom": [
+            "proposal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "public.proposal_subgraphs": {
+      "name": "proposal_subgraphs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "proposal_id": {
+          "name": "proposal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subgraph_id": {
+          "name": "subgraph_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "subgraph_name": {
+          "name": "subgraph_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "schema_sdl": {
+          "name": "schema_sdl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_deleted": {
+          "name": "is_deleted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "is_new": {
+          "name": "is_new",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_published": {
+          "name": "is_published",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "current_schema_version_id": {
+          "name": "current_schema_version_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "labels": {
+          "name": "labels",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "proposal_subgraphs_proposal_id_proposals_id_fk": {
+          "name": "proposal_subgraphs_proposal_id_proposals_id_fk",
+          "tableFrom": "proposal_subgraphs",
+          "tableTo": "proposals",
+          "columnsFrom": [
+            "proposal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "proposal_subgraphs_subgraph_id_subgraphs_id_fk": {
+          "name": "proposal_subgraphs_subgraph_id_subgraphs_id_fk",
+          "tableFrom": "proposal_subgraphs",
+          "tableTo": "subgraphs",
+          "columnsFrom": [
+            "subgraph_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "proposal_subgraphs_current_schema_version_id_schema_versions_id_fk": {
+          "name": "proposal_subgraphs_current_schema_version_id_schema_versions_id_fk",
+          "tableFrom": "proposal_subgraphs",
+          "tableTo": "schema_versions",
+          "columnsFrom": [
+            "current_schema_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "proposal_subgraph": {
+          "name": "proposal_subgraph",
+          "nullsNotDistinct": false,
+          "columns": [
+            "proposal_id",
+            "subgraph_name"
+          ]
+        }
+      },
+      "checkConstraints": {}
+    },
+    "public.proposals": {
+      "name": "proposals",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "federated_graph_id": {
+          "name": "federated_graph_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by_id": {
+          "name": "created_by_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state": {
+          "name": "state",
+          "type": "proposal_state",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "pr_created_by_id_idx": {
+          "name": "pr_created_by_id_idx",
+          "columns": [
+            {
+              "expression": "created_by_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "proposals_federated_graph_id_federated_graphs_id_fk": {
+          "name": "proposals_federated_graph_id_federated_graphs_id_fk",
+          "tableFrom": "proposals",
+          "tableTo": "federated_graphs",
+          "columnsFrom": [
+            "federated_graph_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "proposals_created_by_id_users_id_fk": {
+          "name": "proposals_created_by_id_users_id_fk",
+          "tableFrom": "proposals",
+          "tableTo": "users",
+          "columnsFrom": [
+            "created_by_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "federated_graph_proposal_name": {
+          "name": "federated_graph_proposal_name",
+          "nullsNotDistinct": false,
+          "columns": [
+            "federated_graph_id",
+            "name"
+          ]
+        }
+      },
+      "checkConstraints": {}
+    },
     "public.schema_check_change_action": {
       "name": "schema_check_change_action",
       "schema": "",
@@ -5082,6 +5489,109 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "public.schema_check_proposal_match": {
+      "name": "schema_check_proposal_match",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "schema_check_id": {
+          "name": "schema_check_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "proposal_id": {
+          "name": "proposal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "proposal_match": {
+          "name": "proposal_match",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "scpm_schema_check_id_idx": {
+          "name": "scpm_schema_check_id_idx",
+          "columns": [
+            {
+              "expression": "schema_check_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "scpm_proposal_id_idx": {
+          "name": "scpm_proposal_id_idx",
+          "columns": [
+            {
+              "expression": "proposal_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "schema_check_proposal_match_schema_check_id_schema_checks_id_fk": {
+          "name": "schema_check_proposal_match_schema_check_id_schema_checks_id_fk",
+          "tableFrom": "schema_check_proposal_match",
+          "tableTo": "schema_checks",
+          "columnsFrom": [
+            "schema_check_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "schema_check_proposal_match_proposal_id_proposals_id_fk": {
+          "name": "schema_check_proposal_match_proposal_id_proposals_id_fk",
+          "tableFrom": "schema_check_proposal_match",
+          "tableTo": "proposals",
+          "columnsFrom": [
+            "proposal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "unique_schema_check_proposal_match": {
+          "name": "unique_schema_check_proposal_match",
+          "nullsNotDistinct": false,
+          "columns": [
+            "schema_check_id",
+            "proposal_id"
+          ]
+        }
+      },
+      "checkConstraints": {}
+    },
     "public.schema_check_subgraphs": {
       "name": "schema_check_subgraphs",
       "schema": "",
@@ -5336,6 +5846,13 @@
           "notNull": false,
           "default": false
         },
+        "proposal_match": {
+          "name": "proposal_match",
+          "type": "proposal_match",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
         "client_traffic_check_skipped": {
           "name": "client_traffic_check_skipped",
           "type": "boolean",
@@ -5354,6 +5871,20 @@
           "type": "boolean",
           "primaryKey": false,
           "notNull": false
+        },
+        "composition_skipped": {
+          "name": "composition_skipped",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "breaking_changes_skipped": {
+          "name": "breaking_changes_skipped",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
         },
         "proposed_subgraph_schema_sdl": {
           "name": "proposed_subgraph_schema_sdl",
@@ -5384,6 +5915,12 @@
         "vcs_context": {
           "name": "vcs_context",
           "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error_message": {
+          "name": "error_message",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         }
@@ -6957,6 +7494,25 @@
         "pre-flight",
         "pre-operation",
         "post-operation"
+      ]
+    },
+    "public.proposal_match": {
+      "name": "proposal_match",
+      "schema": "public",
+      "values": [
+        "success",
+        "warn",
+        "error"
+      ]
+    },
+    "public.proposal_state": {
+      "name": "proposal_state",
+      "schema": "public",
+      "values": [
+        "DRAFT",
+        "APPROVED",
+        "PUBLISHED",
+        "CLOSED"
       ]
     },
     "public.schema_change_type": {

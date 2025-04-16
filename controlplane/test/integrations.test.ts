@@ -94,6 +94,13 @@ describe('Federated Graph', (ctx) => {
           },
         },
       },
+      {
+        eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+        meta: {
+          case: 'proposalStateUpdated',
+          value: { graphIds: [] },
+        },
+      },
     ];
 
     const webhookCreateRes = await client.createOrganizationWebhookConfig({

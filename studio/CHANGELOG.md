@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.113.1](https://github.com/wundergraph/cosmo/compare/studio@0.113.0...studio@0.113.1) (2025-04-16)
+
+### Bug Fixes
+
+* solve an issue where fields were marked as deprecated incorrectly for `input` and `enum` types ([#1793](https://github.com/wundergraph/cosmo/issues/1793)) ([faf8083](https://github.com/wundergraph/cosmo/commit/faf8083c6918fba81b58ebb0aa6f5af718469a4a)) (@wilsonrivera)
+
+# [0.113.0](https://github.com/wundergraph/cosmo/compare/studio@0.112.0...studio@0.113.0) (2025-04-16)
+
+### Features
+
+* add webhook proposal state update functionality ([#1794](https://github.com/wundergraph/cosmo/issues/1794)) ([c5e1059](https://github.com/wundergraph/cosmo/commit/c5e10594087d93f63c8adeeedbc9fc3a9bb35198)) (@JivusAyrus)
+
+# [0.112.0](https://github.com/wundergraph/cosmo/compare/studio@0.111.2...studio@0.112.0) (2025-04-15)
+
+### Features
+
+* implement proposals in cosmo ([#1727](https://github.com/wundergraph/cosmo/issues/1727)) ([1d36747](https://github.com/wundergraph/cosmo/commit/1d36747dda3f2f3c491092f0f02cefa22fc9c131)) (@JivusAyrus)
+
 ## [0.111.2](https://github.com/wundergraph/cosmo/compare/studio@0.111.1...studio@0.111.2) (2025-04-15)
 
 **Note:** Version bump only for package studio

@@ -26,6 +26,7 @@ import {
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
+import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 
 export function publishFederatedSubgraph(
   opts: RouterOptions,
@@ -49,6 +50,7 @@ export function publishFederatedSubgraph(
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const schemaGraphPruningRepo = new SchemaGraphPruningRepository(opts.db);
+    const proposalRepo = new ProposalRepository(opts.db);
 
     req.namespace = req.namespace || DefaultNamespace;
 
@@ -81,10 +83,12 @@ export function publishFederatedSubgraph(
     let isEventDrivenGraph = false;
     let isV2Graph: boolean | undefined;
 
+    let routerCompatibilityVersion: string | undefined;
     try {
       const federatedGraphs = subgraph
         ? await fedGraphRepo.bySubgraphLabels({ labels: subgraph.labels, namespaceId: namespace.id })
         : [];
+      routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion(federatedGraphs);
       /*
        * If there are any federated graphs for which the subgraph is a constituent, the subgraph will be validated
        * against the first router compatibility version encountered.
@@ -92,7 +96,7 @@ export function publishFederatedSubgraph(
        * compatibility version.
        */
       // Here we check if the schema is valid as a subgraph SDL
-      const result = buildSchema(subgraphSchemaSDL, true, getFederatedGraphRouterCompatibilityVersion(federatedGraphs));
+      const result = buildSchema(subgraphSchemaSDL, true, routerCompatibilityVersion);
       if (!result.success) {
         return {
           response: {
@@ -116,6 +120,46 @@ export function publishFederatedSubgraph(
         deploymentErrors: [],
         compositionWarnings: [],
       };
+    }
+
+    let proposalMatchMessage: string | undefined;
+    let matchedEntity:
+      | {
+          proposalId: string;
+          proposalSubgraphId: string;
+        }
+      | undefined;
+
+    // if the subgraph is a feature subgraph, we don't need to check for proposal matches for now.
+    if (namespace.enableProposals && !subgraph?.isFeatureSubgraph) {
+      const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
+      if (proposalConfig) {
+        const match = await proposalRepo.matchSchemaWithProposal({
+          subgraphName: req.name,
+          namespaceId: namespace.id,
+          schemaSDL: subgraphSchemaSDL,
+          routerCompatibilityVersion,
+          isDeleted: false,
+        });
+        if (!match) {
+          const message = `The subgraph ${req.name}'s schema does not match to this subgraph's schema in any approved proposal.`;
+          if (proposalConfig.publishSeverityLevel === 'warn') {
+            proposalMatchMessage = message;
+          } else {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL,
+                details: message,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+              compositionWarnings: [],
+              proposalMatchMessage: message,
+            };
+          }
+        }
+        matchedEntity = match;
+      }
     }
 
     const routingUrl = req.routingUrl || '';
@@ -153,6 +197,7 @@ export function publishFederatedSubgraph(
           compositionErrors: [],
           deploymentErrors: [],
           compositionWarnings: [],
+          proposalMatchMessage,
         };
       }
     } else {
@@ -168,6 +213,7 @@ export function publishFederatedSubgraph(
               compositionErrors: [],
               deploymentErrors: [],
               compositionWarnings: [],
+              proposalMatchMessage,
             };
           }
           baseSubgraphID = baseSubgraph.id;
@@ -180,6 +226,7 @@ export function publishFederatedSubgraph(
             compositionErrors: [],
             deploymentErrors: [],
             compositionWarnings: [],
+            proposalMatchMessage,
           };
         }
       }
@@ -194,6 +241,7 @@ export function publishFederatedSubgraph(
           compositionErrors: [],
           deploymentErrors: [],
           compositionWarnings: [],
+          proposalMatchMessage,
         };
       }
 
@@ -207,6 +255,7 @@ export function publishFederatedSubgraph(
             compositionErrors: [],
             deploymentErrors: [],
             compositionWarnings: [],
+            proposalMatchMessage,
           };
         }
         if (req.subscriptionUrl !== undefined) {
@@ -218,6 +267,7 @@ export function publishFederatedSubgraph(
             compositionErrors: [],
             deploymentErrors: [],
             compositionWarnings: [],
+            proposalMatchMessage,
           };
         }
         if (req.subscriptionProtocol !== undefined) {
@@ -229,6 +279,7 @@ export function publishFederatedSubgraph(
             compositionErrors: [],
             deploymentErrors: [],
             compositionWarnings: [],
+            proposalMatchMessage,
           };
         }
         if (req.websocketSubprotocol !== undefined) {
@@ -240,6 +291,7 @@ export function publishFederatedSubgraph(
             compositionErrors: [],
             deploymentErrors: [],
             compositionWarnings: [],
+            proposalMatchMessage,
           };
         }
       } else {
@@ -256,6 +308,7 @@ export function publishFederatedSubgraph(
             compositionErrors: [],
             deploymentErrors: [],
             compositionWarnings: [],
+            proposalMatchMessage,
           };
         }
 
@@ -268,6 +321,7 @@ export function publishFederatedSubgraph(
             compositionErrors: [],
             deploymentErrors: [],
             compositionWarnings: [],
+            proposalMatchMessage,
           };
         }
       }
@@ -281,6 +335,7 @@ export function publishFederatedSubgraph(
           compositionErrors: [],
           deploymentErrors: [],
           compositionWarnings: [],
+          proposalMatchMessage,
         };
       }
 
@@ -371,6 +426,47 @@ export function publishFederatedSubgraph(
       );
     }
 
+    // if this subgraph is part of a proposal, mark the proposal subgraph as published
+    // and if all proposal subgraphs are published, update the proposal state to PUBLISHED
+    if (matchedEntity) {
+      const { allSubgraphsPublished } = await proposalRepo.markProposalSubgraphAsPublished({
+        proposalSubgraphId: matchedEntity.proposalSubgraphId,
+        proposalId: matchedEntity.proposalId,
+      });
+      if (allSubgraphsPublished) {
+        const proposal = await proposalRepo.ById(matchedEntity.proposalId);
+        if (proposal) {
+          const federatedGraph = await fedGraphRepo.byId(proposal.proposal.federatedGraphId);
+          if (federatedGraph) {
+            orgWebhooks.send(
+              {
+                eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+                payload: {
+                  federated_graph: {
+                    id: federatedGraph.id,
+                    name: federatedGraph.name,
+                    namespace: federatedGraph.namespace,
+                  },
+                  organization: {
+                    id: authContext.organizationId,
+                    slug: authContext.organizationSlug,
+                  },
+                  proposal: {
+                    id: proposal.proposal.id,
+                    name: proposal.proposal.name,
+                    namespace: req.namespace,
+                    state: 'PUBLISHED',
+                  },
+                  actor_id: authContext.userId,
+                },
+              },
+              authContext.userId,
+            );
+          }
+        }
+      }
+    }
+
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
       organizationSlug: authContext.organizationSlug,
@@ -431,6 +527,7 @@ export function publishFederatedSubgraph(
         compositionErrors,
         compositionWarnings,
         deploymentErrors: [],
+        proposalMatchMessage,
       };
     }
 
@@ -442,6 +539,7 @@ export function publishFederatedSubgraph(
         compositionErrors: [],
         deploymentErrors,
         compositionWarnings,
+        proposalMatchMessage,
       };
     }
 
@@ -453,6 +551,7 @@ export function publishFederatedSubgraph(
       deploymentErrors: [],
       hasChanged: subgraphChanged,
       compositionWarnings,
+      proposalMatchMessage,
     };
   });
 }
