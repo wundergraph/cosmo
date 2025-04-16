@@ -39,7 +39,7 @@ func TestMCP(t *testing.T) {
 
 				require.Contains(t, resp.Tools, mcp.Tool{
 					Name:        "get_operation_info",
-					Description: "Retrieve comprehensive metadata and execution details for a specific GraphQL operation by its name. Use this to collect all required information needed to execute the operation via execute_<operation_name>.",
+					Description: "Retrieve comprehensive metadata and execution details for a specific GraphQL operation by its name. Use this to collect all required information needed to execute the operation via execute_operation_<operation_name>.",
 					InputSchema: mcp.ToolInputSchema{
 						Type:       "object",
 						Properties: map[string]interface{}{"operationName": map[string]interface{}{"description": "The exact name of the GraphQL operation to retrieve information for.", "type": "string"}},
@@ -81,7 +81,7 @@ func TestMCP(t *testing.T) {
 
 				// Verify execute tool with proper schema
 				require.Contains(t, resp.Tools, mcp.Tool{
-					Name:        "execute",
+					Name:        "execute_graphql",
 					Description: "Executes a GraphQL query or mutation.",
 					InputSchema: mcp.ToolInputSchema{
 						Type: "object",
@@ -118,7 +118,7 @@ func TestMCP(t *testing.T) {
 
 				// Verify MyEmployees operation
 				require.Contains(t, resp.Tools, mcp.Tool{
-					Name:        "execute_my_employees",
+					Name:        "execute_operation_my_employees",
 					Description: "Executes the GraphQL operation 'MyEmployees' of type query. This is a GraphQL query that retrieves a list of employees.",
 					InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"criteria": map[string]interface{}{"additionalProperties": false, "description": "Allows to filter employees by their details.", "nullable": false, "properties": map[string]interface{}{"hasPets": map[string]interface{}{"nullable": true, "type": "boolean"}, "nationality": map[string]interface{}{"enum": []interface{}{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN"}, "nullable": true, "type": "string"}, "nested": map[string]interface{}{"additionalProperties": false, "nullable": true, "properties": map[string]interface{}{"hasChildren": map[string]interface{}{"nullable": true, "type": "boolean"}, "maritalStatus": map[string]interface{}{"enum": []interface{}{"ENGAGED", "MARRIED"}, "nullable": true, "type": "string"}}, "type": "object"}}, "type": "object"}},
 						Required: []string(nil)},
@@ -128,7 +128,7 @@ func TestMCP(t *testing.T) {
 
 				// Verify UpdateMood operation
 				require.Contains(t, resp.Tools, mcp.Tool{
-					Name:        "execute_update_mood",
+					Name:        "execute_operation_update_mood",
 					Description: "Executes the GraphQL operation 'UpdateMood' of type mutation. This mutation update the mood of an employee.",
 					InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"employeeID": map[string]interface{}{"type": "integer"}, "mood": map[string]interface{}{"enum": []interface{}{"HAPPY", "SAD"}, "type": "string"}},
 						Required: []string{"employeeID", "mood"}},
@@ -152,13 +152,13 @@ func TestMCP(t *testing.T) {
 
 				found := false
 				for _, tool := range resp.Tools {
-					if tool.Name == "execute_update_mood" {
+					if tool.Name == "execute_operation_update_mood" {
 						found = true
 						break
 					}
 				}
 
-				require.False(t, found, "Tool execute_update_mood should not be found")
+				require.False(t, found, "Tool execute_operation_update_mood should not be found")
 
 			})
 		})
@@ -198,7 +198,7 @@ func TestMCP(t *testing.T) {
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 
 					req := mcp.CallToolRequest{}
-					req.Params.Name = "execute_my_employees"
+					req.Params.Name = "execute_operation_my_employees"
 					req.Params.Arguments = map[string]interface{}{
 						"criteria": map[string]interface{}{},
 					}
@@ -227,7 +227,7 @@ func TestMCP(t *testing.T) {
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 
 					req := mcp.CallToolRequest{}
-					req.Params.Name = "execute_my_employees"
+					req.Params.Name = "execute_operation_my_employees"
 					req.Params.Arguments = map[string]interface{}{
 						"criteria": nil,
 					}
@@ -254,7 +254,7 @@ func TestMCP(t *testing.T) {
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 
 					req := mcp.CallToolRequest{}
-					req.Params.Name = "execute_update_mood"
+					req.Params.Name = "execute_operation_update_mood"
 					req.Params.Arguments = map[string]interface{}{
 						"employeeID": 1,
 						"mood":       "HAPPY",
@@ -286,7 +286,7 @@ func TestMCP(t *testing.T) {
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 
 					req := mcp.CallToolRequest{}
-					req.Params.Name = "execute"
+					req.Params.Name = "execute_graphql"
 					req.Params.Arguments = map[string]interface{}{
 						"query": `
 							query {

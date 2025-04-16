@@ -400,7 +400,7 @@ func (s *GraphQLSchemaServer) registerTools() {
 	s.server.AddTool(
 		mcp.NewTool(
 			"get_operation_info",
-			mcp.WithDescription("Retrieve comprehensive metadata and execution details for a specific GraphQL operation by its name. Use this to collect all required information needed to execute the operation via execute_<operation_name>."),
+			mcp.WithDescription("Retrieve comprehensive metadata and execution details for a specific GraphQL operation by its name. Use this to collect all required information needed to execute the operation via execute_operation_<operation_name>."),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title: "Get GraphQL Operation Info",
 			}),
@@ -452,7 +452,7 @@ func (s *GraphQLSchemaServer) registerTools() {
 		}`)
 
 		tool := mcp.NewToolWithRawSchema(
-			"execute",
+			"execute_graphql",
 			"Executes a GraphQL query or mutation.",
 			executeGraphQLSchema,
 		)
@@ -467,7 +467,7 @@ func (s *GraphQLSchemaServer) registerTools() {
 			s.handleExecuteGraphQL(),
 		)
 
-		s.registeredTools = append(s.registeredTools, "execute")
+		s.registeredTools = append(s.registeredTools, "execute_graphql")
 	}
 
 	// Get operations filtered by the excludeMutations setting
@@ -504,7 +504,7 @@ func (s *GraphQLSchemaServer) registerTools() {
 			toolDescription = fmt.Sprintf("Executes the GraphQL operation '%s' of type %s.", op.Name, op.OperationType)
 		}
 
-		toolName := fmt.Sprintf("execute_%s", operationToolName)
+		toolName := fmt.Sprintf("execute_operation_%s", operationToolName)
 		tool := mcp.NewToolWithRawSchema(
 			toolName,
 			toolDescription,
@@ -596,7 +596,7 @@ func (s *GraphQLSchemaServer) handleGraphQLOperationInfo() func(ctx context.Cont
 			"Send a POST request to " + s.routerGraphQLEndpoint + " with 'Content-Type: application/json; charset=utf-8'.",
 			"The request body should follow this structure: {\"query\": \"<operation_query>\", \"variables\": <your_variables_object>}",
 			"If the operation requires no variables (schema is empty/null), send: {\"query\": \"<operation_query>\"}",
-			fmt.Sprintf("You can also execute this operation by calling the tool 'execute_%s' in the context of the session.", strcase.ToSnake(input.OperationName)),
+			fmt.Sprintf("You can also execute this operation by calling the tool 'execute_operation_%s' in the context of the session.", strcase.ToSnake(input.OperationName)),
 			"IMPORTANT: Do not modify, reformat, or manipulate the query string in any way. Use it exactly as provided.",
 		}
 
