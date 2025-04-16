@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
+	"github.com/iancoleman/strcase"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -466,7 +467,7 @@ func (s *GraphQLSchemaServer) registerTools() {
 		}
 
 		// Convert operation name to snake_case for consistent tool naming
-		toolName := toSnakeCase(op.Name)
+		toolName := strcase.ToSnake(op.Name)
 
 		var toolDescription string
 
@@ -557,7 +558,7 @@ func (s *GraphQLSchemaServer) handleGraphQLOperationInfo() func(ctx context.Cont
 			"Send a POST request to " + s.routerGraphQLEndpoint + " with 'Content-Type: application/json; charset=utf-8'.",
 			"The request body should follow this structure: {\"query\": \"<operation_query>\", \"variables\": <your_variables_object>}",
 			"If the operation requires no variables (schema is empty/null), send: {\"query\": \"<operation_query>\"}",
-			fmt.Sprintf("You can also execute this operation by calling the tool 'execute_%s' in the context of the session.", toSnakeCase(input.OperationName)),
+			fmt.Sprintf("You can also execute this operation by calling the tool 'execute_%s' in the context of the session.", strcase.ToSnake(input.OperationName)),
 			"IMPORTANT: Do not modify, reformat, or manipulate the query string in any way. Use it exactly as provided.",
 		}
 

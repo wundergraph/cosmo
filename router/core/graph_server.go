@@ -100,7 +100,6 @@ type (
 		prometheusEngineMetrics *rmetric.EngineMetrics
 		hostName                string
 		routerListenAddr        string
-		mcpServer               *mcpserver.GraphQLSchemaServer
 	}
 )
 
@@ -405,6 +404,7 @@ type graphMux struct {
 	metricStore                rmetric.Store
 	prometheusCacheMetrics     *rmetric.CacheMetrics
 	otelCacheMetrics           *rmetric.CacheMetrics
+	mcpServer                  *mcpserver.GraphQLSchemaServer
 }
 
 // buildOperationCaches creates the caches for the graph mux.
@@ -596,18 +596,23 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 	if s.planCache != nil {
 		s.planCache.Close()
 	}
+
 	if s.persistedOperationCache != nil {
 		s.persistedOperationCache.Close()
 	}
+
 	if s.normalizationCache != nil {
 		s.normalizationCache.Close()
 	}
+
 	if s.complexityCalculationCache != nil {
 		s.complexityCalculationCache.Close()
 	}
+
 	if s.validationCache != nil {
 		s.validationCache.Close()
 	}
+
 	if s.operationHashCache != nil {
 		s.operationHashCache.Close()
 	}
@@ -632,6 +637,13 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 
 	if s.metricStore != nil {
 		if aErr := s.metricStore.Shutdown(ctx); aErr != nil {
+			err = errors.Join(err, aErr)
+		}
+	}
+
+	// Shutdown the MCP server if it exists
+	if s.mcpServer != nil {
+		if aErr := s.mcpServer.Stop(ctx); aErr != nil {
 			err = errors.Join(err, aErr)
 		}
 	}
@@ -1202,7 +1214,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			}
 
 			if !found {
-				return nil, fmt.Errorf("storage provider with id %s not found", s.MCP.Storage.ProviderID)
+				return nil, fmt.Errorf("storage provider with id '%s' for mcp server not found", s.MCP.Storage.ProviderID)
 			}
 		}
 
@@ -1231,19 +1243,16 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 
 		// Store the MCP server for later shutdown
-		s.mcpServer = mcpss
+		gm.mcpServer = mcpss
 
 		logFields := []zap.Field{
 			zap.Int("port", s.MCP.Server.Port),
 			zap.String("operations_dir", operationsDir),
 			zap.String("graph_name", s.MCP.GraphName),
 			zap.Bool("exclude_mutations", s.MCP.ExcludeMutations),
+			zap.String("storage_provider_id", s.MCP.Storage.ProviderID),
 			zap.Bool("enable_arbitrary_operations", s.MCP.EnableArbitraryOperations),
 			zap.Bool("expose_schema", s.MCP.ExposeSchema),
-		}
-
-		if s.MCP.Storage.ProviderID != "" {
-			logFields = append(logFields, zap.String("storage_provider_id", s.MCP.Storage.ProviderID))
 		}
 
 		s.logger.Info("MCP server started", logFields...)
@@ -1421,13 +1430,6 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		defer cancel()
 
 		ctx = newCtx
-	}
-
-	// Shutdown the MCP server if it exists
-	if s.mcpServer != nil {
-		if err := s.mcpServer.Stop(ctx); err != nil {
-			finalErr = errors.Join(finalErr, fmt.Errorf("failed to stop MCP server: %w", err))
-		}
 	}
 
 	if s.runtimeMetrics != nil {

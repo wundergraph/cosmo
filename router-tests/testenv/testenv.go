@@ -365,7 +365,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		kafkaClient      *kgo.Client
 		natsSetup        *NatsData
 		pubSubPrefix     = strconv.FormatUint(rand.Uint64(), 16)
-		mcpClient        *mcpclient.SSEMCPClient
 	)
 
 	if cfg.EnableKafka {
@@ -686,26 +685,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.ShutdownDelay = 30 * time.Second
 	}
 
-	var mcpAddr string
-
-	if cfg.MCP.Enabled {
-
-		// Create an MCP client that connects to the router's MCP server
-		mcpPort := cfg.MCP.Server.Port
-		if mcpPort == 0 {
-			mcpPort = 5025
-		}
-
-		// Create MCP client connecting to the MCP server
-		mcpAddr = fmt.Sprintf("http://localhost:%d/mcp", mcpPort)
-		client, err := mcpclient.NewSSEMCPClient(mcpAddr)
-		if err != nil {
-			t.Fatalf("Failed to create MCP client: %v", err)
-		}
-
-		mcpClient = client
-	}
-
 	e := &Environment{
 		t:                       t,
 		cfg:                     cfg,
@@ -727,7 +706,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		logObserver:             logObserver,
 		getPubSubName:           getPubSubName,
 		metricReader:            cfg.MetricReader,
-		MCPClient:               mcpClient,
 		Servers: []*httptest.Server{
 			employeesServer,
 			familyServer,
@@ -759,6 +737,22 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	if cfg.MCP.Enabled {
+
+		// Create an MCP client that connects to the router's MCP server
+		mcpPort := cfg.MCP.Server.Port
+		if mcpPort == 0 {
+			mcpPort = 5025
+		}
+
+		// Create MCP client connecting to the MCP server
+		mcpAddr := fmt.Sprintf("http://localhost:%d/mcp", mcpPort)
+		client, err := mcpclient.NewSSEMCPClient(mcpAddr)
+		if err != nil {
+			t.Fatalf("Failed to create MCP client: %v", err)
+		}
+
+		e.MCPClient = client
+
 		err = e.WaitForMCPServer(e.Context, 1000, 10)
 		if err != nil {
 			return nil, err
