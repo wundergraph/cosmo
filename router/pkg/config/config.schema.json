@@ -1932,7 +1932,7 @@
         "graph_name": {
           "type": "string",
           "default": "cosmo",
-          "description": "The name of the graph to be used by the MCP server."
+          "description": "The name of the graph to be used as suffix for the MCP server name. The default value is 'wundergraph-cosmo-graph'."
         },
         "exclude_mutations": {
           "type": "boolean",
@@ -1942,7 +1942,7 @@
         "enable_arbitrary_operations": {
           "type": "boolean",
           "default": false,
-          "description": "Enable arbitrary GraphQL operation execution through MCP. This allows AI models to execute any valid GraphQL query, mutation, or subscription against your API, not just predefined operations."
+          "description": "Enable arbitrary GraphQL operation execution through MCP. This allows AI models to execute any valid GraphQL query, mutation. Subscriptions are not supported yet. This is a powerful feature and should be used with caution."
         },
         "expose_schema": {
           "type": "boolean",

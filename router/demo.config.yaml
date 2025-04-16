@@ -5,19 +5,6 @@
 
 version: "1"
 
-mcp:
-  enabled: true
-  server:
-    port: "5025"
-  storage:
-    provider_id: "mcp"
-  graph_name: my-graph
-
-storage_providers:
-  file_system:
-    - path: "operations"
-      id: "mcp"
-
 events:
   providers:
     nats:

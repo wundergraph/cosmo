@@ -207,7 +207,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 
 	// Create the MCP server
 	mcpServer := server.NewMCPServer(
-		"wundergraph-cosmo-"+options.GraphName,
+		"wundergraph-cosmo-"+strcase.ToKebab(options.GraphName),
 		"0.0.1",
 		// Prompt, Resources aren't supported yet in any of the popular platforms
 		server.WithToolCapabilities(true),
