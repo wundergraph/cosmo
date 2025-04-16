@@ -4,7 +4,7 @@
   "description": "Apollo Client tests for GraphQL",
   "main": "index.js",
   "scripts": {
-    "test": "vitest",
+    "test": "vitest run",
     "test:watch": "vitest watch",
     "test:coverage": "vitest run --coverage"
   },
@@ -13,7 +13,7 @@
   "license": "ISC",
   "packageManager": "pnpm@9.12.3",
   "devDependencies": {
-    "@apollo/client": "^3.13.5",
+    "@apollo/client": "^3.13.7",
     "@types/node": "^22.13.17",
     "graphql": "^15.8.0",
     "graphql-ws": "^6.0.4",
