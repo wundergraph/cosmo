@@ -119,6 +119,20 @@ export class OrganizationWebhookService {
             },
           },
         },
+        webhookProposalStateUpdate: {
+          with: {
+            federatedGraph: {
+              columns: { id: true },
+              with: {
+                target: {
+                  columns: {
+                    type: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -148,7 +162,7 @@ export class OrganizationWebhookService {
           meta = {
             case: 'proposalStateUpdated',
             value: {
-              graphIds: config.webhookGraphSchemaUpdate.map((wu) => wu.federatedGraphId),
+              graphIds: config.webhookProposalStateUpdate.map((wu) => wu.federatedGraphId),
             },
           };
           break;

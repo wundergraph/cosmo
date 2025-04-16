@@ -677,6 +677,10 @@ export class ProposalRepository {
         proposalSubgraphs: [],
       });
     }
+
+    return {
+      allSubgraphsPublished: allPublished,
+    };
   }
 
   public async getProposalByCheckId({ checkId }: { checkId: string }) {

@@ -289,10 +289,12 @@ const Webhook = ({
         <Button
           variant={mode === "create" ? "default" : "secondary"}
           size={mode === "create" ? "default" : "icon"}
-          disabled={!checkUserAccess({
-            rolesToBe: ["admin", "developer"],
-            userRoles: user?.currentOrganization.roles || [],
-          })}
+          disabled={
+            !checkUserAccess({
+              rolesToBe: ["admin", "developer"],
+              userRoles: user?.currentOrganization.roles || [],
+            })
+          }
         >
           {mode === "create" ? (
             <>

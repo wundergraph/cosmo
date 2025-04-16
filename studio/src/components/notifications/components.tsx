@@ -41,6 +41,12 @@ export const notificationEvents = [
     label: "Monograph Schema Update",
     description: "An update to the schema of any monograph",
   },
+  {
+    id: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+    name: OrganizationEventName[OrganizationEventName.PROPOSAL_STATE_UPDATED],
+    label: "Proposal State Update",
+    description: "An update to the state of a proposal",
+  },
 ] as const;
 
 export const SelectGraphs = ({
@@ -62,7 +68,9 @@ export const SelectGraphs = ({
       entry?.meta?.case !==
       (eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED
         ? "federatedGraphSchemaUpdated"
-        : "monographSchemaUpdated")
+        : eventName === OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED
+        ? "monographSchemaUpdated"
+        : "proposalStateUpdated")
     ) {
       return [];
     }
@@ -85,7 +93,9 @@ export const SelectGraphs = ({
         case:
           eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED
             ? "federatedGraphSchemaUpdated"
-            : "monographSchemaUpdated",
+            : eventName === OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED
+            ? "monographSchemaUpdated"
+            : "proposalStateUpdated",
         value: {
           graphIds: newGraphIds,
         },
@@ -169,7 +179,10 @@ export const Meta = ({
   meta: EventsMeta;
   setMeta: (meta: EventsMeta) => void;
 }) => {
-  if (id === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED) {
+  if (
+    id === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED ||
+    id === OrganizationEventName.PROPOSAL_STATE_UPDATED
+  ) {
     return (
       <SelectGraphs
         meta={meta}
