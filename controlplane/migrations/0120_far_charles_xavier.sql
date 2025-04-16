@@ -7,7 +7,7 @@ BEGIN TRANSACTION;
 
 UPDATE "public"."audit_logs" "al"
 SET "organization_slug" = "org"."slug"
-FROM "public"."organizations" "org"
+    FROM "public"."organizations" "org"
 WHERE
     "al"."organization_slug" IS NULL AND
     "org"."id" = "al"."organization_id";
