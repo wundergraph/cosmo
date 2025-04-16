@@ -3,7 +3,7 @@
 import PackageDescription
 
 let package = Package(
-  name: "TestingApi",
+  name: "ApolloSwift",
   platforms: [
     .iOS(.v12),
     .macOS(.v10_14),
@@ -11,23 +11,23 @@ let package = Package(
     .watchOS(.v5),
   ],
   products: [
-    .library(name: "TestingApi", targets: ["TestingApi"]),
+    .library(name: "ApolloSwift", targets: ["ApolloSwift"]),
   ],
   dependencies: [
     .package(url: "https://github.com/apollographql/apollo-ios", exact: "1.19.0"),
   ],
   targets: [
     .target(
-      name: "TestingApi",
+      name: "ApolloSwift",
       dependencies: [
         .product(name: "ApolloAPI", package: "apollo-ios"),
       ],
       path: "./Sources"
     ),
     .testTarget(
-      name: "TestingApiTests",
+      name: "ApolloSwiftTests",
       dependencies: [
-        "TestingApi",
+        "ApolloSwift",
         .product(name: "Apollo", package: "apollo-ios"),
       ],
       path: "./Tests"),

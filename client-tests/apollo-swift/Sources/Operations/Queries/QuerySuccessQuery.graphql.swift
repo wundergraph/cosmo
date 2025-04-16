@@ -3,20 +3,20 @@
 
 @_exported import ApolloAPI
 
-public class QueryFailureQuery: GraphQLQuery {
-  public static let operationName: String = "QueryFailure"
+public class QuerySuccessQuery: GraphQLQuery {
+  public static let operationName: String = "QuerySuccess"
   public static let operationDocument: ApolloAPI.OperationDocument = .init(
     definition: .init(
-      #"query QueryFailure { employees { __typename id isAvailable2 } }"#
+      #"query QuerySuccess { employees { __typename id isAvailable } }"#
     ))
 
   public init() {}
 
-  public struct Data: TestingApi.SelectionSet {
+  public struct Data: ApolloSwift.SelectionSet {
     public let __data: DataDict
     public init(_dataDict: DataDict) { __data = _dataDict }
 
-    public static var __parentType: any ApolloAPI.ParentType { TestingApi.Objects.Query }
+    public static var __parentType: any ApolloAPI.ParentType { ApolloSwift.Objects.Query }
     public static var __selections: [ApolloAPI.Selection] { [
       .field("employees", [Employee?]?.self),
     ] }
@@ -26,19 +26,19 @@ public class QueryFailureQuery: GraphQLQuery {
     /// Employee
     ///
     /// Parent Type: `Employee`
-    public struct Employee: TestingApi.SelectionSet {
+    public struct Employee: ApolloSwift.SelectionSet {
       public let __data: DataDict
       public init(_dataDict: DataDict) { __data = _dataDict }
 
-      public static var __parentType: any ApolloAPI.ParentType { TestingApi.Objects.Employee }
+      public static var __parentType: any ApolloAPI.ParentType { ApolloSwift.Objects.Employee }
       public static var __selections: [ApolloAPI.Selection] { [
         .field("__typename", String.self),
         .field("id", Int.self),
-        .field("isAvailable2", Bool.self),
+        .field("isAvailable", Bool.self),
       ] }
 
       public var id: Int { __data["id"] }
-      public var isAvailable2: Bool { __data["isAvailable2"] }
+      public var isAvailable: Bool { __data["isAvailable"] }
     }
   }
 }

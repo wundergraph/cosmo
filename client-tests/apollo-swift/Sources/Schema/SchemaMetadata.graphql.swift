@@ -4,25 +4,25 @@
 import ApolloAPI
 
 public protocol SelectionSet: ApolloAPI.SelectionSet & ApolloAPI.RootSelectionSet
-where Schema == TestingApi.SchemaMetadata {}
+where Schema == ApolloSwift.SchemaMetadata {}
 
 public protocol InlineFragment: ApolloAPI.SelectionSet & ApolloAPI.InlineFragment
-where Schema == TestingApi.SchemaMetadata {}
+where Schema == ApolloSwift.SchemaMetadata {}
 
 public protocol MutableSelectionSet: ApolloAPI.MutableRootSelectionSet
-where Schema == TestingApi.SchemaMetadata {}
+where Schema == ApolloSwift.SchemaMetadata {}
 
 public protocol MutableInlineFragment: ApolloAPI.MutableSelectionSet & ApolloAPI.InlineFragment
-where Schema == TestingApi.SchemaMetadata {}
+where Schema == ApolloSwift.SchemaMetadata {}
 
 public enum SchemaMetadata: ApolloAPI.SchemaMetadata {
   public static let configuration: any ApolloAPI.SchemaConfiguration.Type = SchemaConfiguration.self
 
   public static func objectType(forTypename typename: String) -> ApolloAPI.Object? {
     switch typename {
-    case "Employee": return TestingApi.Objects.Employee
-    case "Query": return TestingApi.Objects.Query
-    case "Subscription": return TestingApi.Objects.Subscription
+    case "Employee": return ApolloSwift.Objects.Employee
+    case "Query": return ApolloSwift.Objects.Query
+    case "Subscription": return ApolloSwift.Objects.Subscription
     default: return nil
     }
   }

@@ -12,11 +12,11 @@ public class SubscriptionSuccessSubscription: GraphQLSubscription {
 
   public init() {}
 
-  public struct Data: TestingApi.SelectionSet {
+  public struct Data: ApolloSwift.SelectionSet {
     public let __data: DataDict
     public init(_dataDict: DataDict) { __data = _dataDict }
 
-    public static var __parentType: any ApolloAPI.ParentType { TestingApi.Objects.Subscription }
+    public static var __parentType: any ApolloAPI.ParentType { ApolloSwift.Objects.Subscription }
     public static var __selections: [ApolloAPI.Selection] { [
       .field("countEmp2", Int.self, arguments: [
         "max": 3,

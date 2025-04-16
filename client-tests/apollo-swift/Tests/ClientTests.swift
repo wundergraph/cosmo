@@ -1,15 +1,9 @@
 import XCTest
 import Foundation
 import Apollo
-@testable import TestingApi
+@testable import ApolloSwift
 
-final class TestingApiTests: XCTestCase {
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct
-        // results.
-        XCTAssertTrue(true)
-    }
+final class ClientTestCases: XCTestCase {
 
     func testSuccessQuery() throws {
         let expectation = XCTestExpectation(description: "Test Success Query")

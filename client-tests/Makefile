@@ -7,4 +7,4 @@ test-apollo-js:
 	cd apollo-js && pnpm test
 
 test-apollo-swift:
-	cd apollo-swift/TestingApi && swift test
+	cd apollo-swift && swift test

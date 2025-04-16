@@ -93,7 +93,11 @@ describe('Apollo Client Tests', () => {
 
     const response = await Promise.all([req1, req2, req3]);
 
-    console.log(JSON.stringify(response, null, 2));
+    const expectedString = `[{"data":{"employees":[{"__typename":"Employee","id":1},{"__typename":"Employee","id":2},{"__typename":"Employee","id":3},{"__typename":"Employee","id":4},{"__typename":"Employee","id":5},{"__typename":"Employee","id":7},{"__typename":"Employee","id":8},{"__typename":"Employee","id":10},{"__typename":"Employee","id":11},{"__typename":"Employee","id":12}]},"loading":false,"networkStatus":7},{"data":{"employees":[{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false}]},"loading":false,"networkStatus":7},{"data":{"employees":[{"__typename":"Employee","test":false},{"__typename":"Employee","test":false},{"__typename":"Employee","test":false},{"__typename":"Employee","test":false},{"__typename":"Employee","test":false},{"__typename":"Employee","test":false},{"__typename":"Employee","test":false},{"__typename":"Employee","test":false},{"__typename":"Employee","test":false},{"__typename":"Employee","test":false}]},"loading":false,"networkStatus":7}]`;
+    expect(response[0].errors).toBeUndefined();
+    expect(response[0].data).toBeDefined();
+
+    expect(JSON.stringify(response)).toEqual(expectedString);
   });
 
   it('should handle successful subscription', async () => {
