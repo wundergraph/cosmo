@@ -353,6 +353,24 @@ describe('Webhooks', (ctx) => {
             },
           },
         },
+        {
+          eventName: OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED,
+          meta: {
+            case: 'monographSchemaUpdated',
+            value: {
+              graphIds: [],
+            },
+          },
+        },
+        {
+          eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+          meta: {
+            case: 'proposalStateUpdated',
+            value: {
+              graphIds: [],
+            },
+          },
+        },
       ],
     });
 
@@ -409,7 +427,9 @@ describe('Webhooks', (ctx) => {
 
     expect(getWebhooksRes.response?.code).toBe(EnumStatusCode.OK);
     expect(getWebhooksRes.configs.length).toBe(1);
-    expect(getWebhooksRes.configs[0].events).toContain(OrganizationEventName[OrganizationEventName.PROPOSAL_STATE_UPDATED]);
+    expect(getWebhooksRes.configs[0].events).toContain(
+      OrganizationEventName[OrganizationEventName.PROPOSAL_STATE_UPDATED],
+    );
     expect(getWebhooksRes.configs[0].endpoint).toBe('http://localhost:8081');
 
     // Now get the metadata for this webhook to verify the proposal state updated event
@@ -490,6 +510,15 @@ describe('Webhooks', (ctx) => {
             case: 'federatedGraphSchemaUpdated',
             value: {
               graphIds: [graph?.graph?.id],
+            },
+          },
+        },
+        {
+          eventName: OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED,
+          meta: {
+            case: 'monographSchemaUpdated',
+            value: {
+              graphIds: [],
             },
           },
         },

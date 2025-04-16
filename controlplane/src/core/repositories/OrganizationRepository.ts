@@ -863,15 +863,22 @@ export class OrganizationRepository {
           and(eq(organizationWebhooks.id, input.id), eq(organizationWebhooks.organizationId, input.organizationId)),
         );
 
+      // First delete all the existing webhook configs meta
+      await tx
+        .delete(schema.webhookGraphSchemaUpdate)
+        .where(and(eq(schema.webhookGraphSchemaUpdate.webhookId, input.id)));
+
+      await tx
+        .delete(schema.webhookProposalStateUpdate)
+        .where(eq(schema.webhookProposalStateUpdate.webhookId, input.id));
+
+      // Now loop through the new events metas, the thing to note is that the eventsMeta array will contain the meta for all the events, even if the event is not selected.
+      // The reason for this, for the backend to know the current state of the config, as the user might have unselected a event.
       for (const eventMeta of input.eventsMeta) {
         switch (eventMeta.meta.case) {
           case 'federatedGraphSchemaUpdated':
           case 'monographSchemaUpdated': {
             const graphIds = eventMeta.meta.value.graphIds;
-            await tx
-              .delete(schema.webhookGraphSchemaUpdate)
-              .where(and(eq(schema.webhookGraphSchemaUpdate.webhookId, input.id)));
-
             if (graphIds.length > 0) {
               await tx
                 .insert(schema.webhookGraphSchemaUpdate)
@@ -888,9 +895,6 @@ export class OrganizationRepository {
           }
           case 'proposalStateUpdated': {
             const graphIds = eventMeta.meta.value.graphIds;
-            await tx
-              .delete(schema.webhookProposalStateUpdate)
-              .where(eq(schema.webhookProposalStateUpdate.webhookId, input.id));
 
             if (graphIds.length > 0) {
               await tx
