@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.10.0...helm-cosmo-router@0.10.1) (2025-04-14)
+
+
+### Bug Fixes
+
+* bump router chart version ([#1784](https://github.com/wundergraph/cosmo/issues/1784)) ([724aac3](https://github.com/wundergraph/cosmo/commit/724aac385956b0964f5132e0792a26923efbad99))
+
 ## [0.10.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.9.0...helm-cosmo-router@0.10.0) (2025-03-11)
 
 

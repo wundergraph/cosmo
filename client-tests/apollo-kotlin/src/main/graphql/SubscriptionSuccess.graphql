@@ -1,0 +1,3 @@
+subscription SubscriptionSuccess {
+    countEmp2(max: 3, intervalMilliseconds: 500)
+}

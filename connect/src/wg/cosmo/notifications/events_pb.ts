@@ -56,12 +56,18 @@ export enum OrganizationEventName {
    * @generated from enum value: VALIDATE_CONFIG = 3;
    */
   VALIDATE_CONFIG = 3,
+
+  /**
+   * @generated from enum value: PROPOSAL_STATE_UPDATED = 4;
+   */
+  PROPOSAL_STATE_UPDATED = 4,
 }
 // Retrieve enum metadata with: proto3.getEnumType(OrganizationEventName)
 proto3.util.setEnumType(OrganizationEventName, "wg.cosmo.notifications.OrganizationEventName", [
   { no: 0, name: "FEDERATED_GRAPH_SCHEMA_UPDATED" },
   { no: 1, name: "MONOGRAPH_SCHEMA_UPDATED" },
   { no: 3, name: "VALIDATE_CONFIG" },
+  { no: 4, name: "PROPOSAL_STATE_UPDATED" },
 ]);
 
 /**
@@ -102,6 +108,43 @@ export class GraphSchemaUpdatedMeta extends Message<GraphSchemaUpdatedMeta> {
 }
 
 /**
+ * @generated from message wg.cosmo.notifications.ProposalStateUpdatedMeta
+ */
+export class ProposalStateUpdatedMeta extends Message<ProposalStateUpdatedMeta> {
+  /**
+   * @generated from field: repeated string graphIds = 1;
+   */
+  graphIds: string[] = [];
+
+  constructor(data?: PartialMessage<ProposalStateUpdatedMeta>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.notifications.ProposalStateUpdatedMeta";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "graphIds", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProposalStateUpdatedMeta {
+    return new ProposalStateUpdatedMeta().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ProposalStateUpdatedMeta {
+    return new ProposalStateUpdatedMeta().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ProposalStateUpdatedMeta {
+    return new ProposalStateUpdatedMeta().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ProposalStateUpdatedMeta | PlainMessage<ProposalStateUpdatedMeta> | undefined, b: ProposalStateUpdatedMeta | PlainMessage<ProposalStateUpdatedMeta> | undefined): boolean {
+    return proto3.util.equals(ProposalStateUpdatedMeta, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.notifications.EventMeta
  */
 export class EventMeta extends Message<EventMeta> {
@@ -125,6 +168,12 @@ export class EventMeta extends Message<EventMeta> {
      */
     value: GraphSchemaUpdatedMeta;
     case: "monographSchemaUpdated";
+  } | {
+    /**
+     * @generated from field: wg.cosmo.notifications.ProposalStateUpdatedMeta proposal_state_updated = 4;
+     */
+    value: ProposalStateUpdatedMeta;
+    case: "proposalStateUpdated";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<EventMeta>) {
@@ -138,6 +187,7 @@ export class EventMeta extends Message<EventMeta> {
     { no: 1, name: "event_name", kind: "enum", T: proto3.getEnumType(OrganizationEventName) },
     { no: 2, name: "federated_graph_schema_updated", kind: "message", T: GraphSchemaUpdatedMeta, oneof: "meta" },
     { no: 3, name: "monograph_schema_updated", kind: "message", T: GraphSchemaUpdatedMeta, oneof: "meta" },
+    { no: 4, name: "proposal_state_updated", kind: "message", T: ProposalStateUpdatedMeta, oneof: "meta" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventMeta {
