@@ -12,6 +12,7 @@ import {
   GraphQLScalarType,
   GraphQLSchema,
   GraphQLUnionType,
+  InputValueDefinitionNode,
   Kind,
   Location,
   FieldDefinitionNode,
@@ -57,7 +58,7 @@ export type GraphQLTypeCategory =
 export type ParsedGraphQLField = {
   name: string;
   description?: string;
-  deprecationReason?: string;
+  deprecationReason?: string | null;
   authenticated?: boolean;
   requiresScopes?: string[][];
   defaultValue?: any;
@@ -67,7 +68,7 @@ export type ParsedGraphQLField = {
     description: string;
     defaultValue: any;
     type: string;
-    deprecationReason?: string;
+    deprecationReason: string | null;
     loc?: Location;
   }>;
   loc?: Location;
@@ -112,7 +113,7 @@ export const mapGraphQLType = (
         graphqlType instanceof GraphQLObjectType ? "objects" : "interfaces",
       interfaces:
         graphqlType.getInterfaces?.().map((iface) => iface.name) || [],
-      fields: Object.values(graphqlType.getFields()).map(field => maybeParseField(field.astNode)!).filter(Boolean),
+      fields: Object.values(graphqlType.getFields()).map(field => parseField(field.astNode!)),
     };
   }
 
@@ -120,14 +121,7 @@ export const mapGraphQLType = (
     return {
       ...common,
       category: "inputs",
-      fields: Object.values(graphqlType.getFields()).map((field) => ({
-        name: field.name,
-        description: field.description || "",
-        deprecationReason: field.deprecationReason || "",
-        defaultValue: field.defaultValue,
-        type: field.type.toString(),
-        loc: field.astNode?.loc,
-      })),
+      fields: Object.values(graphqlType.getFields()).map(field => parseField(field.astNode!)),
     };
   }
 
@@ -138,7 +132,7 @@ export const mapGraphQLType = (
       fields: graphqlType.getValues().map((value) => ({
         name: value.name,
         description: value.description || "",
-        deprecationReason: value.deprecationReason || "",
+        deprecationReason: extractDirectives(value.astNode).deprecationReason,
         loc: value.astNode?.loc,
       })),
     };
@@ -550,14 +544,6 @@ export const getGraphQLTypeAtLineNumber = (
   return null;
 };
 
-const maybeParseField = (field: ASTNode | undefined | null): ParsedGraphQLField | null => {
-  if (field?.kind !== Kind.FIELD_DEFINITION) {
-    return null;
-  }
-
-  return parseField(field);
-}
-
 const getTypeName = (ast: TypeNode): string => {
   switch (ast.kind) {
     case Kind.NAMED_TYPE:
@@ -570,10 +556,22 @@ const getTypeName = (ast: TypeNode): string => {
 }
 
 const parseField = (
-  field: FieldDefinitionNode,
+  field: FieldDefinitionNode | InputValueDefinitionNode,
   directives?: ExtractedDirectives
 ): ParsedGraphQLField => {
   directives ??= extractDirectives(field);
+
+  let args: ParsedGraphQLField['args'] = undefined;
+  if (field.kind === Kind.FIELD_DEFINITION && field.arguments) {
+    args = field.arguments.map((arg) => ({
+      name: arg.name.value,
+      description: arg.description?.value || "",
+      defaultValue: arg.defaultValue,
+      type: getTypeName(arg.type),
+      deprecationReason: extractDirectives(arg).deprecationReason,
+      loc: arg.loc,
+    }));
+  }
 
   return {
     name: field.name.value,
@@ -583,14 +581,7 @@ const parseField = (
     requiresScopes: directives.requiresScopes,
     type: getTypeName(field.type),
     defaultValue: "",
-    args: field.arguments?.map((arg) => ({
-      name: arg.name.value,
-      description: arg.description?.value || "",
-      defaultValue: arg.defaultValue,
-      type: getTypeName(arg.type),
-      deprecationReason: extractDirectives(arg).deprecationReason,
-      loc: arg.loc,
-    })) ?? [],
+    args,
     loc: field.loc,
   };
 }
@@ -598,7 +589,7 @@ const parseField = (
 type ExtractedDirectives = {
   authenticated: boolean;
   requiresScopes?: string[][];
-  deprecationReason?: string;
+  deprecationReason: string | null;
   tags: string[];
 }
 
@@ -606,7 +597,7 @@ export const extractDirectives = (node: ASTNode | undefined | null): ExtractedDi
   const result: ExtractedDirectives = {
     authenticated: false,
     requiresScopes: undefined,
-    deprecationReason: undefined,
+    deprecationReason: null,
     tags: [],
   };
 
@@ -630,8 +621,10 @@ export const extractDirectives = (node: ASTNode | undefined | null): ExtractedDi
   for (const directive of node.directives) {
     switch (directive.name.value) {
       case "deprecated":
+        // In case the deprecation reason isn't set, we should fall back to the default message so we
+        // properly display a reason and don't exclude the field by accident
         const deprecatedDirValues = getArgumentValues(GraphQLDeprecatedDirective, directive);
-        result.deprecationReason = (deprecatedDirValues.reason ?? "") as string;
+        result.deprecationReason = (deprecatedDirValues.reason || "No longer supported") as string;
         break;
       case "authenticated":
         result.authenticated = true;
@@ -766,8 +759,8 @@ export const getDeprecatedTypes = (types: GraphQLTypeDefinition[]) => {
 
   for (const typeDefinition of types) {
     const fields = typeDefinition.fields?.filter((field) =>
-      field.deprecationReason != null ||
-      field.args?.some((arg) => arg.deprecationReason != null)
+      field.deprecationReason !== null ||
+      field.args?.some((arg) => arg.deprecationReason !== null)
     );
 
     if (!fields?.length) {
@@ -844,7 +837,7 @@ export const getAllFields = (schema: GraphQLSchema): FieldMatch[] => {
       fields.push({
         type,
         field,
-        parsed: maybeParseField(field.astNode),
+        parsed: parseField(field.astNode!),
       });
     }
   }
@@ -924,8 +917,8 @@ export const searchSchema = (searchValue: string, schema: GraphQLSchema) => {
 
       matches["fields"].push(
         ...(matchingArgs
-          ? matchingArgs.map((argument) => ({ type, field, parsed: maybeParseField(field.astNode), argument }))
-          : [{ type, field, parsed: maybeParseField(field.astNode) }]),
+          ? matchingArgs.map((argument) => ({ type, field, parsed: parseField(field.astNode!), argument }))
+          : [{ type, field, parsed: parseField(field.astNode!) }]),
       );
     }
   }

@@ -747,7 +747,7 @@ const TypeWrapper = ({
 };
 
 const DeprecatedBadge = ({ reason }: { reason: string | undefined | null }) => {
-  if (reason == null) {
+  if (!reason) {
     return null;
   }
 
