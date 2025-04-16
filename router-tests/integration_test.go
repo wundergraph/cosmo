@@ -51,11 +51,10 @@ func TestSimpleQuery(t *testing.T) {
 	})
 }
 
-// This test is comically slow, perhaps due to the router trying to contact a non-existent controlplane on startup,
-// I tried disabling everything that would trigger this, but it still does it. Upwards of 50 seconds on my Mac.
 func TestConfigReload(t *testing.T) {
 	t.Parallel()
 
+	// Can be very slow, compiles the router binary if needed
 	testenv.RunRouterBinary(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		t.Logf("running router binary, cwd: %s", xEnv.GetRouterProcessCwd())
 
@@ -66,11 +65,12 @@ func TestConfigReload(t *testing.T) {
 		f, err := os.Create(filepath.Join(xEnv.GetRouterProcessCwd(), "config.yaml"))
 		require.NoError(t, err)
 
-		f.WriteString(`
+		_, err = f.WriteString(`
 version: "1"
 
 readiness_check_path: "/after"
 `)
+		require.NoError(t, err)
 
 		require.NoError(t, f.Close())
 
