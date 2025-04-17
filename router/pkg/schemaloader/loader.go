@@ -10,7 +10,9 @@ import (
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
+	"go.uber.org/zap"
 )
 
 // Operation represents a GraphQL operation with its AST document and schema information
@@ -28,18 +30,24 @@ type Operation struct {
 type OperationLoader struct {
 	// SchemaDocument is the parsed GraphQL schema document
 	SchemaDocument *ast.Document
+	// Logger is the logger used for logging
+	Logger *zap.Logger
 }
 
 // NewOperationLoader creates a new OperationLoader with the given schema document
-func NewOperationLoader(schemaDoc *ast.Document) *OperationLoader {
+func NewOperationLoader(logger *zap.Logger, schemaDoc *ast.Document) *OperationLoader {
 	return &OperationLoader{
 		SchemaDocument: schemaDoc,
+		Logger:         logger,
 	}
 }
 
 // LoadOperationsFromDirectory loads all GraphQL operations from files in the specified directory
 func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operation, error) {
 	var operations []Operation
+
+	// Create an operation validator
+	validator := astvalidation.DefaultOperationValidator()
 
 	// Walk through the directory and process GraphQL files
 	err := filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
@@ -64,20 +72,38 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 		}
 
 		// Parse the operation
-		report := operationreport.Report{}
 		operationString := string(content)
-		opDoc, err := parseOperation(path, operationString, &report)
+		opDoc, err := parseOperation(path, operationString)
 		if err != nil {
-			return fmt.Errorf("failed to parse operation in file %s: %w", path, err)
+			l.Logger.Error("Failed to parse operation", zap.String("file", path), zap.Error(err))
+			return nil
 		}
 
 		// Extract the operation name and type
 		opName, opType, err := getOperationNameAndType(&opDoc)
 		if err != nil {
-			return fmt.Errorf("failed to get operation name from file %s: %w", path, err)
+			l.Logger.Error("Failed to extract operation name and type", zap.String("operation", opName), zap.String("file", path), zap.Error(err))
+			return nil
 		}
 
-		// if not operation name, use the file name
+		// Check if the operation type is supported
+		if opType == "subscription" {
+			l.Logger.Error("Subscriptions are not supported yet", zap.String("operation", opName), zap.String("file", path))
+			return nil
+		}
+
+		// Validate operation against schema
+		validationReport := operationreport.Report{}
+		validationState := validator.Validate(&opDoc, l.SchemaDocument, &validationReport)
+		if validationState == astvalidation.Invalid {
+			l.Logger.Error("Invalid MCP operation",
+				zap.String("operation", opName),
+				zap.String("file", path),
+				zap.String("errors", validationReport.Error()))
+			return nil
+		}
+
+		// if not the operation name, use the file name
 		if opName == "" {
 			opName = filepath.Base(path)
 		}
@@ -95,7 +121,7 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("error walking directory %s: %w", dirPath, err)
+		return nil, fmt.Errorf("error walking mcp operations directory %s: %w", dirPath, err)
 	}
 
 	return operations, nil
@@ -108,11 +134,8 @@ func isGraphQLFile(path string) bool {
 }
 
 // parseOperation parses a GraphQL operation string into an AST document
-func parseOperation(path string, operation string, report *operationreport.Report) (ast.Document, error) {
-	opDoc, report2 := astparser.ParseGraphqlDocumentString(operation)
-	// Use the report that was passed in
-	*report = report2
-
+func parseOperation(path string, operation string) (ast.Document, error) {
+	opDoc, report := astparser.ParseGraphqlDocumentString(operation)
 	if report.HasErrors() {
 		return ast.Document{}, fmt.Errorf("parsing errors: %s", report.Error())
 	}
