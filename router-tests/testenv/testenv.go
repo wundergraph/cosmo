@@ -1235,7 +1235,7 @@ func (e *Environment) Shutdown() {
 	// Gracefully shutdown router
 	if e.Router != nil {
 		err := e.Router.Shutdown(ctx)
-		if err != nil {
+		if err != nil && !errors.Is(err, context.Canceled) {
 			e.t.Errorf("could not shutdown router: %s", err)
 		}
 	}
