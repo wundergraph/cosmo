@@ -753,13 +753,6 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			t.Fatalf("Failed to create MCP client: %v", err)
 		}
 
-		t.Cleanup(func() {
-			err := client.Close()
-			if err != nil {
-				t.Errorf("Failed to close MCP client: %v", err)
-			}
-		})
-
 		e.MCPClient = client
 
 		err = e.WaitForMCPServer(e.Context, 1000, 10)
