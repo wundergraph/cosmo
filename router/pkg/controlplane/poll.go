@@ -2,8 +2,9 @@ package controlplane
 
 import (
 	"context"
-	"math/rand"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/timex"
 )
 
 type Poller interface {
@@ -59,24 +60,10 @@ func (c *Poll) Subscribe(ctx context.Context, handler func()) {
 				// Add jitter to the interval
 				// This is to prevent all clients from hitting the server at exactly the same time,
 				// which could cause a burst load issue
-				time.Sleep(randomDuration(c.maxJitter))
+				time.Sleep(timex.RandomDuration(c.maxJitter))
 
 				handler()
 			}
 		}
 	}()
-}
-
-// randomDuration returns a random duration between 0 and max
-func randomDuration(max time.Duration) time.Duration {
-	if max < 0 {
-		panic("negative duration")
-	}
-
-	// rand.Int63n will panic if its argument <= 0
-	if max == 0 {
-		return 0
-	}
-
-	return time.Duration(rand.Int63n(int64(max)))
 }

@@ -32,6 +32,14 @@ graphql_metrics:
   collector_endpoint: "https://cosmo-metrics.wundergraph.com"
 localhost_fallback_inside_docker: true
 
+watch_config:
+  enabled: true
+  interval: "10s"
+
+  startup_delay:
+    enabled: true
+    maximum: "10s"
+
 # Cross-Origin Resource Sharing (CORS)
 cors:
   allow_origins: ["*"]
