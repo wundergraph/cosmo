@@ -16,96 +16,6 @@ import (
 func TestHeaderPropagation(t *testing.T) {
 	t.Parallel()
 
-	// Test various error scenarios and verify appropriate Cache-Control headers
-
-	t.Run("Cache-Control no-store with PERSISTED_QUERY_NOT_FOUND error", func(t *testing.T) {
-		t.Parallel()
-		testenv.Run(t, &testenv.Config{
-			// Configure a specific cache control policy to demonstrate that errors override it
-			CacheControlPolicy: config.CacheControlPolicy{
-				Enabled: true,
-				Value: "max-age=300",
-			},
-		}, func(t *testing.T, env *testenv.Environment) {
-			// Make request that triggers PERSISTED_QUERY_NOT_FOUND error
-			res, err := env.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Query:     "", // Empty query
-				Variables: json.RawMessage(`{}`),
-				Extensions: json.RawMessage(`{"persistedQuery": {"version": 1, "sha256Hash": "invalid-hash"}}`),
-			})
-			
-			// Verify request was successful
-			require.NoError(t, err, "GraphQL request should not fail")
-			require.Equal(t, http.StatusOK, res.Response.StatusCode, "Response status code should be 200 OK")
-
-			// Verify Cache-Control header is set to no-store (overriding the max-age setting)
-			require.Equal(t, "no-store", res.Response.Header.Get("Cache-Control"), 
-				"Cache-Control header should be set to no-store for error responses")
-
-			// Verify the response contains errors and the specific error type
-			require.Contains(t, res.Body, "errors", "Response should contain errors")
-			require.Contains(t, res.Body, "PERSISTED_QUERY_NOT_FOUND", "Response should contain PERSISTED_QUERY_NOT_FOUND error")
-		})
-	})
-
-	t.Run("Cache-Control no-store with invalid GraphQL query", func(t *testing.T) {
-		t.Parallel()
-		testenv.Run(t, &testenv.Config{
-			// Configure a specific cache control policy to demonstrate that errors override it
-			CacheControlPolicy: config.CacheControlPolicy{
-				Enabled: true,
-				Value: "max-age=300",
-			},
-		}, func(t *testing.T, env *testenv.Environment) {
-			// Make a request with an invalid GraphQL query that will cause a validation error
-			res, err := env.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Query: `{ nonExistingField }`, // This field doesn't exist in the schema
-			})
-			
-			// Verify request was processed correctly
-			require.NoError(t, err, "GraphQL request should not fail")
-			require.Equal(t, http.StatusOK, res.Response.StatusCode, "Response status code should be 200 OK")
-
-			// Verify Cache-Control header is set to no-store (overriding the max-age setting)
-			require.Equal(t, "no-store", res.Response.Header.Get("Cache-Control"),
-				"Cache-Control header should be set to no-store for error responses")
-
-			// Verify the response contains errors and the validation error message
-			require.Contains(t, res.Body, "errors", "Response should contain errors")
-			require.Contains(t, res.Body, "nonExistingField", "Response should contain validation error for nonExistingField")
-		})
-	})
-	
-	t.Run("Successful query gets appropriate cache header", func(t *testing.T) {
-		t.Parallel()
-		testenv.Run(t, &testenv.Config{
-			// Configure a specific cache control policy
-			CacheControlPolicy: config.CacheControlPolicy{
-				Enabled: true,
-				Value: "max-age=300",
-			},
-		}, func(t *testing.T, env *testenv.Environment) {
-			// Make a request with a valid query that will succeed
-			res, err := env.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Query: `{ __typename }`, // This is a valid query that will always work
-			})
-			
-			// Verify request was successful
-			require.NoError(t, err, "GraphQL request should not fail")
-			require.Equal(t, http.StatusOK, res.Response.StatusCode, "Response status code should be 200 OK")
-
-			// Verify that Cache-Control is set to the configured value for successful responses
-			require.Equal(t, "max-age=300", res.Response.Header.Get("Cache-Control"),
-				"Cache-Control header should be set to the configured value for successful responses")
-
-			// Verify the response doesn't contain errors
-			require.NotContains(t, res.Body, "errors", "Successful response should not contain errors")
-			
-			// Verify the response contains expected data
-			require.Contains(t, res.Body, "__typename", "Response should contain __typename field")
-		})
-	})
-
 	const (
 		customHeader = "X-Custom-Header"
 		employeeVal  = "employee-value"
@@ -794,6 +704,7 @@ func TestHeaderPropagation(t *testing.T) {
 				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 			})
 		})
+
 		t.Run("set operation can override cache control policies", func(t *testing.T) {
 			t.Parallel()
 			t.Run("global set operation", func(t *testing.T) {
@@ -854,6 +765,112 @@ func TestHeaderPropagation(t *testing.T) {
 					require.Equal(t, "my-fake-value", cc)
 					require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 				})
+			})
+		})
+
+		// Test various error scenarios and verify appropriate Cache-Control headers
+		t.Run("Cache-Control no-store with PERSISTED_QUERY_NOT_FOUND error", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				// Configure a specific cache control policy to demonstrate that errors override it
+				CacheControlPolicy: config.CacheControlPolicy{
+					Enabled: true,
+					Value:   "max-age=300",
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Make request that triggers PERSISTED_QUERY_NOT_FOUND error
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query:      "", // Empty query
+					Variables:  json.RawMessage(`{}`),
+					Extensions: json.RawMessage(`{"persistedQuery": {"version": 1, "sha256Hash": "invalid-hash"}}`),
+				})
+
+				// Verify request was successful
+				require.NoError(t, err, "GraphQL request should not fail")
+				require.Equal(t, http.StatusOK, res.Response.StatusCode, "Response status code should be 200 OK")
+
+				// Verify Cache-Control header is set to no-store (overriding the max-age setting)
+				require.Equal(t, "no-store", res.Response.Header.Get("Cache-Control"),
+					"Cache-Control header should be set to no-store for error responses")
+
+				// Verify the response contains errors and the specific error type
+				require.Contains(t, res.Body, "errors", "Response should contain errors")
+				require.Contains(t, res.Body, "PERSISTED_QUERY_NOT_FOUND", "Response should contain PERSISTED_QUERY_NOT_FOUND error")
+			})
+		})
+
+		t.Run("Cache-Control no-store with invalid GraphQL query", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				// Configure a specific cache control policy to demonstrate that errors override it
+				CacheControlPolicy: config.CacheControlPolicy{
+					Enabled: true,
+					Value:   "max-age=300",
+				},
+			}, func(t *testing.T, env *testenv.Environment) {
+				// Make a request with an invalid GraphQL query that will cause a validation error
+				res, err := env.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `{ nonExistingField }`, // This field doesn't exist in the schema
+				})
+
+				// Verify request was processed correctly
+				require.NoError(t, err, "GraphQL request should not fail")
+				require.Equal(t, http.StatusOK, res.Response.StatusCode, "Response status code should be 200 OK")
+
+				// Verify Cache-Control header is set to no-store (overriding the max-age setting)
+				require.Equal(t, "no-store", res.Response.Header.Get("Cache-Control"),
+					"Cache-Control header should be set to no-store for error responses")
+
+				// Verify the response contains errors and the validation error message
+				require.Contains(t, res.Body, "errors", "Response should contain errors")
+				require.Contains(t, res.Body, "nonExistingField", "Response should contain validation error for nonExistingField")
+			})
+		})
+
+		t.Run("Cache-Control no-store with error from subgraph for valid query", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				// Configure a specific cache control policy to demonstrate that errors override it
+				CacheControlPolicy: config.CacheControlPolicy{
+					Enabled: true,
+					Value:   "max-age=300",
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.WriteHeader(http.StatusInternalServerError)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees', Reason: empty response.","extensions":{"statusCode":500}}],"data":{"employee":null}}`, res.Body)
+
+				require.Equal(t, "no-cache", res.Response.Header.Get("Cache-Control")) // no-cache because of the error
+
+				require.Contains(t, res.Body, "Employee authorization error", "Response should contain our fake error message")
+			})
+		})
+
+		t.Run("Successful query gets appropriate cache header", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				// Configure a specific cache control policy
+				CacheControlPolicy: config.CacheControlPolicy{
+					Enabled: true,
+					Value:   "max-age=300",
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				require.Equal(t, "max-age=300", res.Response.Header.Get("Cache-Control")) // no-cache because of the error
+				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 			})
 		})
 	})
