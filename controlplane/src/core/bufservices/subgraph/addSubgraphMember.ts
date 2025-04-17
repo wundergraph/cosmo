@@ -97,6 +97,7 @@ export function addSubgraphMember(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'subgraph_member.created',
       action: 'created',
       actorId: authContext.userId,

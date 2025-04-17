@@ -178,6 +178,7 @@ export function updateMonograph(
 
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
         auditAction: 'monograph.updated',
         action: 'updated',
         actorId: authContext.userId,

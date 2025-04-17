@@ -134,6 +134,7 @@ export function moveMonograph(
     for (const movedGraph of movedGraphs) {
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
         auditAction: 'monograph.moved',
         action: 'moved',
         actorId: authContext.userId,

@@ -66,6 +66,7 @@ export function createOperationOverrides(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'operation_change_override.created',
       action: 'created',
       actorId: authContext.userId,

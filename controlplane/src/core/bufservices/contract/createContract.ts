@@ -167,6 +167,7 @@ export function createContract(
 
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
         auditAction: 'federated_graph.created',
         action: 'created',
         actorId: authContext.userId,

@@ -61,6 +61,7 @@ export function createNamespace(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'namespace.created',
       action: 'created',
       actorId: authContext.userId,

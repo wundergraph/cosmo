@@ -91,6 +91,7 @@ export function acceptOrDeclineInvitation(
 
       await auditLogRepo.addAuditLog({
         organizationId: req.organizationId,
+        organizationSlug: organization.slug,
         auditAction: 'organization.joined',
         action: 'joined',
         actorId: authContext.userId,
@@ -105,6 +106,7 @@ export function acceptOrDeclineInvitation(
 
       await auditLogRepo.addAuditLog({
         organizationId: req.organizationId,
+        organizationSlug: organization.slug,
         auditAction: 'organization_invitation.declined',
         action: 'deleted',
         actorId: authContext.userId,

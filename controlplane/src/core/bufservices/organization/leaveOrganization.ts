@@ -98,6 +98,7 @@ export function leaveOrganization(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'organization.left',
       action: 'left',
       actorId: authContext.userId,

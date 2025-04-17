@@ -95,6 +95,7 @@ export function toggleChangeOverridesForAllOperations(
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
+          organizationSlug: authContext.organizationSlug,
           auditAction: req.isSafe ? 'operation_change_override.created' : 'operation_change_override.deleted',
           action: req.isSafe ? 'created' : 'deleted',
           actorId: authContext.userId,

@@ -49,6 +49,7 @@ export function upgradePlan(
 
     await auditLogRepository.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'subscription.upgraded',
       action: 'upgraded',
       auditableType: 'subscription',

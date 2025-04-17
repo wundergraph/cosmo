@@ -74,6 +74,7 @@ export function enableProposalsForNamespace(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: req.enableProposals ? 'proposal.enabled' : 'proposal.disabled',
       action: req.enableProposals ? 'enabled' : 'disabled',
       actorId: authContext.userId,

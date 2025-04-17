@@ -55,6 +55,7 @@ export function configureNamespaceProposalConfig(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'namespace_proposal_config.updated',
       action: 'updated',
       actorId: authContext.userId,

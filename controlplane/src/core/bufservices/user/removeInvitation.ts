@@ -107,11 +107,13 @@ export function removeInvitation(
           keycloakRealm: opts.keycloakRealm,
         },
         opts.blobStorage,
+        opts.queues.deleteOrganizationAuditLogsQueue,
       );
     }
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'organization_invitation.deleted',
       action: 'deleted',
       actorId: authContext.userId,

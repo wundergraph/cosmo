@@ -89,6 +89,7 @@ export function updateOrganizationWebhookConfig(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'webhook_config.updated',
       action: 'updated',
       actorId: authContext.userId,

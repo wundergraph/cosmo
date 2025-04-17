@@ -64,6 +64,7 @@ export function generateRouterToken(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'router_config.fetched',
       action: 'fetched',
       actorId: authContext.userId,

@@ -126,6 +126,7 @@ export function createAPIKey(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'api_key.created',
       action: 'created',
       actorId: authContext.userId,
