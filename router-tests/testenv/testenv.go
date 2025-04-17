@@ -753,6 +753,13 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			t.Fatalf("Failed to create MCP client: %v", err)
 		}
 
+		t.Cleanup(func() {
+			err := client.Close()
+			if err != nil {
+				t.Errorf("Failed to close MCP client: %v", err)
+			}
+		})
+
 		e.MCPClient = client
 
 		err = e.WaitForMCPServer(e.Context, 1000, 10)
@@ -1224,10 +1231,8 @@ func (e *Environment) Shutdown() {
 	ctx, cancel := context.WithTimeout(e.Context, e.shutdownDelay)
 	defer cancel()
 
-	// Terminate test server resources
-	e.cancel(ErrEnvironmentClosed)
-
 	// Close MCP client if it exists
+	// TODO: Server can't gracefully shutdown when MCP client is connected.
 	if e.MCPClient != nil {
 		e.MCPClient.Close()
 	}
@@ -1235,7 +1240,7 @@ func (e *Environment) Shutdown() {
 	// Gracefully shutdown router
 	if e.Router != nil {
 		err := e.Router.Shutdown(ctx)
-		if err != nil && !errors.Is(err, context.Canceled) {
+		if err != nil {
 			e.t.Errorf("could not shutdown router: %s", err)
 		}
 	}

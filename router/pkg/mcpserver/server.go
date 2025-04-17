@@ -346,7 +346,7 @@ func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
 	s.logger.Debug("shutting down MCP server")
 
 	// Create a shutdown context with timeout
-	shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	if err := s.sseServer.Shutdown(shutdownCtx); err != nil {
