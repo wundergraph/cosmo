@@ -93,6 +93,7 @@ describe('Restore Organization', (ctx) => {
       keycloakClient,
       keycloakRealm: realm,
       blobStorage,
+      deleteOrganizationAuditLogsQueue: queues.deleteOrganizationAuditLogsQueue,
     });
 
     await orgRepo.queueOrganizationDeletion({

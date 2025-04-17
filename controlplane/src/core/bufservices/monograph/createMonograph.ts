@@ -185,6 +185,7 @@ export function createMonograph(
 
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
         auditAction: 'monograph.created',
         action: 'created',
         actorId: authContext.userId,

@@ -45,19 +45,17 @@ type ApiTransportFactory interface {
 }
 
 type DefaultFactoryResolver struct {
-	baseTransport    http.RoundTripper
-	transportFactory ApiTransportFactory
-	transportOptions *TransportOptions
-
 	static *staticdatasource.Factory[staticdatasource.Configuration]
 	pubsub *pubsub_datasource.Factory[pubsub_datasource.Configuration]
 	log    *zap.Logger
 
 	engineCtx          context.Context
-	httpClient         *http.Client
 	enableSingleFlight bool
 	streamingClient    *http.Client
 	subscriptionClient graphql_datasource.GraphQLSubscriptionClient
+
+	httpClient          *http.Client
+	subgraphHTTPClients map[string]*http.Client
 
 	factoryLogger abstractlogger.Logger
 }
@@ -67,6 +65,7 @@ func NewDefaultFactoryResolver(
 	transportOptions *TransportOptions,
 	subscriptionClientOptions *SubscriptionClientOptions,
 	baseTransport http.RoundTripper,
+	subgraphTransports map[string]http.RoundTripper,
 	log *zap.Logger,
 	enableSingleFlight bool,
 	enableNetPoll bool,
@@ -75,12 +74,30 @@ func NewDefaultFactoryResolver(
 ) *DefaultFactoryResolver {
 	transportFactory := NewTransport(transportOptions)
 
-	defaultHttpClient := &http.Client{
+	defaultHTTPClient := &http.Client{
 		Timeout:   transportOptions.SubgraphTransportOptions.RequestTimeout,
 		Transport: transportFactory.RoundTripper(enableSingleFlight, baseTransport),
 	}
+
 	streamingClient := &http.Client{
 		Transport: transportFactory.RoundTripper(enableSingleFlight, baseTransport),
+	}
+
+	subgraphHTTPClients := map[string]*http.Client{}
+
+	for subgraph, subgraphOpts := range transportOptions.SubgraphTransportOptions.SubgraphMap {
+		subgraphTransport, ok := subgraphTransports[subgraph]
+		if !ok {
+			panic(fmt.Sprintf("subgraph %s not found in subgraphTransports", subgraph))
+		}
+
+		// make a new http client
+		subgraphClient := &http.Client{
+			Transport: transportFactory.RoundTripper(enableSingleFlight, subgraphTransport),
+			Timeout:   subgraphOpts.RequestTimeout,
+		}
+
+		subgraphHTTPClients[subgraph] = subgraphClient
 	}
 
 	var factoryLogger abstractlogger.Logger
@@ -106,45 +123,33 @@ func NewDefaultFactoryResolver(
 	}
 
 	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
-		defaultHttpClient,
+		defaultHTTPClient,
 		streamingClient,
 		ctx,
 		options...,
 	)
 
 	return &DefaultFactoryResolver{
-		baseTransport:      baseTransport,
-		transportFactory:   transportFactory,
-		transportOptions:   transportOptions,
 		static:             &staticdatasource.Factory[staticdatasource.Configuration]{},
 		pubsub:             pubsub_datasource.NewFactory(ctx, natsPubSubBySourceID, kafkaPubSubBySourceID),
 		log:                log,
 		factoryLogger:      factoryLogger,
 		engineCtx:          ctx,
-		httpClient:         defaultHttpClient,
 		enableSingleFlight: enableSingleFlight,
 		streamingClient:    streamingClient,
 		subscriptionClient: subscriptionClient,
+
+		httpClient:          defaultHTTPClient,
+		subgraphHTTPClients: subgraphHTTPClients,
 	}
 }
 
 func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (plan.PlannerFactory[graphql_datasource.Configuration], error) {
-	if subgraphName != "" && d.transportOptions.SubgraphTransportOptions.SubgraphMap[subgraphName] != nil {
-		timeout := d.transportOptions.SubgraphTransportOptions.SubgraphMap[subgraphName].RequestTimeout
-
-		// make a new http client
-		subgraphClient := &http.Client{
-			Transport: d.transportFactory.RoundTripper(d.enableSingleFlight, d.baseTransport),
-			Timeout:   timeout,
-		}
-
-		factory, err := graphql_datasource.NewFactory(d.engineCtx, subgraphClient, d.subscriptionClient)
-		return factory, err
+	if subgraphClient, ok := d.subgraphHTTPClients[subgraphName]; ok {
+		return graphql_datasource.NewFactory(d.engineCtx, subgraphClient, d.subscriptionClient)
 	}
 
-	factory, err := graphql_datasource.NewFactory(d.engineCtx, d.httpClient, d.subscriptionClient)
-
-	return factory, err
+	return graphql_datasource.NewFactory(d.engineCtx, d.httpClient, d.subscriptionClient)
 }
 
 func (d *DefaultFactoryResolver) ResolveStaticFactory() (factory plan.PlannerFactory[staticdatasource.Configuration], err error) {

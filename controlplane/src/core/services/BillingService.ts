@@ -120,6 +120,13 @@ export class BillingService {
         organizationId: true,
         priceId: true,
       },
+      with: {
+        organization: {
+          columns: {
+            slug: true,
+          },
+        },
+      },
     });
 
     if (!billing) {
@@ -144,6 +151,7 @@ export class BillingService {
 
       await auditLogRepository.addAuditLog({
         organizationId: billing.organizationId,
+        organizationSlug: billing.organization.slug,
         auditAction: 'subscription.deleted',
         action: 'deleted',
         auditableType: 'subscription',
@@ -270,6 +278,13 @@ export class BillingService {
         id: true,
         organizationId: true,
       },
+      with: {
+        organization: {
+          columns: {
+            slug: true,
+          },
+        },
+      },
     });
 
     if (!billing) {
@@ -294,6 +309,7 @@ export class BillingService {
 
     await auditLogRepository.addAuditLog({
       organizationId: billing.organizationId,
+      organizationSlug: billing.organization.slug,
       auditAction: 'subscription.created',
       action: 'created',
       auditableType: 'subscription',
@@ -309,6 +325,13 @@ export class BillingService {
       columns: {
         id: true,
         organizationId: true,
+      },
+      with: {
+        organization: {
+          columns: {
+            slug: true,
+          },
+        },
       },
     });
 
@@ -340,6 +363,7 @@ export class BillingService {
 
         await auditLogRepository.addAuditLog({
           organizationId: billing.organizationId,
+          organizationSlug: billing.organization.slug,
           auditAction: 'subscription.activated',
           action: 'activated',
           auditableType: 'subscription',
@@ -360,6 +384,7 @@ export class BillingService {
         await billingRepository.setPlan(null, billing.organizationId);
         await auditLogRepository.addAuditLog({
           organizationId: billing.organizationId,
+          organizationSlug: billing.organization.slug,
           auditAction: 'subscription.canceled',
           action: 'canceled',
           auditableType: 'subscription',

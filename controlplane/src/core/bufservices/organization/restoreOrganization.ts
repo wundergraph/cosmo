@@ -52,6 +52,7 @@ export function restoreOrganization(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'organization.restored',
       action: 'restore',
       actorId: authContext.userId,
