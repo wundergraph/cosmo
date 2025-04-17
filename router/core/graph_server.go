@@ -517,9 +517,8 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 		computeSha256 = true
 	}
 
-	// This could be folded into the above checks, but it's separated out to isolate it from the bug
+	// Prometheus schema field usage metrics can use sha256, so we need to ensure it is computed
 	if srv.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled && srv.metricConfig.Prometheus.PromSchemaFieldUsage.IncludeOperationSha {
-		// Prometheus schema field usage metrics use sha256, so we need to ensure it is computed
 		computeSha256 = true
 	}
 
