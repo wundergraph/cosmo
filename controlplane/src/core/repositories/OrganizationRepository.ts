@@ -30,7 +30,8 @@ import { Feature, FeatureIds, OrganizationDTO, OrganizationMemberDTO, WebhooksCo
 import Keycloak from '../services/Keycloak.js';
 import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js';
 import { BlobStorage } from '../blobstorage/index.js';
-import { delayForManualOrgDeletionInDays } from '../constants.js';
+import { delayForManualOrgDeletionInDays, delayForOrgAuditLogsDeletionInDays } from '../constants.js';
+import { DeleteOrganizationAuditLogsQueue } from '../workers/DeleteOrganizationAuditLogsWorker.js';
 import { BillingRepository } from './BillingRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { TargetRepository } from './TargetRepository.js';
@@ -978,7 +979,11 @@ export class OrganizationRepository {
     This manually deletes graphs from db and blob storage.
     Everything else is deleted automatically by db constraints
   */
-  public deleteOrganization(organizationId: string, blobStorage: BlobStorage) {
+  public deleteOrganization(
+    organizationId: string,
+    blobStorage: BlobStorage,
+    deleteOrganizationAuditLogsQueue: DeleteOrganizationAuditLogsQueue,
+  ) {
     return this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, organizationId);
       const targetRepo = new TargetRepository(tx, organizationId);
@@ -1000,6 +1005,13 @@ export class OrganizationRepository {
 
       // Delete organization from db
       await tx.delete(organizations).where(eq(organizations.id, organizationId)).execute();
+
+      // Queue audit logs after the organization have been deleted
+      const now = new Date();
+      const deleteAt = addDays(now, delayForOrgAuditLogsDeletionInDays);
+      const delay = Number(deleteAt) - Number(now);
+
+      await deleteOrganizationAuditLogsQueue.addJob({ organizationId }, { delay });
     });
   }
 

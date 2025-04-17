@@ -73,6 +73,7 @@ export function createOrganization(
 
         await auditLogRepo.addAuditLog({
           organizationId: organization.id,
+          organizationSlug: organization.slug,
           auditAction: 'organization.created',
           action: 'created',
           actorId: authContext.userId,
@@ -118,6 +119,7 @@ export function createOrganization(
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
+          organizationSlug: organization.slug,
           auditAction: 'namespace.created',
           action: 'created',
           actorId: authContext.userId,
