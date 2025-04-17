@@ -928,8 +928,18 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
 		}
 
+		// Determine the router GraphQL endpoint
+		var routerGraphQLEndpoint string
+
+		// Use the custom URL if provided
+		if r.mcp.RouterURL != "" {
+			routerGraphQLEndpoint = r.mcp.RouterURL
+		} else {
+			routerGraphQLEndpoint = path.Join(r.listenAddr, r.graphqlPath)
+		}
+
 		mcpss, err := mcpserver.NewGraphQLSchemaServer(
-			path.Join(r.listenAddr, r.graphqlPath),
+			routerGraphQLEndpoint,
 			mcpOpts...,
 		)
 		if err != nil {

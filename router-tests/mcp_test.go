@@ -28,7 +28,7 @@ func TestMCP(t *testing.T) {
 
 				require.Contains(t, resp.Tools, mcp.Tool{
 					Name:        "get_operation_info",
-					Description: "Retrieve information about a specific GraphQL operation by name. It provides all the necessary details to understand how to execute the operation in a GraphQL request against the cosmo router. This is useful for custom app integration.",
+					Description: "Provides instructions on how to execute the GraphQL operation via HTTP and how to integrate it into your application. This tool doesn't accept arbitrary GraphQL operations. It is specifically designed to provide detailed information about the available 'execute_operation_<operationName>' tools.",
 					InputSchema: mcp.ToolInputSchema{
 						Type:       "object",
 						Properties: map[string]interface{}{"operationName": map[string]interface{}{"description": "The exact name of the GraphQL operation to retrieve information for.", "type": "string"}},
@@ -56,7 +56,7 @@ func TestMCP(t *testing.T) {
 				// Verify get_schema tool with proper schema
 				require.Contains(t, resp.Tools, mcp.Tool{
 					Name:           "get_schema",
-					Description:    "Use this function to obtain the full introspection-based schema of the GraphQL API. This is useful for understanding the structure, available types, queries, mutations, and overall capabilities of the API.",
+					Description:    "Provides the full GraphQL schema of the API.",
 					InputSchema:    mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}(nil), Required: []string(nil)},
 					RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
@@ -106,90 +106,50 @@ func TestMCP(t *testing.T) {
 				require.NotNil(t, resp)
 
 				// Verify MyEmployees operation
-				require.Contains(t, resp.Tools, mcp.Tool{
-					Name:        "execute_operation_my_employees",
-					Description: "Executes the GraphQL operation 'MyEmployees' of type query. This is a GraphQL query that retrieves a list of employees.",
-					InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"criteria": map[string]interface{}{"additionalProperties": false, "description": "Allows to filter employees by their details.", "nullable": false, "properties": map[string]interface{}{"hasPets": map[string]interface{}{"nullable": true, "type": "boolean"}, "nationality": map[string]interface{}{"enum": []interface{}{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN"}, "nullable": true, "type": "string"}, "nested": map[string]interface{}{"additionalProperties": false, "nullable": true, "properties": map[string]interface{}{"hasChildren": map[string]interface{}{"nullable": true, "type": "boolean"}, "maritalStatus": map[string]interface{}{"enum": []interface{}{"ENGAGED", "MARRIED"}, "nullable": true, "type": "string"}}, "type": "object"}}, "type": "object"}},
-						Required: []string(nil)},
-					RawInputSchema: json.RawMessage(nil),
-					Annotations:    mcp.ToolAnnotation{},
-				})
+				require.Contains(t, resp.Tools, mcp.Tool{Name: "execute_operation_my_employees", Description: "Executes the GraphQL operation name 'MyEmployees' of type query. This is a GraphQL query that retrieves a list of employees.", InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"criteria": map[string]interface{}{"additionalProperties": false, "description": "Allows to filter employees by their details.", "nullable": false, "properties": map[string]interface{}{"hasPets": map[string]interface{}{"nullable": true, "type": "boolean"}, "nationality": map[string]interface{}{"enum": []interface{}{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN"}, "nullable": true, "type": "string"}, "nested": map[string]interface{}{"additionalProperties": false, "nullable": true, "properties": map[string]interface{}{"hasChildren": map[string]interface{}{"nullable": true, "type": "boolean"}, "maritalStatus": map[string]interface{}{"enum": []interface{}{"ENGAGED", "MARRIED"}, "nullable": true, "type": "string"}}, "type": "object"}}, "type": "object"}}, Required: []string(nil)}, RawInputSchema: json.RawMessage(nil), Annotations: mcp.ToolAnnotation{Title: "", ReadOnlyHint: false, DestructiveHint: false, IdempotentHint: false, OpenWorldHint: false}})
 
 				// Verify UpdateMood operation
-				require.Contains(t, resp.Tools, mcp.Tool{
-					Name:        "execute_operation_update_mood",
-					Description: "Executes the GraphQL operation 'UpdateMood' of type mutation. This mutation update the mood of an employee.",
-					InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"employeeID": map[string]interface{}{"type": "integer"}, "mood": map[string]interface{}{"enum": []interface{}{"HAPPY", "SAD"}, "type": "string"}},
-						Required: []string{"employeeID", "mood"}},
-					RawInputSchema: json.RawMessage(nil)},
-				)
+				require.Contains(t, resp.Tools, mcp.Tool{Name: "execute_operation_update_mood", Description: "Executes the GraphQL operation name 'UpdateMood' of type mutation. This mutation update the mood of an employee.", InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"employeeID": map[string]interface{}{"type": "integer"}, "mood": map[string]interface{}{"enum": []interface{}{"HAPPY", "SAD"}, "type": "string"}}, Required: []string{"employeeID", "mood"}}, RawInputSchema: json.RawMessage(nil), Annotations: mcp.ToolAnnotation{Title: "", ReadOnlyHint: false, DestructiveHint: false, IdempotentHint: false, OpenWorldHint: false}}, mcp.Tool{Name: "get_operation_info", Description: "Provides instructions on how to execute the GraphQL operation via HTTP. This tool doesn't accept arbitrary GraphQL operations. It is specifically designed to provide detailed information about the available 'execute_operation_<operationName>' tools.", InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"operationName": map[string]interface{}{"description": "The exact name of the GraphQL operation to retrieve information for.", "type": "string"}}, Required: []string{"operationName"}}, RawInputSchema: json.RawMessage(nil), Annotations: mcp.ToolAnnotation{Title: "", ReadOnlyHint: false, DestructiveHint: false, IdempotentHint: false, OpenWorldHint: false}})
 			})
-		})
 
-		t.Run("List user Operations / Static operations of type mutation aren't exposed when excludeMutations is set", func(t *testing.T) {
-			testenv.Run(t, &testenv.Config{
-				MCP: config.MCPConfiguration{
-					Enabled:          true,
-					ExcludeMutations: true,
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-
-				toolsRequest := mcp.ListToolsRequest{}
-				resp, err := xEnv.MCPClient.ListTools(xEnv.Context, toolsRequest)
-				require.NoError(t, err)
-				require.NotNil(t, resp)
-
-				found := false
-				for _, tool := range resp.Tools {
-					if tool.Name == "execute_operation_update_mood" {
-						found = true
-						break
-					}
-				}
-
-				require.False(t, found, "Tool execute_operation_update_mood should not be found")
-
-			})
-		})
-
-		t.Run("Execute Operation Info", func(t *testing.T) {
-			testenv.Run(t, &testenv.Config{
-				MCP: config.MCPConfiguration{
-					Enabled: true,
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-
-				req := mcp.CallToolRequest{}
-				req.Params.Name = "get_operation_info"
-				req.Params.Arguments = map[string]interface{}{
-					"operationName": "MyEmployees",
-				}
-
-				resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
-				assert.NoError(t, err)
-				assert.NotNil(t, resp)
-
-				assert.Len(t, resp.Content, 1)
-				content, ok := resp.Content[0].(mcp.TextContent)
-				assert.True(t, ok)
-
-				assert.Equal(t, content.Type, "text")
-				assert.NotEmpty(t, content.Text)
-			})
-		})
-
-		t.Run("Execute Query", func(t *testing.T) {
-			t.Run("Execute operation of type query with valid input", func(t *testing.T) {
+			t.Run("List user Operations / Static operations of type mutation aren't exposed when excludeMutations is set", func(t *testing.T) {
 				testenv.Run(t, &testenv.Config{
 					MCP: config.MCPConfiguration{
-						Enabled: true,
+						Enabled:          true,
+						ExcludeMutations: true,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+
+					toolsRequest := mcp.ListToolsRequest{}
+					resp, err := xEnv.MCPClient.ListTools(xEnv.Context, toolsRequest)
+					require.NoError(t, err)
+					require.NotNil(t, resp)
+
+					found := false
+					for _, tool := range resp.Tools {
+						if tool.Name == "execute_operation_update_mood" {
+							found = true
+							break
+						}
+					}
+
+					require.False(t, found, "Tool execute_operation_update_mood should not be found")
+
+				})
+			})
+
+			t.Run("Execute Operation Info", func(t *testing.T) {
+				testenv.Run(t, &testenv.Config{
+					MCP: config.MCPConfiguration{
+						Enabled:   true,
+						RouterURL: "https://api.example.com/graphql",
 					},
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 
 					req := mcp.CallToolRequest{}
-					req.Params.Name = "execute_operation_my_employees"
+					req.Params.Name = "get_operation_info"
 					req.Params.Arguments = map[string]interface{}{
-						"criteria": map[string]interface{}{},
+						"operationName": "MyEmployees",
 					}
 
 					resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
@@ -197,137 +157,169 @@ func TestMCP(t *testing.T) {
 					assert.NotNil(t, resp)
 
 					assert.Len(t, resp.Content, 1)
-
 					content, ok := resp.Content[0].(mcp.TextContent)
 					assert.True(t, ok)
 
 					assert.Equal(t, content.Type, "text")
-					assert.Nil(t, content.Annotations)
-					assert.Equal(t, "{\"data\":{\"findEmployees\":[{\"id\":1,\"isAvailable\":false,\"currentMood\":\"HAPPY\",\"products\":[\"CONSULTANCY\",\"COSMO\",\"ENGINE\",\"MARKETING\",\"SDK\"],\"details\":{\"forename\":\"Jens\",\"nationality\":\"GERMAN\"}},{\"id\":2,\"isAvailable\":false,\"currentMood\":\"HAPPY\",\"products\":[\"COSMO\",\"SDK\"],\"details\":{\"forename\":\"Dustin\",\"nationality\":\"GERMAN\"}},{\"id\":3,\"isAvailable\":false,\"currentMood\":\"HAPPY\",\"products\":[\"CONSULTANCY\",\"MARKETING\"],\"details\":{\"forename\":\"Stefan\",\"nationality\":\"AMERICAN\"}},{\"id\":4,\"isAvailable\":false,\"currentMood\":\"HAPPY\",\"products\":[\"FINANCE\",\"HUMAN_RESOURCES\",\"MARKETING\"],\"details\":{\"forename\":\"Björn\",\"nationality\":\"GERMAN\"}},{\"id\":5,\"isAvailable\":false,\"currentMood\":\"HAPPY\",\"products\":[\"ENGINE\",\"SDK\"],\"details\":{\"forename\":\"Sergiy\",\"nationality\":\"UKRAINIAN\"}},{\"id\":7,\"isAvailable\":false,\"currentMood\":\"HAPPY\",\"products\":[\"COSMO\",\"SDK\"],\"details\":{\"forename\":\"Suvij\",\"nationality\":\"INDIAN\"}},{\"id\":8,\"isAvailable\":false,\"currentMood\":\"HAPPY\",\"products\":[\"COSMO\",\"SDK\"],\"details\":{\"forename\":\"Nithin\",\"nationality\":\"INDIAN\"}},{\"id\":10,\"isAvailable\":false,\"currentMood\":\"HAPPY\",\"products\":[\"CONSULTANCY\",\"COSMO\",\"SDK\"],\"details\":{\"forename\":\"Eelco\",\"nationality\":\"DUTCH\"}},{\"id\":11,\"isAvailable\":false,\"currentMood\":\"HAPPY\",\"products\":[\"FINANCE\"],\"details\":{\"forename\":\"Alexandra\",\"nationality\":\"GERMAN\"}},{\"id\":12,\"isAvailable\":false,\"currentMood\":\"HAPPY\",\"products\":[\"CONSULTANCY\",\"COSMO\",\"ENGINE\",\"SDK\"],\"details\":{\"forename\":\"David\",\"nationality\":\"ENGLISH\"}}]}}", content.Text)
 
+					// Set up expected text with the static endpoint
+					expectedContent := "Operation: MyEmployees\nType: query\nDescription: This is a GraphQL query that retrieves a list of employees.\n\nInput Schema:\n```json\n{\"additionalProperties\":false,\"description\":\"This is a GraphQL query that retrieves a list of employees.\",\"nullable\":true,\"properties\":{\"criteria\":{\"additionalProperties\":false,\"description\":\"Allows to filter employees by their details.\",\"nullable\":false,\"properties\":{\"hasPets\":{\"nullable\":true,\"type\":\"boolean\"},\"nationality\":{\"enum\":[\"AMERICAN\",\"DUTCH\",\"ENGLISH\",\"GERMAN\",\"INDIAN\",\"SPANISH\",\"UKRAINIAN\"],\"nullable\":true,\"type\":\"string\"},\"nested\":{\"additionalProperties\":false,\"nullable\":true,\"properties\":{\"hasChildren\":{\"nullable\":true,\"type\":\"boolean\"},\"maritalStatus\":{\"enum\":[\"ENGAGED\",\"MARRIED\"],\"nullable\":true,\"type\":\"string\"}},\"type\":\"object\"}},\"type\":\"object\"}},\"type\":\"object\"}\n```\n\nGraphQL Query:\n```\nquery MyEmployees($criteria: SearchInput) {\n    findEmployees(criteria: $criteria) {\n        id\n        isAvailable\n        currentMood\n        products\n        details {\n            forename\n            nationality\n        }\n    }\n}\n```\n\nUsage Instructions:\n1. Endpoint: https://api.example.com/graphql\n2. HTTP Method: POST\n3. Headers Required:\n   - Content-Type: application/json; charset=utf-8\n\nRequest Format:\n```json\n{\n  \"query\": \"<operation_query>\",\n  \"variables\": <your_variables_object>\n}\n```\n\nImportant Notes:\n1. Use the query string exactly as provided above\n2. Do not modify or reformat the query string"
+
+					assert.Equal(t, expectedContent, content.Text)
 				})
 			})
 
-			t.Run("Execute operation of type query with invalid input", func(t *testing.T) {
-				testenv.Run(t, &testenv.Config{
-					MCP: config.MCPConfiguration{
-						Enabled: true,
-					},
-				}, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Run("Execute Query", func(t *testing.T) {
+				t.Run("Execute operation of type query with valid input", func(t *testing.T) {
+					testenv.Run(t, &testenv.Config{
+						MCP: config.MCPConfiguration{
+							Enabled: true,
+						},
+					}, func(t *testing.T, xEnv *testenv.Environment) {
 
-					req := mcp.CallToolRequest{}
-					req.Params.Name = "execute_operation_my_employees"
-					req.Params.Arguments = map[string]interface{}{
-						"criteria": nil,
-					}
+						req := mcp.CallToolRequest{}
+						req.Params.Name = "execute_operation_my_employees"
+						req.Params.Arguments = map[string]interface{}{
+							"criteria": map[string]interface{}{},
+						}
 
-					resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
-					assert.NoError(t, err)
-					assert.True(t, resp.IsError)
+						resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
+						assert.NoError(t, err)
+						assert.NotNil(t, resp)
 
-					content, ok := resp.Content[0].(mcp.TextContent)
-					assert.True(t, ok)
+						assert.Len(t, resp.Content, 1)
 
-					assert.Equal(t, content.Type, "text")
-					assert.Equal(t, content.Text, "Input validation Error: validation error: at '/criteria': got null, want object")
+						content, ok := resp.Content[0].(mcp.TextContent)
+						assert.True(t, ok)
+
+						assert.Equal(t, content.Type, "text")
+						assert.Nil(t, content.Annotations)
+						assert.Equal(t, "{\"data\":{\"findEmployees\":[{\"id\":1,\"isAvailable\":false,\"currentMood\":\"HAPPY\",\"products\":[\"CONSULTANCY\",\"COSMO\",\"ENGINE\",\"MARKETING\",\"SDK\"],\"details\":{\"forename\":\"Jens\",\"nationality\":\"GERMAN\"}},{\"id\":2,\"isAvailable\":false,\"currentMood\":\"HAPPY\",\"products\":[\"COSMO\",\"SDK\"],\"details\":{\"forename\":\"Dustin\",\"nationality\":\"GERMAN\"}},{\"id\":3,\"isAvailable\":false,\"currentMood\":\"HAPPY\",\"products\":[\"CONSULTANCY\",\"MARKETING\"],\"details\":{\"forename\":\"Stefan\",\"nationality\":\"AMERICAN\"}},{\"id\":4,\"isAvailable\":false,\"currentMood\":\"HAPPY\",\"products\":[\"FINANCE\",\"HUMAN_RESOURCES\",\"MARKETING\"],\"details\":{\"forename\":\"Björn\",\"nationality\":\"GERMAN\"}},{\"id\":5,\"isAvailable\":false,\"currentMood\":\"HAPPY\",\"products\":[\"ENGINE\",\"SDK\"],\"details\":{\"forename\":\"Sergiy\",\"nationality\":\"UKRAINIAN\"}},{\"id\":7,\"isAvailable\":false,\"currentMood\":\"HAPPY\",\"products\":[\"COSMO\",\"SDK\"],\"details\":{\"forename\":\"Suvij\",\"nationality\":\"INDIAN\"}},{\"id\":8,\"isAvailable\":false,\"currentMood\":\"HAPPY\",\"products\":[\"COSMO\",\"SDK\"],\"details\":{\"forename\":\"Nithin\",\"nationality\":\"INDIAN\"}},{\"id\":10,\"isAvailable\":false,\"currentMood\":\"HAPPY\",\"products\":[\"CONSULTANCY\",\"COSMO\",\"SDK\"],\"details\":{\"forename\":\"Eelco\",\"nationality\":\"DUTCH\"}},{\"id\":11,\"isAvailable\":false,\"currentMood\":\"HAPPY\",\"products\":[\"FINANCE\"],\"details\":{\"forename\":\"Alexandra\",\"nationality\":\"GERMAN\"}},{\"id\":12,\"isAvailable\":false,\"currentMood\":\"HAPPY\",\"products\":[\"CONSULTANCY\",\"COSMO\",\"ENGINE\",\"SDK\"],\"details\":{\"forename\":\"David\",\"nationality\":\"ENGLISH\"}}]}}", content.Text)
+
+					})
+				})
+
+				t.Run("Execute operation of type query with invalid input", func(t *testing.T) {
+					testenv.Run(t, &testenv.Config{
+						MCP: config.MCPConfiguration{
+							Enabled: true,
+						},
+					}, func(t *testing.T, xEnv *testenv.Environment) {
+
+						req := mcp.CallToolRequest{}
+						req.Params.Name = "execute_operation_my_employees"
+						req.Params.Arguments = map[string]interface{}{
+							"criteria": nil,
+						}
+
+						resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
+						assert.NoError(t, err)
+						assert.True(t, resp.IsError)
+
+						content, ok := resp.Content[0].(mcp.TextContent)
+						assert.True(t, ok)
+
+						assert.Equal(t, content.Type, "text")
+						assert.Equal(t, content.Text, "Input validation Error: validation error: at '/criteria': got null, want object")
+					})
 				})
 			})
-		})
 
-		t.Run("Execute Mutation", func(t *testing.T) {
-			t.Run("Execute operation of type mutation with valid input", func(t *testing.T) {
-				testenv.Run(t, &testenv.Config{
-					MCP: config.MCPConfiguration{
-						Enabled: true,
-					},
-				}, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Run("Execute Mutation", func(t *testing.T) {
+				t.Run("Execute operation of type mutation with valid input", func(t *testing.T) {
+					testenv.Run(t, &testenv.Config{
+						MCP: config.MCPConfiguration{
+							Enabled: true,
+						},
+					}, func(t *testing.T, xEnv *testenv.Environment) {
 
-					req := mcp.CallToolRequest{}
-					req.Params.Name = "execute_operation_update_mood"
-					req.Params.Arguments = map[string]interface{}{
-						"employeeID": 1,
-						"mood":       "HAPPY",
-					}
+						req := mcp.CallToolRequest{}
+						req.Params.Name = "execute_operation_update_mood"
+						req.Params.Arguments = map[string]interface{}{
+							"employeeID": 1,
+							"mood":       "HAPPY",
+						}
 
-					resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
-					assert.NoError(t, err)
-					assert.NotNil(t, resp)
+						resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
+						assert.NoError(t, err)
+						assert.NotNil(t, resp)
 
-					assert.Len(t, resp.Content, 1)
+						assert.Len(t, resp.Content, 1)
 
-					content, ok := resp.Content[0].(mcp.TextContent)
-					assert.True(t, ok)
+						content, ok := resp.Content[0].(mcp.TextContent)
+						assert.True(t, ok)
 
-					assert.Equal(t, content.Type, "text")
-					assert.Nil(t, content.Annotations)
-					assert.Equal(t, "{\"data\":{\"updateMood\":{\"id\":1,\"details\":{\"forename\":\"Jens\"},\"currentMood\":\"HAPPY\"}}}", content.Text)
+						assert.Equal(t, content.Type, "text")
+						assert.Nil(t, content.Annotations)
+						assert.Equal(t, "{\"data\":{\"updateMood\":{\"id\":1,\"details\":{\"forename\":\"Jens\"},\"currentMood\":\"HAPPY\"}}}", content.Text)
+					})
 				})
 			})
-		})
 
-		t.Run("Developer Tools", func(t *testing.T) {
-			t.Run("Execute an arbitrary query", func(t *testing.T) {
-				testenv.Run(t, &testenv.Config{
-					MCP: config.MCPConfiguration{
-						Enabled:                   true,
-						EnableArbitraryOperations: true,
-					},
-				}, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Run("Developer Tools", func(t *testing.T) {
+				t.Run("Execute an arbitrary query", func(t *testing.T) {
+					testenv.Run(t, &testenv.Config{
+						MCP: config.MCPConfiguration{
+							Enabled:                   true,
+							EnableArbitraryOperations: true,
+						},
+					}, func(t *testing.T, xEnv *testenv.Environment) {
 
-					req := mcp.CallToolRequest{}
-					req.Params.Name = "execute_graphql"
-					req.Params.Arguments = map[string]interface{}{
-						"query": `
+						req := mcp.CallToolRequest{}
+						req.Params.Name = "execute_graphql"
+						req.Params.Arguments = map[string]interface{}{
+							"query": `
 							query {
 							  employees {
 								id
 							  }
 							}
 							`,
-					}
+						}
 
-					resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
-					assert.NoError(t, err)
-					assert.NotNil(t, resp)
+						resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
+						assert.NoError(t, err)
+						assert.NotNil(t, resp)
 
-					assert.Len(t, resp.Content, 1)
+						assert.Len(t, resp.Content, 1)
 
-					content, ok := resp.Content[0].(mcp.TextContent)
-					assert.True(t, ok)
+						content, ok := resp.Content[0].(mcp.TextContent)
+						assert.True(t, ok)
 
-					assert.Equal(t, content.Type, "text")
-					assert.Nil(t, content.Annotations)
-					assert.Equal(t, "{\"data\":{\"employees\":[{\"id\":1},{\"id\":2},{\"id\":3},{\"id\":4},{\"id\":5},{\"id\":7},{\"id\":8},{\"id\":10},{\"id\":11},{\"id\":12}]}}", content.Text)
+						assert.Equal(t, content.Type, "text")
+						assert.Nil(t, content.Annotations)
+						assert.Equal(t, "{\"data\":{\"employees\":[{\"id\":1},{\"id\":2},{\"id\":3},{\"id\":4},{\"id\":5},{\"id\":7},{\"id\":8},{\"id\":10},{\"id\":11},{\"id\":12}]}}", content.Text)
 
+					})
+				})
+
+				t.Run("Get the full graph schema of the base graph", func(t *testing.T) {
+					testenv.Run(t, &testenv.Config{
+						MCP: config.MCPConfiguration{
+							Enabled:      true,
+							ExposeSchema: true,
+						},
+					}, func(t *testing.T, xEnv *testenv.Environment) {
+
+						req := mcp.CallToolRequest{}
+						req.Params.Name = "get_schema"
+
+						resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
+						assert.NoError(t, err)
+						assert.NotNil(t, resp)
+
+						assert.Len(t, resp.Content, 1)
+
+						content, ok := resp.Content[0].(mcp.TextContent)
+						assert.True(t, ok)
+
+						assert.Equal(t, content.Type, "text")
+						assert.Nil(t, content.Annotations)
+						assert.Contains(t, content.Text, "schema {")
+					})
 				})
 			})
 
-			t.Run("Get the full graph schema of the base graph", func(t *testing.T) {
-				testenv.Run(t, &testenv.Config{
-					MCP: config.MCPConfiguration{
-						Enabled:      true,
-						ExposeSchema: true,
-					},
-				}, func(t *testing.T, xEnv *testenv.Environment) {
-
-					req := mcp.CallToolRequest{}
-					req.Params.Name = "get_schema"
-
-					resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
-					assert.NoError(t, err)
-					assert.NotNil(t, resp)
-
-					assert.Len(t, resp.Content, 1)
-
-					content, ok := resp.Content[0].(mcp.TextContent)
-					assert.True(t, ok)
-
-					assert.Equal(t, content.Type, "text")
-					assert.Nil(t, content.Annotations)
-					assert.Contains(t, content.Text, "schema {")
-				})
-			})
 		})
-
 	})
 }

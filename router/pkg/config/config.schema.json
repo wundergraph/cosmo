@@ -1915,6 +1915,11 @@
             }
           }
         },
+        "router_url": {
+          "type": "string",
+          "description": "Custom URL to use for the router GraphQL endpoint in MCP. Use this when your router is behind a proxy. This information is used in MCP responses to provide the real router URL to AI models.",
+          "format": "url"
+        },
         "storage": {
           "type": "object",
           "description": "Storage provider configuration for the MCP server. This specifies where GraphQL operations are loaded from.",
