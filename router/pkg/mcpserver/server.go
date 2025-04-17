@@ -368,7 +368,8 @@ func (s *GraphQLSchemaServer) registerTools() error {
 				"get_schema",
 				mcp.WithDescription("Provides the full GraphQL schema of the API."),
 				mcp.WithToolAnnotation(mcp.ToolAnnotation{
-					Title: "Get GraphQL Schema",
+					Title:        "Get GraphQL Schema",
+					ReadOnlyHint: true,
 				}),
 			),
 			s.handleGetGraphQLSchema(),
@@ -410,8 +411,10 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		)
 
 		tool.Annotations = mcp.ToolAnnotation{
-			Title:         "Execute GraphQL Query",
-			OpenWorldHint: true,
+			Title:           "Execute GraphQL Query",
+			DestructiveHint: true,
+			IdempotentHint:  false,
+			OpenWorldHint:   true,
 		}
 
 		s.server.AddTool(
@@ -480,7 +483,7 @@ func (s *GraphQLSchemaServer) registerTools() error {
 
 		tool.Annotations = mcp.ToolAnnotation{
 			IdempotentHint: op.OperationType != "mutation",
-			Title:          op.Name,
+			Title:          fmt.Sprintf("Execute operation %s", op.Name),
 			ReadOnlyHint:   op.OperationType == "query",
 			OpenWorldHint:  true,
 		}
