@@ -237,23 +237,10 @@ func WithOperationsDir(operationsDir string) func(*Options) {
 	}
 }
 
-// WithServer sets the server configuration
-func WithServer(server ServerOptions) func(*Options) {
-	return func(o *Options) {
-		o.Server = server
-	}
-}
-
 // WithPort sets just the port
 func WithPort(port int) func(*Options) {
 	return func(o *Options) {
 		o.Server.Port = port
-	}
-}
-
-func WithRequestTimeout(timeout time.Duration) func(*Options) {
-	return func(o *Options) {
-		o.RequestTimeout = timeout
 	}
 }
 
@@ -372,21 +359,6 @@ func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
 // registerTools registers all tools for the MCP server
 func (s *GraphQLSchemaServer) registerTools() error {
 
-	s.server.AddTool(
-		mcp.NewTool(
-			"get_operation_info",
-			mcp.WithDescription("Provides instructions on how to execute the GraphQL operation via HTTP and how to integrate it into your application. This tool doesn't accept arbitrary GraphQL operations. It is specifically designed to provide detailed information about the available 'execute_operation_<operationName>' tools."),
-			mcp.WithToolAnnotation(mcp.ToolAnnotation{
-				Title: "Get GraphQL Operation Info",
-			}),
-			mcp.WithString("operationName",
-				mcp.Required(),
-				mcp.Description("The exact name of the GraphQL operation to retrieve information for."),
-			),
-		),
-		s.handleGraphQLOperationInfo(),
-	)
-
 	s.registeredTools = append(s.registeredTools, "get_operation_info")
 
 	// Only register the schema tool if exposeSchema is enabled
@@ -454,9 +426,13 @@ func (s *GraphQLSchemaServer) registerTools() error {
 	// Get operations filtered by the excludeMutations setting
 	operations := s.operationsManager.GetFilteredOperations()
 
+	graphqlOperationNames := make([]string, 0, len(operations))
+
 	for _, op := range operations {
 		var compiledSchema *jsonschema.Schema
 		var err error
+
+		graphqlOperationNames = append(graphqlOperationNames, op.Name)
 
 		if len(op.JSONSchema) > 0 {
 			// Validate the JSON schema before compiling it
@@ -490,9 +466,9 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		var toolDescription string
 
 		if op.Description != "" {
-			toolDescription = fmt.Sprintf("Executes the GraphQL operation name '%s' of type %s. %s", op.Name, op.OperationType, op.Description)
+			toolDescription = fmt.Sprintf("Executes the GraphQL operation '%s' of type %s. %s", op.Name, op.OperationType, op.Description)
 		} else {
-			toolDescription = fmt.Sprintf("Executes the GraphQL operation name '%s' of type %s.", op.Name, op.OperationType)
+			toolDescription = fmt.Sprintf("Executes the GraphQL operation '%s' of type %s.", op.Name, op.OperationType)
 		}
 
 		toolName := fmt.Sprintf("execute_operation_%s", operationToolName)
@@ -516,6 +492,23 @@ func (s *GraphQLSchemaServer) registerTools() error {
 
 		s.registeredTools = append(s.registeredTools, toolName)
 	}
+
+	s.server.AddTool(
+		mcp.NewTool(
+			"get_operation_info",
+			mcp.WithDescription("Provides instructions on how to execute the GraphQL operation via HTTP and how to integrate it into your application."),
+			mcp.WithToolAnnotation(mcp.ToolAnnotation{
+				Title:        "Get GraphQL Operation Info",
+				ReadOnlyHint: true,
+			}),
+			mcp.WithString("operationName",
+				mcp.Required(),
+				mcp.Description("The exact name of the GraphQL operation to retrieve information for."),
+				mcp.Enum(graphqlOperationNames...),
+			),
+		),
+		s.handleGraphQLOperationInfo(),
+	)
 
 	return nil
 }

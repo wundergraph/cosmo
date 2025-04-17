@@ -11,6 +11,8 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
+// TODO fix tool annotations tests once https://github.com/mark3labs/mcp-go/pull/165 is merged
+
 func TestMCP(t *testing.T) {
 
 	t.Run("Discovery", func(t *testing.T) {
@@ -28,13 +30,14 @@ func TestMCP(t *testing.T) {
 
 				require.Contains(t, resp.Tools, mcp.Tool{
 					Name:        "get_operation_info",
-					Description: "Provides instructions on how to execute the GraphQL operation via HTTP and how to integrate it into your application. This tool doesn't accept arbitrary GraphQL operations. It is specifically designed to provide detailed information about the available 'execute_operation_<operationName>' tools.",
+					Description: "Provides instructions on how to execute the GraphQL operation via HTTP and how to integrate it into your application.",
 					InputSchema: mcp.ToolInputSchema{
 						Type:       "object",
-						Properties: map[string]interface{}{"operationName": map[string]interface{}{"description": "The exact name of the GraphQL operation to retrieve information for.", "type": "string"}},
+						Properties: map[string]interface{}{"operationName": map[string]interface{}{"description": "The exact name of the GraphQL operation to retrieve information for.", "enum": []interface{}{"UpdateMood", "MyEmployees"}, "type": "string"}},
 						Required:   []string{"operationName"}},
-					RawInputSchema: json.RawMessage(nil)},
-				)
+					RawInputSchema: json.RawMessage(nil),
+					Annotations:    mcp.ToolAnnotation{Title: "", ReadOnlyHint: false, DestructiveHint: false, IdempotentHint: false, OpenWorldHint: false},
+				})
 			})
 		})
 
@@ -106,10 +109,10 @@ func TestMCP(t *testing.T) {
 				require.NotNil(t, resp)
 
 				// Verify MyEmployees operation
-				require.Contains(t, resp.Tools, mcp.Tool{Name: "execute_operation_my_employees", Description: "Executes the GraphQL operation name 'MyEmployees' of type query. This is a GraphQL query that retrieves a list of employees.", InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"criteria": map[string]interface{}{"additionalProperties": false, "description": "Allows to filter employees by their details.", "nullable": false, "properties": map[string]interface{}{"hasPets": map[string]interface{}{"nullable": true, "type": "boolean"}, "nationality": map[string]interface{}{"enum": []interface{}{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN"}, "nullable": true, "type": "string"}, "nested": map[string]interface{}{"additionalProperties": false, "nullable": true, "properties": map[string]interface{}{"hasChildren": map[string]interface{}{"nullable": true, "type": "boolean"}, "maritalStatus": map[string]interface{}{"enum": []interface{}{"ENGAGED", "MARRIED"}, "nullable": true, "type": "string"}}, "type": "object"}}, "type": "object"}}, Required: []string(nil)}, RawInputSchema: json.RawMessage(nil), Annotations: mcp.ToolAnnotation{Title: "", ReadOnlyHint: false, DestructiveHint: false, IdempotentHint: false, OpenWorldHint: false}})
+				require.Contains(t, resp.Tools, mcp.Tool{Name: "execute_operation_my_employees", Description: "Executes the GraphQL operation 'MyEmployees' of type query. This is a GraphQL query that retrieves a list of employees.", InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"criteria": map[string]interface{}{"additionalProperties": false, "description": "Allows to filter employees by their details.", "nullable": false, "properties": map[string]interface{}{"hasPets": map[string]interface{}{"nullable": true, "type": "boolean"}, "nationality": map[string]interface{}{"enum": []interface{}{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN"}, "nullable": true, "type": "string"}, "nested": map[string]interface{}{"additionalProperties": false, "nullable": true, "properties": map[string]interface{}{"hasChildren": map[string]interface{}{"nullable": true, "type": "boolean"}, "maritalStatus": map[string]interface{}{"enum": []interface{}{"ENGAGED", "MARRIED"}, "nullable": true, "type": "string"}}, "type": "object"}}, "type": "object"}}, Required: []string(nil)}, RawInputSchema: json.RawMessage(nil), Annotations: mcp.ToolAnnotation{Title: "", ReadOnlyHint: false, DestructiveHint: false, IdempotentHint: false, OpenWorldHint: false}})
 
 				// Verify UpdateMood operation
-				require.Contains(t, resp.Tools, mcp.Tool{Name: "execute_operation_update_mood", Description: "Executes the GraphQL operation name 'UpdateMood' of type mutation. This mutation update the mood of an employee.", InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"employeeID": map[string]interface{}{"type": "integer"}, "mood": map[string]interface{}{"enum": []interface{}{"HAPPY", "SAD"}, "type": "string"}}, Required: []string{"employeeID", "mood"}}, RawInputSchema: json.RawMessage(nil), Annotations: mcp.ToolAnnotation{Title: "", ReadOnlyHint: false, DestructiveHint: false, IdempotentHint: false, OpenWorldHint: false}}, mcp.Tool{Name: "get_operation_info", Description: "Provides instructions on how to execute the GraphQL operation via HTTP. This tool doesn't accept arbitrary GraphQL operations. It is specifically designed to provide detailed information about the available 'execute_operation_<operationName>' tools.", InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"operationName": map[string]interface{}{"description": "The exact name of the GraphQL operation to retrieve information for.", "type": "string"}}, Required: []string{"operationName"}}, RawInputSchema: json.RawMessage(nil), Annotations: mcp.ToolAnnotation{Title: "", ReadOnlyHint: false, DestructiveHint: false, IdempotentHint: false, OpenWorldHint: false}})
+				require.Contains(t, resp.Tools, mcp.Tool{Name: "execute_operation_update_mood", Description: "Executes the GraphQL operation 'UpdateMood' of type mutation. This mutation update the mood of an employee.", InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"employeeID": map[string]interface{}{"type": "integer"}, "mood": map[string]interface{}{"enum": []interface{}{"HAPPY", "SAD"}, "type": "string"}}, Required: []string{"employeeID", "mood"}}, RawInputSchema: json.RawMessage(nil), Annotations: mcp.ToolAnnotation{Title: "", ReadOnlyHint: false, DestructiveHint: false, IdempotentHint: false, OpenWorldHint: false}}, mcp.Tool{Name: "get_operation_info", Description: "Provides instructions on how to execute the GraphQL operation via HTTP. This tool doesn't accept arbitrary GraphQL operations. It is specifically designed to provide detailed information about the available 'execute_operation_<operationName>' tools.", InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"operationName": map[string]interface{}{"description": "The exact name of the GraphQL operation to retrieve information for.", "type": "string"}}, Required: []string{"operationName"}}, RawInputSchema: json.RawMessage(nil), Annotations: mcp.ToolAnnotation{Title: "", ReadOnlyHint: false, DestructiveHint: false, IdempotentHint: false, OpenWorldHint: false}})
 			})
 
 			t.Run("List user Operations / Static operations of type mutation aren't exposed when excludeMutations is set", func(t *testing.T) {
