@@ -7,11 +7,10 @@ import (
 	"fmt"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
-	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"go.uber.org/zap"
 )
 
-// SchemaCompiler handles JSON schema compilation for operations
+// SchemaCompiler handles JSON schema compilation and validation
 type SchemaCompiler struct {
 	logger *zap.Logger
 }
@@ -26,27 +25,30 @@ func NewSchemaCompiler(logger *zap.Logger) *SchemaCompiler {
 	}
 }
 
-// CompileSchema compiles a JSON schema for a single operation
-func (sc *SchemaCompiler) CompileSchema(op schemaloader.Operation) (*jsonschema.Schema, error) {
-	if len(op.JSONSchema) == 0 {
+// CompileJSONSchema compiles a JSON schema from raw bytes
+func (sc *SchemaCompiler) CompileJSONSchema(jsonSchema []byte, schemaName string) (*jsonschema.Schema, error) {
+	if len(jsonSchema) == 0 {
 		return nil, nil
 	}
 
 	c := jsonschema.NewCompiler()
 
-	// Load the JSON schema from the operation
-	schema, err := jsonschema.UnmarshalJSON(bytes.NewReader(op.JSONSchema))
+	// Load the JSON schema from the bytes
+	schema, err := jsonschema.UnmarshalJSON(bytes.NewReader(jsonSchema))
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON schema: %w", err)
 	}
 
-	sn := fmt.Sprintf("schema-%s.json", op.Name)
-	err = c.AddResource(sn, schema)
+	if schemaName == "" {
+		schemaName = "schema.json"
+	}
+
+	err = c.AddResource(schemaName, schema)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add resource to JSON schema compiler: %w", err)
 	}
 
-	sch, err := c.Compile(sn)
+	sch, err := c.Compile(schemaName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compile JSON schema: %w", err)
 	}
@@ -74,4 +76,15 @@ func (sc *SchemaCompiler) ValidateInput(data []byte, compiledSchema *jsonschema.
 	}
 
 	return nil
+}
+
+// ValidateJSONSchema validates that the provided bytes are a valid JSON schema
+func (sc *SchemaCompiler) ValidateJSONSchema(jsonSchema []byte) error {
+	if len(jsonSchema) == 0 {
+		return nil
+	}
+
+	// Attempt to compile the schema to verify it's valid
+	_, err := sc.CompileJSONSchema(jsonSchema, "")
+	return err
 }

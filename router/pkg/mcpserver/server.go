@@ -343,7 +343,9 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document) error {
 
 	s.server.DeleteTools(s.registeredTools...)
 
-	s.registerTools()
+	if err := s.registerTools(); err != nil {
+		return fmt.Errorf("failed to register tools: %w", err)
+	}
 
 	return nil
 }
@@ -368,7 +370,7 @@ func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
 }
 
 // registerTools registers all tools for the MCP server
-func (s *GraphQLSchemaServer) registerTools() {
+func (s *GraphQLSchemaServer) registerTools() error {
 
 	s.server.AddTool(
 		mcp.NewTool(
@@ -424,6 +426,11 @@ func (s *GraphQLSchemaServer) registerTools() {
 			"required": ["query"]
 		}`)
 
+		// Validate the schema before using it
+		if err := s.schemaCompiler.ValidateJSONSchema(executeGraphQLSchema); err != nil {
+			return fmt.Errorf("invalid schema for execute_graphql tool: %w", err)
+		}
+
 		tool := mcp.NewToolWithRawSchema(
 			"execute_graphql",
 			"Executes a GraphQL query or mutation.",
@@ -441,6 +448,7 @@ func (s *GraphQLSchemaServer) registerTools() {
 		)
 
 		s.registeredTools = append(s.registeredTools, "execute_graphql")
+
 	}
 
 	// Get operations filtered by the excludeMutations setting
@@ -451,7 +459,17 @@ func (s *GraphQLSchemaServer) registerTools() {
 		var err error
 
 		if len(op.JSONSchema) > 0 {
-			compiledSchema, err = s.schemaCompiler.CompileSchema(op)
+			// Validate the JSON schema before compiling it
+			if err := s.schemaCompiler.ValidateJSONSchema(op.JSONSchema); err != nil {
+				s.logger.Error("invalid schema for operation",
+					zap.String("operation", op.Name),
+					zap.Error(err))
+				continue
+			}
+
+			// Now compile the validated schema
+			schemaName := fmt.Sprintf("schema-%s.json", op.Name)
+			compiledSchema, err = s.schemaCompiler.CompileJSONSchema(op.JSONSchema, schemaName)
 			if err != nil {
 				s.logger.Error("failed to compile schema for operation",
 					zap.String("operation", op.Name),
@@ -498,6 +516,8 @@ func (s *GraphQLSchemaServer) registerTools() {
 
 		s.registeredTools = append(s.registeredTools, toolName)
 	}
+
+	return nil
 }
 
 // handleOperation handles a specific operation
