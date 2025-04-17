@@ -2,7 +2,13 @@
   "name": "benchmark-scenarios",
   "private": true,
   "scripts": {
-    "bundle": "webpack"
+    "bundle": "webpack",
+    "run:errors": "k6 run src/errors.test.ts",
+    "run:mutations": "k6 run src/mutations.test.ts",
+    "run:queries": "k6 run src/queries.test.ts",
+    "run:random": "k6 run src/random.test.ts",
+    "run:subscriptions": "k6 run src/subscriptions.test.ts",
+    "run:all": "pnpm run run:errors && pnpm run run:mutations && pnpm run run:queries && pnpm run run:random && pnpm run run:subscriptions"
   },
   "devDependencies": {
     "@types/k6": "1.0.2"

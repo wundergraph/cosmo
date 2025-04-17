@@ -11,7 +11,7 @@ import (
 	"syscall"
 
 	"github.com/wundergraph/cosmo/router/core"
-	"github.com/wundergraph/cosmo/router/internal/profiler"
+	"github.com/wundergraph/cosmo/router/internal/pyroscope"
 	"github.com/wundergraph/cosmo/router/internal/versioninfo"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
@@ -66,7 +66,7 @@ func Main() {
 		go pprofSvr.Listen()
 	}
 
-	pyroscopeStop, err := profiler.StartProfiler(result.Config)
+	pyroscopeStop, err := pyroscope.SetupPyroscope(logger)
 	if err != nil {
 		logger.Fatal("Could not start profiler", zap.Error(err))
 	}

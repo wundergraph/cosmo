@@ -7,7 +7,6 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/goccy/go-yaml"
-	"github.com/grafana/pyroscope-go"
 	"github.com/joho/godotenv"
 
 	"github.com/wundergraph/cosmo/router/internal/unique"
@@ -124,16 +123,6 @@ type MetricsOTLP struct {
 	ExcludeMetrics      RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray            `yaml:"exclude_metric_labels,omitempty" env:"METRICS_OTLP_EXCLUDE_METRIC_LABELS"`
 	Exporters           []MetricsOTLPExporter `yaml:"exporters"`
-}
-
-type Profiling struct {
-	Enabled           bool                    `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-	ServiceName       string                  `yaml:"service_name" envDefault:"cosmo-router" env:"SERVICE_NAME"`
-	ServerAddress     string                  `yaml:"server_address" envDefault:"http://localhost:4040" env:"SERVER_ADDRESS"`
-	ProfileTypes      []pyroscope.ProfileType `yaml:"profile_types" envDefault:"[cpu,alloc_objects,alloc_space,inuse_objects,inuse_space]" env:"PROFILE_TYPES"`
-	Tags              map[string]string       `yaml:"tags" env:"TAGS" envSeparator:","`
-	BasicAuthUser     string                  `yaml:"basic_auth_user" env:"BASIC_AUTH_USER"`
-	BasicAuthPassword string                  `yaml:"basic_auth_password" env:"BASIC_AUTH_PASSWORD"`
 }
 
 type Telemetry struct {
@@ -852,7 +841,6 @@ type Config struct {
 	InstanceID     string             `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
 	Graph          Graph              `yaml:"graph,omitempty"`
 	Telemetry      Telemetry          `yaml:"telemetry,omitempty"`
-	Profiling      Profiling          `yaml:"profiling" envPrefix:"PROFILING_"`
 	GraphqlMetrics GraphqlMetrics     `yaml:"graphql_metrics,omitempty"`
 	CORS           CORS               `yaml:"cors,omitempty"`
 	Cluster        Cluster            `yaml:"cluster,omitempty"`
