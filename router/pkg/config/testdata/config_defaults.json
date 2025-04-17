@@ -122,7 +122,7 @@
       "ResponseHeaderTimeout": 0,
       "ExpectContinueTimeout": 0,
       "TLSHandshakeTimeout": 10000000000,
-      "KeepAliveIdleTimeout": 0,
+      "KeepAliveIdleTimeout": 90000000000,
       "KeepAliveProbeInterval": 30000000000,
       "MaxConnsPerHost": 100,
       "MaxIdleConns": 1024,
