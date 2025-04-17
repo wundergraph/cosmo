@@ -29,10 +29,13 @@ type ExecutorConfigurationBuilder struct {
 	introspection  bool
 	trackUsageInfo bool
 	baseURL        string
-	transport      http.RoundTripper
 	logger         *zap.Logger
 
 	transportOptions *TransportOptions
+	baseTripper      http.RoundTripper
+	subgraphTrippers map[string]http.RoundTripper
+
+	subscriptionClientOptions *SubscriptionClientOptions
 }
 
 type Executor struct {
@@ -276,7 +279,9 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	loader := NewLoader(b.trackUsageInfo, NewDefaultFactoryResolver(
 		ctx,
 		b.transportOptions,
-		b.transport,
+		b.subscriptionClientOptions,
+		b.baseTripper,
+		b.subgraphTrippers,
 		b.logger,
 		routerEngineCfg.Execution.EnableSingleFlight,
 		routerEngineCfg.Execution.EnableNetPoll,

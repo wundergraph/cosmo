@@ -344,7 +344,7 @@ func TestNatsEvents(t *testing.T) {
 					require.Equal(t, http.StatusOK, resp.StatusCode)
 					defer resp.Body.Close()
 
-					require.Equal(t, "multipart/mixed; boundary=graphql", resp.Header.Get("Content-Type"))
+					require.Equal(t, "multipart/mixed; subscriptionSpec=1.0; boundary=graphql", resp.Header.Get("Content-Type"))
 					require.Equal(t, "no-cache", resp.Header.Get("Cache-Control"))
 					require.Equal(t, "no", resp.Header.Get("X-Accel-Buffering"))
 
@@ -386,7 +386,7 @@ func TestNatsEvents(t *testing.T) {
 			})
 		})
 
-		t.Run("subscribe with multipart responses http", func(t *testing.T) {
+		t.Run("subscribe with multipart responses http and consume healthcheck only", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
@@ -402,11 +402,10 @@ func TestNatsEvents(t *testing.T) {
 
 				var counter atomic.Uint32
 
-				var client *http.Client
+				client := &http.Client{}
+
 				go func() {
 					defer counter.Add(1)
-
-					client = &http.Client{}
 
 					req := xEnv.MakeGraphQLMultipartRequest(http.MethodPost, bytes.NewReader(subscribePayload))
 					resp, err := client.Do(req)
@@ -432,7 +431,6 @@ func TestNatsEvents(t *testing.T) {
 		})
 
 		t.Run("subscribe with closing channel", func(t *testing.T) {
-			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,

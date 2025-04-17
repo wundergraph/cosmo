@@ -24,20 +24,6 @@ import (
 
 const KafkaWaitTimeout = time.Second * 30
 
-func TestLocalKafka(t *testing.T) {
-	t.Skip("skip only for local testing")
-
-	t.Run("subscribe async", func(t *testing.T) {
-		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithEdfsJSONTemplate,
-			EnableKafka:              true,
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// ensureTopicExists(t, xEnv, "employeeUpdated", "employeeUpdatedTwo")
-			produceKafkaMessage(t, xEnv, "employeeUpdatedTwo", `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
-		})
-	})
-}
-
 func TestKafkaEvents(t *testing.T) {
 	t.Parallel()
 	// All tests are running in sequence because they are using the same kafka topic
@@ -337,7 +323,7 @@ func TestKafkaEvents(t *testing.T) {
 
 			require.Eventually(t, func() bool {
 				return counter.Load() == 4
-			}, KafkaWaitTimeout, time.Millisecond*100)
+			}, KafkaWaitTimeout, time.Millisecond*100, "expected 4 events, got %d", counter.Load())
 
 			require.NoError(t, client.Close())
 

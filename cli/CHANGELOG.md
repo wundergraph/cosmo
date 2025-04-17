@@ -4,6 +4,40 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.78.0](https://github.com/wundergraph/cosmo/compare/wgc@0.77.2...wgc@0.78.0) (2025-04-15)
+
+### Features
+
+* implement proposals in cosmo ([#1727](https://github.com/wundergraph/cosmo/issues/1727)) ([1d36747](https://github.com/wundergraph/cosmo/commit/1d36747dda3f2f3c491092f0f02cefa22fc9c131)) (@JivusAyrus)
+
+## [0.77.2](https://github.com/wundergraph/cosmo/compare/wgc@0.77.1...wgc@0.77.2) (2025-04-15)
+
+**Note:** Version bump only for package wgc
+
+## [0.77.1](https://github.com/wundergraph/cosmo/compare/wgc@0.77.0...wgc@0.77.1) (2025-04-10)
+
+### Bug Fixes
+
+* improve subgraph change verification ([#1772](https://github.com/wundergraph/cosmo/issues/1772)) ([4f7d438](https://github.com/wundergraph/cosmo/commit/4f7d438ea77cbcbbd1dfb5c2c13752658f2edd62)) (@jensneuse)
+
+# [0.77.0](https://github.com/wundergraph/cosmo/compare/wgc@0.76.3...wgc@0.77.0) (2025-04-10)
+
+### Features
+
+* add initial mcp server implementation to wgc ([#1764](https://github.com/wundergraph/cosmo/issues/1764)) ([34c1365](https://github.com/wundergraph/cosmo/commit/34c1365e30da7491e2a4e7fac0d157d002da1481)) (@jensneuse)
+
+## [0.76.3](https://github.com/wundergraph/cosmo/compare/wgc@0.76.2...wgc@0.76.3) (2025-04-07)
+
+**Note:** Version bump only for package wgc
+
+## [0.76.2](https://github.com/wundergraph/cosmo/compare/wgc@0.76.1...wgc@0.76.2) (2025-04-04)
+
+**Note:** Version bump only for package wgc
+
+## [0.76.1](https://github.com/wundergraph/cosmo/compare/wgc@0.76.0...wgc@0.76.1) (2025-04-01)
+
+**Note:** Version bump only for package wgc
+
 # [0.76.0](https://github.com/wundergraph/cosmo/compare/wgc@0.75.12...wgc@0.76.0) (2025-03-28)
 
 ### Features

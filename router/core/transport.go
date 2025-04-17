@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel/propagation"
 
@@ -314,14 +315,12 @@ func (ct *CustomTransport) singleFlightKey(req *http.Request) uint64 {
 type TransportFactory struct {
 	preHandlers                   []TransportPreHandler
 	postHandlers                  []TransportPostHandler
-	subgraphTransportOptions      *SubgraphTransportOptions
 	retryOptions                  retrytransport.RetryOptions
 	localhostFallbackInsideDocker bool
 	metricStore                   metric.Store
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
 	tracePropagators              propagation.TextMapPropagator
-	proxy                         ProxyFunc
 }
 
 var _ ApiTransportFactory = TransportFactory{}
@@ -330,7 +329,6 @@ type TransportOptions struct {
 	PreHandlers                   []TransportPreHandler
 	PostHandlers                  []TransportPostHandler
 	SubgraphTransportOptions      *SubgraphTransportOptions
-	Proxy                         ProxyFunc
 	RetryOptions                  retrytransport.RetryOptions
 	LocalhostFallbackInsideDocker bool
 	MetricStore                   metric.Store
@@ -339,26 +337,24 @@ type TransportOptions struct {
 	TracePropagators              propagation.TextMapPropagator
 }
 
+type SubscriptionClientOptions struct {
+	PingInterval time.Duration
+}
+
 func NewTransport(opts *TransportOptions) *TransportFactory {
 	return &TransportFactory{
 		preHandlers:                   opts.PreHandlers,
 		postHandlers:                  opts.PostHandlers,
 		retryOptions:                  opts.RetryOptions,
-		subgraphTransportOptions:      opts.SubgraphTransportOptions,
 		localhostFallbackInsideDocker: opts.LocalhostFallbackInsideDocker,
 		metricStore:                   opts.MetricStore,
 		logger:                        opts.Logger,
 		tracerProvider:                opts.TracerProvider,
-		proxy:                         opts.Proxy,
 		tracePropagators:              opts.TracePropagators,
 	}
 }
 
 func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport http.RoundTripper) http.RoundTripper {
-	if t.subgraphTransportOptions != nil && t.subgraphTransportOptions.SubgraphMap != nil && len(t.subgraphTransportOptions.SubgraphMap) > 0 {
-		baseTransport = NewSubgraphTransport(t.subgraphTransportOptions, baseTransport, t.logger, t.proxy)
-	}
-
 	if t.localhostFallbackInsideDocker && docker.Inside() {
 		baseTransport = docker.NewLocalhostFallbackRoundTripper(baseTransport)
 	}

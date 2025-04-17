@@ -142,6 +142,7 @@
           "Default": "",
           "Name": "",
           "Value": "",
+          "Expression": "",
           "ValueFrom": null
         },
         {
@@ -152,6 +153,7 @@
           "Default": "",
           "Name": "",
           "Value": "",
+          "Expression": "",
           "ValueFrom": null
         },
         {
@@ -162,6 +164,7 @@
           "Default": "123",
           "Name": "",
           "Value": "",
+          "Expression": "",
           "ValueFrom": null
         },
         {
@@ -172,6 +175,7 @@
           "Default": "",
           "Name": "X-API-Key",
           "Value": "some-secret",
+          "Expression": "",
           "ValueFrom": null
         },
         {
@@ -182,12 +186,24 @@
           "Default": "",
           "Name": "x-operation-name",
           "Value": "",
+          "Expression": "",
           "ValueFrom": {
             "RequestHeader": "",
             "ContextField": "operation_name",
             "ResponseHeader": "",
             "Expression": ""
           }
+        },
+        {
+          "Operation": "set",
+          "Matching": "",
+          "Named": "",
+          "Rename": "",
+          "Default": "",
+          "Name": "x-expression-header",
+          "Value": "",
+          "Expression": "request.header.Get('X-Operation-Name')",
+          "ValueFrom": null
         }
       ],
       "Response": [
@@ -214,6 +230,7 @@
             "Default": "some-secret",
             "Name": "",
             "Value": "",
+            "Expression": "",
             "ValueFrom": null
           }
         ],
@@ -343,6 +360,12 @@
         }
       ]
     }
+  },
+  "Batching": {
+    "Enabled": false,
+    "MaxConcurrency": 10,
+    "MaxEntriesPerBatch": 100,
+    "OmitExtensions": false
   },
   "ListenAddr": "localhost:3002",
   "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
@@ -577,6 +600,8 @@
     "WebSocketClientPollTimeout": 1000000000,
     "WebSocketClientConnBufferSize": 128,
     "WebSocketClientReadTimeout": 5000000000,
+    "WebSocketClientWriteTimeout": 10000000000,
+    "WebSocketClientPingInterval": 10000000000,
     "ExecutionPlanCacheSize": 1024,
     "MinifySubgraphOperations": true,
     "EnablePersistedOperationsCache": true,
@@ -586,6 +611,7 @@
     "ParseKitPoolSize": 16,
     "EnableValidationCache": true,
     "ValidationCacheSize": 1024,
+    "DisableExposingVariablesContentOnValidationError": false,
     "ResolverMaxRecyclableParserSize": 4096,
     "EnableSubgraphFetchOperationName": true,
     "DisableVariablesRemapping": false,
@@ -618,6 +644,16 @@
           "Enabled": true,
           "HeaderKey": "Authorization"
         }
+      }
+    },
+    "ClientInfoFromInitialPayload": {
+      "Enabled": true,
+      "NameField": "graphql-client-name",
+      "VersionField": "graphql-client-version",
+      "ForwardToRequestHeaders": {
+        "Enabled": true,
+        "NameTargetHeader": "graphql-client-name",
+        "VersionTargetHeader": "graphql-client-version"
       }
     }
   },

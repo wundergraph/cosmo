@@ -5,16 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"math"
 	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -2569,6 +2568,223 @@ func TestFlakyAccessLogs(t *testing.T) {
 				require.Len(t, sn, 0)
 			})
 		})
+	})
+
+	t.Run("verify error codes from engine and not subgraph", func(t *testing.T) {
+		t.Run("verify graphql validation error", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					RouterOptions: []core.Option{
+						core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+							ReplaceUndefinedOpFieldErrors: config.ApolloCompatibilityReplaceUndefinedOpFieldErrors{
+								Enabled: true,
+							},
+						}),
+					},
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "error_codes",
+							ValueFrom: &config.CustomDynamicAttribute{
+								ContextField: core.ContextFieldGraphQLErrorCodes,
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					response, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+						Query: `query employees { employees2 { id } }`,
+					})
+					require.NoError(t, err)
+					require.Equal(t, http.StatusBadRequest, response.Response.StatusCode)
+
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestLogAll := requestLog.All()
+					requestContext := requestLogAll[0].ContextMap()
+
+					actual, ok := requestContext["error_codes"].([]interface{})
+					if !ok {
+						require.Fail(t, "error_codes error when casting")
+					}
+
+					require.Len(t, actual, 1)
+					require.Equal(t, "GRAPHQL_VALIDATION_FAILED", actual[0])
+				},
+			)
+		})
+
+		t.Run("verify graphql bad input error", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					RouterOptions: []core.Option{
+						core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+							ReplaceInvalidVarErrors: config.ApolloCompatibilityReplaceInvalidVarErrors{
+								Enabled: true,
+							},
+						}),
+					},
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "error_codes",
+							ValueFrom: &config.CustomDynamicAttribute{
+								ContextField: core.ContextFieldGraphQLErrorCodes,
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query employee { employee(id: "7") { id } }`,
+					})
+
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestLogAll := requestLog.All()
+					requestContext := requestLogAll[0].ContextMap()
+
+					actual, ok := requestContext["error_codes"].([]interface{})
+					if !ok {
+						require.Fail(t, "error_codes error when casting")
+					}
+
+					require.Len(t, actual, 1)
+					require.Equal(t, "BAD_USER_INPUT", actual[0])
+				},
+			)
+		})
+
+		t.Run("verify graphql validation input type error", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					RouterOptions: []core.Option{
+						core.WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags{
+							ReplaceInvalidVarErrors: config.ApolloRouterCompatibilityReplaceInvalidVarErrors{
+								Enabled: true,
+							},
+						}),
+					},
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "error_codes",
+							ValueFrom: &config.CustomDynamicAttribute{
+								ContextField: core.ContextFieldGraphQLErrorCodes,
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query employee { employee(id: "7") { id } }`,
+					})
+
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestLogAll := requestLog.All()
+					requestContext := requestLogAll[0].ContextMap()
+
+					actual, ok := requestContext["error_codes"].([]interface{})
+					if !ok {
+						require.Fail(t, "error_codes error when casting")
+					}
+
+					require.Len(t, actual, 1)
+					require.Equal(t, "VALIDATION_INVALID_TYPE_VARIABLE", actual[0])
+				},
+			)
+		})
+
+	})
+
+	t.Run("verify batching operation id is printed", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t,
+			&testenv.Config{
+				BatchingConfig: config.BatchingConfig{
+					Enabled:            true,
+					MaxConcurrency:     10,
+					MaxEntriesPerBatch: 100,
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			},
+			func(t *testing.T, xEnv *testenv.Environment) {
+				queries := []testenv.GraphQLRequest{
+					{
+						Query: `query employees { employees { id } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+				}
+				res, err := xEnv.MakeGraphQLBatchedRequestRequest(queries, nil)
+				require.NoError(t, err)
+				require.Equal(t, http.StatusOK, res.Response.StatusCode)
+
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+				require.Len(t, requestLogAll, len(queries))
+
+				batchedIds := make([]string, 0)
+				for i := 0; i < len(queries); i++ {
+					if actual, ok := requestLogAll[i].ContextMap()["batched_request_operation_id"].(string); ok {
+						batchedIds = append(batchedIds, actual)
+					}
+				}
+
+				expectedBatchIds := []string{
+					"batch-operation-0",
+					"batch-operation-1",
+					"batch-operation-2",
+				}
+
+				require.ElementsMatch(t, expectedBatchIds, batchedIds)
+			},
+		)
+	})
+	t.Run("verify batching operation id is not printed for normal requests", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t,
+			&testenv.Config{
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			},
+			func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query employee { employee(id: "7") { id } }`,
+				})
+
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+
+				batchOperationId, ok := requestLogAll[0].ContextMap()["batched_request_operation_id"].(string)
+				assert.False(t, ok)
+				assert.Empty(t, batchOperationId)
+			},
+		)
 	})
 
 }

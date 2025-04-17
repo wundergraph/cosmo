@@ -63,6 +63,7 @@ message PublishFederatedSubgraphResponse {
   repeated DeploymentError deploymentErrors = 3;
   optional bool hasChanged = 4;
   repeated CompositionWarning compositionWarnings = 5;
+  optional string proposalMatchMessage = 6;
 }
 
 message GitInfo {
@@ -177,6 +178,7 @@ message SchemaChange{
   optional string path = 3;
   bool isBreaking = 4;
   optional bool hasOverride = 5;
+  optional string subgraphName = 6;
 }
 
 message CompositionError {
@@ -230,6 +232,7 @@ message LintIssue{
   LintSeverity severity = 2;
   string message = 3;
   LintLocation issueLocation = 4;
+  optional string subgraphName = 5;
 }
 
 message GraphPruningIssue{
@@ -239,6 +242,7 @@ message GraphPruningIssue{
   string message = 4;
   LintLocation issueLocation = 5;
   string federatedGraphName = 6;
+  optional string subgraphName = 7;
 }
 
 message CheckSubgraphSchemaResponse {
@@ -256,6 +260,7 @@ message CheckSubgraphSchemaResponse {
   repeated GraphPruningIssue graphPruneErrors = 11;
   optional bool client_traffic_check_skipped = 12;
   repeated CompositionWarning compositionWarnings = 13;
+  optional string proposalMatchMessage = 14;
 }
 
 message FixSubgraphSchemaResponse {
@@ -265,10 +270,10 @@ message FixSubgraphSchemaResponse {
 }
 
 message CreateFederatedGraphResponse {
-    Response response = 1;
-    repeated CompositionError compositionErrors = 2;
-    repeated DeploymentError deploymentErrors = 3;
-    repeated CompositionWarning compositionWarnings = 4;
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
+  repeated CompositionWarning compositionWarnings = 4;
 }
 
 message CreateFederatedSubgraphResponse {
@@ -280,6 +285,7 @@ message DeleteFederatedSubgraphResponse {
   repeated CompositionError compositionErrors = 2;
   repeated DeploymentError deploymentErrors = 3;
   repeated CompositionWarning compositionWarnings = 4;
+  optional string proposalMatchMessage = 5;
 }
 
 message DeleteFederatedGraphResponse {
@@ -455,9 +461,19 @@ message SchemaCheck {
     string repositorySlug = 3;
   }
 
+  message CheckedSubgraph {
+    // its the check subgraph id
+    string id = 1;
+    string subgraphName = 2;
+    // its optional because the subgraph can be deleted
+    optional string subgraphId = 3;
+    bool isDeleted = 4;
+    bool isNew = 5;
+  }
+
   string id = 1;
-  string targetID = 2;
-  string subgraphName = 3;
+  optional string targetID = 2;
+  optional string subgraphName = 3;
   string timestamp = 4;
   bool isComposable = 5;
   bool isBreaking = 6;
@@ -471,6 +487,11 @@ message SchemaCheck {
   bool lint_skipped = 14;
   bool graph_pruning_skipped = 15;
   optional VCSContext vcsContext = 16;
+  repeated CheckedSubgraph checkedSubgraphs = 17;
+  optional string proposalMatch = 18;
+  bool composition_skipped = 19;
+  bool breaking_changes_skipped = 20;
+  optional string errorMessage = 21;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -495,6 +516,14 @@ message GetCheckSummaryResponse {
   message AffectedGraph {
     string id = 1;
     int32 traffic_check_days = 2;
+    string name = 3;
+    bool isCheckSuccessful = 4;
+  }
+
+  message ProposalSchemaMatch {
+    string proposalId = 1;
+    string proposalName = 2;
+    bool proposalMatch = 3;
   }
 
   Response response = 1;
@@ -507,6 +536,10 @@ message GetCheckSummaryResponse {
   repeated LintIssue lintIssues = 9;
   repeated GraphPruningIssue graphPruningIssues = 10;
   repeated string compositionWarnings = 11;
+  optional string proposalId = 12;
+  optional string proposalName = 13;
+  repeated ProposalSchemaMatch proposalMatches = 14;
+  bool isProposalsEnabled = 15;
 }
 
 message GetCheckOperationsRequest {
@@ -1198,6 +1231,12 @@ message DeleteOrganizationRequest {
 }
 
 message DeleteOrganizationResponse {
+  Response response = 1;
+}
+
+message RestoreOrganizationRequest {}
+
+message RestoreOrganizationResponse {
   Response response = 1;
 }
 
@@ -2455,6 +2494,166 @@ message SetGraphRouterCompatibilityVersionResponse {
   repeated CompositionWarning compositionWarnings = 6;
 }
 
+message GetProposedSchemaOfCheckedSubgraphRequest {
+  string checkId = 1;
+  string checkedSubgraphId = 2;
+}
+
+message GetProposedSchemaOfCheckedSubgraphResponse {
+  Response response = 1;
+  string proposedSchema = 2;
+}
+
+message Proposal {
+  string id = 1;
+  string name = 2;
+  string createdAt = 3;
+  string createdByEmail = 4;
+  string state = 5;
+  string federatedGraphId = 6;
+  string federatedGraphName = 7;
+  repeated ProposalSubgraph subgraphs = 8;
+  bool latestCheckSuccess = 9;
+  string latestCheckId = 10;
+}
+
+message ProposalSubgraph {
+  string name = 1;
+  string schemaSDL = 2;
+  bool isDeleted = 3;
+  bool isNew = 4;
+  repeated Label labels = 5;
+}
+
+message CreateProposalRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+  string name = 3;
+  repeated ProposalSubgraph subgraphs = 4;
+}
+
+message CreateProposalResponse {
+  Response response = 1;
+  string proposalId = 2;
+  string checkId = 3;
+  repeated SchemaChange breakingChanges = 4;
+  repeated SchemaChange nonBreakingChanges = 5;
+  repeated CompositionError compositionErrors = 6;
+  repeated CompositionWarning compositionWarnings = 7;
+  repeated LintIssue lintErrors = 8;
+  repeated LintIssue lintWarnings = 9;
+  repeated GraphPruningIssue graphPruneErrors = 10;
+  repeated GraphPruningIssue graphPruneWarnings = 11;
+  CheckOperationUsageStats operationUsageStats = 12;
+  bool lintingSkipped = 13;
+  bool graphPruningSkipped = 14;
+  string checkUrl = 15;
+}
+
+message GetProposalRequest {
+  string proposalId = 1;
+}
+
+message GetProposalResponse {
+  message CurrentSubgraph {
+    string name = 1;
+    string schemaSDL = 2;
+  }
+
+  Response response = 1;
+  Proposal proposal = 2;
+  repeated CurrentSubgraph currentSubgraphs = 3;
+}
+
+message GetProposalsByFederatedGraphRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+  string startDate = 3;
+  string endDate = 4;
+  int32 limit = 5;
+  int32 offset = 6;
+}   
+
+message GetProposalsByFederatedGraphResponse {
+  Response response = 1;
+  repeated Proposal proposals = 2;
+  bool isProposalsEnabled = 3;
+}
+
+message GetProposalChecksRequest {
+  string proposalId = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+  string startDate = 4;
+  string endDate = 5;
+}
+
+message GetProposalChecksResponse {
+  Response response = 1;
+  repeated SchemaCheck checks = 2;
+  int32 totalChecksCount = 3;
+}
+
+message UpdateProposalRequest {
+  message UpdateProposalSubgraphs {
+    repeated ProposalSubgraph subgraphs = 1;
+  }
+  string proposalName = 1;
+  string federatedGraphName = 2;
+  oneof update_action {
+    string state = 3;
+    UpdateProposalSubgraphs updatedSubgraphs = 4;
+  }
+  string namespace = 5;
+}
+
+message UpdateProposalResponse {
+  Response response = 1;
+  string checkId = 2;
+  repeated SchemaChange breakingChanges = 3;
+  repeated SchemaChange nonBreakingChanges = 4;
+  repeated CompositionError compositionErrors = 5;
+  repeated CompositionWarning compositionWarnings = 6;
+  repeated LintIssue lintErrors = 7;
+  repeated LintIssue lintWarnings = 8;
+  repeated GraphPruningIssue graphPruneErrors = 9;
+  repeated GraphPruningIssue graphPruneWarnings = 10;
+  CheckOperationUsageStats operationUsageStats = 11;
+  bool lintingSkipped = 12;
+  bool graphPruningSkipped = 13;
+  string checkUrl = 14;
+}
+
+message EnableProposalsForNamespaceRequest {
+  string namespace = 1;
+  bool enableProposals = 2;
+}
+
+message EnableProposalsForNamespaceResponse {
+  Response response = 1;
+}
+
+message ConfigureNamespaceProposalConfigRequest {
+  string namespace = 1;
+  LintSeverity checkSeverityLevel = 2;
+  LintSeverity publishSeverityLevel = 3;
+}
+
+message ConfigureNamespaceProposalConfigResponse {
+  Response response = 1;
+}
+
+message GetNamespaceProposalConfigRequest {
+  string namespace = 1;
+}
+
+message GetNamespaceProposalConfigResponse {
+  Response response = 1;
+  bool enabled = 2;
+  LintSeverity checkSeverityLevel = 3;
+  LintSeverity publishSeverityLevel = 4;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -2500,6 +2699,7 @@ service PlatformService {
   rpc DeleteFederatedSubgraph(DeleteFederatedSubgraphRequest) returns (DeleteFederatedSubgraphResponse) {}
   // CheckSubgraphSchema checks if the schema is valid and if it can be composed without conflicts with the provided new subgraph schema.
   rpc CheckSubgraphSchema(CheckSubgraphSchemaRequest) returns (CheckSubgraphSchemaResponse) {}
+  rpc GetProposedSchemaOfCheckedSubgraph(GetProposedSchemaOfCheckedSubgraphRequest) returns (GetProposedSchemaOfCheckedSubgraphResponse) {}
   rpc FixSubgraphSchema(FixSubgraphSchemaRequest) returns (FixSubgraphSchemaResponse) {}
   // UpdateFederatedGraph updates a federated graph with new labels and routing url
   rpc UpdateFederatedGraph(UpdateFederatedGraphRequest) returns (UpdateFederatedGraphResponse) {}
@@ -2629,6 +2829,8 @@ service PlatformService {
   rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {}
   // DeleteOrganization deletes an organization
   rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse) {}
+  // RestoreOrganization restore an organization pending deletion
+  rpc RestoreOrganization(RestoreOrganizationRequest) returns (RestoreOrganizationResponse) {}
   // LeaveOrganization removes a member from the organization
   rpc LeaveOrganization(LeaveOrganizationRequest) returns (LeaveOrganizationResponse) {}
   // UpdateOrganizationDetails updates the name and slug of the organization
@@ -2783,4 +2985,22 @@ service PlatformService {
 
   // Graph
   rpc SetGraphRouterCompatibilityVersion(SetGraphRouterCompatibilityVersionRequest) returns (SetGraphRouterCompatibilityVersionResponse) { }
+
+  // Proposal
+  // Create a proposal for a federated graph
+  rpc CreateProposal(CreateProposalRequest) returns (CreateProposalResponse) {}
+  // Get a proposal by id
+  rpc GetProposal(GetProposalRequest) returns (GetProposalResponse) {}
+  // Update a proposal
+  rpc UpdateProposal(UpdateProposalRequest) returns (UpdateProposalResponse) {}
+  // EnableProposalsForNamespace enables the proposals for the namespace passed.
+  rpc EnableProposalsForNamespace(EnableProposalsForNamespaceRequest) returns (EnableProposalsForNamespaceResponse) {}
+  // ConfigureNamespaceProposalConfig configures the proposal config of the namespace passed.
+  rpc ConfigureNamespaceProposalConfig(ConfigureNamespaceProposalConfigRequest) returns (ConfigureNamespaceProposalConfigResponse) {}
+  // GetNamespaceProposalConfig returns the proposal config of the namespace passed.
+  rpc GetNamespaceProposalConfig(GetNamespaceProposalConfigRequest) returns (GetNamespaceProposalConfigResponse) {}
+  // GetProposalsByFederatedGraph returns proposals for a federated graph.
+  rpc GetProposalsByFederatedGraph(GetProposalsByFederatedGraphRequest) returns (GetProposalsByFederatedGraphResponse) {}
+  // GetProposalChecks returns checks for a proposal.
+  rpc GetProposalChecks(GetProposalChecksRequest) returns (GetProposalChecksResponse) {}
 }

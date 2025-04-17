@@ -228,7 +228,7 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 		}
 	} else {
 		// Regular request
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		if statusCode != 0 {
 			w.WriteHeader(statusCode)
 		}
@@ -275,12 +275,8 @@ func writeMultipartError(
 	// The multipart spec requires us to use both CRLF (\r and \n) characters together. Since we didn't do this
 	// before, some clients that rely on both CR and LF strictly to parse blocks were broken and not parsing our
 	// multipart chunks correctly. With this fix here (and in a few other places) the clients are now working.
-	if isSubscription {
-		resp = append(resp, '\r', '\n')
-	} else {
-		resp = append(resp, []byte("\r\n--graphql--")...)
-	}
-
+	resp = append(resp, []byte("\r\n--graphql--")...)
+ 
 	if _, err := w.Write([]byte(resp)); err != nil {
 		return err
 	}

@@ -12,3 +12,4 @@ teardown:
 .PHONY: run-scenarios
 run-scenarios:
 	cd ./benchmark-scenarios && pnpm run run:all
+

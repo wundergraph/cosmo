@@ -129,6 +129,15 @@ describe('CheckSubgraphSchema', (ctx) => {
     expect(checkResp.compositionErrors).toHaveLength(1);
     expect(checkResp.compositionErrors[0].message).toBe(noBaseDefinitionForExtensionError(OBJECT, 'Product').message);
 
+    const checkSummary = await client.getCheckSummary({
+      namespace: DEFAULT_NAMESPACE,
+      graphName: federatedGraphName,
+      checkId: checkResp.checkId,
+    });
+
+    expect(checkSummary.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkSummary.affectedGraphs).toHaveLength(1);
+    expect(checkSummary.check?.checkedSubgraphs.length).toEqual(1);
     await server.close();
   });
 
@@ -175,6 +184,16 @@ describe('CheckSubgraphSchema', (ctx) => {
       invalidOverrideTargetSubgraphNameWarning('employees', 'Query', ['hello'], subgraphName).message,
     );
 
+    const checkSummary = await client.getCheckSummary({
+      namespace: DEFAULT_NAMESPACE,
+      graphName: federatedGraphName,
+      checkId: checkResp.checkId,
+    });
+
+    expect(checkSummary.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkSummary.affectedGraphs).toHaveLength(1);
+    expect(checkSummary.check?.checkedSubgraphs.length).toEqual(1);
+
     await server.close();
   });
 
@@ -210,6 +229,16 @@ describe('CheckSubgraphSchema', (ctx) => {
     expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
     expect(checkResp.compositionErrors).toHaveLength(0);
     expect(checkResp.breakingChanges).toHaveLength(0);
+
+    const checkSummary = await client.getCheckSummary({
+      namespace: DEFAULT_NAMESPACE,
+      graphName: federatedGraphName,
+      checkId: checkResp.checkId,
+    });
+
+    expect(checkSummary.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkSummary.affectedGraphs).toHaveLength(1);
+    expect(checkSummary.check?.checkedSubgraphs.length).toEqual(1);
 
     await server.close();
   });
@@ -255,6 +284,7 @@ describe('CheckSubgraphSchema', (ctx) => {
     });
     expect(checksResp.response?.code).toBe(EnumStatusCode.OK);
     expect(checksResp.checks?.length).toBe(1);
+    expect(checksResp.totalChecksCount).toBe(1);
 
     await server.close();
   });
@@ -433,6 +463,70 @@ type Employee {
     });
     expect(checkOperationsResp.response?.code).toBe(EnumStatusCode.OK);
     expect(checkOperationsResp.operations.length).toBe(0);
+
+    await server.close();
+  });
+
+  test('Should handle composition when one of the subgraphs has an empty schema', async () => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+
+    const emptySubgraphName = genID('empty-subgraph');
+    const validSubgraphName = genID('valid-subgraph');
+    const label = genUniqueLabel();
+
+    // Create federated graph
+    const fedGraphName = genID('federated-graph');
+    await client.createFederatedGraph({
+      name: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      labelMatchers: [joinLabel(label)],
+      routingUrl: 'http://localhost:8081',
+    });
+
+    // Create first subgraph with empty schema
+    await client.createFederatedSubgraph({
+      name: emptySubgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      labels: [label],
+      routingUrl: 'http://localhost:8081',
+    });
+
+    // Create second subgraph with valid schema
+    await client.createFederatedSubgraph({
+      name: validSubgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      labels: [label],
+      routingUrl: 'http://localhost:8081',
+    });
+
+    // Publish valid schema
+    let validSchema = `
+    type Query {
+      hello: String
+    }
+  `;
+    const publishValidResp = await client.publishFederatedSubgraph({
+      name: validSubgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      schema: validSchema,
+    });
+    expect(publishValidResp.response?.code).toBe(EnumStatusCode.OK);
+
+    validSchema = `
+    type Query {
+      hello2: String
+    }
+  `;
+
+    // Check valid subgraph with empty schema
+    const checkValidResp = await client.checkSubgraphSchema({
+      subgraphName: validSubgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      schema: Buffer.from(validSchema),
+    });
+    expect(checkValidResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkValidResp.compositionErrors.length).toBe(0);
+    expect(checkValidResp.breakingChanges.length).toBe(1);
 
     await server.close();
   });

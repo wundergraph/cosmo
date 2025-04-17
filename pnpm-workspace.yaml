@@ -3,6 +3,7 @@ packages:
   - composition
   - composition-go/shim
   - controlplane
+  - controlplane/emails
   - proto
   - shared
   - studio

@@ -9,11 +9,12 @@ import {
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
-import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
+import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 
 export function deleteFederatedSubgraph(
   opts: RouterOptions,
@@ -27,6 +28,9 @@ export function deleteFederatedSubgraph(
     logger = enrichLogger(ctx, logger, authContext);
 
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
+    const proposalRepo = new ProposalRepository(opts.db);
+    const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+    const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const orgWebhooks = new OrganizationWebhookService(
       opts.db,
       authContext.organizationId,
@@ -41,6 +45,19 @@ export function deleteFederatedSubgraph(
         response: {
           code: EnumStatusCode.ERR,
           details: `The user doesnt have the permissions to perform this operation`,
+        },
+        compositionErrors: [],
+        deploymentErrors: [],
+        compositionWarnings: [],
+      };
+    }
+
+    const namespace = await namespaceRepo.byName(req.namespace);
+    if (!namespace) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Could not find namespace ${req.namespace}`,
         },
         compositionErrors: [],
         deploymentErrors: [],
@@ -71,6 +88,47 @@ export function deleteFederatedSubgraph(
       headers: ctx.requestHeader,
       authContext,
     });
+
+    let proposalMatchMessage: string | undefined;
+    let matchedEntity:
+      | {
+          proposalId: string;
+          proposalSubgraphId: string;
+        }
+      | undefined;
+    if (namespace.enableProposals) {
+      const federatedGraphs = await fedGraphRepo.bySubgraphLabels({
+        labels: subgraph.labels,
+        namespaceId: namespace.id,
+      });
+      const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
+      if (proposalConfig) {
+        const match = await proposalRepo.matchSchemaWithProposal({
+          subgraphName: subgraph.name,
+          namespaceId: namespace.id,
+          schemaSDL: '',
+          routerCompatibilityVersion: getFederatedGraphRouterCompatibilityVersion(federatedGraphs),
+          isDeleted: true,
+        });
+        if (!match) {
+          if (proposalConfig.publishSeverityLevel === 'warn') {
+            proposalMatchMessage = `The subgraph ${subgraph.name} is not proposed to be deleted in any of the approved proposals.`;
+          } else {
+            return {
+              response: {
+                code: EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL,
+                details: `The subgraph ${subgraph.name} is not proposed to be deleted in any of the approved proposals.`,
+              },
+              compositionErrors: [],
+              deploymentErrors: [],
+              compositionWarnings: [],
+              proposalMatchMessage: `The subgraph ${subgraph.name} is not proposed to be deleted in any of the approved proposals.`,
+            };
+          }
+        }
+        matchedEntity = match;
+      }
+    }
 
     const { affectedFederatedGraphs, compositionErrors, deploymentErrors, compositionWarnings } =
       await opts.db.transaction(async (tx) => {
@@ -157,6 +215,47 @@ export function deleteFederatedSubgraph(
       );
     }
 
+    // if this subgraph is part of a proposal, mark the proposal subgraph as published
+    // and if all proposal subgraphs are published, update the proposal state to PUBLISHED
+    if (matchedEntity) {
+      const { allSubgraphsPublished } = await proposalRepo.markProposalSubgraphAsPublished({
+        proposalSubgraphId: matchedEntity.proposalSubgraphId,
+        proposalId: matchedEntity.proposalId,
+      });
+      if (allSubgraphsPublished) {
+        const proposal = await proposalRepo.ById(matchedEntity.proposalId);
+        if (proposal) {
+          const federatedGraph = await fedGraphRepo.byId(proposal.proposal.federatedGraphId);
+          if (federatedGraph) {
+            orgWebhooks.send(
+              {
+                eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+                payload: {
+                  federated_graph: {
+                    id: federatedGraph.id,
+                    name: federatedGraph.name,
+                    namespace: federatedGraph.namespace,
+                  },
+                  organization: {
+                    id: authContext.organizationId,
+                    slug: authContext.organizationSlug,
+                  },
+                  proposal: {
+                    id: proposal.proposal.id,
+                    name: proposal.proposal.name,
+                    namespace: req.namespace,
+                    state: 'PUBLISHED',
+                  },
+                  actor_id: authContext.userId,
+                },
+              },
+              authContext.userId,
+            );
+          }
+        }
+      }
+    }
+
     if (compositionErrors.length > 0) {
       return {
         response: {
@@ -165,6 +264,7 @@ export function deleteFederatedSubgraph(
         deploymentErrors: [],
         compositionErrors,
         compositionWarnings,
+        proposalMatchMessage,
       };
     }
 
@@ -176,6 +276,7 @@ export function deleteFederatedSubgraph(
         deploymentErrors,
         compositionErrors: [],
         compositionWarnings,
+        proposalMatchMessage,
       };
     }
 
@@ -186,6 +287,7 @@ export function deleteFederatedSubgraph(
       deploymentErrors: [],
       compositionErrors: [],
       compositionWarnings,
+      proposalMatchMessage,
     };
   });
 }

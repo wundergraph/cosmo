@@ -1,0 +1,13 @@
+name: Router Benchmarks
+
+on:
+  push:
+    branches:
+      - main
+
+
+jobs:
+  build-docker-images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4

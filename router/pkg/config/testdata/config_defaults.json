@@ -122,7 +122,7 @@
       "ResponseHeaderTimeout": 0,
       "ExpectContinueTimeout": 0,
       "TLSHandshakeTimeout": 10000000000,
-      "KeepAliveIdleTimeout": 0,
+      "KeepAliveIdleTimeout": 90000000000,
       "KeepAliveProbeInterval": 30000000000,
       "MaxConnsPerHost": 100,
       "MaxIdleConns": 1024,
@@ -163,6 +163,12 @@
       "Enabled": false,
       "Fields": null
     }
+  },
+  "Batching": {
+    "Enabled": false,
+    "MaxConcurrency": 10,
+    "MaxEntriesPerBatch": 100,
+    "OmitExtensions": false
   },
   "ListenAddr": "localhost:3002",
   "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
@@ -293,6 +299,8 @@
     "WebSocketClientPollTimeout": 1000000000,
     "WebSocketClientConnBufferSize": 128,
     "WebSocketClientReadTimeout": 5000000000,
+    "WebSocketClientWriteTimeout": 10000000000,
+    "WebSocketClientPingInterval": 10000000000,
     "ExecutionPlanCacheSize": 1024,
     "MinifySubgraphOperations": true,
     "EnablePersistedOperationsCache": true,
@@ -302,6 +310,7 @@
     "ParseKitPoolSize": 16,
     "EnableValidationCache": true,
     "ValidationCacheSize": 1024,
+    "DisableExposingVariablesContentOnValidationError": false,
     "ResolverMaxRecyclableParserSize": 32768,
     "EnableSubgraphFetchOperationName": false,
     "DisableVariablesRemapping": false,
@@ -334,6 +343,16 @@
           "Enabled": true,
           "HeaderKey": "Authorization"
         }
+      }
+    },
+    "ClientInfoFromInitialPayload": {
+      "Enabled": true,
+      "NameField": "graphql-client-name",
+      "VersionField": "graphql-client-version",
+      "ForwardToRequestHeaders": {
+        "Enabled": true,
+        "NameTargetHeader": "graphql-client-name",
+        "VersionTargetHeader": "graphql-client-version"
       }
     }
   },
