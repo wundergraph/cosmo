@@ -11,8 +11,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-// TODO fix tool annotations tests once https://github.com/mark3labs/mcp-go/pull/165 is merged
-
 func TestMCP(t *testing.T) {
 
 	t.Run("Discovery", func(t *testing.T) {

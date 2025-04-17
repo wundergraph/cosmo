@@ -102,6 +102,20 @@
     "Value": "",
     "Subgraphs": null
   },
+  "MCP": {
+    "Enabled": false,
+    "Server": {
+      "Port": 5025
+    },
+    "Storage": {
+      "ProviderID": ""
+    },
+    "GraphName": "cosmo",
+    "ExcludeMutations": false,
+    "EnableArbitraryOperations": false,
+    "ExposeSchema": false,
+    "RouterURL": ""
+  },
   "Modules": null,
   "Headers": {
     "All": null,
@@ -373,7 +387,8 @@
   "StorageProviders": {
     "S3": null,
     "CDN": null,
-    "Redis": null
+    "Redis": null,
+    "FileSystem": null
   },
   "ExecutionConfig": {
     "File": {

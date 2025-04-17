@@ -75,8 +75,7 @@
                 "type": "array",
                 "description": "List of Redis URLs to connect to. If cluster_enabled is true, these are the seeds to discover the cluster.",
                 "items": {
-                  "type": "string",
-                  "format": "uri"
+                  "type": "string"
                 }
               },
               "cluster_enabled": {
@@ -1909,7 +1908,7 @@
           "additionalProperties": false,
           "properties": {
             "port": {
-              "type": "string",
+              "type": "integer",
               "default": "5025",
               "description": "The port where the MCP server will listen for requests. The default value is '5025'."
             }

@@ -886,7 +886,6 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 	}
 
-	// We support MCP only on the base graph
 	if r.mcp.Enabled {
 		var operationsDir string
 
@@ -1402,9 +1401,13 @@ func (r *Router) Shutdown(ctx context.Context) error {
 	}
 
 	if r.mcpServer != nil {
-		if aErr := r.mcpServer.Stop(ctx); aErr != nil {
-			err = errors.Join(err, fmt.Errorf("failed to shutdown mcp server: %w", aErr))
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if subErr := r.mcpServer.Stop(ctx); subErr != nil {
+				err.Append(fmt.Errorf("failed to shutdown mcp server: %w", subErr))
+			}
+		}()
 	}
 
 	if r.tracerProvider != nil {

@@ -359,8 +359,6 @@ func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
 // registerTools registers all tools for the MCP server
 func (s *GraphQLSchemaServer) registerTools() error {
 
-	s.registeredTools = append(s.registeredTools, "get_operation_info")
-
 	// Only register the schema tool if exposeSchema is enabled
 	if s.exposeSchema {
 		s.server.AddTool(
@@ -512,6 +510,8 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		),
 		s.handleGraphQLOperationInfo(),
 	)
+
+	s.registeredTools = append(s.registeredTools, "get_operation_info")
 
 	return nil
 }
