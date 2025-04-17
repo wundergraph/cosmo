@@ -121,6 +121,7 @@ export function moveSubgraph(
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
+          organizationSlug: authContext.organizationSlug,
           auditAction: 'subgraph.moved',
           action: 'moved',
           actorId: authContext.userId,

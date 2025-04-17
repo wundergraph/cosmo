@@ -63,6 +63,7 @@ export function removeOperationIgnoreAllOverride(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'operation_ignore_override.deleted',
       action: 'updated',
       actorId: authContext.userId,
