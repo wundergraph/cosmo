@@ -1258,9 +1258,26 @@ func (r *Router) Start(ctx context.Context) error {
 	return nil
 }
 
+type concSafeErrorJoiner struct {
+	errs []error
+	mu   sync.Mutex
+}
+
+func (e *concSafeErrorJoiner) Append(err error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.errs = append(e.errs, err)
+}
+
+func (e *concSafeErrorJoiner) ErrOrNil() error {
+	return errors.Join(e.errs...)
+}
+
 // Shutdown gracefully shuts down the router. It blocks until the server is shutdown.
 // If the router is already shutdown, the method returns immediately without error.
-func (r *Router) Shutdown(ctx context.Context) (err error) {
+func (r *Router) Shutdown(ctx context.Context) error {
+	var err concSafeErrorJoiner
+
 	if !r.shutdown.CompareAndSwap(false, true) {
 		return nil
 	}
@@ -1275,19 +1292,19 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 
 	if r.configPoller != nil {
 		if subErr := r.configPoller.Stop(ctx); subErr != nil {
-			err = errors.Join(err, fmt.Errorf("failed to stop config poller: %w", subErr))
+			err.Append(fmt.Errorf("failed to stop config poller: %w", subErr))
 		}
 	}
 
 	if r.httpServer != nil {
 		if subErr := r.httpServer.Shutdown(ctx); subErr != nil {
-			if errors.Is(err, context.DeadlineExceeded) {
+			if errors.Is(subErr, context.DeadlineExceeded) {
 				r.logger.Warn(
 					"Shutdown deadline exceeded. Router took too long to shutdown. Consider increasing the grace period",
 					zap.Duration("grace_period", r.routerGracePeriod),
 				)
 			}
-			err = errors.Join(err, fmt.Errorf("failed to shutdown router: %w", subErr))
+			err.Append(fmt.Errorf("failed to shutdown router: %w", subErr))
 		}
 	}
 
@@ -1298,7 +1315,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		go func() {
 			defer wg.Done()
 			if subErr := r.prometheusServer.Close(); subErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to shutdown prometheus server: %w", subErr))
+				err.Append(fmt.Errorf("failed to shutdown prometheus server: %w", subErr))
 			}
 		}()
 	}
@@ -1310,7 +1327,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if subErr := r.tracerProvider.Shutdown(ctx); subErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to shutdown tracer: %w", subErr))
+				err.Append(fmt.Errorf("failed to shutdown tracer: %w", subErr))
 			}
 		}()
 	}
@@ -1322,7 +1339,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if subErr := r.gqlMetricsExporter.Shutdown(ctx); subErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to shutdown graphql metrics exporter: %w", subErr))
+				err.Append(fmt.Errorf("failed to shutdown graphql metrics exporter: %w", subErr))
 			}
 		}()
 	}
@@ -1334,7 +1351,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if subErr := r.promMeterProvider.Shutdown(ctx); subErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to shutdown prometheus meter provider: %w", subErr))
+				err.Append(fmt.Errorf("failed to shutdown prometheus meter provider: %w", subErr))
 			}
 		}()
 	}
@@ -1346,7 +1363,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if subErr := r.otlpMeterProvider.Shutdown(ctx); subErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to shutdown OTLP meter provider: %w", subErr))
+				err.Append(fmt.Errorf("failed to shutdown OTLP meter provider: %w", subErr))
 			}
 		}()
 	}
@@ -1358,7 +1375,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if closeErr := r.redisClient.Close(); closeErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to close redis client: %w", closeErr))
+				err.Append(fmt.Errorf("failed to close redis client: %w", closeErr))
 			}
 		}()
 	}
@@ -1370,7 +1387,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		for _, module := range r.modules {
 			if cleaner, ok := module.(Cleaner); ok {
 				if subErr := cleaner.Cleanup(); subErr != nil {
-					err = errors.Join(err, fmt.Errorf("failed to clean module %s: %w", module.Module().ID, subErr))
+					err.Append(fmt.Errorf("failed to clean module %s: %w", module.Module().ID, subErr))
 				}
 			}
 		}
@@ -1383,7 +1400,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 
 	wg.Wait()
 
-	return err
+	return err.ErrOrNil()
 }
 
 func WithListenerAddr(addr string) Option {
@@ -1718,7 +1735,7 @@ func DefaultTransportRequestOptions() *TransportRequestOptions {
 		ResponseHeaderTimeout:  0 * time.Second,
 		ExpectContinueTimeout:  0 * time.Second,
 		KeepAliveProbeInterval: 30 * time.Second,
-		KeepAliveIdleTimeout:   0 * time.Second,
+		KeepAliveIdleTimeout:   90 * time.Second,
 		DialTimeout:            30 * time.Second,
 
 		MaxConnsPerHost:     100,

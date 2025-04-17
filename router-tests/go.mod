@@ -31,6 +31,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
 	go.opentelemetry.io/otel/trace v1.28.0
 	go.uber.org/atomic v1.11.0
+	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.33.0
 	google.golang.org/protobuf v1.36.1
