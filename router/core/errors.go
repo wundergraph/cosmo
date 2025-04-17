@@ -190,6 +190,9 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 		return
 	}
 
+	// Set Cache-Control: no-store for all error responses
+	w.Header().Set("Cache-Control", "no-store")
+
 	// According to the tests requestContext can be nil (when called from module WriteResponseError)
 	// As such we have coded this condition defensively to be safe
 	requestContext := getRequestContext(r.Context())

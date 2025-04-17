@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
@@ -14,6 +15,96 @@ import (
 
 func TestHeaderPropagation(t *testing.T) {
 	t.Parallel()
+
+	// Test various error scenarios and verify appropriate Cache-Control headers
+
+	t.Run("Cache-Control no-store with PERSISTED_QUERY_NOT_FOUND error", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			// Configure a specific cache control policy to demonstrate that errors override it
+			CacheControlPolicy: config.CacheControlPolicy{
+				Enabled: true,
+				Value: "max-age=300",
+			},
+		}, func(t *testing.T, env *testenv.Environment) {
+			// Make request that triggers PERSISTED_QUERY_NOT_FOUND error
+			res, err := env.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query:     "", // Empty query
+				Variables: json.RawMessage(`{}`),
+				Extensions: json.RawMessage(`{"persistedQuery": {"version": 1, "sha256Hash": "invalid-hash"}}`),
+			})
+			
+			// Verify request was successful
+			require.NoError(t, err, "GraphQL request should not fail")
+			require.Equal(t, http.StatusOK, res.Response.StatusCode, "Response status code should be 200 OK")
+
+			// Verify Cache-Control header is set to no-store (overriding the max-age setting)
+			require.Equal(t, "no-store", res.Response.Header.Get("Cache-Control"), 
+				"Cache-Control header should be set to no-store for error responses")
+
+			// Verify the response contains errors and the specific error type
+			require.Contains(t, res.Body, "errors", "Response should contain errors")
+			require.Contains(t, res.Body, "PERSISTED_QUERY_NOT_FOUND", "Response should contain PERSISTED_QUERY_NOT_FOUND error")
+		})
+	})
+
+	t.Run("Cache-Control no-store with invalid GraphQL query", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			// Configure a specific cache control policy to demonstrate that errors override it
+			CacheControlPolicy: config.CacheControlPolicy{
+				Enabled: true,
+				Value: "max-age=300",
+			},
+		}, func(t *testing.T, env *testenv.Environment) {
+			// Make a request with an invalid GraphQL query that will cause a validation error
+			res, err := env.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `{ nonExistingField }`, // This field doesn't exist in the schema
+			})
+			
+			// Verify request was processed correctly
+			require.NoError(t, err, "GraphQL request should not fail")
+			require.Equal(t, http.StatusOK, res.Response.StatusCode, "Response status code should be 200 OK")
+
+			// Verify Cache-Control header is set to no-store (overriding the max-age setting)
+			require.Equal(t, "no-store", res.Response.Header.Get("Cache-Control"),
+				"Cache-Control header should be set to no-store for error responses")
+
+			// Verify the response contains errors and the validation error message
+			require.Contains(t, res.Body, "errors", "Response should contain errors")
+			require.Contains(t, res.Body, "nonExistingField", "Response should contain validation error for nonExistingField")
+		})
+	})
+	
+	t.Run("Successful query gets appropriate cache header", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			// Configure a specific cache control policy
+			CacheControlPolicy: config.CacheControlPolicy{
+				Enabled: true,
+				Value: "max-age=300",
+			},
+		}, func(t *testing.T, env *testenv.Environment) {
+			// Make a request with a valid query that will succeed
+			res, err := env.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `{ __typename }`, // This is a valid query that will always work
+			})
+			
+			// Verify request was successful
+			require.NoError(t, err, "GraphQL request should not fail")
+			require.Equal(t, http.StatusOK, res.Response.StatusCode, "Response status code should be 200 OK")
+
+			// Verify that Cache-Control is set to the configured value for successful responses
+			require.Equal(t, "max-age=300", res.Response.Header.Get("Cache-Control"),
+				"Cache-Control header should be set to the configured value for successful responses")
+
+			// Verify the response doesn't contain errors
+			require.NotContains(t, res.Body, "errors", "Successful response should not contain errors")
+			
+			// Verify the response contains expected data
+			require.Contains(t, res.Body, "__typename", "Response should contain __typename field")
+		})
+	})
 
 	const (
 		customHeader = "X-Custom-Header"
