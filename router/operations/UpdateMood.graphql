@@ -1,9 +1,0 @@
-mutation UpdateMood($employeeID: Int! $mood: Mood!) {
-    updateMood(employeeID: $employeeID mood: $mood) {
-        id
-        details {
-            forename
-        }
-        currentMood
-    }
-}
