@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.200.0](https://github.com/wundergraph/cosmo/compare/router@0.199.1...router@0.200.0) (2025-04-18)
+
+### Bug Fixes
+
+* **router:** refactor per-subgraph transport options to avoid leaking goroutines ([#1773](https://github.com/wundergraph/cosmo/issues/1773)) ([b233751](https://github.com/wundergraph/cosmo/commit/b2337519b0837e0bfc9d9ec04d051ebeb4894412)) (@endigma)
+
+### Features
+
+* mcp server support in the router ([#1786](https://github.com/wundergraph/cosmo/issues/1786)) ([3bd8a5e](https://github.com/wundergraph/cosmo/commit/3bd8a5ead43fd8c8a2c62d18fae163d7c0cff8db)) (@StarpTech)
+
 ## [0.199.1](https://github.com/wundergraph/cosmo/compare/router@0.199.0...router@0.199.1) (2025-04-16)
 
 ### Bug Fixes
