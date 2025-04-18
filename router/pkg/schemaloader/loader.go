@@ -75,20 +75,20 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 		operationString := string(content)
 		opDoc, err := parseOperation(path, operationString)
 		if err != nil {
-			l.Logger.Error("Failed to parse operation", zap.String("file", path), zap.Error(err))
+			l.Logger.Error("Failed to parse MCP operation", zap.String("file", path), zap.Error(err))
 			return nil
 		}
 
 		// Extract the operation name and type
 		opName, opType, err := getOperationNameAndType(&opDoc)
 		if err != nil {
-			l.Logger.Error("Failed to extract operation name and type", zap.String("operation", opName), zap.String("file", path), zap.Error(err))
+			l.Logger.Error("Failed to extract MCP operation name and type", zap.String("operation", opName), zap.String("file", path), zap.Error(err))
 			return nil
 		}
 
 		// Check if the operation type is supported
 		if opType == "subscription" {
-			l.Logger.Error("Subscriptions are not supported yet", zap.String("operation", opName), zap.String("file", path))
+			l.Logger.Error("Subscriptions in MCP are not supported yet", zap.String("operation", opName), zap.String("file", path))
 			return nil
 		}
 
@@ -103,9 +103,17 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 			return nil
 		}
 
-		// if not the operation name, use the file name
+		// if not the operation name, use the file name without the extension
 		if opName == "" {
-			opName = filepath.Base(path)
+			opName = strings.TrimSuffix(d.Name(), filepath.Ext(d.Name()))
+		}
+
+		// Check if the operation name is unique
+		for _, op := range operations {
+			if op.Name == opName {
+				l.Logger.Error("MCP operation already exists", zap.String("operation", opName), zap.String("file", path))
+				return nil
+			}
 		}
 
 		// Add to our list of operations
