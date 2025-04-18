@@ -14,6 +14,7 @@ import (
 	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
@@ -24,11 +25,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/klauspost/compress/gzip"
-	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
@@ -47,9 +45,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
-	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 )
 
@@ -78,7 +74,6 @@ type (
 		*Config
 		context                 context.Context
 		cancelFunc              context.CancelFunc
-		pubSubProviders         *EnginePubSubProviders
 		storageProviders        *config.StorageProviders
 		engineStats             statistics.EngineStatistics
 		playgroundHandler       func(http.Handler) http.Handler
@@ -96,8 +91,8 @@ type (
 		runtimeMetrics          *rmetric.RuntimeMetrics
 		otlpEngineMetrics       *rmetric.EngineMetrics
 		prometheusEngineMetrics *rmetric.EngineMetrics
-		hostName                string
-		routerListenAddr        string
+		instanceData            InstanceData
+		pubSubProviders         []datasource.PubSubProvider
 	}
 )
 
@@ -135,11 +130,9 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		baseRouterConfigVersion: routerConfig.GetVersion(),
 		inFlightRequests:        &atomic.Uint64{},
 		graphMuxList:            make([]*graphMux, 0, 1),
-		routerListenAddr:        r.listenAddr,
-		hostName:                r.hostName,
-		pubSubProviders: &EnginePubSubProviders{
-			nats:  map[string]pubsub_datasource.NatsPubSub{},
-			kafka: map[string]pubsub_datasource.KafkaPubSub{},
+		instanceData: InstanceData{
+			hostName:      r.hostName,
+			listenAddress: r.listenAddr,
 		},
 		storageProviders: &r.storageProviders,
 	}
@@ -927,9 +920,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		SubgraphErrorPropagation: s.subgraphErrorPropagation,
 	}
 
-	err = s.buildPubSubConfiguration(ctx, engineConfig, routerEngineConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build pubsub configuration: %w", err)
+	var pubSubProviders []datasource.PubSubProvider
+
+	addPubSubProviderCallback := func(provider datasource.PubSubProvider) {
+		pubSubProviders = append(pubSubProviders, provider)
 	}
 
 	// map[string]*http.Transport cannot be coerced into map[string]http.RoundTripper, unfortunately
@@ -967,6 +961,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
 		},
+		addPubSubProviderCallback: addPubSubProviderCallback,
 	}
 
 	executor, err := ecb.Build(
@@ -975,15 +970,25 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			EngineConfig:                   engineConfig,
 			Subgraphs:                      configSubgraphs,
 			RouterEngineConfig:             routerEngineConfig,
-			PubSubProviders:                s.pubSubProviders,
 			Reporter:                       s.engineStats,
 			ApolloCompatibilityFlags:       s.apolloCompatibilityFlags,
 			ApolloRouterCompatibilityFlags: s.apolloRouterCompatibilityFlags,
 			HeartbeatInterval:              s.multipartHeartbeatInterval,
+			InstanceData:                   s.instanceData,
 		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build plan configuration: %w", err)
+	}
+
+	if len(pubSubProviders) > 0 {
+		for _, provider := range pubSubProviders {
+			if err := provider.Startup(ctx); err != nil {
+				return nil, fmt.Errorf("failed to startup pubsub provider: %w", err)
+			}
+		}
+
+		s.pubSubProviders = pubSubProviders
 	}
 
 	operationProcessor := NewOperationProcessor(OperationProcessorOptions{
@@ -1239,86 +1244,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	return gm, nil
 }
 
-func (s *graphServer) buildPubSubConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, routerEngineCfg *RouterEngineConfiguration) error {
-	datasourceConfigurations := engineConfig.GetDatasourceConfigurations()
-	for _, datasourceConfiguration := range datasourceConfigurations {
-		if datasourceConfiguration.CustomEvents == nil {
-			continue
-		}
-
-		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetNats() {
-
-			providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
-			// if this source name's provider has already been initiated, do not try to initiate again
-			_, ok := s.pubSubProviders.nats[providerID]
-			if ok {
-				continue
-			}
-
-			for _, eventSource := range routerEngineCfg.Events.Providers.Nats {
-				if eventSource.ID == eventConfiguration.EngineEventConfiguration.GetProviderId() {
-					options, err := buildNatsOptions(eventSource, s.logger)
-					if err != nil {
-						return fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", providerID, err)
-					}
-					natsConnection, err := nats.Connect(eventSource.URL, options...)
-					if err != nil {
-						return fmt.Errorf("failed to create connection for Nats provider with ID \"%s\": %w", providerID, err)
-					}
-					js, err := jetstream.New(natsConnection)
-					if err != nil {
-						return err
-					}
-
-					s.pubSubProviders.nats[providerID] = pubsubNats.NewConnector(s.logger, natsConnection, js, s.hostName, s.routerListenAddr).New(ctx)
-
-					break
-				}
-			}
-
-			_, ok = s.pubSubProviders.nats[providerID]
-			if !ok {
-				return fmt.Errorf("failed to find Nats provider with ID \"%s\". Ensure the provider definition is part of the config", providerID)
-			}
-		}
-
-		for _, eventConfiguration := range datasourceConfiguration.GetCustomEvents().GetKafka() {
-
-			providerID := eventConfiguration.EngineEventConfiguration.GetProviderId()
-			// if this source name's provider has already been initiated, do not try to initiate again
-			_, ok := s.pubSubProviders.kafka[providerID]
-			if ok {
-				continue
-			}
-
-			for _, eventSource := range routerEngineCfg.Events.Providers.Kafka {
-				if eventSource.ID == providerID {
-					options, err := buildKafkaOptions(eventSource)
-					if err != nil {
-						return fmt.Errorf("failed to build options for Kafka provider with ID \"%s\": %w", providerID, err)
-					}
-					ps, err := kafka.NewConnector(s.logger, options)
-					if err != nil {
-						return fmt.Errorf("failed to create connection for Kafka provider with ID \"%s\": %w", providerID, err)
-					}
-
-					s.pubSubProviders.kafka[providerID] = ps.New(ctx)
-
-					break
-				}
-			}
-
-			_, ok = s.pubSubProviders.kafka[providerID]
-			if !ok {
-				return fmt.Errorf("failed to find Kafka provider with ID \"%s\". Ensure the provider definition is part of the config", providerID)
-			}
-		}
-
-	}
-
-	return nil
-}
-
 // wait waits for all in-flight requests to finish. Similar to http.Server.Shutdown we wait in intervals + jitter
 // to make the shutdown process more efficient.
 func (s *graphServer) wait(ctx context.Context) error {
@@ -1392,23 +1317,9 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	if s.pubSubProviders != nil {
-
-		s.logger.Debug("Shutting down pubsub providers")
-
-		for _, pubSub := range s.pubSubProviders.nats {
-			if p, ok := pubSub.(pubsub.Lifecycle); ok {
-				if err := p.Shutdown(ctx); err != nil {
-					finalErr = errors.Join(finalErr, err)
-				}
-			}
-		}
-		for _, pubSub := range s.pubSubProviders.kafka {
-			if p, ok := pubSub.(pubsub.Lifecycle); ok {
-				if err := p.Shutdown(ctx); err != nil {
-					finalErr = errors.Join(finalErr, err)
-				}
-			}
+	for _, provider := range s.pubSubProviders {
+		if providerErr := provider.Shutdown(ctx); providerErr != nil {
+			finalErr = errors.Join(finalErr, providerErr)
 		}
 	}
 

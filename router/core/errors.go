@@ -12,7 +12,7 @@ import (
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/unique"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -73,7 +73,7 @@ func getErrorType(err error) errorType {
 			return errorTypeContextTimeout
 		}
 	}
-	var edfsErr *pubsub.Error
+	var edfsErr *datasource.Error
 	if errors.As(err, &edfsErr) {
 		return errorTypeEDFS
 	}
