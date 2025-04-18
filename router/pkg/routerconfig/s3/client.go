@@ -17,8 +17,9 @@ import (
 type Option func(*Client)
 
 type Client struct {
-	client  *minio.Client
-	options *ClientOptions
+	client          *minio.Client
+	options         *ClientOptions
+	retryIfNotFound bool
 }
 
 type ClientOptions struct {
@@ -30,9 +31,10 @@ type ClientOptions struct {
 	ObjectPath      string
 }
 
-func NewClient(endpoint string, options *ClientOptions) (routerconfig.Client, error) {
+func NewClient(endpoint string, options *ClientOptions, retryIfNotFound bool) (routerconfig.Client, error) {
 	client := &Client{
-		options: options,
+		options:         options,
+		retryIfNotFound: retryIfNotFound,
 	}
 
 	// The providers credential chain is used to allow multiple authentication methods.
@@ -100,7 +102,7 @@ func (c Client) RouterConfig(ctx context.Context, version string, modifiedSince 
 		if errors.As(err, &minioErr) {
 			if minioErr.StatusCode == http.StatusNotModified {
 				return nil, configpoller.ErrConfigNotModified
-			} else if minioErr.Code == "NoSuchKey" {
+			} else if minioErr.Code == "NoSuchKey" && c.retryIfNotFound {
 				res.Config = routerconfig.GetDefaultConfig()
 				return res, nil
 			}
