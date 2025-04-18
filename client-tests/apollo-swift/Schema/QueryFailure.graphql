@@ -1,0 +1,6 @@
+query QueryFailure {
+  employees {
+    id
+    isAvailable2
+  }
+}

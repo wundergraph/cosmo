@@ -89,7 +89,7 @@ func init() {
 // Run runs the test and fails the test if an error occurs
 func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	t.Helper()
-	env, err := createTestEnv(t, cfg)
+	env, err := CreateTestEnv(t, cfg)
 	if env != nil {
 		t.Cleanup(env.Shutdown)
 	}
@@ -109,7 +109,7 @@ func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 // FailsOnStartup runs the test and ensures that the router fails during bootstrapping
 func FailsOnStartup(t *testing.T, cfg *Config, f func(t *testing.T, err error)) {
 	t.Helper()
-	env, err := createTestEnv(t, cfg)
+	env, err := CreateTestEnv(t, cfg)
 	require.Error(t, err)
 	require.Nil(t, env)
 	f(t, err)
@@ -119,7 +119,7 @@ func FailsOnStartup(t *testing.T, cfg *Config, f func(t *testing.T, err error)) 
 // Useful when you want to assert errors during router bootstrapping
 func RunWithError(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) error {
 	t.Helper()
-	env, err := createTestEnv(t, cfg)
+	env, err := CreateTestEnv(t, cfg)
 	if env != nil {
 		t.Cleanup(env.Shutdown)
 	}
@@ -137,7 +137,7 @@ func RunWithError(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environm
 func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 	b.Helper()
 	b.StopTimer()
-	env, err := createTestEnv(b, cfg)
+	env, err := CreateTestEnv(b, cfg)
 	if env != nil {
 		b.Cleanup(env.Shutdown)
 	}
@@ -301,6 +301,7 @@ type Config struct {
 	DisableSimulateCloudExporter       bool
 	CdnSever                           *httptest.Server
 	UseVersionedGraph                  bool
+	NoShutdownTestServer               bool
 }
 
 type CacheMetricsAssertions struct {
@@ -346,7 +347,7 @@ type LogObservationConfig struct {
 	LogLevel zapcore.Level
 }
 
-func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
+func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	t.Helper()
 
 	var (
@@ -385,8 +386,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.MetricOptions.EnableOTLPRouterCache = true
 	}
 
-	ctx, cancel := context.WithCancelCause(context.Background())
-
 	var logObserver *observer.ObservedLogs
 
 	if oc := cfg.LogObservation; oc.Enabled {
@@ -424,6 +423,8 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	ports := freeport.GetN(t, requiredPorts)
 
 	getPubSubName := GetPubSubNameFn(pubSubPrefix)
+
+	ctx, cancel := context.WithCancelCause(context.Background())
 
 	employees := &Subgraph{
 		handler:          subgraphs.EmployeesHandler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
@@ -548,6 +549,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	var routerConfig nodev1.RouterConfig
 	if err := protojson.Unmarshal([]byte(replaced), &routerConfig); err != nil {
+		cancel(err)
 		return nil, err
 	}
 
@@ -571,11 +573,9 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	listenerAddr := fmt.Sprintf("localhost:%d", ports[1])
 
-	var client *http.Client
+	client := &http.Client{}
 
-	if cfg.NoRetryClient {
-		client = http.DefaultClient
-	} else {
+	if !cfg.NoRetryClient {
 		retryClient := retryablehttp.NewClient()
 		retryClient.Logger = nil
 		retryClient.RetryMax = 10
@@ -586,6 +586,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
 	if err != nil {
+		cancel(err)
 		return nil, err
 	}
 
@@ -625,6 +626,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	if err := rr.Start(ctx); err != nil {
+		cancel(err)
 		return nil, err
 	}
 
@@ -1161,29 +1163,29 @@ func (e *Environment) Observer() *observer.ObservedLogs {
 // Shutdown closes all resources associated with the test environment. Can be called multiple times but will only
 // shut down resources once.
 func (e *Environment) Shutdown() {
-	if e.shutdown.Load() {
+	if !e.shutdown.CompareAndSwap(false, true) {
 		return
 	}
-
-	e.shutdown.Store(true)
 
 	ctx, cancel := context.WithTimeout(e.Context, e.shutdownDelay)
 	defer cancel()
 
-	// Terminate test server resources
-	e.cancel(ErrEnvironmentClosed)
-
 	// Gracefully shutdown router
 	if e.Router != nil {
 		err := e.Router.Shutdown(ctx)
-		if err != nil && !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, context.Canceled) {
+		if err != nil {
 			e.t.Errorf("could not shutdown router: %s", err)
 		}
 	}
 
+	// Terminate test server resources
+	e.cancel(ErrEnvironmentClosed)
+
 	// Close all test servers
-	for _, s := range e.Servers {
-		s.CloseClientConnections()
+	if !e.cfg.NoShutdownTestServer {
+		for _, s := range e.Servers {
+			s.CloseClientConnections()
+		}
 	}
 
 	for _, s := range e.Servers {
@@ -1205,16 +1207,25 @@ func (e *Environment) Shutdown() {
 	// Flush NATS connections
 	if e.cfg.EnableNats {
 		if e.NatsConnectionMyNats != nil {
-			e.NatsConnectionMyNats.Flush()
+			err := e.NatsConnectionMyNats.Flush()
+			if err != nil {
+				e.t.Logf("could not flush MyNats NATS connection: %s", err)
+			}
 		}
 		if e.NatsConnectionDefault != nil {
-			e.NatsConnectionDefault.Flush()
+			err := e.NatsConnectionDefault.Flush()
+			if err != nil {
+				e.t.Logf("could not flush Default NATS connection: %s", err)
+			}
 		}
 	}
 
 	// Flush Kafka connection
 	if e.cfg.EnableKafka && e.KafkaClient != nil {
-		e.KafkaClient.Flush(ctx)
+		err := e.KafkaClient.Flush(ctx)
+		if err != nil {
+			e.t.Logf("could not flush Kafka connection: %s", err)
+		}
 	}
 
 	if e.routerCmd != nil {

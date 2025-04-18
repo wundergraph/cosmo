@@ -176,6 +176,7 @@ export function updateOrgMemberRole(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'member_role.updated',
       action: 'updated',
       actorId: authContext.userId,

@@ -9,6 +9,10 @@ import (
 
 	log "github.com/jensneuse/abstractlogger"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
@@ -21,11 +25,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"go.uber.org/zap"
-
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 )
@@ -282,7 +281,6 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 		httpClient:         http.DefaultClient,
 		streamingClient:    http.DefaultClient,
 		subscriptionClient: subscriptionClient,
-		transportOptions:   &TransportOptions{SubgraphTransportOptions: NewSubgraphTransportOptions(config.TrafficShapingRules{})},
 	}, logger, func(provider datasource.PubSubProvider) {})
 
 	// this generates the plan configuration using the data source factories from the config package

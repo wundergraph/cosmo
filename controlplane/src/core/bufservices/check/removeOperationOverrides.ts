@@ -55,6 +55,7 @@ export function removeOperationOverrides(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'operation_change_override.deleted',
       action: 'deleted',
       actorId: authContext.userId,

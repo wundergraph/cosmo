@@ -1223,6 +1223,13 @@ export const organizationBilling = pgTable(
   },
 );
 
+export const organizationBillingRelations = relations(organizationBilling, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [organizationBilling.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
 export type Feature = {
   id: FeatureIds;
   description?: string;
@@ -1289,6 +1296,13 @@ export const billingSubscriptions = pgTable(
     };
   },
 );
+
+export const billingSubscriptionsRelations = relations(billingSubscriptions, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [billingSubscriptions.organizationId],
+    references: [organizations.id],
+  }),
+}));
 
 export const organizationsMembers = pgTable(
   'organization_members', // orgm
@@ -1440,6 +1454,29 @@ export const webhookGraphSchemaUpdate = pgTable(
   },
 );
 
+export const webhookProposalStateUpdate = pgTable(
+  'webhook_proposal_state_update', // wpsu
+  {
+    webhookId: uuid('webhook_id')
+      .notNull()
+      .references(() => organizationWebhooks.id, {
+        onDelete: 'cascade',
+      }),
+    federatedGraphId: uuid('federated_graph_id')
+      .notNull()
+      .references(() => federatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+  },
+  (t) => {
+    return {
+      pk: primaryKey({ columns: [t.webhookId, t.federatedGraphId] }),
+      webhookIdIndex: index('wpsu_webhook_id_idx').on(t.webhookId),
+      federatedGraphIdIndex: index('wpsu_federated_graph_id_idx').on(t.federatedGraphId),
+    };
+  },
+);
+
 export const webhookDeliveryType = pgEnum('webhook_delivery_type', ['webhook', 'slack', 'admission'] as const);
 
 export const webhookDeliveries = pgTable(
@@ -1502,9 +1539,21 @@ export const webhookGraphSchemaUpdateRelations = relations(webhookGraphSchemaUpd
   }),
 }));
 
+export const webhookProposalStateUpdateRelations = relations(webhookProposalStateUpdate, ({ one }) => ({
+  organizationWebhook: one(organizationWebhooks, {
+    fields: [webhookProposalStateUpdate.webhookId],
+    references: [organizationWebhooks.id],
+  }),
+  federatedGraph: one(federatedGraphs, {
+    fields: [webhookProposalStateUpdate.federatedGraphId],
+    references: [federatedGraphs.id],
+  }),
+}));
+
 export const organizationWebhookRelations = relations(organizationWebhooks, ({ many }) => ({
   organization: many(organizations),
   webhookGraphSchemaUpdate: many(webhookGraphSchemaUpdate),
+  webhookProposalStateUpdate: many(webhookProposalStateUpdate),
 }));
 
 export const gitInstallationTypeEnum = pgEnum('git_installation_type', ['PERSONAL', 'ORGANIZATION'] as const);
@@ -1655,11 +1704,8 @@ export const auditLogs = pgTable(
   'audit_logs', // auditlogs
   {
     id: uuid('id').notNull().primaryKey().defaultRandom(),
-    organizationId: uuid('organization_id')
-      .notNull()
-      .references(() => organizations.id, {
-        onDelete: 'cascade',
-      }),
+    organizationId: uuid('organization_id').notNull(), // we don't want the audit log to be dropped when the organization is deleted
+    organizationSlug: text('organization_slug'),
 
     // Information about the action
     action: text('action').$type<AuditLogAction>().notNull(), // e.g. created

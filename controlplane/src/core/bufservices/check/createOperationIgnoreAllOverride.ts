@@ -65,6 +65,7 @@ export function createOperationIgnoreAllOverride(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'operation_ignore_override.created',
       action: 'updated',
       actorId: authContext.userId,

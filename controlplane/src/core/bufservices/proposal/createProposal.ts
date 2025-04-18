@@ -312,6 +312,7 @@ export function createProposal(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'proposal.created',
       action: 'created',
       actorId: authContext.userId,
@@ -402,7 +403,7 @@ export function createProposal(
       operationUsageStats,
       lintingSkipped: !namespace.enableLinting,
       graphPruningSkipped: !namespace.enableGraphPruning,
-      checkUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/graph/$federatedGraphName/checks/${checkId}`,
+      checkUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/graph/${federatedGraph.name}/checks/${checkId}`,
     };
   });
 }

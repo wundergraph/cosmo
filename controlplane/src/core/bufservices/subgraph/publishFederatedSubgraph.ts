@@ -368,6 +368,7 @@ export function publishFederatedSubgraph(
 
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
         auditAction: 'subgraph.created',
         action: 'created',
         actorId: authContext.userId,
@@ -428,14 +429,47 @@ export function publishFederatedSubgraph(
     // if this subgraph is part of a proposal, mark the proposal subgraph as published
     // and if all proposal subgraphs are published, update the proposal state to PUBLISHED
     if (matchedEntity) {
-      await proposalRepo.markProposalSubgraphAsPublished({
+      const { allSubgraphsPublished } = await proposalRepo.markProposalSubgraphAsPublished({
         proposalSubgraphId: matchedEntity.proposalSubgraphId,
         proposalId: matchedEntity.proposalId,
       });
+      if (allSubgraphsPublished) {
+        const proposal = await proposalRepo.ById(matchedEntity.proposalId);
+        if (proposal) {
+          const federatedGraph = await fedGraphRepo.byId(proposal.proposal.federatedGraphId);
+          if (federatedGraph) {
+            orgWebhooks.send(
+              {
+                eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+                payload: {
+                  federated_graph: {
+                    id: federatedGraph.id,
+                    name: federatedGraph.name,
+                    namespace: federatedGraph.namespace,
+                  },
+                  organization: {
+                    id: authContext.organizationId,
+                    slug: authContext.organizationSlug,
+                  },
+                  proposal: {
+                    id: proposal.proposal.id,
+                    name: proposal.proposal.name,
+                    namespace: req.namespace,
+                    state: 'PUBLISHED',
+                  },
+                  actor_id: authContext.userId,
+                },
+              },
+              authContext.userId,
+            );
+          }
+        }
+      }
     }
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: subgraph.isFeatureSubgraph ? 'feature_subgraph.updated' : 'subgraph.updated',
       action: 'updated',
       actorId: authContext.userId,

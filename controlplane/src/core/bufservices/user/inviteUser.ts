@@ -128,6 +128,7 @@ export function inviteUser(
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
+          organizationSlug: organization.slug,
           auditAction: 'organization_invitation.created',
           action: 'created',
           actorId: authContext.userId,
@@ -178,6 +179,7 @@ export function inviteUser(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: organization.slug,
       auditAction: 'organization_invitation.created',
       action: 'created',
       actorId: authContext.userId,
