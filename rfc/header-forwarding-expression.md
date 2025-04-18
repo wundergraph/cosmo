@@ -1,0 +1,189 @@
+---
+title: "RFC: Add support for header forwarding using expressions via Expr Lang"
+author: Jens Neuse
+---
+
+# RFC: Add support for header forwarding using expressions via Expr Lang
+
+## Overview
+
+This RFC proposes extending the existing `set` header rule in Cosmo Router to support dynamic header values using Expr Lang expressions. Currently, the router supports setting static header values or values from predefined context fields, but there's no way to dynamically generate header values based on request context, authentication claims, or other runtime data.
+
+## Motivation
+
+Users need the ability to dynamically set header values based on complex conditions and runtime data. Common use cases include:
+
+1. Setting headers with authentication claims
+2. Setting headers based on request context (e.g., operation type, client info)
+3. Setting headers with transformed values using expressions
+4. Setting headers conditionally based on complex business logic
+
+## Design
+
+### Current Implementation
+
+Currently, the router supports two types of header operations:
+
+1. `propagate` - Forwards headers from client to subgraphs
+2. `set` - Sets static header values or values from predefined context fields
+
+The configuration schema for header rules is defined in `traffic_shaping_header_rule` and `set_header_rule`.
+
+### Proposed Changes
+
+We propose extending the `set_header_rule` to support dynamic header values using Expr Lang expressions. The expression will have access to the same context as other expressions in the router, including:
+
+- Request information (headers, URL, body)
+- Authentication context (claims, scopes)
+- Operation context (name, type, variables)
+- Error information
+
+#### Configuration Schema Changes
+
+Extend the `set_header_rule` schema to support expressions and deprecate `value_from`:
+
+```json
+{
+  "type": "object",
+  "description": "The configuration for setting headers. This is used to set specific headers in requests or responses.",
+  "additionalProperties": false,
+  "properties": {
+    "op": {
+      "type": "string",
+      "const": "set",
+      "description": "The 'set' operation is used to set a specific header value."
+    },
+    "name": {
+      "type": "string",
+      "examples": [
+        "X-API-Key"
+      ],
+      "description": "The name of the header to set."
+    },
+    "value": {
+      "type": "string",
+      "examples": [
+        "My-Secret-Value"
+      ],
+      "description": "The static value to set for the header. This can include environment variables."
+    },
+    "expression": {
+      "type": "string",
+      "description": "The Expr Lang expression to evaluate. The expression must return a string value."
+    }
+  },
+  "required": [
+    "op",
+    "name"
+  ],
+  "oneOf": [
+    {
+      "required": ["value"]
+    },
+    {
+      "required": ["expression"]
+    }
+  ]
+}
+```
+
+### Example Usage
+
+```yaml
+headers:
+  all:
+    request:
+      # Using expressions for dynamic values
+      - op: set
+        name: X-User-ID
+        expression: request.auth.claims.user_id
+      - op: set
+        name: X-Operation-Type
+        expression: operation.type
+      - op: set
+        name: X-Client-Info
+        expression: operation.client_info.name + "/" + operation.client_info.version
+      # Using static values
+      - op: set
+        name: X-API-Key
+        value: "static-key"
+      # Example of what was previously done with value_from, now using expressions
+      - op: set
+        name: X-Operation-Name
+        expression: operation.name
+```
+
+### Migration Guide
+
+Users currently using `value_from` should migrate to using expressions. Here are some common migration examples:
+
+```yaml
+# Before
+- op: set
+  name: X-Operation-Name
+  value_from:
+    context_field: operation_name
+
+# After
+- op: set
+  name: X-Operation-Name
+  expression: operation.name
+```
+
+### Implementation Details
+
+1. Update `RequestHeaderRule` struct to include expression field and mark `value_from` as deprecated
+2. Update header rule processing logic to handle expressions in set operations
+3. Reuse existing Expr Lang context and evaluation infrastructure
+4. Add validation to ensure expressions return string values
+5. Add error handling for expression evaluation failures
+6. Add deprecation warnings for `value_from` usage
+
+### Performance Impact
+
+1. Expression evaluation adds overhead compared to static header values
+2. Results should be cached where possible to avoid repeated evaluation
+3. Expressions should be compiled once and reused
+
+## Alternatives Considered
+
+1. **Creating a new operation type**
+   - Would require more code changes
+   - Less intuitive for users
+   - Duplicates existing functionality
+
+2. **Adding new predefined context fields**
+   - Would require code changes for each new field
+   - Not scalable for complex use cases
+   - Limited flexibility
+
+## Open Questions
+
+1. Should we allow expressions to return arrays for multi-value headers?
+2. Should we add caching for expression results?
+3. Should we add validation for header names generated by expressions?
+
+## Future Work
+
+1. Add support for response header expressions
+2. Add support for header transformation expressions
+3. Add support for conditional header forwarding
+4. Add metrics for expression evaluation performance
+5. Add caching for expression results
+
+## Implementation Plan
+
+1. Update configuration schema for set header rule
+2. Implement expression evaluation in header processing
+3. Add validation and error handling
+4. Add deprecation warnings for value_from
+5. Add tests for new functionality
+6. Update documentation
+7. Add examples and migration guide
+
+## References
+
+- [Expr Lang Documentation](https://expr-lang.org/)
+- [Current Header Rules Documentation](https://cosmo-docs.wundergraph.com/router/proxy-capabilities#forward-http-headers-to-subgraphs)
+- [Authentication Documentation](https://cosmo-docs.wundergraph.com/router/authentication)
+
