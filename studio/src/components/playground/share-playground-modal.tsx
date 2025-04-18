@@ -29,21 +29,26 @@ const SHARE_OPTIONS = [
 
 type ShareOptionId = typeof SHARE_OPTIONS[number]['id'];
 
+const DEFAULT_SELECTED_OPTIONS = SHARE_OPTIONS.reduce((acc, { id, isChecked }) => {
+    acc[id] = isChecked;
+    return acc;
+}, {} as Record<ShareOptionId, boolean>);
+
 export const SharePlaygroundModal = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState<Record<ShareOptionId, boolean>>(
-    () =>
-      SHARE_OPTIONS.reduce((acc, { id, isChecked }) => {
-        acc[id] = isChecked;
-        return acc;
-      }, {} as Record<ShareOptionId, boolean>)
+    () => DEFAULT_SELECTED_OPTIONS    
   );
   const { toast } = useToast();
   const [shareableUrl, setShareableUrl] = useState('');
 
-  const generateShareableUrl = () => {
+  // Reset state when modal is opened
+  useEffect(() => {
+    if (!isOpen) return;
 
-  };
+    setSelectedOptions(DEFAULT_SELECTED_OPTIONS);
+    setShareableUrl('');
+  }, [isOpen]);
 
   const handleCopyLink = () => {
     toast({
