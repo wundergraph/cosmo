@@ -14176,11 +14176,6 @@ export class GetUserAccessibleResourcesResponse_Graph extends Message<GetUserAcc
    */
   namespace = "";
 
-  /**
-   * @generated from field: optional string federatedGraph = 4;
-   */
-  federatedGraph?: string;
-
   constructor(data?: PartialMessage<GetUserAccessibleResourcesResponse_Graph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -14192,7 +14187,6 @@ export class GetUserAccessibleResourcesResponse_Graph extends Message<GetUserAcc
     { no: 1, name: "targetId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "federatedGraph", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetUserAccessibleResourcesResponse_Graph {

@@ -7,8 +7,8 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { OrganizationRuleSetRepository } from "../../repositories/OrganizationRuleSetRepository.js";
-import { OrganizationRuleSetDTO } from "../../../types/index.js";
+import { OrganizationRuleSetRepository } from '../../repositories/OrganizationRuleSetRepository.js';
+import { OrganizationRuleSetDTO } from '../../../types/index.js';
 
 export function createOrganizationRuleSet(
   opts: RouterOptions,
@@ -26,7 +26,7 @@ export function createOrganizationRuleSet(
       return {
         response: {
           code: EnumStatusCode.ERR_ALREADY_EXISTS,
-          details: `A rule set with the name "${req.name}" already exists.`
+          details: `A rule set with the name "${req.name}" already exists.`,
         },
       };
     }
@@ -42,7 +42,7 @@ export function createOrganizationRuleSet(
       return {
         response: {
           code: EnumStatusCode.ERR,
-          details: 'Could not create new rule set'
+          details: 'Could not create new rule set',
         },
       };
     }

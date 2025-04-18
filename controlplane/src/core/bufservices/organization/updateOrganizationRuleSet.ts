@@ -8,8 +8,8 @@ import {
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { memberRoleEnum } from '../../../db/schema.js';
-import { OrganizationRuleSetRepository } from "../../repositories/OrganizationRuleSetRepository.js";
-import { MemberRole } from "../../../db/models.js";
+import { OrganizationRuleSetRepository } from '../../repositories/OrganizationRuleSetRepository.js';
+import { MemberRole } from '../../../db/models.js';
 
 export function updateOrganizationRuleSet(
   opts: RouterOptions,
@@ -23,7 +23,7 @@ export function updateOrganizationRuleSet(
     logger = enrichLogger(ctx, logger, authContext);
 
     const ruleSetRepo = new OrganizationRuleSetRepository(opts.db);
-    if (!await ruleSetRepo.exists({ organizationId: authContext.organizationId, ruleSetId: req.ruleSetId })) {
+    if (!(await ruleSetRepo.exists({ organizationId: authContext.organizationId, ruleSetId: req.ruleSetId }))) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,

@@ -7,7 +7,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { OrganizationRuleSetRepository } from "../../repositories/OrganizationRuleSetRepository.js";
+import { OrganizationRuleSetRepository } from '../../repositories/OrganizationRuleSetRepository.js';
 
 export function deleteOrganizationRuleSet(
   opts: RouterOptions,
@@ -36,7 +36,7 @@ export function deleteOrganizationRuleSet(
         return {
           response: {
             code: EnumStatusCode.ERR,
-            details: 'one'
+            details: 'Move all rule set members before trying to delete the rule set',
           },
         };
       }

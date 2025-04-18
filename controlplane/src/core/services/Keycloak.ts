@@ -371,7 +371,7 @@ export default class Keycloak {
         realm: realm || this.realm,
         id: organizationGroup[0].id!,
       },
-      { name: groupName }
+      { name: groupName },
     );
 
     return newGroup?.id;
