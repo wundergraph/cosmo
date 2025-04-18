@@ -81,6 +81,7 @@ import {
   MagnifyingGlassIcon,
   PlayIcon,
   PlusIcon,
+  DownloadIcon,
 } from "@radix-ui/react-icons";
 import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -101,6 +102,47 @@ import { BiAnalyse } from "react-icons/bi";
 import { IoBarcodeSharp } from "react-icons/io5";
 import { z } from "zod";
 import { useUser } from "@/hooks/use-user";
+import { GetPersistedOperationsResponse_Operation, PersistedOperation } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+
+interface APICollectionVariable {
+  key: string;
+  value: string;
+}
+
+interface APICollectionRequest {
+  method: string;
+  header: Array<{
+    key: string;
+    value: string;
+    type?: string;
+  }>;
+  body: {
+    mode: 'graphql';
+    graphql: {
+      query: string;
+      variables: string;
+    };
+  };
+  url: {
+    raw: string;
+    host: string[];
+  };
+}
+
+interface APICollectionItem {
+  name: string;
+  request: APICollectionRequest;
+}
+
+interface APICollection {
+  info: {
+    name: string;
+    description: string;
+    schema: string;
+  };
+  item: APICollectionItem[];
+  variable: APICollectionVariable[];
+}
 
 const getSnippets = ({
   clientName,
@@ -217,6 +259,82 @@ const ClientOperations = () => {
     },
   );
 
+  const createAPICollection = (operations: GetPersistedOperationsResponse_Operation | GetPersistedOperationsResponse_Operation[]) => {
+    const ops = Array.isArray(operations) ? operations : [operations];
+    const items = ops.map(op => {
+      const variables = extractVariablesFromGraphQL(op.contents, ast);
+      return {
+        name: op.operationNames[0] || "WunderGraph GraphQL Cosmo Operation",
+        request: {
+          method: "POST",
+          header: [
+            {
+              key: "Content-Type",
+              value: "application/json"
+            },
+            {
+              key: "graphql-client-name",
+              value: clientName || "",
+              type: "text"
+            }
+          ],
+          body: {
+            mode: "graphql" as const,
+            graphql: {
+              query: op.contents,
+              variables: JSON.stringify(variables, null, 2)
+            }
+          },
+          url: {
+            raw: "{{baseUrl}}",
+            host: ["{{baseUrl}}"]
+          }
+        }
+      };
+    });
+
+    const spec: APICollection = {
+      info: {
+        name: ops.length === 1 
+          ? (ops[0].operationNames[0] || "WunderGraph GraphQL Cosmo Operation")
+          : `${clientName} Operations`,
+        description: ops.length === 1
+          ? "GraphQL operation exported from WunderGraph Cosmo"
+          : `All GraphQL operations for client ${clientName} exported from WunderGraph Cosmo`,
+        schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+      },
+      item: items,
+      variable: [
+        {
+          key: "baseUrl",
+          value: graphContext?.graph?.routingURL || "/"
+        }
+      ]
+    };
+
+    return JSON.stringify(spec, null, 2);
+  };
+
+  const downloadJson = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const doExport = (op: GetPersistedOperationsResponse_Operation) => {
+    const collection = createAPICollection(op);
+    downloadJson(collection, `${op.operationNames[0]}.json`);
+  };
+
+  const doExportAll = (operations: GetPersistedOperationsResponse_Operation[]) => {
+    const collection = createAPICollection(operations);
+    downloadJson(collection, `${clientName}-operations.json`);
+  };
+
   let content: React.ReactNode;
 
   if (isLoading) {
@@ -273,29 +391,40 @@ const ClientOperations = () => {
 
     content = (
       <div>
-        <div className="relative">
-          <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
-          <Input
-            placeholder="Search by Name or ID"
-            className="pl-8 pr-10"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              applyParams(e.target.value);
-            }}
-          />
-          {search && (
-            <Button
-              variant="ghost"
-              className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
-              onClick={() => {
-                setSearch("");
-                applyParams("");
+        <div className="flex justify-between items-center gap-x-2">
+          <div className="relative grow">
+            <MagnifyingGlassIcon className="absolute bottom-0 left-3 top-0 my-auto" />
+            <Input
+              placeholder="Search by Name or ID"
+              className="pl-8 pr-10"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                applyParams(e.target.value);
               }}
-            >
-              <Cross1Icon />
-            </Button>
-          )}
+            />
+            {search && (
+              <Button
+                variant="ghost"
+                className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
+                onClick={() => {
+                  setSearch("");
+                  applyParams("");
+                }}
+              >
+                <Cross1Icon />
+              </Button>
+            )}
+          </div>
+          <div className="h-8 w-px bg-border" />
+          <Tooltip delayDuration={200}>
+            <TooltipTrigger>
+              <Button variant="outline" onClick={() => doExportAll(filteredOperations)}>
+                <DownloadIcon />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Download All Operations</TooltipContent>
+          </Tooltip>
         </div>
         <Accordion type="single" collapsible className="mt-4 w-full">
           {filteredOperations.map((op) => {
@@ -350,6 +479,14 @@ const ClientOperations = () => {
                         </p>
                       )}
                       <div className="flex items-center gap-x-2">
+                        <Tooltip delayDuration={200}>
+                          <TooltipTrigger>
+                            <Button variant="outline" size="icon" onClick={() => doExport(op)}>
+                              <DownloadIcon />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Download Operation</TooltipContent>
+                        </Tooltip>
                         <Tooltip delayDuration={100}>
                           <TooltipTrigger>
                             <Button variant="outline" size="icon" asChild>
