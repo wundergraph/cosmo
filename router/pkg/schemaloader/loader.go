@@ -148,14 +148,7 @@ func parseOperation(path string, operation string) (ast.Document, error) {
 		return ast.Document{}, fmt.Errorf("parsing errors: %s", report.Error())
 	}
 
-	// Validate that there is exactly one operation definition
-	operationCount := 0
-	for _, rootNode := range opDoc.RootNodes {
-		if rootNode.Kind == ast.NodeKindOperationDefinition {
-			operationCount++
-		}
-	}
-
+	operationCount := len(opDoc.OperationDefinitions)
 	if operationCount != 1 {
 		return ast.Document{}, fmt.Errorf("expected exactly one operation definition in file %s, got %d", path, operationCount)
 	}

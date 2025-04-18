@@ -150,4 +150,9 @@ require (
 // Remember you can use Go workspaces to avoid using replace directives in multiple go.mod files
 // Use what is best for your personal workflow. See CONTRIBUTING.md for more information
 
+replace (
+	// Due to https://github.com/mark3labs/mcp-go/pull/128
+	github.com/mark3labs/mcp-go => github.com/wundergraph/mcp-go v0.0.0-20250418103513-9bd590ca8b7f
 // replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+// replace github.com/mark3labs/mcp-go => ../../mcp-go
+)

@@ -179,4 +179,8 @@ replace (
 // github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
 )
 
-replace github.com/hashicorp/consul/sdk => github.com/wundergraph/consul/sdk v0.0.0-20250204115147-ed842a8fd301
+replace (
+	github.com/hashicorp/consul/sdk => github.com/wundergraph/consul/sdk v0.0.0-20250204115147-ed842a8fd301
+	// Due to https://github.com/mark3labs/mcp-go/pull/128
+	github.com/mark3labs/mcp-go => github.com/wundergraph/mcp-go v0.0.0-20250418103513-9bd590ca8b7f
+)

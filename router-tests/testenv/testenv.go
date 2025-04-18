@@ -1224,12 +1224,6 @@ func (e *Environment) Shutdown() {
 	ctx, cancel := context.WithTimeout(e.Context, e.shutdownDelay)
 	defer cancel()
 
-	// Close MCP client if it exists
-	// TODO: Server can't gracefully shutdown when MCP client is connected.
-	if e.MCPClient != nil {
-		e.MCPClient.Close()
-	}
-
 	// Gracefully shutdown router
 	if e.Router != nil {
 		err := e.Router.Shutdown(ctx)
