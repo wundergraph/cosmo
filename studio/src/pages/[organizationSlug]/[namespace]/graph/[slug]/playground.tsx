@@ -13,6 +13,7 @@ import {
   PreFlightScript,
 } from "@/components/playground/custom-scripts";
 import { PlanView } from "@/components/playground/plan-view";
+import { SharePlaygroundModal } from "@/components/playground/share-playground-modal";
 import { TraceContext, TraceView } from "@/components/playground/trace-view";
 import {
   PlaygroundContext,
@@ -793,6 +794,7 @@ const PlaygroundPortal = () => {
   const preFlightScriptSection = document.getElementById(
     "pre-flight-script-section",
   );
+  const shareButton = document.getElementById("share-button");
 
   if (
     !responseToolbar ||
@@ -801,6 +803,7 @@ const PlaygroundPortal = () => {
     !saveDiv ||
     !toggleClientValidation ||
     !scriptsSection ||
+    !shareButton ||
     !preFlightScriptSection
   ) {
     return null;
@@ -815,6 +818,7 @@ const PlaygroundPortal = () => {
       {createPortal(<ToggleClientValidation />, toggleClientValidation)}
       {createPortal(<CustomScripts />, scriptsSection)}
       {createPortal(<PreFlightScript />, preFlightScriptSection)}
+      {createPortal(<SharePlaygroundModal />, shareButton)}
     </>
   );
 };
@@ -1041,6 +1045,10 @@ const PlaygroundPage: NextPageWithLayout = () => {
       const toggleClientValidation = document.createElement("div");
       toggleClientValidation.id = "toggle-client-validation";
       toolbar.append(toggleClientValidation);
+
+      const shareButton = document.createElement("div");
+      shareButton.id = "share-button";
+      toolbar.append(shareButton);
     }
 
     // remove settings button
