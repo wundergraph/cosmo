@@ -14,6 +14,10 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip";
 import { CopyIcon } from '@radix-ui/react-icons';
 import { useState } from 'react';
+import { useState, useContext, useCallback, useEffect } from 'react';
+import { createStateUrl } from '@/lib/playground-url-state';
+import { PlaygroundUrlState } from '@/types/playground.types';
+import { PlaygroundContext } from './types';
 
 const MAX_URL_LENGTH = 2000;
 
@@ -32,7 +36,7 @@ type ShareOptionId = typeof SHARE_OPTIONS[number]['id'];
 const DEFAULT_SELECTED_OPTIONS = SHARE_OPTIONS.reduce((acc, { id, isChecked }) => {
     acc[id] = isChecked;
     return acc;
-}, {} as Record<ShareOptionId, boolean>);
+  }, {} as Record<ShareOptionId, boolean>);
 
 export const SharePlaygroundModal = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -42,6 +46,11 @@ export const SharePlaygroundModal = () => {
   const { toast } = useToast();
   const [shareableUrl, setShareableUrl] = useState('');
 
+  // sharing state only for the active tab
+  const { tabsState } = useContext(PlaygroundContext);
+  const activeTabId = tabsState.activeTabIndex;
+  const { query, variables, headers } = tabsState.tabs[activeTabId];
+
   // Reset state when modal is opened
   useEffect(() => {
     if (!isOpen) return;
@@ -50,10 +59,77 @@ export const SharePlaygroundModal = () => {
     setShareableUrl('');
   }, [isOpen]);
 
+  const generateShareableUrl = useCallback(() => {
+    try {
+      const stateToShare: PlaygroundUrlState = {
+        // Always include operation
+        operation: query ?? '',
+      };
+
+      if (selectedOptions.variables && variables) {
+        stateToShare.variables = variables;
+      }
+      if (selectedOptions.headers && headers !== null) stateToShare.headers = headers;
+      if (selectedOptions.preFlight) {
+        const preFlightSelected = localStorage.getItem('playground:pre-flight:selected');
+        const preFlightEnabled = localStorage.getItem('playground:pre-flight:enabled');
+
+        stateToShare.preFlight = {
+            content: (preFlightSelected && preFlightSelected!== 'undefined') ? JSON.parse(preFlightSelected)?.content : undefined,
+            enabled: preFlightEnabled === 'true',
+        };
+      }
+      if (selectedOptions.preOperation) {
+        const preOperationSelected = localStorage.getItem('playground:pre-operation:selected');
+        const scriptsTabState = localStorage.getItem('playground:script:tabState');
+        const parsedScriptsTabState = scriptsTabState ? JSON.parse(scriptsTabState) : null;
+        const preOpEnabled = (parsedScriptsTabState && parsedScriptsTabState[activeTabId]?.["pre-operation"]?.enabled) ?? false;
+
+        stateToShare.preOperation = {
+            content: (preOperationSelected && preOperationSelected !== 'undefined') ? JSON.parse(preOperationSelected)?.content : undefined,
+            enabled: preOpEnabled === true,
+        };
+      }
+      if (selectedOptions.postOperation) {
+        const postOperationSelected = localStorage.getItem('playground:post-operation:selected');
+        const scriptsTabState = localStorage.getItem('playground:script:tabState');
+        const parsedScriptsTabState = scriptsTabState ? JSON.parse(scriptsTabState) : null;
+        const postOpEnabled = (parsedScriptsTabState && parsedScriptsTabState[activeTabId]?.["post-operation"]?.enabled) ?? false;
+
+        stateToShare.postOperation = {
+            content: (postOperationSelected && postOperationSelected !== 'undefined') ? JSON.parse(postOperationSelected)?.content : undefined,
+            enabled: postOpEnabled === true,
+        };
+      }
+
+      setShareableUrl(createStateUrl(stateToShare));
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to generate shareable URL',
+        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+      });
+    }
+  }, [query, variables, headers, selectedOptions]);
+
   const handleCopyLink = () => {
-    toast({
+    try {
+      if (!shareableUrl) {
+        throw new Error('Failed to generate shareable URL');
+      }
+
+      navigator.clipboard.writeText(shareableUrl);
+      toast({
         description: 'Playground state URL copied to clipboard',
-    });
+        duration: 3000,
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: error instanceof Error ? error.message : 'Failed to copy link',
+        description: 'Please try again later',
+      });
+    }
   };
 
   return (
@@ -76,6 +152,7 @@ export const SharePlaygroundModal = () => {
       </Tooltip>
       <DialogContent>
         <DialogHeader>
+            {/* can optionally specify tab title here */}
           <DialogTitle>Share Playground State</DialogTitle>
           <DialogDescription>
             Select which parts of your playground state to include in the shared URL
