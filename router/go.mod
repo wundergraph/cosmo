@@ -31,7 +31,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.169
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.170
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0
@@ -65,7 +65,9 @@ require (
 	github.com/dgraph-io/ristretto/v2 v2.1.0
 	github.com/expr-lang/expr v1.17.0
 	github.com/goccy/go-json v0.10.3
+	github.com/iancoleman/strcase v0.3.0
 	github.com/klauspost/compress v1.17.9
+	github.com/mark3labs/mcp-go v0.21.1
 	github.com/minio/minio-go/v7 v7.0.74
 	github.com/pquerna/cachecontrol v0.2.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
@@ -131,6 +133,7 @@ require (
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.16 // indirect
+	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.23.1 // indirect
@@ -147,4 +150,9 @@ require (
 // Remember you can use Go workspaces to avoid using replace directives in multiple go.mod files
 // Use what is best for your personal workflow. See CONTRIBUTING.md for more information
 
+replace (
+	// Due to https://github.com/mark3labs/mcp-go/pull/128
+	github.com/mark3labs/mcp-go => github.com/wundergraph/mcp-go v0.0.0-20250418103513-9bd590ca8b7f
 // replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+// replace github.com/mark3labs/mcp-go => ../../mcp-go
+)
