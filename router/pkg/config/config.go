@@ -705,9 +705,17 @@ type PersistedOperationsCDNProvider struct {
 	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com"`
 }
 
+type ExecutionConfigStorageIfNotFound string
+
+const (
+	ExecutionConfigStorageIfNotFoundRetry ExecutionConfigStorageIfNotFound = "retry"
+	ExecutionConfigStorageIfNotFoundError ExecutionConfigStorageIfNotFound = "error"
+)
+
 type ExecutionConfigStorage struct {
-	ProviderID string `yaml:"provider_id,omitempty" env:"PROVIDER_ID"`
-	ObjectPath string `yaml:"object_path,omitempty" env:"OBJECT_PATH"`
+	ProviderID string                           `yaml:"provider_id,omitempty" env:"PROVIDER_ID"`
+	ObjectPath string                           `yaml:"object_path,omitempty" env:"OBJECT_PATH"`
+	IfNotFound ExecutionConfigStorageIfNotFound `yaml:"if_not_found,omitempty" envDefault:"retry" env:"IF_NOT_FOUND"`
 }
 
 type FallbackExecutionConfigStorage struct {

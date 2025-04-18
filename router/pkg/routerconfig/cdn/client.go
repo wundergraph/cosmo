@@ -11,15 +11,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/httpclient"
-	"github.com/wundergraph/cosmo/router/internal/jwt"
-	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
-	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"hash"
 	"io"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/httpclient"
+	"github.com/wundergraph/cosmo/router/internal/jwt"
+	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"go.uber.org/zap"
@@ -39,6 +40,7 @@ type Options struct {
 	Logger                     *zap.Logger
 	SignatureKey               string
 	RouterCompatibilityVersion int
+	RetryIfNotFound            bool
 }
 
 type Client struct {
@@ -54,6 +56,7 @@ type Client struct {
 	logger                     *zap.Logger
 	hash                       hash.Hash
 	routerCompatibilityVersion int
+	retryIfNotFound            bool
 }
 
 type routerConfigNotFoundError struct {
@@ -103,6 +106,7 @@ func NewClient(endpoint string, token string, opts *Options) (routerconfig.Clien
 		httpClient:                 httpclient.NewRetryableHTTPClient(logger),
 		logger:                     opts.Logger,
 		routerCompatibilityVersion: opts.RouterCompatibilityVersion,
+		retryIfNotFound:            opts.RetryIfNotFound,
 	}
 
 	if opts.SignatureKey != "" {
@@ -227,7 +231,7 @@ func (cdn *Client) RouterConfig(ctx context.Context, version string, modifiedSin
 	res := &routerconfig.Response{}
 
 	body, err := cdn.getRouterConfig(ctx, version, modifiedSince)
-	if err != nil && errors.Is(err, ErrConfigNotFound) {
+	if err != nil && errors.Is(err, ErrConfigNotFound) && cdn.retryIfNotFound {
 		res.Config = routerconfig.GetDefaultConfig()
 		return res, nil
 	} else if err != nil {

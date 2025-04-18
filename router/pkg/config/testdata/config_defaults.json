@@ -398,7 +398,8 @@
     },
     "Storage": {
       "ProviderID": "",
-      "ObjectPath": ""
+      "ObjectPath": "",
+      "IfNotFound": "retry"
     },
     "FallbackStorage": {
       "Enabled": false,
