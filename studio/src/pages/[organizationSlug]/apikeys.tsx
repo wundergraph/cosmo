@@ -243,6 +243,10 @@ const CreateAPIKeyDialog = ({
     <Dialog open={open} onOpenChange={(v) => {
       setOpen(v);
       if (!v) {
+        setSelectedAllResources(false);
+        setSelectedFedGraphs([]);
+        setSelectedSubgraphs([]);
+        setSelectedPermissions([]);
         reset();
       }
     }}>

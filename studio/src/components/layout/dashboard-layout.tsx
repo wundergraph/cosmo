@@ -39,7 +39,10 @@ import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
 import { TitleLayout } from "./title-layout";
 import { FaGripfire } from "react-icons/fa";
-import { DocumentPlusIcon } from "@heroicons/react/24/outline";
+import {
+  DocumentPlusIcon,
+  UserGroupIcon,
+} from "@heroicons/react/24/outline";
 
 export const StarBanner = ({
   isDisabled,
@@ -149,54 +152,59 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
       {
         title: "Graphs",
         href: basePath + "/graphs",
-        icon: <PiGraphLight className="h-4 w-4" />,
+        icon: <PiGraphLight className="size-4" />,
       },
       {
         title: "Subgraphs",
         href: basePath + "/subgraphs",
-        icon: <Component2Icon className="h-4 w-4" />,
+        icon: <Component2Icon className="size-4" />,
       },
       {
         title: "Feature Flags",
         href: basePath + "/feature-flags",
-        icon: <MdOutlineFeaturedPlayList className="h-4 w-4" />,
+        icon: <MdOutlineFeaturedPlayList className="size-4" />,
         matchExact: false,
       },
       {
         title: "Policies",
         href: basePath + "/policies",
-        icon: <MdOutlinePolicy className="h-4 w-4" />,
+        icon: <MdOutlinePolicy className="size-4" />,
       },
       {
         title: "Cache Warmer",
         href: basePath + "/cache-warmer",
-        icon: <FaGripfire className="h-4 w-4" />,
+        icon: <FaGripfire className="size-4" />,
         separator: true,
+      },
+      {
+        title: "Groups",
+        href: basePath + "/groups",
+        icon: <UserGroupIcon className="size-4" />,
       },
       {
         title: "Members",
         href: basePath + "/members",
-        icon: <PiUsers className="h-4 w-4" />,
+        icon: <PiUsers className="size-4" />,
       },
       {
         title: "API Keys",
         href: basePath + "/apikeys",
-        icon: <PiKey className="h-4 w-4" />,
+        icon: <PiKey className="size-4" />,
       },
       {
         title: "Notifications",
         href: basePath + "/webhooks",
-        icon: <PiBell className="h-4 w-4" />,
+        icon: <PiBell className="size-4" />,
       },
       {
         title: "Webhook History",
         href: basePath + "/webhook-history",
-        icon: <PiWebhooksLogo className="h-4 w-4" />,
+        icon: <PiWebhooksLogo className="size-4" />,
       },
       {
         title: "Usage",
         href: basePath + "/usages",
-        icon: <PiChartDonut className="h-4 w-4" />,
+        icon: <PiChartDonut className="size-4" />,
       },
     ];
 
@@ -207,21 +215,21 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
       navigation.push({
         title: "Billing",
         href: basePath + "/billing",
-        icon: <PiReceipt className="h-4 w-4" />,
+        icon: <PiReceipt className="size-4" />,
       });
     }
 
     navigation.push({
       title: "Audit log",
       href: basePath + "/audit-log",
-      icon: <AiOutlineAudit className="h-4 w-4" />,
+      icon: <AiOutlineAudit className="size-4" />,
     });
 
     navigation.push(
       {
         title: "Settings",
         href: basePath + "/settings",
-        icon: <PiGear className="h-4 w-4" />,
+        icon: <PiGear className="size-4" />,
         separator: true,
       },
       {
@@ -230,12 +238,12 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
       {
         title: "Invitations",
         href: "/account/invitations",
-        icon: <EnvelopeClosedIcon className="h-4 w-4" />,
+        icon: <EnvelopeClosedIcon className="size-4" />,
       },
       {
         title: "Manage",
         href: "/account/manage",
-        icon: <PiUserGear className="h-4 w-4" />,
+        icon: <PiUserGear className="size-4" />,
       },
     );
 

@@ -66,25 +66,7 @@ import { useRouter } from "next/router";
 import { useContext, useState } from "react";
 import { useDebounce } from "use-debounce";
 import { z } from "zod";
-
-const usePaginationParams = () => {
-  const router = useRouter();
-  const pageNumber = router.query.page
-    ? parseInt(router.query.page as string)
-    : 1;
-  const pageSize = Number.parseInt((router.query.pageSize as string) || "10");
-  const limit = pageSize > 50 ? 50 : pageSize;
-  const offset = (pageNumber - 1) * limit;
-  const search = (router.query.search as string) || "";
-
-  return {
-    pageNumber,
-    pageSize,
-    limit,
-    offset,
-    search,
-  };
-};
+import { usePaginationParams } from "@/hooks/use-pagination-params";
 
 const emailInputSchema = z.object({
   email: z.string().email(),
@@ -378,7 +360,7 @@ const PendingInvitations = () => {
   const user = useUser();
   const isAdmin = user?.currentOrganization.roles.includes("admin") ?? false;
 
-  const { limit, offset, pageNumber, search } = usePaginationParams();
+  const { pageSize, offset, pageNumber, search } = usePaginationParams();
 
   const [debouncedSearch] = useDebounce(search, 500);
 
@@ -386,14 +368,14 @@ const PendingInvitations = () => {
     getPendingOrganizationMembers,
     {
       pagination: {
-        limit,
+        limit: pageSize,
         offset,
       },
       search: debouncedSearch,
     },
   );
 
-  const noOfPages = Math.ceil((data?.totalCount ?? 0) / limit);
+  const noOfPages = Math.ceil((data?.totalCount ?? 0) / pageSize);
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -443,7 +425,7 @@ const PendingInvitations = () => {
           </TableBody>
         </Table>
       </TableWrapper>
-      <Pagination limit={limit} noOfPages={noOfPages} pageNumber={pageNumber} />
+      <Pagination limit={pageSize} noOfPages={noOfPages} pageNumber={pageNumber} />
     </>
   );
 };
@@ -452,19 +434,19 @@ const AcceptedMembers = () => {
   const user = useUser();
   const isAdmin = user?.currentOrganization.roles.includes("admin") ?? false;
 
-  const { limit, offset, pageNumber, search } = usePaginationParams();
+  const { pageSize, offset, pageNumber, search } = usePaginationParams();
 
   const [debouncedSearch] = useDebounce(search, 500);
 
   const { data, isLoading, error, refetch } = useQuery(getOrganizationMembers, {
     pagination: {
-      limit,
+      limit: pageSize,
       offset,
     },
     search: debouncedSearch,
   });
 
-  const noOfPages = Math.ceil((data?.totalCount ?? 0) / limit);
+  const noOfPages = Math.ceil((data?.totalCount ?? 0) / pageSize);
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -517,7 +499,7 @@ const AcceptedMembers = () => {
           )}
         </Table>
       </TableWrapper>
-      <Pagination limit={limit} noOfPages={noOfPages} pageNumber={pageNumber} />
+      <Pagination limit={pageSize} noOfPages={noOfPages} pageNumber={pageNumber} />
     </>
   );
 };
@@ -529,7 +511,7 @@ const MembersToolbar = () => {
   const isAdmin = user?.currentOrganization.roles.includes("admin") ?? false;
   const client = useQueryClient();
 
-  const { limit, offset, search } = usePaginationParams();
+  const { pageSize, offset, search } = usePaginationParams();
 
   const { data } = useQuery(isMemberLimitReached);
 
@@ -565,7 +547,7 @@ const MembersToolbar = () => {
                   getPendingOrganizationMembers,
                   {
                     pagination: {
-                      limit,
+                      limit: pageSize,
                       offset,
                     },
                     search,
@@ -596,11 +578,11 @@ const MembersPage: NextPageWithLayout = () => {
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 500);
 
-  const { limit, offset } = usePaginationParams();
+  const { pageSize, offset } = usePaginationParams();
 
   const { data } = useQuery(getPendingOrganizationMembers, {
     pagination: {
-      limit,
+      limit: pageSize,
       offset,
     },
     search: debouncedSearch,

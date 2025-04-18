@@ -102,6 +102,10 @@ import { deleteOrganization } from './organization/deleteOrganization.js';
 import { restoreOrganization } from './organization/restoreOrganization.js';
 import { getAuditLogs } from './organization/getAuditLogs.js';
 import { getOrganizationMembers } from './organization/getOrganizationMembers.js';
+import { createOrganizationRuleSet } from './organization/createOrganizationRuleSet.js';
+import { getOrganizationRuleSets } from './organization/getOrganizationRuleSets.js';
+import { updateOrganizationRuleSet } from './organization/updateOrganizationRuleSet.js';
+import { deleteOrganizationRuleSet } from './organization/deleteOrganizationRuleSet.js';
 import { getPendingOrganizationMembers } from './organization/getPendingOrganizationMembers.js';
 import { isMemberLimitReached } from './organization/isMemberLimitReached.js';
 import { leaveOrganization } from './organization/leaveOrganization.js';
@@ -539,6 +543,22 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getPendingOrganizationMembers: (req, ctx) => {
       return getPendingOrganizationMembers(opts, req, ctx);
+    },
+
+    createOrganizationRuleSet: (req, ctx) => {
+      return createOrganizationRuleSet(opts, req, ctx);
+    },
+
+    getOrganizationRuleSets: (req, ctx) => {
+      return getOrganizationRuleSets(opts, req, ctx);
+    },
+
+    updateOrganizationRuleSet: (req, ctx) => {
+      return updateOrganizationRuleSet(opts, req, ctx);
+    },
+
+    deleteOrganizationRuleSet: (req, ctx) => {
+      return deleteOrganizationRuleSet(opts, req, ctx);
     },
 
     getAPIKeys: (req, ctx) => {

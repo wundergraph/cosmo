@@ -6385,6 +6385,412 @@ export class CreateFederatedGraphTokenResponse extends Message<CreateFederatedGr
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.OrganizationRuleSetRule
+ */
+export class OrganizationRuleSetRule extends Message<OrganizationRuleSetRule> {
+  /**
+   * @generated from field: string role = 1;
+   */
+  role = "";
+
+  /**
+   * @generated from field: repeated string resources = 2;
+   */
+  resources: string[] = [];
+
+  constructor(data?: PartialMessage<OrganizationRuleSetRule>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.OrganizationRuleSetRule";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "resources", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrganizationRuleSetRule {
+    return new OrganizationRuleSetRule().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): OrganizationRuleSetRule {
+    return new OrganizationRuleSetRule().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): OrganizationRuleSetRule {
+    return new OrganizationRuleSetRule().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: OrganizationRuleSetRule | PlainMessage<OrganizationRuleSetRule> | undefined, b: OrganizationRuleSetRule | PlainMessage<OrganizationRuleSetRule> | undefined): boolean {
+    return proto3.util.equals(OrganizationRuleSetRule, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.OrganizationRuleSet
+ */
+export class OrganizationRuleSet extends Message<OrganizationRuleSet> {
+  /**
+   * @generated from field: string ruleSetId = 1;
+   */
+  ruleSetId = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: int32 membersCount = 3;
+   */
+  membersCount = 0;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.OrganizationRuleSetRule rules = 4;
+   */
+  rules: OrganizationRuleSetRule[] = [];
+
+  constructor(data?: PartialMessage<OrganizationRuleSet>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.OrganizationRuleSet";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "ruleSetId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "membersCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "rules", kind: "message", T: OrganizationRuleSetRule, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrganizationRuleSet {
+    return new OrganizationRuleSet().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): OrganizationRuleSet {
+    return new OrganizationRuleSet().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): OrganizationRuleSet {
+    return new OrganizationRuleSet().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: OrganizationRuleSet | PlainMessage<OrganizationRuleSet> | undefined, b: OrganizationRuleSet | PlainMessage<OrganizationRuleSet> | undefined): boolean {
+    return proto3.util.equals(OrganizationRuleSet, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CreateOrganizationRuleSetRequest
+ */
+export class CreateOrganizationRuleSetRequest extends Message<CreateOrganizationRuleSetRequest> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<CreateOrganizationRuleSetRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreateOrganizationRuleSetRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOrganizationRuleSetRequest {
+    return new CreateOrganizationRuleSetRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateOrganizationRuleSetRequest {
+    return new CreateOrganizationRuleSetRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateOrganizationRuleSetRequest {
+    return new CreateOrganizationRuleSetRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateOrganizationRuleSetRequest | PlainMessage<CreateOrganizationRuleSetRequest> | undefined, b: CreateOrganizationRuleSetRequest | PlainMessage<CreateOrganizationRuleSetRequest> | undefined): boolean {
+    return proto3.util.equals(CreateOrganizationRuleSetRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CreateOrganizationRuleSetResponse
+ */
+export class CreateOrganizationRuleSetResponse extends Message<CreateOrganizationRuleSetResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: wg.cosmo.platform.v1.OrganizationRuleSet ruleSet = 2;
+   */
+  ruleSet?: OrganizationRuleSet;
+
+  constructor(data?: PartialMessage<CreateOrganizationRuleSetResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CreateOrganizationRuleSetResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "ruleSet", kind: "message", T: OrganizationRuleSet },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOrganizationRuleSetResponse {
+    return new CreateOrganizationRuleSetResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateOrganizationRuleSetResponse {
+    return new CreateOrganizationRuleSetResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateOrganizationRuleSetResponse {
+    return new CreateOrganizationRuleSetResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateOrganizationRuleSetResponse | PlainMessage<CreateOrganizationRuleSetResponse> | undefined, b: CreateOrganizationRuleSetResponse | PlainMessage<CreateOrganizationRuleSetResponse> | undefined): boolean {
+    return proto3.util.equals(CreateOrganizationRuleSetResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationRuleSetsRequest
+ */
+export class GetOrganizationRuleSetsRequest extends Message<GetOrganizationRuleSetsRequest> {
+  constructor(data?: PartialMessage<GetOrganizationRuleSetsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationRuleSetsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationRuleSetsRequest {
+    return new GetOrganizationRuleSetsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationRuleSetsRequest {
+    return new GetOrganizationRuleSetsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationRuleSetsRequest {
+    return new GetOrganizationRuleSetsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOrganizationRuleSetsRequest | PlainMessage<GetOrganizationRuleSetsRequest> | undefined, b: GetOrganizationRuleSetsRequest | PlainMessage<GetOrganizationRuleSetsRequest> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationRuleSetsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationRuleSetsResponse
+ */
+export class GetOrganizationRuleSetsResponse extends Message<GetOrganizationRuleSetsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.OrganizationRuleSet ruleSets = 2;
+   */
+  ruleSets: OrganizationRuleSet[] = [];
+
+  constructor(data?: PartialMessage<GetOrganizationRuleSetsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationRuleSetsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "ruleSets", kind: "message", T: OrganizationRuleSet, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationRuleSetsResponse {
+    return new GetOrganizationRuleSetsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationRuleSetsResponse {
+    return new GetOrganizationRuleSetsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationRuleSetsResponse {
+    return new GetOrganizationRuleSetsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetOrganizationRuleSetsResponse | PlainMessage<GetOrganizationRuleSetsResponse> | undefined, b: GetOrganizationRuleSetsResponse | PlainMessage<GetOrganizationRuleSetsResponse> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationRuleSetsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateOrganizationRuleSetRequest
+ */
+export class UpdateOrganizationRuleSetRequest extends Message<UpdateOrganizationRuleSetRequest> {
+  /**
+   * @generated from field: string ruleSetId = 1;
+   */
+  ruleSetId = "";
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.OrganizationRuleSetRule rules = 2;
+   */
+  rules: OrganizationRuleSetRule[] = [];
+
+  constructor(data?: PartialMessage<UpdateOrganizationRuleSetRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateOrganizationRuleSetRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "ruleSetId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "rules", kind: "message", T: OrganizationRuleSetRule, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrganizationRuleSetRequest {
+    return new UpdateOrganizationRuleSetRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateOrganizationRuleSetRequest {
+    return new UpdateOrganizationRuleSetRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateOrganizationRuleSetRequest {
+    return new UpdateOrganizationRuleSetRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateOrganizationRuleSetRequest | PlainMessage<UpdateOrganizationRuleSetRequest> | undefined, b: UpdateOrganizationRuleSetRequest | PlainMessage<UpdateOrganizationRuleSetRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateOrganizationRuleSetRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateOrganizationRuleSetResponse
+ */
+export class UpdateOrganizationRuleSetResponse extends Message<UpdateOrganizationRuleSetResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<UpdateOrganizationRuleSetResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateOrganizationRuleSetResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrganizationRuleSetResponse {
+    return new UpdateOrganizationRuleSetResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateOrganizationRuleSetResponse {
+    return new UpdateOrganizationRuleSetResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateOrganizationRuleSetResponse {
+    return new UpdateOrganizationRuleSetResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateOrganizationRuleSetResponse | PlainMessage<UpdateOrganizationRuleSetResponse> | undefined, b: UpdateOrganizationRuleSetResponse | PlainMessage<UpdateOrganizationRuleSetResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateOrganizationRuleSetResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteOrganizationRuleSetRequest
+ */
+export class DeleteOrganizationRuleSetRequest extends Message<DeleteOrganizationRuleSetRequest> {
+  /**
+   * @generated from field: string ruleSetId = 1;
+   */
+  ruleSetId = "";
+
+  constructor(data?: PartialMessage<DeleteOrganizationRuleSetRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteOrganizationRuleSetRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "ruleSetId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteOrganizationRuleSetRequest {
+    return new DeleteOrganizationRuleSetRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteOrganizationRuleSetRequest {
+    return new DeleteOrganizationRuleSetRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteOrganizationRuleSetRequest {
+    return new DeleteOrganizationRuleSetRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteOrganizationRuleSetRequest | PlainMessage<DeleteOrganizationRuleSetRequest> | undefined, b: DeleteOrganizationRuleSetRequest | PlainMessage<DeleteOrganizationRuleSetRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteOrganizationRuleSetRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteOrganizationRuleSetResponse
+ */
+export class DeleteOrganizationRuleSetResponse extends Message<DeleteOrganizationRuleSetResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<DeleteOrganizationRuleSetResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteOrganizationRuleSetResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteOrganizationRuleSetResponse {
+    return new DeleteOrganizationRuleSetResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteOrganizationRuleSetResponse {
+    return new DeleteOrganizationRuleSetResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteOrganizationRuleSetResponse {
+    return new DeleteOrganizationRuleSetResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteOrganizationRuleSetResponse | PlainMessage<DeleteOrganizationRuleSetResponse> | undefined, b: DeleteOrganizationRuleSetResponse | PlainMessage<DeleteOrganizationRuleSetResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteOrganizationRuleSetResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.OrgMember
  */
 export class OrgMember extends Message<OrgMember> {
@@ -13770,6 +14176,11 @@ export class GetUserAccessibleResourcesResponse_Graph extends Message<GetUserAcc
    */
   namespace = "";
 
+  /**
+   * @generated from field: optional string federatedGraph = 4;
+   */
+  federatedGraph?: string;
+
   constructor(data?: PartialMessage<GetUserAccessibleResourcesResponse_Graph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -13781,6 +14192,7 @@ export class GetUserAccessibleResourcesResponse_Graph extends Message<GetUserAcc
     { no: 1, name: "targetId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "federatedGraph", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetUserAccessibleResourcesResponse_Graph {

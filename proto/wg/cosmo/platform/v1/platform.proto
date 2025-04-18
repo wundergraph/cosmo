@@ -868,6 +868,51 @@ message CreateFederatedGraphTokenResponse {
   string token = 2;
 }
 
+message OrganizationRuleSetRule {
+  string role = 1;
+  repeated string resources = 2;
+}
+
+message OrganizationRuleSet {
+  string ruleSetId = 1;
+  string name = 2;
+  int32 membersCount = 3;
+  repeated OrganizationRuleSetRule rules = 4;
+}
+
+message CreateOrganizationRuleSetRequest {
+  string name = 1;
+}
+
+message CreateOrganizationRuleSetResponse {
+  Response response = 1;
+  OrganizationRuleSet ruleSet = 2;
+}
+
+message GetOrganizationRuleSetsRequest {}
+
+message GetOrganizationRuleSetsResponse {
+  Response response = 1;
+  repeated OrganizationRuleSet ruleSets = 2;
+}
+
+message UpdateOrganizationRuleSetRequest {
+  string ruleSetId = 1;
+  repeated OrganizationRuleSetRule rules = 2;
+}
+
+message UpdateOrganizationRuleSetResponse {
+  Response response = 1;
+}
+
+message DeleteOrganizationRuleSetRequest {
+  string ruleSetId = 1;
+}
+
+message DeleteOrganizationRuleSetResponse {
+  Response response = 1;
+}
+
 message OrgMember{
   string userID = 1;
   string email = 2;
@@ -2797,6 +2842,16 @@ service PlatformService {
   rpc RemoveInvitation(RemoveInvitationRequest) returns (RemoveInvitationResponse){}
   // MigrateFromApollo migrates the graphs from apollo to cosmo
   rpc MigrateFromApollo(MigrateFromApolloRequest) returns (MigrateFromApolloResponse) {}
+
+  // Organization Rule Set management
+  // CreateOrganizationRuleSet creates a new rule set
+  rpc CreateOrganizationRuleSet(CreateOrganizationRuleSetRequest) returns (CreateOrganizationRuleSetResponse) {}
+  // GetOrganizationRuleSets returns the list of organization rule sets
+  rpc GetOrganizationRuleSets(GetOrganizationRuleSetsRequest) returns (GetOrganizationRuleSetsResponse) {}
+  // UpdateOrganizationRuleSet updates the rule list for an organization rule set
+  rpc UpdateOrganizationRuleSet(UpdateOrganizationRuleSetRequest) returns (UpdateOrganizationRuleSetResponse) {}
+  // DeleteOrganizationRuleSet deletes an existing organization rule set
+  rpc DeleteOrganizationRuleSet(DeleteOrganizationRuleSetRequest) returns (DeleteOrganizationRuleSetResponse) {}
 
   // CreateOrganizationWebhookConfig create a new webhook config for the organization
   rpc CreateOrganizationWebhookConfig(CreateOrganizationWebhookConfigRequest) returns (CreateOrganizationWebhookConfigResponse) {}

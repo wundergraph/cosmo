@@ -347,6 +347,36 @@ export default class Keycloak {
     });
   }
 
+  public async createSubGroup({
+    realm,
+    groupName,
+    organizationSlug,
+  }: {
+    realm?: string;
+    groupName: string;
+    organizationSlug: string;
+  }) {
+    const organizationGroup = await this.client.groups.find({
+      max: 1,
+      realm: realm || this.realm,
+      search: organizationSlug,
+    });
+
+    if (organizationGroup.length === 0) {
+      return undefined;
+    }
+
+    const newGroup = await this.client.groups.createChildGroup(
+      {
+        realm: realm || this.realm,
+        id: organizationGroup[0].id!,
+      },
+      { name: groupName }
+    );
+
+    return newGroup?.id;
+  }
+
   public fetchAllSubGroups({ realm, kcGroupId }: { realm?: string; kcGroupId: string }) {
     return this.client.groups.listSubGroups({
       parentId: kcGroupId,

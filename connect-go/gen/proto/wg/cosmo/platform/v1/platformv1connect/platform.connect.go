@@ -247,6 +247,18 @@ const (
 	// PlatformServiceMigrateFromApolloProcedure is the fully-qualified name of the PlatformService's
 	// MigrateFromApollo RPC.
 	PlatformServiceMigrateFromApolloProcedure = "/wg.cosmo.platform.v1.PlatformService/MigrateFromApollo"
+	// PlatformServiceCreateOrganizationRuleSetProcedure is the fully-qualified name of the
+	// PlatformService's CreateOrganizationRuleSet RPC.
+	PlatformServiceCreateOrganizationRuleSetProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateOrganizationRuleSet"
+	// PlatformServiceGetOrganizationRuleSetsProcedure is the fully-qualified name of the
+	// PlatformService's GetOrganizationRuleSets RPC.
+	PlatformServiceGetOrganizationRuleSetsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOrganizationRuleSets"
+	// PlatformServiceUpdateOrganizationRuleSetProcedure is the fully-qualified name of the
+	// PlatformService's UpdateOrganizationRuleSet RPC.
+	PlatformServiceUpdateOrganizationRuleSetProcedure = "/wg.cosmo.platform.v1.PlatformService/UpdateOrganizationRuleSet"
+	// PlatformServiceDeleteOrganizationRuleSetProcedure is the fully-qualified name of the
+	// PlatformService's DeleteOrganizationRuleSet RPC.
+	PlatformServiceDeleteOrganizationRuleSetProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteOrganizationRuleSet"
 	// PlatformServiceCreateOrganizationWebhookConfigProcedure is the fully-qualified name of the
 	// PlatformService's CreateOrganizationWebhookConfig RPC.
 	PlatformServiceCreateOrganizationWebhookConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateOrganizationWebhookConfig"
@@ -584,6 +596,10 @@ var (
 	platformServiceRemoveOrganizationMemberMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("RemoveOrganizationMember")
 	platformServiceRemoveInvitationMethodDescriptor                      = platformServiceServiceDescriptor.Methods().ByName("RemoveInvitation")
 	platformServiceMigrateFromApolloMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("MigrateFromApollo")
+	platformServiceCreateOrganizationRuleSetMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("CreateOrganizationRuleSet")
+	platformServiceGetOrganizationRuleSetsMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationRuleSets")
+	platformServiceUpdateOrganizationRuleSetMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("UpdateOrganizationRuleSet")
+	platformServiceDeleteOrganizationRuleSetMethodDescriptor             = platformServiceServiceDescriptor.Methods().ByName("DeleteOrganizationRuleSet")
 	platformServiceCreateOrganizationWebhookConfigMethodDescriptor       = platformServiceServiceDescriptor.Methods().ByName("CreateOrganizationWebhookConfig")
 	platformServiceGetOrganizationWebhookConfigsMethodDescriptor         = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationWebhookConfigs")
 	platformServiceGetOrganizationWebhookMetaMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("GetOrganizationWebhookMeta")
@@ -804,6 +820,15 @@ type PlatformServiceClient interface {
 	RemoveInvitation(context.Context, *connect.Request[v1.RemoveInvitationRequest]) (*connect.Response[v1.RemoveInvitationResponse], error)
 	// MigrateFromApollo migrates the graphs from apollo to cosmo
 	MigrateFromApollo(context.Context, *connect.Request[v1.MigrateFromApolloRequest]) (*connect.Response[v1.MigrateFromApolloResponse], error)
+	// Organization Rule Set management
+	// CreateOrganizationRuleSet creates a new rule set
+	CreateOrganizationRuleSet(context.Context, *connect.Request[v1.CreateOrganizationRuleSetRequest]) (*connect.Response[v1.CreateOrganizationRuleSetResponse], error)
+	// GetOrganizationRuleSets returns the list of organization rule sets
+	GetOrganizationRuleSets(context.Context, *connect.Request[v1.GetOrganizationRuleSetsRequest]) (*connect.Response[v1.GetOrganizationRuleSetsResponse], error)
+	// UpdateOrganizationRuleSet updates the rule list for an organization rule set
+	UpdateOrganizationRuleSet(context.Context, *connect.Request[v1.UpdateOrganizationRuleSetRequest]) (*connect.Response[v1.UpdateOrganizationRuleSetResponse], error)
+	// DeleteOrganizationRuleSet deletes an existing organization rule set
+	DeleteOrganizationRuleSet(context.Context, *connect.Request[v1.DeleteOrganizationRuleSetRequest]) (*connect.Response[v1.DeleteOrganizationRuleSetResponse], error)
 	// CreateOrganizationWebhookConfig create a new webhook config for the organization
 	CreateOrganizationWebhookConfig(context.Context, *connect.Request[v1.CreateOrganizationWebhookConfigRequest]) (*connect.Response[v1.CreateOrganizationWebhookConfigResponse], error)
 	// GetOrganizationWebhookConfigs returns all webhooks for the organization
@@ -1408,6 +1433,30 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceMigrateFromApolloProcedure,
 			connect.WithSchema(platformServiceMigrateFromApolloMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		createOrganizationRuleSet: connect.NewClient[v1.CreateOrganizationRuleSetRequest, v1.CreateOrganizationRuleSetResponse](
+			httpClient,
+			baseURL+PlatformServiceCreateOrganizationRuleSetProcedure,
+			connect.WithSchema(platformServiceCreateOrganizationRuleSetMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getOrganizationRuleSets: connect.NewClient[v1.GetOrganizationRuleSetsRequest, v1.GetOrganizationRuleSetsResponse](
+			httpClient,
+			baseURL+PlatformServiceGetOrganizationRuleSetsProcedure,
+			connect.WithSchema(platformServiceGetOrganizationRuleSetsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		updateOrganizationRuleSet: connect.NewClient[v1.UpdateOrganizationRuleSetRequest, v1.UpdateOrganizationRuleSetResponse](
+			httpClient,
+			baseURL+PlatformServiceUpdateOrganizationRuleSetProcedure,
+			connect.WithSchema(platformServiceUpdateOrganizationRuleSetMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		deleteOrganizationRuleSet: connect.NewClient[v1.DeleteOrganizationRuleSetRequest, v1.DeleteOrganizationRuleSetResponse](
+			httpClient,
+			baseURL+PlatformServiceDeleteOrganizationRuleSetProcedure,
+			connect.WithSchema(platformServiceDeleteOrganizationRuleSetMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		createOrganizationWebhookConfig: connect.NewClient[v1.CreateOrganizationWebhookConfigRequest, v1.CreateOrganizationWebhookConfigResponse](
@@ -2015,6 +2064,10 @@ type platformServiceClient struct {
 	removeOrganizationMember              *connect.Client[v1.RemoveOrganizationMemberRequest, v1.RemoveOrganizationMemberResponse]
 	removeInvitation                      *connect.Client[v1.RemoveInvitationRequest, v1.RemoveInvitationResponse]
 	migrateFromApollo                     *connect.Client[v1.MigrateFromApolloRequest, v1.MigrateFromApolloResponse]
+	createOrganizationRuleSet             *connect.Client[v1.CreateOrganizationRuleSetRequest, v1.CreateOrganizationRuleSetResponse]
+	getOrganizationRuleSets               *connect.Client[v1.GetOrganizationRuleSetsRequest, v1.GetOrganizationRuleSetsResponse]
+	updateOrganizationRuleSet             *connect.Client[v1.UpdateOrganizationRuleSetRequest, v1.UpdateOrganizationRuleSetResponse]
+	deleteOrganizationRuleSet             *connect.Client[v1.DeleteOrganizationRuleSetRequest, v1.DeleteOrganizationRuleSetResponse]
 	createOrganizationWebhookConfig       *connect.Client[v1.CreateOrganizationWebhookConfigRequest, v1.CreateOrganizationWebhookConfigResponse]
 	getOrganizationWebhookConfigs         *connect.Client[v1.GetOrganizationWebhookConfigsRequest, v1.GetOrganizationWebhookConfigsResponse]
 	getOrganizationWebhookMeta            *connect.Client[v1.GetOrganizationWebhookMetaRequest, v1.GetOrganizationWebhookMetaResponse]
@@ -2466,6 +2519,26 @@ func (c *platformServiceClient) RemoveInvitation(ctx context.Context, req *conne
 // MigrateFromApollo calls wg.cosmo.platform.v1.PlatformService.MigrateFromApollo.
 func (c *platformServiceClient) MigrateFromApollo(ctx context.Context, req *connect.Request[v1.MigrateFromApolloRequest]) (*connect.Response[v1.MigrateFromApolloResponse], error) {
 	return c.migrateFromApollo.CallUnary(ctx, req)
+}
+
+// CreateOrganizationRuleSet calls wg.cosmo.platform.v1.PlatformService.CreateOrganizationRuleSet.
+func (c *platformServiceClient) CreateOrganizationRuleSet(ctx context.Context, req *connect.Request[v1.CreateOrganizationRuleSetRequest]) (*connect.Response[v1.CreateOrganizationRuleSetResponse], error) {
+	return c.createOrganizationRuleSet.CallUnary(ctx, req)
+}
+
+// GetOrganizationRuleSets calls wg.cosmo.platform.v1.PlatformService.GetOrganizationRuleSets.
+func (c *platformServiceClient) GetOrganizationRuleSets(ctx context.Context, req *connect.Request[v1.GetOrganizationRuleSetsRequest]) (*connect.Response[v1.GetOrganizationRuleSetsResponse], error) {
+	return c.getOrganizationRuleSets.CallUnary(ctx, req)
+}
+
+// UpdateOrganizationRuleSet calls wg.cosmo.platform.v1.PlatformService.UpdateOrganizationRuleSet.
+func (c *platformServiceClient) UpdateOrganizationRuleSet(ctx context.Context, req *connect.Request[v1.UpdateOrganizationRuleSetRequest]) (*connect.Response[v1.UpdateOrganizationRuleSetResponse], error) {
+	return c.updateOrganizationRuleSet.CallUnary(ctx, req)
+}
+
+// DeleteOrganizationRuleSet calls wg.cosmo.platform.v1.PlatformService.DeleteOrganizationRuleSet.
+func (c *platformServiceClient) DeleteOrganizationRuleSet(ctx context.Context, req *connect.Request[v1.DeleteOrganizationRuleSetRequest]) (*connect.Response[v1.DeleteOrganizationRuleSetResponse], error) {
+	return c.deleteOrganizationRuleSet.CallUnary(ctx, req)
 }
 
 // CreateOrganizationWebhookConfig calls
@@ -3057,6 +3130,15 @@ type PlatformServiceHandler interface {
 	RemoveInvitation(context.Context, *connect.Request[v1.RemoveInvitationRequest]) (*connect.Response[v1.RemoveInvitationResponse], error)
 	// MigrateFromApollo migrates the graphs from apollo to cosmo
 	MigrateFromApollo(context.Context, *connect.Request[v1.MigrateFromApolloRequest]) (*connect.Response[v1.MigrateFromApolloResponse], error)
+	// Organization Rule Set management
+	// CreateOrganizationRuleSet creates a new rule set
+	CreateOrganizationRuleSet(context.Context, *connect.Request[v1.CreateOrganizationRuleSetRequest]) (*connect.Response[v1.CreateOrganizationRuleSetResponse], error)
+	// GetOrganizationRuleSets returns the list of organization rule sets
+	GetOrganizationRuleSets(context.Context, *connect.Request[v1.GetOrganizationRuleSetsRequest]) (*connect.Response[v1.GetOrganizationRuleSetsResponse], error)
+	// UpdateOrganizationRuleSet updates the rule list for an organization rule set
+	UpdateOrganizationRuleSet(context.Context, *connect.Request[v1.UpdateOrganizationRuleSetRequest]) (*connect.Response[v1.UpdateOrganizationRuleSetResponse], error)
+	// DeleteOrganizationRuleSet deletes an existing organization rule set
+	DeleteOrganizationRuleSet(context.Context, *connect.Request[v1.DeleteOrganizationRuleSetRequest]) (*connect.Response[v1.DeleteOrganizationRuleSetResponse], error)
 	// CreateOrganizationWebhookConfig create a new webhook config for the organization
 	CreateOrganizationWebhookConfig(context.Context, *connect.Request[v1.CreateOrganizationWebhookConfigRequest]) (*connect.Response[v1.CreateOrganizationWebhookConfigResponse], error)
 	// GetOrganizationWebhookConfigs returns all webhooks for the organization
@@ -3657,6 +3739,30 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceMigrateFromApolloProcedure,
 		svc.MigrateFromApollo,
 		connect.WithSchema(platformServiceMigrateFromApolloMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceCreateOrganizationRuleSetHandler := connect.NewUnaryHandler(
+		PlatformServiceCreateOrganizationRuleSetProcedure,
+		svc.CreateOrganizationRuleSet,
+		connect.WithSchema(platformServiceCreateOrganizationRuleSetMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetOrganizationRuleSetsHandler := connect.NewUnaryHandler(
+		PlatformServiceGetOrganizationRuleSetsProcedure,
+		svc.GetOrganizationRuleSets,
+		connect.WithSchema(platformServiceGetOrganizationRuleSetsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceUpdateOrganizationRuleSetHandler := connect.NewUnaryHandler(
+		PlatformServiceUpdateOrganizationRuleSetProcedure,
+		svc.UpdateOrganizationRuleSet,
+		connect.WithSchema(platformServiceUpdateOrganizationRuleSetMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceDeleteOrganizationRuleSetHandler := connect.NewUnaryHandler(
+		PlatformServiceDeleteOrganizationRuleSetProcedure,
+		svc.DeleteOrganizationRuleSet,
+		connect.WithSchema(platformServiceDeleteOrganizationRuleSetMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateOrganizationWebhookConfigHandler := connect.NewUnaryHandler(
@@ -4332,6 +4438,14 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceRemoveInvitationHandler.ServeHTTP(w, r)
 		case PlatformServiceMigrateFromApolloProcedure:
 			platformServiceMigrateFromApolloHandler.ServeHTTP(w, r)
+		case PlatformServiceCreateOrganizationRuleSetProcedure:
+			platformServiceCreateOrganizationRuleSetHandler.ServeHTTP(w, r)
+		case PlatformServiceGetOrganizationRuleSetsProcedure:
+			platformServiceGetOrganizationRuleSetsHandler.ServeHTTP(w, r)
+		case PlatformServiceUpdateOrganizationRuleSetProcedure:
+			platformServiceUpdateOrganizationRuleSetHandler.ServeHTTP(w, r)
+		case PlatformServiceDeleteOrganizationRuleSetProcedure:
+			platformServiceDeleteOrganizationRuleSetHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateOrganizationWebhookConfigProcedure:
 			platformServiceCreateOrganizationWebhookConfigHandler.ServeHTTP(w, r)
 		case PlatformServiceGetOrganizationWebhookConfigsProcedure:
@@ -4797,6 +4911,22 @@ func (UnimplementedPlatformServiceHandler) RemoveInvitation(context.Context, *co
 
 func (UnimplementedPlatformServiceHandler) MigrateFromApollo(context.Context, *connect.Request[v1.MigrateFromApolloRequest]) (*connect.Response[v1.MigrateFromApolloResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.MigrateFromApollo is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) CreateOrganizationRuleSet(context.Context, *connect.Request[v1.CreateOrganizationRuleSetRequest]) (*connect.Response[v1.CreateOrganizationRuleSetResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CreateOrganizationRuleSet is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetOrganizationRuleSets(context.Context, *connect.Request[v1.GetOrganizationRuleSetsRequest]) (*connect.Response[v1.GetOrganizationRuleSetsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOrganizationRuleSets is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) UpdateOrganizationRuleSet(context.Context, *connect.Request[v1.UpdateOrganizationRuleSetRequest]) (*connect.Response[v1.UpdateOrganizationRuleSetResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UpdateOrganizationRuleSet is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) DeleteOrganizationRuleSet(context.Context, *connect.Request[v1.DeleteOrganizationRuleSetRequest]) (*connect.Response[v1.DeleteOrganizationRuleSetResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteOrganizationRuleSet is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) CreateOrganizationWebhookConfig(context.Context, *connect.Request[v1.CreateOrganizationWebhookConfigRequest]) (*connect.Response[v1.CreateOrganizationWebhookConfigResponse], error) {

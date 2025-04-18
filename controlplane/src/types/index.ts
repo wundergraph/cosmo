@@ -245,6 +245,17 @@ export interface UserDTO {
   email: string;
 }
 
+export interface OrganizationRuleSetDTO {
+  id: string;
+  name: string;
+  kcGroupId: string | null;
+  membersCount: number;
+  rules: {
+    role: string;
+    resources: string[];
+  }[];
+}
+
 export interface OrganizationMemberDTO {
   userID: string;
   orgMemberID: string;
