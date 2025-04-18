@@ -29,12 +29,14 @@ import (
 const NatsWaitTimeout = time.Second * 30
 
 func assertLineEquals(t *testing.T, reader *bufio.Reader, expected string) {
+	t.Helper()
 	line, _, err := reader.ReadLine()
 	assert.NoError(t, err)
 	assert.Equal(t, expected, string(line))
 }
 
 func assertMultipartPrefix(t *testing.T, reader *bufio.Reader) {
+	t.Helper()
 	assertLineEquals(t, reader, "")
 	assertLineEquals(t, reader, "--graphql")
 	assertLineEquals(t, reader, "Content-Type: application/json")
@@ -42,6 +44,7 @@ func assertMultipartPrefix(t *testing.T, reader *bufio.Reader) {
 }
 
 func assertMultipartValueEventually(t *testing.T, reader *bufio.Reader, expected string) {
+	t.Helper()
 	assert.Eventually(t, func() bool {
 		assertMultipartPrefix(t, reader)
 		line, _, err := reader.ReadLine()

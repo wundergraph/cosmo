@@ -30,6 +30,8 @@ import (
 	"time"
 
 	"github.com/cloudflare/backoff"
+	mcpclient "github.com/mark3labs/mcp-go/client"
+	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -302,6 +304,7 @@ type Config struct {
 	CdnSever                           *httptest.Server
 	UseVersionedGraph                  bool
 	NoShutdownTestServer               bool
+	MCP                                config.MCPConfiguration
 }
 
 type CacheMetricsAssertions struct {
@@ -345,6 +348,11 @@ type SubgraphConfig struct {
 type LogObservationConfig struct {
 	Enabled  bool
 	LogLevel zapcore.Level
+}
+
+type MCPConfig struct {
+	Enabled bool
+	Port    int
 }
 
 func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
@@ -584,6 +592,10 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		client = retryClient.StandardClient()
 	}
 
+	if cfg.MCP.Enabled {
+		cfg.MCP.Server.Port = freeport.GetOne(t)
+	}
+
 	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
 	if err != nil {
 		cancel(err)
@@ -718,9 +730,35 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		}
 	}
 
-	waitErr := e.WaitForServer(ctx, e.RouterURL+"/health/ready", 250, 30)
+	err = e.WaitForServer(ctx, e.RouterURL+"/health/ready", 250, 30)
+	if err != nil {
+		return nil, err
+	}
 
-	return e, waitErr
+	if cfg.MCP.Enabled {
+
+		// Create an MCP client that connects to the router's MCP server
+		mcpPort := cfg.MCP.Server.Port
+		if mcpPort == 0 {
+			mcpPort = 5025
+		}
+
+		// Create MCP client connecting to the MCP server
+		mcpAddr := fmt.Sprintf("http://localhost:%d/mcp", mcpPort)
+		client, err := mcpclient.NewSSEMCPClient(mcpAddr)
+		if err != nil {
+			t.Fatalf("Failed to create MCP client: %v", err)
+		}
+
+		e.MCPClient = client
+
+		err = e.WaitForMCPServer(e.Context, 1000, 10)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return e, err
 }
 
 func generateJwtToken() (string, error) {
@@ -878,6 +916,22 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		}
 	} else if routerConfig != nil {
 		routerOpts = append(routerOpts, core.WithStaticExecutionConfig(routerConfig))
+	}
+
+	if testConfig.MCP.Enabled {
+		// Add Storage provider
+		routerOpts = append(routerOpts, core.WithStorageProviders(config.StorageProviders{
+			FileSystem: []config.FileSystemStorageProvider{
+				{
+					ID:   "test",
+					Path: "testdata/mcp_operations",
+				},
+			},
+		}))
+
+		testConfig.MCP.Storage.ProviderID = "test"
+
+		routerOpts = append(routerOpts, core.WithMCP(testConfig.MCP))
 	}
 
 	if testConfig.TraceExporter != nil {
@@ -1113,6 +1167,7 @@ type Environment struct {
 	KafkaClient           *kgo.Client
 	logObserver           *observer.ObservedLogs
 	getPubSubName         func(name string) string
+	MCPClient             *mcpclient.Client
 
 	shutdownDelay       time.Duration
 	extraURLQueryValues url.Values
@@ -1290,6 +1345,47 @@ func (e *Environment) WaitForServer(ctx context.Context, url string, timeoutMs i
 			if err == nil && resp.StatusCode == 200 {
 				return nil
 			}
+			time.Sleep(time.Millisecond * time.Duration(timeoutMs))
+			maxAttempts--
+		}
+	}
+}
+
+func (e *Environment) WaitForMCPServer(ctx context.Context, timeoutMs int, maxAttempts int) error {
+	if err := e.MCPClient.Start(ctx); err != nil {
+		e.t.Fatalf("Failed to start MCP client: %v", err)
+	}
+
+	for {
+		if maxAttempts == 0 {
+			return errors.New("timed out waiting for server to be ready")
+		}
+		select {
+		case <-ctx.Done():
+			return errors.New("timed out waiting for router to be ready")
+		default:
+			reqCtx, cancelFn := context.WithTimeout(context.Background(), time.Second)
+			initRequest := mcp.InitializeRequest{}
+			initRequest.Params.ProtocolVersion = mcp.LATEST_PROTOCOL_VERSION
+			initRequest.Params.ClientInfo = mcp.Implementation{
+				Name:    "testenv-client",
+				Version: "1.0.0",
+			}
+
+			_, err := e.MCPClient.Initialize(reqCtx, initRequest)
+			if err != nil {
+				e.t.Fatalf("Failed to initialize MCP client: %v", err)
+			}
+
+			cancelFn()
+
+			// Test Ping
+			if err := e.MCPClient.Ping(ctx); err != nil {
+				e.t.Logf("Ping failed: %v", err)
+			} else {
+				return nil
+			}
+
 			time.Sleep(time.Millisecond * time.Duration(timeoutMs))
 			maxAttempts--
 		}
