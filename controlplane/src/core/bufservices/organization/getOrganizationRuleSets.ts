@@ -44,6 +44,7 @@ export function getOrganizationRuleSets(
           ruleSets.push(await ruleSetRepo.createRuleSet({
             organizationId: authContext.organizationId,
             name: group.name!,
+            builtin: true,
             kcGroupId: group.id!,
           }));
         }

@@ -32,6 +32,15 @@ export function deleteOrganizationRuleSet(
         };
       }
 
+      if (ruleSet.builtin) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details: 'Builtin rule sets cannot be deleted',
+          },
+        };
+      }
+
       if (ruleSet.membersCount > 0) {
         return {
           response: {

@@ -1343,6 +1343,7 @@ export const organizationRuleSets = pgTable('organization_rule_sets', {
       onDelete: 'cascade',
     }),
   name: text('name').notNull(),
+  builtin: boolean('builtin').notNull().default(false),
   kcGroupId: text('kc_group_id').unique(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });

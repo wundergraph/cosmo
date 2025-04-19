@@ -10,6 +10,7 @@ export class OrganizationRuleSetRepository {
   public async createRuleSet(input: {
     organizationId: string;
     name: string;
+    builtin?: boolean;
     kcGroupId: string;
   }): Promise<OrganizationRuleSetDTO> {
     const insertedRuleSet = await this.db
@@ -17,6 +18,7 @@ export class OrganizationRuleSetRepository {
       .values({
         organizationId: input.organizationId,
         name: input.name,
+        builtin: input.builtin ?? false,
         kcGroupId: input.kcGroupId,
       })
       .returning()
@@ -25,6 +27,7 @@ export class OrganizationRuleSetRepository {
     return {
       id: insertedRuleSet[0].id,
       name: input.name,
+      builtin: insertedRuleSet[0].builtin,
       kcGroupId: input.kcGroupId,
       membersCount: 0,
       rules: [],

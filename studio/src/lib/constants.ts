@@ -121,20 +121,17 @@ export const graphPruningRules = [
 export const roles = [
   {
     key: "admin",
-    resourceType: null,
     displayName: "Admin",
     description: "Blah blah blah admin role description",
   },
   {
     key: "developer",
-    resourceType: null,
     displayName: "Developer",
     description: "Blah blah blah developer role description",
   },
   {
-    key: "readonly",
-    resourceType: null,
-    displayName: "Readonly",
-    description: "Blah blah blah readonly role description",
+    key: "viewer",
+    displayName: "Viewer",
+    description: "Blah blah blah viewer role description",
   },
 ];

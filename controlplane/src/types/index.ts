@@ -248,6 +248,7 @@ export interface UserDTO {
 export interface OrganizationRuleSetDTO {
   id: string;
   name: string;
+  builtin: boolean;
   kcGroupId: string | null;
   membersCount: number;
   rules: {

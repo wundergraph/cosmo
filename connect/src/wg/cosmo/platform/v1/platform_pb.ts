@@ -6442,12 +6442,17 @@ export class OrganizationRuleSet extends Message<OrganizationRuleSet> {
   name = "";
 
   /**
-   * @generated from field: int32 membersCount = 3;
+   * @generated from field: bool builtin = 3;
+   */
+  builtin = false;
+
+  /**
+   * @generated from field: int32 membersCount = 4;
    */
   membersCount = 0;
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.OrganizationRuleSetRule rules = 4;
+   * @generated from field: repeated wg.cosmo.platform.v1.OrganizationRuleSetRule rules = 5;
    */
   rules: OrganizationRuleSetRule[] = [];
 
@@ -6461,8 +6466,9 @@ export class OrganizationRuleSet extends Message<OrganizationRuleSet> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "ruleSetId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "membersCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 4, name: "rules", kind: "message", T: OrganizationRuleSetRule, repeated: true },
+    { no: 3, name: "builtin", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "membersCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "rules", kind: "message", T: OrganizationRuleSetRule, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrganizationRuleSet {

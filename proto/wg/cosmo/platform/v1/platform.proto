@@ -876,8 +876,9 @@ message OrganizationRuleSetRule {
 message OrganizationRuleSet {
   string ruleSetId = 1;
   string name = 2;
-  int32 membersCount = 3;
-  repeated OrganizationRuleSetRule rules = 4;
+  bool builtin = 3;
+  int32 membersCount = 4;
+  repeated OrganizationRuleSetRule rules = 5;
 }
 
 message CreateOrganizationRuleSetRequest {
