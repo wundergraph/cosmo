@@ -481,10 +481,14 @@ type OperationContext interface {
 	Type() string
 	// Hash is the hash of the operation
 	Hash() uint64
-	// Content is the content of the operation
+	// Content is the normalized content of the operation
 	Content() string
 	// ClientInfo returns information about the client that initiated this operation
 	ClientInfo() ClientInfo
+	// Variables returns the variables associated with the operation
+	Variables() *astjson.Value
+	// RawContent returns the raw content associated with the operation
+	RawContent() string
 }
 
 var _ OperationContext = (*operationContext)(nil)
@@ -580,6 +584,10 @@ func (o *operationContext) Protocol() OperationProtocol {
 
 func (o *operationContext) ClientInfo() ClientInfo {
 	return *o.clientInfo
+}
+
+func (o *operationContext) RawContent() string {
+	return o.rawContent
 }
 
 // isMutationRequest returns true if the current request is a mutation request
