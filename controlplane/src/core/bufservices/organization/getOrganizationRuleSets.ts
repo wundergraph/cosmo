@@ -23,6 +23,33 @@ export function getOrganizationRuleSets(
     const ruleSetRepo = new OrganizationRuleSetRepository(opts.db);
     const ruleSets = await ruleSetRepo.listForOrganization(authContext.organizationId);
 
+    if (ruleSets.length === 0) {
+      // The organization doesn't have any rule set, we should retrieve the legacy groups and create rule set for
+      // them, that way the organization may manage them
+      await opts.keycloakClient.authenticateClient();
+      const organizationGroups = await opts.keycloakClient.client.groups.find({
+        max: 1,
+        search: authContext.organizationSlug,
+        realm: opts.keycloakRealm,
+        briefRepresentation: false,
+      });
+
+      if (organizationGroups.length > 0){
+        const subGroups = await opts.keycloakClient.fetchAllSubGroups({
+          realm: opts.keycloakRealm,
+          kcGroupId: organizationGroups[0].id!,
+        });
+
+        for (const group of subGroups) {
+          ruleSets.push(await ruleSetRepo.createRuleSet({
+            organizationId: authContext.organizationId,
+            name: group.name!,
+            kcGroupId: group.id!,
+          }));
+        }
+      }
+    }
+
     return {
       response: {
         code: EnumStatusCode.OK,
