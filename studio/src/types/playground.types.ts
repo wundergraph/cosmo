@@ -5,16 +5,16 @@ export const PlaygroundStateSchema = z.object({
     variables: z.string().optional(),
     headers: z.string().optional(),
     preFlight: z.object({
-        content: z.string(),
-        enabled: z.boolean()
+        enabled: z.boolean(),
+        content: z.string().optional(),
     }).optional(),
     preOperation: z.object({
-        content: z.string(),
-        enabled: z.boolean()
+        enabled: z.boolean(),
+        content: z.string().optional(),
     }).optional(),
     postOperation: z.object({
-        content: z.string(),
-        enabled: z.boolean()
+        enabled: z.boolean(),
+        content: z.string().optional(),
     }).optional(),
 });
   
