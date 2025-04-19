@@ -48,8 +48,8 @@ export const SharePlaygroundModal = () => {
 
   // sharing state only for the active tab
   const { tabsState } = useContext(PlaygroundContext);
-  const activeTabId = tabsState.activeTabIndex;
-  const { query, variables, headers } = tabsState.tabs[activeTabId] ?? {};
+  const currentActiveTab = tabsState.tabs[tabsState.activeTabIndex] ?? {};
+  const { query, variables, headers } = currentActiveTab;
 
   // Reset state when modal is opened
   useEffect(() => {
@@ -73,33 +73,27 @@ export const SharePlaygroundModal = () => {
       if (selectedOptions.preFlight) {
         const preFlightSelected = localStorage.getItem("playground:pre-flight:selected");
         const preFlightEnabled = localStorage.getItem("playground:pre-flight:enabled");
+        const parsedPreFlightSelected = 
+          (preFlightSelected && preFlightSelected !== "undefined") ? JSON.parse(preFlightSelected) : {};
 
         stateToShare.preFlight = {
-            content: (preFlightSelected && preFlightSelected!== "undefined") ? JSON.parse(preFlightSelected)?.content : undefined,
+            ...parsedPreFlightSelected,
             enabled: preFlightEnabled === "true",
         };
       }
       if (selectedOptions.preOperation) {
-        const preOperationSelected = localStorage.getItem("playground:pre-operation:selected");
         const scriptsTabState = localStorage.getItem("playground:script:tabState");
         const parsedScriptsTabState = scriptsTabState ? JSON.parse(scriptsTabState) : null;
-        const preOpEnabled = (parsedScriptsTabState && parsedScriptsTabState[activeTabId]?.["pre-operation"]?.enabled) ?? false;
+        const preOperationOfActiveTab = parsedScriptsTabState && parsedScriptsTabState[currentActiveTab.id]?.["pre-operation"];
 
-        stateToShare.preOperation = {
-            content: (preOperationSelected && preOperationSelected !== "undefined") ? JSON.parse(preOperationSelected)?.content : undefined,
-            enabled: preOpEnabled === true,
-        };
+        stateToShare.preOperation = preOperationOfActiveTab;
       }
       if (selectedOptions.postOperation) {
-        const postOperationSelected = localStorage.getItem("playground:post-operation:selected");
         const scriptsTabState = localStorage.getItem("playground:script:tabState");
         const parsedScriptsTabState = scriptsTabState ? JSON.parse(scriptsTabState) : null;
-        const postOpEnabled = (parsedScriptsTabState && parsedScriptsTabState[activeTabId]?.["post-operation"]?.enabled) ?? false;
+        const postOperationOfActiveTab = parsedScriptsTabState && parsedScriptsTabState[currentActiveTab.id]?.["post-operation"];
 
-        stateToShare.postOperation = {
-            content: (postOperationSelected && postOperationSelected !== "undefined") ? JSON.parse(postOperationSelected)?.content : undefined,
-            enabled: postOpEnabled === true,
-        };
+        stateToShare.postOperation = postOperationOfActiveTab;
       }
 
       setShareableUrl(createStateUrl(stateToShare));

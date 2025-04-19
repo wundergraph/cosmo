@@ -5,16 +5,26 @@ export const PlaygroundStateSchema = z.object({
     variables: z.string().optional(),
     headers: z.string().optional(),
     preFlight: z.object({
-        enabled: z.boolean(),
+        enabled: z.boolean().optional(),
         content: z.string().optional(),
+        id: z.string().optional(),
+        title: z.string().optional(),
+        updatedByTabId: z.string().optional(),
+        type: z.string().optional(),
     }).optional(),
     preOperation: z.object({
-        enabled: z.boolean(),
+        enabled: z.boolean().optional(),
         content: z.string().optional(),
+        id: z.string().optional(),
+        title: z.string().optional(),
+        updatedByTabId: z.string().optional(),
     }).optional(),
     postOperation: z.object({
-        enabled: z.boolean(),
+        enabled: z.boolean().optional(),
         content: z.string().optional(),
+        id: z.string().optional(),
+        title: z.string().optional(),
+        updatedByTabId: z.string().optional(),
     }).optional(),
 });
   
