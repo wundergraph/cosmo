@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
 import { useToast } from '@/components/ui/use-toast';
+import { DEFAULT_QUERY_TEMPLATE } from '@/constants/playground.constants';
 import { extractStateFromUrl } from '@/lib/playground-url-state';
 import { PlaygroundUrlState } from '@/types/playground.types';
-import { DEFAULT_QUERY_TEMPLATE } from '@/constants/playground.constants';
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
 
-export const usePlaygroundUrlState = () => {
+export const usePlaygroundStateFromUrl = () => {
   const router = useRouter();
   const { toast } = useToast();
   const [state, setState] = useState<PlaygroundUrlState | null>(null);
@@ -46,4 +46,4 @@ export const usePlaygroundUrlState = () => {
   };
 
   return { state, clearState };
-}; 
+};

@@ -56,7 +56,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { DEFAULT_QUERY_TEMPLATE } from "@/constants/playground.constants";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import { usePlaygroundUrlState } from "@/hooks/use-playground-url-state";
+import { usePlaygroundStateFromUrl } from "@/hooks/use-playground-state-from-url";
 import { NextPageWithLayout } from "@/lib/page";
 import { parseSchema } from "@/lib/schema-helpers";
 import { cn } from "@/lib/utils";
@@ -921,7 +921,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
 
   const [view, setView] = useState<PlaygroundView>("response");
 
-  const { state: urlState, clearState: clearUrlState } = usePlaygroundUrlState();
+  const { state: urlState, clearState: clearUrlState } = usePlaygroundStateFromUrl();
 
   const [tabsState, setTabsState] = useState<TabsState>({
     activeTabIndex: 0,
