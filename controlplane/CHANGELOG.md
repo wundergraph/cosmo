@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.137.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.136.0...controlplane@0.137.0) (2025-04-18)
+
+### Features
+
+* organization audit logs should retain for 90d after org ([#1762](https://github.com/wundergraph/cosmo/issues/1762)) ([4c66340](https://github.com/wundergraph/cosmo/commit/4c663405d5b5367096d5a43e1f5ea92689703a68)) (@wilsonrivera)
+
 # [0.136.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.135.0...controlplane@0.136.0) (2025-04-16)
 
 ### Features
