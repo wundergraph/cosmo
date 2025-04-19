@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -6,32 +6,32 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { FiShare2 } from "react-icons/fi";
-import { Checkbox } from '@/components/ui/checkbox';
-import { useToast } from '@/components/ui/use-toast';
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/components/ui/use-toast";
 import { Tooltip } from "@/components/ui/tooltip";
 import { TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip";
-import { CopyIcon } from '@radix-ui/react-icons';
-import { useState } from 'react';
-import { useState, useContext, useCallback, useEffect } from 'react';
-import { createStateUrl } from '@/lib/playground-url-state';
-import { PlaygroundUrlState } from '@/types/playground.types';
-import { PlaygroundContext } from './types';
+import { CopyIcon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { useState, useContext, useCallback, useEffect } from "react";
+import { createStateUrl } from "@/lib/playground-url-state";
+import { PlaygroundUrlState } from "@/types/playground.types";
+import { PlaygroundContext } from "./types";
 
 const MAX_URL_LENGTH = 2000;
 
 const SHARE_OPTIONS = [
   // operation is always checked and disabled
-  { id: 'operation', label: 'Operation', isChecked: true, isDisabled: true },
-  { id: 'variables', label: 'Variables', isChecked: false, isDisabled: false },
-  { id: 'headers', label: 'Headers', isChecked: false, isDisabled: false },
-  { id: 'preFlight', label: 'Pre-Flight Script', isChecked: false, isDisabled: false },
-  { id: 'preOperation', label: 'Pre-request Script', isChecked: false, isDisabled: false },
-  { id: 'postOperation', label: 'Post-request Script', isChecked: false, isDisabled: false },
+  { id: "operation", label: "Operation", isChecked: true, isDisabled: true },
+  { id: "variables", label: "Variables", isChecked: false, isDisabled: false },
+  { id: "headers", label: "Headers", isChecked: false, isDisabled: false },
+  { id: "preFlight", label: "Pre-Flight Script", isChecked: false, isDisabled: false },
+  { id: "preOperation", label: "Pre-request Script", isChecked: false, isDisabled: false },
+  { id: "postOperation", label: "Post-request Script", isChecked: false, isDisabled: false },
 ] as const;
 
-type ShareOptionId = typeof SHARE_OPTIONS[number]['id'];
+type ShareOptionId = typeof SHARE_OPTIONS[number]["id"];
 
 const DEFAULT_SELECTED_OPTIONS = SHARE_OPTIONS.reduce((acc, { id, isChecked }) => {
     acc[id] = isChecked;
@@ -44,26 +44,26 @@ export const SharePlaygroundModal = () => {
     () => DEFAULT_SELECTED_OPTIONS    
   );
   const { toast } = useToast();
-  const [shareableUrl, setShareableUrl] = useState('');
+  const [shareableUrl, setShareableUrl] = useState("");
 
   // sharing state only for the active tab
   const { tabsState } = useContext(PlaygroundContext);
   const activeTabId = tabsState.activeTabIndex;
-  const { query, variables, headers } = tabsState.tabs[activeTabId];
+  const { query, variables, headers } = tabsState.tabs[activeTabId] ?? {};
 
   // Reset state when modal is opened
   useEffect(() => {
     if (!isOpen) return;
 
     setSelectedOptions(DEFAULT_SELECTED_OPTIONS);
-    setShareableUrl('');
+    setShareableUrl("");
   }, [isOpen]);
 
   const generateShareableUrl = useCallback(() => {
     try {
       const stateToShare: PlaygroundUrlState = {
         // Always include operation
-        operation: query ?? '',
+        operation: query ?? "",
       };
 
       if (selectedOptions.variables && variables) {
@@ -71,33 +71,33 @@ export const SharePlaygroundModal = () => {
       }
       if (selectedOptions.headers && headers !== null) stateToShare.headers = headers;
       if (selectedOptions.preFlight) {
-        const preFlightSelected = localStorage.getItem('playground:pre-flight:selected');
-        const preFlightEnabled = localStorage.getItem('playground:pre-flight:enabled');
+        const preFlightSelected = localStorage.getItem("playground:pre-flight:selected");
+        const preFlightEnabled = localStorage.getItem("playground:pre-flight:enabled");
 
         stateToShare.preFlight = {
-            content: (preFlightSelected && preFlightSelected!== 'undefined') ? JSON.parse(preFlightSelected)?.content : undefined,
-            enabled: preFlightEnabled === 'true',
+            content: (preFlightSelected && preFlightSelected!== "undefined") ? JSON.parse(preFlightSelected)?.content : undefined,
+            enabled: preFlightEnabled === "true",
         };
       }
       if (selectedOptions.preOperation) {
-        const preOperationSelected = localStorage.getItem('playground:pre-operation:selected');
-        const scriptsTabState = localStorage.getItem('playground:script:tabState');
+        const preOperationSelected = localStorage.getItem("playground:pre-operation:selected");
+        const scriptsTabState = localStorage.getItem("playground:script:tabState");
         const parsedScriptsTabState = scriptsTabState ? JSON.parse(scriptsTabState) : null;
         const preOpEnabled = (parsedScriptsTabState && parsedScriptsTabState[activeTabId]?.["pre-operation"]?.enabled) ?? false;
 
         stateToShare.preOperation = {
-            content: (preOperationSelected && preOperationSelected !== 'undefined') ? JSON.parse(preOperationSelected)?.content : undefined,
+            content: (preOperationSelected && preOperationSelected !== "undefined") ? JSON.parse(preOperationSelected)?.content : undefined,
             enabled: preOpEnabled === true,
         };
       }
       if (selectedOptions.postOperation) {
-        const postOperationSelected = localStorage.getItem('playground:post-operation:selected');
-        const scriptsTabState = localStorage.getItem('playground:script:tabState');
+        const postOperationSelected = localStorage.getItem("playground:post-operation:selected");
+        const scriptsTabState = localStorage.getItem("playground:script:tabState");
         const parsedScriptsTabState = scriptsTabState ? JSON.parse(scriptsTabState) : null;
         const postOpEnabled = (parsedScriptsTabState && parsedScriptsTabState[activeTabId]?.["post-operation"]?.enabled) ?? false;
 
         stateToShare.postOperation = {
-            content: (postOperationSelected && postOperationSelected !== 'undefined') ? JSON.parse(postOperationSelected)?.content : undefined,
+            content: (postOperationSelected && postOperationSelected !== "undefined") ? JSON.parse(postOperationSelected)?.content : undefined,
             enabled: postOpEnabled === true,
         };
       }
@@ -105,30 +105,36 @@ export const SharePlaygroundModal = () => {
       setShareableUrl(createStateUrl(stateToShare));
     } catch (error) {
       toast({
-        variant: 'destructive',
-        title: 'Failed to generate shareable URL',
-        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        variant: "destructive",
+        title: "Something went wrong",
+        description: "We couldn't generate the shareable URL. Please try again later",
       });
+      if (process.env.NODE_ENV === "development") {
+        console.error(error);
+      }
     }
   }, [query, variables, headers, selectedOptions]);
 
   const handleCopyLink = () => {
     try {
       if (!shareableUrl) {
-        throw new Error('Failed to generate shareable URL');
+        throw new Error("Failed to generate shareable URL");
       }
 
       navigator.clipboard.writeText(shareableUrl);
       toast({
-        description: 'Playground state URL copied to clipboard',
+        description: "Playground state URL copied to clipboard",
         duration: 3000,
       });
     } catch (error) {
       toast({
-        variant: 'destructive',
-        title: error instanceof Error ? error.message : 'Failed to copy link',
-        description: 'Please try again later',
+        variant: "destructive",
+        title: "Couldn't copy the link",
+        description: "Please try again in a few seconds",
       });
+      if (process.env.NODE_ENV === "development") {
+        console.error(error);
+      }
     }
   };
 
@@ -187,9 +193,13 @@ export const SharePlaygroundModal = () => {
           }
         </div>
         {shareableUrl.length > MAX_URL_LENGTH && (
-          <p className="text-xs text-amber-500 mt-1">
-            Warning: URL is very long and might not work in all browsers.
-          </p>
+          <Alert>
+            <ExclamationTriangleIcon className="h-4 w-4" />
+            <AlertTitle>Warning</AlertTitle>
+            <AlertDescription>
+              The generated URL is too long and may not work in all browsers.
+            </AlertDescription>
+          </Alert>
         )}
         {/* if url exists, consider showing the url here */}
         {/* consider showing warning here
