@@ -86,36 +86,39 @@ export function RuleSetRuleBuilder({ rule, accessibleResources, disabled, onRule
         uniqueKey="namespaces"
         isMobile={isMobile}
         title="Namespace"
-        resources={namespaces}
+        options={namespaces.map((ns) => ({
+          key: `ns-${ns}`,
+          label: ns,
+          value: `namespace:${ns}`,
+        }))}
         selectedResources={setOfSelectedResources}
         toggleResources={toggleResources}
-        getResourceKey={(res) => `ns-${res}`}
-        getResourceLabel={(res) => res}
-        getResourceValue={(res) => res}
       />
 
       <RuleSetRuleBuilderCommand
         uniqueKey="federated-graphs"
         isMobile={isMobile}
         title="Federated Graph"
-        resources={accessibleResources?.federatedGraphs}
+        options={accessibleResources?.federatedGraphs?.map((fg) => ({
+          key: `fg-${fg.targetId}`,
+          label: fg.name,
+          value: `federated-graph:${fg.targetId}`,
+        }))}
         selectedResources={setOfSelectedResources}
         toggleResources={toggleResources}
-        getResourceKey={(res) => `fg-${res.targetId}`}
-        getResourceLabel={(res) => res.name}
-        getResourceValue={(res) => `${res.namespace}:federated_graph:${res.name}`}
       />
 
       <RuleSetRuleBuilderCommand
         uniqueKey="subgraphs"
         isMobile={isMobile}
         title="Subgraph"
-        resources={accessibleResources?.subgraphs}
+        options={accessibleResources?.subgraphs?.map((sg) => ({
+          key: `sg-${sg.targetId}`,
+          label: sg.name,
+          value: `subgraph:${sg.targetId}`,
+        }))}
         selectedResources={setOfSelectedResources}
         toggleResources={toggleResources}
-        getResourceKey={(res) => `sg-${res.targetId}`}
-        getResourceLabel={(res) => res.name}
-        getResourceValue={(res) => `${res.namespace}:subgraph:${res.name}`}
       />
     </>
   );
@@ -196,33 +199,27 @@ function RuleSetRuleBuilderCommand<TData>({
   uniqueKey,
   isMobile,
   title,
-  resources,
+  options,
   selectedResources,
   toggleResources,
-  getResourceKey,
-  getResourceLabel,
-  getResourceValue,
 }: {
   uniqueKey: string;
   isMobile: boolean;
   title: string;
-  resources?: TData[];
+  options?: { key: string; label: string; value: string; }[];
   selectedResources: Set<string>;
   toggleResources(resources: string[]): void;
-  getResourceKey(res: TData): string;
-  getResourceLabel(res: TData): string;
-  getResourceValue(res: TData): string;
 }) {
   const [searchValue, setSearchValue] = useState<string>();
-  const filteredResources = useMemo(() => resources?.filter((res) =>
-    !searchValue || getResourceLabel(res).toLowerCase().includes(searchValue.toLowerCase())
-  ) ?? [], [resources, searchValue, getResourceLabel]);
+  const filteredResources = useMemo(() => options?.filter((opt) =>
+    !searchValue || opt.label.toLowerCase().includes(searchValue.toLowerCase())
+  ) ?? [], [options, searchValue]);
 
-  if (!resources?.length) {
+  if (!options?.length) {
     return null;
   }
 
-  const filteredResourcesAsValue = filteredResources.map(getResourceValue);
+  const filteredResourcesAsValue = filteredResources.map((opt) => opt.value);
   const currentSelectedResources = filteredResourcesAsValue.filter((res) => selectedResources.has(res));
   const unselectedResources = filteredResourcesAsValue.filter((res) => !selectedResources.has(res));
   const command = (
@@ -238,15 +235,11 @@ function RuleSetRuleBuilderCommand<TData>({
       </div>
       <CommandList>
         <CommandEmpty>No matching {title.toLowerCase()}</CommandEmpty>
-        {filteredResources.map((res) => {
-          const value = getResourceValue(res);
+        {filteredResources.map(({ key, label, value }) => {
           const isChecked = selectedResources.has(value);
 
           return (
-            <CommandItem
-              key={getResourceKey(res)}
-              onSelect={() => toggleResources([value])}
-            >
+            <CommandItem key={key} onSelect={() => toggleResources([value])}>
               <div
                 className={cn(
                   "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
@@ -257,7 +250,7 @@ function RuleSetRuleBuilderCommand<TData>({
               >
                 <CheckIcon className="size-4" />
               </div>
-              <span className="truncate">{getResourceLabel(res)}</span>
+              <span className="truncate">{label}</span>
             </CommandItem>
           );
         })}
