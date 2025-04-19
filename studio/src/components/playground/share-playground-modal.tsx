@@ -176,7 +176,7 @@ export const SharePlaygroundModal = () => {
                     setSelectedOptions(prev => ({ ...prev, [id]: !!checked }))
                   }
                 />
-                <label htmlFor={id}>{label}</label>
+                <label className="cursor-pointer select-none" htmlFor={id}>{label}</label>
               </div>
             ))}
           </div>
