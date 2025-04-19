@@ -15,7 +15,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip";
 import { CopyIcon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { useState, useContext, useCallback, useEffect } from "react";
-import { createStateUrl } from "@/lib/playground-url-state";
+import { createCompressedStateUrl } from "@/lib/playground-url-state";
 import { PlaygroundUrlState } from "@/types/playground.types";
 import { PlaygroundContext } from "./types";
 
@@ -92,11 +92,11 @@ export const SharePlaygroundModal = () => {
         const scriptsTabState = localStorage.getItem("playground:script:tabState");
         const parsedScriptsTabState = scriptsTabState ? JSON.parse(scriptsTabState) : null;
         const postOperationOfActiveTab = parsedScriptsTabState && parsedScriptsTabState[currentActiveTab.id]?.["post-operation"];
-
+        
         stateToShare.postOperation = postOperationOfActiveTab;
       }
 
-      setShareableUrl(createStateUrl(stateToShare));
+      setShareableUrl(createCompressedStateUrl(stateToShare));
     } catch (error) {
       toast({
         variant: "destructive",

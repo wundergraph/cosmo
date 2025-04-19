@@ -53,8 +53,10 @@ import {
 } from "@/components/ui/select";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
+import { DEFAULT_QUERY_TEMPLATE } from "@/constants/playground.constants";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { useLocalStorage } from "@/hooks/use-local-storage";
+import { usePlaygroundUrlState } from "@/hooks/use-playground-url-state";
 import { NextPageWithLayout } from "@/lib/page";
 import { parseSchema } from "@/lib/schema-helpers";
 import { cn } from "@/lib/utils";
@@ -84,8 +86,6 @@ import crypto from "crypto";
 import { GraphiQL } from "graphiql";
 import {
   GraphQLSchema,
-  Kind,
-  OperationTypeNode,
   parse,
   validate,
 } from "graphql";
@@ -874,6 +874,10 @@ const PlaygroundPage: NextPageWithLayout = () => {
     operation ? decodeURIComponent(operation) : undefined,
   );
 
+  const [updatedVariables, setUpdatedVariables] = useState<string | undefined>(
+    variables ? decodeURIComponent(variables) : undefined,
+  );
+
   const [storedHeaders, setStoredHeaders] = useLocalStorage(
     "graphiql:headers",
     "",
@@ -916,6 +920,13 @@ const PlaygroundPage: NextPageWithLayout = () => {
   const [isMounted, setIsMounted] = useState(false);
 
   const [view, setView] = useState<PlaygroundView>("response");
+
+  const { state: urlState, clearState: clearUrlState } = usePlaygroundUrlState();
+
+  const [tabsState, setTabsState] = useState<TabsState>({
+    activeTabIndex: 0,
+    tabs: [],
+  });
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -1064,43 +1075,78 @@ const PlaygroundPage: NextPageWithLayout = () => {
   });
 
   useEffect(() => {
-    if (!isGraphiqlRendered && typeof query === "string") {
-      if (!query) {
-        // query is empty - fill it with template
-        setQuery(`# Welcome to WunderGraph Studio
-#
-#
-# Type queries into this side of the screen, and you will see intelligent
-# typeaheads aware of the current GraphQL type schema and live syntax and
-# validation errors highlighted within the text.
-#
-# GraphQL queries typically start with a "{" character. Lines that start
-# with a # are ignored.
-#
-# An example GraphQL query might look like:
-#
-#     {
-#       field(arg: "value") {
-#         subField
-#       }
-#     }
-#
-# Keyboard shortcuts:
-#
-#   Prettify query:  Shift-Ctrl-P (or press the prettify button)
-#
-#  Merge fragments:  Shift-Ctrl-M (or press the merge button)
-#
-#        Run Query:  Ctrl-Enter (or press the play button)
-#
-#    Auto Complete:  Ctrl-Space (or just start typing)
-#
-`);
+    if (isGraphiqlRendered || typeof query !== "string") return;
+
+    const loadTemplateQuery = () => {
+      if (!query && !urlState) {
+        setQuery(DEFAULT_QUERY_TEMPLATE);
       }
-      // set first render flag to true - to prevent opening new tab / filling data while user is editing
-      setIsGraphiqlRendered(true);
+    };
+
+    // centralized logic for initializing the playground state from the shared URL state
+    const loadUrlState = () => {
+      if (!urlState) return;
+        
+      setQuery(urlState.operation);
+      if (urlState.variables) setUpdatedVariables(urlState.variables);
+      if (urlState.headers) setHeaders(urlState.headers);
+      if (urlState.preFlight) {
+        localStorage.setItem(
+          "playground:pre-flight:enabled",
+          JSON.stringify(urlState.preFlight.enabled)
+        );
+        if (urlState.preFlight.content) {
+          localStorage.setItem(
+            "playground:pre-flight:selected",
+            JSON.stringify(urlState.preFlight, (k, v) => k === 'enabled' ? undefined : v)
+          );
+        }
+      }
+
+      // Script (pre-op/post-op) updates for the active tab state
+      if (urlState.preOperation || urlState.postOperation) {
+        const activeId = tabsState.tabs[tabsState.activeTabIndex]?.id;
+        if (!activeId) return;
+
+        const currentScriptTabState = localStorage.getItem("playground:script:tabState");
+        const parsedCurrentScriptTabState = JSON.parse(currentScriptTabState || "{}");
+        
+        // Create or update the tab state
+        parsedCurrentScriptTabState[activeId] = {
+          ...parsedCurrentScriptTabState[activeId],
+          ...(urlState.preOperation && {
+            "pre-operation": urlState.preOperation
+          }),
+          ...(urlState.postOperation && {
+            "post-operation": urlState.postOperation
+          })
+        };
+
+        localStorage.setItem(
+          "playground:script:tabState",
+          JSON.stringify(parsedCurrentScriptTabState)
+        );
+
+        urlState.preOperation && localStorage.setItem(
+          "playground:pre-operation:selected",
+          JSON.stringify(urlState.preOperation)
+        );
+
+        urlState.postOperation && localStorage.setItem(
+          "playground:post-operation:selected",
+          JSON.stringify(urlState.postOperation)
+        );
+      }
+
+      // In order to avoid conflicts, it is important to clear the url state after loading it.
+      clearUrlState();
     }
-  }, [query, isGraphiqlRendered]);
+
+    loadTemplateQuery();
+    loadUrlState();
+    // set first render flag to true - to prevent opening new tab / filling data while user is editing
+    setIsGraphiqlRendered(true);
+  }, [query, isGraphiqlRendered, urlState, clearUrlState]);
 
   const { routingUrl, subscriptionUrl } = useMemo(() => {
     if (!loadSchemaGraphId || type === "graph" || type === "featureFlag") {
@@ -1271,10 +1317,6 @@ const PlaygroundPage: NextPageWithLayout = () => {
     };
   }, [theme]);
 
-  const [tabsState, setTabsState] = useState<TabsState>({
-    activeTabIndex: 0,
-    tabs: [],
-  });
 
   if (!graphContext?.graph) return null;
 
@@ -1307,7 +1349,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
             showPersistHeadersSettings={false}
             fetcher={fetcher}
             query={query}
-            variables={variables ? decodeURIComponent(variables) : undefined}
+            variables={updatedVariables}
             onEditQuery={setQuery}
             defaultHeaders={`{
   "X-WG-TRACE" : "true"
