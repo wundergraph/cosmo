@@ -37,6 +37,9 @@ export const useSharePlaygroundModal = (isOpen: boolean) => {
   const [selectedOptions, setSelectedOptions] = useState<Record<ShareOptionId, boolean>>(
     () => DEFAULT_SELECTED_OPTIONS    
   );
+  const [lastOptionsSelected, setLastOptionsSelected] = useState<Record<ShareOptionId, boolean>>(
+    () => DEFAULT_SELECTED_OPTIONS
+  );
   const { toast } = useToast();
   const [shareableUrl, setShareableUrl] = useState("");
   const [warning, setWarning] = useState<{ title: string; description: string } | null>(null);
@@ -98,6 +101,7 @@ export const useSharePlaygroundModal = (isOpen: boolean) => {
 
       const newUrl = createCompressedStateUrl(stateToShare);
       setShareableUrl(newUrl);
+      setLastOptionsSelected(selectedOptions);
 
       if (newUrl.length > MAX_URL_LENGTH) {
         // todo: add a button in error message to easily remove scripts
@@ -118,7 +122,7 @@ export const useSharePlaygroundModal = (isOpen: boolean) => {
         console.error(error);
       }
     }
-  }, [buildStateToShare, toast]);
+  }, [buildStateToShare, toast, selectedOptions]);
 
   const handleCopyLink = useCallback(() => {
     try {
@@ -144,14 +148,30 @@ export const useSharePlaygroundModal = (isOpen: boolean) => {
   }, [shareableUrl, toast]);
 
   const handleOptionChange = useCallback((id: string, checked: boolean) => {
-    setSelectedOptions(prev => ({ ...prev, [id]: !!checked }));
-    if (shareableUrl) {
-      setWarning({
-        title: WARNING_MESSAGES.OPTIONS_CHANGED.title,
-        description: WARNING_MESSAGES.OPTIONS_CHANGED.description,
-      });
-    }
-  }, [shareableUrl]);
+    setSelectedOptions(prev => {
+      const updatedOptions = { ...prev, [id]: !!checked };
+
+      // Check if options have changed and shareableUrl exists
+      if (shareableUrl) {
+        // Check if any option has changed
+        const hasOptionsChanged = Object.keys(updatedOptions).some(
+          key => updatedOptions[key as ShareOptionId] !== lastOptionsSelected[key as ShareOptionId]
+        );
+      
+        if (hasOptionsChanged) {
+          setWarning({
+            title: WARNING_MESSAGES.OPTIONS_CHANGED.title,
+            description: WARNING_MESSAGES.OPTIONS_CHANGED.description,
+          });
+        } else {
+          // If options are back to their original state, remove the warning
+          setWarning(null);
+        }
+      }
+
+      return updatedOptions;
+    });
+  }, [shareableUrl, lastOptionsSelected]);
 
   return {
     options: SHARE_OPTIONS,
