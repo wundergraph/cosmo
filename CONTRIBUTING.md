@@ -94,25 +94,61 @@ We merge all pull requests in `squash merge` mode. You're not enforced to use [c
 All services work with environment variables. You can find the default values in the `.env.example` file.
 Please copy the variables to `.env` (the same for studio but with `.env.local`) and adjust the values to your needs.
 
+```shell
+# In the root directory (cosmo/)
+# Copy controlplane environment file
+cp controlplane/.env.example controlplane/.env
+
+# Copy studio environment file
+cp studio/.env.local.example studio/.env.local
+
+# Copy cli environment file
+cp cli/.env.example cli/.env
+
+# Copy router environment file
+cp router/.env.example router/.env
+```
+
+Install and build the dependencies
+
+```shell
+# In the root directory (cosmo/)
+# Clean any existing builds
+pnpm clean
+
+# Install dependencies
+pnpm install
+
+# Generate necessary files
+pnpm generate
+
+# Build all packages
+pnpm build
+```
+
 Bootstrapping Cosmo for local development is easy. Just run the following commands in order:
 
 ```shell
+# In the root directory (cosmo/)
 # 1️⃣ Setup the repository, build libraries and start all services (Wait a few seconds until Keycloak is ready)
 make
 
 # 2️⃣ Run migrations and seed the database
 make migrate && make seed
 
-# 3️⃣ Start the control plane
+# 3️⃣ Wait for the services to be ready (especially Redis and PostgreSQL)
+make infra-up
+
+# 4️⃣ Start the control plane
 make start-cp
 
-# 4️⃣ Create the demo and copy the JWT printed at the bottom
+# 5️⃣ Create the demo and copy the JWT printed at the bottom
 make create-demo
 
-# 5️⃣ Start the subgraphs
+# 6️⃣ Start the subgraphs
 OTEL_AUTH_TOKEN=<jwt-token> make dc-subgraphs-demo
 
-# 6️⃣ Put the JWT from the previous step into the router/.env as GRAPH_API_TOKEN and start the router
+# 7️⃣ Put the JWT from the previous step into the router/.env as GRAPH_API_TOKEN and start the router
 make start-router
 
 # ✨ Finally, Start the studio (http://localhost:3000) and explore the Cosmo platform
