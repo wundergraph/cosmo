@@ -1,5 +1,5 @@
 import { useToast } from '@/components/ui/use-toast';
-import { DEFAULT_QUERY_TEMPLATE } from '@/constants/playground.constants';
+import { DEFAULT_QUERY_TEMPLATE } from '@/lib/constants';
 import { extractStateFromUrl } from '@/lib/playground-url-state';
 import { PlaygroundUrlState } from '@/types/playground.types';
 import { useRouter } from 'next/router';

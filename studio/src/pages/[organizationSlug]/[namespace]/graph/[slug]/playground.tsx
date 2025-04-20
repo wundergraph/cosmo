@@ -53,7 +53,7 @@ import {
 } from "@/components/ui/select";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
-import { DEFAULT_QUERY_TEMPLATE } from "@/constants/playground.constants";
+import { DEFAULT_QUERY_TEMPLATE } from "@/lib/constants";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { usePlaygroundStateFromUrl } from "@/hooks/use-playground-state-from-url";
