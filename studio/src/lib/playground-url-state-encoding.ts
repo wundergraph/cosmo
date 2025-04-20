@@ -42,6 +42,10 @@ export const buildStateToShare = (
     stateToShare.postOperation = getScriptTabState(id, 'post-operation');
   }
 
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[Playground] compressed state:', stateToShare);
+  }
+
   return stateToShare;
 };
 

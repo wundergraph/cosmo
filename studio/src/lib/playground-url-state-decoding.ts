@@ -27,6 +27,10 @@ const decompressState = (compressedState: string): PlaygroundUrlState => {
     throw new Error(`Invalid playground state: ${result.error.errors.map((e) => e.toString()).join('\n')}`);
   }
   
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[Playground] decompressed state:', result.data);
+  }
+
   return result.data;
 }
 
