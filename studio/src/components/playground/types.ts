@@ -1,6 +1,7 @@
+import { SHARE_OPTIONS } from "@/lib/constants";
 import { createContext } from "react";
 
-type TabState = {
+export type TabState = {
   id: string;
   hash: string;
   title: string;
@@ -101,3 +102,5 @@ export type QueryPlan = QueryPlanFetchTypeNode & {
   trigger?: QueryPlanFetchNode;
   children: QueryPlanFetchTypeNode[];
 };
+
+export type ShareOptionId = typeof SHARE_OPTIONS[number]["id"];

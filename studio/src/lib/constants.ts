@@ -117,3 +117,13 @@ export const graphPruningRules = [
     description: "Returns all the deleted fields which were not deprecated.",
   },
 ];
+
+export const SHARE_OPTIONS = [
+  // operation is always checked and disabled
+  { id: "operation", label: "Operation", isChecked: true, isDisabled: true },
+  { id: "variables", label: "Variables", isChecked: false, isDisabled: false },
+  { id: "headers", label: "Headers", isChecked: false, isDisabled: false },
+  { id: "preFlight", label: "Pre-Flight Script", isChecked: false, isDisabled: false },
+  { id: "preOperation", label: "Pre-request Script", isChecked: false, isDisabled: false },
+  { id: "postOperation", label: "Post-request Script", isChecked: false, isDisabled: false },
+] as const;

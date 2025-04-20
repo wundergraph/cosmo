@@ -1,7 +1,50 @@
+/**
+ * This lib focuses on serialization/deserialization logic for sharing state
+ */
+import { ShareOptionId, TabState } from '@/components/playground/types';
 import { PlaygroundStateSchema, PlaygroundUrlState } from '@/types/playground.types';
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
+import { getPreFlightScript, getScriptTabState } from './playground-storage';
 
 const PLAYGROUND_STATE_QUERY_PARAM = 'playgroundUrlState';
+
+/**
+ * Helper which generates the state to share based on the selected options
+ */
+export const buildStateToShare = (
+  selectedOptions: Record<ShareOptionId, boolean>, 
+  currentTab: TabState
+): PlaygroundUrlState => {
+  const { query, variables, headers, id } = currentTab;
+
+  const stateToShare: PlaygroundUrlState = {
+    // Always include operation
+    operation: query ?? "",
+  };
+
+  if (selectedOptions.variables && variables) {
+    stateToShare.variables = variables;
+  }
+
+  if (selectedOptions.headers && headers !== null) {
+    stateToShare.headers = headers;
+  }
+
+  if (selectedOptions.preFlight) {
+    const preFlight = getPreFlightScript();
+    if (preFlight) stateToShare.preFlight = preFlight;
+  }
+
+  if (selectedOptions.preOperation && id) {
+    stateToShare.preOperation = getScriptTabState(id, 'pre-operation');
+  }
+
+  if (selectedOptions.postOperation && id) {
+    stateToShare.postOperation = getScriptTabState(id, 'post-operation');
+  }
+
+  return stateToShare;
+};
 
 /**
  * Creates a URL with the compressed playground state embedded
