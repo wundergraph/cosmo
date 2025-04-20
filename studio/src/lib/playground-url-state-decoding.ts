@@ -1,7 +1,7 @@
 /**
  * This lib focuses on deserialization logic for sharing state
  */
-import { PlaygroundStateSchema, PlaygroundUrlState } from '@/types/playground.types';
+import { PlaygroundStateSchema, PlaygroundUrlState } from '@/components/playground/types';
 import { decompressFromEncodedURIComponent } from 'lz-string';
 import { PLAYGROUND_STATE_QUERY_PARAM } from './constants';
 

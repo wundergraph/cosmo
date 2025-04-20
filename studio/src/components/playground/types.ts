@@ -1,5 +1,6 @@
 import { SHARE_OPTIONS } from "@/lib/constants";
 import { createContext } from "react";
+import { z } from 'zod';
 
 export type TabState = {
   id: string;
@@ -104,3 +105,36 @@ export type QueryPlan = QueryPlanFetchTypeNode & {
 };
 
 export type ShareOptionId = typeof SHARE_OPTIONS[number]["id"];
+
+export const PlaygroundStateSchema = z.object({
+    operation: z.string().min(1, 'Operation is required in playground url state'),
+    variables: z.string().optional(),
+    headers: z.string().optional(),
+    preFlight: z.object({
+        enabled: z.boolean().optional(),
+        content: z.string().optional(),
+        id: z.string().optional(),
+        title: z.string().optional(),
+        updatedByTabId: z.string().optional(),
+        type: z.string().optional(),
+    }).optional(),
+    preOperation: z.object({
+        enabled: z.boolean().optional(),
+        content: z.string().optional(),
+        id: z.string().optional(),
+        title: z.string().optional(),
+        updatedByTabId: z.string().optional(),
+    }).optional(),
+    postOperation: z.object({
+        enabled: z.boolean().optional(),
+        content: z.string().optional(),
+        id: z.string().optional(),
+        title: z.string().optional(),
+        updatedByTabId: z.string().optional(),
+    }).optional(),
+});
+  
+export type PlaygroundUrlState = z.infer<typeof PlaygroundStateSchema>;
+export type PreFlightUrlState = PlaygroundUrlState['preFlight'];
+export type PreOperationUrlState = PlaygroundUrlState['preOperation'];
+export type PostOperationUrlState = PlaygroundUrlState['postOperation'];

@@ -101,6 +101,7 @@ import { PiBracketsCurly, PiDevices, PiGraphLight } from "react-icons/pi";
 import { TbDevicesCheck } from "react-icons/tb";
 import { useDebounce } from "use-debounce";
 import { z } from "zod";
+import { setPreFlightScript, setScriptTabState } from "@/lib/playground-storage";
 
 const validateHeaders = (headers: Record<string, string>) => {
   for (const headersKey in headers) {
@@ -1085,57 +1086,29 @@ const PlaygroundPage: NextPageWithLayout = () => {
 
     // centralized logic for initializing the playground state from the shared URL state
     const loadUrlState = () => {
-      if (!urlState) return;
+      if (!urlState) return;    
+      const activeId = tabsState.tabs[tabsState.activeTabIndex]?.id;
         
       setQuery(urlState.operation);
-      if (urlState.variables) setUpdatedVariables(urlState.variables);
-      if (urlState.headers) setHeaders(urlState.headers);
-      if (urlState.preFlight) {
-        localStorage.setItem(
-          "playground:pre-flight:enabled",
-          JSON.stringify(urlState.preFlight.enabled)
-        );
-        if (urlState.preFlight.content) {
-          localStorage.setItem(
-            "playground:pre-flight:selected",
-            JSON.stringify(urlState.preFlight, (k, v) => k === 'enabled' ? undefined : v)
-          );
-        }
+
+      if (urlState.variables) {
+        setUpdatedVariables(urlState.variables);
       }
 
-      // Script (pre-op/post-op) updates for the active tab state
-      if (urlState.preOperation || urlState.postOperation) {
-        const activeId = tabsState.tabs[tabsState.activeTabIndex]?.id;
-        if (!activeId) return;
+      if (urlState.headers) {
+        setHeaders(urlState.headers);
+      }
 
-        const currentScriptTabState = localStorage.getItem("playground:script:tabState");
-        const parsedCurrentScriptTabState = JSON.parse(currentScriptTabState || "{}");
-        
-        // Create or update the tab state
-        parsedCurrentScriptTabState[activeId] = {
-          ...parsedCurrentScriptTabState[activeId],
-          ...(urlState.preOperation && {
-            "pre-operation": urlState.preOperation
-          }),
-          ...(urlState.postOperation && {
-            "post-operation": urlState.postOperation
-          })
-        };
+      if (urlState.preFlight) {
+        setPreFlightScript(urlState.preFlight);
+      }
 
-        localStorage.setItem(
-          "playground:script:tabState",
-          JSON.stringify(parsedCurrentScriptTabState)
-        );
+      if (urlState.preOperation) {
+        setScriptTabState('pre-operation', urlState.preOperation, activeId);
+      }
 
-        urlState.preOperation && localStorage.setItem(
-          "playground:pre-operation:selected",
-          JSON.stringify(urlState.preOperation)
-        );
-
-        urlState.postOperation && localStorage.setItem(
-          "playground:post-operation:selected",
-          JSON.stringify(urlState.postOperation)
-        );
+      if (urlState.postOperation) {
+        setScriptTabState('post-operation', urlState.postOperation, activeId);
       }
 
       // In order to avoid conflicts, it is important to clear the url state after loading it.
