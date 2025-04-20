@@ -1,7 +1,7 @@
 import { PlaygroundContext, ShareOptionId } from '@/components/playground/types';
 import { useToast } from '@/components/ui/use-toast';
 import { SHARE_OPTIONS } from '@/lib/constants';
-import { buildStateToShare, createCompressedStateUrl } from '@/lib/playground-url-state';
+import { buildStateToShare, createCompressedStateUrl } from '@/lib/playground-url-state-encoding';
 import { PlaygroundUrlState } from '@/types/playground.types';
 import { useCallback, useContext, useEffect, useState } from 'react';
 

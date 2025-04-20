@@ -1,6 +1,6 @@
 import { useToast } from '@/components/ui/use-toast';
 import { DEFAULT_QUERY_TEMPLATE } from '@/lib/constants';
-import { extractStateFromUrl } from '@/lib/playground-url-state';
+import { extractStateFromUrl } from '@/lib/playground-url-state-decoding';
 import { PlaygroundUrlState } from '@/types/playground.types';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';

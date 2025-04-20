@@ -128,6 +128,8 @@ export const SHARE_OPTIONS = [
   { id: "postOperation", label: "Post-request Script", isChecked: false, isDisabled: false },
 ] as const;
 
+export const PLAYGROUND_STATE_QUERY_PARAM = 'playgroundUrlState';
+
 export const DEFAULT_QUERY_TEMPLATE = `# Welcome to WunderGraph Studio
 #
 #

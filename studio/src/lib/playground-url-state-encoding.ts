@@ -1,12 +1,11 @@
 /**
- * This lib focuses on serialization/deserialization logic for sharing state
+ * This lib focuses on serialization logic for sharing state
  */
 import { ShareOptionId, TabState } from '@/components/playground/types';
-import { PlaygroundStateSchema, PlaygroundUrlState } from '@/types/playground.types';
-import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
+import { PlaygroundUrlState } from '@/types/playground.types';
+import { compressToEncodedURIComponent } from 'lz-string';
+import { PLAYGROUND_STATE_QUERY_PARAM } from './constants';
 import { getPreFlightScript, getScriptTabState } from './playground-storage';
-
-const PLAYGROUND_STATE_QUERY_PARAM = 'playgroundUrlState';
 
 /**
  * Helper which generates the state to share based on the selected options
@@ -68,43 +67,4 @@ export const createCompressedStateUrl = (state: PlaygroundUrlState, baseUrl?: st
   const url = new URL(baseUrl || window.location.href);
   url.searchParams.set(PLAYGROUND_STATE_QUERY_PARAM, compressedState);
   return url.toString();
-}
-
-/**
- * Decompresses a URL-safe string into a playground state object
- * 
- * @param compressedState - The compressed state string to decompress
- * @returns The decompressed and validated playground state
- * @throws Error if decompression fails or validation fails
- */
-const decompressState = (compressedState: string): PlaygroundUrlState => {
-  const decompressed = decompressFromEncodedURIComponent(compressedState);
-  
-  if (!decompressed) {
-    throw new Error('Failed to decompress playground state');
-  }
-  
-  const parsedState = JSON.parse(decompressed);
-  // Validate using Zod schema
-  const result = PlaygroundStateSchema.safeParse(parsedState);
-  
-  if (!result.success) {
-    throw new Error(`Invalid playground state: ${result.error.errors.map((e) => e.toString()).join('\n')}`);
-  }
-  
-  return result.data;
-}
-
-/**
- * Helper function to get the playground state parameter from the current URL
- */
-export const extractStateFromUrl = (): PlaygroundUrlState | null => {
-  const params = new URLSearchParams(window.location.search);
-  const stateParam = params.get(PLAYGROUND_STATE_QUERY_PARAM);
-  
-  if (!stateParam) {
-      return null;
-  }
-    
-  return decompressState(stateParam);
 }
