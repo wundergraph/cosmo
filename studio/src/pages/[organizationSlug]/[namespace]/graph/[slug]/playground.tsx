@@ -1081,7 +1081,6 @@ const PlaygroundPage: NextPageWithLayout = () => {
         // query is empty - fill it with template
         setQuery(DEFAULT_QUERY_TEMPLATE);
       }
-
       // set first render flag to true - to prevent opening new tab / filling data while user is editing
       setIsGraphiqlRendered(true);
     }
