@@ -1,8 +1,8 @@
 /**
  * This lib focuses on serialization logic for sharing state
  */
-import { ShareOptionId, TabState } from '@/components/playground/types';
-import { PlaygroundUrlState } from '@/components/playground/types';
+import { ShareOptionId, TabState } from '../components/playground/types';
+import { PlaygroundUrlState } from '../components/playground/types';
 import { compressToEncodedURIComponent } from 'lz-string';
 import { PLAYGROUND_STATE_QUERY_PARAM } from './constants';
 import { getPreFlightScript, getScriptTabState } from './playground-storage';

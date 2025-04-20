@@ -1,7 +1,7 @@
 /**
  * This lib focuses on deserialization logic for sharing state
  */
-import { PlaygroundStateSchema, PlaygroundUrlState } from '@/components/playground/types';
+import { PlaygroundStateSchema, PlaygroundUrlState } from '../components/playground/types';
 import { decompressFromEncodedURIComponent } from 'lz-string';
 import { PLAYGROUND_STATE_QUERY_PARAM } from './constants';
 
@@ -12,7 +12,7 @@ import { PLAYGROUND_STATE_QUERY_PARAM } from './constants';
  * @returns The decompressed and validated playground state
  * @throws Error if decompression fails or validation fails
  */
-const decompressState = (compressedState: string): PlaygroundUrlState => {
+export const decompressState = (compressedState: string): PlaygroundUrlState => {
   const decompressed = decompressFromEncodedURIComponent(compressedState);
   
   if (!decompressed) {
