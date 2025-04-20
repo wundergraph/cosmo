@@ -56,7 +56,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { DEFAULT_QUERY_TEMPLATE } from "@/lib/constants";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import { usePlaygroundStateFromUrl } from "@/hooks/use-playground-state-from-url";
+import { useHydratePlaygroundStateFromUrl } from "@/hooks/use-hydrate-playground-state-from-url";
 import { NextPageWithLayout } from "@/lib/page";
 import { parseSchema } from "@/lib/schema-helpers";
 import { cn } from "@/lib/utils";
@@ -922,12 +922,12 @@ const PlaygroundPage: NextPageWithLayout = () => {
 
   const [view, setView] = useState<PlaygroundView>("response");
 
-  const { state: urlState, clearState: clearUrlState } = usePlaygroundStateFromUrl();
-
   const [tabsState, setTabsState] = useState<TabsState>({
     activeTabIndex: 0,
     tabs: [],
   });
+
+  useHydratePlaygroundStateFromUrl(tabsState, setQuery, setUpdatedVariables, setHeaders);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -1076,50 +1076,16 @@ const PlaygroundPage: NextPageWithLayout = () => {
   });
 
   useEffect(() => {
-    if (isGraphiqlRendered || typeof query !== "string") return;
-
-    const loadTemplateQuery = () => {
-      if (!query && !urlState) {
+    if (!isGraphiqlRendered && typeof query === "string") {
+      if (!query) {
+        // query is empty - fill it with template
         setQuery(DEFAULT_QUERY_TEMPLATE);
       }
-    };
 
-    // centralized logic for initializing the playground state from the shared URL state
-    const loadUrlState = () => {
-      if (!urlState) return;    
-      const activeId = tabsState.tabs[tabsState.activeTabIndex]?.id;
-        
-      setQuery(urlState.operation);
-
-      if (urlState.variables) {
-        setUpdatedVariables(urlState.variables);
-      }
-
-      if (urlState.headers) {
-        setHeaders(urlState.headers);
-      }
-
-      if (urlState.preFlight) {
-        setPreFlightScript(urlState.preFlight);
-      }
-
-      if (urlState.preOperation) {
-        setScriptTabState('pre-operation', urlState.preOperation, activeId);
-      }
-
-      if (urlState.postOperation) {
-        setScriptTabState('post-operation', urlState.postOperation, activeId);
-      }
-
-      // In order to avoid conflicts, it is important to clear the url state after loading it.
-      clearUrlState();
+      // set first render flag to true - to prevent opening new tab / filling data while user is editing
+      setIsGraphiqlRendered(true);
     }
-
-    loadTemplateQuery();
-    loadUrlState();
-    // set first render flag to true - to prevent opening new tab / filling data while user is editing
-    setIsGraphiqlRendered(true);
-  }, [query, isGraphiqlRendered, urlState, clearUrlState]);
+  }, [query, isGraphiqlRendered]);
 
   const { routingUrl, subscriptionUrl } = useMemo(() => {
     if (!loadSchemaGraphId || type === "graph" || type === "featureFlag") {
