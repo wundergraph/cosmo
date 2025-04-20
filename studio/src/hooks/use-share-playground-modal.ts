@@ -72,7 +72,7 @@ export const useSharePlaygroundModal = (isOpen: boolean) => {
         console.error(error);
       }
     }
-  }, [buildStateToShare, toast, selectedOptions]);
+  }, [buildStateToShare, toast, selectedOptions, currentActiveTab]);
 
   const handleCopyLink = useCallback(() => {
     try {
