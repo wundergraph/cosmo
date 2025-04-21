@@ -102,21 +102,11 @@ go tool pprof ‘http://localhost:6060/debug/pprof/profile?seconds=5’
 
 ### Pyroscope Integration
 
-You can integrate the router with Pyroscope by providing the following configuration:
+You can integrate the router with Pyroscope by providing the following configuration in environment variables:
 
-```
-profiling:
-    enabled: true
-    basic_auth_username: ""
-    basic_auth_password: ""
-    server_address: "http://localhost:4040"
-    profile_types:
-      - "cpu"
-      - "alloc_objects"
-      - "alloc_space"
-      - "inuse_objects"
-      - "inuse_space"
-    tags:
-      environment: demo
-      run_id: 3
-```
+- PYROSCOPE_ENABLED - Whether the integration is enabled
+- PYROSCOPE_SERVICE_NAME - The name of the service (default: "router")
+- PYROSCOPE_SERVER_ADDRESS - The address to the Pyroscope server
+- PYROSCOPE_TAGS - A map of tags to apply to the profiles
+- PYROSCOPE_BASIC_AUTH_USER
+- PYROSCOPE_BASIC_AUTH_PASSWORD

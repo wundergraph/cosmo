@@ -109,47 +109,52 @@ func (c *ChatRoomContainer) Messages() []*model.ChatMessage {
 }
 
 type ChatRoomManager struct {
-	chatrooms map[string]*ChatRoomContainer
+	chatRoom *ChatRoomContainer
 }
 
 func NewChatRoomManager() *ChatRoomManager {
 	return &ChatRoomManager{
-		chatrooms: make(map[string]*ChatRoomContainer),
+		chatRoom: NewChatRoomContainer("1", "1"),
 	}
 }
 
 func (c *ChatRoomManager) GetChatRoom(id string) *ChatRoomContainer {
-	return c.chatrooms[id]
+	return &ChatRoomContainer{
+		id:              id,
+		name:            id,
+		product:         &model.Product{ID: "1"},
+		chatRoomChannel: make([]*chatRoomChannel, 0),
+	}
 }
 
 func (c *ChatRoomManager) GetOrCreateChatRoom(id string) *ChatRoomContainer {
-	if c.chatrooms[id] == nil {
-		c.chatrooms[id] = NewChatRoomContainer(id, id)
+	return &ChatRoomContainer{
+		id:              id,
+		name:            id,
+		product:         &model.Product{ID: "1"},
+		chatRoomChannel: make([]*chatRoomChannel, 0),
 	}
-	return c.chatrooms[id]
 }
 
 func (c *ChatRoomManager) CreateChatRoom(id string, name string) *ChatRoomContainer {
-	c.chatrooms[id] = NewChatRoomContainer(id, name)
-	return c.chatrooms[id]
+	return &ChatRoomContainer{
+		id:              id,
+		name:            name,
+		product:         &model.Product{ID: "1"},
+		chatRoomChannel: make([]*chatRoomChannel, 0),
+	}
 }
 
 func (c *ChatRoomManager) DeleteChatRoom(id string) {
-	c.chatrooms[id].Unsubscribe()
-	delete(c.chatrooms, id)
+	fmt.Println("Deleting chat room", id)
+	return
 }
 
 func (c *ChatRoomManager) CleanUp() {
-	for _, chatroom := range c.chatrooms {
-		chatroom.Unsubscribe()
-	}
-	c.chatrooms = make(map[string]*ChatRoomContainer)
+	fmt.Println("Cleaning up chat room", c.chatRoom.id)
+	c.chatRoom.Unsubscribe()
 }
 
 func (c *ChatRoomManager) GetAllChatRooms() []*model.ChatRoom {
-	chatrooms := make([]*model.ChatRoom, 0)
-	for _, chatroom := range c.chatrooms {
-		chatrooms = append(chatrooms, chatroom.GetModel())
-	}
-	return chatrooms
+	return []*model.ChatRoom{c.chatRoom.GetModel()}
 }
