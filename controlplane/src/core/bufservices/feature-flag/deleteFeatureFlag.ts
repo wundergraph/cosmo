@@ -116,6 +116,7 @@ export function deleteFeatureFlag(
 
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
         auditAction: 'feature_flag.deleted',
         action: 'deleted',
         actorId: authContext.userId,

@@ -85,6 +85,7 @@ export function createIntegration(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'integration.created',
       action: 'created',
       actorId: authContext.userId,

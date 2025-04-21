@@ -1,6 +1,6 @@
 {
-  "id": "59df05ab-6485-4207-99aa-48bdfe2651a5",
-  "prevId": "116b5e0b-d914-427c-bdc7-dc49310e00c2",
+  "id": "1047e67f-16f1-4d7b-bfb6-2031ff10230b",
+  "prevId": "818589d7-b138-4797-af9d-0ca6ab742af0",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -317,6 +317,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "organization_slug": {
+          "name": "organization_slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "action": {
           "name": "action",
           "type": "text",
@@ -435,21 +441,7 @@
           "with": {}
         }
       },
-      "foreignKeys": {
-        "audit_logs_organization_id_organizations_id_fk": {
-          "name": "audit_logs_organization_id_organizations_id_fk",
-          "tableFrom": "audit_logs",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
@@ -7401,6 +7393,95 @@
       "compositePrimaryKeys": {
         "webhook_graph_schema_update_webhook_id_federated_graph_id_pk": {
           "name": "webhook_graph_schema_update_webhook_id_federated_graph_id_pk",
+          "columns": [
+            "webhook_id",
+            "federated_graph_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "public.webhook_proposal_state_update": {
+      "name": "webhook_proposal_state_update",
+      "schema": "",
+      "columns": {
+        "webhook_id": {
+          "name": "webhook_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "federated_graph_id": {
+          "name": "federated_graph_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "wpsu_webhook_id_idx": {
+          "name": "wpsu_webhook_id_idx",
+          "columns": [
+            {
+              "expression": "webhook_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "wpsu_federated_graph_id_idx": {
+          "name": "wpsu_federated_graph_id_idx",
+          "columns": [
+            {
+              "expression": "federated_graph_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "webhook_proposal_state_update_webhook_id_organization_webhook_configs_id_fk": {
+          "name": "webhook_proposal_state_update_webhook_id_organization_webhook_configs_id_fk",
+          "tableFrom": "webhook_proposal_state_update",
+          "tableTo": "organization_webhook_configs",
+          "columnsFrom": [
+            "webhook_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "webhook_proposal_state_update_federated_graph_id_federated_graphs_id_fk": {
+          "name": "webhook_proposal_state_update_federated_graph_id_federated_graphs_id_fk",
+          "tableFrom": "webhook_proposal_state_update",
+          "tableTo": "federated_graphs",
+          "columnsFrom": [
+            "federated_graph_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "webhook_proposal_state_update_webhook_id_federated_graph_id_pk": {
+          "name": "webhook_proposal_state_update_webhook_id_federated_graph_id_pk",
           "columns": [
             "webhook_id",
             "federated_graph_id"

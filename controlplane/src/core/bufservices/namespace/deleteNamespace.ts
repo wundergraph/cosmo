@@ -99,6 +99,7 @@ export function deleteNamespace(
 
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
+          organizationSlug: authContext.organizationSlug,
           auditAction: 'federated_graph.deleted',
           action: 'deleted',
           actorId: authContext.userId,
@@ -115,6 +116,7 @@ export function deleteNamespace(
       for (const subgraph of subgraphs) {
         await auditLogRepo.addAuditLog({
           organizationId: authContext.organizationId,
+          organizationSlug: authContext.organizationSlug,
           auditAction: subgraph.isFeatureSubgraph ? 'feature_subgraph.deleted' : 'subgraph.deleted',
           action: 'deleted',
           actorId: authContext.userId,
@@ -130,6 +132,7 @@ export function deleteNamespace(
 
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
         auditAction: 'namespace.deleted',
         action: 'deleted',
         actorId: authContext.userId,

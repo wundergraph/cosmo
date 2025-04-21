@@ -66,6 +66,7 @@ export function removeSubgraphMember(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'subgraph_member.deleted',
       action: 'deleted',
       actorId: authContext.userId,

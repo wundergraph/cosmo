@@ -135,6 +135,7 @@ export function updateFeatureFlag(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'feature_flag.updated',
       action: 'updated',
       actorId: authContext.userId,
