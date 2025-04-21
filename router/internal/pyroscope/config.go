@@ -11,7 +11,7 @@ type Profiling struct {
 	Enabled           bool                    `envDefault:"false" env:"PYROSCOPE_ENABLED"`
 	ServiceName       string                  `envDefault:"cosmo-router" env:"PYROSCOPE_SERVICE_NAME"`
 	ServerAddress     string                  `envDefault:"http://localhost:4040" env:"PYROSCOPE_SERVER_ADDRESS"`
-	ProfileTypes      []pyroscope.ProfileType ` envDefault:"[cpu,alloc_objects,alloc_space,inuse_objects,inuse_space]" env:"PYROSCOPE_PROFILE_TYPES"`
+	ProfileTypes      []pyroscope.ProfileType `envDefault:"[cpu,alloc_objects,alloc_space,inuse_objects,inuse_space]" env:"PYROSCOPE_PROFILE_TYPES"`
 	Tags              map[string]string       `env:"PYROSCOPE_TAGS" envSeparator:","`
 	BasicAuthUser     string                  `env:"PYROSCOPE_BASIC_AUTH_USER"`
 	BasicAuthPassword string                  `env:"PYROSCOPE_BASIC_AUTH_PASSWORD"`

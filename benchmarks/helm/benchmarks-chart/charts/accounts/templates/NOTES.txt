@@ -1,0 +1,1 @@
+This is the helm chart for the {{ include "accounts.fullname" . }}

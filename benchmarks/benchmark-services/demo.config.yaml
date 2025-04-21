@@ -5,23 +5,5 @@
 
 version: "1"
 
-# profiling:
-#     enabled: true
-#     server_address: "http://pyroscope:4040"
-#     profile_types:
-#       - "cpu"
-#       - "alloc_objects"
-#       - "alloc_space"
-#       - "inuse_objects"
-#       - "inuse_space"
-#     tags:
-#       environment: local
-#       run_id: 1
-
-engine:
-  # max_concurrent_resolvers: 5048
-  debug:
-    report_websocket_connections: true
-    report_memory_usage: true
 
     

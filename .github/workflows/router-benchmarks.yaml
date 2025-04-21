@@ -1,13 +1,213 @@
 name: Router Benchmarks
 
 on:
-  push:
+  pull_request:
     branches:
       - main
 
 
+env:
+  IMAGE_VERSION: "pr-${{ github.sha }}"
+
 jobs:
-  build-docker-images:
+  build-service-images:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - accounts
+          - chat
+          - products
+          
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: 'google-github-actions/auth@v2'
+        id: auth
+        with:
+          service_account: ${{ secrets.TESTING_GCP_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{secrets.TESTING_GCP_WORKLOAD_PROVIDER}}
+  
+      - name: 'Docker auth'
+        run: |-
+          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Build Service Image
+        uses: ./.github/actions/build-push-image-google
+        with:
+          dockerfile: ./benchmarks/benchmark-services/Dockerfile
+          docker_context: ./benchmarks/benchmark-services
+          image_name: ${{ matrix.service }}
+          image_version: ${{ env.IMAGE_VERSION }}
+          image_respository: ${{ secrets.TESTING_DOCKER_REPOSITORY_URL }}
+  
+
+  build-router-images:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: 'google-github-actions/auth@v2'
+        id: auth
+        with:
+          service_account: ${{ secrets.TESTING_GCP_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{secrets.TESTING_GCP_WORKLOAD_PROVIDER}}
+  
+      - name: 'Docker auth'
+        run: |-
+          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Build Router Image
+        uses: ./.github/actions/build-push-image-google
+        with:
+          dockerfile: ./router/Dockerfile
+          docker_context: ./router
+          image_name: router
+          image_version: ${{ env.IMAGE_VERSION }}
+          image_respository: ${{ secrets.TESTING_DOCKER_REPOSITORY_URL }}
+
+  deploy-benchmarker:
+    name: Deploy Benchmarker
+    needs: 
+      - build-service-images
+      - build-router-images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install 1Password CLI
+        uses: 1password/install-cli-action@v1
+
+      - name: Ensure 1Password is logged in
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.TESTING_OP_SERVICE_ACCOUNT_TOKEN }}
+        run: op user get --me
+
+      - uses: 'google-github-actions/auth@v2'
+        id: auth
+        with:
+          service_account: ${{ secrets.TESTING_GCP_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{secrets.TESTING_GCP_WORKLOAD_PROVIDER}}
+
+      - name: 'Docker auth'
+        run: |-
+          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Setup Carvel tools
+        uses: carvel-dev/setup-action@v2
+        with:
+          only: kapp, kbld
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Smoke test if the Carvel tools are working
+        run: |
+          kapp version
+          kbld version
+
+      - name: Set up Kubeconform
+        uses: bmuschko/setup-kubeconform@v1
+        with:
+          kubeconform-version: 0.6.3
+
+      - name: Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TESTING_TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TESTING_TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - id: 'get-credentials'
+        uses: 'google-github-actions/get-gke-credentials@v1'
+        name: Login to GKE
+        with:
+          cluster_name: ${{ secrets.TESTING_CLUSTER_NAME }}
+          use_internal_ip: true
+          project_id: ${{ secrets.TESTING_PROJECT_ID }}
+          location: ${{ secrets.TESTING_REGION }}
+
+      - id: check-namespace
+        run: |
+          echo "result=$(kubectl get namespace  >/dev/null 2>&1 && echo true || echo false)" >> $GITHUB_OUTPUT
+        name: Check if namespace exists
+        env:
+          NAMESPACE: "pr_${{ github.event.number }}"
+
+      - name: Create namespace if it doesn't exist
+        if: steps.check-namespace.outputs.result == 'false'
+        run: |
+          kubectl create namespace ${NAMESPACE}
+        env:
+          NAMESPACE: "pr_${{ github.event.number }}"
+  
+      - name: Deploy
+        working-directory: ./iac/helm/metis-backend
+        run: |
+          make KAPP_ARGS="-y" deploy
+        env:
+          ENVIRONMENT: production
+          NAMESPACE: pr_${{ github.event.number }}
+          IMAGE_VERSION: ${{ env.IMAGE_VERSION }}
+          IMAGE_REPOSITORY: ${{ secrets.TESTING_DOCKER_REPOSITORY_URL }}
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.TESTING_OP_SERVICE_ACCOUNT_TOKEN }}
+
+      
+  run-benchmarks:
+    name: Run Benchmarks
+    needs: 
+      - deploy-benchmarker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - uses: 'google-github-actions/auth@v2'
+        id: auth
+        with:
+          service_account: ${{ secrets.TESTING_GCP_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{secrets.TESTING_GCP_WORKLOAD_PROVIDER}}
+
+      - name: Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TESTING_TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TESTING_TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - id: 'get-credentials'
+        uses: 'google-github-actions/get-gke-credentials@v1'
+        name: Login to GKE
+        with:
+          cluster_name: ${{ secrets.TESTING_CLUSTER_NAME }}
+          use_internal_ip: true
+          project_id: ${{ secrets.TESTING_PROJECT_ID }}
+          location: ${{ secrets.TESTING_REGION }}
+      
+      - name: Install Node
+        uses: ./.github/actions/node
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Setup Kubernetes port-forward daemon
+        uses: vbem/k8s-port-forward@v1
+        with:
+          workload: 'svc/benchmarks-router'
+          options: '--namespace pr_${{ github.event.number }}'
+          mappings: '3002:3002'
+      
+      - name: Setup k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Run k6
+        uses: grafana/run-k6-action@v1
+        # TODO: Add K6_CLOUD_TOKEN and K6_CLOUD_PROJECT_ID to the environment variables
+        # env:
+        #   K6_CLOUD_TOKEN: ${{ secrets.K6_CLOUD_TOKEN }}
+        #   K6_CLOUD_PROJECT_ID: ${{ secrets.K6_CLOUD_PROJECT_ID }}
+        with:
+          fail-fast: true
+          path: |
+            ./benchmarks/benchmark-scenarios/**/*.test.ts
+
+    
+            

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.routerConfigName }}
+data:
+  # property-like keys; each key maps to a simple value
+  router-config.json: |-
+    {{- .Files.Get "router.config.json" }}
