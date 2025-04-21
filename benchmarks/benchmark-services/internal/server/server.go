@@ -34,7 +34,6 @@ func (s *Server) Start(ctx context.Context) error {
 	mux.Handle("/graphql", graphqlServer)
 	mux.Handle("/health", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
-		w.WriteHeader(http.StatusOK)
 	}))
 
 	server := &http.Server{

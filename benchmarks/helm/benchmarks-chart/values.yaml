@@ -15,8 +15,8 @@ router:
       memory: 500Mi
 
   configuration:
-    # We don't need a graphApiToken for the benchmarks, we will be using a static config
-    graphApiToken: null
+    # We don't need a graphApiToken for the benchmarks, we are using a static config
+    graphApiToken: ""
 
 accounts:
   fullnameOverride: accounts-service
