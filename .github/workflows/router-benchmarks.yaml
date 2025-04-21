@@ -160,7 +160,7 @@ jobs:
 
       - name: Generate proto
         run: |
-          make generate
+          pnpm generate
       
       - name: Build PNPM
         run: |
