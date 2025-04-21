@@ -44,9 +44,9 @@ spec:
               protocol: TCP
           env:
             - name: SERVICE_NAME
-              value: {{ .Values.fullnameOverride }}
+              value: {{ .Values.fullnameOverride | quote }}
             - name: PORT
-              value: {{ .Values.service.port }}
+              value: {{ .Values.service.port | quote }}
             {{- with .Values.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
