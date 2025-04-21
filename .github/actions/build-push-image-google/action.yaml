@@ -24,6 +24,9 @@ inputs:
   image_respository:
     description: "The repository of the image"
     required: true
+  build_args:
+    description: "The build arguments to pass to the build"
+    default: ""
 outputs:
   image_ref:
     description: "The reference of the image that was built"
@@ -85,3 +88,4 @@ runs:
           VERSION=${{ github.sha }}
           DATE=${{ env.BUILD_TIME }}
           COMMIT=${{ github.sha }}
+          ${inputs.build_args}

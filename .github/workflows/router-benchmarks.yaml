@@ -47,6 +47,8 @@ jobs:
           image_name: ${{ matrix.service }}
           image_version: ${{ env.IMAGE_VERSION }}
           image_respository: ${{ secrets.TESTING_DOCKER_REPOSITORY_URL }}
+          build_args: |
+            SERVICE_NAME=${{ matrix.service }}
   
 
   build-router-images:
