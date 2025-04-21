@@ -154,6 +154,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
   
+      - name: Copy .env.example to .env
+        run: |
+          cp ./cli/.env.example ./cli/.env
   
       - name: Deploy
         working-directory: ./benchmarks
