@@ -149,7 +149,7 @@ jobs:
           NAMESPACE: "pr-${{ github.event.number }}"
   
       - name: Deploy
-        working-directory: ./benchmarks/helm
+        working-directory: ./benchmarks
         run: |
           make deploy-benchmarker
         env:
