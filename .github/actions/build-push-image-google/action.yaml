@@ -88,4 +88,4 @@ runs:
           VERSION=${{ github.sha }}
           DATE=${{ env.BUILD_TIME }}
           COMMIT=${{ github.sha }}
-          ${inputs.build_args}
+          ${{ inputs.build_args }}
