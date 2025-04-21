@@ -1,9 +1,15 @@
-name: Router Benchmarks
+name: Router Benchmarks (Manual)
 
 on:
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        type: number
+        description: "The PR number to run the benchmarks for"
+      build-images:
+        type: boolean
+        description: "Whether to build the images"
+        default: false
 
 
 env:
@@ -19,6 +25,7 @@ permissions:
 jobs:
   build-service-images:
     runs-on: ubuntu-latest
+    if: ${{ inputs.build-images == 'true' }}
     strategy:
       matrix:
         service:
@@ -53,6 +60,7 @@ jobs:
 
   build-router-images:
     runs-on: ubuntu-latest
+    if: ${{ inputs.build-images == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -77,6 +85,7 @@ jobs:
 
   deploy-benchmarker:
     name: Deploy Benchmarker
+    if: ${{ inputs.build-images == 'true' }}
     needs: 
       - build-service-images
       - build-router-images
@@ -139,14 +148,14 @@ jobs:
           echo "result=$(kubectl get namespace ${NAMESPACE} >/dev/null 2>&1 && echo true || echo false)" >> $GITHUB_OUTPUT
         name: Check if namespace exists
         env:
-          NAMESPACE: "pr-${{ github.event.number }}"
+          NAMESPACE: "pr-${{ inputs.pr-number }}"
 
       - name: Create namespace if it doesn't exist
         if: steps.check-namespace.outputs.result == 'false'
         run: |
           kubectl create namespace ${NAMESPACE}
         env:
-          NAMESPACE: "pr-${{ github.event.number }}"
+          NAMESPACE: "pr-${{ inputs.pr-number }}"
 
       - name: Install Node
         uses: ./.github/actions/node
@@ -172,14 +181,15 @@ jobs:
           make deploy-benchmarker
         env:
           ENVIRONMENT: production
-          NAMESPACE: pr-${{ github.event.number }}
+          NAMESPACE: pr-${{ inputs.pr-number }}
           IMAGE_VERSION: ${{ env.IMAGE_VERSION }}
           IMAGE_REPOSITORY: ${{ secrets.TESTING_DOCKER_REPOSITORY_URL }}
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.TESTING_OP_SERVICE_ACCOUNT_TOKEN }}
 
       
   run-benchmarks:
-    name: Run Benchmarks
+    name: Run Benchmarks after Deployment
+    if: ${{ inputs.build-images == 'true' }}
     needs: 
       - deploy-benchmarker
     runs-on: ubuntu-latest
@@ -219,7 +229,7 @@ jobs:
         uses: vbem/k8s-port-forward@v1
         with:
           workload: 'svc/benchmarks-router'
-          options: '--namespace pr-${{ github.event.number }}'
+          options: '--namespace pr-${{ inputs.pr-number }}'
           mappings: '3002:3002'
       
       - name: Setup k6
@@ -237,4 +247,59 @@ jobs:
             ./benchmarks/benchmark-scenarios/**/*.test.ts
 
     
-            
+  run-benchmarks-without-deployment:
+    name: Run Benchmarks without Deployment
+    if: ${{ inputs.build-images == 'false' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+                
+      - uses: 'google-github-actions/auth@v2'
+        id: auth
+        with:
+          service_account: ${{ secrets.TESTING_GCP_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{secrets.TESTING_GCP_WORKLOAD_PROVIDER}}
+          
+      - name: Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TESTING_TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TESTING_TS_OAUTH_SECRET }}
+          tags: tag:ci
+          
+      - id: 'get-credentials'
+        uses: 'google-github-actions/get-gke-credentials@v1'
+        name: Login to GKE
+        with:
+          cluster_name: ${{ secrets.TESTING_CLUSTER_NAME }}
+          use_internal_ip: true
+          project_id: ${{ secrets.TESTING_PROJECT_ID }}
+          location: ${{ secrets.TESTING_REGION }}
+                
+      - name: Install Node
+        uses: ./.github/actions/node
+          
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+                
+      - name: Setup Kubernetes port-forward daemon
+        uses: vbem/k8s-port-forward@v1
+        with:
+          workload: 'svc/benchmarks-router'
+          options: '--namespace pr-${{ inputs.pr-number }}'
+          mappings: '3002:3002'
+                
+      - name: Setup k6
+        uses: grafana/setup-k6-action@v1
+          
+      - name: Run k6
+        uses: grafana/run-k6-action@v1
+        # TODO: Add K6_CLOUD_TOKEN and K6_CLOUD_PROJECT_ID to the environment variables
+        # env:
+        #   K6_CLOUD_TOKEN: ${{ secrets.K6_CLOUD_TOKEN }}
+        #   K6_CLOUD_PROJECT_ID: ${{ secrets.K6_CLOUD_PROJECT_ID }}
+        with:
+          fail-fast: true
+          path: |
+            ./benchmarks/benchmark-scenarios/**/*.test.ts
