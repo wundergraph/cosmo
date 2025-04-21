@@ -19,3 +19,5 @@ graphqlmetrics:
   - "graphqlmetrics/**/*"
 aws-lambda-router:
   - "aws-lambda-router/**/*"
+router-benchmarks:
+  - "benchmarks/**/*"
