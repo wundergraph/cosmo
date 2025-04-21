@@ -59,6 +59,7 @@ export function updateIntegrationConfig(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'integration.updated',
       action: 'updated',
       actorId: authContext.userId,

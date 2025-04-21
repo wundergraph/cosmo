@@ -172,6 +172,7 @@ export function updateProposal(
 
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
         auditAction:
           stateValue === 'APPROVED'
             ? 'proposal.approved'
@@ -407,6 +408,7 @@ export function updateProposal(
 
       await auditLogRepo.addAuditLog({
         organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
         auditAction: 'proposal.updated',
         action: 'updated',
         actorId: authContext.userId,

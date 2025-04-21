@@ -161,6 +161,7 @@ export function createFeatureFlag(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'feature_flag.created',
       action: 'created',
       actorId: authContext.userId,

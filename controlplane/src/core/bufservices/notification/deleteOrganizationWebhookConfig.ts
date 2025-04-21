@@ -68,6 +68,7 @@ export function deleteOrganizationWebhookConfig(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'webhook_config.deleted',
       action: 'deleted',
       actorId: authContext.userId,

@@ -126,6 +126,20 @@
       }
     ]
   },
+  "MCP": {
+    "Enabled": false,
+    "Server": {
+      "Port": 5025
+    },
+    "Storage": {
+      "ProviderID": "mcp"
+    },
+    "GraphName": "cosmo",
+    "ExcludeMutations": false,
+    "EnableArbitraryOperations": false,
+    "ExposeSchema": false,
+    "RouterURL": "https://cosmo-router.wundergraph.com"
+  },
   "Modules": {
     "myModule": {
       "value": 1
@@ -693,6 +707,12 @@
           "test2@localhost:8001"
         ],
         "ClusterEnabled": false
+      }
+    ],
+    "FileSystem": [
+      {
+        "ID": "mcp",
+        "Path": "operations"
       }
     ]
   },

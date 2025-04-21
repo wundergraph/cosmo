@@ -660,9 +660,10 @@ type SubgraphErrorPropagationConfiguration struct {
 }
 
 type StorageProviders struct {
-	S3    []S3StorageProvider    `yaml:"s3,omitempty"`
-	CDN   []BaseStorageProvider  `yaml:"cdn,omitempty"`
-	Redis []RedisStorageProvider `yaml:"redis,omitempty"`
+	S3         []S3StorageProvider         `yaml:"s3,omitempty"`
+	CDN        []CDNStorageProvider        `yaml:"cdn,omitempty"`
+	Redis      []RedisStorageProvider      `yaml:"redis,omitempty"`
+	FileSystem []FileSystemStorageProvider `yaml:"file_system,omitempty"`
 }
 
 type PersistedOperationsStorageConfig struct {
@@ -685,9 +686,14 @@ type S3StorageProvider struct {
 	Secure    bool   `yaml:"secure,omitempty"`
 }
 
-type BaseStorageProvider struct {
+type CDNStorageProvider struct {
 	ID  string `yaml:"id,omitempty"`
 	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com"`
+}
+
+type FileSystemStorageProvider struct {
+	ID   string `yaml:"id,omitempty" env:"STORAGE_PROVIDER_FS_ID"`
+	Path string `yaml:"path,omitempty" env:"STORAGE_PROVIDER_FS_PATH"`
 }
 
 type RedisStorageProvider struct {
@@ -870,6 +876,25 @@ type CacheWarmupConfiguration struct {
 	Timeout        time.Duration     `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
 }
 
+type MCPConfiguration struct {
+	Enabled                   bool             `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
+	Server                    MCPServer        `yaml:"server,omitempty"`
+	Storage                   MCPStorageConfig `yaml:"storage,omitempty"`
+	GraphName                 string           `yaml:"graph_name" envDefault:"cosmo" env:"MCP_GRAPH_NAME"`
+	ExcludeMutations          bool             `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
+	EnableArbitraryOperations bool             `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
+	ExposeSchema              bool             `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
+	RouterURL                 string           `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
+}
+
+type MCPStorageConfig struct {
+	ProviderID string `yaml:"provider_id,omitempty" env:"MCP_STORAGE_PROVIDER_ID"`
+}
+
+type MCPServer struct {
+	Port int `yaml:"port" envDefault:"5025" env:"MCP_SERVER_PORT"`
+}
+
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
@@ -882,6 +907,7 @@ type Config struct {
 	Compliance     ComplianceConfig   `yaml:"compliance,omitempty"`
 	TLS            TLSConfiguration   `yaml:"tls,omitempty"`
 	CacheControl   CacheControlPolicy `yaml:"cache_control_policy"`
+	MCP            MCPConfiguration   `yaml:"mcp,omitempty"`
 
 	Modules        map[string]interface{} `yaml:"modules,omitempty"`
 	Headers        HeaderRules            `yaml:"headers,omitempty"`

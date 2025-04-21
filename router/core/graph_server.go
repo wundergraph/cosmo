@@ -5,18 +5,17 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"github.com/cespare/xxhash/v2"
-	"github.com/wundergraph/cosmo/router/pkg/execution_config"
-	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	otelmetric "go.opentelemetry.io/otel/metric"
-	oteltrace "go.opentelemetry.io/otel/trace"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
+	"github.com/cespare/xxhash/v2"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	otelmetric "go.opentelemetry.io/otel/metric"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto/v2"
@@ -28,6 +27,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/atomic"
@@ -79,6 +79,7 @@ type (
 		context                 context.Context
 		cancelFunc              context.CancelFunc
 		pubSubProviders         *EnginePubSubProviders
+		storageProviders        *config.StorageProviders
 		engineStats             statistics.EngineStatistics
 		playgroundHandler       func(http.Handler) http.Handler
 		publicKey               *ecdsa.PublicKey
@@ -140,6 +141,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			nats:  map[string]pubsub_datasource.NatsPubSub{},
 			kafka: map[string]pubsub_datasource.KafkaPubSub{},
 		},
+		storageProviders: &r.storageProviders,
 	}
 
 	baseOtelAttributes := []attribute.KeyValue{
@@ -601,18 +603,23 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 	if s.planCache != nil {
 		s.planCache.Close()
 	}
+
 	if s.persistedOperationCache != nil {
 		s.persistedOperationCache.Close()
 	}
+
 	if s.normalizationCache != nil {
 		s.normalizationCache.Close()
 	}
+
 	if s.complexityCalculationCache != nil {
 		s.complexityCalculationCache.Close()
 	}
+
 	if s.validationCache != nil {
 		s.validationCache.Close()
 	}
+
 	if s.operationHashCache != nil {
 		s.operationHashCache.Close()
 	}
@@ -997,6 +1004,13 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		DisableExposingVariablesContentOnValidationError: s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
+
+	// We support the MCP only on the base graph. Feature flags are not supported yet.
+	if featureFlagName == "" && s.mcpServer != nil {
+		if mErr := s.mcpServer.Reload(executor.ClientSchema); mErr != nil {
+			return nil, fmt.Errorf("failed to reload MCP server: %w", mErr)
+		}
+	}
 
 	if s.Config.cacheWarmup != nil && s.Config.cacheWarmup.Enabled {
 

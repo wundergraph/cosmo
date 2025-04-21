@@ -33,26 +33,26 @@
     "storage_providers": {
       "type": "object",
       "additionalProperties": false,
-      "description": "The configuration for the storage providers. Storage providers can be used to store the persisted operations and the execution config.",
+      "description": "The configuration for the storage providers. Storage providers can be used to provide access to persisted operations, router execution config and MCP operations.",
       "properties": {
         "cdn": {
           "type": "array",
           "items": {
             "type": "object",
             "required": [
-              "url",
-              "id"
+              "id",
+              "url"
             ],
             "additionalProperties": false,
             "properties": {
               "id": {
                 "type": "string",
-                "description": "The ID of the storage provider. The ID is used to identify the storage provider in the configuration."
+                "description": "The provider ID. The provider ID is used to identify the provider in the configuration."
               },
               "url": {
                 "type": "string",
-                "description": "The URL of the CDN. The URL is specified as a string with the format 'scheme://host:port'.",
-                "default": "https://cosmo-cdn.wundergraph.com"
+                "description": "The provider URL. The URL is used to connect to the provider.",
+                "format": "url"
               }
             }
           }
@@ -62,26 +62,25 @@
           "items": {
             "type": "object",
             "required": [
-              "urls",
-              "id"
+              "id",
+              "urls"
             ],
             "additionalProperties": false,
             "properties": {
               "id": {
                 "type": "string",
-                "description": "The ID of the redis provider. The ID is used to identify the storage provider in the configuration."
+                "description": "The provider ID. The provider ID is used to identify the provider in the configuration."
               },
               "urls": {
                 "type": "array",
-                "description": "The cluster connection URLs. The values are specified as a string with the format 'scheme://host:port'. If cluster enabled, will use these urls for a cluster connection. If cluster is not enabled, we will just select the first URL provided.",
-                "default": [],
+                "description": "List of Redis URLs to connect to. If cluster_enabled is true, these are the seeds to discover the cluster.",
                 "items": {
                   "type": "string"
                 }
               },
               "cluster_enabled": {
                 "type": "boolean",
-                "description": "Enable Redis Cluster connection, using the supplied URLs.",
+                "description": "Whether to use the Redis Cluster client.",
                 "default": false
               }
             }
@@ -89,43 +88,67 @@
         },
         "s3": {
           "type": "array",
-          "description": "The configuration for the S3 storage provider. If no access key and secret key are provided, the provider will attempt to retreieve IAM credentials from the EC2 service.",
+          "description": "The S3 configuration. The S3 provider is used to store and retrieve data.",
           "items": {
             "type": "object",
             "required": [
-              "bucket",
-              "id"
+              "id",
+              "endpoint",
+              "access_key",
+              "secret_key",
+              "bucket"
             ],
             "additionalProperties": false,
             "properties": {
               "id": {
                 "type": "string",
-                "description": "The ID of the storage provider. The ID is used to identify the storage provider in the configuration."
-              },
-              "bucket": {
-                "type": "string",
-                "description": "The name of the S3 bucket. The S3 bucket is used to store the execution config."
-              },
-              "region": {
-                "type": "string",
-                "description": "The region of the S3 bucket. The region is used to specify the region of the S3 bucket."
-              },
-              "access_key": {
-                "type": "string",
-                "description": "The access key of the S3 bucket. The access key ID is used to authenticate with the S3 bucket."
-              },
-              "secret_key": {
-                "type": "string",
-                "description": "The secret key of the S3 bucket. The secret access key is used to authenticate with the S3 bucket."
+                "description": "The provider ID. The provider ID is used to identify the provider in the configuration."
               },
               "endpoint": {
                 "type": "string",
-                "description": "The endpoint of the S3 bucket. The endpoint is used to specify the endpoint of the S3 bucket."
+                "description": "The S3 endpoint to use."
+              },
+              "access_key": {
+                "type": "string",
+                "description": "The S3 access key to use."
+              },
+              "secret_key": {
+                "type": "string",
+                "description": "The S3 secret key to use."
+              },
+              "bucket": {
+                "type": "string",
+                "description": "The S3 bucket to use."
+              },
+              "region": {
+                "type": "string",
+                "description": "The S3 region to use."
               },
               "secure": {
                 "type": "boolean",
-                "default": true,
-                "description": "Enable the secure connection. The secure connection is used to establish a secure connection with the S3 bucket."
+                "description": "Whether to use HTTPS for the S3 connection."
+              }
+            }
+          }
+        },
+        "file_system": {
+          "type": "array",
+          "description": "The file system configuration. The file system provider is used to store and retrieve data from the local file system.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "path"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The provider ID. The provider ID is used to identify the provider in the configuration."
+              },
+              "path": {
+                "type": "string",
+                "description": "The file system path where data is stored and retrieved."
               }
             }
           }
@@ -1874,6 +1897,69 @@
         }
       }
     },
+    "mcp": {
+      "type": "object",
+      "description": "The configuration for the Model Context Protocol (MCP) server. MCP allows AI models to interact with your GraphQL APIs. By exposing individual GraphQL operations to the model, you can open your graph to empower AI agents working with your data. See https://cosmo-docs.wundergraph.com/router/mcp for more information.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the MCP server. If the value is true, the MCP server will be started."
+        },
+        "server": {
+          "type": "object",
+          "description": "Server configuration for the MCP server.",
+          "additionalProperties": false,
+          "properties": {
+            "port": {
+              "type": "integer",
+              "default": "5025",
+              "description": "The port where the MCP server will listen for requests. The default value is '5025'."
+            }
+          }
+        },
+        "router_url": {
+          "type": "string",
+          "description": "Custom URL to use for the router GraphQL endpoint in MCP. Use this when your router is behind a proxy. This information is used in MCP responses to provide the real router URL to AI models.",
+          "format": "url"
+        },
+        "storage": {
+          "type": "object",
+          "description": "Storage provider configuration for the MCP server. This specifies where GraphQL operations are loaded from.",
+          "additionalProperties": false,
+          "properties": {
+            "provider_id": {
+              "type": "string",
+              "description": "The ID of the storage provider to use for loading GraphQL operations. Only storage provider of type 'file_system' are supported. The provider must be configured in the storage_providers section."
+            }
+          },
+          "required": [
+            "provider_id"
+          ]
+        },
+        "graph_name": {
+          "type": "string",
+          "default": "cosmo",
+          "description": "The name of the graph to be used as suffix for the MCP server name. The default value is 'wundergraph-cosmo-graph'."
+        },
+        "exclude_mutations": {
+          "type": "boolean",
+          "default": false,
+          "description": "Exclude mutation operations from being exposed via MCP. This provides an additional security layer to prevent AI models from modifying data."
+        },
+        "enable_arbitrary_operations": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable arbitrary GraphQL operation execution through MCP. This allows AI models to execute any valid GraphQL query, mutation. Subscriptions are not supported yet. This is a powerful feature and should be used with caution."
+        },
+        "expose_schema": {
+          "type": "boolean",
+          "default": false,
+          "description": "Expose the full GraphQL schema through MCP. When enabled, AI models can request the complete schema of your API."
+        }
+      }
+    },
     "events": {
       "type": "object",
       "description": "The configuration for EDFS. See https://cosmo-docs.wundergraph.com/router/event-driven-federated-subscriptions-edfs for more information.",
@@ -2646,7 +2732,7 @@
         },
         "suppress_fetch_errors": {
           "type": "object",
-          "description": "Suppresses fetch errors. When enabled, only the ‘data’ object is returned, suppressing errors. If disabled, fetch errors are included in the ‘errors’ array.",
+          "description": "Suppresses fetch errors. When enabled, only the 'data' object is returned, suppressing errors. If disabled, fetch errors are included in the 'errors' array.",
           "additionalProperties": false,
           "properties": {
             "enabled": {
@@ -2690,7 +2776,7 @@
         },
         "subscription_multipart_print_boundary": {
           "type": "object",
-          "description": "Prints the multipart boundary right after the message in multipart subscriptions. Without this flag, the Apollo client wouldn’t parse a message until the next one is pushed.",
+          "description": "Prints the multipart boundary right after the message in multipart subscriptions. Without this flag, the Apollo client wouldn't parse a message until the next one is pushed.",
           "additionalProperties": false,
           "properties": {
             "enabled": {

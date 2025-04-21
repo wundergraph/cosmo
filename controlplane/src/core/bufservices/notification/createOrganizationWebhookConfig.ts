@@ -69,6 +69,7 @@ export function createOrganizationWebhookConfig(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'webhook_config.created',
       action: 'created',
       actorId: authContext.userId,
