@@ -19,5 +19,5 @@ run-scenarios:
 
 .PHONY: deploy-benchmarker
 deploy-benchmarker: setup-cluster
-	cd ./helm && make deploy
+	cd ./helm && make KAPP_ARGS="-y" deploy
 	

@@ -72,6 +72,8 @@ runs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         platforms: ${{ inputs.image_platforms }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
         outputs:
           type=image,name=target,annotation-index.org.opencontainers.image.description=${{ inputs.image_description }}
           type=image,name=target,annotation-index.org.opencontainers.image.source=https://github.com/wundergraph/cosmo

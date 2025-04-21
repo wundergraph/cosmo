@@ -149,9 +149,9 @@ jobs:
           NAMESPACE: "pr-${{ github.event.number }}"
   
       - name: Deploy
-        working-directory: ./iac/helm/metis-backend
+        working-directory: ./benchmarks/helm
         run: |
-          make KAPP_ARGS="-y" deploy
+          make deploy-benchmarker
         env:
           ENVIRONMENT: production
           NAMESPACE: pr-${{ github.event.number }}
