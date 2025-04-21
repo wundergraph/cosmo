@@ -9,6 +9,13 @@ on:
 env:
   IMAGE_VERSION: "pr-${{ github.sha }}"
 
+permissions:
+  packages: read
+  id-token: write
+  contents: write
+  issues: write
+  pull-requests: write
+
 jobs:
   build-service-images:
     runs-on: ubuntu-latest
@@ -127,7 +134,7 @@ jobs:
 
       - id: check-namespace
         run: |
-          echo "result=$(kubectl get namespace  >/dev/null 2>&1 && echo true || echo false)" >> $GITHUB_OUTPUT
+          echo "result=$(kubectl get namespace ${NAMESPACE} >/dev/null 2>&1 && echo true || echo false)" >> $GITHUB_OUTPUT
         name: Check if namespace exists
         env:
           NAMESPACE: "pr_${{ github.event.number }}"

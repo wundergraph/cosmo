@@ -1,0 +1,91 @@
+name: Router Benchmarks Teardown
+
+on:
+  pull_request:
+    types: [ closed ]
+
+
+jobs:
+  teardown:
+    runs-on: ubuntu-latest
+    if: github.event.number != null
+    env:
+      NAMESPACE: pr_${{ github.event.number }}
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install 1Password CLI
+        uses: 1password/install-cli-action@v1
+
+      - name: Ensure 1Password is logged in
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.TESTING_OP_SERVICE_ACCOUNT_TOKEN }}
+        run: op user get --me
+
+      - uses: 'google-github-actions/auth@v2'
+        id: auth
+        with:
+          service_account: ${{ secrets.TESTING_GCP_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{secrets.TESTING_GCP_WORKLOAD_PROVIDER}}
+
+      - name: 'Docker auth'
+        run: |-
+          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Setup Carvel tools
+        uses: carvel-dev/setup-action@v2
+        with:
+          only: kapp, kbld
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Smoke test if the Carvel tools are working
+        run: |
+          kapp version
+          kbld version
+
+      - name: Set up Kubeconform
+        uses: bmuschko/setup-kubeconform@v1
+        with:
+          kubeconform-version: 0.6.3
+
+      - name: Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TESTING_TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TESTING_TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - id: 'get-credentials'
+        uses: 'google-github-actions/get-gke-credentials@v1'
+        name: Login to GKE
+        with:
+          cluster_name: ${{ secrets.TESTING_CLUSTER_NAME }}
+          use_internal_ip: true
+          project_id: ${{ secrets.TESTING_PROJECT_ID }}
+          location: ${{ secrets.TESTING_REGION }}
+      
+      - id: check-namespace
+        run: |
+          echo "result=$(kubectl get namespace ${{ env.NAMESPACE }} >/dev/null 2>&1 && echo true || echo false)" >> $GITHUB_OUTPUT
+        name: Check if namespace exists
+        env:
+          NAMESPACE: ${{ env.NAMESPACE }}
+
+      - name: Delete Benchmarking Services
+        if: steps.check-namespace.outputs.result == 'true'
+        working-directory: ./benchmarks/helm
+        run: |
+          make KAPP_ARGS="-y" delete
+        env:
+          NAMESPACE: ${{ env.NAMESPACE }}
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.TESTING_OP_SERVICE_ACCOUNT_TOKEN }}
+
+  
+      - name: Delete Namespace
+        if: steps.check-namespace.outputs.result == 'true'
+        run: |
+          kubectl delete namespace ${{ env.NAMESPACE }}
