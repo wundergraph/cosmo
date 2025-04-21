@@ -139,14 +139,14 @@ jobs:
           echo "result=$(kubectl get namespace ${NAMESPACE} >/dev/null 2>&1 && echo true || echo false)" >> $GITHUB_OUTPUT
         name: Check if namespace exists
         env:
-          NAMESPACE: "pr_${{ github.event.number }}"
+          NAMESPACE: "pr-${{ github.event.number }}"
 
       - name: Create namespace if it doesn't exist
         if: steps.check-namespace.outputs.result == 'false'
         run: |
           kubectl create namespace ${NAMESPACE}
         env:
-          NAMESPACE: "pr_${{ github.event.number }}"
+          NAMESPACE: "pr-${{ github.event.number }}"
   
       - name: Deploy
         working-directory: ./iac/helm/metis-backend
@@ -154,7 +154,7 @@ jobs:
           make KAPP_ARGS="-y" deploy
         env:
           ENVIRONMENT: production
-          NAMESPACE: pr_${{ github.event.number }}
+          NAMESPACE: pr-${{ github.event.number }}
           IMAGE_VERSION: ${{ env.IMAGE_VERSION }}
           IMAGE_REPOSITORY: ${{ secrets.TESTING_DOCKER_REPOSITORY_URL }}
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.TESTING_OP_SERVICE_ACCOUNT_TOKEN }}

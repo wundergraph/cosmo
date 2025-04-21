@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.number != null
     env:
-      NAMESPACE: pr_${{ github.event.number }}
+      NAMESPACE: pr-${{ github.event.number }}
     permissions:
       contents: read
       packages: read
