@@ -10,7 +10,7 @@ deploy: build
 
 .PHONY: build
 build: load-secrets
-	helm template --debug benchmarks -n ${NAMESPACE} --create-namespace -f ./.generated/values.yaml --set-file router.configuration.executionConfig=./.generated/router.config.json ./benchmarks-chart > .generated/benchmarks-cloud.yaml
+	helm template --debug benchmarks -n ${NAMESPACE} --create-namespace -f ./.generated/values.yaml --set-file router.configuration.executionConfig=./router.config.json ./benchmarks-chart > .generated/benchmarks-cloud.yaml
 	kbld -f .generated/benchmarks-cloud.yaml > .generated/benchmarks-cloud.resolved.yaml
 
 .PHONY: delete
@@ -19,7 +19,6 @@ delete:
 
 .PHONY: load-secrets
 load-secrets: load-deployment-secrets inject-versions inject-image-repository
-
 
 .PHONY: load-deployment-secrets
 load-deployment-secrets:
