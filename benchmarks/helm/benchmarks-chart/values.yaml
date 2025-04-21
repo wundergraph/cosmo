@@ -14,6 +14,9 @@ router:
       cpu: 100m
       memory: 500Mi
 
+  configuration:
+    graphApiToken: null
+
 accounts:
   fullnameOverride: accounts-service
 
