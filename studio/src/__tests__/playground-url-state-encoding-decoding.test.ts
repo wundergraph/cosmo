@@ -43,6 +43,11 @@ describe("buildStateToShare", () => {
     const result = buildStateToShare(selected, tab);
 
     expect(result).toEqual({ operation: "query MyEmployees { hello }" });
+    expect(result).not.toHaveProperty("headers");
+    expect(result).not.toHaveProperty("variables");
+    expect(result).not.toHaveProperty("preFlight");
+    expect(result).not.toHaveProperty("preOperation");
+    expect(result).not.toHaveProperty("postOperation");
   });
 
   test("includes all selected fields", () => {
