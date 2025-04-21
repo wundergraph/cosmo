@@ -147,6 +147,13 @@ jobs:
           kubectl create namespace ${NAMESPACE}
         env:
           NAMESPACE: "pr-${{ github.event.number }}"
+
+      - name: Install Node
+        uses: ./.github/actions/node
+  
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+  
   
       - name: Deploy
         working-directory: ./benchmarks
