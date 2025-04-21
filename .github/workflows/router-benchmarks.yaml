@@ -157,6 +157,14 @@ jobs:
       - name: Copy .env.example to .env
         run: |
           cp ./cli/.env.example ./cli/.env
+
+      - name: Generate proto
+        run: |
+          make generate
+      
+      - name: Build PNPM
+        run: |
+          pnpm -r run --filter '!studio' build
   
       - name: Deploy
         working-directory: ./benchmarks
