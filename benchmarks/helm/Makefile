@@ -46,7 +46,7 @@ inject-versions:
 
 .PHONY: inject-image-repository
 inject-image-repository:
-	yq -i '.router.image.repository = "${IMAGE_REPOSITORY}"' ./.generated/values.yaml
-	yq -i '.accounts.image.repository = "${IMAGE_REPOSITORY}"' ./.generated/values.yaml
-	yq -i '.chat.image.repository = "${IMAGE_REPOSITORY}"' ./.generated/values.yaml
-	yq -i '.products.image.repository = "${IMAGE_REPOSITORY}"' ./.generated/values.yaml
+	yq -i '.router.image.registry = "${IMAGE_REPOSITORY}"' ./.generated/values.yaml
+	yq -i '.accounts.image.registry = "${IMAGE_REPOSITORY}"' ./.generated/values.yaml
+	yq -i '.chat.image.registry = "${IMAGE_REPOSITORY}"' ./.generated/values.yaml
+	yq -i '.products.image.registry = "${IMAGE_REPOSITORY}"' ./.generated/values.yaml
