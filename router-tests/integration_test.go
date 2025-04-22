@@ -53,7 +53,10 @@ func TestSimpleQuery(t *testing.T) {
 func TestNoSubgraphConfig(t *testing.T) {
 	t.Parallel()
 
-	testenv.RunRouterBinary(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+	testenv.RunRouterBinary(t, &testenv.Config{
+		UseDemoConfig: true,
+		NoRetryClient: true,
+	}, func(t *testing.T, xEnv *testenv.Environment) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `query { hello }`,
 		})

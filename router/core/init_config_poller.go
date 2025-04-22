@@ -23,11 +23,6 @@ func getConfigClient(r *Router, cdnProviders map[string]config.CDNStorageProvide
 			)
 		}
 
-		retryIfNotFound := true
-		if r.routerConfigPollerConfig.Storage.IfNotFound == config.ExecutionConfigStorageIfNotFoundError {
-			retryIfNotFound = false
-		}
-
 		c, err := configCDNProvider.NewClient(
 			provider.URL,
 			r.graphApiToken,
@@ -35,7 +30,7 @@ func getConfigClient(r *Router, cdnProviders map[string]config.CDNStorageProvide
 				Logger:                     r.logger,
 				SignatureKey:               r.routerConfigPollerConfig.GraphSignKey,
 				RouterCompatibilityVersion: execution_config.RouterCompatibilityVersionThreshold,
-				RetryIfNotFound:            retryIfNotFound,
+				UseDemoConfig:              r.routerConfigPollerConfig.UseDemoConfig,
 			})
 		if err != nil {
 			return nil, err
@@ -55,11 +50,6 @@ func getConfigClient(r *Router, cdnProviders map[string]config.CDNStorageProvide
 		return &c, nil
 	}
 
-	retryIfNotFound := true
-	if r.routerConfigPollerConfig.Storage.IfNotFound == config.ExecutionConfigStorageIfNotFoundError {
-		retryIfNotFound = false
-	}
-
 	// S3 Providers
 	if provider, ok := s3Providers[providerID]; ok {
 		clientOptions := &configs3Provider.ClientOptions{
@@ -75,7 +65,7 @@ func getConfigClient(r *Router, cdnProviders map[string]config.CDNStorageProvide
 			clientOptions.ObjectPath = r.routerConfigPollerConfig.FallbackStorage.ObjectPath
 		}
 
-		c, err := configs3Provider.NewClient(provider.Endpoint, clientOptions, retryIfNotFound)
+		c, err := configs3Provider.NewClient(provider.Endpoint, clientOptions, r.routerConfigPollerConfig.UseDemoConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -109,7 +99,7 @@ func getConfigClient(r *Router, cdnProviders map[string]config.CDNStorageProvide
 		Logger:                     r.logger,
 		SignatureKey:               r.routerConfigPollerConfig.GraphSignKey,
 		RouterCompatibilityVersion: execution_config.RouterCompatibilityVersionThreshold,
-		RetryIfNotFound:            retryIfNotFound,
+		UseDemoConfig:              r.routerConfigPollerConfig.UseDemoConfig,
 	})
 	if err != nil {
 		return nil, err

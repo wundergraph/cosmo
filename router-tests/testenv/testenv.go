@@ -272,6 +272,7 @@ type Config struct {
 	ModifySubgraphErrorPropagation     func(subgraphErrorPropagation *config.SubgraphErrorPropagationConfiguration)
 	ModifyWebsocketConfiguration       func(websocketConfiguration *config.WebSocketConfiguration)
 	ModifyCDNConfig                    func(cdnConfig *config.CDNConfiguration)
+	UseDemoConfig                      bool
 	KafkaSeeds                         []string
 	DisableWebSockets                  bool
 	DisableParentBasedSampler          bool
@@ -798,6 +799,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 	if testConfig.ModifyCDNConfig != nil {
 		testConfig.ModifyCDNConfig(&cfg.CDN)
+	}
+
+	if testConfig.UseDemoConfig {
+		cfg.ExecutionConfig.UseDemoConfig = true
 	}
 
 	graphApiToken, err := generateJwtToken()

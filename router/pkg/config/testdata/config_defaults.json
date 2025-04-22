@@ -398,14 +398,14 @@
     },
     "Storage": {
       "ProviderID": "",
-      "ObjectPath": "",
-      "IfNotFound": "retry"
+      "ObjectPath": ""
     },
     "FallbackStorage": {
       "Enabled": false,
       "ProviderID": "",
       "ObjectPath": ""
-    }
+    },
+    "UseDemoConfig": false
   },
   "PersistedOperationsConfig": {
     "LogUnknown": false,

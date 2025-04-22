@@ -40,7 +40,7 @@ type Options struct {
 	Logger                     *zap.Logger
 	SignatureKey               string
 	RouterCompatibilityVersion int
-	RetryIfNotFound            bool
+	UseDemoConfig              bool
 }
 
 type Client struct {
@@ -56,7 +56,7 @@ type Client struct {
 	logger                     *zap.Logger
 	hash                       hash.Hash
 	routerCompatibilityVersion int
-	retryIfNotFound            bool
+	useDemoConfig              bool
 }
 
 type routerConfigNotFoundError struct {
@@ -106,7 +106,7 @@ func NewClient(endpoint string, token string, opts *Options) (routerconfig.Clien
 		httpClient:                 httpclient.NewRetryableHTTPClient(logger),
 		logger:                     opts.Logger,
 		routerCompatibilityVersion: opts.RouterCompatibilityVersion,
-		retryIfNotFound:            opts.RetryIfNotFound,
+		useDemoConfig:              opts.UseDemoConfig,
 	}
 
 	if opts.SignatureKey != "" {
@@ -231,7 +231,7 @@ func (cdn *Client) RouterConfig(ctx context.Context, version string, modifiedSin
 	res := &routerconfig.Response{}
 
 	body, err := cdn.getRouterConfig(ctx, version, modifiedSince)
-	if err != nil && errors.Is(err, ErrConfigNotFound) && cdn.retryIfNotFound {
+	if err != nil && errors.Is(err, ErrConfigNotFound) && cdn.useDemoConfig {
 		res.Config = routerconfig.GetDefaultConfig()
 		return res, nil
 	} else if err != nil {

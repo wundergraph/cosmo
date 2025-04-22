@@ -327,15 +327,6 @@
                 "object_path": {
                   "type": "string",
                   "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the storage provider."
-                },
-                "if_not_found": {
-                  "type": "string",
-                  "description": "The action to take if the execution config is not found in the storage provider.",
-                  "enum": [
-                    "retry",
-                    "error"
-                  ],
-                  "default": "retry"
                 }
               }
             }
@@ -364,6 +355,17 @@
                   "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the storage provider."
                 }
               }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "use_demo_config": {
+              "type": "boolean",
+              "description": "Use the demo execution config. The demo execution config is an example execution config that is used to start the router.",
+              "default": false
             }
           }
         }

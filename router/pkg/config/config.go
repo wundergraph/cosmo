@@ -705,17 +705,9 @@ type PersistedOperationsCDNProvider struct {
 	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com"`
 }
 
-type ExecutionConfigStorageIfNotFound string
-
-const (
-	ExecutionConfigStorageIfNotFoundRetry ExecutionConfigStorageIfNotFound = "retry"
-	ExecutionConfigStorageIfNotFoundError ExecutionConfigStorageIfNotFound = "error"
-)
-
 type ExecutionConfigStorage struct {
-	ProviderID string                           `yaml:"provider_id,omitempty" env:"PROVIDER_ID"`
-	ObjectPath string                           `yaml:"object_path,omitempty" env:"OBJECT_PATH"`
-	IfNotFound ExecutionConfigStorageIfNotFound `yaml:"if_not_found,omitempty" envDefault:"retry" env:"IF_NOT_FOUND"`
+	ProviderID string `yaml:"provider_id,omitempty" env:"PROVIDER_ID"`
+	ObjectPath string `yaml:"object_path,omitempty" env:"OBJECT_PATH"`
 }
 
 type FallbackExecutionConfigStorage struct {
@@ -734,6 +726,7 @@ type ExecutionConfig struct {
 	File            ExecutionConfigFile            `yaml:"file,omitempty"`
 	Storage         ExecutionConfigStorage         `yaml:"storage,omitempty" envPrefix:"EXECUTION_CONFIG_STORAGE_"`
 	FallbackStorage FallbackExecutionConfigStorage `yaml:"fallback_storage,omitempty" envPrefix:"EXECUTION_CONFIG_FALLBACK_STORAGE_"`
+	UseDemoConfig   bool                           `yaml:"use_demo_config,omitempty" envDefault:"false" env:"EXECUTION_CONFIG_USE_DEMO_CONFIG"`
 }
 
 type PersistedOperationsCacheConfig struct {
