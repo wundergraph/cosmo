@@ -48,6 +48,12 @@ export default (opts: BaseCommandOptions) => {
       program.error('Could not perform authentication. Please try again');
     }
 
+    if (!decoded.groups) {
+      program.error(
+        'You are not part of any organizations on Cosmo. Please login to your account on the browser and try again.',
+      );
+    }
+
     const organizationSlugs = new Set(decoded.groups.map((group) => group.split('/')[1]));
 
     const organizationSlugByDisplayKey = new Map<string, string>();
