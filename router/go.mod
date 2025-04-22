@@ -31,7 +31,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.170
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.171
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0
@@ -153,6 +153,6 @@ require (
 replace (
 	// Due to https://github.com/mark3labs/mcp-go/pull/128
 	github.com/mark3labs/mcp-go => github.com/wundergraph/mcp-go v0.0.0-20250418103513-9bd590ca8b7f
-// replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
-// replace github.com/mark3labs/mcp-go => ../../mcp-go
+//  github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+//  github.com/mark3labs/mcp-go => ../../mcp-go
 )
