@@ -1,6 +1,8 @@
 package graphqlschemausage
 
 import (
+	"slices"
+
 	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvisitor"
@@ -11,7 +13,7 @@ import (
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 )
 
-func GetTypeFieldUsageInfo(operationPlan plan.Plan) []*graphqlmetrics.TypeFieldUsageInfo {
+func GetTypeFieldUsageInfo(operationPlan plan.Plan) []*TypeFieldUsageInfo {
 	visitor := typeFieldUsageInfoVisitor{}
 	switch p := operationPlan.(type) {
 	case *plan.SynchronousResponsePlan:
@@ -22,8 +24,43 @@ func GetTypeFieldUsageInfo(operationPlan plan.Plan) []*graphqlmetrics.TypeFieldU
 	return visitor.typeFieldUsageInfo
 }
 
+// An array of TypeFieldUsageInfo, with a method to convert it into a []*graphqlmetrics.TypeFieldUsageInfo
+type TypeFieldMetrics []*TypeFieldUsageInfo
+
+// IntoGraphQLMetrics converts the TypeFieldMetrics into a []*graphqlmetrics.TypeFieldUsageInfo
+func (t TypeFieldMetrics) IntoGraphQLMetrics() []*graphqlmetrics.TypeFieldUsageInfo {
+	metrics := make([]*graphqlmetrics.TypeFieldUsageInfo, len(t))
+	for i, info := range t {
+		metrics[i] = info.IntoGraphQLMetrics()
+	}
+	return metrics
+}
+
+// TypeFieldUsageInfo holds information about the usage of a GraphQL type
+type TypeFieldUsageInfo struct {
+	NamedType           string
+	ExactParentTypeName string
+
+	Path                   []string
+	ParentTypeNames        []string
+	SubgraphIDs            []string
+	IndirectInterfaceField bool
+}
+
+// IntoGraphQLMetrics converts the graphqlschemausage.TypeFieldUsageInfo into a *graphqlmetrics.TypeFieldUsageInfo
+func (t *TypeFieldUsageInfo) IntoGraphQLMetrics() *graphqlmetrics.TypeFieldUsageInfo {
+	return &graphqlmetrics.TypeFieldUsageInfo{
+		Path:                   t.Path,
+		TypeNames:              t.ParentTypeNames,
+		SubgraphIDs:            t.SubgraphIDs,
+		NamedType:              t.NamedType,
+		IndirectInterfaceField: t.IndirectInterfaceField,
+		Count:                  0,
+	}
+}
+
 type typeFieldUsageInfoVisitor struct {
-	typeFieldUsageInfo []*graphqlmetrics.TypeFieldUsageInfo
+	typeFieldUsageInfo []*TypeFieldUsageInfo
 }
 
 func (p *typeFieldUsageInfoVisitor) visitNode(node resolve.Node, path []string) {
@@ -33,17 +70,18 @@ func (p *typeFieldUsageInfoVisitor) visitNode(node resolve.Node, path []string) 
 			if field.Info == nil {
 				continue
 			}
-			pathCopy := append([]string{}, append(path, field.Info.Name)...)
-			p.typeFieldUsageInfo = append(p.typeFieldUsageInfo, &graphqlmetrics.TypeFieldUsageInfo{
-				Path:        pathCopy,
-				TypeNames:   field.Info.ParentTypeNames,
-				SubgraphIDs: field.Info.Source.IDs,
-				NamedType:   field.Info.NamedType,
+			pathCopy := slices.Clone(append(path, field.Info.Name))
+			p.typeFieldUsageInfo = append(p.typeFieldUsageInfo, &TypeFieldUsageInfo{
+				Path:                pathCopy,
+				ParentTypeNames:     field.Info.ParentTypeNames,
+				ExactParentTypeName: field.Info.ExactParentTypeName,
+				SubgraphIDs:         field.Info.Source.IDs,
+				NamedType:           field.Info.NamedType,
 			})
 			if len(field.Info.IndirectInterfaceNames) > 0 {
-				p.typeFieldUsageInfo = append(p.typeFieldUsageInfo, &graphqlmetrics.TypeFieldUsageInfo{
+				p.typeFieldUsageInfo = append(p.typeFieldUsageInfo, &TypeFieldUsageInfo{
 					Path:                   pathCopy,
-					TypeNames:              field.Info.IndirectInterfaceNames,
+					ParentTypeNames:        field.Info.IndirectInterfaceNames,
 					SubgraphIDs:            field.Info.Source.IDs,
 					NamedType:              field.Info.NamedType,
 					IndirectInterfaceField: true,

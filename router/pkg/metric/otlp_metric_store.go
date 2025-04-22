@@ -2,6 +2,7 @@ package metric
 
 import (
 	"context"
+
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
@@ -89,6 +90,10 @@ func (h *OtlpMetricStore) MeasureOperationPlanningTime(ctx context.Context, plan
 	if c, ok := h.measurements.histograms[OperationPlanningTime]; ok {
 		c.Record(ctx, planningTime, opts...)
 	}
+}
+
+func (h *OtlpMetricStore) MeasureSchemaFieldUsage(_ context.Context, _ int64, _ ...otelmetric.AddOption) {
+	// Do not record schema usage in OpenTelemetry
 }
 
 func (h *OtlpMetricStore) Flush(ctx context.Context) error {
