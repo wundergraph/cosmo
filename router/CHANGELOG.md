@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.201.0](https://github.com/wundergraph/cosmo/compare/router@0.200.1...router@0.201.0) (2025-04-22)
+
+### Features
+
+* **router:** schema usage lite export via prometheus ([#1704](https://github.com/wundergraph/cosmo/issues/1704)) ([f5a4707](https://github.com/wundergraph/cosmo/commit/f5a470720ceb07ce5656a9b8ca2177e7b705bdfc)) (@endigma)
+
 ## [0.200.1](https://github.com/wundergraph/cosmo/compare/router@0.200.0...router@0.200.1) (2025-04-22)
 
 ### Bug Fixes
