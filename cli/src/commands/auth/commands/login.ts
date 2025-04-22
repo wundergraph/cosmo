@@ -17,7 +17,7 @@ export default (opts: BaseCommandOptions) => {
   loginCommand.action(async () => {
     const resp = await performDeviceAuth();
     if (!resp.success) {
-      program.error('Could not perform authentication. Please try again');
+      program.error(pc.red('Could not perform authentication. Please try again'));
     }
     console.log('Code: %s\n', resp.response.deviceCode);
     console.log(
@@ -33,11 +33,11 @@ export default (opts: BaseCommandOptions) => {
     });
 
     if (!accessTokenResp.success) {
-      program.error(accessTokenResp.errorMessage + ' Please try again.');
+      program.error(pc.red(accessTokenResp.errorMessage + ' Please try again.'));
     }
 
     if (!accessTokenResp.response) {
-      program.error('Could not perform authentication. Please try again');
+      program.error(pc.red('Could not perform authentication. Please try again'));
     }
 
     let decoded: DecodedAccessToken;
@@ -45,7 +45,15 @@ export default (opts: BaseCommandOptions) => {
     try {
       decoded = jwtDecode<DecodedAccessToken>(accessTokenResp.response.accessToken);
     } catch {
-      program.error('Could not perform authentication. Please try again');
+      program.error(pc.red('Could not perform authentication. Please try again'));
+    }
+
+    if (!decoded.groups) {
+      program.error(
+        pc.red(
+          'You are not part of any organizations on Cosmo. Please login to your account in the browser and try again.',
+        ),
+      );
     }
 
     const organizationSlugs = new Set(decoded.groups.map((group) => group.split('/')[1]));
