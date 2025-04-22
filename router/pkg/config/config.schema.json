@@ -88,14 +88,12 @@
         },
         "s3": {
           "type": "array",
-          "description": "The S3 configuration. The S3 provider is used to store and retrieve data.",
+          "description": "The S3 configuration. The S3 provider is used to store and retrieve data. If no access key and secret key are provided, the provider will attempt to retreieve IAM credentials from the EC2 service.",
           "items": {
             "type": "object",
             "required": [
               "id",
               "endpoint",
-              "access_key",
-              "secret_key",
               "bucket"
             ],
             "additionalProperties": false,
