@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.202.0](https://github.com/wundergraph/cosmo/compare/router@0.201.1...router@0.202.0) (2025-04-22)
+
+### Features
+
+* rework key matching logic, add engine support for fragments in provides/requires ([#1759](https://github.com/wundergraph/cosmo/issues/1759)) ([032d847](https://github.com/wundergraph/cosmo/commit/032d847d968f67f07d926cb8d6b0d546e953d23b)) (@devsergiy)
+
 ## [0.201.1](https://github.com/wundergraph/cosmo/compare/router@0.201.0...router@0.201.1) (2025-04-22)
 
 ### Bug Fixes
