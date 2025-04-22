@@ -93,8 +93,7 @@
             "type": "object",
             "required": [
               "id",
-              "bucket",
-              "endpoint"
+              "bucket"
             ],
             "additionalProperties": false,
             "properties": {
