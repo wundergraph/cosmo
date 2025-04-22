@@ -2,9 +2,10 @@ package metric
 
 import (
 	"context"
+	"time"
+
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
-	"time"
 )
 
 // This is dummy implementation of metric.Provider interface to avoid nil checks in the code
