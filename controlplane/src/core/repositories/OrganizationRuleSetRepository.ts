@@ -56,9 +56,15 @@ export class OrganizationRuleSetRepository {
     return existingRuleSet.length > 0;
   }
 
-  public async byId(id: string): Promise<OrganizationRuleSetDTO | undefined> {
+  public async byId(input: {
+    organizationId: string;
+    ruleSetId: string;
+  }): Promise<OrganizationRuleSetDTO | undefined> {
     const ruleSet = await this.db.query.organizationRuleSets.findFirst({
-      where: eq(schema.organizationRuleSets.id, id),
+      where: and(
+        eq(schema.organizationRuleSets.organizationId, input.organizationId),
+        eq(schema.organizationRuleSets.id, input.ruleSetId)
+      ),
       with: {
         rules: {
           columns: {

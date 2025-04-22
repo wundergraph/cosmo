@@ -11,6 +11,7 @@ import {
 import { RuleSetRuleBuilder } from "@/components/member-groups/rule-set-rule-builder";
 import { useState } from "react";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { useToast } from "@/components/ui/use-toast";
 
 export function RuleSetSheet({ ruleSet, onRuleSetUpdated, onOpenChange }: {
   ruleSet?: OrganizationRuleSet;
@@ -44,12 +45,14 @@ function RuleSetSheetContent({ ruleSet, onRuleSetUpdated, onCancel }: {
 }) {
   const { data } = useQuery(getUserAccessibleResources);
   const [ruleSetRules, setRuleSetRules] = useState<OrganizationRuleSetRule[]>([...ruleSet.rules]);
+  const { toast } = useToast();
 
+  const ruleSetCanBeModified = !ruleSet?.builtin;
   const allRulesHaveRole = ruleSetRules.every((rule) => !!rule.role);
   const { mutate, isPending } = useMutation(updateOrganizationRuleSet);
 
   const onSaveClick = () => {
-    if (!allRulesHaveRole) {
+    if (!allRulesHaveRole || !ruleSetCanBeModified) {
       return;
     }
 
@@ -71,9 +74,18 @@ function RuleSetSheetContent({ ruleSet, onRuleSetUpdated, onCancel }: {
           if (resp?.response?.code === EnumStatusCode.OK) {
             onRuleSetUpdated();
           } else {
+            toast({
+              description: resp?.response?.details ?? "Could not update the rule set. Please try again.",
+              duration: 3000,
+            });
           }
         },
-        onError() {},
+        onError() {
+          toast({
+            description: "Could not update the rule set. Please try again.",
+            duration: 3000,
+          });
+        },
       }
     );
   };
@@ -85,65 +97,74 @@ function RuleSetSheetContent({ ruleSet, onRuleSetUpdated, onCancel }: {
         <SheetDescription>Blah blah blah description</SheetDescription>
       </SheetHeader>
 
-      <div className="my-6 space-y-3">
-        {ruleSetRules.length
-          ? (
-            ruleSetRules.map((rule, index) => (
-              <RuleSetRuleBuilder
-                key={`rule-${rule.role}-${index}`}
-                rule={rule}
-                accessibleResources={data}
-                disabled={isPending}
-                onRuleUpdated={(newRule) => {
-                  const newRuleSetRules = [...ruleSetRules];
-                  newRuleSetRules[index] = newRule;
-                  setRuleSetRules(newRuleSetRules);
-                }}
-                onRemoveRule={() => {
-                  const newRuleSetRules = [...ruleSetRules];
-                  newRuleSetRules.splice(index, 1);
-                  setRuleSetRules(newRuleSetRules);
-                }}
-              />
-            ))
-          )
-          : (
-            <div className="border rounded-lg flex justify-start items-center gap-x-2 px-4 py-3">
-              <ExclamationTriangleIcon className="size-4" />
-              <span>No rules have been added to this rule set.</span>
-            </div>
-          )
-        }
+      {ruleSetCanBeModified ? (
+        <div className="my-6 space-y-3">
+          {ruleSetRules.length
+            ? (
+              ruleSetRules.map((rule, index) => (
+                <RuleSetRuleBuilder
+                  key={`rule-${rule.role}-${index}`}
+                  rule={rule}
+                  accessibleResources={data}
+                  disabled={isPending}
+                  onRuleUpdated={(newRule) => {
+                    const newRuleSetRules = [...ruleSetRules];
+                    newRuleSetRules[index] = newRule;
+                    setRuleSetRules(newRuleSetRules);
+                  }}
+                  onRemoveRule={() => {
+                    const newRuleSetRules = [...ruleSetRules];
+                    newRuleSetRules.splice(index, 1);
+                    setRuleSetRules(newRuleSetRules);
+                  }}
+                />
+              ))
+            )
+            : (
+              <div className="border rounded-lg flex justify-start items-center gap-x-2 px-4 py-3">
+                <ExclamationTriangleIcon className="size-4" />
+                <span>No rules have been added to this rule set.</span>
+              </div>
+            )
+          }
 
-        <div>
-          <Button
-            variant="link"
-            className="gap-x-2"
-            onClick={() => {
-              setRuleSetRules([
-                ...ruleSetRules,
-                OrganizationRuleSetRule.fromJson({}),
-              ])
-            }}
-          >
-            <PlusIcon className="size-4" />
-            <span>Add rule</span>
-          </Button>
+          <div>
+            <Button
+              variant="link"
+              className="gap-x-2"
+              onClick={() => {
+                setRuleSetRules([
+                  ...ruleSetRules,
+                  OrganizationRuleSetRule.fromJson({}),
+                ])
+              }}
+            >
+              <PlusIcon className="size-4" />
+              <span>Add rule</span>
+            </Button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="my-6 p-3 flex justify-start items-center gap-x-2">
+          <ExclamationTriangleIcon className="size-4" />
+          Builtin rule sets cannot be modified.
+        </div>
+      )}
 
       <SheetFooter className="gap-y-2">
         <Button variant="secondary" onClick={onCancel} disabled={isPending}>
-          Cancel
+          {ruleSetCanBeModified ? "Cancel" : "Close"}
         </Button>
 
-        <Button
-          disabled={isPending || !allRulesHaveRole}
-          isLoading={isPending}
-          onClick={onSaveClick}
-        >
-          Save
-        </Button>
+        {ruleSetCanBeModified && (
+          <Button
+            disabled={isPending || !allRulesHaveRole}
+            isLoading={isPending}
+            onClick={onSaveClick}
+          >
+            Save
+          </Button>
+        )}
       </SheetFooter>
     </>
   );

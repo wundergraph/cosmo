@@ -23,10 +23,24 @@ export function updateOrganizationRuleSet(
     logger = enrichLogger(ctx, logger, authContext);
 
     const ruleSetRepo = new OrganizationRuleSetRepository(opts.db);
-    if (!(await ruleSetRepo.exists({ organizationId: authContext.organizationId, ruleSetId: req.ruleSetId }))) {
+    const ruleSet = await ruleSetRepo.byId({
+      organizationId: authContext.organizationId,
+      ruleSetId: req.ruleSetId,
+    })
+
+    if (!ruleSet) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
+        },
+      };
+    }
+
+    if (ruleSet.builtin) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: 'Builtin rule sets cannot be modified',
         },
       };
     }

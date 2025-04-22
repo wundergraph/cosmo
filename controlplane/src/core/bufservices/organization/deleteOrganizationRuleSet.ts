@@ -23,7 +23,11 @@ export function deleteOrganizationRuleSet(
     return opts.db.transaction(async (tx) => {
       const ruleSetRepo = new OrganizationRuleSetRepository(tx);
 
-      const ruleSet = await ruleSetRepo.byId(req.ruleSetId);
+      const ruleSet = await ruleSetRepo.byId({
+        organizationId: authContext.organizationId,
+        ruleSetId: req.ruleSetId,
+      });
+
       if (!ruleSet) {
         return {
           response: {
