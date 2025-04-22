@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.200.1](https://github.com/wundergraph/cosmo/compare/router@0.200.0...router@0.200.1) (2025-04-22)
+
+### Bug Fixes
+
+* **subscriptions:** dont use completed channel in sub updater ([#1802](https://github.com/wundergraph/cosmo/issues/1802)) ([973d2cc](https://github.com/wundergraph/cosmo/commit/973d2ccd37d721f3ccbca2c897f34d59bc00cf80)) (@StarpTech)
+
 # [0.200.0](https://github.com/wundergraph/cosmo/compare/router@0.199.1...router@0.200.0) (2025-04-18)
 
 ### Bug Fixes
