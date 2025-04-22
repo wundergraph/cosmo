@@ -29,11 +29,12 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandGroup,
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
-import { CheckIcon } from "@radix-ui/react-icons";
 import { Separator } from "@/components/ui/separator";
 import useWindowSize from "@/hooks/use-window-size";
+import { CheckIcon } from "@heroicons/react/20/solid";
 import {
   Accordion,
   AccordionContent,
@@ -100,6 +101,7 @@ export function RuleSetRuleBuilder({ rule, accessibleResources, disabled, onRule
         isMobile={isMobile}
         title="Federated Graph"
         options={accessibleResources?.federatedGraphs?.map((fg) => ({
+          group: fg.namespace,
           key: `fg-${fg.targetId}`,
           label: fg.name,
           value: `federated-graph:${fg.targetId}`,
@@ -113,6 +115,7 @@ export function RuleSetRuleBuilder({ rule, accessibleResources, disabled, onRule
         isMobile={isMobile}
         title="Subgraph"
         options={accessibleResources?.subgraphs?.map((sg) => ({
+          group: sg.namespace,
           key: `sg-${sg.targetId}`,
           label: sg.name,
           value: `subgraph:${sg.targetId}`,
@@ -195,7 +198,7 @@ export function RuleSetRuleBuilder({ rule, accessibleResources, disabled, onRule
   );
 }
 
-function RuleSetRuleBuilderCommand<TData>({
+function RuleSetRuleBuilderCommand({
   uniqueKey,
   isMobile,
   title,
@@ -206,7 +209,12 @@ function RuleSetRuleBuilderCommand<TData>({
   uniqueKey: string;
   isMobile: boolean;
   title: string;
-  options?: { key: string; label: string; value: string; }[];
+  options?: {
+    group?: string;
+    key: string;
+    label: string;
+    value: string;
+  }[];
   selectedResources: Set<string>;
   toggleResources(resources: string[]): void;
 }) {
@@ -218,6 +226,8 @@ function RuleSetRuleBuilderCommand<TData>({
   if (!options?.length) {
     return null;
   }
+
+  const groupedFilteredOptions = Object.groupBy(filteredResources, (obj) => obj.group || '');
 
   const filteredResourcesAsValue = filteredResources.map((opt) => opt.value);
   const currentSelectedResources = filteredResourcesAsValue.filter((res) => selectedResources.has(res));
@@ -235,23 +245,23 @@ function RuleSetRuleBuilderCommand<TData>({
       </div>
       <CommandList>
         <CommandEmpty>No matching {title.toLowerCase()}</CommandEmpty>
-        {filteredResources.map(({ key, label, value }) => {
-          const isChecked = selectedResources.has(value);
-
-          return (
-            <CommandItem key={key} onSelect={() => toggleResources([value])}>
-              <div
-                className={cn(
-                  "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                  isChecked
-                    ? "bg-primary text-primary-foreground"
-                    : "opacity-50 [&_svg]:invisible"
-                )}
-              >
-                <CheckIcon className="size-4" />
-              </div>
-              <span className="truncate">{label}</span>
-            </CommandItem>
+        {Object.keys(groupedFilteredOptions).map((key) => {
+          const groupChildren = groupedFilteredOptions[key]!;
+          return !key ? (
+            <RuleSetRuleBuilderCommandList
+              key={`${title}-${key}`}
+              options={groupChildren}
+              selectedResources={selectedResources}
+              toggleResources={toggleResources}
+            />
+          ) : (
+            <CommandGroup key={`${title}-${key}`} heading={key}>
+              <RuleSetRuleBuilderCommandList
+                options={groupChildren}
+                selectedResources={selectedResources}
+                toggleResources={toggleResources}
+              />
+            </CommandGroup>
           );
         })}
       </CommandList>
@@ -310,4 +320,34 @@ function RuleSetRuleBuilderCommand<TData>({
         </DropdownMenuPortal>
       </DropdownMenuSub>
     );
+}
+
+function RuleSetRuleBuilderCommandList({ options, selectedResources, toggleResources }: {
+  options: {
+    key: string;
+    label: string;
+    value: string;
+  }[];
+  selectedResources: Set<string>;
+  toggleResources(resources: string[]): void;
+}) {
+  return options.map(({ key, label, value }) => {
+      const isChecked = selectedResources.has(value);
+
+      return (
+        <CommandItem key={key} onSelect={() => toggleResources([value])}>
+          <div
+            className={cn(
+              "mr-2 flex h-4 w-4 items-center justify-center",
+              isChecked
+                ? "text-primary-foreground"
+                : "[&_svg]:invisible"
+            )}
+          >
+            <CheckIcon className="size-4" />
+          </div>
+          <span className="truncate">{label}</span>
+        </CommandItem>
+      );
+    });
 }
