@@ -40,6 +40,11 @@ runs:
       run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition run build
       working-directory: ${{ inputs.working-directory }}
 
+    - name: Build
+      shell: bash
+      run: pnpm --filter ./composition run postversion
+      working-directory: ${{ inputs.working-directory }}
+
     - name: 'Build wgc binary'
       shell: bash
       run: bun build --compile --minify --sourcemap --target ${{ inputs.target }} src/index.ts --outfile out/wgc-experimental-${{ inputs.github-sha }}-${{ inputs.target }}
