@@ -2,6 +2,7 @@ node_modules
 .husky
 .idea
 .vscode
+.zed
 **/*.env
 **/*.env.*
 !**/*.env.example
