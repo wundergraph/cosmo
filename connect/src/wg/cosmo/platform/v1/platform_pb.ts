@@ -3875,9 +3875,12 @@ export class GetChecksByFederatedGraphNameResponse extends Message<GetChecksByFe
   checksCountBasedOnDateRange = 0;
 
   /**
-   * @generated from field: int32 totalChecksCount = 4;
+   * this determines that the federated graph has checks
+   * this is for scenarios where the selecetd date ranges return 0 checks
+   *
+   * @generated from field: bool hasChecks = 5;
    */
-  totalChecksCount = 0;
+  hasChecks = false;
 
   constructor(data?: PartialMessage<GetChecksByFederatedGraphNameResponse>) {
     super();
@@ -3890,7 +3893,7 @@ export class GetChecksByFederatedGraphNameResponse extends Message<GetChecksByFe
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "checks", kind: "message", T: SchemaCheck, repeated: true },
     { no: 3, name: "checksCountBasedOnDateRange", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 4, name: "totalChecksCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "hasChecks", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChecksByFederatedGraphNameResponse {

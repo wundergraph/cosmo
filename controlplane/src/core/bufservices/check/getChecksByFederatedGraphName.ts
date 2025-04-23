@@ -6,6 +6,7 @@ import {
   GetChecksByFederatedGraphNameRequest,
   GetChecksByFederatedGraphNameResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { subDays } from 'date-fns';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
@@ -38,7 +39,7 @@ export function getChecksByFederatedGraphName(
         },
         checks: [],
         checksCountBasedOnDateRange: 0,
-        totalChecksCount: 0,
+        hasChecks: false,
       };
     }
 
@@ -47,8 +48,9 @@ export function getChecksByFederatedGraphName(
       featureId: 'breaking-change-retention',
     });
 
+    const maxNumberOfDays = breakingChangeRetention?.limit ?? 7;
     const { dateRange } = validateDateRanges({
-      limit: breakingChangeRetention?.limit ?? 7,
+      limit: maxNumberOfDays,
       dateRange: {
         start: req.startDate,
         end: req.endDate,
@@ -63,7 +65,7 @@ export function getChecksByFederatedGraphName(
         },
         checks: [],
         checksCountBasedOnDateRange: 0,
-        totalChecksCount: 0,
+        hasChecks: false,
       };
     }
 
@@ -76,7 +78,7 @@ export function getChecksByFederatedGraphName(
         },
         checks: [],
         checksCountBasedOnDateRange: 0,
-        totalChecksCount: 0,
+        hasChecks: false,
       };
     }
 
@@ -91,7 +93,19 @@ export function getChecksByFederatedGraphName(
       includeSubgraphs,
     });
 
-    const totalChecksCount = await subgraphRepo.getChecksCount({ federatedGraphTargetId: federatedGraph.targetId });
+    let totalChecksCount = 0;
+    // fetch the total checks count, only if the checks count based on the date range is 0
+    // this is to avoid fetching the total checks count when the count based on the date range is not 0
+    // as its only used to determine if the federated graph has checks
+    if (checksData.checksCount === 0) {
+      const now = new Date();
+      totalChecksCount = await subgraphRepo.getChecksCount({
+        federatedGraphTargetId: federatedGraph.targetId,
+        // we are fetching the checks count for the last number of days based on the org limit.
+        startDate: subDays(now, maxNumberOfDays).toISOString(),
+        endDate: now.toISOString(),
+      });
+    }
 
     return {
       response: {
@@ -99,7 +113,7 @@ export function getChecksByFederatedGraphName(
       },
       checks: checksData.checks,
       checksCountBasedOnDateRange: checksData.checksCount,
-      totalChecksCount,
+      hasChecks: checksData.checksCount > 0 ? true : totalChecksCount > 0,
     };
   });
 }

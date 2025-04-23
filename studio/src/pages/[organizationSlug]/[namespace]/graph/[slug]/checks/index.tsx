@@ -117,7 +117,7 @@ const ChecksPage: NextPageWithLayout = () => {
 
   if (!data?.checks || !graphContext?.graph) return null;
 
-  if (data.totalChecksCount === 0)
+  if (!data.hasChecks)
     return (
       <EmptyState
         icon={<CommandLineIcon />}

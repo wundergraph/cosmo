@@ -498,7 +498,9 @@ message GetChecksByFederatedGraphNameResponse {
   Response response = 1;
   repeated SchemaCheck checks = 2;
   int32 checksCountBasedOnDateRange = 3;
-  int32 totalChecksCount = 4;
+  // this determines that the federated graph has checks
+  // this is for scenarios where the selecetd date ranges return 0 checks
+  bool hasChecks = 5;
 }
 
 message GetCheckSummaryRequest {
