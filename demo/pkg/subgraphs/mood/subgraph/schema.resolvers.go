@@ -18,21 +18,29 @@ func (r *mutationResolver) UpdateMood(ctx context.Context, employeeID int, mood 
 	storage.Set(employeeID, mood)
 	myNatsTopic := r.GetPubSubName(fmt.Sprintf("employeeUpdated.%d", employeeID))
 	payload := fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID)
-	err := r.NatsPubSubByProviderID["default"].Publish(ctx, nats.PublishAndRequestEventConfiguration{
-		Subject: myNatsTopic,
-		Data:    []byte(payload),
-	})
-	if err != nil {
-		return nil, err
+	if r.NatsPubSubByProviderID["default"] != nil {
+		err := r.NatsPubSubByProviderID["default"].Publish(ctx, nats.PublishAndRequestEventConfiguration{
+			Subject: myNatsTopic,
+			Data:    []byte(payload),
+		})
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, fmt.Errorf("no nats pubsub default provider found")
 	}
 
 	defaultTopic := r.GetPubSubName(fmt.Sprintf("employeeUpdatedMyNats.%d", employeeID))
-	err = r.NatsPubSubByProviderID["my-nats"].Publish(ctx, nats.PublishAndRequestEventConfiguration{
-		Subject: defaultTopic,
-		Data:    []byte(payload),
-	})
-	if err != nil {
-		return nil, err
+	if r.NatsPubSubByProviderID["my-nats"] != nil {
+		err := r.NatsPubSubByProviderID["my-nats"].Publish(ctx, nats.PublishAndRequestEventConfiguration{
+			Subject: defaultTopic,
+			Data:    []byte(payload),
+		})
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, fmt.Errorf("no nats pubsub my-nats provider found")
 	}
 
 	return &model.Employee{ID: employeeID, CurrentMood: mood}, nil
