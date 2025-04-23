@@ -5,6 +5,7 @@ import (
 
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/redis"
 )
 
 var additionalProviders []datasource.ProviderFactory
@@ -19,5 +20,6 @@ func GetProviderFactories() []datasource.ProviderFactory {
 	return append([]datasource.ProviderFactory{
 		kafka.GetProvider,
 		nats.GetProvider,
+		redis.GetProvider,
 	}, additionalProviders...)
 }
