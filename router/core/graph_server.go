@@ -14,7 +14,6 @@ import (
 	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
@@ -59,11 +58,6 @@ type (
 	Server interface {
 		HttpServer() *http.Server
 		HealthChecks() health.Checker
-	}
-
-	EnginePubSubProviders struct {
-		nats  map[string]pubsub_datasource.NatsPubSub
-		kafka map[string]pubsub_datasource.KafkaPubSub
 	}
 
 	// graphServer is the swappable implementation of a Graph instance which is an HTTP mux with middlewares.
