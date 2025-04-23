@@ -194,7 +194,7 @@ func AvailabilityHandler(opts *SubgraphOptions) http.Handler {
 }
 
 func MoodHandler(opts *SubgraphOptions) http.Handler {
-	return subgraphHandler(mood.NewSchema(opts.NatsPubSubByProviderID))
+	return subgraphHandler(mood.NewSchema(opts.NatsPubSubByProviderID, opts.GetPubSubName))
 }
 
 func CountriesHandler(opts *SubgraphOptions) http.Handler {
@@ -260,7 +260,7 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 	if srv := newServer("availability", config.EnableDebug, config.Ports.Availability, availability.NewSchema(natsPubSubByProviderID, config.GetPubSubName)); srv != nil {
 		servers = append(servers, srv)
 	}
-	if srv := newServer("mood", config.EnableDebug, config.Ports.Mood, mood.NewSchema(natsPubSubByProviderID)); srv != nil {
+	if srv := newServer("mood", config.EnableDebug, config.Ports.Mood, mood.NewSchema(natsPubSubByProviderID, config.GetPubSubName)); srv != nil {
 		servers = append(servers, srv)
 	}
 	if srv := newServer("countries", config.EnableDebug, config.Ports.Countries, countries.NewSchema(natsPubSubByProviderID)); srv != nil {
