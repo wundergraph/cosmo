@@ -20,10 +20,10 @@ export function getOrganizationMemberGroups(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    const ruleSetRepo = new OrganizationMemberGroupRepository(opts.db);
-    const ruleSets = await ruleSetRepo.listForOrganization(authContext.organizationId);
+    const orgMemberGroupRepo = new OrganizationMemberGroupRepository(opts.db);
 
-    if (ruleSets.length === 0) {
+    const groups = await orgMemberGroupRepo.forOrganization(authContext.organizationId);
+    if (groups.length === 0) {
       // The organization doesn't have any rule set, we should retrieve the legacy groups and create rule set for
       // them, that way the organization may manage them
       await opts.keycloakClient.authenticateClient();
@@ -34,18 +34,20 @@ export function getOrganizationMemberGroups(
         briefRepresentation: false,
       });
 
-      if (organizationGroups.length > 0){
+      if (organizationGroups.length > 0) {
         const subGroups = await opts.keycloakClient.fetchAllSubGroups({
           realm: opts.keycloakRealm,
           kcGroupId: organizationGroups[0].id!,
         });
 
         for (const group of subGroups) {
-          ruleSets.push(await ruleSetRepo.createRuleSet({
-            organizationId: authContext.organizationId,
-            name: group.name!,
-            kcGroupId: group.id!,
-          }));
+          groups.push(
+            await orgMemberGroupRepo.create({
+              organizationId: authContext.organizationId,
+              name: group.name!,
+              kcGroupId: group.id!,
+            }),
+          );
         }
       }
     }
@@ -54,11 +56,10 @@ export function getOrganizationMemberGroups(
       response: {
         code: EnumStatusCode.OK,
       },
-      groups: ruleSets.map(({ id, kcGroupId, ...rs }) => ({
+      groups: groups.map(({ id, kcGroupId, ...rest }) => ({
         groupId: id,
-        ...rs,
-      })),
-      totalCount: ruleSets.length,
+        ...rest,
+      }))
     };
   });
 }

@@ -7,7 +7,7 @@ import { MemberRole } from '../../db/models.js';
 export class OrganizationMemberGroupRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 
-  public async createRuleSet(input: {
+  public async create(input: {
     organizationId: string;
     name: string;
     kcGroupId: string;
@@ -32,8 +32,8 @@ export class OrganizationMemberGroupRepository {
     };
   }
 
-  public async exists(input: { organizationId: string; ruleSetId?: string; ruleSetName?: string }) {
-    if (!input.ruleSetId && !input.ruleSetName) {
+  public async nameExists(input: { organizationId: string; name?: string }) {
+    if (!input.name) {
       return false;
     }
 
@@ -43,9 +43,7 @@ export class OrganizationMemberGroupRepository {
       .where(
         and(
           eq(schema.organizationMemberGroups.organizationId, input.organizationId),
-          input.ruleSetId
-            ? eq(schema.organizationMemberGroups.id, input.ruleSetId)
-            : eq(schema.organizationMemberGroups.name, input.ruleSetName!),
+          eq(schema.organizationMemberGroups.name, input.name!),
         ),
       )
       .limit(1)
@@ -61,7 +59,7 @@ export class OrganizationMemberGroupRepository {
     const memberGroup = await this.db.query.organizationMemberGroups.findFirst({
       where: and(
         eq(schema.organizationMemberGroups.organizationId, input.organizationId),
-        eq(schema.organizationMemberGroups.id, input.groupId)
+        eq(schema.organizationMemberGroups.id, input.groupId),
       ),
       with: {
         rules: {
@@ -97,7 +95,7 @@ export class OrganizationMemberGroupRepository {
     };
   }
 
-  public async listForOrganization(organizationId: string): Promise<OrganizationMemberGroupDTO[]> {
+  public async forOrganization(organizationId: string): Promise<OrganizationMemberGroupDTO[]> {
     const ruleSets = await this.db.query.organizationMemberGroups.findMany({
       where: eq(schema.organizationMemberGroups.organizationId, organizationId),
       with: {
@@ -157,6 +155,9 @@ export class OrganizationMemberGroupRepository {
   }
 
   public deleteRuleSet(id: string) {
-    return this.db.delete(schema.organizationMemberGroups).where(eq(schema.organizationMemberGroups.id, id)).returning();
+    return this.db
+      .delete(schema.organizationMemberGroups)
+      .where(eq(schema.organizationMemberGroups.id, id))
+      .returning();
   }
 }

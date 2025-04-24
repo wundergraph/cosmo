@@ -36,6 +36,7 @@ export type WebhookDeliveryInfo = typeof webhookDeliveries.$inferInsert;
 
 export type AuditableType =
   | 'organization'
+  | 'group'
   | 'subgraph'
   | 'federated_graph'
   | 'monograph'
@@ -83,6 +84,8 @@ export type AuditLogFullAction =
   | 'organization.updated'
   | 'organization.deletion_queued'
   | 'organization.restored'
+  | 'group.created'
+  | 'group.deleted'
   | 'graph_token.created'
   | 'graph_token.deleted'
   | 'monograph.created'

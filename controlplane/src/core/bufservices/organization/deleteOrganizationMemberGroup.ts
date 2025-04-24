@@ -8,7 +8,8 @@ import {
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationMemberGroupRepository } from '../../repositories/OrganizationMemberGroupRepository.js';
-import { OidcRepository } from "../../repositories/OidcRepository.js";
+import { OidcRepository } from '../../repositories/OidcRepository.js';
+import { AuditLogRepository } from "../../repositories/AuditLogRepository.js";
 
 export function deleteOrganizationMemberGroup(
   opts: RouterOptions,
@@ -23,6 +24,7 @@ export function deleteOrganizationMemberGroup(
 
     return opts.db.transaction(async (tx) => {
       const orgMemberGroupRepo = new OrganizationMemberGroupRepository(tx);
+      const auditLogRepo = new AuditLogRepository(tx);
       const oidcRepo = new OidcRepository(tx);
 
       const memberGroup = await orgMemberGroupRepo.byId({
@@ -57,6 +59,19 @@ export function deleteOrganizationMemberGroup(
           id: memberGroup.kcMapperId,
         });
       }
+
+      await auditLogRepo.addAuditLog({
+        organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
+        auditAction: 'group.deleted',
+        action: 'deleted',
+        actorId: authContext.userId,
+        auditableDisplayName: memberGroup.name,
+        auditableType: 'group',
+        actorDisplayName: authContext.userDisplayName,
+        apiKeyName: authContext.apiKeyName,
+        actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+      });
 
       return {
         response: {

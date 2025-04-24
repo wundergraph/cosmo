@@ -1,7 +1,7 @@
 import { CreateOIDCProviderRequest, GroupMapper } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { validate as isValidUuid } from 'uuid';
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from 'drizzle-orm';
 import * as schema from '../../db/schema.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
 import Keycloak from './Keycloak.js';
@@ -84,10 +84,12 @@ export default class OidcProvider {
         name: schema.organizationMemberGroups.name,
       })
       .from(schema.organizationMemberGroups)
-      .where(and(
-        eq(schema.organizationMemberGroups.organizationId, organizationId),
-        inArray(schema.organizationMemberGroups.id, targetGroupIds)
-      ));
+      .where(
+        and(
+          eq(schema.organizationMemberGroups.organizationId, organizationId),
+          inArray(schema.organizationMemberGroups.id, targetGroupIds),
+        ),
+      );
 
     let key = 'ssoGroups';
     // using a different claim name for microsoft entra as it doesn't allow us to change the name of the claim.
@@ -99,9 +101,9 @@ export default class OidcProvider {
       realm: kcRealm,
       alias,
       claims: `[{ "key": "${key}", "value": ".*" }]`,
-      keycloakGroupName: `/${organizationSlug}`
-    })
-    
+      keycloakGroupName: `/${organizationSlug}`,
+    });
+
     for (const mapper of mappers) {
       const claims = `[{ "key": "${key}", "value": "${mapper.ssoGroup.trim()}" }]`;
 
@@ -119,13 +121,19 @@ export default class OidcProvider {
 
       await db
         .update(schema.organizationMemberGroups)
-        .set({ kcMapperId: createdMapper.id, })
+        .set({ kcMapperId: createdMapper.id })
         .where(eq(schema.organizationMemberGroups.id, memberGroup.id))
         .execute();
     }
   }
 
-  public async fetchIDPMappers({ kcClient, kcRealm, alias, organizationId, db }: {
+  public async fetchIDPMappers({
+    kcClient,
+    kcRealm,
+    alias,
+    organizationId,
+    db,
+  }: {
     kcClient: Keycloak;
     kcRealm: string;
     alias: string;

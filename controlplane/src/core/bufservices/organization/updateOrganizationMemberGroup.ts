@@ -26,7 +26,7 @@ export function updateOrganizationMemberGroup(
     const ruleSet = await ruleSetRepo.byId({
       organizationId: authContext.organizationId,
       groupId: req.groupId,
-    })
+    });
 
     if (!ruleSet) {
       return {

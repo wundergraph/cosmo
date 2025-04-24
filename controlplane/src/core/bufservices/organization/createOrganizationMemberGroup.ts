@@ -9,6 +9,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationMemberGroupRepository } from '../../repositories/OrganizationMemberGroupRepository.js';
 import { OrganizationMemberGroupDTO } from '../../../types/index.js';
+import { AuditLogRepository } from "../../repositories/AuditLogRepository.js";
 
 export function createOrganizationMemberGroup(
   opts: RouterOptions,
@@ -21,8 +22,10 @@ export function createOrganizationMemberGroup(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    const ruleSetRepo = new OrganizationMemberGroupRepository(opts.db);
-    if (await ruleSetRepo.exists({ organizationId: authContext.organizationId, ruleSetName: req.name })) {
+    const orgMemberGroupRepo = new OrganizationMemberGroupRepository(opts.db);
+    const auditLogRepo = new AuditLogRepository(opts.db);
+
+    if (await orgMemberGroupRepo.nameExists({ organizationId: authContext.organizationId, name: req.name })) {
       return {
         response: {
           code: EnumStatusCode.ERR_ALREADY_EXISTS,
@@ -47,9 +50,9 @@ export function createOrganizationMemberGroup(
       };
     }
 
-    let createdRuleSet: OrganizationMemberGroupDTO;
+    let createdGroup: OrganizationMemberGroupDTO;
     try {
-      createdRuleSet = await ruleSetRepo.createRuleSet({
+      createdGroup = await orgMemberGroupRepo.create({
         organizationId: authContext.organizationId,
         name: req.name,
         kcGroupId: createdGroupId,
@@ -59,13 +62,26 @@ export function createOrganizationMemberGroup(
       throw e;
     }
 
+    await auditLogRepo.addAuditLog({
+      organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
+      auditAction: 'group.created',
+      action: 'created',
+      actorId: authContext.userId,
+      auditableDisplayName: req.name,
+      auditableType: 'group',
+      actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
+      actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+    });
+
     return {
       response: {
         code: EnumStatusCode.OK,
       },
       group: {
-        groupId: createdRuleSet.id,
-        name: createdRuleSet.name,
+        groupId: createdGroup.id,
+        name: createdGroup.name,
         membersCount: 0,
         rules: [],
       },
