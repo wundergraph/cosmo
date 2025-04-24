@@ -2,7 +2,6 @@ package redis
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -14,7 +13,7 @@ import (
 
 // GetProvider returns a provider factory for Redis
 func GetProvider(ctx context.Context, in *nodev1.DataSourceConfiguration, _ *plan.DataSourceMetadata, config config.EventsConfiguration, logger *zap.Logger, hostName string, routerListenAddr string) (datasource.PubSubProvider, error) {
-	if in.CustomEvents == nil || len(in.CustomEvents.Redis) == 0 {
+	if len(in.GetCustomEvents().GetRedis()) == 0 {
 		return nil, nil
 	}
 
@@ -23,12 +22,11 @@ func GetProvider(ctx context.Context, in *nodev1.DataSourceConfiguration, _ *pla
 		executionCtx:     ctx,
 		hostName:         hostName,
 		routerListenAddr: routerListenAddr,
-		eventsConfig:     in.CustomEvents.Redis,
+		eventsConfig:     in.GetCustomEvents().GetRedis(),
 	}
 
-	var found bool
 	providerID := ""
-	for _, event := range in.CustomEvents.Redis {
+	for _, event := range in.GetCustomEvents().GetRedis() {
 		providerID = event.GetEngineEventConfiguration().GetProviderId()
 		if providerID == "" {
 			continue
@@ -36,20 +34,12 @@ func GetProvider(ctx context.Context, in *nodev1.DataSourceConfiguration, _ *pla
 		for _, redisConfig := range config.Providers.Redis {
 			if strings.EqualFold(redisConfig.ID, providerID) {
 				provider.adapter = NewAdapter(logger, redisConfig.URLs, redisConfig.ClusterEnabled)
-				found = true
-				break
+				return provider, nil
 			}
 		}
-		if found {
-			break
-		}
 	}
 
-	if !found {
-		return nil, fmt.Errorf("failed to find redis provider with id: %s", providerID)
-	}
-
-	return provider, nil
+	return nil, nil
 }
 
 // Provider for Redis
@@ -75,23 +65,12 @@ func (p *Provider) Shutdown(ctx context.Context) error {
 // FindPubSubDataSource finds a matching event configuration based on typeName and fieldName
 func (p *Provider) FindPubSubDataSource(typeName string, fieldName string, extractFn datasource.ArgumentTemplateCallback) (datasource.PubSubDataSource, error) {
 	for _, config := range p.eventsConfig {
-		engineConfig := config.GetEngineEventConfiguration()
-		if engineConfig == nil {
-			continue
+		if config.GetEngineEventConfiguration().GetTypeName() == typeName && config.GetEngineEventConfiguration().GetFieldName() == fieldName {
+			return &PubSubDataSource{
+				EventConfiguration: config,
+				RedisAdapter:       p.adapter,
+			}, nil
 		}
-
-		if engineConfig.TypeName != "" && !strings.EqualFold(engineConfig.TypeName, typeName) {
-			continue
-		}
-
-		if engineConfig.FieldName != "" && !strings.EqualFold(engineConfig.FieldName, fieldName) {
-			continue
-		}
-
-		return &PubSubDataSource{
-			EventConfiguration: config,
-			RedisAdapter:       p.adapter,
-		}, nil
 	}
 
 	return nil, nil

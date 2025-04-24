@@ -14,15 +14,15 @@ import (
 
 // SubscriptionEventConfiguration contains configuration for subscription events
 type SubscriptionEventConfiguration struct {
-	ProviderID string
-	Channels   []string
+	ProviderID string   `json:"providerId"`
+	Channels   []string `json:"channels"`
 }
 
 // PublishAndRequestEventConfiguration contains configuration for publish events
 type PublishAndRequestEventConfiguration struct {
-	ProviderID string
-	Channel    string
-	Data       json.RawMessage
+	ProviderID string          `json:"providerId"`
+	Channel    string          `json:"channel"`
+	Data       json.RawMessage `json:"data"`
 }
 
 // AdapterInterface defines the methods that a Redis adapter should implement
