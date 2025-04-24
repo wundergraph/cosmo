@@ -175,13 +175,13 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			ctx = WithResponseHeaderPropagation(ctx)
 		}
 
-		defer propagateSubgraphErrors(ctx)
-
 		resp, err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, HeaderPropagationWriter(w, ctx.Context()))
+
+		defer trackResponseError(ctx, err)
+
 		requestContext.dataSourceNames = getSubgraphNames(p.Response.DataSources)
 
 		if err != nil {
-			trackFinalResponseError(ctx.Context(), err)
 			h.WriteError(ctx, err, p.Response, w)
 			return
 		}
@@ -194,7 +194,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		)
 		h.setDebugCacheHeaders(w, requestContext.operation)
 
-		defer propagateSubgraphErrors(ctx)
 		ctx, writer, ok = GetSubscriptionResponseWriter(ctx, r, w, h.apolloSubscriptionMultipartPrintBoundary)
 		if !ok {
 			requestContext.logger.Error("unable to get subscription response writer", zap.Error(errCouldNotFlushResponse))
@@ -211,25 +210,24 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, writer)
 		requestContext.dataSourceNames = getSubgraphNames(p.Response.Response.DataSources)
 
+		defer trackResponseError(ctx, err)
+
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
 				requestContext.logger.Debug("context canceled: unable to resolve subscription response", zap.Error(err))
-				trackFinalResponseError(r.Context(), err)
 				return
 			} else if errors.Is(err, ErrUnauthorized) {
-				trackFinalResponseError(ctx.Context(), err)
 				writeRequestErrors(r, w, http.StatusUnauthorized, graphqlerrors.RequestErrorsFromError(err), requestContext.logger)
 				return
 			}
 
 			requestContext.logger.Error("unable to resolve subscription response", zap.Error(err))
-			trackFinalResponseError(ctx.Context(), err)
 			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errCouldNotResolveResponse), requestContext.logger)
 			return
 		}
 	default:
 		requestContext.logger.Error("unsupported plan kind")
-		trackFinalResponseError(ctx.Context(), errOperationPlanUnsupported)
+		trackResponseError(ctx, errOperationPlanUnsupported)
 		writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errOperationPlanUnsupported), requestContext.logger)
 	}
 }

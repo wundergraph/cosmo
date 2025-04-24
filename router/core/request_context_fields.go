@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -28,6 +27,7 @@ const (
 	ContextFieldOperationNormalizationTime = "operation_normalization_time"
 	ContextFieldPersistedOperationSha256   = "persisted_operation_sha256"
 	ContextFieldOperationSha256            = "operation_sha256"
+	ContextFieldResponseError              = "response_error"
 	ContextFieldResponseErrorMessage       = "response_error_message"
 	ContextFieldRequestError               = "request_error"
 )
@@ -61,6 +61,21 @@ func NewStringLogField(val string, attribute config.CustomAttribute) zap.Field {
 	return zap.Skip()
 }
 
+func NewErrorLogField(val error, attribute config.CustomAttribute) zap.Field {
+	if v := val; v != nil {
+		if unwrapped, ok := v.(multiError); ok {
+			errs := unwrapped.Unwrap()
+			if len(errs) > 0 {
+				return zap.Errors(attribute.Key, errs)
+			}
+		}
+		return zap.Errors(attribute.Key, []error{v})
+	} else if attribute.Default != "" {
+		return zap.String(attribute.Key, attribute.Default)
+	}
+	return zap.Skip()
+}
+
 func NewBoolLogField(val bool, attribute config.CustomAttribute) zap.Field {
 	if val {
 		return zap.Bool(attribute.Key, val)
@@ -86,6 +101,24 @@ func NewDurationLogField(val time.Duration, attribute config.CustomAttribute) za
 		}
 	}
 	return zap.Skip()
+}
+
+func LogLevelHandler(r *http.Request) zapcore.Level {
+
+	if r == nil {
+		return zapcore.InfoLevel
+	}
+
+	reqContext := getRequestContext(r.Context())
+	if reqContext == nil {
+		return zapcore.InfoLevel
+	}
+
+	if reqContext.error != nil {
+		return zapcore.ErrorLevel
+	}
+
+	return zapcore.InfoLevel
 }
 
 func RouterAccessLogsFieldHandler(
@@ -190,6 +223,8 @@ func GetLogFieldFromCustomAttribute(field config.CustomAttribute, req *requestCo
 		return NewStringSliceLogField(v, field)
 	case time.Duration:
 		return NewDurationLogField(v, field)
+	case error:
+		return NewErrorLogField(v, field)
 	}
 
 	return zap.Skip()
@@ -209,7 +244,9 @@ func getCustomDynamicAttributeValue(
 		if attribute.ContextField == ContextFieldRequestError {
 			return err != nil
 		} else if attribute.ContextField == ContextFieldResponseErrorMessage && err != nil {
-			return fmt.Sprintf("%v", err)
+			return getErrorString(err)
+		} else if attribute.ContextField == ContextFieldResponseError && err != nil {
+			return err
 		}
 		return ""
 	}
@@ -266,11 +303,20 @@ func getCustomDynamicAttributeValue(
 		}
 		return reqContext.operation.persistedID
 	case ContextFieldResponseErrorMessage:
+		var fErr any
 		if err != nil {
-			return fmt.Sprintf("%v", err)
+			fErr = err
+		} else if reqContext.error != nil {
+			fErr = reqContext.error
+		}
+
+		return getErrorString(fErr)
+	case ContextFieldResponseError:
+		if err != nil {
+			return err
 		}
 		if reqContext.error != nil {
-			return reqContext.error.Error()
+			return reqContext.error
 		}
 	case ContextFieldOperationServices:
 		return reqContext.dataSourceNames
@@ -278,6 +324,22 @@ func getCustomDynamicAttributeValue(
 		return reqContext.graphQLErrorServices
 	case ContextFieldGraphQLErrorCodes:
 		return reqContext.graphQLErrorCodes
+	}
+
+	return ""
+}
+
+func getErrorString(err any) string {
+	if err == nil {
+		return ""
+	}
+
+	if e, ok := err.(error); ok {
+		return e.Error()
+	}
+
+	if e, ok := err.(string); ok {
+		return e
 	}
 
 	return ""

@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"time"
+
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
@@ -17,8 +20,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-	"slices"
-	"time"
 )
 
 var (
@@ -148,7 +149,12 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 				path = responseInfo.Request.URL.Path
 			}
 		}
-		f.accessLogger.Info(path, fields)
+
+		if responseInfo.Err != nil {
+			f.accessLogger.Error(path, fields)
+		} else {
+			f.accessLogger.Info(path, fields)
+		}
 	}
 
 	if responseInfo.Err != nil {

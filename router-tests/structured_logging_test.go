@@ -4,16 +4,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"math"
 	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -193,7 +194,7 @@ func TestAccessLogsFileOutput(t *testing.T) {
 			require.NoError(t, os.RemoveAll(fp))
 		})
 
-		logger := logging.NewZapAccessLogger(f, false, false)
+		logger := logging.NewZapAccessLogger(f, zap.InfoLevel, false, false, false)
 		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
@@ -249,7 +250,7 @@ func TestAccessLogsFileOutput(t *testing.T) {
 				require.NoError(t, os.RemoveAll(fp))
 			})
 
-			logger := logging.NewZapAccessLogger(f, false, false)
+			logger := logging.NewZapAccessLogger(f, zap.InfoLevel, false, false, false)
 			require.NoError(t, err)
 
 			testenv.Run(t, &testenv.Config{

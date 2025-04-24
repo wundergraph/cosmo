@@ -661,6 +661,20 @@
           "description": "Enable the access logs. The access logs are used to log the incoming requests. By default, the access logs are enabled and logged to the standard output.",
           "default": true
         },
+        "level": {
+          "type": "string",
+          "description": "The level of the access logs. The supported levels are 'info', 'error'. The default value is 'info'. The 'info' level logs all requests. The 'error' level logs only the errors.",
+          "default": "info",
+          "enum": [
+            "info",
+            "error"
+          ]
+        },
+        "add_stacktrace": {
+          "type": "boolean",
+          "description": "Enable the stacktrace in the access logs. The stacktrace is used to log the stacktrace of the error. The default value is false.",
+          "default": false
+        },
         "buffer": {
           "type": "object",
           "additionalProperties": false,
@@ -760,6 +774,7 @@
                               "operation_planning_time",
                               "operation_normalization_time",
                               "request_error",
+                              "response_error",
                               "response_error_message"
                             ]
                           }
@@ -3156,6 +3171,7 @@
                   "persisted_operation_sha256",
                   "operation_sha256",
                   "request_error",
+                  "response_error",
                   "response_error_message",
                   "graphql_error_codes",
                   "graphql_error_service_names",
