@@ -3,13 +3,14 @@ package requestlogger
 import (
 	"crypto/sha256"
 	"fmt"
+	"net"
+	"net/http"
+	"time"
+
 	"github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"net"
-	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
 
@@ -46,9 +47,10 @@ const (
 )
 
 type handler struct {
-	accessLogger *accessLogger
-	handler      http.Handler
-	logger       *zap.Logger
+	accessLogger    *accessLogger
+	handler         http.Handler
+	logLevelHandler func(r *http.Request) zapcore.Level
+	logger          *zap.Logger
 }
 
 func parseOptions(r *handler, opts ...Option) http.Handler {
@@ -93,6 +95,12 @@ func WithNoTimeField() Option {
 func WithFields(fields ...zapcore.Field) Option {
 	return func(r *handler) {
 		r.accessLogger.baseFields = fields
+	}
+}
+
+func WithLogLevelHandler(fn func(r *http.Request) zapcore.Level) Option {
+	return func(r *handler) {
+		r.logLevelHandler = fn
 	}
 }
 
@@ -157,7 +165,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				h.logger.Error("[Recovery from panic]", fields...)
 			}
 
-			// Dpanic will panic already in development but in production it will log the error and continue
+			// Dpanic will panic already in development, but in production it will log the error and continue
 			// For those reasons we panic here to pass it to the recovery middleware in all cases
 			panic(err)
 		}
@@ -178,7 +186,13 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		resFields = append(resFields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, nil, r, nil)...)
 	}
 
-	h.logger.Info(path, append(fields, resFields...)...)
+	logLevel := zapcore.InfoLevel
+
+	if h.logLevelHandler != nil {
+		logLevel = h.logLevelHandler(r)
+	}
+
+	h.logger.Log(logLevel, path, append(fields, resFields...)...)
 }
 
 func (al *accessLogger) getRequestFields(r *http.Request) []zapcore.Field {

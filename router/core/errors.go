@@ -174,10 +174,14 @@ func getAggregatedSubgraphServiceNames(err error) []string {
 	return nil
 }
 
-// propagateSubgraphErrors propagates the subgraph errors to the request context
-func propagateSubgraphErrors(ctx *resolve.Context) {
-	err := ctx.SubgraphErrors()
+// trackResponseError propagates the errors during engine execution to the request context.
+func trackResponseError(ctx *resolve.Context, err error) {
+	if err != nil {
+		trackFinalResponseError(ctx.Context(), err)
+		return
+	}
 
+	err = ctx.ExecutionError()
 	if err != nil {
 		trackFinalResponseError(ctx.Context(), err)
 	}
@@ -276,8 +280,8 @@ func writeMultipartError(
 	// before, some clients that rely on both CR and LF strictly to parse blocks were broken and not parsing our
 	// multipart chunks correctly. With this fix here (and in a few other places) the clients are now working.
 	resp = append(resp, []byte("\r\n--graphql--")...)
- 
-	if _, err := w.Write([]byte(resp)); err != nil {
+
+	if _, err := w.Write(resp); err != nil {
 		return err
 	}
 

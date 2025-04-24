@@ -56,10 +56,15 @@ func (h *SubgraphAccessLogger) RequestFields(respInfo *resolve.ResponseInfo, sub
 	if h.accessLogger.fieldsHandler != nil {
 		fields = append(fields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, respInfo.Err, respInfo.Request, &respInfo.ResponseHeaders)...)
 	}
+	fields = append(fields, subgraphFields...)
 
 	return fields
 }
 
 func (h *SubgraphAccessLogger) Info(message string, fields []zap.Field) {
 	h.logger.Info(message, fields...)
+}
+
+func (h *SubgraphAccessLogger) Error(message string, fields []zap.Field) {
+	h.logger.Error(message, fields...)
 }

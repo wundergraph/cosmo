@@ -156,6 +156,13 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 			Attributes:         cfg.AccessLogs.Router.Fields,
 			SubgraphEnabled:    cfg.AccessLogs.Subgraphs.Enabled,
 			SubgraphAttributes: cfg.AccessLogs.Subgraphs.Fields,
+			Level:              cfg.AccessLogs.Level,
+			AddStacktrace:      cfg.AccessLogs.AddStacktrace,
+		}
+
+		level, err := logging.ZapLogLevelFromString(cfg.AccessLogs.Level)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse log level: %w for access logs", err)
 		}
 
 		if cfg.AccessLogs.Output.File.Enabled {
@@ -168,8 +175,9 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 					WS:            f,
 					BufferSize:    int(cfg.AccessLogs.Buffer.Size.Uint64()),
 					FlushInterval: cfg.AccessLogs.Buffer.FlushInterval,
+					Stacktrace:    c.AddStacktrace,
 					Development:   cfg.DevelopmentMode,
-					Level:         zap.InfoLevel,
+					Level:         level,
 					Pretty:        !cfg.JSONLog,
 				})
 				if err != nil {
@@ -177,7 +185,7 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 				}
 				c.Logger = bl.Logger
 			} else {
-				c.Logger = logging.NewZapAccessLogger(f, cfg.DevelopmentMode, !cfg.JSONLog)
+				c.Logger = logging.NewZapAccessLogger(f, level, c.AddStacktrace, cfg.DevelopmentMode, !cfg.JSONLog)
 			}
 		} else if cfg.AccessLogs.Output.Stdout.Enabled {
 			if cfg.AccessLogs.Buffer.Enabled {
@@ -185,8 +193,9 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 					WS:            os.Stdout,
 					BufferSize:    int(cfg.AccessLogs.Buffer.Size.Uint64()),
 					FlushInterval: cfg.AccessLogs.Buffer.FlushInterval,
+					Stacktrace:    cfg.AccessLogs.AddStacktrace,
 					Development:   cfg.DevelopmentMode,
-					Level:         zap.InfoLevel,
+					Level:         level,
 					Pretty:        !cfg.JSONLog,
 				})
 				if err != nil {
@@ -194,7 +203,7 @@ func NewRouter(ctx context.Context, params Params, additionalOptions ...core.Opt
 				}
 				c.Logger = bl.Logger
 			} else {
-				c.Logger = logging.NewZapAccessLogger(os.Stdout, cfg.DevelopmentMode, !cfg.JSONLog)
+				c.Logger = logging.NewZapAccessLogger(os.Stdout, level, c.AddStacktrace, cfg.DevelopmentMode, !cfg.JSONLog)
 			}
 		}
 

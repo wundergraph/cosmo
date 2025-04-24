@@ -6766,7 +6766,8 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Equal(t, trace.SpanKindInternal, sn[8].SpanKind())
 			require.Equal(t, codes.Error, sn[8].Status().Code)
 			require.Lenf(t, sn[8].Attributes(), 14, "expected 14 attributes, got %d", len(sn[8].Attributes()))
-			require.Contains(t, sn[8].Status().Description, "connect: connection refused\nFailed to fetch from Subgraph 'products' at Path: 'employees'.")
+			require.Contains(t, sn[8].Status().Description, "Failed to fetch from Subgraph 'products' at Path: 'employees'.")
+			require.Contains(t, sn[8].Status().Description, "connect: connection refused")
 
 			events := sn[8].Events()
 			require.Len(t, events, 1, "expected 1 event because the GraphQL request failed")
@@ -6776,7 +6777,8 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Equal(t, "query unnamed", sn[10].Name())
 			require.Equal(t, trace.SpanKindServer, sn[10].SpanKind())
 			require.Equal(t, codes.Error, sn[10].Status().Code)
-			require.Contains(t, sn[10].Status().Description, "connect: connection refused\nFailed to fetch from Subgraph 'products' at Path: 'employees'.")
+			require.Contains(t, sn[10].Status().Description, "Failed to fetch from Subgraph 'products' at Path: 'employees'.")
+			require.Contains(t, sn[10].Status().Description, "connect: connection refused")
 		})
 	})
 

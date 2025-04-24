@@ -896,6 +896,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			requestlogger.WithFields(baseLogFields...),
 			requestlogger.WithAttributes(s.accessLogsConfig.Attributes),
 			requestlogger.WithExprAttributes(exprAttributes),
+			requestlogger.WithLogLevelHandler(LogLevelHandler),
 			requestlogger.WithFieldsHandler(RouterAccessLogsFieldHandler),
 		}
 
