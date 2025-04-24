@@ -54,7 +54,7 @@ func TestNoSubgraphConfig(t *testing.T) {
 	t.Parallel()
 
 	testenv.RunRouterBinary(t, &testenv.Config{
-		UseDemoConfig: true,
+		Demo:          true,
 		NoRetryClient: true,
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{

@@ -726,7 +726,6 @@ type ExecutionConfig struct {
 	File            ExecutionConfigFile            `yaml:"file,omitempty"`
 	Storage         ExecutionConfigStorage         `yaml:"storage,omitempty" envPrefix:"EXECUTION_CONFIG_STORAGE_"`
 	FallbackStorage FallbackExecutionConfigStorage `yaml:"fallback_storage,omitempty" envPrefix:"EXECUTION_CONFIG_FALLBACK_STORAGE_"`
-	UseDemoConfig   bool                           `yaml:"use_demo_config,omitempty" envDefault:"false" env:"EXECUTION_CONFIG_USE_DEMO_CONFIG"`
 }
 
 type PersistedOperationsCacheConfig struct {
@@ -908,6 +907,7 @@ type Config struct {
 	TLS            TLSConfiguration   `yaml:"tls,omitempty"`
 	CacheControl   CacheControlPolicy `yaml:"cache_control_policy"`
 	MCP            MCPConfiguration   `yaml:"mcp,omitempty"`
+	Demo           bool               `yaml:"demo,omitempty" envDefault:"false" env:"DEMO"`
 
 	Modules        map[string]interface{} `yaml:"modules,omitempty"`
 	Headers        HeaderRules            `yaml:"headers,omitempty"`

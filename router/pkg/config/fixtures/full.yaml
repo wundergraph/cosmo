@@ -45,6 +45,8 @@ mcp:
   storage:
     provider_id: mcp
 
+demo: true
+
 # Cross-Origin Resource Sharing (CORS)
 cors:
   allow_origins: ["*"]

@@ -116,6 +116,7 @@
     "ExposeSchema": false,
     "RouterURL": ""
   },
+  "Demo": false,
   "Modules": null,
   "Headers": {
     "All": null,
@@ -404,8 +405,7 @@
       "Enabled": false,
       "ProviderID": "",
       "ObjectPath": ""
-    },
-    "UseDemoConfig": false
+    }
   },
   "PersistedOperationsConfig": {
     "LogUnknown": false,

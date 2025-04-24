@@ -140,6 +140,7 @@
     "ExposeSchema": false,
     "RouterURL": "https://cosmo-router.wundergraph.com"
   },
+  "Demo": true,
   "Modules": {
     "myModule": {
       "value": 1
@@ -729,8 +730,7 @@
       "Enabled": false,
       "ProviderID": "",
       "ObjectPath": ""
-    },
-    "UseDemoConfig": false
+    }
   },
   "PersistedOperationsConfig": {
     "LogUnknown": true,

@@ -198,6 +198,7 @@ type (
 		apolloCompatibilityFlags        config.ApolloCompatibilityFlags
 		apolloRouterCompatibilityFlags  config.ApolloRouterCompatibilityFlags
 		storageProviders                config.StorageProviders
+		demo                            bool
 		eventsConfig                    config.EventsConfiguration
 		prometheusServer                *http.Server
 		modulesConfig                   map[string]interface{}
@@ -1995,6 +1996,12 @@ func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 func WithMCP(cfg config.MCPConfiguration) Option {
 	return func(r *Router) {
 		r.mcp = cfg
+	}
+}
+
+func WithDemo(demo bool) Option {
+	return func(r *Router) {
+		r.demo = demo
 	}
 }
 

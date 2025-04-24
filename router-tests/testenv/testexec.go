@@ -83,14 +83,14 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 	vals := ""
 
 	for key, val := range map[string]string{
-		"GRAPH_API_TOKEN":                  token,
-		"LISTEN_ADDR":                      listenerAddr,
-		"CDN_URL":                          testCdn.URL,
-		"METRICS_OTLP_ENABLED":             "false",
-		"RETRY_ENABLED":                    "false",
-		"SHUTDOWN_DELAY":                   "30s",
-		"CDN_CACHE_SIZE":                   fmt.Sprintf("%d", 1024*1024),
-		"EXECUTION_CONFIG_USE_DEMO_CONFIG": fmt.Sprintf("%t", cfg.UseDemoConfig),
+		"GRAPH_API_TOKEN":      token,
+		"LISTEN_ADDR":          listenerAddr,
+		"CDN_URL":              testCdn.URL,
+		"METRICS_OTLP_ENABLED": "false",
+		"RETRY_ENABLED":        "false",
+		"SHUTDOWN_DELAY":       "30s",
+		"CDN_CACHE_SIZE":       fmt.Sprintf("%d", 1024*1024),
+		"DEMO":                 fmt.Sprintf("%t", cfg.Demo),
 	} {
 		vals += fmt.Sprintf("\n%s=%s", key, val)
 	}

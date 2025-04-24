@@ -357,17 +357,6 @@
               }
             }
           }
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "use_demo_config": {
-              "type": "boolean",
-              "description": "Use the demo execution config. The demo execution config is an example execution config that is used to start the router.",
-              "default": false
-            }
-          }
         }
       ]
     },
@@ -1965,6 +1954,11 @@
           "description": "Expose the full GraphQL schema through MCP. When enabled, AI models can request the complete schema of your API."
         }
       }
+    },
+    "demo": {
+      "type": "boolean",
+      "description": "Launch the router in demo mode. The demo mode is used to start the router with a demo execution config if no execution config is found.",
+      "default": false
     },
     "events": {
       "type": "object",
