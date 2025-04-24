@@ -69,6 +69,7 @@ const (
 	natsDefaultSourceName = "default"
 	myNatsProviderID      = "my-nats"
 	myKafkaProviderID     = "my-kafka"
+	myRedisProviderID     = "my-redis"
 )
 
 var (
@@ -80,8 +81,11 @@ var (
 	ConfigWithEdfsKafkaJSONTemplate string
 	//go:embed testdata/configWithEdfsNats.json
 	ConfigWithEdfsNatsJSONTemplate string
-	demoNatsProviders              = []string{natsDefaultSourceName, myNatsProviderID}
-	demoKafkaProviders             = []string{myKafkaProviderID}
+	//go:embed testdata/configWithEdfsRedis.json
+	ConfigWithEdfsRedisJSONTemplate string
+	demoNatsProviders               = []string{natsDefaultSourceName, myNatsProviderID}
+	demoKafkaProviders              = []string{myKafkaProviderID}
+	demoRedisProviders              = []string{myRedisProviderID}
 )
 
 func init() {
@@ -311,6 +315,7 @@ type Config struct {
 	UseVersionedGraph                  bool
 	NoShutdownTestServer               bool
 	MCP                                config.MCPConfiguration
+	EnableRedis                        bool
 }
 
 type CacheMetricsAssertions struct {
@@ -361,6 +366,8 @@ type MCPConfig struct {
 	Port    int
 }
 
+var redisHost = "redis://localhost:6379"
+
 func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	t.Helper()
 
@@ -391,6 +398,11 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			t.Fatalf("could not setup nats clients: %s", err.Error())
 		}
 		natsSetup = s
+	}
+
+	var enableRedis bool
+	if cfg.EnableRedis {
+		enableRedis = true
 	}
 
 	if cfg.AssertCacheMetrics != nil {
@@ -729,6 +741,10 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		e.NatsConnectionMyNats = natsSetup.Connections[1]
 	}
 
+	if enableRedis {
+		e.RedisHosts = []string{redisHost}
+	}
+
 	if routerConfig.FeatureFlagConfigs != nil {
 		myFF, ok := routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName["myff"]
 		if ok {
@@ -852,7 +868,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 	natsEventSources := make([]config.NatsEventSource, len(demoNatsProviders))
 	kafkaEventSources := make([]config.KafkaEventSource, len(demoKafkaProviders))
-
+	redisEventSources := make([]config.RedisEventSource, len(demoRedisProviders))
 	if natsData != nil {
 		for _, sourceName := range demoNatsProviders {
 			natsEventSources = append(natsEventSources, config.NatsEventSource{
@@ -867,11 +883,20 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			Brokers: testConfig.KafkaSeeds,
 		})
 	}
+	if testConfig.EnableRedis {
+		for _, sourceName := range demoRedisProviders {
+			redisEventSources = append(redisEventSources, config.RedisEventSource{
+				ID:   sourceName,
+				URLs: []string{redisHost},
+			})
+		}
+	}
 
 	eventsConfiguration := config.EventsConfiguration{
 		Providers: config.EventProviders{
 			Nats:  natsEventSources,
 			Kafka: kafkaEventSources,
+			Redis: redisEventSources,
 		},
 	}
 	if testConfig.ModifyEventsConfiguration != nil {
@@ -1172,6 +1197,7 @@ type Environment struct {
 	NatsData              *NatsData
 	NatsConnectionDefault *nats.Conn
 	NatsConnectionMyNats  *nats.Conn
+	RedisHosts            []string
 	SubgraphRequestCount  *SubgraphRequestCount
 	KafkaAdminClient      *kadm.Client
 	KafkaClient           *kgo.Client

@@ -26,7 +26,7 @@ func GetProvider(ctx context.Context, in *nodev1.DataSourceConfiguration, _ *pla
 	usedProviders := make(map[string]bool)
 	for _, event := range redisData {
 		if _, found := definedProviders[event.EngineEventConfiguration.ProviderId]; !found {
-			return nil, fmt.Errorf("failed to find redis provider with id %s", event.EngineEventConfiguration.ProviderId)
+			return nil, fmt.Errorf("failed to find Redis provider with ID %s", event.EngineEventConfiguration.ProviderId)
 		}
 		usedProviders[event.EngineEventConfiguration.ProviderId] = true
 	}

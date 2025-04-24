@@ -84,7 +84,7 @@ func TestGetProvider(t *testing.T) {
 		provider, err := GetProvider(ctx, in, dsMeta, cfg, logger, "host", "addr")
 		require.Error(t, err)
 		require.Nil(t, provider)
-		assert.Contains(t, err.Error(), "failed to find redis provider with id")
+		assert.Contains(t, err.Error(), "failed to find Redis provider with ID")
 	})
 
 	t.Run("creates provider with configured adapters", func(t *testing.T) {
