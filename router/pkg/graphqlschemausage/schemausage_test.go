@@ -367,13 +367,13 @@ func TestGetSchemaUsageInfo(t *testing.T) {
 	assert.Len(t, argumentUsageInfo, len(expectedArgumentUsageInfo))
 	assert.Len(t, inputUsageInfo, len(expectedInputUsageInfo))
 	for i := range expectedFieldUsageInfo {
-		assert.Equal(t, prettyJSON(t, expectedFieldUsageInfo[i]), prettyJSON(t, fieldUsageInfo[i]), "fieldUsageInfo[%d]", i)
+		assert.JSONEq(t, prettyJSON(t, expectedFieldUsageInfo[i]), prettyJSON(t, fieldUsageInfo[i].IntoGraphQLMetrics()), "fieldUsageInfo[%d]", i)
 	}
 	for i := range expectedArgumentUsageInfo {
-		assert.Equal(t, prettyJSON(t, expectedArgumentUsageInfo[i]), prettyJSON(t, argumentUsageInfo[i]), "argumentUsageInfo[%d]", i)
+		assert.JSONEq(t, prettyJSON(t, expectedArgumentUsageInfo[i]), prettyJSON(t, argumentUsageInfo[i]), "argumentUsageInfo[%d]", i)
 	}
 	for i := range expectedInputUsageInfo {
-		assert.Equal(t, prettyJSON(t, &expectedInputUsageInfo[i]), prettyJSON(t, inputUsageInfo[i]), "inputUsageInfo[%d]", i)
+		assert.JSONEq(t, prettyJSON(t, &expectedInputUsageInfo[i]), prettyJSON(t, inputUsageInfo[i]), "inputUsageInfo[%d]", i)
 	}
 }
 
@@ -507,7 +507,7 @@ func TestGetSchemaUsageInfoInterfaces(t *testing.T) {
 
 	assert.Len(t, fieldUsageInfo, len(expectedFieldUsageInfo))
 	for i := range expectedFieldUsageInfo {
-		assert.Equal(t, prettyJSON(t, expectedFieldUsageInfo[i]), prettyJSON(t, fieldUsageInfo[i]), "fieldUsageInfo[%d]", i)
+		assert.Equal(t, prettyJSON(t, expectedFieldUsageInfo[i]), prettyJSON(t, fieldUsageInfo[i].IntoGraphQLMetrics()), "fieldUsageInfo[%d]", i)
 	}
 }
 
