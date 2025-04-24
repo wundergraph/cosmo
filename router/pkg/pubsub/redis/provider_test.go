@@ -118,7 +118,7 @@ func TestGetProvider(t *testing.T) {
 		require.NotNil(t, provider)
 
 		// Check the returned provider
-		redisProvider, ok := provider.(*Provider)
+		redisProvider, ok := provider.(*PubSubProvider)
 		require.True(t, ok)
 		assert.NotNil(t, redisProvider.logger)
 		assert.NotNil(t, redisProvider.adapter)
@@ -131,7 +131,7 @@ func TestProvider_FindPubSubDataSource(t *testing.T) {
 	typeName := "TestType"
 	fieldName := "testField"
 
-	provider := &Provider{
+	provider := &PubSubProvider{
 		adapter: mock,
 		eventsConfig: []*nodev1.RedisEventConfiguration{
 			{
