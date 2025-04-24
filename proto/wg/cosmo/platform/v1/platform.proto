@@ -896,18 +896,6 @@ message GetOrganizationMemberGroupsResponse {
   repeated OrganizationMemberGroup groups = 2;
 }
 
-message GetOrganizationAvailableMemberGroupsRequest {}
-
-message GetOrganizationAvailableMemberGroupsResponse {
-  message MemberGroup {
-    string groupId = 1;
-    string name = 2;
-  }
-
-  Response response = 1;
-  repeated MemberGroup groups = 2;
-}
-
 message UpdateOrganizationMemberGroupRequest {
   message MemberGroupRule {
     string role = 1;
@@ -931,12 +919,17 @@ message DeleteOrganizationMemberGroupResponse {
 }
 
 message OrgMember{
+  message Group {
+    string groupId = 1;
+    string name = 2;
+  }
+
   string userID = 1;
   string email = 2;
   repeated string roles = 3;
   string orgMemberID = 4;
   bool active = 5;
-  repeated string groups = 6;
+  repeated Group groups = 6;
 }
 
 message PendingOrgInvitation{
@@ -2866,8 +2859,6 @@ service PlatformService {
   rpc CreateOrganizationMemberGroup(CreateOrganizationMemberGroupRequest) returns (CreateOrganizationMemberGroupResponse) {}
   // GetOrganizationMemberGroups returns the list of organization member groups
   rpc GetOrganizationMemberGroups(GetOrganizationMemberGroupsRequest) returns (GetOrganizationMemberGroupsResponse) {}
-  // GetOrganizationAvailableMemberGroups return the list of organization member groups with minimal properties
-  rpc GetOrganizationAvailableMemberGroups(GetOrganizationAvailableMemberGroupsRequest) returns (GetOrganizationAvailableMemberGroupsResponse) {}
   // UpdateOrganizationMemberGroup updates the rule list for an organization member group
   rpc UpdateOrganizationMemberGroup(UpdateOrganizationMemberGroupRequest) returns (UpdateOrganizationMemberGroupResponse) {}
   // DeleteOrganizationMemberGroup deletes an existing organization member group

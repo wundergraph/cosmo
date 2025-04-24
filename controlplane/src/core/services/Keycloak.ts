@@ -241,7 +241,7 @@ export default class Keycloak {
     await this.client.identityProviders.del({ alias, realm: realm || this.realm });
   }
 
-  public async createIDPMapper({
+  public createIDPMapper({
     realm,
     claims,
     alias,
@@ -252,7 +252,7 @@ export default class Keycloak {
     alias: string;
     keycloakGroupName: string;
   }) {
-    await this.client.identityProviders.createMapper({
+    return this.client.identityProviders.createMapper({
       alias,
       realm: realm || this.realm,
       identityProviderMapper: {

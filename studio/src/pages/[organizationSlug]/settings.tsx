@@ -341,7 +341,11 @@ const AddNewMappers = ({
 }) => {
   return (
     <>
-      {mappers.map((mapper, index) => (
+      {mappers.length === 0 ? (
+        <div className="text-muted-foreground text-sm px-1">
+          No mappers have been added.
+        </div>
+      ) : mappers.map((mapper, index) => (
         <NewMapper
           key={mapper.id}
           mapper={mapper}
@@ -530,7 +534,7 @@ const OpenIDConnectProvider = ({
 
   const onSubmit: SubmitHandler<ConnectOIDCProviderInput> = (data) => {
     const groupMappers = mappers.map((m) => {
-      return { role: m.groupId, ssoGroup: m.ssoGroup.trim() };
+      return { groupId: m.groupId, ssoGroup: m.ssoGroup.trim() };
     });
 
     mutate(
@@ -548,7 +552,10 @@ const OpenIDConnectProvider = ({
               description: "OIDC provider connected successfully.",
               duration: 3000,
             });
+
             setMode("result");
+            reset();
+            updateMappers([]);
           } else if (d.response?.details) {
             toast({ description: d.response.details, duration: 4000 });
             setMode("create");
@@ -566,8 +573,6 @@ const OpenIDConnectProvider = ({
         },
       },
     );
-    reset();
-    updateMappers([]);
   };
 
   return (

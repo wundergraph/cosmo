@@ -26,6 +26,7 @@ export class OrganizationMemberGroupRepository {
       id: insertedRuleSet[0].id,
       name: input.name,
       kcGroupId: input.kcGroupId,
+      kcMapperId: null,
       membersCount: 0,
       rules: [],
     };
@@ -55,12 +56,12 @@ export class OrganizationMemberGroupRepository {
 
   public async byId(input: {
     organizationId: string;
-    ruleSetId: string;
+    groupId: string;
   }): Promise<OrganizationMemberGroupDTO | undefined> {
-    const ruleSet = await this.db.query.organizationMemberGroups.findFirst({
+    const memberGroup = await this.db.query.organizationMemberGroups.findFirst({
       where: and(
         eq(schema.organizationMemberGroups.organizationId, input.organizationId),
-        eq(schema.organizationMemberGroups.id, input.ruleSetId)
+        eq(schema.organizationMemberGroups.id, input.groupId)
       ),
       with: {
         rules: {
@@ -70,24 +71,25 @@ export class OrganizationMemberGroupRepository {
           },
         },
       },
-      extras: (table, { sql }) => ({
-        // There is an active issue that prevents using `schema.organizationRuleSetMembers` instead of directly
-        // using strings (https://github.com/drizzle-team/drizzle-orm/issues/3493)
-        membersCount: sql<number>`CAST((
-          select count(distinct "user_id")
-          from "organization_rule_set_members" 
-          where "organization_rule_set_members"."rule_set_id" = ${table.id}
-        ) AS INTEGER)`.as('members_count'),
-      }),
+      // extras: (table, { sql }) => ({
+      //   // There is an active issue that prevents using `schema.organizationRuleSetMembers` instead of directly
+      //   // using strings (https://github.com/drizzle-team/drizzle-orm/issues/3493)
+      //   membersCount: sql<number>`CAST((
+      //     select count(distinct "user_id")
+      //     from "organization_rule_set_members"
+      //     where "organization_rule_set_members"."rule_set_id" = ${table.id}
+      //   ) AS INTEGER)`.as('members_count'),
+      // }),
     });
 
-    if (!ruleSet) {
+    if (!memberGroup) {
       return undefined;
     }
 
-    const rulesGroupedByRole = Object.groupBy(ruleSet.rules, (r) => r.role);
+    const rulesGroupedByRole = Object.groupBy(memberGroup.rules, (r) => r.role);
     return {
-      ...ruleSet,
+      ...memberGroup,
+      membersCount: 0,
       rules: Object.entries(rulesGroupedByRole).flatMap(([role, value]) => ({
         role,
         resources: value.map((obj) => obj.resource),

@@ -1344,6 +1344,7 @@ export const organizationMemberGroups = pgTable('organization_member_groups', {
     }),
   name: text('name').notNull(),
   kcGroupId: text('kc_group_id').unique(),
+  kcMapperId: text('kc_mapper_id').unique(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

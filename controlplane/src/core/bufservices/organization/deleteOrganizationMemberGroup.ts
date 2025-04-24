@@ -8,6 +8,7 @@ import {
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationMemberGroupRepository } from '../../repositories/OrganizationMemberGroupRepository.js';
+import { OidcRepository } from "../../repositories/OidcRepository.js";
 
 export function deleteOrganizationMemberGroup(
   opts: RouterOptions,
@@ -21,14 +22,15 @@ export function deleteOrganizationMemberGroup(
     logger = enrichLogger(ctx, logger, authContext);
 
     return opts.db.transaction(async (tx) => {
-      const ruleSetRepo = new OrganizationMemberGroupRepository(tx);
+      const orgMemberGroupRepo = new OrganizationMemberGroupRepository(tx);
+      const oidcRepo = new OidcRepository(tx);
 
-      const ruleSet = await ruleSetRepo.byId({
+      const memberGroup = await orgMemberGroupRepo.byId({
         organizationId: authContext.organizationId,
-        ruleSetId: req.groupId,
+        groupId: req.groupId,
       });
 
-      if (!ruleSet) {
+      if (!memberGroup) {
         return {
           response: {
             code: EnumStatusCode.ERR_NOT_FOUND,
@@ -36,22 +38,23 @@ export function deleteOrganizationMemberGroup(
         };
       }
 
-      if (ruleSet.membersCount > 0) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: 'Move all rule set members before trying to delete the rule set',
-          },
-        };
-      }
+      await orgMemberGroupRepo.deleteRuleSet(memberGroup.id);
 
-      await ruleSetRepo.deleteRuleSet(ruleSet.id);
-
-      if (ruleSet.kcGroupId) {
-        await opts.keycloakClient.authenticateClient();
+      await opts.keycloakClient.authenticateClient();
+      if (memberGroup.kcGroupId) {
+        // Delete the group from Keycloak
         await opts.keycloakClient.client.groups.del({
           realm: opts.keycloakRealm,
-          id: ruleSet.kcGroupId,
+          id: memberGroup.kcGroupId,
+        });
+      }
+
+      const oidc = await oidcRepo.getOidcProvider({ organizationId: authContext.organizationId });
+      if (oidc && memberGroup.kcMapperId) {
+        await opts.keycloakClient.client.identityProviders.delMapper({
+          realm: opts.keycloakRealm,
+          alias: oidc.alias,
+          id: memberGroup.kcMapperId,
         });
       }
 

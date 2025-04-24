@@ -6637,123 +6637,6 @@ export class GetOrganizationMemberGroupsResponse extends Message<GetOrganization
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.GetOrganizationAvailableMemberGroupsRequest
- */
-export class GetOrganizationAvailableMemberGroupsRequest extends Message<GetOrganizationAvailableMemberGroupsRequest> {
-  constructor(data?: PartialMessage<GetOrganizationAvailableMemberGroupsRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationAvailableMemberGroupsRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationAvailableMemberGroupsRequest {
-    return new GetOrganizationAvailableMemberGroupsRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationAvailableMemberGroupsRequest {
-    return new GetOrganizationAvailableMemberGroupsRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationAvailableMemberGroupsRequest {
-    return new GetOrganizationAvailableMemberGroupsRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GetOrganizationAvailableMemberGroupsRequest | PlainMessage<GetOrganizationAvailableMemberGroupsRequest> | undefined, b: GetOrganizationAvailableMemberGroupsRequest | PlainMessage<GetOrganizationAvailableMemberGroupsRequest> | undefined): boolean {
-    return proto3.util.equals(GetOrganizationAvailableMemberGroupsRequest, a, b);
-  }
-}
-
-/**
- * @generated from message wg.cosmo.platform.v1.GetOrganizationAvailableMemberGroupsResponse
- */
-export class GetOrganizationAvailableMemberGroupsResponse extends Message<GetOrganizationAvailableMemberGroupsResponse> {
-  /**
-   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
-   */
-  response?: Response;
-
-  /**
-   * @generated from field: repeated wg.cosmo.platform.v1.GetOrganizationAvailableMemberGroupsResponse.MemberGroup groups = 2;
-   */
-  groups: GetOrganizationAvailableMemberGroupsResponse_MemberGroup[] = [];
-
-  constructor(data?: PartialMessage<GetOrganizationAvailableMemberGroupsResponse>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationAvailableMemberGroupsResponse";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "groups", kind: "message", T: GetOrganizationAvailableMemberGroupsResponse_MemberGroup, repeated: true },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationAvailableMemberGroupsResponse {
-    return new GetOrganizationAvailableMemberGroupsResponse().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationAvailableMemberGroupsResponse {
-    return new GetOrganizationAvailableMemberGroupsResponse().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationAvailableMemberGroupsResponse {
-    return new GetOrganizationAvailableMemberGroupsResponse().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GetOrganizationAvailableMemberGroupsResponse | PlainMessage<GetOrganizationAvailableMemberGroupsResponse> | undefined, b: GetOrganizationAvailableMemberGroupsResponse | PlainMessage<GetOrganizationAvailableMemberGroupsResponse> | undefined): boolean {
-    return proto3.util.equals(GetOrganizationAvailableMemberGroupsResponse, a, b);
-  }
-}
-
-/**
- * @generated from message wg.cosmo.platform.v1.GetOrganizationAvailableMemberGroupsResponse.MemberGroup
- */
-export class GetOrganizationAvailableMemberGroupsResponse_MemberGroup extends Message<GetOrganizationAvailableMemberGroupsResponse_MemberGroup> {
-  /**
-   * @generated from field: string groupId = 1;
-   */
-  groupId = "";
-
-  /**
-   * @generated from field: string name = 2;
-   */
-  name = "";
-
-  constructor(data?: PartialMessage<GetOrganizationAvailableMemberGroupsResponse_MemberGroup>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationAvailableMemberGroupsResponse.MemberGroup";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "groupId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationAvailableMemberGroupsResponse_MemberGroup {
-    return new GetOrganizationAvailableMemberGroupsResponse_MemberGroup().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationAvailableMemberGroupsResponse_MemberGroup {
-    return new GetOrganizationAvailableMemberGroupsResponse_MemberGroup().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationAvailableMemberGroupsResponse_MemberGroup {
-    return new GetOrganizationAvailableMemberGroupsResponse_MemberGroup().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GetOrganizationAvailableMemberGroupsResponse_MemberGroup | PlainMessage<GetOrganizationAvailableMemberGroupsResponse_MemberGroup> | undefined, b: GetOrganizationAvailableMemberGroupsResponse_MemberGroup | PlainMessage<GetOrganizationAvailableMemberGroupsResponse_MemberGroup> | undefined): boolean {
-    return proto3.util.equals(GetOrganizationAvailableMemberGroupsResponse_MemberGroup, a, b);
-  }
-}
-
-/**
  * @generated from message wg.cosmo.platform.v1.UpdateOrganizationMemberGroupRequest
  */
 export class UpdateOrganizationMemberGroupRequest extends Message<UpdateOrganizationMemberGroupRequest> {
@@ -6980,9 +6863,9 @@ export class OrgMember extends Message<OrgMember> {
   active = false;
 
   /**
-   * @generated from field: repeated string groups = 6;
+   * @generated from field: repeated wg.cosmo.platform.v1.OrgMember.Group groups = 6;
    */
-  groups: string[] = [];
+  groups: OrgMember_Group[] = [];
 
   constructor(data?: PartialMessage<OrgMember>) {
     super();
@@ -6997,7 +6880,7 @@ export class OrgMember extends Message<OrgMember> {
     { no: 3, name: "roles", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "orgMemberID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "active", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 6, name: "groups", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 6, name: "groups", kind: "message", T: OrgMember_Group, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrgMember {
@@ -7014,6 +6897,49 @@ export class OrgMember extends Message<OrgMember> {
 
   static equals(a: OrgMember | PlainMessage<OrgMember> | undefined, b: OrgMember | PlainMessage<OrgMember> | undefined): boolean {
     return proto3.util.equals(OrgMember, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.OrgMember.Group
+ */
+export class OrgMember_Group extends Message<OrgMember_Group> {
+  /**
+   * @generated from field: string groupId = 1;
+   */
+  groupId = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<OrgMember_Group>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.OrgMember.Group";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "groupId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrgMember_Group {
+    return new OrgMember_Group().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): OrgMember_Group {
+    return new OrgMember_Group().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): OrgMember_Group {
+    return new OrgMember_Group().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: OrgMember_Group | PlainMessage<OrgMember_Group> | undefined, b: OrgMember_Group | PlainMessage<OrgMember_Group> | undefined): boolean {
+    return proto3.util.equals(OrgMember_Group, a, b);
   }
 }
 

@@ -848,13 +848,6 @@
       "when": 1744830881880,
       "tag": "0120_far_charles_xavier",
       "breakpoints": true
-    },
-    {
-      "idx": 121,
-      "version": "7",
-      "when": 1745487274106,
-      "tag": "0121_stale_lady_ursula",
-      "breakpoints": true
     }
   ]
 }

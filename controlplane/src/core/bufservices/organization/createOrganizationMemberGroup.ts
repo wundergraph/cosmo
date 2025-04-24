@@ -63,7 +63,7 @@ export function createOrganizationMemberGroup(
       response: {
         code: EnumStatusCode.OK,
       },
-      groups: {
+      group: {
         groupId: createdRuleSet.id,
         name: createdRuleSet.name,
         membersCount: 0,

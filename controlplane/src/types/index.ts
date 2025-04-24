@@ -249,6 +249,7 @@ export interface OrganizationMemberGroupDTO {
   id: string;
   name: string;
   kcGroupId: string | null;
+  kcMapperId: string | null;
   membersCount: number;
   rules: {
     role: string;

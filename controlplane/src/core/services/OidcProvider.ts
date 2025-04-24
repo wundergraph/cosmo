@@ -1,6 +1,6 @@
 import { CreateOIDCProviderRequest, GroupMapper } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { uid } from 'uid';
+import { validate as isValidUuid } from 'uuid';
 import { and, eq, inArray } from "drizzle-orm";
 import * as schema from '../../db/schema.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
@@ -73,6 +73,11 @@ export default class OidcProvider {
     endpoint: string;
     db: PostgresJsDatabase<typeof schema>;
   }) {
+    const targetGroupIds = mappers.map((m) => m.groupId).filter((v) => isValidUuid(v));
+    if (targetGroupIds.length === 0) {
+      return;
+    }
+
     const organizationMemberGroups = await db
       .select({
         id: schema.organizationMemberGroups.id,
@@ -81,7 +86,7 @@ export default class OidcProvider {
       .from(schema.organizationMemberGroups)
       .where(and(
         eq(schema.organizationMemberGroups.organizationId, organizationId),
-        inArray(schema.organizationMemberGroups.id, mappers.map((m) => m.groupId))
+        inArray(schema.organizationMemberGroups.id, targetGroupIds)
       ));
 
     let key = 'ssoGroups';
@@ -105,12 +110,18 @@ export default class OidcProvider {
         throw new Error(`The group ${mapper.groupId} doesn't exist.`);
       }
 
-      await kcClient.createIDPMapper({
+      const createdMapper = await kcClient.createIDPMapper({
         realm: kcRealm,
         alias,
         claims,
         keycloakGroupName: `/${organizationSlug}/${memberGroup.name}`,
       });
+
+      await db
+        .update(schema.organizationMemberGroups)
+        .set({ kcMapperId: createdMapper.id, })
+        .where(eq(schema.organizationMemberGroups.id, memberGroup.id))
+        .execute();
     }
   }
 

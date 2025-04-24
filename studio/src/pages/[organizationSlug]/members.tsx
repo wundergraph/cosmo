@@ -51,6 +51,7 @@ import {
 import { Cross1Icon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { OrgMember_Group } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import {
   getOrganizationMembers,
   getPendingOrganizationMembers,
@@ -136,44 +137,9 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
   );
 };
 
-const roleOptions: {
-  [key: string]: { label: string; newRole: string }[];
-} = {
-  admin: [
-    {
-      label: "Demote to developer",
-      newRole: "developer",
-    },
-    {
-      label: "Demote to viewer",
-      newRole: "viewer",
-    },
-  ],
-  developer: [
-    {
-      label: "Promote to admin",
-      newRole: "admin",
-    },
-    {
-      label: "Demote to viewer",
-      newRole: "viewer",
-    },
-  ],
-  viewer: [
-    {
-      label: "Promote to admin",
-      newRole: "admin",
-    },
-    {
-      label: "Promote to developer",
-      newRole: "developer",
-    },
-  ],
-};
-
 const MemberCard = ({
   email,
-  role,
+  group,
   memberUserID,
   acceptedInvite,
   isAdmin,
@@ -182,7 +148,7 @@ const MemberCard = ({
   refresh,
 }: {
   email: string;
-  role?: string;
+  group?: OrgMember_Group;
   memberUserID: string;
   acceptedInvite: boolean;
   isAdmin: boolean;
@@ -190,12 +156,9 @@ const MemberCard = ({
   active?: boolean;
   refresh: () => void;
 }) => {
-  const user = useContext(UserContext);
-
   const { mutate: resendInvitation } = useMutation(inviteUser);
   const { mutate: revokeInvitation } = useMutation(removeInvitation);
   const { mutate: removeMember } = useMutation(removeOrganizationMember);
-  const { mutate: updateUserRole } = useMutation(updateOrgMemberRole);
 
   const { toast, update } = useToast();
 
@@ -210,8 +173,8 @@ const MemberCard = ({
       <TableCell>
         <div className="flex h-6 items-center justify-between gap-x-4 text-muted-foreground">
           <div className={cn({ "pr-[14px]": isAdmin && isCurrentUser })}>
-            {acceptedInvite && role ? (
-              <span className="text-sm">{sentenceCase(role)}</span>
+            {acceptedInvite ? (
+              <span className="text-sm">{group?.name}</span>
             ) : (
               <span className="text-sm text-gray-800 dark:text-gray-400">
                 Pending
@@ -312,40 +275,11 @@ const MemberCard = ({
                   >
                     {acceptedInvite ? "Remove member" : "Remove invitation"}
                   </DropdownMenuItem>
-                  {role &&
-                    roleOptions[role].map(({ label, newRole }) => (
-                      <DropdownMenuItem
-                        key={newRole}
-                        onClick={() => {
-                          updateUserRole(
-                            {
-                              userID: user?.id,
-                              orgMemberUserID: memberUserID,
-                              role: newRole,
-                            },
-                            {
-                              onSuccess: (d) => {
-                                toast({
-                                  description:
-                                    d.response?.details ||
-                                    `Updated the role to ${newRole} successfully.`,
-                                  duration: 3000,
-                                });
-                                refresh();
-                              },
-                              onError: (error) => {
-                                toast({
-                                  description: `Could not update role to ${newRole}. Please try again.`,
-                                  duration: 3000,
-                                });
-                              },
-                            },
-                          );
-                        }}
-                      >
-                        {label}
-                      </DropdownMenuItem>
-                    ))}
+                  {acceptedInvite && (
+                    <DropdownMenuItem>
+                      Change group
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
@@ -481,7 +415,7 @@ const AcceptedMembers = () => {
                 <MemberCard
                   key={member.userID}
                   email={member.email}
-                  role={getHighestPriorityRole({ userRoles: member.roles })}
+                  group={member.groups?.[0]}
                   memberUserID={member.userID}
                   acceptedInvite={true}
                   isAdmin={isAdmin || false}
