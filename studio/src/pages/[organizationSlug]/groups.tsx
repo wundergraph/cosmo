@@ -10,16 +10,16 @@ import {
 } from "@heroicons/react/24/outline";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
-  getOrganizationRuleSets
+  getOrganizationMemberGroups
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useRouter } from "next/router";
 import { useState } from "react";
-import type { OrganizationRuleSet } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { DeleteRuleSetDialog } from "@/components/member-groups/delete-rule-set-dialog";
-import { RuleSetSheet } from "@/components/member-groups/rule-set-sheet";
-import { CreateRuleSetDialog } from "@/components/member-groups/create-rule-set-dialog";
+import type { OrganizationMemberGroup } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { DeleteMemberGroupDialog } from "@/components/member-groups/delete-member-group-dialog";
+import { MemberGroupSheet } from "@/components/member-groups/member-group-sheet";
+import { CreateMemberGroupDialog } from "@/components/member-groups/create-member-group-dialog";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableWrapper } from "@/components/ui/table";
-import { RuleSetRow } from "@/components/member-groups/rule-set-row";
+import { MemberGroupRow } from "@/components/member-groups/member-group-row";
 
 const GroupsToolbar = () => {
   return null;
@@ -28,10 +28,10 @@ const GroupsToolbar = () => {
 const GroupsPage: NextPageWithLayout = () => {
   const router = useRouter();
 
-  const [selectedRuleSet, setSelectedRuleSet] = useState<OrganizationRuleSet | null>(null);
-  const [openDeleteRuleSetDialog, setOpenDeleteRuleSetDialog] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<OrganizationMemberGroup | null>(null);
+  const [openDeleteGroupDialog, setOpenDeleteGroupDialog] = useState(false);
 
-  const { data, isLoading, error, refetch } = useQuery(getOrganizationRuleSets);
+  const { data, isLoading, error, refetch } = useQuery(getOrganizationMemberGroups);
   if (isLoading) {
     return <Loader fullscreen />;
   }
@@ -47,38 +47,38 @@ const GroupsPage: NextPageWithLayout = () => {
     );
   }
 
-  const ruleSets = data?.ruleSets ?? [];
-  const activeRuleSetId = router.query?.ruleSet as string;
-  const activeRuleSet = activeRuleSetId ? ruleSets.find((ruleSet) => ruleSet.ruleSetId === activeRuleSetId) : undefined;
+  const groups = data?.groups ?? [];
+  const activeGroupId = router.query?.group as string;
+  const activeGroup = activeGroupId ? groups.find((g) => g.groupId === activeGroupId) : undefined;
 
-  const openRuleSet = (ruleSet: OrganizationRuleSet) => {
+  const openGroup = (group: OrganizationMemberGroup) => {
     router.replace({
       pathname: router.pathname,
       query: {
         ...router.query,
-        ruleSet: ruleSet.ruleSetId,
+        group: group.groupId,
       },
     });
   };
 
-  const createRuleSet = (
-    <CreateRuleSetDialog
-      existingRuleSetNames={ruleSets.map((group) => group.name.toLowerCase())}
-      onRuleSetCreated={async (ruleSet) => {
+  const createGroupContent = (
+    <CreateMemberGroupDialog
+      existingGroupNames={groups.map((group) => group.name.toLowerCase())}
+      onGroupCreated={async (group) => {
         await refetch();
-        openRuleSet(ruleSet);
+        openGroup(group);
       }}
     />
   );
 
   return (
     <>
-      <RuleSetSheet
-        ruleSet={activeRuleSet}
-        onRuleSetUpdated={refetch}
+      <MemberGroupSheet
+        group={activeGroup}
+        onGroupUpdated={refetch}
         onOpenChange={(open) => {
           if (!open) {
-            const { ruleSet, ...restQuery } = router.query;
+            const { group, ...restQuery } = router.query;
             router.replace({
               pathname: router.pathname,
               query: restQuery,
@@ -87,28 +87,28 @@ const GroupsPage: NextPageWithLayout = () => {
         }}
       />
 
-      {ruleSets.length === 0 ? (
+      {groups.length === 0 ? (
         <EmptyState
           icon={<UserGroupIcon />}
-          title="Create a Rule Set"
-          description="No rule sets found."
+          title="Create a group"
+          description="No member groups found."
           actions={
             <div className="mt-2">
-              {createRuleSet}
+              {createGroupContent}
             </div>
           }
         />
       ) : (
         <div className="flex h-full flex-col gap-y-6">
-          <DeleteRuleSetDialog
-            open={openDeleteRuleSetDialog}
-            ruleSet={selectedRuleSet}
-            onRuleSetDeleted={refetch}
-            onOpenChange={setOpenDeleteRuleSetDialog}
+          <DeleteMemberGroupDialog
+            open={openDeleteGroupDialog}
+            group={selectedGroup}
+            onGroupDeleted={refetch}
+            onOpenChange={setOpenDeleteGroupDialog}
           />
 
           <div className="flex flex-col justify-end gap-y-4 md:flex-row md:items-center">
-            {createRuleSet}
+            {createGroupContent}
           </div>
 
           <TableWrapper className="max-h-full">
@@ -121,14 +121,14 @@ const GroupsPage: NextPageWithLayout = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {ruleSets.map((group) => (
-                  <RuleSetRow
-                    key={group.ruleSetId}
-                    ruleSet={group}
-                    onSelect={() => openRuleSet(group)}
+                {groups.map((group) => (
+                  <MemberGroupRow
+                    key={group.groupId}
+                    group={group}
+                    onSelect={() => openGroup(group)}
                     onDelete={() => {
-                      setSelectedRuleSet(group);
-                      setOpenDeleteRuleSetDialog(true);
+                      setSelectedGroup(group);
+                      setOpenDeleteGroupDialog(true);
                     }}
                   />
                 ))}

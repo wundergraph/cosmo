@@ -1,24 +1,22 @@
 import { and, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
-import { OrganizationRuleSetDTO } from '../../types/index.js';
+import { OrganizationMemberGroupDTO } from '../../types/index.js';
 import { MemberRole } from '../../db/models.js';
 
-export class OrganizationRuleSetRepository {
+export class OrganizationMemberGroupRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 
   public async createRuleSet(input: {
     organizationId: string;
     name: string;
-    builtin?: boolean;
     kcGroupId: string;
-  }): Promise<OrganizationRuleSetDTO> {
+  }): Promise<OrganizationMemberGroupDTO> {
     const insertedRuleSet = await this.db
-      .insert(schema.organizationRuleSets)
+      .insert(schema.organizationMemberGroups)
       .values({
         organizationId: input.organizationId,
         name: input.name,
-        builtin: input.builtin ?? false,
         kcGroupId: input.kcGroupId,
       })
       .returning()
@@ -27,7 +25,6 @@ export class OrganizationRuleSetRepository {
     return {
       id: insertedRuleSet[0].id,
       name: input.name,
-      builtin: insertedRuleSet[0].builtin,
       kcGroupId: input.kcGroupId,
       membersCount: 0,
       rules: [],
@@ -40,14 +37,14 @@ export class OrganizationRuleSetRepository {
     }
 
     const existingRuleSet = await this.db
-      .select({ id: schema.organizationRuleSets.id })
-      .from(schema.organizationRuleSets)
+      .select({ id: schema.organizationMemberGroups.id })
+      .from(schema.organizationMemberGroups)
       .where(
         and(
-          eq(schema.organizationRuleSets.organizationId, input.organizationId),
+          eq(schema.organizationMemberGroups.organizationId, input.organizationId),
           input.ruleSetId
-            ? eq(schema.organizationRuleSets.id, input.ruleSetId)
-            : eq(schema.organizationRuleSets.name, input.ruleSetName!),
+            ? eq(schema.organizationMemberGroups.id, input.ruleSetId)
+            : eq(schema.organizationMemberGroups.name, input.ruleSetName!),
         ),
       )
       .limit(1)
@@ -59,11 +56,11 @@ export class OrganizationRuleSetRepository {
   public async byId(input: {
     organizationId: string;
     ruleSetId: string;
-  }): Promise<OrganizationRuleSetDTO | undefined> {
-    const ruleSet = await this.db.query.organizationRuleSets.findFirst({
+  }): Promise<OrganizationMemberGroupDTO | undefined> {
+    const ruleSet = await this.db.query.organizationMemberGroups.findFirst({
       where: and(
-        eq(schema.organizationRuleSets.organizationId, input.organizationId),
-        eq(schema.organizationRuleSets.id, input.ruleSetId)
+        eq(schema.organizationMemberGroups.organizationId, input.organizationId),
+        eq(schema.organizationMemberGroups.id, input.ruleSetId)
       ),
       with: {
         rules: {
@@ -77,7 +74,7 @@ export class OrganizationRuleSetRepository {
         // There is an active issue that prevents using `schema.organizationRuleSetMembers` instead of directly
         // using strings (https://github.com/drizzle-team/drizzle-orm/issues/3493)
         membersCount: sql<number>`CAST((
-          select count(*) 
+          select count(distinct "user_id")
           from "organization_rule_set_members" 
           where "organization_rule_set_members"."rule_set_id" = ${table.id}
         ) AS INTEGER)`.as('members_count'),
@@ -98,9 +95,9 @@ export class OrganizationRuleSetRepository {
     };
   }
 
-  public async listForOrganization(organizationId: string): Promise<OrganizationRuleSetDTO[]> {
-    const ruleSets = await this.db.query.organizationRuleSets.findMany({
-      where: eq(schema.organizationRuleSets.organizationId, organizationId),
+  public async listForOrganization(organizationId: string): Promise<OrganizationMemberGroupDTO[]> {
+    const ruleSets = await this.db.query.organizationMemberGroups.findMany({
+      where: eq(schema.organizationMemberGroups.organizationId, organizationId),
       with: {
         rules: {
           columns: {
@@ -109,15 +106,15 @@ export class OrganizationRuleSetRepository {
           },
         },
       },
-      extras: (table, { sql }) => ({
-        // There is an active issue that prevents using `schema.organizationRuleSetMembers` instead of directly
-        // using strings (https://github.com/drizzle-team/drizzle-orm/issues/3493)
-        membersCount: sql<number>`CAST((
-          select count(*) 
-          from "organization_rule_set_members" 
-          where "organization_rule_set_members"."rule_set_id" = ${table.id}
-        ) AS INTEGER)`.as('members_count'),
-      }),
+      // extras: (table, { sql }) => ({
+      //   // There is an active issue that prevents using `schema.organizationRuleSetMembers` instead of directly
+      //   // using strings (https://github.com/drizzle-team/drizzle-orm/issues/3493)
+      //   membersCount: sql<number>`CAST((
+      //     select count(distinct "user_id")
+      //     from "organization_rule_set_members"
+      //     where "organization_rule_set_members"."rule_set_id" = ${table.id}
+      //   ) AS INTEGER)`.as('members_count'),
+      // }),
     });
 
     return ruleSets.map(({ rules, ...rs }) => {
@@ -125,6 +122,7 @@ export class OrganizationRuleSetRepository {
 
       return {
         ...rs,
+        membersCount: 0,
         rules: Object.entries(rulesGroupedByRole).flatMap(([role, value]) => ({
           role,
           resources: value.map((obj) => obj.resource),
@@ -134,29 +132,29 @@ export class OrganizationRuleSetRepository {
   }
 
   public updateRules(input: { ruleSetId: string; rules: { role: MemberRole; resources: string[] }[] }) {
-    return this.db.transaction(async (tx) => {
-      await tx
-        .delete(schema.organizationRuleSetRules)
-        .where(eq(schema.organizationRuleSetRules.ruleSetId, input.ruleSetId))
-        .execute();
-
-      if (input.rules.length === 0) {
-        return;
-      }
-
-      await tx.insert(schema.organizationRuleSetRules).values(
-        input.rules.flatMap(({ role, resources }) =>
-          resources.map((res) => ({
-            ruleSetId: input.ruleSetId,
-            role,
-            resource: res,
-          })),
-        ),
-      );
-    });
+    // return this.db.transaction(async (tx) => {
+    //   await tx
+    //     .delete(schema.organizationMemberGroups)
+    //     .where(eq(schema.organizationMemberGroups.groupId, input.ruleSetId))
+    //     .execute();
+    //
+    //   if (input.rules.length === 0) {
+    //     return;
+    //   }
+    //
+    //   await tx.insert(schema.organizationMemberGroups).values(
+    //     input.rules.flatMap(({ role, resources }) =>
+    //       resources.map((res) => ({
+    //         ruleSetId: input.ruleSetId,
+    //         role,
+    //         resource: res,
+    //       })),
+    //     ),
+    //   );
+    // });
   }
 
   public deleteRuleSet(id: string) {
-    return this.db.delete(schema.organizationRuleSets).where(eq(schema.organizationRuleSets.id, id)).returning();
+    return this.db.delete(schema.organizationMemberGroups).where(eq(schema.organizationMemberGroups.id, id)).returning();
   }
 }

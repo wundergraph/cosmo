@@ -6385,9 +6385,9 @@ export class CreateFederatedGraphTokenResponse extends Message<CreateFederatedGr
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.OrganizationRuleSetRule
+ * @generated from message wg.cosmo.platform.v1.OrganizationMemberGroupRule
  */
-export class OrganizationRuleSetRule extends Message<OrganizationRuleSetRule> {
+export class OrganizationMemberGroupRule extends Message<OrganizationMemberGroupRule> {
   /**
    * @generated from field: string role = 1;
    */
@@ -6398,43 +6398,43 @@ export class OrganizationRuleSetRule extends Message<OrganizationRuleSetRule> {
    */
   resources: string[] = [];
 
-  constructor(data?: PartialMessage<OrganizationRuleSetRule>) {
+  constructor(data?: PartialMessage<OrganizationMemberGroupRule>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.OrganizationRuleSetRule";
+  static readonly typeName = "wg.cosmo.platform.v1.OrganizationMemberGroupRule";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "resources", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrganizationRuleSetRule {
-    return new OrganizationRuleSetRule().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrganizationMemberGroupRule {
+    return new OrganizationMemberGroupRule().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): OrganizationRuleSetRule {
-    return new OrganizationRuleSetRule().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): OrganizationMemberGroupRule {
+    return new OrganizationMemberGroupRule().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): OrganizationRuleSetRule {
-    return new OrganizationRuleSetRule().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): OrganizationMemberGroupRule {
+    return new OrganizationMemberGroupRule().fromJsonString(jsonString, options);
   }
 
-  static equals(a: OrganizationRuleSetRule | PlainMessage<OrganizationRuleSetRule> | undefined, b: OrganizationRuleSetRule | PlainMessage<OrganizationRuleSetRule> | undefined): boolean {
-    return proto3.util.equals(OrganizationRuleSetRule, a, b);
+  static equals(a: OrganizationMemberGroupRule | PlainMessage<OrganizationMemberGroupRule> | undefined, b: OrganizationMemberGroupRule | PlainMessage<OrganizationMemberGroupRule> | undefined): boolean {
+    return proto3.util.equals(OrganizationMemberGroupRule, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.OrganizationRuleSet
+ * @generated from message wg.cosmo.platform.v1.OrganizationMemberGroup
  */
-export class OrganizationRuleSet extends Message<OrganizationRuleSet> {
+export class OrganizationMemberGroup extends Message<OrganizationMemberGroup> {
   /**
-   * @generated from field: string ruleSetId = 1;
+   * @generated from field: string groupId = 1;
    */
-  ruleSetId = "";
+  groupId = "";
 
   /**
    * @generated from field: string name = 2;
@@ -6442,357 +6442,511 @@ export class OrganizationRuleSet extends Message<OrganizationRuleSet> {
   name = "";
 
   /**
-   * @generated from field: bool builtin = 3;
-   */
-  builtin = false;
-
-  /**
-   * @generated from field: int32 membersCount = 4;
+   * @generated from field: int32 membersCount = 3;
    */
   membersCount = 0;
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.OrganizationRuleSetRule rules = 5;
+   * @generated from field: repeated wg.cosmo.platform.v1.OrganizationMemberGroupRule rules = 4;
    */
-  rules: OrganizationRuleSetRule[] = [];
+  rules: OrganizationMemberGroupRule[] = [];
 
-  constructor(data?: PartialMessage<OrganizationRuleSet>) {
+  constructor(data?: PartialMessage<OrganizationMemberGroup>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.OrganizationRuleSet";
+  static readonly typeName = "wg.cosmo.platform.v1.OrganizationMemberGroup";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "ruleSetId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "groupId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "builtin", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 4, name: "membersCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 5, name: "rules", kind: "message", T: OrganizationRuleSetRule, repeated: true },
+    { no: 3, name: "membersCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "rules", kind: "message", T: OrganizationMemberGroupRule, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrganizationRuleSet {
-    return new OrganizationRuleSet().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrganizationMemberGroup {
+    return new OrganizationMemberGroup().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): OrganizationRuleSet {
-    return new OrganizationRuleSet().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): OrganizationMemberGroup {
+    return new OrganizationMemberGroup().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): OrganizationRuleSet {
-    return new OrganizationRuleSet().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): OrganizationMemberGroup {
+    return new OrganizationMemberGroup().fromJsonString(jsonString, options);
   }
 
-  static equals(a: OrganizationRuleSet | PlainMessage<OrganizationRuleSet> | undefined, b: OrganizationRuleSet | PlainMessage<OrganizationRuleSet> | undefined): boolean {
-    return proto3.util.equals(OrganizationRuleSet, a, b);
+  static equals(a: OrganizationMemberGroup | PlainMessage<OrganizationMemberGroup> | undefined, b: OrganizationMemberGroup | PlainMessage<OrganizationMemberGroup> | undefined): boolean {
+    return proto3.util.equals(OrganizationMemberGroup, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.CreateOrganizationRuleSetRequest
+ * @generated from message wg.cosmo.platform.v1.CreateOrganizationMemberGroupRequest
  */
-export class CreateOrganizationRuleSetRequest extends Message<CreateOrganizationRuleSetRequest> {
+export class CreateOrganizationMemberGroupRequest extends Message<CreateOrganizationMemberGroupRequest> {
   /**
    * @generated from field: string name = 1;
    */
   name = "";
 
-  constructor(data?: PartialMessage<CreateOrganizationRuleSetRequest>) {
+  constructor(data?: PartialMessage<CreateOrganizationMemberGroupRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.CreateOrganizationRuleSetRequest";
+  static readonly typeName = "wg.cosmo.platform.v1.CreateOrganizationMemberGroupRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOrganizationRuleSetRequest {
-    return new CreateOrganizationRuleSetRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOrganizationMemberGroupRequest {
+    return new CreateOrganizationMemberGroupRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateOrganizationRuleSetRequest {
-    return new CreateOrganizationRuleSetRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateOrganizationMemberGroupRequest {
+    return new CreateOrganizationMemberGroupRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateOrganizationRuleSetRequest {
-    return new CreateOrganizationRuleSetRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateOrganizationMemberGroupRequest {
+    return new CreateOrganizationMemberGroupRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: CreateOrganizationRuleSetRequest | PlainMessage<CreateOrganizationRuleSetRequest> | undefined, b: CreateOrganizationRuleSetRequest | PlainMessage<CreateOrganizationRuleSetRequest> | undefined): boolean {
-    return proto3.util.equals(CreateOrganizationRuleSetRequest, a, b);
+  static equals(a: CreateOrganizationMemberGroupRequest | PlainMessage<CreateOrganizationMemberGroupRequest> | undefined, b: CreateOrganizationMemberGroupRequest | PlainMessage<CreateOrganizationMemberGroupRequest> | undefined): boolean {
+    return proto3.util.equals(CreateOrganizationMemberGroupRequest, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.CreateOrganizationRuleSetResponse
+ * @generated from message wg.cosmo.platform.v1.CreateOrganizationMemberGroupResponse
  */
-export class CreateOrganizationRuleSetResponse extends Message<CreateOrganizationRuleSetResponse> {
+export class CreateOrganizationMemberGroupResponse extends Message<CreateOrganizationMemberGroupResponse> {
   /**
    * @generated from field: wg.cosmo.platform.v1.Response response = 1;
    */
   response?: Response;
 
   /**
-   * @generated from field: wg.cosmo.platform.v1.OrganizationRuleSet ruleSet = 2;
+   * @generated from field: wg.cosmo.platform.v1.OrganizationMemberGroup group = 2;
    */
-  ruleSet?: OrganizationRuleSet;
+  group?: OrganizationMemberGroup;
 
-  constructor(data?: PartialMessage<CreateOrganizationRuleSetResponse>) {
+  constructor(data?: PartialMessage<CreateOrganizationMemberGroupResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.CreateOrganizationRuleSetResponse";
+  static readonly typeName = "wg.cosmo.platform.v1.CreateOrganizationMemberGroupResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "ruleSet", kind: "message", T: OrganizationRuleSet },
+    { no: 2, name: "group", kind: "message", T: OrganizationMemberGroup },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOrganizationRuleSetResponse {
-    return new CreateOrganizationRuleSetResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOrganizationMemberGroupResponse {
+    return new CreateOrganizationMemberGroupResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateOrganizationRuleSetResponse {
-    return new CreateOrganizationRuleSetResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateOrganizationMemberGroupResponse {
+    return new CreateOrganizationMemberGroupResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateOrganizationRuleSetResponse {
-    return new CreateOrganizationRuleSetResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateOrganizationMemberGroupResponse {
+    return new CreateOrganizationMemberGroupResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: CreateOrganizationRuleSetResponse | PlainMessage<CreateOrganizationRuleSetResponse> | undefined, b: CreateOrganizationRuleSetResponse | PlainMessage<CreateOrganizationRuleSetResponse> | undefined): boolean {
-    return proto3.util.equals(CreateOrganizationRuleSetResponse, a, b);
+  static equals(a: CreateOrganizationMemberGroupResponse | PlainMessage<CreateOrganizationMemberGroupResponse> | undefined, b: CreateOrganizationMemberGroupResponse | PlainMessage<CreateOrganizationMemberGroupResponse> | undefined): boolean {
+    return proto3.util.equals(CreateOrganizationMemberGroupResponse, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.GetOrganizationRuleSetsRequest
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationMemberGroupsRequest
  */
-export class GetOrganizationRuleSetsRequest extends Message<GetOrganizationRuleSetsRequest> {
-  constructor(data?: PartialMessage<GetOrganizationRuleSetsRequest>) {
+export class GetOrganizationMemberGroupsRequest extends Message<GetOrganizationMemberGroupsRequest> {
+  constructor(data?: PartialMessage<GetOrganizationMemberGroupsRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationRuleSetsRequest";
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationMemberGroupsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationRuleSetsRequest {
-    return new GetOrganizationRuleSetsRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationMemberGroupsRequest {
+    return new GetOrganizationMemberGroupsRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationRuleSetsRequest {
-    return new GetOrganizationRuleSetsRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationMemberGroupsRequest {
+    return new GetOrganizationMemberGroupsRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationRuleSetsRequest {
-    return new GetOrganizationRuleSetsRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationMemberGroupsRequest {
+    return new GetOrganizationMemberGroupsRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetOrganizationRuleSetsRequest | PlainMessage<GetOrganizationRuleSetsRequest> | undefined, b: GetOrganizationRuleSetsRequest | PlainMessage<GetOrganizationRuleSetsRequest> | undefined): boolean {
-    return proto3.util.equals(GetOrganizationRuleSetsRequest, a, b);
+  static equals(a: GetOrganizationMemberGroupsRequest | PlainMessage<GetOrganizationMemberGroupsRequest> | undefined, b: GetOrganizationMemberGroupsRequest | PlainMessage<GetOrganizationMemberGroupsRequest> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationMemberGroupsRequest, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.GetOrganizationRuleSetsResponse
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationMemberGroupsResponse
  */
-export class GetOrganizationRuleSetsResponse extends Message<GetOrganizationRuleSetsResponse> {
+export class GetOrganizationMemberGroupsResponse extends Message<GetOrganizationMemberGroupsResponse> {
   /**
    * @generated from field: wg.cosmo.platform.v1.Response response = 1;
    */
   response?: Response;
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.OrganizationRuleSet ruleSets = 2;
+   * @generated from field: repeated wg.cosmo.platform.v1.OrganizationMemberGroup groups = 2;
    */
-  ruleSets: OrganizationRuleSet[] = [];
+  groups: OrganizationMemberGroup[] = [];
 
-  constructor(data?: PartialMessage<GetOrganizationRuleSetsResponse>) {
+  constructor(data?: PartialMessage<GetOrganizationMemberGroupsResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationRuleSetsResponse";
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationMemberGroupsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "ruleSets", kind: "message", T: OrganizationRuleSet, repeated: true },
+    { no: 2, name: "groups", kind: "message", T: OrganizationMemberGroup, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationRuleSetsResponse {
-    return new GetOrganizationRuleSetsResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationMemberGroupsResponse {
+    return new GetOrganizationMemberGroupsResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationRuleSetsResponse {
-    return new GetOrganizationRuleSetsResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationMemberGroupsResponse {
+    return new GetOrganizationMemberGroupsResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationRuleSetsResponse {
-    return new GetOrganizationRuleSetsResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationMemberGroupsResponse {
+    return new GetOrganizationMemberGroupsResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetOrganizationRuleSetsResponse | PlainMessage<GetOrganizationRuleSetsResponse> | undefined, b: GetOrganizationRuleSetsResponse | PlainMessage<GetOrganizationRuleSetsResponse> | undefined): boolean {
-    return proto3.util.equals(GetOrganizationRuleSetsResponse, a, b);
+  static equals(a: GetOrganizationMemberGroupsResponse | PlainMessage<GetOrganizationMemberGroupsResponse> | undefined, b: GetOrganizationMemberGroupsResponse | PlainMessage<GetOrganizationMemberGroupsResponse> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationMemberGroupsResponse, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.UpdateOrganizationRuleSetRequest
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationAvailableMemberGroupsRequest
  */
-export class UpdateOrganizationRuleSetRequest extends Message<UpdateOrganizationRuleSetRequest> {
-  /**
-   * @generated from field: string ruleSetId = 1;
-   */
-  ruleSetId = "";
-
-  /**
-   * @generated from field: repeated wg.cosmo.platform.v1.OrganizationRuleSetRule rules = 2;
-   */
-  rules: OrganizationRuleSetRule[] = [];
-
-  constructor(data?: PartialMessage<UpdateOrganizationRuleSetRequest>) {
+export class GetOrganizationAvailableMemberGroupsRequest extends Message<GetOrganizationAvailableMemberGroupsRequest> {
+  constructor(data?: PartialMessage<GetOrganizationAvailableMemberGroupsRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.UpdateOrganizationRuleSetRequest";
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationAvailableMemberGroupsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "ruleSetId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "rules", kind: "message", T: OrganizationRuleSetRule, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrganizationRuleSetRequest {
-    return new UpdateOrganizationRuleSetRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationAvailableMemberGroupsRequest {
+    return new GetOrganizationAvailableMemberGroupsRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateOrganizationRuleSetRequest {
-    return new UpdateOrganizationRuleSetRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationAvailableMemberGroupsRequest {
+    return new GetOrganizationAvailableMemberGroupsRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateOrganizationRuleSetRequest {
-    return new UpdateOrganizationRuleSetRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationAvailableMemberGroupsRequest {
+    return new GetOrganizationAvailableMemberGroupsRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: UpdateOrganizationRuleSetRequest | PlainMessage<UpdateOrganizationRuleSetRequest> | undefined, b: UpdateOrganizationRuleSetRequest | PlainMessage<UpdateOrganizationRuleSetRequest> | undefined): boolean {
-    return proto3.util.equals(UpdateOrganizationRuleSetRequest, a, b);
+  static equals(a: GetOrganizationAvailableMemberGroupsRequest | PlainMessage<GetOrganizationAvailableMemberGroupsRequest> | undefined, b: GetOrganizationAvailableMemberGroupsRequest | PlainMessage<GetOrganizationAvailableMemberGroupsRequest> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationAvailableMemberGroupsRequest, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.UpdateOrganizationRuleSetResponse
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationAvailableMemberGroupsResponse
  */
-export class UpdateOrganizationRuleSetResponse extends Message<UpdateOrganizationRuleSetResponse> {
+export class GetOrganizationAvailableMemberGroupsResponse extends Message<GetOrganizationAvailableMemberGroupsResponse> {
   /**
    * @generated from field: wg.cosmo.platform.v1.Response response = 1;
    */
   response?: Response;
 
-  constructor(data?: PartialMessage<UpdateOrganizationRuleSetResponse>) {
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.GetOrganizationAvailableMemberGroupsResponse.MemberGroup groups = 2;
+   */
+  groups: GetOrganizationAvailableMemberGroupsResponse_MemberGroup[] = [];
+
+  constructor(data?: PartialMessage<GetOrganizationAvailableMemberGroupsResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.UpdateOrganizationRuleSetResponse";
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationAvailableMemberGroupsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "groups", kind: "message", T: GetOrganizationAvailableMemberGroupsResponse_MemberGroup, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrganizationRuleSetResponse {
-    return new UpdateOrganizationRuleSetResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationAvailableMemberGroupsResponse {
+    return new GetOrganizationAvailableMemberGroupsResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateOrganizationRuleSetResponse {
-    return new UpdateOrganizationRuleSetResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationAvailableMemberGroupsResponse {
+    return new GetOrganizationAvailableMemberGroupsResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateOrganizationRuleSetResponse {
-    return new UpdateOrganizationRuleSetResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationAvailableMemberGroupsResponse {
+    return new GetOrganizationAvailableMemberGroupsResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: UpdateOrganizationRuleSetResponse | PlainMessage<UpdateOrganizationRuleSetResponse> | undefined, b: UpdateOrganizationRuleSetResponse | PlainMessage<UpdateOrganizationRuleSetResponse> | undefined): boolean {
-    return proto3.util.equals(UpdateOrganizationRuleSetResponse, a, b);
+  static equals(a: GetOrganizationAvailableMemberGroupsResponse | PlainMessage<GetOrganizationAvailableMemberGroupsResponse> | undefined, b: GetOrganizationAvailableMemberGroupsResponse | PlainMessage<GetOrganizationAvailableMemberGroupsResponse> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationAvailableMemberGroupsResponse, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.DeleteOrganizationRuleSetRequest
+ * @generated from message wg.cosmo.platform.v1.GetOrganizationAvailableMemberGroupsResponse.MemberGroup
  */
-export class DeleteOrganizationRuleSetRequest extends Message<DeleteOrganizationRuleSetRequest> {
+export class GetOrganizationAvailableMemberGroupsResponse_MemberGroup extends Message<GetOrganizationAvailableMemberGroupsResponse_MemberGroup> {
   /**
-   * @generated from field: string ruleSetId = 1;
+   * @generated from field: string groupId = 1;
    */
-  ruleSetId = "";
+  groupId = "";
 
-  constructor(data?: PartialMessage<DeleteOrganizationRuleSetRequest>) {
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<GetOrganizationAvailableMemberGroupsResponse_MemberGroup>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.DeleteOrganizationRuleSetRequest";
+  static readonly typeName = "wg.cosmo.platform.v1.GetOrganizationAvailableMemberGroupsResponse.MemberGroup";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "ruleSetId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "groupId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteOrganizationRuleSetRequest {
-    return new DeleteOrganizationRuleSetRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOrganizationAvailableMemberGroupsResponse_MemberGroup {
+    return new GetOrganizationAvailableMemberGroupsResponse_MemberGroup().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteOrganizationRuleSetRequest {
-    return new DeleteOrganizationRuleSetRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetOrganizationAvailableMemberGroupsResponse_MemberGroup {
+    return new GetOrganizationAvailableMemberGroupsResponse_MemberGroup().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteOrganizationRuleSetRequest {
-    return new DeleteOrganizationRuleSetRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetOrganizationAvailableMemberGroupsResponse_MemberGroup {
+    return new GetOrganizationAvailableMemberGroupsResponse_MemberGroup().fromJsonString(jsonString, options);
   }
 
-  static equals(a: DeleteOrganizationRuleSetRequest | PlainMessage<DeleteOrganizationRuleSetRequest> | undefined, b: DeleteOrganizationRuleSetRequest | PlainMessage<DeleteOrganizationRuleSetRequest> | undefined): boolean {
-    return proto3.util.equals(DeleteOrganizationRuleSetRequest, a, b);
+  static equals(a: GetOrganizationAvailableMemberGroupsResponse_MemberGroup | PlainMessage<GetOrganizationAvailableMemberGroupsResponse_MemberGroup> | undefined, b: GetOrganizationAvailableMemberGroupsResponse_MemberGroup | PlainMessage<GetOrganizationAvailableMemberGroupsResponse_MemberGroup> | undefined): boolean {
+    return proto3.util.equals(GetOrganizationAvailableMemberGroupsResponse_MemberGroup, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.DeleteOrganizationRuleSetResponse
+ * @generated from message wg.cosmo.platform.v1.UpdateOrganizationMemberGroupRequest
  */
-export class DeleteOrganizationRuleSetResponse extends Message<DeleteOrganizationRuleSetResponse> {
+export class UpdateOrganizationMemberGroupRequest extends Message<UpdateOrganizationMemberGroupRequest> {
+  /**
+   * @generated from field: string groupId = 1;
+   */
+  groupId = "";
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.UpdateOrganizationMemberGroupRequest.MemberGroupRule rules = 2;
+   */
+  rules: UpdateOrganizationMemberGroupRequest_MemberGroupRule[] = [];
+
+  constructor(data?: PartialMessage<UpdateOrganizationMemberGroupRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateOrganizationMemberGroupRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "groupId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "rules", kind: "message", T: UpdateOrganizationMemberGroupRequest_MemberGroupRule, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrganizationMemberGroupRequest {
+    return new UpdateOrganizationMemberGroupRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateOrganizationMemberGroupRequest {
+    return new UpdateOrganizationMemberGroupRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateOrganizationMemberGroupRequest {
+    return new UpdateOrganizationMemberGroupRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateOrganizationMemberGroupRequest | PlainMessage<UpdateOrganizationMemberGroupRequest> | undefined, b: UpdateOrganizationMemberGroupRequest | PlainMessage<UpdateOrganizationMemberGroupRequest> | undefined): boolean {
+    return proto3.util.equals(UpdateOrganizationMemberGroupRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateOrganizationMemberGroupRequest.MemberGroupRule
+ */
+export class UpdateOrganizationMemberGroupRequest_MemberGroupRule extends Message<UpdateOrganizationMemberGroupRequest_MemberGroupRule> {
+  /**
+   * @generated from field: string role = 1;
+   */
+  role = "";
+
+  /**
+   * @generated from field: repeated string resources = 2;
+   */
+  resources: string[] = [];
+
+  constructor(data?: PartialMessage<UpdateOrganizationMemberGroupRequest_MemberGroupRule>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateOrganizationMemberGroupRequest.MemberGroupRule";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "resources", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrganizationMemberGroupRequest_MemberGroupRule {
+    return new UpdateOrganizationMemberGroupRequest_MemberGroupRule().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateOrganizationMemberGroupRequest_MemberGroupRule {
+    return new UpdateOrganizationMemberGroupRequest_MemberGroupRule().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateOrganizationMemberGroupRequest_MemberGroupRule {
+    return new UpdateOrganizationMemberGroupRequest_MemberGroupRule().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpdateOrganizationMemberGroupRequest_MemberGroupRule | PlainMessage<UpdateOrganizationMemberGroupRequest_MemberGroupRule> | undefined, b: UpdateOrganizationMemberGroupRequest_MemberGroupRule | PlainMessage<UpdateOrganizationMemberGroupRequest_MemberGroupRule> | undefined): boolean {
+    return proto3.util.equals(UpdateOrganizationMemberGroupRequest_MemberGroupRule, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UpdateOrganizationMemberGroupResponse
+ */
+export class UpdateOrganizationMemberGroupResponse extends Message<UpdateOrganizationMemberGroupResponse> {
   /**
    * @generated from field: wg.cosmo.platform.v1.Response response = 1;
    */
   response?: Response;
 
-  constructor(data?: PartialMessage<DeleteOrganizationRuleSetResponse>) {
+  constructor(data?: PartialMessage<UpdateOrganizationMemberGroupResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.DeleteOrganizationRuleSetResponse";
+  static readonly typeName = "wg.cosmo.platform.v1.UpdateOrganizationMemberGroupResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteOrganizationRuleSetResponse {
-    return new DeleteOrganizationRuleSetResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrganizationMemberGroupResponse {
+    return new UpdateOrganizationMemberGroupResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteOrganizationRuleSetResponse {
-    return new DeleteOrganizationRuleSetResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpdateOrganizationMemberGroupResponse {
+    return new UpdateOrganizationMemberGroupResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteOrganizationRuleSetResponse {
-    return new DeleteOrganizationRuleSetResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpdateOrganizationMemberGroupResponse {
+    return new UpdateOrganizationMemberGroupResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: DeleteOrganizationRuleSetResponse | PlainMessage<DeleteOrganizationRuleSetResponse> | undefined, b: DeleteOrganizationRuleSetResponse | PlainMessage<DeleteOrganizationRuleSetResponse> | undefined): boolean {
-    return proto3.util.equals(DeleteOrganizationRuleSetResponse, a, b);
+  static equals(a: UpdateOrganizationMemberGroupResponse | PlainMessage<UpdateOrganizationMemberGroupResponse> | undefined, b: UpdateOrganizationMemberGroupResponse | PlainMessage<UpdateOrganizationMemberGroupResponse> | undefined): boolean {
+    return proto3.util.equals(UpdateOrganizationMemberGroupResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteOrganizationMemberGroupRequest
+ */
+export class DeleteOrganizationMemberGroupRequest extends Message<DeleteOrganizationMemberGroupRequest> {
+  /**
+   * @generated from field: string groupId = 1;
+   */
+  groupId = "";
+
+  constructor(data?: PartialMessage<DeleteOrganizationMemberGroupRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteOrganizationMemberGroupRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "groupId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteOrganizationMemberGroupRequest {
+    return new DeleteOrganizationMemberGroupRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteOrganizationMemberGroupRequest {
+    return new DeleteOrganizationMemberGroupRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteOrganizationMemberGroupRequest {
+    return new DeleteOrganizationMemberGroupRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteOrganizationMemberGroupRequest | PlainMessage<DeleteOrganizationMemberGroupRequest> | undefined, b: DeleteOrganizationMemberGroupRequest | PlainMessage<DeleteOrganizationMemberGroupRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteOrganizationMemberGroupRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.DeleteOrganizationMemberGroupResponse
+ */
+export class DeleteOrganizationMemberGroupResponse extends Message<DeleteOrganizationMemberGroupResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<DeleteOrganizationMemberGroupResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.DeleteOrganizationMemberGroupResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteOrganizationMemberGroupResponse {
+    return new DeleteOrganizationMemberGroupResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteOrganizationMemberGroupResponse {
+    return new DeleteOrganizationMemberGroupResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteOrganizationMemberGroupResponse {
+    return new DeleteOrganizationMemberGroupResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteOrganizationMemberGroupResponse | PlainMessage<DeleteOrganizationMemberGroupResponse> | undefined, b: DeleteOrganizationMemberGroupResponse | PlainMessage<DeleteOrganizationMemberGroupResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteOrganizationMemberGroupResponse, a, b);
   }
 }
 
@@ -6825,6 +6979,11 @@ export class OrgMember extends Message<OrgMember> {
    */
   active = false;
 
+  /**
+   * @generated from field: repeated string groups = 6;
+   */
+  groups: string[] = [];
+
   constructor(data?: PartialMessage<OrgMember>) {
     super();
     proto3.util.initPartial(data, this);
@@ -6838,6 +6997,7 @@ export class OrgMember extends Message<OrgMember> {
     { no: 3, name: "roles", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "orgMemberID", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "active", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "groups", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrgMember {

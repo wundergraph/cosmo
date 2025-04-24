@@ -1,24 +1,24 @@
-import type { OrganizationRuleSet } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import type { OrganizationMemberGroup } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMutation } from "@connectrpc/connect-query";
 import {
-  deleteOrganizationRuleSet,
+  deleteOrganizationMemberGroup,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { z } from "zod";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { useToast } from "@/components/ui/use-toast";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 
-export function DeleteRuleSetDialog({ open, ruleSet, onRuleSetDeleted, onOpenChange }: {
+export function DeleteMemberGroupDialog({ open, group, onGroupDeleted, onOpenChange }: {
   open: boolean;
-  ruleSet: OrganizationRuleSet | null;
-  onRuleSetDeleted(): Promise<unknown>;
+  group: OrganizationMemberGroup | null;
+  onGroupDeleted(): Promise<unknown>;
   onOpenChange(open: boolean): void;
 }) {
   const { toast } = useToast();
-  const { mutate, isPending } = useMutation(deleteOrganizationRuleSet);
+  const { mutate, isPending } = useMutation(deleteOrganizationMemberGroup);
 
   function handleOnOpenChange(open: boolean) {
     if (isPending) {
@@ -30,53 +30,53 @@ export function DeleteRuleSetDialog({ open, ruleSet, onRuleSetDeleted, onOpenCha
     reset();
   }
 
-  const regex = new RegExp(`^${ruleSet?.name}$`);
+  const regex = new RegExp(`^${group?.name}$`);
   const schema = z.object({
     name: z.string().regex(regex, {
       message: "Please enter the rule set name as requested.",
     }),
   });
 
-  type DeleteRuleSetInput = z.infer<typeof schema>;
+  type DeleteGroupInput = z.infer<typeof schema>;
 
   const {
     register,
     formState: { isValid, errors },
     handleSubmit,
     reset,
-  } = useZodForm<DeleteRuleSetInput>({
+  } = useZodForm<DeleteGroupInput>({
     mode: "onChange",
     schema: schema,
   });
 
-  const onSubmit: SubmitHandler<DeleteRuleSetInput> = () => {
-    if (!ruleSet) {
+  const onSubmit: SubmitHandler<DeleteGroupInput> = () => {
+    if (!group) {
       return;
     }
 
     mutate(
-      { ruleSetId: ruleSet.ruleSetId },
+      { groupId: group.groupId },
       {
         async onSuccess(resp) {
           if (resp?.response?.code === EnumStatusCode.OK) {
             toast({
-              description: "Rule set deleted successfully.",
+              description: "Group deleted successfully.",
               duration: 3000,
             });
 
-            await onRuleSetDeleted();
+            await onGroupDeleted();
             onOpenChange(false);
             reset();
           } else {
             toast({
-              description: resp?.response?.details ?? "Could not delete the rule set. Please try again.",
+              description: resp?.response?.details ?? "Could not delete the group. Please try again.",
               duration: 3000,
             });
           }
         },
         onError() {
           toast({
-            description: "Could not delete the rule set. Please try again.",
+            description: "Could not delete the group. Please try again.",
             duration: 3000,
           });
         },
@@ -85,19 +85,19 @@ export function DeleteRuleSetDialog({ open, ruleSet, onRuleSetDeleted, onOpenCha
   };
 
   return (
-    <Dialog open={!!ruleSet && open} onOpenChange={handleOnOpenChange}>
+    <Dialog open={!!group && open} onOpenChange={handleOnOpenChange}>
       <DialogTrigger />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete rule set</DialogTitle>
+          <DialogTitle>Delete group</DialogTitle>
         </DialogHeader>
 
         <form
           className="mt-4 flex flex-col gap-y-3"
           onSubmit={handleSubmit(onSubmit)}
         >
-          <div>Are you sure you want to delete this rule set?</div>
-          {ruleSet?.membersCount
+          <div>Are you sure you want to delete this group?</div>
+          {group?.membersCount
             ? (
               <>
                 <div></div>
@@ -109,7 +109,7 @@ export function DeleteRuleSetDialog({ open, ruleSet, onRuleSetDeleted, onOpenCha
             : (
               <>
                 <div>
-                  Enter <strong>{ruleSet?.name}</strong> to confirm you want to delete this rule set.
+                  Enter <strong>{group?.name}</strong> to confirm you want to delete this group.
                 </div>
 
                 <Input
@@ -132,7 +132,7 @@ export function DeleteRuleSetDialog({ open, ruleSet, onRuleSetDeleted, onOpenCha
                   disabled={!isValid || isPending}
                   isLoading={isPending}
                 >
-                  Delete rule set
+                  Delete group
                 </Button>
               </>
             )}

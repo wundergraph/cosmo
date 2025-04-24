@@ -1,1 +1,0 @@
-ALTER TABLE "organization_rule_sets" ADD COLUMN "builtin" boolean DEFAULT false NOT NULL;

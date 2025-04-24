@@ -204,7 +204,7 @@ const MemberCard = ({
       <TableCell>{email}</TableCell>
       {acceptedInvite && (
         <TableCell>
-          {active === false && <Badge variant="destructive">Disabled</Badge>}
+          {!active && <Badge variant="destructive">Disabled</Badge>}
         </TableCell>
       )}
       <TableCell>
@@ -472,7 +472,7 @@ const AcceptedMembers = () => {
             <TableRow>
               <TableHead className="w-full">Email</TableHead>
               <TableHead className=""></TableHead>
-              <TableHead className="">Role</TableHead>
+              <TableHead className="">Group</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

@@ -102,10 +102,11 @@ import { deleteOrganization } from './organization/deleteOrganization.js';
 import { restoreOrganization } from './organization/restoreOrganization.js';
 import { getAuditLogs } from './organization/getAuditLogs.js';
 import { getOrganizationMembers } from './organization/getOrganizationMembers.js';
-import { createOrganizationRuleSet } from './organization/createOrganizationRuleSet.js';
-import { getOrganizationRuleSets } from './organization/getOrganizationRuleSets.js';
-import { updateOrganizationRuleSet } from './organization/updateOrganizationRuleSet.js';
-import { deleteOrganizationRuleSet } from './organization/deleteOrganizationRuleSet.js';
+import { createOrganizationMemberGroup } from './organization/createOrganizationMemberGroup.js';
+import { getOrganizationMemberGroups } from './organization/getOrganizationMemberGroups.js';
+import { getOrganizationAvailableMemberGroups } from './organization/getOrganizationAvailableMemberGroups.js';
+import { updateOrganizationMemberGroup } from './organization/updateOrganizationMemberGroup.js';
+import { deleteOrganizationMemberGroup } from './organization/deleteOrganizationMemberGroup.js';
 import { getPendingOrganizationMembers } from './organization/getPendingOrganizationMembers.js';
 import { isMemberLimitReached } from './organization/isMemberLimitReached.js';
 import { leaveOrganization } from './organization/leaveOrganization.js';
@@ -545,20 +546,24 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return getPendingOrganizationMembers(opts, req, ctx);
     },
 
-    createOrganizationRuleSet: (req, ctx) => {
-      return createOrganizationRuleSet(opts, req, ctx);
+    createOrganizationMemberGroup: (req, ctx) => {
+      return createOrganizationMemberGroup(opts, req, ctx);
     },
 
-    getOrganizationRuleSets: (req, ctx) => {
-      return getOrganizationRuleSets(opts, req, ctx);
+    getOrganizationMemberGroups: (req, ctx) => {
+      return getOrganizationMemberGroups(opts, req, ctx);
     },
 
-    updateOrganizationRuleSet: (req, ctx) => {
-      return updateOrganizationRuleSet(opts, req, ctx);
+    getOrganizationAvailableMemberGroups: (req, ctx) => {
+      return getOrganizationAvailableMemberGroups(opts, req, ctx);
     },
 
-    deleteOrganizationRuleSet: (req, ctx) => {
-      return deleteOrganizationRuleSet(opts, req, ctx);
+    updateOrganizationMemberGroup: (req, ctx) => {
+      return updateOrganizationMemberGroup(opts, req, ctx);
+    },
+
+    deleteOrganizationMemberGroup: (req, ctx) => {
+      return deleteOrganizationMemberGroup(opts, req, ctx);
     },
 
     getAPIKeys: (req, ctx) => {

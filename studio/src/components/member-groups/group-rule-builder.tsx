@@ -1,5 +1,5 @@
 import type {
-  OrganizationRuleSetRule,
+  OrganizationMemberGroupRule,
   GetUserAccessibleResourcesResponse,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { roles } from "@/lib/constants";
@@ -43,11 +43,11 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 
-export function RuleSetRuleBuilder({ rule, accessibleResources, disabled, onRuleUpdated, onRemoveRule }: {
-  rule: OrganizationRuleSetRule;
+export function GroupRuleBuilder({ rule, accessibleResources, disabled, onRuleUpdated, onRemoveRule }: {
+  rule: OrganizationMemberGroupRule;
   accessibleResources: GetUserAccessibleResourcesResponse | undefined;
   disabled: boolean;
-  onRuleUpdated(rule: OrganizationRuleSetRule): void;
+  onRuleUpdated(rule: OrganizationMemberGroupRule): void;
   onRemoveRule(): void;
 }) {
   const { isMobile } = useWindowSize();
@@ -83,7 +83,7 @@ export function RuleSetRuleBuilder({ rule, accessibleResources, disabled, onRule
 
   const children = (
     <>
-      <RuleSetRuleBuilderCommand
+      <GroupRuleBuilderCommand
         uniqueKey="namespaces"
         isMobile={isMobile}
         title="Namespace"
@@ -96,7 +96,7 @@ export function RuleSetRuleBuilder({ rule, accessibleResources, disabled, onRule
         toggleResources={toggleResources}
       />
 
-      <RuleSetRuleBuilderCommand
+      <GroupRuleBuilderCommand
         uniqueKey="federated-graphs"
         isMobile={isMobile}
         title="Federated Graph"
@@ -110,7 +110,7 @@ export function RuleSetRuleBuilder({ rule, accessibleResources, disabled, onRule
         toggleResources={toggleResources}
       />
 
-      <RuleSetRuleBuilderCommand
+      <GroupRuleBuilderCommand
         uniqueKey="subgraphs"
         isMobile={isMobile}
         title="Subgraph"
@@ -198,7 +198,7 @@ export function RuleSetRuleBuilder({ rule, accessibleResources, disabled, onRule
   );
 }
 
-function RuleSetRuleBuilderCommand({
+function GroupRuleBuilderCommand({
   uniqueKey,
   isMobile,
   title,
@@ -248,7 +248,7 @@ function RuleSetRuleBuilderCommand({
         {Object.keys(groupedFilteredOptions).map((key) => {
           const groupChildren = groupedFilteredOptions[key]!;
           return !key ? (
-            <RuleSetRuleBuilderCommandList
+            <GroupRuleBuilderCommandList
               key={`${title}-${key}`}
               options={groupChildren}
               selectedResources={selectedResources}
@@ -256,7 +256,7 @@ function RuleSetRuleBuilderCommand({
             />
           ) : (
             <CommandGroup key={`${title}-${key}`} heading={key}>
-              <RuleSetRuleBuilderCommandList
+              <GroupRuleBuilderCommandList
                 options={groupChildren}
                 selectedResources={selectedResources}
                 toggleResources={toggleResources}
@@ -322,7 +322,7 @@ function RuleSetRuleBuilderCommand({
     );
 }
 
-function RuleSetRuleBuilderCommandList({ options, selectedResources, toggleResources }: {
+function GroupRuleBuilderCommandList({ options, selectedResources, toggleResources }: {
   options: {
     key: string;
     label: string;

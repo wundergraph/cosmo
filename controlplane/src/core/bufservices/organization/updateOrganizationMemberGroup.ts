@@ -2,45 +2,36 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  UpdateOrganizationRuleSetRequest,
-  UpdateOrganizationRuleSetResponse,
+  UpdateOrganizationMemberGroupRequest,
+  UpdateOrganizationMemberGroupResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { memberRoleEnum } from '../../../db/schema.js';
-import { OrganizationRuleSetRepository } from '../../repositories/OrganizationRuleSetRepository.js';
+import { OrganizationMemberGroupRepository } from '../../repositories/OrganizationMemberGroupRepository.js';
 import { MemberRole } from '../../../db/models.js';
 
-export function updateOrganizationRuleSet(
+export function updateOrganizationMemberGroup(
   opts: RouterOptions,
-  req: UpdateOrganizationRuleSetRequest,
+  req: UpdateOrganizationMemberGroupRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<UpdateOrganizationRuleSetResponse>> {
+): Promise<PlainMessage<UpdateOrganizationMemberGroupResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<UpdateOrganizationRuleSetResponse>>(ctx, logger, async () => {
+  return handleError<PlainMessage<UpdateOrganizationMemberGroupResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    const ruleSetRepo = new OrganizationRuleSetRepository(opts.db);
+    const ruleSetRepo = new OrganizationMemberGroupRepository(opts.db);
     const ruleSet = await ruleSetRepo.byId({
       organizationId: authContext.organizationId,
-      ruleSetId: req.ruleSetId,
+      ruleSetId: req.groupId,
     })
 
     if (!ruleSet) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
-        },
-      };
-    }
-
-    if (ruleSet.builtin) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'Builtin rule sets cannot be modified',
         },
       };
     }
@@ -63,7 +54,7 @@ export function updateOrganizationRuleSet(
       });
     }
 
-    await ruleSetRepo.updateRules({ ruleSetId: req.ruleSetId, rules: resourcesByRole });
+    await ruleSetRepo.updateRules({ ruleSetId: req.groupId, rules: resourcesByRole });
 
     return {
       response: {

@@ -365,6 +365,7 @@ export class OrganizationRepository {
       orgMemberID: orgMember[0].memberID,
       email: orgMember[0].email,
       roles: userRoles,
+      groups: [],
       active: orgMember[0].active,
     };
   }
@@ -405,6 +406,7 @@ export class OrganizationRepository {
       orgMemberID: orgMember[0].memberID,
       email: orgMember[0].email,
       roles: userRoles,
+      groups: [],
       active: orgMember[0].active,
     };
   }

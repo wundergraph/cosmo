@@ -868,49 +868,65 @@ message CreateFederatedGraphTokenResponse {
   string token = 2;
 }
 
-message OrganizationRuleSetRule {
+message OrganizationMemberGroupRule {
   string role = 1;
   repeated string resources = 2;
 }
 
-message OrganizationRuleSet {
-  string ruleSetId = 1;
+message OrganizationMemberGroup {
+  string groupId = 1;
   string name = 2;
-  bool builtin = 3;
-  int32 membersCount = 4;
-  repeated OrganizationRuleSetRule rules = 5;
+  int32 membersCount = 3;
+  repeated OrganizationMemberGroupRule rules = 4;
 }
 
-message CreateOrganizationRuleSetRequest {
+message CreateOrganizationMemberGroupRequest {
   string name = 1;
 }
 
-message CreateOrganizationRuleSetResponse {
+message CreateOrganizationMemberGroupResponse {
   Response response = 1;
-  OrganizationRuleSet ruleSet = 2;
+  OrganizationMemberGroup group = 2;
 }
 
-message GetOrganizationRuleSetsRequest {}
+message GetOrganizationMemberGroupsRequest {}
 
-message GetOrganizationRuleSetsResponse {
+message GetOrganizationMemberGroupsResponse {
   Response response = 1;
-  repeated OrganizationRuleSet ruleSets = 2;
+  repeated OrganizationMemberGroup groups = 2;
 }
 
-message UpdateOrganizationRuleSetRequest {
-  string ruleSetId = 1;
-  repeated OrganizationRuleSetRule rules = 2;
+message GetOrganizationAvailableMemberGroupsRequest {}
+
+message GetOrganizationAvailableMemberGroupsResponse {
+  message MemberGroup {
+    string groupId = 1;
+    string name = 2;
+  }
+
+  Response response = 1;
+  repeated MemberGroup groups = 2;
 }
 
-message UpdateOrganizationRuleSetResponse {
+message UpdateOrganizationMemberGroupRequest {
+  message MemberGroupRule {
+    string role = 1;
+    repeated string resources = 2;
+  }
+
+  string groupId = 1;
+  repeated MemberGroupRule rules = 2;
+}
+
+message UpdateOrganizationMemberGroupResponse {
   Response response = 1;
 }
 
-message DeleteOrganizationRuleSetRequest {
-  string ruleSetId = 1;
+message DeleteOrganizationMemberGroupRequest {
+  string groupId = 1;
 }
 
-message DeleteOrganizationRuleSetResponse {
+message DeleteOrganizationMemberGroupResponse {
   Response response = 1;
 }
 
@@ -920,6 +936,7 @@ message OrgMember{
   repeated string roles = 3;
   string orgMemberID = 4;
   bool active = 5;
+  repeated string groups = 6;
 }
 
 message PendingOrgInvitation{
@@ -2844,15 +2861,17 @@ service PlatformService {
   // MigrateFromApollo migrates the graphs from apollo to cosmo
   rpc MigrateFromApollo(MigrateFromApolloRequest) returns (MigrateFromApolloResponse) {}
 
-  // Organization Rule Set management
-  // CreateOrganizationRuleSet creates a new rule set
-  rpc CreateOrganizationRuleSet(CreateOrganizationRuleSetRequest) returns (CreateOrganizationRuleSetResponse) {}
-  // GetOrganizationRuleSets returns the list of organization rule sets
-  rpc GetOrganizationRuleSets(GetOrganizationRuleSetsRequest) returns (GetOrganizationRuleSetsResponse) {}
-  // UpdateOrganizationRuleSet updates the rule list for an organization rule set
-  rpc UpdateOrganizationRuleSet(UpdateOrganizationRuleSetRequest) returns (UpdateOrganizationRuleSetResponse) {}
-  // DeleteOrganizationRuleSet deletes an existing organization rule set
-  rpc DeleteOrganizationRuleSet(DeleteOrganizationRuleSetRequest) returns (DeleteOrganizationRuleSetResponse) {}
+  // Organization Member Group management
+  // CreateOrganizationMemberGroup creates a new member group
+  rpc CreateOrganizationMemberGroup(CreateOrganizationMemberGroupRequest) returns (CreateOrganizationMemberGroupResponse) {}
+  // GetOrganizationMemberGroups returns the list of organization member groups
+  rpc GetOrganizationMemberGroups(GetOrganizationMemberGroupsRequest) returns (GetOrganizationMemberGroupsResponse) {}
+  // GetOrganizationAvailableMemberGroups return the list of organization member groups with minimal properties
+  rpc GetOrganizationAvailableMemberGroups(GetOrganizationAvailableMemberGroupsRequest) returns (GetOrganizationAvailableMemberGroupsResponse) {}
+  // UpdateOrganizationMemberGroup updates the rule list for an organization member group
+  rpc UpdateOrganizationMemberGroup(UpdateOrganizationMemberGroupRequest) returns (UpdateOrganizationMemberGroupResponse) {}
+  // DeleteOrganizationMemberGroup deletes an existing organization member group
+  rpc DeleteOrganizationMemberGroup(DeleteOrganizationMemberGroupRequest) returns (DeleteOrganizationMemberGroupResponse) {}
 
   // CreateOrganizationWebhookConfig create a new webhook config for the organization
   rpc CreateOrganizationWebhookConfig(CreateOrganizationWebhookConfigRequest) returns (CreateOrganizationWebhookConfigResponse) {}

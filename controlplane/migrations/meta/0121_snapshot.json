@@ -1,5 +1,5 @@
 {
-  "id": "5a3acdf8-7c99-4fcf-939e-ebd07a1543e3",
+  "id": "2eab35e4-526b-43f7-8873-27f173bc1333",
   "prevId": "1047e67f-16f1-4d7b-bfb6-2031ff10230b",
   "version": "7",
   "dialect": "postgresql",
@@ -3957,6 +3957,122 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "public.organization_member_group_rules": {
+      "name": "organization_member_group_rules",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "group_id": {
+          "name": "group_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "member_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resource": {
+          "name": "resource",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "organization_member_group_rules_group_id_organization_member_groups_id_fk": {
+          "name": "organization_member_group_rules_group_id_organization_member_groups_id_fk",
+          "tableFrom": "organization_member_group_rules",
+          "tableTo": "organization_member_groups",
+          "columnsFrom": [
+            "group_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "public.organization_member_groups": {
+      "name": "organization_member_groups",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kc_group_id": {
+          "name": "kc_group_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "organization_member_groups_organization_id_organizations_id_fk": {
+          "name": "organization_member_groups_organization_id_organizations_id_fk",
+          "tableFrom": "organization_member_groups",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "organization_member_groups_kc_group_id_unique": {
+          "name": "organization_member_groups_kc_group_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "kc_group_id"
+          ]
+        }
+      },
+      "checkConstraints": {}
+    },
     "public.organization_member_roles": {
       "name": "organization_member_roles",
       "schema": "",
@@ -4022,160 +4138,6 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "public.organization_rule_set_members": {
-      "name": "organization_rule_set_members",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "rule_set_id": {
-          "name": "rule_set_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "organization_rule_set_members_rule_set_id_organization_rule_sets_id_fk": {
-          "name": "organization_rule_set_members_rule_set_id_organization_rule_sets_id_fk",
-          "tableFrom": "organization_rule_set_members",
-          "tableTo": "organization_rule_sets",
-          "columnsFrom": [
-            "rule_set_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "public.organization_rule_set_rules": {
-      "name": "organization_rule_set_rules",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "rule_set_id": {
-          "name": "rule_set_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "role": {
-          "name": "role",
-          "type": "member_role",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "resource": {
-          "name": "resource",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "organization_rule_set_rules_rule_set_id_organization_rule_sets_id_fk": {
-          "name": "organization_rule_set_rules_rule_set_id_organization_rule_sets_id_fk",
-          "tableFrom": "organization_rule_set_rules",
-          "tableTo": "organization_rule_sets",
-          "columnsFrom": [
-            "rule_set_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "public.organization_rule_sets": {
-      "name": "organization_rule_sets",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "organization_id": {
-          "name": "organization_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "kc_group_id": {
-          "name": "kc_group_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "organization_rule_sets_organization_id_organizations_id_fk": {
-          "name": "organization_rule_sets_organization_id_organizations_id_fk",
-          "tableFrom": "organization_rule_sets",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "organization_rule_sets_kc_group_id_unique": {
-          "name": "organization_rule_sets_kc_group_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "kc_group_id"
-          ]
-        }
-      },
       "checkConstraints": {}
     },
     "public.organization_webhook_configs": {

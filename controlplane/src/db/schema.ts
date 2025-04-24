@@ -1335,7 +1335,7 @@ export const organizationRelations = relations(organizations, ({ many }) => ({
 
 export const memberRoleEnum = pgEnum('member_role', ['admin', 'developer', 'viewer'] as const);
 
-export const organizationRuleSets = pgTable('organization_rule_sets', {
+export const organizationMemberGroups = pgTable('organization_member_groups', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
   organizationId: uuid('organization_id')
     .notNull()
@@ -1343,47 +1343,29 @@ export const organizationRuleSets = pgTable('organization_rule_sets', {
       onDelete: 'cascade',
     }),
   name: text('name').notNull(),
-  builtin: boolean('builtin').notNull().default(false),
   kcGroupId: text('kc_group_id').unique(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const organizationRuleSetRules = pgTable('organization_rule_set_rules', {
+export const organizationMemberGroupRules = pgTable('organization_member_group_rules', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
-  ruleSetId: uuid('rule_set_id')
+  groupId: uuid('group_id')
     .notNull()
-    .references(() => organizationRuleSets.id, {
+    .references(() => organizationMemberGroups.id, {
       onDelete: 'cascade',
     }),
   role: memberRoleEnum('role').notNull(),
   resource: text('resource').notNull(),
 });
 
-export const organizationRuleSetMembers = pgTable('organization_rule_set_members', {
-  id: uuid('id').notNull().primaryKey().defaultRandom(),
-  ruleSetId: uuid('rule_set_id')
-    .notNull()
-    .references(() => organizationRuleSets.id, {
-      onDelete: 'cascade',
-    }),
-});
-
-export const organizationRuleSetRelations = relations(organizationRuleSets, ({ many }) => ({
-  rules: many(organizationRuleSetRules),
-  members: many(organizationRuleSetMembers),
+export const organizationMemberGroupsRelations = relations(organizationMemberGroups, ({ many }) => ({
+  rules: many(organizationMemberGroupRules),
 }));
 
-export const organizationRuleSetRulesRelations = relations(organizationRuleSetRules, ({ one }) => ({
-  ruleSet: one(organizationRuleSets, {
-    fields: [organizationRuleSetRules.ruleSetId],
-    references: [organizationRuleSets.id],
-  }),
-}));
-
-export const organizationRuleSetMembersRelations = relations(organizationRuleSetMembers, ({ one }) => ({
-  ruleSet: one(organizationRuleSets, {
-    fields: [organizationRuleSetMembers.ruleSetId],
-    references: [organizationRuleSets.id],
+export const organizationMemberGroupRulesRelations = relations(organizationMemberGroupRules, ({ one }) => ({
+  group: one(organizationMemberGroups, {
+    fields: [organizationMemberGroupRules.groupId],
+    references: [organizationMemberGroups.id],
   }),
 }));
 

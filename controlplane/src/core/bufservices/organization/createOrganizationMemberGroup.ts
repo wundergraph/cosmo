@@ -2,31 +2,31 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  CreateOrganizationRuleSetRequest,
-  CreateOrganizationRuleSetResponse,
+  CreateOrganizationMemberGroupRequest,
+  CreateOrganizationMemberGroupResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { OrganizationRuleSetRepository } from '../../repositories/OrganizationRuleSetRepository.js';
-import { OrganizationRuleSetDTO } from '../../../types/index.js';
+import { OrganizationMemberGroupRepository } from '../../repositories/OrganizationMemberGroupRepository.js';
+import { OrganizationMemberGroupDTO } from '../../../types/index.js';
 
-export function createOrganizationRuleSet(
+export function createOrganizationMemberGroup(
   opts: RouterOptions,
-  req: CreateOrganizationRuleSetRequest,
+  req: CreateOrganizationMemberGroupRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<CreateOrganizationRuleSetResponse>> {
+): Promise<PlainMessage<CreateOrganizationMemberGroupResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<CreateOrganizationRuleSetResponse>>(ctx, logger, async () => {
+  return handleError<PlainMessage<CreateOrganizationMemberGroupResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    const ruleSetRepo = new OrganizationRuleSetRepository(opts.db);
+    const ruleSetRepo = new OrganizationMemberGroupRepository(opts.db);
     if (await ruleSetRepo.exists({ organizationId: authContext.organizationId, ruleSetName: req.name })) {
       return {
         response: {
           code: EnumStatusCode.ERR_ALREADY_EXISTS,
-          details: `A rule set with the name "${req.name}" already exists.`,
+          details: `A group with the name "${req.name}" already exists.`,
         },
       };
     }
@@ -42,12 +42,12 @@ export function createOrganizationRuleSet(
       return {
         response: {
           code: EnumStatusCode.ERR,
-          details: 'Could not create new rule set',
+          details: 'Could not create the new group',
         },
       };
     }
 
-    let createdRuleSet: OrganizationRuleSetDTO;
+    let createdRuleSet: OrganizationMemberGroupDTO;
     try {
       createdRuleSet = await ruleSetRepo.createRuleSet({
         organizationId: authContext.organizationId,
@@ -63,8 +63,8 @@ export function createOrganizationRuleSet(
       response: {
         code: EnumStatusCode.OK,
       },
-      ruleSet: {
-        ruleSetId: createdRuleSet.id,
+      groups: {
+        groupId: createdRuleSet.id,
         name: createdRuleSet.name,
         membersCount: 0,
         rules: [],

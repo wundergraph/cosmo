@@ -245,10 +245,9 @@ export interface UserDTO {
   email: string;
 }
 
-export interface OrganizationRuleSetDTO {
+export interface OrganizationMemberGroupDTO {
   id: string;
   name: string;
-  builtin: boolean;
   kcGroupId: string | null;
   membersCount: number;
   rules: {
@@ -262,6 +261,7 @@ export interface OrganizationMemberDTO {
   orgMemberID: string;
   email: string;
   roles: string[];
+  groups: [];
   active: boolean;
 }
 

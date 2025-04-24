@@ -2,45 +2,36 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  DeleteOrganizationRuleSetRequest,
-  DeleteOrganizationRuleSetResponse,
+  DeleteOrganizationMemberGroupRequest,
+  DeleteOrganizationMemberGroupResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { OrganizationRuleSetRepository } from '../../repositories/OrganizationRuleSetRepository.js';
+import { OrganizationMemberGroupRepository } from '../../repositories/OrganizationMemberGroupRepository.js';
 
-export function deleteOrganizationRuleSet(
+export function deleteOrganizationMemberGroup(
   opts: RouterOptions,
-  req: DeleteOrganizationRuleSetRequest,
+  req: DeleteOrganizationMemberGroupRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<DeleteOrganizationRuleSetResponse>> {
+): Promise<PlainMessage<DeleteOrganizationMemberGroupResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<DeleteOrganizationRuleSetResponse>>(ctx, logger, async () => {
+  return handleError<PlainMessage<DeleteOrganizationMemberGroupResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
     return opts.db.transaction(async (tx) => {
-      const ruleSetRepo = new OrganizationRuleSetRepository(tx);
+      const ruleSetRepo = new OrganizationMemberGroupRepository(tx);
 
       const ruleSet = await ruleSetRepo.byId({
         organizationId: authContext.organizationId,
-        ruleSetId: req.ruleSetId,
+        ruleSetId: req.groupId,
       });
 
       if (!ruleSet) {
         return {
           response: {
             code: EnumStatusCode.ERR_NOT_FOUND,
-          },
-        };
-      }
-
-      if (ruleSet.builtin) {
-        return {
-          response: {
-            code: EnumStatusCode.ERR,
-            details: 'Builtin rule sets cannot be deleted',
           },
         };
       }
