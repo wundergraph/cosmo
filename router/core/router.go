@@ -198,7 +198,7 @@ type (
 		apolloCompatibilityFlags        config.ApolloCompatibilityFlags
 		apolloRouterCompatibilityFlags  config.ApolloRouterCompatibilityFlags
 		storageProviders                config.StorageProviders
-		demo                            bool
+		demoMode                        bool
 		eventsConfig                    config.EventsConfiguration
 		prometheusServer                *http.Server
 		modulesConfig                   map[string]interface{}
@@ -1999,9 +1999,9 @@ func WithMCP(cfg config.MCPConfiguration) Option {
 	}
 }
 
-func WithDemo(demo bool) Option {
+func WithDemoMode(demoMode bool) Option {
 	return func(r *Router) {
-		r.demo = demo
+		r.demoMode = demoMode
 	}
 }
 

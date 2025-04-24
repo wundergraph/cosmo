@@ -1969,7 +1969,7 @@
         }
       }
     },
-    "demo": {
+    "demo_mode": {
       "type": "boolean",
       "description": "Launch the router in demo mode. The demo mode is used to start the router with a demo execution config if no execution config is found.",
       "default": false

@@ -120,7 +120,7 @@
     "ExposeSchema": false,
     "RouterURL": ""
   },
-  "Demo": false,
+  "DemoMode": false,
   "Modules": null,
   "Headers": {
     "All": null,

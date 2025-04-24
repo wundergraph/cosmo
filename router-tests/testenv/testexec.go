@@ -90,7 +90,7 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 		"RETRY_ENABLED":        "false",
 		"SHUTDOWN_DELAY":       "30s",
 		"CDN_CACHE_SIZE":       fmt.Sprintf("%d", 1024*1024),
-		"DEMO":                 fmt.Sprintf("%t", cfg.Demo),
+		"DEMO_MODE":            fmt.Sprintf("%t", cfg.DemoMode),
 	} {
 		vals += fmt.Sprintf("\n%s=%s", key, val)
 	}

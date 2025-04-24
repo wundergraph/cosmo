@@ -30,7 +30,7 @@ func getConfigClient(r *Router, cdnProviders map[string]config.CDNStorageProvide
 				Logger:                     r.logger,
 				SignatureKey:               r.routerConfigPollerConfig.GraphSignKey,
 				RouterCompatibilityVersion: execution_config.RouterCompatibilityVersionThreshold,
-				UseDemoConfig:              r.demo,
+				UseDemoConfig:              r.demoMode,
 			})
 		if err != nil {
 			return nil, err
@@ -65,7 +65,7 @@ func getConfigClient(r *Router, cdnProviders map[string]config.CDNStorageProvide
 			clientOptions.ObjectPath = r.routerConfigPollerConfig.FallbackStorage.ObjectPath
 		}
 
-		c, err := configs3Provider.NewClient(provider.Endpoint, clientOptions, r.demo)
+		c, err := configs3Provider.NewClient(provider.Endpoint, clientOptions, r.demoMode)
 		if err != nil {
 			return nil, err
 		}
@@ -99,7 +99,7 @@ func getConfigClient(r *Router, cdnProviders map[string]config.CDNStorageProvide
 		Logger:                     r.logger,
 		SignatureKey:               r.routerConfigPollerConfig.GraphSignKey,
 		RouterCompatibilityVersion: execution_config.RouterCompatibilityVersionThreshold,
-		UseDemoConfig:              r.demo,
+		UseDemoConfig:              r.demoMode,
 	})
 	if err != nil {
 		return nil, err
