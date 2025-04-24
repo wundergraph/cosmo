@@ -177,6 +177,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		resp, err := h.executor.Resolver.ResolveGraphQLResponse(ctx, p.Response, nil, HeaderPropagationWriter(w, ctx.Context()))
 
+		// Respects resolver errors and execution errors
 		defer trackResponseError(ctx, err)
 
 		requestContext.dataSourceNames = getSubgraphNames(p.Response.DataSources)
@@ -210,6 +211,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err := h.executor.Resolver.ResolveGraphQLSubscription(ctx, p.Response, writer)
 		requestContext.dataSourceNames = getSubgraphNames(p.Response.Response.DataSources)
 
+		// Respects resolver errors and execution errors
 		defer trackResponseError(ctx, err)
 
 		if err != nil {
