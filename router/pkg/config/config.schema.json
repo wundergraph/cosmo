@@ -88,45 +88,43 @@
         },
         "s3": {
           "type": "array",
-          "description": "The S3 configuration. The S3 provider is used to store and retrieve data.",
+          "description": "The configuration for the S3 storage provider. If no access key and secret key are provided, the provider will attempt to retrieve IAM credentials from the EC2 service.",
           "items": {
             "type": "object",
             "required": [
               "id",
-              "endpoint",
-              "access_key",
-              "secret_key",
-              "bucket"
+              "bucket",
+              "endpoint"
             ],
             "additionalProperties": false,
             "properties": {
               "id": {
                 "type": "string",
-                "description": "The provider ID. The provider ID is used to identify the provider in the configuration."
+                "description": "The ID of the storage provider. The ID is used to identify the storage provider in the configuration."
               },
               "endpoint": {
                 "type": "string",
-                "description": "The S3 endpoint to use."
+                "description": "The S3 endpoint to connect to. The endpoint is used to connect to the S3 provider. If not set, the default S3 endpoint is used."
               },
               "access_key": {
                 "type": "string",
-                "description": "The S3 access key to use."
+                "description": "The access key of the S3 bucket. The access key ID is used to authenticate with the S3 bucket."
               },
               "secret_key": {
                 "type": "string",
-                "description": "The S3 secret key to use."
+                "description": "The secret key of the S3 bucket. The secret key is used to authenticate with the S3 bucket."
               },
               "bucket": {
                 "type": "string",
-                "description": "The S3 bucket to use."
+                "description": "The name of the S3 bucket. The S3 bucket is used to store the execution config."
               },
               "region": {
                 "type": "string",
-                "description": "The S3 region to use."
+                "description": "The region of the S3 bucket. The region is used to specify the region of the S3 bucket."
               },
               "secure": {
                 "type": "boolean",
-                "description": "Whether to use HTTPS for the S3 connection."
+                "description": "Enable the secure connection. The secure connection is used to establish a secure connection with the S3 bucket."
               }
             }
           }
@@ -1204,6 +1202,22 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Exclude scope info from Prometheus metrics. The default value is false."
+                },
+                "schema_usage": {
+                  "type": "object",
+                  "description": "Configure schema field usage metrics for Prometheus",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable the collection and export of GraphQL schema metrics to Prometheus. The default value is false."
+                    },
+                    "include_operation_sha": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Include the operation SHA256 in the metric labels, this can be an expensive operation. The default value is false."
+                    }
+                  }
                 }
               }
             }
@@ -2547,10 +2561,10 @@
           "description": "Defines the timeout for the websocket read of the WebSocket client implementation. This is used to set the read deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         },
         "websocket_client_write_timeout": {
-            "type": "string",
-            "format": "go-duration",
-            "default": "10s",
-            "description": "Defines the timeout for the websocket write of the WebSocket client implementation. This is used to set the write deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+          "type": "string",
+          "format": "go-duration",
+          "default": "10s",
+          "description": "Defines the timeout for the websocket write of the WebSocket client implementation. This is used to set the write deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         },
         "websocket_client_ping_interval": {
           "type": "string",

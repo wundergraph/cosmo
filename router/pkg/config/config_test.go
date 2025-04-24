@@ -525,8 +525,8 @@ func TestValidLocalExecutionConfig(t *testing.T) {
 	f := createTempFileFromFixture(t, `
 version: "1"
 
-execution_config: 
-  file: 
+execution_config:
+  file:
     path: "router.json"
 `)
 	_, err := LoadConfig(f, "")
@@ -549,7 +549,7 @@ storage_providers:
       secure: false
 
 execution_config:
-  file: 
+  file:
     path: "router.json"
   storage: # Cannot have both local and storage
     provider_id: s3
@@ -567,12 +567,53 @@ func TestClientHeaderConfig(t *testing.T) {
 	f := createTempFileFromFixture(t, `
 version: "1"
 
-client_header: 
+client_header:
   name: "Client_Name"
   version: "Client_Version"
 `)
 	_, err := LoadConfig(f, "")
 	require.NoError(t, err)
+}
+
+func TestLoadPrometheusSchemaUsageConfig(t *testing.T) {
+	t.Run("from file", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+telemetry:
+  metrics:
+    prometheus:
+      schema_usage:
+        enabled: true
+        include_operation_sha: true
+`)
+		c, err := LoadConfig(f, "")
+		require.NoError(t, err)
+
+		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
+		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.IncludeOperationSha)
+	})
+
+	t.Run("from environment", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+`)
+
+		c, err := LoadConfig(f, "")
+		require.NoError(t, err)
+
+		require.False(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
+		require.False(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.IncludeOperationSha)
+
+		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_ENABLED", "true")
+		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_INCLUDE_OPERATION_SHA", "true")
+
+		c, err = LoadConfig(f, "")
+		require.NoError(t, err)
+
+		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
+		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.IncludeOperationSha)
+	})
 }
 
 func TestPrefixedMetricEngineConfig(t *testing.T) {
