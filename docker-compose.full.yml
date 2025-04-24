@@ -110,7 +110,7 @@ services:
   # Infrastructure services
 
   clickhouse:
-    image: clickhouse/clickhouse-server:${DC_CLICKHOUSE_VERSION:-24.6}
+    image: clickhouse/clickhouse-server:${DC_CLICKHOUSE_VERSION:-24.12}
     environment:
       CLICKHOUSE_DB: ${CLICKHOUSE_DATABASE:-cosmo}
       CLICKHOUSE_USER: ${CLICKHOUSE_USER:-default}
