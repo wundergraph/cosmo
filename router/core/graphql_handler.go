@@ -283,6 +283,8 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		Data:   nil,
 	}
 
+	h.log.Error("write error", zap.Error(err))
+
 	switch getErrorType(err) {
 	case errorTypeMergeResult:
 		var errMerge resolve.ErrMergeResult
