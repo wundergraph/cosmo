@@ -13,9 +13,14 @@ enum OrganizationEventName {
   FEDERATED_GRAPH_SCHEMA_UPDATED = 0;
   MONOGRAPH_SCHEMA_UPDATED = 1;
   VALIDATE_CONFIG = 3;
+  PROPOSAL_STATE_UPDATED = 4;
 }
 
 message GraphSchemaUpdatedMeta {
+  repeated string graphIds = 1;
+}
+
+message ProposalStateUpdatedMeta {
   repeated string graphIds = 1;
 }
 
@@ -24,5 +29,6 @@ message EventMeta {
   oneof meta {
     GraphSchemaUpdatedMeta federated_graph_schema_updated = 2;
     GraphSchemaUpdatedMeta monograph_schema_updated = 3;
+    ProposalStateUpdatedMeta proposal_state_updated = 4;
   }
 }

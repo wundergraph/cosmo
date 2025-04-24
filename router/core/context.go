@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -21,6 +22,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
 	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
@@ -51,9 +53,8 @@ type ClientInfo struct {
 }
 
 func NewClientInfoFromRequest(r *http.Request, clientHeader config.ClientHeader) *ClientInfo {
-	clientName := ctrace.GetClientHeader(r.Header, []string{clientHeader.Name, "graphql-client-name", "apollographql-client-name"}, "unknown")
-	clientVersion := ctrace.GetClientHeader(r.Header, []string{clientHeader.Version, "graphql-client-version", "apollographql-client-version"}, "missing")
 	requestToken := r.Header.Get("X-WG-Token")
+	clientName, clientVersion := ctrace.GetClientDetails(r, clientHeader)
 	return &ClientInfo{
 		Name:           clientName,
 		Version:        clientVersion,
@@ -532,7 +533,7 @@ type operationContext struct {
 	persistedOperationCacheHit bool
 	normalizationCacheHit      bool
 
-	typeFieldUsageInfo []*graphqlmetrics.TypeFieldUsageInfo
+	typeFieldUsageInfo graphqlschemausage.TypeFieldMetrics
 	argumentUsageInfo  []*graphqlmetrics.ArgumentUsageInfo
 	inputUsageInfo     []*graphqlmetrics.InputUsageInfo
 
@@ -560,6 +561,10 @@ func (o *operationContext) Type() string {
 
 func (o *operationContext) Hash() uint64 {
 	return o.hash
+}
+
+func (o *operationContext) HashString() string {
+	return strconv.FormatUint(o.hash, 10)
 }
 
 func (o *operationContext) Content() string {

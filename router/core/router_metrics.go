@@ -3,7 +3,6 @@ package core
 import (
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
-	"strconv"
 
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
@@ -27,6 +26,9 @@ type routerMetrics struct {
 	routerConfigVersion string
 	logger              *zap.Logger
 	exportEnabled       bool
+
+	promSchemaUsageEnabled             bool
+	promSchemaUsageIncludeOperationSha bool
 }
 
 type routerMetricsConfig struct {
@@ -35,6 +37,9 @@ type routerMetricsConfig struct {
 	routerConfigVersion string
 	logger              *zap.Logger
 	exportEnabled       bool
+
+	promSchemaUsageEnabled             bool
+	promSchemaUsageIncludeOperationSha bool
 }
 
 func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
@@ -44,6 +49,9 @@ func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
 		routerConfigVersion: cfg.routerConfigVersion,
 		logger:              cfg.logger,
 		exportEnabled:       cfg.exportEnabled,
+
+		promSchemaUsageEnabled:             cfg.promSchemaUsageEnabled,
+		promSchemaUsageIncludeOperationSha: cfg.promSchemaUsageIncludeOperationSha,
 	}
 }
 
@@ -59,6 +67,9 @@ func (m *routerMetrics) StartOperation(logger *zap.Logger, requestContentLength 
 		TrackUsageInfo:       m.exportEnabled,
 		InFlightAddOption:    inFlightAddOption,
 		SliceAttributes:      sliceAttr,
+
+		PrometheusSchemaUsageEnabled:    m.promSchemaUsageEnabled,
+		PrometheusSchemaUsageIncludeSha: m.promSchemaUsageIncludeOperationSha,
 	})
 	return metrics
 }
@@ -97,12 +108,12 @@ func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext
 	// which seems to be efficient in terms of memory usage and CPU
 	item := &graphqlmetricsv1.SchemaUsageInfo{
 		RequestDocument:  operationContext.content,
-		TypeFieldMetrics: operationContext.typeFieldUsageInfo,
+		TypeFieldMetrics: operationContext.typeFieldUsageInfo.IntoGraphQLMetrics(),
 		ArgumentMetrics:  operationContext.argumentUsageInfo,
 		InputMetrics:     operationContext.inputUsageInfo,
 		OperationInfo: &graphqlmetricsv1.OperationInfo{
 			Type: opType,
-			Hash: strconv.FormatUint(operationContext.hash, 10),
+			Hash: operationContext.HashString(),
 			// parsed operation names are re-used across requests
 			// for that reason, we need to copy the name, or it might get corrupted
 			Name: m.strCopy(operationContext.name),

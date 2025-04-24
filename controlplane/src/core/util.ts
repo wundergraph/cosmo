@@ -532,6 +532,7 @@ export const isCheckSuccessful = ({
   hasLintErrors,
   hasGraphPruningErrors,
   clientTrafficCheckSkipped,
+  hasProposalMatchError,
 }: {
   isComposable: boolean;
   isBreaking: boolean;
@@ -539,6 +540,7 @@ export const isCheckSuccessful = ({
   hasLintErrors: boolean;
   hasGraphPruningErrors: boolean;
   clientTrafficCheckSkipped: boolean;
+  hasProposalMatchError: boolean;
 }) => {
   return (
     isComposable &&
@@ -546,6 +548,17 @@ export const isCheckSuccessful = ({
     // OR Breaking changes are found, but no client traffic is found and traffic check is not skipped
     (!isBreaking || (isBreaking && !hasClientTraffic && !clientTrafficCheckSkipped)) &&
     !hasLintErrors &&
-    !hasGraphPruningErrors
+    !hasGraphPruningErrors &&
+    !hasProposalMatchError
   );
+};
+
+export const flipDateRangeValuesIfNeeded = (dateRange?: { start: number; end: number }) => {
+  if (!dateRange || dateRange.start <= dateRange.end) {
+    return;
+  }
+
+  const tmp = dateRange.start;
+  dateRange.start = dateRange.end;
+  dateRange.end = tmp;
 };

@@ -85,6 +85,7 @@ export function createFederatedGraphToken(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'graph_token.created',
       action: 'created',
       actorId: authContext.userId,

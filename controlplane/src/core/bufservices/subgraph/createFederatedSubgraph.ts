@@ -233,6 +233,7 @@ export function createFederatedSubgraph(
 
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
       auditAction: req.isFeatureSubgraph ? 'feature_subgraph.created' : 'subgraph.created',
       action: 'created',
       actorId: authContext.userId,

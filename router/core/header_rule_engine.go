@@ -5,14 +5,17 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"regexp"
 	"slices"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/expr-lang/expr/vm"
 	cachedirective "github.com/pquerna/cachecontrol/cacheobject"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
@@ -116,6 +119,7 @@ func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 type HeaderPropagation struct {
 	regex            map[string]*regexp.Regexp
 	rules            *config.HeaderRules
+	compiledRules    map[string]*vm.Program
 	hasRequestRules  bool
 	hasResponseRules bool
 }
@@ -136,8 +140,9 @@ func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error)
 
 	initHeaderRules(rules)
 	hf := HeaderPropagation{
-		rules: rules,
-		regex: map[string]*regexp.Regexp{},
+		rules:         rules,
+		regex:         map[string]*regexp.Regexp{},
+		compiledRules: map[string]*vm.Program{},
 	}
 
 	rhrs, rhrrs := hf.getAllRules()
@@ -145,6 +150,10 @@ func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error)
 	hf.hasResponseRules = len(rhrrs) > 0
 
 	if err := hf.collectRuleMatchers(rhrs, rhrrs); err != nil {
+		return nil, err
+	}
+
+	if err := hf.compileExpressionRules(rhrs); err != nil {
 		return nil, err
 	}
 
@@ -230,6 +239,24 @@ func (hf *HeaderPropagation) collectRuleMatchers(rhrs []*config.RequestHeaderRul
 		}
 	}
 
+	return nil
+}
+
+func (hf *HeaderPropagation) compileExpressionRules(rules []*config.RequestHeaderRule) error {
+	manager := expr.CreateNewExprManager()
+	for _, rule := range rules {
+		if rule.Expression == "" {
+			continue
+		}
+		if _, ok := hf.compiledRules[rule.Expression]; ok {
+			continue
+		}
+		program, err := manager.CompileExpression(rule.Expression, reflect.String)
+		if err != nil {
+			return fmt.Errorf("error compiling expression %s for header rule %s: %w", rule.Expression, rule.Name, err)
+		}
+		hf.compiledRules[rule.Expression] = program
+	}
 	return nil
 }
 
@@ -361,10 +388,21 @@ func (h *HeaderPropagation) applyResponseRuleKeyValue(res *http.Response, propag
 
 func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.Request, rule *config.RequestHeaderRule) {
 	if rule.Operation == config.HeaderRuleOperationSet {
+		reqCtx := getRequestContext(request.Context())
 		if rule.ValueFrom != nil && rule.ValueFrom.ContextField != "" {
-			val := getCustomDynamicAttributeValue(rule.ValueFrom, getRequestContext(request.Context()), nil)
+			val := getCustomDynamicAttributeValue(rule.ValueFrom, reqCtx, nil)
 			value := fmt.Sprintf("%v", val)
 			if value != "" {
+				request.Header.Set(rule.Name, value)
+			}
+			return
+		}
+
+		if rule.Expression != "" {
+			value, err := h.getRequestRuleExpressionValue(rule, reqCtx)
+			if err != nil {
+				reqCtx.SetError(err)
+			} else if value != "" {
 				request.Header.Set(rule.Name, value)
 			}
 			return
@@ -548,6 +586,21 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	}
 }
 
+func (h *HeaderPropagation) getRequestRuleExpressionValue(rule *config.RequestHeaderRule, reqCtx *requestContext) (value string, err error) {
+	if reqCtx == nil {
+		return "", fmt.Errorf("context cannot be nil")
+	}
+	program, ok := h.compiledRules[rule.Expression]
+	if !ok {
+		return "", fmt.Errorf("expression %s not found in compiled rules for header rule %s", rule.Expression, rule.Name)
+	}
+	value, err = expr.ResolveStringExpression(program, reqCtx.expressionContext)
+	if err != nil {
+		return "", fmt.Errorf("unable to resolve expression %q for header rule %s: %s", rule.Expression, rule.Name, err.Error())
+	}
+	return
+}
+
 func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirective.Object, string) {
 	result := cachedirective.Object{
 		RespDirectives: &cachedirective.ResponseCacheDirectives{},
@@ -642,7 +695,7 @@ func PropagatedHeaders(rules []*config.RequestHeaderRule) (headerNames []string,
 	for _, rule := range rules {
 		switch rule.Operation {
 		case config.HeaderRuleOperationSet:
-			if rule.Name == "" || (rule.Value == "" && rule.ValueFrom == nil) {
+			if rule.Name == "" || (rule.Value == "" && rule.ValueFrom == nil && rule.Expression == "") {
 				return nil, nil, fmt.Errorf("invalid header set rule %+v, no header name/value combination", rule)
 			}
 			headerNames = append(headerNames, rule.Name)

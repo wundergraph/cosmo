@@ -70,7 +70,11 @@
         },
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
-        "ExcludeScopeInfo": true
+        "ExcludeScopeInfo": true,
+        "SchemaFieldUsage": {
+          "Enabled": true,
+          "IncludeOperationSha": false
+        }
       }
     }
   },
@@ -126,6 +130,20 @@
       }
     ]
   },
+  "MCP": {
+    "Enabled": false,
+    "Server": {
+      "Port": 5025
+    },
+    "Storage": {
+      "ProviderID": "mcp"
+    },
+    "GraphName": "cosmo",
+    "ExcludeMutations": false,
+    "EnableArbitraryOperations": false,
+    "ExposeSchema": false,
+    "RouterURL": "https://cosmo-router.wundergraph.com"
+  },
   "Modules": {
     "myModule": {
       "value": 1
@@ -142,6 +160,7 @@
           "Default": "",
           "Name": "",
           "Value": "",
+          "Expression": "",
           "ValueFrom": null
         },
         {
@@ -152,6 +171,7 @@
           "Default": "",
           "Name": "",
           "Value": "",
+          "Expression": "",
           "ValueFrom": null
         },
         {
@@ -162,6 +182,7 @@
           "Default": "123",
           "Name": "",
           "Value": "",
+          "Expression": "",
           "ValueFrom": null
         },
         {
@@ -172,6 +193,7 @@
           "Default": "",
           "Name": "X-API-Key",
           "Value": "some-secret",
+          "Expression": "",
           "ValueFrom": null
         },
         {
@@ -182,12 +204,24 @@
           "Default": "",
           "Name": "x-operation-name",
           "Value": "",
+          "Expression": "",
           "ValueFrom": {
             "RequestHeader": "",
             "ContextField": "operation_name",
             "ResponseHeader": "",
             "Expression": ""
           }
+        },
+        {
+          "Operation": "set",
+          "Matching": "",
+          "Named": "",
+          "Rename": "",
+          "Default": "",
+          "Name": "x-expression-header",
+          "Value": "",
+          "Expression": "request.header.Get('X-Operation-Name')",
+          "ValueFrom": null
         }
       ],
       "Response": [
@@ -214,6 +248,7 @@
             "Default": "some-secret",
             "Name": "",
             "Value": "",
+            "Expression": "",
             "ValueFrom": null
           }
         ],
@@ -343,6 +378,12 @@
         }
       ]
     }
+  },
+  "Batching": {
+    "Enabled": false,
+    "MaxConcurrency": 10,
+    "MaxEntriesPerBatch": 100,
+    "OmitExtensions": false
   },
   "ListenAddr": "localhost:3002",
   "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
@@ -669,6 +710,12 @@
           "test2@localhost:8001"
         ],
         "ClusterEnabled": false
+      }
+    ],
+    "FileSystem": [
+      {
+        "ID": "mcp",
+        "Path": "operations"
       }
     ]
   },

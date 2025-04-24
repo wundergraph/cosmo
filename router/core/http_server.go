@@ -136,18 +136,19 @@ func (s *server) listenAndServe() error {
 
 func (s *server) Shutdown(ctx context.Context) error {
 	var err error
-	s.mu.Lock()
-	defer s.mu.Unlock()
+
+	if s.httpServer != nil {
+		err = errors.Join(err, s.httpServer.Shutdown(ctx))
+	}
 
 	if s.graphServer != nil {
-		err = errors.Join(s.graphServer.Shutdown(ctx))
-	}
-	if s.httpServer != nil {
-		err = errors.Join(s.httpServer.Shutdown(ctx))
+		err = errors.Join(err, s.graphServer.Shutdown(ctx))
 	}
 
+	s.mu.Lock()
 	s.graphServer = nil
 	s.handler = nil
+	s.mu.Unlock()
 
 	return err
 }

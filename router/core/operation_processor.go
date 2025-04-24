@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"hash"
@@ -11,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"sync"
 	"time"
 
@@ -67,6 +69,10 @@ type ParsedOperation struct {
 	PersistedOperationCacheHit bool
 	// NormalizationCacheHit is set to true if the request is a non-persisted operation and the normalized operation was loaded from cache
 	NormalizationCacheHit bool
+}
+
+func (o *ParsedOperation) IDString() string {
+	return strconv.FormatUint(o.ID, 10)
 }
 
 type invalidExtensionsTypeError jsonparser.ValueType
@@ -372,7 +378,7 @@ func (o *OperationKit) ComputeOperationSha256() error {
 	}
 
 	// we're using the hex representation of the sha256 hash
-	sha256Hash := fmt.Sprintf("%x", o.kit.sha256Hash.Sum(nil))
+	sha256Hash := hex.EncodeToString(o.kit.sha256Hash.Sum(nil))
 	o.cache.operationHashCache.Set(id, sha256Hash, 1)
 	o.parsedOperation.Sha256Hash = sha256Hash
 

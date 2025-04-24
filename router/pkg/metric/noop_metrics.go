@@ -2,9 +2,10 @@ package metric
 
 import (
 	"context"
+	"time"
+
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
-	"time"
 )
 
 // This is dummy implementation of metric.Provider interface to avoid nil checks in the code
@@ -39,6 +40,10 @@ func (n NoopMetrics) MeasureRequestError(ctx context.Context, sliceAttr []attrib
 }
 
 func (n NoopMetrics) MeasureOperationPlanningTime(ctx context.Context, planningTime time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption) {
+
+}
+
+func (n NoopMetrics) MeasureSchemaFieldUsage(ctx context.Context, count int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
 
 }
 

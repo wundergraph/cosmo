@@ -14,6 +14,7 @@ import {
   Subgraph,
   subgraphValidationError,
   UNION,
+  UnionDefinitionData,
 } from '../../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';
@@ -999,6 +1000,20 @@ describe('Union tests', () => {
           `,
         ),
       );
+    });
+
+    test('that a Union has subgraphs data', () => {
+      const result = federateSubgraphs(
+        [subgraphA, subgraphB, subgraphAC],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      ) as FederationResultSuccess;
+      expect(result.success).toBe(true);
+
+      const unionDef = result.parentDefinitionDataByTypeName.get('Starters') as UnionDefinitionData;
+
+      expect(unionDef.subgraphNames.size).toBe(2);
+      expect(unionDef.subgraphNames).toContain(subgraphA.name);
+      expect(unionDef.subgraphNames).toContain(subgraphB.name);
     });
   });
 });
