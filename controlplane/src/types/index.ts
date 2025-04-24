@@ -245,7 +245,7 @@ export interface UserDTO {
   email: string;
 }
 
-export interface OrganizationMemberGroupDTO {
+export interface OrganizationGroupDTO {
   id: string;
   name: string;
   kcGroupId: string | null;
@@ -257,12 +257,18 @@ export interface OrganizationMemberGroupDTO {
   }[];
 }
 
+export interface OrganizationMemberGroupDTO {
+  groupId: string;
+  name: string;
+  kcGroupId: string | null;
+}
+
 export interface OrganizationMemberDTO {
   userID: string;
   orgMemberID: string;
   email: string;
   roles: string[];
-  groups: [];
+  groups: OrganizationMemberGroupDTO[];
   active: boolean;
 }
 

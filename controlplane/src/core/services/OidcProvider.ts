@@ -80,14 +80,14 @@ export default class OidcProvider {
 
     const organizationMemberGroups = await db
       .select({
-        id: schema.organizationMemberGroups.id,
-        name: schema.organizationMemberGroups.name,
+        id: schema.organizationGroups.id,
+        name: schema.organizationGroups.name,
       })
-      .from(schema.organizationMemberGroups)
+      .from(schema.organizationGroups)
       .where(
         and(
-          eq(schema.organizationMemberGroups.organizationId, organizationId),
-          inArray(schema.organizationMemberGroups.id, targetGroupIds),
+          eq(schema.organizationGroups.organizationId, organizationId),
+          inArray(schema.organizationGroups.id, targetGroupIds),
         ),
       );
 
@@ -120,9 +120,9 @@ export default class OidcProvider {
       });
 
       await db
-        .update(schema.organizationMemberGroups)
+        .update(schema.organizationGroups)
         .set({ kcMapperId: createdMapper.id })
-        .where(eq(schema.organizationMemberGroups.id, memberGroup.id))
+        .where(eq(schema.organizationGroups.id, memberGroup.id))
         .execute();
     }
   }
@@ -142,11 +142,11 @@ export default class OidcProvider {
   }) {
     const organizationMemberGroups = await db
       .select({
-        id: schema.organizationMemberGroups.id,
-        name: schema.organizationMemberGroups.name,
+        id: schema.organizationGroups.id,
+        name: schema.organizationGroups.name,
       })
-      .from(schema.organizationMemberGroups)
-      .where(eq(schema.organizationMemberGroups.organizationId, organizationId));
+      .from(schema.organizationGroups)
+      .where(eq(schema.organizationGroups.organizationId, organizationId));
 
     const mappers = await kcClient.client.identityProviders.findMappers({
       alias,

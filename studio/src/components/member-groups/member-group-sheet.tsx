@@ -1,12 +1,12 @@
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { OrganizationMemberGroup, OrganizationMemberGroupRule } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { OrganizationGroup, OrganizationGroupRule } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useMutation, useQuery } from "@connectrpc/connect-query";
 import {
   getUserAccessibleResources,
-  updateOrganizationMemberGroup,
+  updateOrganizationGroup,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { GroupRuleBuilder } from "@/components/member-groups/group-rule-builder";
 import { useState } from "react";
@@ -14,7 +14,7 @@ import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb
 import { useToast } from "@/components/ui/use-toast";
 
 export function MemberGroupSheet({ group, onGroupUpdated, onOpenChange }: {
-  group?: OrganizationMemberGroup;
+  group?: OrganizationGroup;
   onGroupUpdated(): Promise<unknown>;
   onOpenChange(open: boolean): void;
 }) {
@@ -39,16 +39,16 @@ export function MemberGroupSheet({ group, onGroupUpdated, onOpenChange }: {
 }
 
 function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
-  group: OrganizationMemberGroup;
+  group: OrganizationGroup;
   onGroupUpdated(): void;
   onCancel(): void;
 }) {
   const { data } = useQuery(getUserAccessibleResources);
-  const [groupRules, setGroupRules] = useState<OrganizationMemberGroupRule[]>([...group.rules]);
+  const [groupRules, setGroupRules] = useState<OrganizationGroupRule[]>([...group.rules]);
   const { toast } = useToast();
 
   const allRulesHaveRole = groupRules.every((rule) => !!rule.role);
-  const { mutate, isPending } = useMutation(updateOrganizationMemberGroup);
+  const { mutate, isPending } = useMutation(updateOrganizationGroup);
 
   const onSaveClick = () => {
     if (!allRulesHaveRole) {
@@ -137,7 +137,7 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
             onClick={() => {
               setGroupRules([
                 ...groupRules,
-                OrganizationMemberGroupRule.fromJson({}),
+                OrganizationGroupRule.fromJson({}),
               ])
             }}
           >

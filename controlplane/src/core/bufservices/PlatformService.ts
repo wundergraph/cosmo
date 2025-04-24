@@ -102,10 +102,10 @@ import { deleteOrganization } from './organization/deleteOrganization.js';
 import { restoreOrganization } from './organization/restoreOrganization.js';
 import { getAuditLogs } from './organization/getAuditLogs.js';
 import { getOrganizationMembers } from './organization/getOrganizationMembers.js';
-import { createOrganizationMemberGroup } from './organization/createOrganizationMemberGroup.js';
-import { getOrganizationMemberGroups } from './organization/getOrganizationMemberGroups.js';
-import { updateOrganizationMemberGroup } from './organization/updateOrganizationMemberGroup.js';
-import { deleteOrganizationMemberGroup } from './organization/deleteOrganizationMemberGroup.js';
+import { createOrganizationGroup } from './organization/createOrganizationGroup.js';
+import { getOrganizationGroups } from './organization/getOrganizationGroups.js';
+import { updateOrganizationGroup } from './organization/updateOrganizationGroup.js';
+import { deleteOrganizationGroup } from './organization/deleteOrganizationGroup.js';
 import { getPendingOrganizationMembers } from './organization/getPendingOrganizationMembers.js';
 import { isMemberLimitReached } from './organization/isMemberLimitReached.js';
 import { leaveOrganization } from './organization/leaveOrganization.js';
@@ -151,6 +151,7 @@ import { inviteUser } from './user/inviteUser.js';
 import { removeInvitation } from './user/removeInvitation.js';
 import { removeOrganizationMember } from './user/removeOrganizationMember.js';
 import { updateOrgMemberRole } from './user/updateOrgMemberRole.js';
+import { updateOrgMemberGroup } from './user/updateOrgMemberGroup.js';
 import { deleteCacheWarmerOperation } from './cache-warmer/deleteCacheWarmerOperation.js';
 import { setGraphRouterCompatibilityVersion } from './graph/setGraphRouterCompatibilityVersion.js';
 import { getOrganizationBySlug } from './organization/getOrganizationBySlug.js';
@@ -382,6 +383,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return updateOrgMemberRole(opts, req, ctx);
     },
 
+    updateOrgMemberGroup: (req, ctx) => {
+      return updateOrgMemberGroup(opts, req, ctx);
+    },
+
     deleteRouterToken: (req, ctx) => {
       return deleteRouterToken(opts, req, ctx);
     },
@@ -545,20 +550,20 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return getPendingOrganizationMembers(opts, req, ctx);
     },
 
-    createOrganizationMemberGroup: (req, ctx) => {
-      return createOrganizationMemberGroup(opts, req, ctx);
+    createOrganizationGroup: (req, ctx) => {
+      return createOrganizationGroup(opts, req, ctx);
     },
 
-    getOrganizationMemberGroups: (req, ctx) => {
-      return getOrganizationMemberGroups(opts, req, ctx);
+    getOrganizationGroups: (req, ctx) => {
+      return getOrganizationGroups(opts, req, ctx);
     },
 
-    updateOrganizationMemberGroup: (req, ctx) => {
-      return updateOrganizationMemberGroup(opts, req, ctx);
+    updateOrganizationGroup: (req, ctx) => {
+      return updateOrganizationGroup(opts, req, ctx);
     },
 
-    deleteOrganizationMemberGroup: (req, ctx) => {
-      return deleteOrganizationMemberGroup(opts, req, ctx);
+    deleteOrganizationGroup: (req, ctx) => {
+      return deleteOrganizationGroup(opts, req, ctx);
     },
 
     getAPIKeys: (req, ctx) => {

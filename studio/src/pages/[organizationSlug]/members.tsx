@@ -1,5 +1,4 @@
 import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Badge } from "@/components/ui/badge";
@@ -51,7 +50,7 @@ import {
 import { Cross1Icon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { OrgMember_Group } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { OrgMember, OrgMember_Group } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import {
   getOrganizationMembers,
   getPendingOrganizationMembers,
@@ -59,15 +58,14 @@ import {
   isMemberLimitReached,
   removeInvitation,
   removeOrganizationMember,
-  updateOrgMemberRole,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { sentenceCase } from "change-case";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useContext, useState } from "react";
+import { useState } from "react";
 import { useDebounce } from "use-debounce";
 import { z } from "zod";
 import { usePaginationParams } from "@/hooks/use-pagination-params";
+import { UpdateMemberGroupDialog } from "@/components/members/update-member-group-dialog";
 
 const emailInputSchema = z.object({
   email: z.string().email(),
@@ -140,21 +138,21 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
 const MemberCard = ({
   email,
   group,
-  memberUserID,
   acceptedInvite,
   isAdmin,
   isCurrentUser,
   active,
   refresh,
+  onSelect,
 }: {
   email: string;
   group?: OrgMember_Group;
-  memberUserID: string;
   acceptedInvite: boolean;
   isAdmin: boolean;
   isCurrentUser: boolean;
   active?: boolean;
   refresh: () => void;
+  onSelect?(): void;
 }) => {
   const { mutate: resendInvitation } = useMutation(inviteUser);
   const { mutate: revokeInvitation } = useMutation(removeInvitation);
@@ -275,9 +273,9 @@ const MemberCard = ({
                   >
                     {acceptedInvite ? "Remove member" : "Remove invitation"}
                   </DropdownMenuItem>
-                  {acceptedInvite && (
-                    <DropdownMenuItem>
-                      Change group
+                  {acceptedInvite && onSelect && (
+                    <DropdownMenuItem onClick={onSelect}>
+                      Update member group
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
@@ -343,7 +341,6 @@ const PendingInvitations = () => {
                 <MemberCard
                   key={member.userID}
                   email={member.email}
-                  memberUserID={member.userID}
                   acceptedInvite={false}
                   isAdmin={isAdmin || false}
                   isCurrentUser={member.email === user.email}
@@ -367,6 +364,7 @@ const PendingInvitations = () => {
 const AcceptedMembers = () => {
   const user = useUser();
   const isAdmin = user?.currentOrganization.roles.includes("admin") ?? false;
+  const [selectedMember, setSelectedMember] = useState<OrgMember | undefined>();
 
   const { pageSize, offset, pageNumber, search } = usePaginationParams();
 
@@ -400,6 +398,17 @@ const AcceptedMembers = () => {
 
   return (
     <>
+      <UpdateMemberGroupDialog
+        open={!!selectedMember}
+        member={selectedMember}
+        onOpenChange={(o) => {
+          if (!o) {
+            setSelectedMember(undefined);
+          }
+        }}
+        refresh={refetch}
+      />
+
       <TableWrapper className="max-h-full">
         <Table>
           <TableHeader>
@@ -416,12 +425,12 @@ const AcceptedMembers = () => {
                   key={member.userID}
                   email={member.email}
                   group={member.groups?.[0]}
-                  memberUserID={member.userID}
                   acceptedInvite={true}
                   isAdmin={isAdmin || false}
                   isCurrentUser={member.email === user.email}
                   active={member.active}
                   refresh={() => refetch()}
+                  onSelect={() => setSelectedMember(member)}
                 />
               );
             })}

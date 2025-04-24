@@ -2,30 +2,30 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  CreateOrganizationMemberGroupRequest,
-  CreateOrganizationMemberGroupResponse,
+  CreateOrganizationGroupRequest,
+  CreateOrganizationGroupResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { OrganizationMemberGroupRepository } from '../../repositories/OrganizationMemberGroupRepository.js';
-import { OrganizationMemberGroupDTO } from '../../../types/index.js';
+import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
+import { OrganizationGroupDTO } from '../../../types/index.js';
 import { AuditLogRepository } from "../../repositories/AuditLogRepository.js";
 
-export function createOrganizationMemberGroup(
+export function createOrganizationGroup(
   opts: RouterOptions,
-  req: CreateOrganizationMemberGroupRequest,
+  req: CreateOrganizationGroupRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<CreateOrganizationMemberGroupResponse>> {
+): Promise<PlainMessage<CreateOrganizationGroupResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<CreateOrganizationMemberGroupResponse>>(ctx, logger, async () => {
+  return handleError<PlainMessage<CreateOrganizationGroupResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    const orgMemberGroupRepo = new OrganizationMemberGroupRepository(opts.db);
+    const orgGroupRepo = new OrganizationGroupRepository(opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
 
-    if (await orgMemberGroupRepo.nameExists({ organizationId: authContext.organizationId, name: req.name })) {
+    if (await orgGroupRepo.nameExists({ organizationId: authContext.organizationId, name: req.name })) {
       return {
         response: {
           code: EnumStatusCode.ERR_ALREADY_EXISTS,
@@ -50,9 +50,9 @@ export function createOrganizationMemberGroup(
       };
     }
 
-    let createdGroup: OrganizationMemberGroupDTO;
+    let createdGroup: OrganizationGroupDTO;
     try {
-      createdGroup = await orgMemberGroupRepo.create({
+      createdGroup = await orgGroupRepo.create({
         organizationId: authContext.organizationId,
         name: req.name,
         kcGroupId: createdGroupId,

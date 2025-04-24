@@ -1,5 +1,5 @@
 {
-  "id": "5bc75d9d-7663-494c-8164-df3e4ef64038",
+  "id": "6ad4fe0c-b64b-491d-a90c-adc208ab55e7",
   "prevId": "1047e67f-16f1-4d7b-bfb6-2031ff10230b",
   "version": "7",
   "dialect": "postgresql",
@@ -3720,6 +3720,192 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "public.organization_group_members": {
+      "name": "organization_group_members",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "organization_member_id": {
+          "name": "organization_member_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "group_id": {
+          "name": "group_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "organization_group_members_organization_member_id_organization_members_id_fk": {
+          "name": "organization_group_members_organization_member_id_organization_members_id_fk",
+          "tableFrom": "organization_group_members",
+          "tableTo": "organization_members",
+          "columnsFrom": [
+            "organization_member_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "organization_group_members_group_id_organization_groups_id_fk": {
+          "name": "organization_group_members_group_id_organization_groups_id_fk",
+          "tableFrom": "organization_group_members",
+          "tableTo": "organization_groups",
+          "columnsFrom": [
+            "group_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "public.organization_group_rules": {
+      "name": "organization_group_rules",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "group_id": {
+          "name": "group_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "member_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resource": {
+          "name": "resource",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "organization_group_rules_group_id_organization_groups_id_fk": {
+          "name": "organization_group_rules_group_id_organization_groups_id_fk",
+          "tableFrom": "organization_group_rules",
+          "tableTo": "organization_groups",
+          "columnsFrom": [
+            "group_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "public.organization_groups": {
+      "name": "organization_groups",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kc_group_id": {
+          "name": "kc_group_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kc_mapper_id": {
+          "name": "kc_mapper_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "organization_groups_organization_id_organizations_id_fk": {
+          "name": "organization_groups_organization_id_organizations_id_fk",
+          "tableFrom": "organization_groups",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "organization_groups_kc_group_id_unique": {
+          "name": "organization_groups_kc_group_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "kc_group_id"
+          ]
+        },
+        "organization_groups_kc_mapper_id_unique": {
+          "name": "organization_groups_kc_mapper_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "kc_mapper_id"
+          ]
+        }
+      },
+      "checkConstraints": {}
+    },
     "public.organization_integrations": {
       "name": "organization_integrations",
       "schema": "",
@@ -3955,135 +4141,6 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "public.organization_member_group_rules": {
-      "name": "organization_member_group_rules",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "group_id": {
-          "name": "group_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "role": {
-          "name": "role",
-          "type": "member_role",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "resource": {
-          "name": "resource",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "organization_member_group_rules_group_id_organization_member_groups_id_fk": {
-          "name": "organization_member_group_rules_group_id_organization_member_groups_id_fk",
-          "tableFrom": "organization_member_group_rules",
-          "tableTo": "organization_member_groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "public.organization_member_groups": {
-      "name": "organization_member_groups",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "organization_id": {
-          "name": "organization_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "kc_group_id": {
-          "name": "kc_group_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "kc_mapper_id": {
-          "name": "kc_mapper_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "organization_member_groups_organization_id_organizations_id_fk": {
-          "name": "organization_member_groups_organization_id_organizations_id_fk",
-          "tableFrom": "organization_member_groups",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "organization_member_groups_kc_group_id_unique": {
-          "name": "organization_member_groups_kc_group_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "kc_group_id"
-          ]
-        },
-        "organization_member_groups_kc_mapper_id_unique": {
-          "name": "organization_member_groups_kc_mapper_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "kc_mapper_id"
-          ]
-        }
-      },
       "checkConstraints": {}
     },
     "public.organization_member_roles": {

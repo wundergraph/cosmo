@@ -1,4 +1,4 @@
-import type { OrganizationMemberGroup } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import type { OrganizationGroup } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { TableRow, TableCell } from "@/components/ui/table";
 import {
   DropdownMenu,
@@ -10,7 +10,7 @@ import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 
 export function MemberGroupRow({ group, onSelect, onDelete }: {
-  group: OrganizationMemberGroup;
+  group: OrganizationGroup;
   onSelect(): void;
   onDelete(): void;
 }) {

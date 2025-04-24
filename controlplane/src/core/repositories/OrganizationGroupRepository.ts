@@ -1,19 +1,19 @@
 import { and, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
-import { OrganizationMemberGroupDTO } from '../../types/index.js';
+import { OrganizationGroupDTO } from '../../types/index.js';
 import { MemberRole } from '../../db/models.js';
 
-export class OrganizationMemberGroupRepository {
+export class OrganizationGroupRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
 
   public async create(input: {
     organizationId: string;
     name: string;
     kcGroupId: string;
-  }): Promise<OrganizationMemberGroupDTO> {
+  }): Promise<OrganizationGroupDTO> {
     const insertedRuleSet = await this.db
-      .insert(schema.organizationMemberGroups)
+      .insert(schema.organizationGroups)
       .values({
         organizationId: input.organizationId,
         name: input.name,
@@ -38,12 +38,12 @@ export class OrganizationMemberGroupRepository {
     }
 
     const existingRuleSet = await this.db
-      .select({ id: schema.organizationMemberGroups.id })
-      .from(schema.organizationMemberGroups)
+      .select({ id: schema.organizationGroups.id })
+      .from(schema.organizationGroups)
       .where(
         and(
-          eq(schema.organizationMemberGroups.organizationId, input.organizationId),
-          eq(schema.organizationMemberGroups.name, input.name!),
+          eq(schema.organizationGroups.organizationId, input.organizationId),
+          eq(schema.organizationGroups.name, input.name!),
         ),
       )
       .limit(1)
@@ -55,11 +55,11 @@ export class OrganizationMemberGroupRepository {
   public async byId(input: {
     organizationId: string;
     groupId: string;
-  }): Promise<OrganizationMemberGroupDTO | undefined> {
-    const memberGroup = await this.db.query.organizationMemberGroups.findFirst({
+  }): Promise<OrganizationGroupDTO | undefined> {
+    const memberGroup = await this.db.query.organizationGroups.findFirst({
       where: and(
-        eq(schema.organizationMemberGroups.organizationId, input.organizationId),
-        eq(schema.organizationMemberGroups.id, input.groupId),
+        eq(schema.organizationGroups.organizationId, input.organizationId),
+        eq(schema.organizationGroups.id, input.groupId),
       ),
       with: {
         rules: {
@@ -95,9 +95,9 @@ export class OrganizationMemberGroupRepository {
     };
   }
 
-  public async forOrganization(organizationId: string): Promise<OrganizationMemberGroupDTO[]> {
-    const ruleSets = await this.db.query.organizationMemberGroups.findMany({
-      where: eq(schema.organizationMemberGroups.organizationId, organizationId),
+  public async forOrganization(organizationId: string): Promise<OrganizationGroupDTO[]> {
+    const ruleSets = await this.db.query.organizationGroups.findMany({
+      where: eq(schema.organizationGroups.organizationId, organizationId),
       with: {
         rules: {
           columns: {
@@ -154,10 +154,10 @@ export class OrganizationMemberGroupRepository {
     // });
   }
 
-  public deleteRuleSet(id: string) {
+  public deleteById(id: string) {
     return this.db
-      .delete(schema.organizationMemberGroups)
-      .where(eq(schema.organizationMemberGroups.id, id))
+      .delete(schema.organizationGroups)
+      .where(eq(schema.organizationGroups.id, id))
       .returning();
   }
 }

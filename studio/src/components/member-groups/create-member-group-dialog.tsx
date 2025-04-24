@@ -1,9 +1,9 @@
-import { OrganizationMemberGroup } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { OrganizationGroup } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useMutation } from "@connectrpc/connect-query";
 import {
-  createOrganizationMemberGroup,
+  createOrganizationGroup,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { z } from "zod";
 import { useZodForm } from "@/hooks/use-form";
@@ -15,11 +15,11 @@ import { useToast } from "@/components/ui/use-toast";
 
 export function CreateMemberGroupDialog({ existingGroupNames, onGroupCreated }: {
   existingGroupNames: string[];
-  onGroupCreated(group: OrganizationMemberGroup): Promise<void>
+  onGroupCreated(group: OrganizationGroup): Promise<void>
 }) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const { mutate, isPending } = useMutation(createOrganizationMemberGroup);
+  const { mutate, isPending } = useMutation(createOrganizationGroup);
 
   const createGroupInputSchema = z.object({
     name: z

@@ -868,53 +868,53 @@ message CreateFederatedGraphTokenResponse {
   string token = 2;
 }
 
-message OrganizationMemberGroupRule {
+message OrganizationGroupRule {
   string role = 1;
   repeated string resources = 2;
 }
 
-message OrganizationMemberGroup {
+message OrganizationGroup {
   string groupId = 1;
   string name = 2;
   int32 membersCount = 3;
-  repeated OrganizationMemberGroupRule rules = 4;
+  repeated OrganizationGroupRule rules = 4;
 }
 
-message CreateOrganizationMemberGroupRequest {
+message CreateOrganizationGroupRequest {
   string name = 1;
 }
 
-message CreateOrganizationMemberGroupResponse {
+message CreateOrganizationGroupResponse {
   Response response = 1;
-  OrganizationMemberGroup group = 2;
+  OrganizationGroup group = 2;
 }
 
-message GetOrganizationMemberGroupsRequest {}
+message GetOrganizationGroupsRequest {}
 
-message GetOrganizationMemberGroupsResponse {
+message GetOrganizationGroupsResponse {
   Response response = 1;
-  repeated OrganizationMemberGroup groups = 2;
+  repeated OrganizationGroup groups = 2;
 }
 
-message UpdateOrganizationMemberGroupRequest {
-  message MemberGroupRule {
+message UpdateOrganizationGroupRequest {
+  message GroupRule {
     string role = 1;
     repeated string resources = 2;
   }
 
   string groupId = 1;
-  repeated MemberGroupRule rules = 2;
+  repeated GroupRule rules = 2;
 }
 
-message UpdateOrganizationMemberGroupResponse {
+message UpdateOrganizationGroupResponse {
   Response response = 1;
 }
 
-message DeleteOrganizationMemberGroupRequest {
+message DeleteOrganizationGroupRequest {
   string groupId = 1;
 }
 
-message DeleteOrganizationMemberGroupResponse {
+message DeleteOrganizationGroupResponse {
   Response response = 1;
 }
 
@@ -1321,6 +1321,16 @@ message UpdateOrgMemberRoleRequest {
 }
 
 message UpdateOrgMemberRoleResponse {
+  Response response = 1;
+}
+
+message UpdateOrgMemberGroupRequest {
+  string userID = 1;
+  string orgMemberUserID = 2;
+  string groupId = 3;
+}
+
+message UpdateOrgMemberGroupResponse {
   Response response = 1;
 }
 
@@ -2855,14 +2865,14 @@ service PlatformService {
   rpc MigrateFromApollo(MigrateFromApolloRequest) returns (MigrateFromApolloResponse) {}
 
   // Organization Member Group management
-  // CreateOrganizationMemberGroup creates a new member group
-  rpc CreateOrganizationMemberGroup(CreateOrganizationMemberGroupRequest) returns (CreateOrganizationMemberGroupResponse) {}
-  // GetOrganizationMemberGroups returns the list of organization member groups
-  rpc GetOrganizationMemberGroups(GetOrganizationMemberGroupsRequest) returns (GetOrganizationMemberGroupsResponse) {}
-  // UpdateOrganizationMemberGroup updates the rule list for an organization member group
-  rpc UpdateOrganizationMemberGroup(UpdateOrganizationMemberGroupRequest) returns (UpdateOrganizationMemberGroupResponse) {}
-  // DeleteOrganizationMemberGroup deletes an existing organization member group
-  rpc DeleteOrganizationMemberGroup(DeleteOrganizationMemberGroupRequest) returns (DeleteOrganizationMemberGroupResponse) {}
+  // CreateOrganizationGroup creates a new member group
+  rpc CreateOrganizationGroup(CreateOrganizationGroupRequest) returns (CreateOrganizationGroupResponse) {}
+  // GetOrganizationGroups returns the list of organization member groups
+  rpc GetOrganizationGroups(GetOrganizationGroupsRequest) returns (GetOrganizationGroupsResponse) {}
+  // UpdateOrganizationGroup updates the rule list for an organization member group
+  rpc UpdateOrganizationGroup(UpdateOrganizationGroupRequest) returns (UpdateOrganizationGroupResponse) {}
+  // DeleteOrganizationGroup deletes an existing organization member group
+  rpc DeleteOrganizationGroup(DeleteOrganizationGroupRequest) returns (DeleteOrganizationGroupResponse) {}
 
   // CreateOrganizationWebhookConfig create a new webhook config for the organization
   rpc CreateOrganizationWebhookConfig(CreateOrganizationWebhookConfigRequest) returns (CreateOrganizationWebhookConfigResponse) {}
@@ -2903,6 +2913,8 @@ service PlatformService {
   rpc UpdateOrganizationDetails(UpdateOrganizationDetailsRequest) returns (UpdateOrganizationDetailsResponse) {}
   // UpdateOrgMemberRole updates the role of an org member
   rpc UpdateOrgMemberRole(UpdateOrgMemberRoleRequest) returns (UpdateOrgMemberRoleResponse) {}
+  // UpdateOrgMemberGroup updates the group of an organization member
+  rpc UpdateOrgMemberGroup(UpdateOrgMemberGroupRequest) returns (UpdateOrgMemberGroupResponse) {}
 
   // IsGitHubAppInstalled checks if the cosmo github app is installed to a repository
   rpc IsGitHubAppInstalled(IsGitHubAppInstalledRequest) returns (IsGitHubAppInstalledResponse) {}

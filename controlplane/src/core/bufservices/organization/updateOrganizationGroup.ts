@@ -2,27 +2,27 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  UpdateOrganizationMemberGroupRequest,
-  UpdateOrganizationMemberGroupResponse,
+  UpdateOrganizationGroupRequest,
+  UpdateOrganizationGroupResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { memberRoleEnum } from '../../../db/schema.js';
-import { OrganizationMemberGroupRepository } from '../../repositories/OrganizationMemberGroupRepository.js';
+import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { MemberRole } from '../../../db/models.js';
 
-export function updateOrganizationMemberGroup(
+export function updateOrganizationGroup(
   opts: RouterOptions,
-  req: UpdateOrganizationMemberGroupRequest,
+  req: UpdateOrganizationGroupRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<UpdateOrganizationMemberGroupResponse>> {
+): Promise<PlainMessage<UpdateOrganizationGroupResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<UpdateOrganizationMemberGroupResponse>>(ctx, logger, async () => {
+  return handleError<PlainMessage<UpdateOrganizationGroupResponse>>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    const ruleSetRepo = new OrganizationMemberGroupRepository(opts.db);
+    const ruleSetRepo = new OrganizationGroupRepository(opts.db);
     const ruleSet = await ruleSetRepo.byId({
       organizationId: authContext.organizationId,
       groupId: req.groupId,

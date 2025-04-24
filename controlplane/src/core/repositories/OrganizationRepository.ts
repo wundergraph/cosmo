@@ -26,7 +26,14 @@ import {
   slackSchemaUpdateEventConfigs,
   users,
 } from '../../db/schema.js';
-import { Feature, FeatureIds, OrganizationDTO, OrganizationMemberDTO, WebhooksConfigDTO } from '../../types/index.js';
+import {
+  Feature,
+  FeatureIds,
+  OrganizationDTO,
+  OrganizationMemberDTO,
+  OrganizationMemberGroupDTO,
+  WebhooksConfigDTO
+} from '../../types/index.js';
 import Keycloak from '../services/Keycloak.js';
 import { DeleteOrganizationQueue } from '../workers/DeleteOrganizationWorker.js';
 import { BlobStorage } from '../blobstorage/index.js';
@@ -280,7 +287,8 @@ export class OrganizationRepository {
           slug: org.slug,
           creatorUserId: org.creatorUserId || undefined,
           createdAt: org.createdAt.toISOString(),
-          roles: await this.getOrganizationMemberRoles({
+          roles: ['admin'],
+          groups: await this.getOrganizationMemberGroups({
             userID: input.userId,
             organizationID: org.id,
           }),
@@ -355,17 +363,15 @@ export class OrganizationRepository {
       return null;
     }
 
-    const userRoles = await this.getOrganizationMemberRoles({
-      organizationID: input.organizationID,
-      userID: input.userID,
-    });
-
     return {
       userID: orgMember[0].userID,
       orgMemberID: orgMember[0].memberID,
       email: orgMember[0].email,
-      roles: userRoles,
-      groups: [],
+      roles: ['admin'],
+      groups: await this.getOrganizationMemberGroups({
+        organizationID: input.organizationID,
+        userID: input.userID,
+      }),
       active: orgMember[0].active,
     };
   }
@@ -396,17 +402,15 @@ export class OrganizationRepository {
       return null;
     }
 
-    const userRoles = await this.getOrganizationMemberRoles({
-      organizationID: input.organizationID,
-      userID: orgMember[0].userID,
-    });
-
     return {
       userID: orgMember[0].userID,
       orgMemberID: orgMember[0].memberID,
       email: orgMember[0].email,
-      roles: userRoles,
-      groups: [],
+      roles: ['admin'],
+      groups: await this.getOrganizationMemberGroups({
+        organizationID: input.organizationID,
+        userID: orgMember[0].userID,
+      }),
       active: orgMember[0].active,
     };
   }
@@ -458,6 +462,10 @@ export class OrganizationRepository {
         orgMemberID: member.memberID,
         email: member.email,
         roles: roles.map((role) => role.role),
+        groups: await this.getOrganizationMemberGroups({
+          organizationID,
+          userID: member.userID,
+        }),
         active: member.active,
       } as OrganizationMemberDTO);
     }
@@ -520,6 +528,25 @@ export class OrganizationRepository {
       .execute();
 
     return userRoles.map((role) => role.role);
+  }
+
+  public getOrganizationMemberGroups(input: { userID: string; organizationID: string }): Promise<OrganizationMemberGroupDTO[]> {
+    return this.db
+      .select({
+        groupId: schema.organizationGroups.id,
+        name: schema.organizationGroups.name,
+        kcGroupId: schema.organizationGroups.kcGroupId,
+      })
+      .from(schema.organizationGroupMembers)
+      .innerJoin(organizationsMembers, eq(organizationsMembers.id, schema.organizationGroupMembers.organizationMemberId))
+      .innerJoin(schema.organizationGroups, eq(schema.organizationGroups.id, schema.organizationGroupMembers.groupId))
+      .where(
+        and(
+          eq(organizationsMembers.userId, input.userID),
+          eq(organizationsMembers.organizationId, input.organizationID),
+        ),
+      )
+      .execute();
   }
 
   /**
@@ -1017,17 +1044,17 @@ export class OrganizationRepository {
     });
   }
 
-  public updateUserRole(input: { orgMemberID: string; role: MemberRole }) {
+  public updateUserGroup(input: { orgMemberID: string; groupId: string }) {
     return this.db.transaction(async (tx) => {
       await tx
-        .delete(organizationMemberRoles)
-        .where(eq(organizationMemberRoles.organizationMemberId, input.orgMemberID));
+        .delete(schema.organizationGroupMembers)
+        .where(eq(schema.organizationGroupMembers.organizationMemberId, input.orgMemberID));
 
       await tx
-        .insert(organizationMemberRoles)
+        .insert(schema.organizationGroupMembers)
         .values({
           organizationMemberId: input.orgMemberID,
-          role: input.role,
+          groupId: input.groupId,
         })
         .execute();
     });

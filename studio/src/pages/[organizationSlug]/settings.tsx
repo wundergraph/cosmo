@@ -68,12 +68,12 @@ import {
   updateFeatureSettings,
   updateIDPMappers,
   updateOrganizationDetails,
-  getOrganizationMemberGroups,
+  getOrganizationGroups,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
   Feature,
   GetOIDCProviderResponse,
-  OrganizationMemberGroup,
+  OrganizationGroup,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -230,7 +230,7 @@ type MapperInput = Mapper & {
 };
 
 const createMapperSchema = z.object({
-  groupId: z.string().min(1),
+  groupId: z.string().uuid(),
   ssoGroup: z.string().min(1, { message: "Please enter a value" }),
 });
 
@@ -245,12 +245,12 @@ const NewMapper = ({
   remove: () => void;
   onChange: (secret: Mapper) => void;
   mapper: Mapper;
-  availableGroups: OrganizationMemberGroup[];
+  availableGroups: OrganizationGroup[];
 }) => {
   type CreateMapperFormInput = z.infer<typeof createMapperSchema>;
   const [groupId, setGroupId] = useState(mapper.groupId);
 
-  const label = availableGroups.find((g) => g.groupId === groupId)?.name || "Select a group";
+  const groupLabel = availableGroups.find((g) => g.groupId === groupId)?.name || "Select a group";
 
   const {
     register,
@@ -276,7 +276,7 @@ const NewMapper = ({
             {...register("groupId")}
           >
             <SelectTrigger value={groupId} className="w-[200px] lg:w-full">
-              <SelectValue aria-label={label}>{label}</SelectValue>
+              <SelectValue aria-label={groupLabel}>{groupLabel}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {availableGroups.map((group) => (
@@ -336,7 +336,7 @@ const AddNewMappers = ({
   updateMappers,
 }: {
   mappers: MapperInput[];
-  availableGroups: OrganizationMemberGroup[];
+  availableGroups: OrganizationGroup[];
   updateMappers: Dispatch<SetStateAction<MapperInput[]>>;
 }) => {
   return (
@@ -398,7 +398,7 @@ const UpdateIDPMappers = ({
 
   const [mappers, updateMappers] = useState<MapperInput[]>(currentMappers);
 
-  const { data: orgMemberGroups } = useQuery(getOrganizationMemberGroups);
+  const { data: orgMemberGroups } = useQuery(getOrganizationGroups);
 
   const mutateMappers = () => {
     const groupMappers = mappers.map((m) => {
@@ -503,7 +503,7 @@ const OpenIDConnectProvider = ({
   const { mutate, isPending, data } = useMutation(createOIDCProvider);
   const { mutate: deleteOidcProvider } = useMutation(deleteOIDCProvider);
 
-  const { data: orgMemberGroups } = useQuery(getOrganizationMemberGroups, undefined, {
+  const { data: orgMemberGroups } = useQuery(getOrganizationGroups, undefined, {
     enabled: mode === "map",
   });
 

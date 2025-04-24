@@ -1,5 +1,5 @@
 import type {
-  OrganizationMemberGroupRule,
+  OrganizationGroupRule,
   GetUserAccessibleResourcesResponse,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { roles } from "@/lib/constants";
@@ -44,10 +44,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 export function GroupRuleBuilder({ rule, accessibleResources, disabled, onRuleUpdated, onRemoveRule }: {
-  rule: OrganizationMemberGroupRule;
+  rule: OrganizationGroupRule;
   accessibleResources: GetUserAccessibleResourcesResponse | undefined;
   disabled: boolean;
-  onRuleUpdated(rule: OrganizationMemberGroupRule): void;
+  onRuleUpdated(rule: OrganizationGroupRule): void;
   onRemoveRule(): void;
 }) {
   const { isMobile } = useWindowSize();

@@ -10,11 +10,11 @@ import {
 } from "@heroicons/react/24/outline";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
-  getOrganizationMemberGroups
+  getOrganizationGroups
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useRouter } from "next/router";
 import { useState } from "react";
-import type { OrganizationMemberGroup } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import type { OrganizationGroup } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { DeleteMemberGroupDialog } from "@/components/member-groups/delete-member-group-dialog";
 import { MemberGroupSheet } from "@/components/member-groups/member-group-sheet";
 import { CreateMemberGroupDialog } from "@/components/member-groups/create-member-group-dialog";
@@ -28,10 +28,10 @@ const GroupsToolbar = () => {
 const GroupsPage: NextPageWithLayout = () => {
   const router = useRouter();
 
-  const [selectedGroup, setSelectedGroup] = useState<OrganizationMemberGroup | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<OrganizationGroup | null>(null);
   const [openDeleteGroupDialog, setOpenDeleteGroupDialog] = useState(false);
 
-  const { data, isLoading, error, refetch } = useQuery(getOrganizationMemberGroups);
+  const { data, isLoading, error, refetch } = useQuery(getOrganizationGroups);
   if (isLoading) {
     return <Loader fullscreen />;
   }
@@ -51,7 +51,7 @@ const GroupsPage: NextPageWithLayout = () => {
   const activeGroupId = router.query?.group as string;
   const activeGroup = activeGroupId ? groups.find((g) => g.groupId === activeGroupId) : undefined;
 
-  const openGroup = (group: OrganizationMemberGroup) => {
+  const openGroup = (group: OrganizationGroup) => {
     router.replace({
       pathname: router.pathname,
       query: {

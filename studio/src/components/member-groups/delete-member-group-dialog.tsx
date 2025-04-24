@@ -1,10 +1,10 @@
-import type { OrganizationMemberGroup } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import type { OrganizationGroup } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMutation } from "@connectrpc/connect-query";
 import {
-  deleteOrganizationMemberGroup,
+  deleteOrganizationGroup,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { z } from "zod";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
@@ -13,12 +13,12 @@ import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb
 
 export function DeleteMemberGroupDialog({ open, group, onGroupDeleted, onOpenChange }: {
   open: boolean;
-  group: OrganizationMemberGroup | null;
+  group: OrganizationGroup | null;
   onGroupDeleted(): Promise<unknown>;
   onOpenChange(open: boolean): void;
 }) {
   const { toast } = useToast();
-  const { mutate, isPending } = useMutation(deleteOrganizationMemberGroup);
+  const { mutate, isPending } = useMutation(deleteOrganizationGroup);
 
   function handleOnOpenChange(open: boolean) {
     if (isPending) {
