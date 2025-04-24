@@ -15,18 +15,21 @@ import (
 type CosmoAuthorizerOptions struct {
 	FieldConfigurations           []*nodev1.FieldConfiguration
 	RejectOperationIfUnauthorized bool
+	SkipExtensionsInResponse      bool
 }
 
 func NewCosmoAuthorizer(opts *CosmoAuthorizerOptions) *CosmoAuthorizer {
 	return &CosmoAuthorizer{
-		fieldConfigurations: opts.FieldConfigurations,
-		rejectUnauthorized:  opts.RejectOperationIfUnauthorized,
+		fieldConfigurations:      opts.FieldConfigurations,
+		rejectUnauthorized:       opts.RejectOperationIfUnauthorized,
+		skipExtensionsInResponse: opts.SkipExtensionsInResponse,
 	}
 }
 
 type CosmoAuthorizer struct {
-	fieldConfigurations []*nodev1.FieldConfiguration
-	rejectUnauthorized  bool
+	fieldConfigurations      []*nodev1.FieldConfiguration
+	rejectUnauthorized       bool
+	skipExtensionsInResponse bool
 }
 
 func (a *CosmoAuthorizer) HasResponseExtensionData(ctx *resolve.Context) bool {

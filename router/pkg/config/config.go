@@ -449,6 +449,7 @@ type AuthorizationConfiguration struct {
 	RequireAuthentication bool `yaml:"require_authentication" envDefault:"false" env:"REQUIRE_AUTHENTICATION"`
 	// RejectOperationIfUnauthorized makes the router reject the whole GraphQL Operation if one field fails to authorize
 	RejectOperationIfUnauthorized bool `yaml:"reject_operation_if_unauthorized" envDefault:"false" env:"REJECT_OPERATION_IF_UNAUTHORIZED"`
+	SkipExtensionInResponse       bool `yaml:"skip_in_response_extension" envDefault:"false" env:"SKIP_EXTENSION_IN_RESPONSE"`
 }
 
 type RateLimitConfiguration struct {

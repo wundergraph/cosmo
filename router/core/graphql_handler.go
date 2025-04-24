@@ -159,6 +159,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx = ctx.WithContext(executionContext)
 	if h.authorizer != nil {
 		ctx = WithAuthorizationExtension(ctx)
+		ctx.SetAuthorizerOptions(resolve.AuthorizerOptions{IncludeOutputInResponseExtension: !h.authorizer.skipExtensionsInResponse})
 		ctx.SetAuthorizer(h.authorizer)
 	}
 	if h.engineLoaderHooks != nil {
@@ -327,8 +328,10 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 				}
 				return
 			}
-			response.Extensions = &Extensions{
-				Authorization: buf.Bytes(),
+			if !h.authorizer.skipExtensionsInResponse {
+				response.Extensions = &Extensions{
+					Authorization: buf.Bytes(),
+				}
 			}
 		}
 		if isHttpResponseWriter {

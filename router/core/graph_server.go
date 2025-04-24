@@ -1087,6 +1087,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 	if s.Config.authorization != nil {
 		authorizerOptions.RejectOperationIfUnauthorized = s.authorization.RejectOperationIfUnauthorized
+		authorizerOptions.SkipExtensionsInResponse = s.authorization.SkipExtensionInResponse
 	}
 
 	handlerOpts := HandlerOptions{
