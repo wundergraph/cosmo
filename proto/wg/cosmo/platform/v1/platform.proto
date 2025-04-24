@@ -1634,7 +1634,7 @@ message IsGitHubAppInstalledResponse {
 }
 
 message GroupMapper {
-  string role = 1;
+  string groupId = 1;
   string ssoGroup = 2;
 }
 

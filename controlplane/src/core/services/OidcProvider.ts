@@ -1,6 +1,7 @@
 import { CreateOIDCProviderRequest, GroupMapper } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { uid } from 'uid';
+import { and, eq, inArray } from "drizzle-orm";
 import * as schema from '../../db/schema.js';
 import { OidcRepository } from '../repositories/OidcRepository.js';
 import Keycloak from './Keycloak.js';
@@ -45,9 +46,11 @@ export default class OidcProvider {
       kcClient,
       kcRealm,
       mappers: input.mappers,
+      organizationId,
       organizationSlug,
       alias,
       endpoint,
+      db,
     });
   }
 
@@ -55,54 +58,77 @@ export default class OidcProvider {
     kcClient,
     kcRealm,
     mappers,
+    organizationId,
     organizationSlug,
     endpoint,
     alias,
+    db,
   }: {
     kcClient: Keycloak;
     kcRealm: string;
     mappers: GroupMapper[];
+    organizationId: string;
     organizationSlug: string;
     alias: string;
     endpoint: string;
+    db: PostgresJsDatabase<typeof schema>;
   }) {
-    for (const mapper of mappers) {
-      let key = 'ssoGroups';
-      // using a different claim name for microsoft entra as it doesnt allow us to change the name of the claim.
-      if (endpoint === 'login.microsoftonline.com') {
-        key = 'groups';
-      }
-      const claims = `[{ "key": "${key}", "value": "${mapper.ssoGroup.trim()}" }]`;
-      let keycloakGroupName;
+    const organizationMemberGroups = await db
+      .select({
+        id: schema.organizationMemberGroups.id,
+        name: schema.organizationMemberGroups.name,
+      })
+      .from(schema.organizationMemberGroups)
+      .where(and(
+        eq(schema.organizationMemberGroups.organizationId, organizationId),
+        inArray(schema.organizationMemberGroups.id, mappers.map((m) => m.groupId))
+      ));
 
-      switch (mapper.role) {
-        case 'Admin': {
-          keycloakGroupName = `/${organizationSlug}/admin`;
-          break;
-        }
-        case 'Developer': {
-          keycloakGroupName = `/${organizationSlug}/developer`;
-          break;
-        }
-        case 'Viewer': {
-          keycloakGroupName = `/${organizationSlug}/viewer`;
-          break;
-        }
-        default: {
-          throw new Error(`The role ${mapper.role} doesn't exist.`);
-        }
+    let key = 'ssoGroups';
+    // using a different claim name for microsoft entra as it doesn't allow us to change the name of the claim.
+    if (endpoint === 'login.microsoftonline.com') {
+      key = 'groups';
+    }
+
+    await kcClient.createIDPMapper({
+      realm: kcRealm,
+      alias,
+      claims: `[{ "key": "${key}", "value": ".*" }]`,
+      keycloakGroupName: `/${organizationSlug}`
+    })
+    
+    for (const mapper of mappers) {
+      const claims = `[{ "key": "${key}", "value": "${mapper.ssoGroup.trim()}" }]`;
+
+      const memberGroup = organizationMemberGroups.find((g) => g.id === mapper.groupId);
+      if (!memberGroup) {
+        throw new Error(`The group ${mapper.groupId} doesn't exist.`);
       }
 
       await kcClient.createIDPMapper({
         realm: kcRealm,
         alias,
         claims,
-        keycloakGroupName,
+        keycloakGroupName: `/${organizationSlug}/${memberGroup.name}`,
       });
     }
   }
 
-  public async fetchIDPMappers({ kcClient, kcRealm, alias }: { kcClient: Keycloak; kcRealm: string; alias: string }) {
+  public async fetchIDPMappers({ kcClient, kcRealm, alias, organizationId, db }: {
+    kcClient: Keycloak;
+    kcRealm: string;
+    alias: string;
+    organizationId: string;
+    db: PostgresJsDatabase<typeof schema>;
+  }) {
+    const organizationMemberGroups = await db
+      .select({
+        id: schema.organizationMemberGroups.id,
+        name: schema.organizationMemberGroups.name,
+      })
+      .from(schema.organizationMemberGroups)
+      .where(eq(schema.organizationMemberGroups.organizationId, organizationId));
+
     const mappers = await kcClient.client.identityProviders.findMappers({
       alias,
       realm: kcRealm,
@@ -118,7 +144,12 @@ export default class OidcProvider {
       if (splitKCGroup.length !== 3) {
         continue;
       }
-      const roleInCosmo: string = splitKCGroup[2];
+
+      const groupInCosmo: string = splitKCGroup[2];
+      const memberGroup = organizationMemberGroups.find((g) => g.name === groupInCosmo);
+      if (!memberGroup) {
+        continue;
+      }
 
       const stringifiedClaims = mapper.config.claims;
       const claims = JSON.parse(stringifiedClaims);
@@ -132,16 +163,13 @@ export default class OidcProvider {
 
       idpMappers.push(
         new GroupMapper({
-          role: roleInCosmo[0].toUpperCase() + roleInCosmo.slice(1),
+          groupId: memberGroup.id,
           ssoGroup: claims[0].value,
         }),
       );
     }
-    return [
-      ...idpMappers.filter((mapper) => mapper.role === 'Admin'),
-      ...idpMappers.filter((mapper) => mapper.role === 'Developer'),
-      ...idpMappers.filter((mapper) => mapper.role === 'Viewer'),
-    ];
+
+    return idpMappers;
   }
 
   public async deleteIDPMappers({ kcClient, kcRealm, alias }: { kcClient: Keycloak; kcRealm: string; alias: string }) {

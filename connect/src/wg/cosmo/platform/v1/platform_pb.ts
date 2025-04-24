@@ -12664,9 +12664,9 @@ export class IsGitHubAppInstalledResponse extends Message<IsGitHubAppInstalledRe
  */
 export class GroupMapper extends Message<GroupMapper> {
   /**
-   * @generated from field: string role = 1;
+   * @generated from field: string groupId = 1;
    */
-  role = "";
+  groupId = "";
 
   /**
    * @generated from field: string ssoGroup = 2;
@@ -12681,7 +12681,7 @@ export class GroupMapper extends Message<GroupMapper> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.GroupMapper";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "role", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "groupId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "ssoGroup", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
