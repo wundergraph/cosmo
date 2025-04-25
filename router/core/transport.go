@@ -339,6 +339,7 @@ type TransportOptions struct {
 
 type SubscriptionClientOptions struct {
 	PingInterval time.Duration
+	ReadTimeout  time.Duration
 }
 
 func NewTransport(opts *TransportOptions) *TransportFactory {
