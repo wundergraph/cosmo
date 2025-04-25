@@ -269,7 +269,8 @@ export function checkSubgraphSchema(
         subgraphName,
         proposedSubgraphSchemaSDL: newSchemaSDL,
         isDeleted: !!req.delete,
-        isNew: false,
+        isNew: !subgraph,
+        namespaceId: namespace.id,
       },
     });
 

@@ -461,6 +461,7 @@ export class SchemaCheckRepository {
       proposedSubgraphSchemaSDL: string;
       isDeleted: boolean;
       isNew: boolean;
+      namespaceId: string;
     };
   }) {
     const schemaCheckSubgraph = await this.db.insert(schema.schemaCheckSubgraphs).values(data).returning();
@@ -626,6 +627,7 @@ export class SchemaCheckRepository {
           proposedSubgraphSchemaSDL: newSchemaSDL,
           isDeleted: newSchemaSDL === '',
           isNew: !subgraph,
+          namespaceId: namespace.id,
         },
       });
 
