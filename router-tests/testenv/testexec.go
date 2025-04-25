@@ -34,7 +34,7 @@ func RunRouterBinary(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Envir
 	defer cancel()
 
 	routerPath := getRouterBinary(t, ctx)
-	err, env := runRouterBin(t, ctx, cfg, routerPath)
+	env, err := runRouterBin(t, ctx, cfg, routerPath)
 	if err != nil {
 		return err
 	}
@@ -76,19 +76,19 @@ func getRouterBinary(t *testing.T, ctx context.Context) string {
 }
 
 // runRouterBin starts the router binary and returns an Environment.
-func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath string) (error, *Environment) {
+func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath string) (*Environment, error) {
 	t.Helper()
 
 	fullBinPath, err := filepath.Abs(binaryPath)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	port := freeport.GetOne(t)
 	listenerAddr := fmt.Sprintf("localhost:%d", port)
 	token, err := generateJwtToken()
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 	testCdn := SetupCDNServer(t, freeport.GetOne(t))
 	vals := ""
@@ -108,7 +108,7 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 	envFile := filepath.Join(os.TempDir(), RandString(6)+".env")
 	err = os.WriteFile(envFile, []byte(strings.TrimSpace(vals)), os.ModePerm)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	cmd := exec.Command(fullBinPath, "--override-env", envFile)
@@ -116,7 +116,7 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 	newCtx, cancel := context.WithCancelCause(ctx)
 	err = runCmdWithLogs(t, ctx, cmd, false)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	// Graceful shutdown on context cancel
@@ -148,10 +148,10 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 	// Wait for server readiness
 	err = env.WaitForServer(newCtx, env.RouterURL+"/health/ready", 600, 60)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
-	return nil, env
+	return env, nil
 }
 
 func runCmdWithLogs(t *testing.T, ctx context.Context, cmd *exec.Cmd, waitToComplete bool) error {
