@@ -1341,11 +1341,11 @@ type TestResponse struct {
 func (e *Environment) WaitForServer(ctx context.Context, url string, timeoutMs int, maxAttempts int) error {
 	for {
 		if maxAttempts == 0 {
-			return errors.New("timed out waiting for server to be ready")
+			return errors.New("max attempts reached, timed out waiting for server to be ready")
 		}
 		select {
 		case <-ctx.Done():
-			return errors.New("timed out waiting for router to be ready")
+			return errors.New("context timed out waiting for router to be ready")
 		default:
 			reqCtx, cancelFn := context.WithTimeout(context.Background(), time.Second)
 			req, err := http.NewRequestWithContext(reqCtx, "GET", url, nil)

@@ -27,18 +27,22 @@ var (
 )
 
 // RunRouterBinary starts the router binary, sets up the test environment, and runs the provided test function.
-func RunRouterBinary(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
+func RunRouterBinary(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) error {
 	t.Helper()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	routerPath := getRouterBinary(t, ctx)
-	env := runRouterBin(t, ctx, cfg, routerPath)
+	err, env := runRouterBin(t, ctx, cfg, routerPath)
+	if err != nil {
+		return err
+	}
 	t.Cleanup(env.Shutdown)
 
 	// Execute the test case with the environment
 	f(t, env)
+	return nil
 }
 
 // BuildRouter runs `make build` inside the router directory and fails the test on error.
@@ -51,7 +55,10 @@ func buildRouterBin(t *testing.T, ctx context.Context) {
 
 		cmd := exec.Command("make", "build-race")
 		cmd.Dir = routerDir
-		runCmdWithLogs(t, ctx, cmd, true) // Run the build command
+		err := runCmdWithLogs(t, ctx, cmd, true) // Run the build command
+		if err != nil {
+			t.Fatalf("failed to execute runCmdWithLogs: %v", err)
+		}
 
 		// Determine the binary path after successful build
 		binPath := filepath.Join(routerDir, "router") // Adjust if needed for Windows
@@ -69,16 +76,20 @@ func getRouterBinary(t *testing.T, ctx context.Context) string {
 }
 
 // runRouterBin starts the router binary and returns an Environment.
-func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath string) *Environment {
+func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath string) (error, *Environment) {
 	t.Helper()
 
 	fullBinPath, err := filepath.Abs(binaryPath)
-	require.NoError(t, err)
+	if err != nil {
+		return err, nil
+	}
 
 	port := freeport.GetOne(t)
 	listenerAddr := fmt.Sprintf("localhost:%d", port)
 	token, err := generateJwtToken()
-	require.NoError(t, err)
+	if err != nil {
+		return err, nil
+	}
 	testCdn := SetupCDNServer(t, freeport.GetOne(t))
 	vals := ""
 
@@ -95,17 +106,28 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 		vals += fmt.Sprintf("\n%s=%s", key, val)
 	}
 	envFile := filepath.Join(os.TempDir(), RandString(6)+".env")
-	require.NoError(t, os.WriteFile(envFile, []byte(strings.TrimSpace(vals)), os.ModePerm))
+	err = os.WriteFile(envFile, []byte(strings.TrimSpace(vals)), os.ModePerm)
+	if err != nil {
+		return err, nil
+	}
 
 	cmd := exec.Command(fullBinPath, "--override-env", envFile)
 	cmd.Dir = t.TempDir()
-	newCtx, cancel := context.WithCancelCause(context.Background())
-	runCmdWithLogs(t, ctx, cmd, false)
+	newCtx, cancel := context.WithCancelCause(ctx)
+	err = runCmdWithLogs(t, ctx, cmd, false)
+	if err != nil {
+		return err, nil
+	}
 
 	// Graceful shutdown on context cancel
 	go func() {
 		<-newCtx.Done()
 		_ = cmd.Process.Signal(os.Interrupt)
+	}()
+
+	go func() {
+		err := cmd.Wait()
+		cancel(err)
 	}()
 
 	// Create test environment
@@ -124,12 +146,15 @@ func runRouterBin(t *testing.T, ctx context.Context, cfg *Config, binaryPath str
 	}
 
 	// Wait for server readiness
-	require.NoError(t, env.WaitForServer(ctx, env.RouterURL+"/health/ready", 600, 60))
+	err = env.WaitForServer(newCtx, env.RouterURL+"/health/ready", 600, 60)
+	if err != nil {
+		return err, nil
+	}
 
-	return env
+	return nil, env
 }
 
-func runCmdWithLogs(t *testing.T, ctx context.Context, cmd *exec.Cmd, waitToComplete bool) {
+func runCmdWithLogs(t *testing.T, ctx context.Context, cmd *exec.Cmd, waitToComplete bool) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	r, w := io.Pipe()
@@ -153,8 +178,16 @@ func runCmdWithLogs(t *testing.T, ctx context.Context, cmd *exec.Cmd, waitToComp
 	}()
 
 	if waitToComplete {
-		require.NoError(t, cmd.Run(), "Failed to start router")
+		err := cmd.Run()
+		if err != nil {
+			return fmt.Errorf("failed to run router: %w", err)
+		}
 	} else {
-		require.NoError(t, cmd.Start(), "Failed to start router")
+		err := cmd.Start()
+		if err != nil {
+			return fmt.Errorf("failed to start router: %w", err)
+		}
+
 	}
+	return nil
 }
