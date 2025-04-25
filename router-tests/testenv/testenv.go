@@ -829,8 +829,8 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		},
 		WebSocketClientPollTimeout:    300 * time.Millisecond,
 		WebSocketClientConnBufferSize: 1,
-		WebSocketClientReadTimeout:    100 * time.Millisecond,
-		WebSocketClientWriteTimeout:   1 * time.Second,
+		WebSocketClientReadTimeout:    1 * time.Second,
+		WebSocketClientWriteTimeout:   2 * time.Second,
 		// Avoid get in conflict with any test that doesn't expect to handle pings
 		WebSocketClientPingInterval:    30 * time.Second,
 		MaxConcurrentResolvers:         32,

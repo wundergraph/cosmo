@@ -955,6 +955,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		trackUsageInfo:   s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
 		subscriptionClientOptions: &SubscriptionClientOptions{
 			PingInterval: s.engineExecutionConfiguration.WebSocketClientPingInterval,
+			ReadTimeout:  s.engineExecutionConfiguration.WebSocketClientReadTimeout,
 		},
 		transportOptions: &TransportOptions{
 			SubgraphTransportOptions: s.subgraphTransportOptions,
