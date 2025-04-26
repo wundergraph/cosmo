@@ -1,4 +1,5 @@
-import { buildSchema, DocumentNode, DefinitionNode, GraphQLSchema, parse, print, visit } from 'graphql';
+import { GraphQLSchema, parse, visit } from 'graphql';
+import { buildASTSchema } from '@wundergraph/composition';
 
 /**
  * Removes all directive definitions and directive usages from a GraphQL schema string
@@ -9,7 +10,7 @@ import { buildSchema, DocumentNode, DefinitionNode, GraphQLSchema, parse, print,
  */
 export function buildSchemaWithoutDirectives(schemaString: string): GraphQLSchema {
   // Parse the schema into an AST
-  const ast = parse(schemaString);
+  const ast = parse(schemaString, { noLocation: true, });
 
   // Visit the AST and remove all directives
   const cleanedAst = visit(ast, {
@@ -19,9 +20,6 @@ export function buildSchemaWithoutDirectives(schemaString: string): GraphQLSchem
     Directive: () => null,
   });
 
-  // Convert the cleaned AST back to a string
-  const cleanedSchemaString = print(cleanedAst);
-
   // Build and return the schema
-  return buildSchema(cleanedSchemaString);
+  return buildASTSchema(cleanedAst, { assumeValid: true, assumeValidSDL: true, });
 }
