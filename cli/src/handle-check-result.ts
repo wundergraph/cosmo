@@ -54,6 +54,11 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
 
   switch (resp.response?.code) {
     case EnumStatusCode.OK: {
+      if (resp.proposalMatchMessage) {
+        console.log(pc.yellow(`Warning: Proposal match failed`));
+        console.log(pc.yellow(resp.proposalMatchMessage));
+      }
+
       if (
         resp.nonBreakingChanges.length === 0 &&
         resp.breakingChanges.length === 0 &&
@@ -242,6 +247,18 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
             '\n',
         );
       }
+      break;
+    }
+    case EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL: {
+      console.log(pc.red(`Error: Proposal match failed`));
+      console.log(pc.red(resp.proposalMatchMessage));
+      console.log(
+        logSymbols.error +
+          pc.red(
+            `Schema check failed.\nSee https://cosmo-docs.wundergraph.com/studio/schema-checks for more information on resolving operation check errors.\n${studioCheckDestination}\n`,
+          ),
+      );
+      success = false;
       break;
     }
     case EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA: {

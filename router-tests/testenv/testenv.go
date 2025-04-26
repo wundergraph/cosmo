@@ -30,6 +30,8 @@ import (
 	"time"
 
 	"github.com/cloudflare/backoff"
+	mcpclient "github.com/mark3labs/mcp-go/client"
+	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -92,7 +94,7 @@ func init() {
 // Run runs the test and fails the test if an error occurs
 func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 	t.Helper()
-	env, err := createTestEnv(t, cfg)
+	env, err := CreateTestEnv(t, cfg)
 	if env != nil {
 		t.Cleanup(env.Shutdown)
 	}
@@ -112,7 +114,7 @@ func Run(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) {
 // FailsOnStartup runs the test and ensures that the router fails during bootstrapping
 func FailsOnStartup(t *testing.T, cfg *Config, f func(t *testing.T, err error)) {
 	t.Helper()
-	env, err := createTestEnv(t, cfg)
+	env, err := CreateTestEnv(t, cfg)
 	require.Error(t, err)
 	require.Nil(t, env)
 	f(t, err)
@@ -122,7 +124,7 @@ func FailsOnStartup(t *testing.T, cfg *Config, f func(t *testing.T, err error)) 
 // Useful when you want to assert errors during router bootstrapping
 func RunWithError(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environment)) error {
 	t.Helper()
-	env, err := createTestEnv(t, cfg)
+	env, err := CreateTestEnv(t, cfg)
 	if env != nil {
 		t.Cleanup(env.Shutdown)
 	}
@@ -140,7 +142,7 @@ func RunWithError(t *testing.T, cfg *Config, f func(t *testing.T, xEnv *Environm
 func Bench(b *testing.B, cfg *Config, f func(b *testing.B, xEnv *Environment)) {
 	b.Helper()
 	b.StopTimer()
-	env, err := createTestEnv(b, cfg)
+	env, err := CreateTestEnv(b, cfg)
 	if env != nil {
 		b.Cleanup(env.Shutdown)
 	}
@@ -255,6 +257,12 @@ type MetricOptions struct {
 	EnablePrometheusRouterCache  bool
 	OTLPEngineStatsOptions       EngineStatOptions
 	PrometheusEngineStatsOptions EngineStatOptions
+	PrometheusSchemaFieldUsage   PrometheusSchemaFieldUsage
+}
+
+type PrometheusSchemaFieldUsage struct {
+	Enabled             bool
+	IncludeOperationSha bool
 }
 
 type Config struct {
@@ -296,6 +304,7 @@ type Config struct {
 	ModifyEventsConfiguration          func(cfg *config.EventsConfiguration)
 	EnableRuntimeMetrics               bool
 	EnableNats                         bool
+	BatchingConfig                     config.BatchingConfig
 	EnableKafka                        bool
 	SubgraphAccessLogsEnabled          bool
 	SubgraphAccessLogFields            []config.CustomAttribute
@@ -303,6 +312,8 @@ type Config struct {
 	DisableSimulateCloudExporter       bool
 	CdnSever                           *httptest.Server
 	UseVersionedGraph                  bool
+	NoShutdownTestServer               bool
+	MCP                                config.MCPConfiguration
 }
 
 type CacheMetricsAssertions struct {
@@ -348,7 +359,12 @@ type LogObservationConfig struct {
 	LogLevel zapcore.Level
 }
 
-func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
+type MCPConfig struct {
+	Enabled bool
+	Port    int
+}
+
+func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	t.Helper()
 
 	var (
@@ -387,8 +403,6 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.MetricOptions.EnableOTLPRouterCache = true
 	}
 
-	ctx, cancel := context.WithCancelCause(context.Background())
-
 	var logObserver *observer.ObservedLogs
 
 	if oc := cfg.LogObservation; oc.Enabled {
@@ -426,6 +440,8 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	ports := freeport.GetN(t, requiredPorts)
 
 	getPubSubName := GetPubSubNameFn(pubSubPrefix)
+
+	ctx, cancel := context.WithCancelCause(context.Background())
 
 	employees := &Subgraph{
 		handler:          subgraphs.EmployeesHandler(subgraphOptions(ctx, t, cfg.Logger, natsSetup, getPubSubName)),
@@ -550,6 +566,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	var routerConfig nodev1.RouterConfig
 	if err := protojson.Unmarshal([]byte(replaced), &routerConfig); err != nil {
+		cancel(err)
 		return nil, err
 	}
 
@@ -573,11 +590,9 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	listenerAddr := fmt.Sprintf("localhost:%d", ports[1])
 
-	var client *http.Client
+	client := &http.Client{}
 
-	if cfg.NoRetryClient {
-		client = http.DefaultClient
-	} else {
+	if !cfg.NoRetryClient {
 		retryClient := retryablehttp.NewClient()
 		retryClient.Logger = nil
 		retryClient.RetryMax = 10
@@ -586,8 +601,13 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		client = retryClient.StandardClient()
 	}
 
+	if cfg.MCP.Enabled {
+		cfg.MCP.Server.Port = freeport.GetOne(t)
+	}
+
 	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
 	if err != nil {
+		cancel(err)
 		return nil, err
 	}
 
@@ -627,6 +647,7 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	if err := rr.Start(ctx); err != nil {
+		cancel(err)
 		return nil, err
 	}
 
@@ -718,9 +739,35 @@ func createTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		}
 	}
 
-	waitErr := e.WaitForServer(ctx, e.RouterURL+"/health/ready", 250, 30)
+	err = e.WaitForServer(ctx, e.RouterURL+"/health/ready", 250, 30)
+	if err != nil {
+		return nil, err
+	}
 
-	return e, waitErr
+	if cfg.MCP.Enabled {
+
+		// Create an MCP client that connects to the router's MCP server
+		mcpPort := cfg.MCP.Server.Port
+		if mcpPort == 0 {
+			mcpPort = 5025
+		}
+
+		// Create MCP client connecting to the MCP server
+		mcpAddr := fmt.Sprintf("http://localhost:%d/mcp", mcpPort)
+		client, err := mcpclient.NewSSEMCPClient(mcpAddr)
+		if err != nil {
+			t.Fatalf("Failed to create MCP client: %v", err)
+		}
+
+		e.MCPClient = client
+
+		err = e.WaitForMCPServer(e.Context, 1000, 10)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return e, err
 }
 
 func generateJwtToken() (string, error) {
@@ -782,8 +829,8 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		},
 		WebSocketClientPollTimeout:    300 * time.Millisecond,
 		WebSocketClientConnBufferSize: 1,
-		WebSocketClientReadTimeout:    100 * time.Millisecond,
-		WebSocketClientWriteTimeout:   1 * time.Second,
+		WebSocketClientReadTimeout:    1 * time.Second,
+		WebSocketClientWriteTimeout:   2 * time.Second,
 		// Avoid get in conflict with any test that doesn't expect to handle pings
 		WebSocketClientPingInterval:    30 * time.Second,
 		MaxConcurrentResolvers:         32,
@@ -852,6 +899,12 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithAutomatedPersistedQueriesConfig(cfg.AutomaticPersistedQueries),
 		core.WithCDN(cfg.CDN),
 		core.WithListenerAddr(listenerAddr),
+		core.WithBatching(&core.BatchingConfig{
+			Enabled:               testConfig.BatchingConfig.Enabled,
+			MaxConcurrentRoutines: testConfig.BatchingConfig.MaxConcurrency,
+			MaxEntriesPerBatch:    testConfig.BatchingConfig.MaxEntriesPerBatch,
+			OmitExtensions:        testConfig.BatchingConfig.OmitExtensions,
+		}),
 		core.WithSubgraphErrorPropagation(cfg.SubgraphErrorPropagation),
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithInstanceID("test-instance"),
@@ -872,6 +925,22 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		}
 	} else if routerConfig != nil {
 		routerOpts = append(routerOpts, core.WithStaticExecutionConfig(routerConfig))
+	}
+
+	if testConfig.MCP.Enabled {
+		// Add Storage provider
+		routerOpts = append(routerOpts, core.WithStorageProviders(config.StorageProviders{
+			FileSystem: []config.FileSystemStorageProvider{
+				{
+					ID:   "test",
+					Path: "testdata/mcp_operations",
+				},
+			},
+		}))
+
+		testConfig.MCP.Storage.ProviderID = "test"
+
+		routerOpts = append(routerOpts, core.WithMCP(testConfig.MCP))
 	}
 
 	if testConfig.TraceExporter != nil {
@@ -917,6 +986,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetrics,
 			ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetricLabels,
 			ExcludeScopeInfo:    testConfig.MetricOptions.MetricExclusions.ExcludeScopeInfo,
+			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
+				Enabled:             testConfig.MetricOptions.PrometheusSchemaFieldUsage.Enabled,
+				IncludeOperationSha: testConfig.MetricOptions.PrometheusSchemaFieldUsage.IncludeOperationSha,
+			},
 		}
 	}
 
@@ -1107,6 +1180,7 @@ type Environment struct {
 	KafkaClient           *kgo.Client
 	logObserver           *observer.ObservedLogs
 	getPubSubName         func(name string) string
+	MCPClient             *mcpclient.Client
 
 	shutdownDelay       time.Duration
 	extraURLQueryValues url.Values
@@ -1153,29 +1227,29 @@ func (e *Environment) Observer() *observer.ObservedLogs {
 // Shutdown closes all resources associated with the test environment. Can be called multiple times but will only
 // shut down resources once.
 func (e *Environment) Shutdown() {
-	if e.shutdown.Load() {
+	if !e.shutdown.CompareAndSwap(false, true) {
 		return
 	}
-
-	e.shutdown.Store(true)
 
 	ctx, cancel := context.WithTimeout(e.Context, e.shutdownDelay)
 	defer cancel()
 
-	// Terminate test server resources
-	e.cancel(ErrEnvironmentClosed)
-
 	// Gracefully shutdown router
 	if e.Router != nil {
 		err := e.Router.Shutdown(ctx)
-		if err != nil && !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, context.Canceled) {
+		if err != nil {
 			e.t.Errorf("could not shutdown router: %s", err)
 		}
 	}
 
+	// Terminate test server resources
+	e.cancel(ErrEnvironmentClosed)
+
 	// Close all test servers
-	for _, s := range e.Servers {
-		s.CloseClientConnections()
+	if !e.cfg.NoShutdownTestServer {
+		for _, s := range e.Servers {
+			s.CloseClientConnections()
+		}
 	}
 
 	for _, s := range e.Servers {
@@ -1197,16 +1271,25 @@ func (e *Environment) Shutdown() {
 	// Flush NATS connections
 	if e.cfg.EnableNats {
 		if e.NatsConnectionMyNats != nil {
-			e.NatsConnectionMyNats.Flush()
+			err := e.NatsConnectionMyNats.Flush()
+			if err != nil {
+				e.t.Logf("could not flush MyNats NATS connection: %s", err)
+			}
 		}
 		if e.NatsConnectionDefault != nil {
-			e.NatsConnectionDefault.Flush()
+			err := e.NatsConnectionDefault.Flush()
+			if err != nil {
+				e.t.Logf("could not flush Default NATS connection: %s", err)
+			}
 		}
 	}
 
 	// Flush Kafka connection
 	if e.cfg.EnableKafka && e.KafkaClient != nil {
-		e.KafkaClient.Flush(ctx)
+		err := e.KafkaClient.Flush(ctx)
+		if err != nil {
+			e.t.Logf("could not flush Kafka connection: %s", err)
+		}
 	}
 
 	if e.routerCmd != nil {
@@ -1277,6 +1360,47 @@ func (e *Environment) WaitForServer(ctx context.Context, url string, timeoutMs i
 	}
 }
 
+func (e *Environment) WaitForMCPServer(ctx context.Context, timeoutMs int, maxAttempts int) error {
+	if err := e.MCPClient.Start(ctx); err != nil {
+		e.t.Fatalf("Failed to start MCP client: %v", err)
+	}
+
+	for {
+		if maxAttempts == 0 {
+			return errors.New("timed out waiting for server to be ready")
+		}
+		select {
+		case <-ctx.Done():
+			return errors.New("timed out waiting for router to be ready")
+		default:
+			reqCtx, cancelFn := context.WithTimeout(context.Background(), time.Second)
+			initRequest := mcp.InitializeRequest{}
+			initRequest.Params.ProtocolVersion = mcp.LATEST_PROTOCOL_VERSION
+			initRequest.Params.ClientInfo = mcp.Implementation{
+				Name:    "testenv-client",
+				Version: "1.0.0",
+			}
+
+			_, err := e.MCPClient.Initialize(reqCtx, initRequest)
+			if err != nil {
+				e.t.Fatalf("Failed to initialize MCP client: %v", err)
+			}
+
+			cancelFn()
+
+			// Test Ping
+			if err := e.MCPClient.Ping(ctx); err != nil {
+				e.t.Logf("Ping failed: %v", err)
+			} else {
+				return nil
+			}
+
+			time.Sleep(time.Millisecond * time.Duration(timeoutMs))
+			maxAttempts--
+		}
+	}
+}
+
 func (e *Environment) MakeGraphQLRequestOK(request GraphQLRequest) *TestResponse {
 	var resp *TestResponse
 	var err error
@@ -1308,6 +1432,32 @@ func (e *Environment) MakeGraphQLRequestWithContext(ctx context.Context, request
 	}
 
 	req.Header.Set("Accept-Encoding", "identity")
+	return e.MakeGraphQLRequestRaw(req)
+}
+
+func (e *Environment) MakeGraphQLBatchedRequestRequest(
+	request []GraphQLRequest,
+	headers map[string]string,
+) (*TestResponse, error) {
+	return e.MakeGraphQLBatchedRequestRequestWithContext(e.Context, request, headers)
+}
+
+func (e *Environment) MakeGraphQLBatchedRequestRequestWithContext(
+	ctx context.Context,
+	request []GraphQLRequest,
+	headers map[string]string,
+) (*TestResponse, error) {
+	data, err := json.Marshal(request)
+	require.NoError(e.t, err)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, e.GraphQLRequestURL(), bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept-Encoding", "identity")
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+
 	return e.MakeGraphQLRequestRaw(req)
 }
 

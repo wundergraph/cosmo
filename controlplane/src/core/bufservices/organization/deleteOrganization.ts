@@ -108,6 +108,7 @@ export function deleteOrganization(
 
     await auditLogRepo.addAuditLog({
       organizationId: org.id,
+      organizationSlug: authContext.organizationSlug,
       auditAction: 'organization.deletion_queued',
       action: 'queued_deletion',
       actorId: authContext.userId,

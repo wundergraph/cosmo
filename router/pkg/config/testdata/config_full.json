@@ -70,7 +70,11 @@
         },
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
-        "ExcludeScopeInfo": true
+        "ExcludeScopeInfo": true,
+        "SchemaFieldUsage": {
+          "Enabled": true,
+          "IncludeOperationSha": false
+        }
       }
     }
   },
@@ -125,6 +129,20 @@
         "Value": "max-age=60, public"
       }
     ]
+  },
+  "MCP": {
+    "Enabled": false,
+    "Server": {
+      "Port": 5025
+    },
+    "Storage": {
+      "ProviderID": "mcp"
+    },
+    "GraphName": "cosmo",
+    "ExcludeMutations": false,
+    "EnableArbitraryOperations": false,
+    "ExposeSchema": false,
+    "RouterURL": "https://cosmo-router.wundergraph.com"
   },
   "Modules": {
     "myModule": {
@@ -360,6 +378,12 @@
         }
       ]
     }
+  },
+  "Batching": {
+    "Enabled": false,
+    "MaxConcurrency": 10,
+    "MaxEntriesPerBatch": 100,
+    "OmitExtensions": false
   },
   "ListenAddr": "localhost:3002",
   "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
@@ -686,6 +710,12 @@
           "test2@localhost:8001"
         ],
         "ClusterEnabled": false
+      }
+    ],
+    "FileSystem": [
+      {
+        "ID": "mcp",
+        "Path": "operations"
       }
     ]
   },

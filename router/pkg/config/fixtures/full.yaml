@@ -32,6 +32,19 @@ graphql_metrics:
   collector_endpoint: "https://cosmo-metrics.wundergraph.com"
 localhost_fallback_inside_docker: true
 
+# MCP Server
+mcp:
+  enabled: false
+  expose_schema: false
+  enable_arbitrary_operations: false
+  exclude_mutations: false
+  graph_name: cosmo
+  router_url: https://cosmo-router.wundergraph.com
+  server:
+    port: 5025
+  storage:
+    provider_id: mcp
+
 # Cross-Origin Resource Sharing (CORS)
 cors:
   allow_origins: ["*"]
@@ -133,6 +146,10 @@ telemetry:
       exclude_metrics: []
       exclude_metric_labels: []
       exclude_scope_info: true
+
+      schema_usage:
+        enabled: true
+        include_operation_sha: false
 
 cache_control_policy:
   enabled: true
@@ -339,6 +356,9 @@ websocket:
         header_key: "Authorization"
 
 storage_providers:
+  file_system:
+    - id: "mcp"
+      path: "operations"
   s3:
     - id: "s3"
       endpoint: "localhost:10000"

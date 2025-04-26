@@ -68,6 +68,7 @@ type PreHandlerOptions struct {
 	ApolloCompatibilityFlags    *config.ApolloCompatibilityFlags
 	DisableVariablesRemapping   bool
 	ExprManager                 *expr.Manager
+	OmitBatchExtensions         bool
 }
 
 type PreHandler struct {
@@ -100,6 +101,7 @@ type PreHandler struct {
 	variableParsePool           astjson.ParserPool
 	disableVariablesRemapping   bool
 	exprManager                 *expr.Manager
+	omitBatchExtensions         bool
 }
 
 type httpOperation struct {
@@ -145,6 +147,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
 		disableVariablesRemapping: opts.DisableVariablesRemapping,
 		exprManager:               opts.ExprManager,
+		omitBatchExtensions:       opts.OmitBatchExtensions,
 	}
 }
 
@@ -450,6 +453,7 @@ func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit) bo
 	if h.computeOperationSha256 {
 		return true
 	}
+
 	hasPersistedHash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash != ""
 	// If it already has a persisted hash attached to the request, then there is no need for us to compute it anew
 	// Otherwise, we only want to compute the hash (an expensive operation) if we're safelisting or logging unknown persisted operations
@@ -609,7 +613,28 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		otel.WgOperationName.String(operationKit.parsedOperation.Request.OperationName),
 		otel.WgOperationType.String(operationKit.parsedOperation.Type),
 	}
+
+	// Add the batched operation index even if we error out later
+	var batchedOperationIndex string
+	if opIndex, ok := req.Context().Value(BatchedOperationId{}).(string); ok {
+		batchedOperationIndex = opIndex
+		attributesAfterParse = append(
+			attributesAfterParse, otel.WgBatchingOperationIndex.String(batchedOperationIndex),
+		)
+	}
+
 	requestContext.telemetry.addCommonAttribute(attributesAfterParse...)
+
+	if batchedOperationIndex != "" && operationKit.parsedOperation.Type == "subscription" {
+		unsupportedErr := &httpGraphqlError{
+			message:    "Subscriptions aren't supported in batch operations",
+			statusCode: http.StatusBadRequest,
+		}
+		if !h.omitBatchExtensions {
+			unsupportedErr.extensionCode = ExtensionCodeBatchSubscriptionsUnsupported
+		}
+		return unsupportedErr
+	}
 
 	// Set the router span name after we have the operation name
 	httpOperation.routerSpan.SetName(GetSpanName(operationKit.parsedOperation.Request.OperationName, operationKit.parsedOperation.Type))

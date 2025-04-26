@@ -10,10 +10,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"sync"
 	"time"
 
 	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
+	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 
 	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
@@ -110,6 +112,13 @@ type (
 		CollectorEndpoint string
 	}
 
+	BatchingConfig struct {
+		Enabled               bool
+		MaxConcurrentRoutines int
+		MaxEntriesPerBatch    int
+		OmitExtensions        bool
+	}
+
 	IPAnonymizationConfig struct {
 		Enabled bool
 		Method  IPAnonymizationMethod
@@ -201,10 +210,12 @@ type (
 		subgraphTransportOptions        *SubgraphTransportOptions
 		graphqlMetricsConfig            *GraphQLMetricsConfig
 		routerTrafficConfig             *config.RouterTrafficConfiguration
+		batchingConfig                  *BatchingConfig
 		fileUploadConfig                *config.FileUpload
 		accessController                *AccessController
 		retryOptions                    retrytransport.RetryOptions
 		redisClient                     rd.RDCloser
+		mcpServer                       *mcpserver.GraphQLSchemaServer
 		processStartTime                time.Time
 		developmentMode                 bool
 		healthcheck                     health.Checker
@@ -235,6 +246,7 @@ type (
 		cacheWarmup                *config.CacheWarmupConfiguration
 		multipartHeartbeatInterval time.Duration
 		hostName                   string
+		mcp                        config.MCPConfiguration
 	}
 	// Option defines the method to customize server.
 	Option func(svr *Router)
@@ -872,7 +884,85 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to create redis client: %w", err)
 		}
+	}
 
+	if r.mcp.Enabled {
+		var operationsDir string
+
+		// If storage provider ID is set, resolve it to a directory path
+		if r.mcp.Storage.ProviderID != "" {
+			r.logger.Debug("Resolving storage provider for MCP operations",
+				zap.String("provider_id", r.mcp.Storage.ProviderID))
+
+			// Find the provider in storage_providers
+			found := false
+
+			// Check for file_system providers
+			for _, provider := range r.storageProviders.FileSystem {
+				if provider.ID == r.mcp.Storage.ProviderID {
+					r.logger.Debug("Found file_system storage provider for MCP",
+						zap.String("id", provider.ID),
+						zap.String("path", provider.Path))
+
+					// Use the resolved file system path
+					operationsDir = provider.Path
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				return fmt.Errorf("storage provider with id '%s' for mcp server not found", r.mcp.Storage.ProviderID)
+			}
+		}
+
+		// Initialize the MCP server with the resolved operations directory
+		mcpOpts := []func(*mcpserver.Options){
+			mcpserver.WithGraphName(r.mcp.GraphName),
+			mcpserver.WithOperationsDir(operationsDir),
+			mcpserver.WithPort(r.mcp.Server.Port),
+			mcpserver.WithLogger(r.logger),
+			mcpserver.WithExcludeMutations(r.mcp.ExcludeMutations),
+			mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
+			mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
+		}
+
+		// Determine the router GraphQL endpoint
+		var routerGraphQLEndpoint string
+
+		// Use the custom URL if provided
+		if r.mcp.RouterURL != "" {
+			routerGraphQLEndpoint = r.mcp.RouterURL
+		} else {
+			routerGraphQLEndpoint = path.Join(r.listenAddr, r.graphqlPath)
+		}
+
+		mcpss, err := mcpserver.NewGraphQLSchemaServer(
+			routerGraphQLEndpoint,
+			mcpOpts...,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to create mcp server: %w", err)
+		}
+
+		err = mcpss.Start()
+		if err != nil {
+			return fmt.Errorf("failed to start MCP server: %w", err)
+		}
+
+		r.mcpServer = mcpss
+
+		logFields := []zap.Field{
+			zap.Int("port", r.mcp.Server.Port),
+			zap.String("operations_dir", operationsDir),
+			zap.String("graph_name", r.mcp.GraphName),
+			zap.Bool("exclude_mutations", r.mcp.ExcludeMutations),
+			zap.String("storage_provider_id", r.mcp.Storage.ProviderID),
+			zap.Bool("enable_arbitrary_operations", r.mcp.EnableArbitraryOperations),
+			zap.Bool("expose_schema", r.mcp.ExposeSchema),
+		}
+
+		r.logger.Info("MCP server started", logFields...)
 	}
 
 	if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
@@ -930,7 +1020,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 // buildClients initializes the storage clients for persisted operations and router config.
 func (r *Router) buildClients() error {
 	s3Providers := map[string]config.S3StorageProvider{}
-	cdnProviders := map[string]config.BaseStorageProvider{}
+	cdnProviders := map[string]config.CDNStorageProvider{}
 	redisProviders := map[string]config.RedisStorageProvider{}
 
 	for _, provider := range r.storageProviders.S3 {
@@ -1248,9 +1338,26 @@ func (r *Router) Start(ctx context.Context) error {
 	return nil
 }
 
+type concSafeErrorJoiner struct {
+	errs []error
+	mu   sync.Mutex
+}
+
+func (e *concSafeErrorJoiner) Append(err error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.errs = append(e.errs, err)
+}
+
+func (e *concSafeErrorJoiner) ErrOrNil() error {
+	return errors.Join(e.errs...)
+}
+
 // Shutdown gracefully shuts down the router. It blocks until the server is shutdown.
 // If the router is already shutdown, the method returns immediately without error.
-func (r *Router) Shutdown(ctx context.Context) (err error) {
+func (r *Router) Shutdown(ctx context.Context) error {
+	var err concSafeErrorJoiner
+
 	if !r.shutdown.CompareAndSwap(false, true) {
 		return nil
 	}
@@ -1265,19 +1372,19 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 
 	if r.configPoller != nil {
 		if subErr := r.configPoller.Stop(ctx); subErr != nil {
-			err = errors.Join(err, fmt.Errorf("failed to stop config poller: %w", subErr))
+			err.Append(fmt.Errorf("failed to stop config poller: %w", subErr))
 		}
 	}
 
 	if r.httpServer != nil {
 		if subErr := r.httpServer.Shutdown(ctx); subErr != nil {
-			if errors.Is(err, context.DeadlineExceeded) {
+			if errors.Is(subErr, context.DeadlineExceeded) {
 				r.logger.Warn(
 					"Shutdown deadline exceeded. Router took too long to shutdown. Consider increasing the grace period",
 					zap.Duration("grace_period", r.routerGracePeriod),
 				)
 			}
-			err = errors.Join(err, fmt.Errorf("failed to shutdown router: %w", subErr))
+			err.Append(fmt.Errorf("failed to shutdown router: %w", subErr))
 		}
 	}
 
@@ -1288,7 +1395,17 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		go func() {
 			defer wg.Done()
 			if subErr := r.prometheusServer.Close(); subErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to shutdown prometheus server: %w", subErr))
+				err.Append(fmt.Errorf("failed to shutdown prometheus server: %w", subErr))
+			}
+		}()
+	}
+
+	if r.mcpServer != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if subErr := r.mcpServer.Stop(ctx); subErr != nil {
+				err.Append(fmt.Errorf("failed to shutdown mcp server: %w", subErr))
 			}
 		}()
 	}
@@ -1300,7 +1417,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if subErr := r.tracerProvider.Shutdown(ctx); subErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to shutdown tracer: %w", subErr))
+				err.Append(fmt.Errorf("failed to shutdown tracer: %w", subErr))
 			}
 		}()
 	}
@@ -1312,7 +1429,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if subErr := r.gqlMetricsExporter.Shutdown(ctx); subErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to shutdown graphql metrics exporter: %w", subErr))
+				err.Append(fmt.Errorf("failed to shutdown graphql metrics exporter: %w", subErr))
 			}
 		}()
 	}
@@ -1324,7 +1441,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if subErr := r.promMeterProvider.Shutdown(ctx); subErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to shutdown prometheus meter provider: %w", subErr))
+				err.Append(fmt.Errorf("failed to shutdown prometheus meter provider: %w", subErr))
 			}
 		}()
 	}
@@ -1336,7 +1453,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if subErr := r.otlpMeterProvider.Shutdown(ctx); subErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to shutdown OTLP meter provider: %w", subErr))
+				err.Append(fmt.Errorf("failed to shutdown OTLP meter provider: %w", subErr))
 			}
 		}()
 	}
@@ -1348,7 +1465,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 			defer wg.Done()
 
 			if closeErr := r.redisClient.Close(); closeErr != nil {
-				err = errors.Join(err, fmt.Errorf("failed to close redis client: %w", closeErr))
+				err.Append(fmt.Errorf("failed to close redis client: %w", closeErr))
 			}
 		}()
 	}
@@ -1360,7 +1477,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 		for _, module := range r.modules {
 			if cleaner, ok := module.(Cleaner); ok {
 				if subErr := cleaner.Cleanup(); subErr != nil {
-					err = errors.Join(err, fmt.Errorf("failed to clean module %s: %w", module.Module().ID, subErr))
+					err.Append(fmt.Errorf("failed to clean module %s: %w", module.Module().ID, subErr))
 				}
 			}
 		}
@@ -1373,7 +1490,7 @@ func (r *Router) Shutdown(ctx context.Context) (err error) {
 
 	wg.Wait()
 
-	return err
+	return err.ErrOrNil()
 }
 
 func WithListenerAddr(addr string) Option {
@@ -1708,7 +1825,7 @@ func DefaultTransportRequestOptions() *TransportRequestOptions {
 		ResponseHeaderTimeout:  0 * time.Second,
 		ExpectContinueTimeout:  0 * time.Second,
 		KeepAliveProbeInterval: 30 * time.Second,
-		KeepAliveIdleTimeout:   0 * time.Second,
+		KeepAliveIdleTimeout:   90 * time.Second,
 		DialTimeout:            30 * time.Second,
 
 		MaxConnsPerHost:     100,
@@ -1747,6 +1864,12 @@ func DefaultGraphQLMetricsConfig() *GraphQLMetricsConfig {
 func WithGraphQLMetrics(cfg *GraphQLMetricsConfig) Option {
 	return func(r *Router) {
 		r.graphqlMetricsConfig = cfg
+	}
+}
+
+func WithBatching(cfg *BatchingConfig) Option {
+	return func(r *Router) {
+		r.batchingConfig = cfg
 	}
 }
 
@@ -1866,6 +1989,12 @@ func WithClientHeader(cfg config.ClientHeader) Option {
 func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 	return func(r *Router) {
 		r.cacheWarmup = cfg
+	}
+}
+
+func WithMCP(cfg config.MCPConfiguration) Option {
+	return func(r *Router) {
+		r.mcp = cfg
 	}
 }
 
@@ -2043,6 +2172,10 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
 			ExcludeScopeInfo:    cfg.Metrics.Prometheus.ExcludeScopeInfo,
+			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
+				Enabled:             cfg.Metrics.Prometheus.SchemaFieldUsage.Enabled,
+				IncludeOperationSha: cfg.Metrics.Prometheus.SchemaFieldUsage.IncludeOperationSha,
+			},
 		},
 	}
 }

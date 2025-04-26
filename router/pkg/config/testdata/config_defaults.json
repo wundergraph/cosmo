@@ -51,7 +51,11 @@
         },
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
-        "ExcludeScopeInfo": false
+        "ExcludeScopeInfo": false,
+        "SchemaFieldUsage": {
+          "Enabled": false,
+          "IncludeOperationSha": false
+        }
       }
     }
   },
@@ -102,6 +106,20 @@
     "Value": "",
     "Subgraphs": null
   },
+  "MCP": {
+    "Enabled": false,
+    "Server": {
+      "Port": 5025
+    },
+    "Storage": {
+      "ProviderID": ""
+    },
+    "GraphName": "cosmo",
+    "ExcludeMutations": false,
+    "EnableArbitraryOperations": false,
+    "ExposeSchema": false,
+    "RouterURL": ""
+  },
   "Modules": null,
   "Headers": {
     "All": null,
@@ -122,7 +140,7 @@
       "ResponseHeaderTimeout": 0,
       "ExpectContinueTimeout": 0,
       "TLSHandshakeTimeout": 10000000000,
-      "KeepAliveIdleTimeout": 0,
+      "KeepAliveIdleTimeout": 90000000000,
       "KeepAliveProbeInterval": 30000000000,
       "MaxConnsPerHost": 100,
       "MaxIdleConns": 1024,
@@ -163,6 +181,12 @@
       "Enabled": false,
       "Fields": null
     }
+  },
+  "Batching": {
+    "Enabled": false,
+    "MaxConcurrency": 10,
+    "MaxEntriesPerBatch": 100,
+    "OmitExtensions": false
   },
   "ListenAddr": "localhost:3002",
   "ControlplaneURL": "https://cosmo-cp.wundergraph.com",
@@ -367,7 +391,8 @@
   "StorageProviders": {
     "S3": null,
     "CDN": null,
-    "Redis": null
+    "Redis": null,
+    "FileSystem": null
   },
   "ExecutionConfig": {
     "File": {

@@ -11,7 +11,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
+	"github.com/cespare/xxhash/v2"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	otelmetric "go.opentelemetry.io/otel/metric"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto/v2"
@@ -23,17 +27,13 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/wundergraph/cosmo/router/internal/expr"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"go.opentelemetry.io/otel/attribute"
-	otelmetric "go.opentelemetry.io/otel/metric"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
-	oteltrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/exp/maps"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -43,7 +43,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
-	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
@@ -52,7 +51,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
-	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
 const (
@@ -81,11 +79,12 @@ type (
 		context                 context.Context
 		cancelFunc              context.CancelFunc
 		pubSubProviders         *EnginePubSubProviders
+		storageProviders        *config.StorageProviders
 		engineStats             statistics.EngineStatistics
 		playgroundHandler       func(http.Handler) http.Handler
 		publicKey               *ecdsa.PublicKey
-		executionTransport      *http.Transport
-		executionTransportProxy ProxyFunc
+		baseTransport           *http.Transport
+		subgraphTransports      map[string]*http.Transport
 		baseOtelAttributes      []attribute.KeyValue
 		baseRouterConfigVersion string
 		mux                     *chi.Mux
@@ -114,14 +113,24 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		return nil, fmt.Errorf(`the compatibility version "%s" is not compatible with this router version`, routerConfig.CompatibilityVersion)
 	}
 
+	// Base transport
+	baseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy)
+
+	// Subgraph transports
+	subgraphTransports := map[string]*http.Transport{}
+	for subgraph, subgraphOpts := range r.subgraphTransportOptions.SubgraphMap {
+		subgraphBaseTransport := newHTTPTransport(subgraphOpts, proxy)
+		subgraphTransports[subgraph] = subgraphBaseTransport
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	s := &graphServer{
 		context:                 ctx,
 		cancelFunc:              cancel,
 		Config:                  &r.Config,
 		engineStats:             r.EngineStats,
-		executionTransport:      newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy),
-		executionTransportProxy: proxy,
+		baseTransport:           baseTransport,
+		subgraphTransports:      subgraphTransports,
 		playgroundHandler:       r.playgroundHandler,
 		baseRouterConfigVersion: routerConfig.GetVersion(),
 		inFlightRequests:        &atomic.Uint64{},
@@ -132,6 +141,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			nats:  map[string]pubsub_datasource.NatsPubSub{},
 			kafka: map[string]pubsub_datasource.KafkaPubSub{},
 		},
+		storageProviders: &r.storageProviders,
 	}
 
 	baseOtelAttributes := []attribute.KeyValue{
@@ -228,6 +238,28 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		return nil, fmt.Errorf("failed to create gzip wrapper: %w", err)
 	}
 
+	if s.traceConfig.Enabled {
+		handler := rtrace.NewTracingHandler(rtrace.TracingHandlerOpts{
+			TraceConfig:         s.traceConfig,
+			HealthCheckPath:     s.healthCheckPath,
+			ReadinessCheckPath:  s.readinessCheckPath,
+			LivenessCheckPath:   s.livenessCheckPath,
+			CompositePropagator: s.compositePropagator,
+			TracerProvider:      s.tracerProvider,
+			SpanNameFormatter:   SpanNameFormatter,
+		})
+		httpRouter.Use(handler)
+	}
+
+	if s.batchingConfig.Enabled {
+		if s.batchingConfig.MaxConcurrentRoutines <= 0 {
+			return nil, errors.New("maxConcurrent must be greater than 0")
+		}
+		if s.batchingConfig.MaxEntriesPerBatch <= 0 {
+			return nil, errors.New("maxEntriesPerBatch must be greater than 0")
+		}
+	}
+
 	/**
 	* A group where we can selectively apply middlewares to the graphql endpoint
 	 */
@@ -242,7 +274,28 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		}
 
 		// Mount the feature flag handler. It calls the base mux if no feature flag is set.
-		cr.Handle(r.graphqlPath, multiGraphHandler)
+		if s.batchingConfig.Enabled {
+			handler := Handler(
+				HandlerOpts{
+					MaxEntriesPerBatch: s.batchingConfig.MaxEntriesPerBatch,
+					MaxRoutines:        s.batchingConfig.MaxConcurrentRoutines,
+					OmitExtensions:     s.batchingConfig.OmitExtensions,
+					HandlerSent:        multiGraphHandler,
+					Tracer: r.tracerProvider.Tracer(
+						"wundergraph/cosmo/router/internal/batch",
+						oteltrace.WithInstrumentationVersion("0.0.1"),
+					),
+					Digest:              xxhash.New(),
+					ClientHeader:        s.clientHeader,
+					BaseOtelAttributes:  s.baseOtelAttributes,
+					RouterConfigVersion: s.baseRouterConfigVersion,
+					Logger:              s.logger,
+				},
+			)
+			cr.Handle(r.graphqlPath, handler)
+		} else {
+			cr.Handle(r.graphqlPath, multiGraphHandler)
+		}
 
 		if r.webSocketConfiguration != nil && r.webSocketConfiguration.Enabled && r.webSocketConfiguration.AbsintheProtocol.Enabled {
 			// Mount the Absinthe protocol handler for WebSockets
@@ -309,7 +362,6 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 			return
 		}
 
-		// Fall back to the base composition
 		baseMux.ServeHTTP(w, r)
 	}, nil
 }
@@ -465,6 +517,11 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 		computeSha256 = true
 	}
 
+	// Prometheus schema field usage metrics can use sha256, so we need to ensure it is computed
+	if srv.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled && srv.metricConfig.Prometheus.PromSchemaFieldUsage.IncludeOperationSha {
+		computeSha256 = true
+	}
+
 	if computeSha256 {
 		operationHashCacheConfig := &ristretto.Config[uint64, string]{
 			MaxCost:            srv.engineExecutionConfiguration.OperationHashCacheSize,
@@ -551,18 +608,23 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 	if s.planCache != nil {
 		s.planCache.Close()
 	}
+
 	if s.persistedOperationCache != nil {
 		s.persistedOperationCache.Close()
 	}
+
 	if s.normalizationCache != nil {
 		s.normalizationCache.Close()
 	}
+
 	if s.complexityCalculationCache != nil {
 		s.complexityCalculationCache.Close()
 	}
+
 	if s.validationCache != nil {
 		s.validationCache.Close()
 	}
+
 	if s.operationHashCache != nil {
 		s.operationHashCache.Close()
 	}
@@ -684,6 +746,9 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		exportEnabled:       s.graphqlMetricsConfig.Enabled,
 		routerConfigVersion: routerConfigVersion,
 		logger:              s.logger,
+
+		promSchemaUsageEnabled:             s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
+		promSchemaUsageIncludeOperationSha: s.metricConfig.Prometheus.PromSchemaFieldUsage.IncludeOperationSha,
 	})
 
 	baseLogFields := []zapcore.Field{
@@ -701,9 +766,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	subgraphResolver := NewSubgraphResolver(subgraphs)
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
-
+			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
+			// If this is a batched request attach id to the logger
+			if batchedOperationId, ok := r.Context().Value(BatchedOperationId{}).(string); ok {
+				requestLogger = requestLogger.With(logging.WithBatchedRequestOperationID(batchedOperationId))
+			}
 			reqContext := buildRequestContext(requestContextOptions{
 				operationContext:              nil,
 				requestLogger:                 requestLogger,
@@ -787,58 +855,30 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	})
 
 	if s.traceConfig.Enabled {
-		spanStartOptions := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(
-				otel.RouterServerAttribute,
-				otel.WgRouterRootSpan.Bool(true),
-			),
+		f := func(h http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				reqContext := getRequestContext(r.Context())
+				traceID := rtrace.GetTraceID(r.Context())
+				requestLogger := reqContext.Logger().With(logging.WithTraceID(traceID))
+
+				reqContext.logger = requestLogger
+
+				span := oteltrace.SpanFromContext(r.Context())
+				span.SetAttributes(reqContext.telemetry.traceAttrs...)
+
+				// Set if the trace is sampled in the expression context
+				isSampled := span.SpanContext().IsSampled()
+				reqContext.expressionContext.Request.Trace.Sampled = isSampled
+
+				// Set the trace ID in the response header
+				if s.traceConfig.ResponseTraceHeader.Enabled {
+					w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
+				}
+
+				h.ServeHTTP(w, r)
+			})
 		}
-
-		if s.traceConfig.WithNewRoot {
-			spanStartOptions = append(spanStartOptions, oteltrace.WithNewRoot())
-		}
-
-		middlewareOptions := []otelhttp.Option{
-			otelhttp.WithSpanOptions(spanStartOptions...),
-			otelhttp.WithFilter(rtrace.CommonRequestFilter),
-			otelhttp.WithFilter(rtrace.PrefixRequestFilter(
-				[]string{s.healthCheckPath, s.readinessCheckPath, s.livenessCheckPath}),
-			),
-			// Disable built-in metricStore through NoopMeterProvider
-			otelhttp.WithMeterProvider(sdkmetric.NewMeterProvider()),
-			otelhttp.WithSpanNameFormatter(SpanNameFormatter),
-			otelhttp.WithTracerProvider(s.tracerProvider),
-		}
-
-		if s.compositePropagator != nil {
-			middlewareOptions = append(middlewareOptions, otelhttp.WithPropagators(s.compositePropagator))
-		}
-
-		traceHandler := rtrace.NewMiddleware(
-			rtrace.WithTracePreHandler(
-				func(r *http.Request, w http.ResponseWriter) {
-					reqContext := getRequestContext(r.Context())
-					traceID := rtrace.GetTraceID(r.Context())
-					requestLogger := reqContext.Logger().With(logging.WithTraceID(traceID))
-
-					reqContext.logger = requestLogger
-
-					span := oteltrace.SpanFromContext(r.Context())
-					span.SetAttributes(reqContext.telemetry.traceAttrs...)
-
-					// Set if the trace is sampled in the expression context
-					isSampled := span.SpanContext().IsSampled()
-					reqContext.expressionContext.Request.Trace.Sampled = isSampled
-
-					// Set the trace ID in the response header
-					if s.traceConfig.ResponseTraceHeader.Enabled {
-						w.Header().Set(s.traceConfig.ResponseTraceHeader.HeaderName, traceID)
-					}
-				}),
-			rtrace.WithOtelHttp(middlewareOptions...),
-		)
-
-		httpRouter.Use(traceHandler.Handler)
+		httpRouter.Use(f)
 	}
 
 	var subgraphAccessLogger *requestlogger.SubgraphAccessLogger
@@ -900,17 +940,24 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		return nil, fmt.Errorf("failed to build pubsub configuration: %w", err)
 	}
 
+	// map[string]*http.Transport cannot be coerced into map[string]http.RoundTripper, unfortunately
+	subgraphTippers := map[string]http.RoundTripper{}
+	for subgraph, subgraphTransport := range s.subgraphTransports {
+		subgraphTippers[subgraph] = subgraphTransport
+	}
+
 	ecb := &ExecutorConfigurationBuilder{
-		introspection:  s.introspection,
-		baseURL:        s.baseURL,
-		transport:      s.executionTransport,
-		logger:         s.logger,
-		trackUsageInfo: s.graphqlMetricsConfig.Enabled,
+		introspection:    s.introspection,
+		baseURL:          s.baseURL,
+		baseTripper:      s.baseTransport,
+		subgraphTrippers: subgraphTippers,
+		logger:           s.logger,
+		trackUsageInfo:   s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
 		subscriptionClientOptions: &SubscriptionClientOptions{
 			PingInterval: s.engineExecutionConfiguration.WebSocketClientPingInterval,
+			ReadTimeout:  s.engineExecutionConfiguration.WebSocketClientReadTimeout,
 		},
 		transportOptions: &TransportOptions{
-			Proxy:                    s.executionTransportProxy,
 			SubgraphTransportOptions: s.subgraphTransportOptions,
 			PreHandlers:              s.preOriginHandlers,
 			PostHandlers:             s.postOriginHandlers,
@@ -966,6 +1013,13 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		DisableExposingVariablesContentOnValidationError: s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
+
+	// We support the MCP only on the base graph. Feature flags are not supported yet.
+	if featureFlagName == "" && s.mcpServer != nil {
+		if mErr := s.mcpServer.Reload(executor.ClientSchema); mErr != nil {
+			return nil, fmt.Errorf("failed to reload MCP server: %w", mErr)
+		}
+	}
 
 	if s.Config.cacheWarmup != nil && s.Config.cacheWarmup.Enabled {
 
@@ -1114,12 +1168,13 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		AlwaysSkipLoader:            s.engineExecutionConfiguration.Debug.AlwaysSkipLoader,
 		QueryPlansEnabled:           s.Config.queryPlansEnabled,
 		QueryPlansLoggingEnabled:    s.engineExecutionConfiguration.Debug.PrintQueryPlans,
-		TrackSchemaUsageInfo:        s.graphqlMetricsConfig.Enabled,
+		TrackSchemaUsageInfo:        s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
 		ClientHeader:                s.clientHeader,
 		ComputeOperationSha256:      computeSha256,
 		ApolloCompatibilityFlags:    &s.apolloCompatibilityFlags,
 		DisableVariablesRemapping:   s.engineExecutionConfiguration.DisableVariablesRemapping,
 		ExprManager:                 exprManager,
+		OmitBatchExtensions:         s.batchingConfig.OmitExtensions,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
@@ -1374,6 +1429,12 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		if err := mux.Shutdown(ctx); err != nil {
 			finalErr = errors.Join(finalErr, err)
 		}
+	}
+
+	// Close idle connections on base and subgraph transports
+	s.baseTransport.CloseIdleConnections()
+	for _, subgraphTransport := range s.subgraphTransports {
+		subgraphTransport.CloseIdleConnections()
 	}
 
 	return finalErr

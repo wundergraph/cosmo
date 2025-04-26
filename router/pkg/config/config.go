@@ -98,6 +98,13 @@ type Prometheus struct {
 	ExcludeMetrics      RegExArray  `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray  `yaml:"exclude_metric_labels,omitempty" env:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
 	ExcludeScopeInfo    bool        `yaml:"exclude_scope_info" envDefault:"false" env:"PROMETHEUS_EXCLUDE_SCOPE_INFO"`
+
+	SchemaFieldUsage PrometheusSchemaFieldUsage `yaml:"schema_usage" envPrefix:"PROMETHEUS_SCHEMA_FIELD_USAGE_"`
+}
+
+type PrometheusSchemaFieldUsage struct {
+	Enabled             bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	IncludeOperationSha bool `yaml:"include_operation_sha" envDefault:"false" env:"INCLUDE_OPERATION_SHA"`
 }
 
 type MetricsOTLPExporter struct {
@@ -174,7 +181,7 @@ type GlobalSubgraphRequestRule struct {
 	ResponseHeaderTimeout  *time.Duration `yaml:"response_header_timeout,omitempty" envDefault:"0s"`
 	ExpectContinueTimeout  *time.Duration `yaml:"expect_continue_timeout,omitempty" envDefault:"0s"`
 	TLSHandshakeTimeout    *time.Duration `yaml:"tls_handshake_timeout,omitempty" envDefault:"10s"`
-	KeepAliveIdleTimeout   *time.Duration `yaml:"keep_alive_idle_timeout,omitempty" envDefault:"0s"`
+	KeepAliveIdleTimeout   *time.Duration `yaml:"keep_alive_idle_timeout,omitempty" envDefault:"90s"`
 	KeepAliveProbeInterval *time.Duration `yaml:"keep_alive_probe_interval,omitempty" envDefault:"30s"`
 
 	// Connection configuration
@@ -659,9 +666,10 @@ type SubgraphErrorPropagationConfiguration struct {
 }
 
 type StorageProviders struct {
-	S3    []S3StorageProvider    `yaml:"s3,omitempty"`
-	CDN   []BaseStorageProvider  `yaml:"cdn,omitempty"`
-	Redis []RedisStorageProvider `yaml:"redis,omitempty"`
+	S3         []S3StorageProvider         `yaml:"s3,omitempty"`
+	CDN        []CDNStorageProvider        `yaml:"cdn,omitempty"`
+	Redis      []RedisStorageProvider      `yaml:"redis,omitempty"`
+	FileSystem []FileSystemStorageProvider `yaml:"file_system,omitempty"`
 }
 
 type PersistedOperationsStorageConfig struct {
@@ -684,9 +692,14 @@ type S3StorageProvider struct {
 	Secure    bool   `yaml:"secure,omitempty"`
 }
 
-type BaseStorageProvider struct {
+type CDNStorageProvider struct {
 	ID  string `yaml:"id,omitempty"`
 	URL string `yaml:"url,omitempty" envDefault:"https://cosmo-cdn.wundergraph.com"`
+}
+
+type FileSystemStorageProvider struct {
+	ID   string `yaml:"id,omitempty" env:"STORAGE_PROVIDER_FS_ID"`
+	Path string `yaml:"path,omitempty" env:"STORAGE_PROVIDER_FS_PATH"`
 }
 
 type RedisStorageProvider struct {
@@ -754,6 +767,13 @@ type AccessLogsConfig struct {
 	Output    AccessLogsOutputConfig    `yaml:"output,omitempty" env:"ACCESS_LOGS_OUTPUT"`
 	Router    AccessLogsRouterConfig    `yaml:"router,omitempty" env:"ACCESS_LOGS_ROUTER"`
 	Subgraphs AccessLogsSubgraphsConfig `yaml:"subgraphs,omitempty" env:"ACCESS_LOGS_SUBGRAPH"`
+}
+
+type BatchingConfig struct {
+	Enabled            bool `yaml:"enabled" env:"BATCHING_ENABLED" envDefault:"false"`
+	MaxConcurrency     int  `yaml:"max_concurrency" env:"BATCHING_MAX_CONCURRENCY" envDefault:"10"`
+	MaxEntriesPerBatch int  `yaml:"max_entries_per_batch" env:"BATCHING_MAX_ENTRIES" envDefault:"100"`
+	OmitExtensions     bool `yaml:"omit_extensions" env:"BATCHING_OMIT_EXTENSIONS" envDefault:"false"`
 }
 
 type AccessLogsBufferConfig struct {
@@ -862,6 +882,25 @@ type CacheWarmupConfiguration struct {
 	Timeout        time.Duration     `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
 }
 
+type MCPConfiguration struct {
+	Enabled                   bool             `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
+	Server                    MCPServer        `yaml:"server,omitempty"`
+	Storage                   MCPStorageConfig `yaml:"storage,omitempty"`
+	GraphName                 string           `yaml:"graph_name" envDefault:"cosmo" env:"MCP_GRAPH_NAME"`
+	ExcludeMutations          bool             `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
+	EnableArbitraryOperations bool             `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
+	ExposeSchema              bool             `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
+	RouterURL                 string           `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
+}
+
+type MCPStorageConfig struct {
+	ProviderID string `yaml:"provider_id,omitempty" env:"MCP_STORAGE_PROVIDER_ID"`
+}
+
+type MCPServer struct {
+	Port int `yaml:"port" envDefault:"5025" env:"MCP_SERVER_PORT"`
+}
+
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
@@ -874,12 +913,14 @@ type Config struct {
 	Compliance     ComplianceConfig   `yaml:"compliance,omitempty"`
 	TLS            TLSConfiguration   `yaml:"tls,omitempty"`
 	CacheControl   CacheControlPolicy `yaml:"cache_control_policy"`
+	MCP            MCPConfiguration   `yaml:"mcp,omitempty"`
 
 	Modules        map[string]interface{} `yaml:"modules,omitempty"`
 	Headers        HeaderRules            `yaml:"headers,omitempty"`
 	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping,omitempty"`
 	FileUpload     FileUpload             `yaml:"file_upload,omitempty"`
 	AccessLogs     AccessLogsConfig       `yaml:"access_logs,omitempty"`
+	Batching       BatchingConfig         `yaml:"batching,omitempty"`
 
 	ListenAddr                    string                      `yaml:"listen_addr" envDefault:"localhost:3002" env:"LISTEN_ADDR"`
 	ControlplaneURL               string                      `yaml:"controlplane_url" envDefault:"https://cosmo-cp.wundergraph.com" env:"CONTROLPLANE_URL"`

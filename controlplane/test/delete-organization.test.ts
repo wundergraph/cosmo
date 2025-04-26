@@ -95,6 +95,7 @@ describe('Delete Organization', (ctx) => {
       keycloakClient,
       keycloakRealm: realm,
       blobStorage,
+      deleteOrganizationAuditLogsQueue: queues.deleteOrganizationAuditLogsQueue,
     });
 
     const job = await orgRepo.queueOrganizationDeletion({
@@ -166,6 +167,7 @@ describe('Delete Organization', (ctx) => {
       keycloakClient,
       keycloakRealm: realm,
       blobStorage,
+      deleteOrganizationAuditLogsQueue: queues.deleteOrganizationAuditLogsQueue,
     });
 
     const job = await orgRepo.queueOrganizationDeletion({

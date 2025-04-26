@@ -26,6 +26,9 @@ type routerMetrics struct {
 	routerConfigVersion string
 	logger              *zap.Logger
 	exportEnabled       bool
+
+	promSchemaUsageEnabled             bool
+	promSchemaUsageIncludeOperationSha bool
 }
 
 type routerMetricsConfig struct {
@@ -34,6 +37,9 @@ type routerMetricsConfig struct {
 	routerConfigVersion string
 	logger              *zap.Logger
 	exportEnabled       bool
+
+	promSchemaUsageEnabled             bool
+	promSchemaUsageIncludeOperationSha bool
 }
 
 func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
@@ -43,6 +49,9 @@ func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
 		routerConfigVersion: cfg.routerConfigVersion,
 		logger:              cfg.logger,
 		exportEnabled:       cfg.exportEnabled,
+
+		promSchemaUsageEnabled:             cfg.promSchemaUsageEnabled,
+		promSchemaUsageIncludeOperationSha: cfg.promSchemaUsageIncludeOperationSha,
 	}
 }
 
@@ -58,6 +67,9 @@ func (m *routerMetrics) StartOperation(logger *zap.Logger, requestContentLength 
 		TrackUsageInfo:       m.exportEnabled,
 		InFlightAddOption:    inFlightAddOption,
 		SliceAttributes:      sliceAttr,
+
+		PrometheusSchemaUsageEnabled:    m.promSchemaUsageEnabled,
+		PrometheusSchemaUsageIncludeSha: m.promSchemaUsageIncludeOperationSha,
 	})
 	return metrics
 }
@@ -96,7 +108,7 @@ func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext
 	// which seems to be efficient in terms of memory usage and CPU
 	item := &graphqlmetricsv1.SchemaUsageInfo{
 		RequestDocument:  operationContext.content,
-		TypeFieldMetrics: operationContext.typeFieldUsageInfo,
+		TypeFieldMetrics: operationContext.typeFieldUsageInfo.IntoGraphQLMetrics(),
 		ArgumentMetrics:  operationContext.argumentUsageInfo,
 		InputMetrics:     operationContext.inputUsageInfo,
 		OperationInfo: &graphqlmetricsv1.OperationInfo{
