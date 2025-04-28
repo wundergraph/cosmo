@@ -406,6 +406,7 @@ export function checkSubgraphSchema(
       storedBreakingChanges,
       inspectorChanges: [],
       routerCompatibilityVersion,
+      labels: subgraph ? undefined : req.labels,
     });
 
     const { composedGraphs } = await composer.composeWithProposedSchemas({
