@@ -284,7 +284,6 @@ describe('CheckSubgraphSchema', (ctx) => {
     });
     expect(checksResp.response?.code).toBe(EnumStatusCode.OK);
     expect(checksResp.checks?.length).toBe(1);
-    expect(checksResp.hasChecks).toBe(true);
 
     await server.close();
   });

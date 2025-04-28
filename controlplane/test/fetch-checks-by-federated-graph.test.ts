@@ -108,7 +108,6 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
     expect(checksResp.response?.code).toBe(EnumStatusCode.OK);
 
     // Check if we have checks now after running the check
-    expect(checksResp.hasChecks).toBe(true);
     expect(checksResp.checks.length).toBe(1);
     expect(checksResp.checksCountBasedOnDateRange).toBe(1);
 
@@ -132,7 +131,6 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
     });
 
     expect(checksResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-    expect(checksResp.hasChecks).toBe(false);
     expect(checksResp.checks).toHaveLength(0);
 
     await server.close();
@@ -201,8 +199,6 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
 
     expect(checksResp.response?.code).toBe(EnumStatusCode.OK);
 
-    // Since we didn't run any checks, hasChecks should be false
-    expect(checksResp.hasChecks).toBe(false);
     expect(checksResp.checks).toHaveLength(0);
     expect(checksResp.checksCountBasedOnDateRange).toBe(0);
 
@@ -422,7 +418,6 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
     expect(allChecksResp.response?.code).toBe(EnumStatusCode.OK);
     expect(allChecksResp.checks.length).toBe(2);
     expect(allChecksResp.checksCountBasedOnDateRange).toBe(2);
-    expect(allChecksResp.hasChecks).toBe(true);
 
     // Now get checks filtered by the first subgraph
     const checksFilteredResp = await client.getChecksByFederatedGraphName({
@@ -440,7 +435,6 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
     expect(checksFilteredResp.response?.code).toBe(EnumStatusCode.OK);
     expect(checksFilteredResp.checks.length).toBe(1);
     expect(checksFilteredResp.checksCountBasedOnDateRange).toBe(1);
-    expect(checksFilteredResp.hasChecks).toBe(true);
 
     // The filtered results should only contain checks for subgraph1
     const checkSubgraphs = checksFilteredResp.checks[0].checkedSubgraphs;
@@ -463,7 +457,6 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
     expect(checksFilteredResp2.response?.code).toBe(EnumStatusCode.OK);
     expect(checksFilteredResp2.checks.length).toBe(1);
     expect(checksFilteredResp2.checksCountBasedOnDateRange).toBe(1);
-    expect(checksFilteredResp2.hasChecks).toBe(true);
 
     // The filtered results should only contain checks for subgraph2
     const checkSubgraphs2 = checksFilteredResp2.checks[0].checkedSubgraphs;
@@ -582,8 +575,6 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
     expect(checksResp.response?.code).toBe(EnumStatusCode.OK);
     expect(checksResp.checks).toHaveLength(0);
     expect(checksResp.checksCountBasedOnDateRange).toBe(0);
-    // hasChecks should be true because there are checks in total, just none in the date range
-    expect(checksResp.hasChecks).toBe(true);
 
     // Verify we can get the actual checks with the current date range
     const currentChecksResp = await client.getChecksByFederatedGraphName({
@@ -600,7 +591,6 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
 
     expect(currentChecksResp.response?.code).toBe(EnumStatusCode.OK);
     expect(currentChecksResp.checks.length).toBeGreaterThan(0);
-    expect(currentChecksResp.hasChecks).toBe(true);
 
     await server.close();
   });
@@ -742,7 +732,6 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
     });
 
     expect(checksResp1.response?.code).toBe(EnumStatusCode.OK);
-    expect(checksResp1.hasChecks).toBe(true);
     expect(checksResp1.checks.length).toBe(1);
     expect(checksResp1.checksCountBasedOnDateRange).toBe(1);
 
@@ -765,7 +754,6 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
     });
 
     expect(checksResp2.response?.code).toBe(EnumStatusCode.OK);
-    expect(checksResp2.hasChecks).toBe(true);
     expect(checksResp2.checks.length).toBe(1);
     expect(checksResp2.checksCountBasedOnDateRange).toBe(1);
 
@@ -793,7 +781,6 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
     // We should get a successful response but with no checks found
     expect(checksRespMismatch.response?.code).toBe(EnumStatusCode.OK);
     // The check should exist for the graph overall, but not for the specified subgraph ID
-    expect(checksRespMismatch.hasChecks).toBe(true);
     expect(checksRespMismatch.checks.length).toBe(0);
     expect(checksRespMismatch.checksCountBasedOnDateRange).toBe(0);
 

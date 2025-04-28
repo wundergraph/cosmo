@@ -46,7 +46,7 @@ export function getChecksByFederatedGraphName(
       organizationId: authContext.organizationId,
       featureId: 'breaking-change-retention',
     });
-    
+
     const { dateRange } = validateDateRanges({
       limit: breakingChangeRetention?.limit ?? 7,
       dateRange: {
@@ -88,7 +88,6 @@ export function getChecksByFederatedGraphName(
       endDate: dateRange.end,
       includeSubgraphs,
     });
-
 
     return {
       response: {
