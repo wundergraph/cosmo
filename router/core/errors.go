@@ -190,6 +190,8 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 		return
 	}
 
+	w.Header().Set("Cache-Control", "no-cache")
+
 	// According to the tests requestContext can be nil (when called from module WriteResponseError)
 	// As such we have coded this condition defensively to be safe
 	requestContext := getRequestContext(r.Context())
@@ -312,7 +314,6 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 	case errors.As(err, &httpErr):
 		writeRequestErrors(r, w, httpErr.StatusCode(), requestErrorsFromHttpError(httpErr), requestLogger)
 	case errors.As(err, &poNotFoundErr):
-		w.Header().Set("Cache-Control", "no-cache")
 		newErr := NewHttpGraphqlError("PersistedQueryNotFound", "PERSISTED_QUERY_NOT_FOUND", http.StatusOK)
 		writeRequestErrors(r, w, http.StatusOK, requestErrorsFromHttpError(newErr), requestLogger)
 	case errors.As(err, &reportErr):
