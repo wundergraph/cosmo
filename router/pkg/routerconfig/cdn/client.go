@@ -231,9 +231,8 @@ func (cdn *Client) RouterConfig(ctx context.Context, version string, modifiedSin
 	res := &routerconfig.Response{}
 
 	body, err := cdn.getRouterConfig(ctx, version, modifiedSince)
-	if err != nil && errors.Is(err, ErrConfigNotFound) && cdn.useDemoConfig {
-		res.Config = routerconfig.GetDefaultConfig()
-		return res, nil
+	if err != nil && errors.Is(err, ErrConfigNotFound) {
+		return nil, configpoller.ErrConfigNotFound
 	} else if err != nil {
 		return nil, err
 	}
