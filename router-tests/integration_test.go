@@ -329,6 +329,7 @@ func TestVariables(t *testing.T) {
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		t.Run("correct validation", func(t *testing.T) {
+			t.Parallel()
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
 				Variables: json.RawMessage(`{"criteria":{"nationality":"GERMAN"}}`),
@@ -337,6 +338,7 @@ func TestVariables(t *testing.T) {
 		})
 
 		t.Run("query with variables", func(t *testing.T) {
+			t.Parallel()
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
 				Variables: json.RawMessage(`{"n":1}`),
@@ -345,6 +347,7 @@ func TestVariables(t *testing.T) {
 		})
 
 		t.Run("inline variables", func(t *testing.T) {
+			t.Parallel()
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employee(id:1) { id details { forename surname } } }`,
 			})
@@ -352,6 +355,7 @@ func TestVariables(t *testing.T) {
 		})
 
 		t.Run("invalid number", func(t *testing.T) {
+			t.Parallel()
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
 				Variables: json.RawMessage(`1`),
@@ -362,6 +366,7 @@ func TestVariables(t *testing.T) {
 		})
 
 		t.Run("invalid string", func(t *testing.T) {
+			t.Parallel()
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
 				Variables: json.RawMessage(`"1"`),
@@ -372,6 +377,7 @@ func TestVariables(t *testing.T) {
 		})
 
 		t.Run("invalid boolean", func(t *testing.T) {
+			t.Parallel()
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
 				Variables: json.RawMessage(`true`),
@@ -382,6 +388,7 @@ func TestVariables(t *testing.T) {
 		})
 
 		t.Run("invalid array", func(t *testing.T) {
+			t.Parallel()
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
 				Variables: json.RawMessage(`[]`),
@@ -392,6 +399,7 @@ func TestVariables(t *testing.T) {
 		})
 
 		t.Run("missing", func(t *testing.T) {
+			t.Parallel()
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
 				Variables: json.RawMessage(`{}`),
@@ -402,6 +410,7 @@ func TestVariables(t *testing.T) {
 		})
 
 		t.Run("wrong value variable", func(t *testing.T) {
+			t.Parallel()
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query:     `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
 				Variables: json.RawMessage(`{"criteria":1}`),
@@ -417,6 +426,7 @@ func TestVariablesRemapping(t *testing.T) {
 	t.Parallel()
 
 	t.Run("enabled", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
@@ -452,6 +462,7 @@ func TestVariablesRemapping(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			t.Run("scalar argument type", func(t *testing.T) {
+				t.Parallel()
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query:     `query ($count:Int!) { employee(id:$count) { id } }`,
 					Variables: json.RawMessage(`{"count":1}`),
@@ -460,6 +471,7 @@ func TestVariablesRemapping(t *testing.T) {
 			})
 
 			t.Run("input object argument type - variable argument", func(t *testing.T) {
+				t.Parallel()
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query:     `query ($arg:InputArg!) { rootFieldWithInput(arg: $arg) }`,
 					Variables: json.RawMessage(`{"arg":{"string": "foo"}}`),
@@ -468,6 +480,7 @@ func TestVariablesRemapping(t *testing.T) {
 			})
 
 			t.Run("input object argument type - inline value", func(t *testing.T) {
+				t.Parallel()
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { rootFieldWithInput(arg: {string: "foo"}) }`,
 				})
@@ -477,6 +490,7 @@ func TestVariablesRemapping(t *testing.T) {
 	})
 
 	t.Run("disabled", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.DisableVariablesRemapping = true
@@ -515,6 +529,7 @@ func TestVariablesRemapping(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			t.Run("scalar argument type", func(t *testing.T) {
+				t.Parallel()
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query:     `query ($count:Int!) { employee(id:$count) { id } }`,
 					Variables: json.RawMessage(`{"count":1}`),
@@ -523,6 +538,7 @@ func TestVariablesRemapping(t *testing.T) {
 			})
 
 			t.Run("input object argument type", func(t *testing.T) {
+				t.Parallel()
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query:     `query ($arg:InputArg!) { rootFieldWithInput(arg: $arg) }`,
 					Variables: json.RawMessage(`{"arg":{"string": "foo"}}`),

@@ -4,16 +4,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"math"
 	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -2302,6 +2303,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 		})
 
 		t.Run("validate the evaluation of the body.raw expression for a file upload", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				AccessLogFields: []config.CustomAttribute{
 					{

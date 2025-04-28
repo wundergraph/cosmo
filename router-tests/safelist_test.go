@@ -22,6 +22,7 @@ func TestSafelist(t *testing.T) {
 	)
 
 	t.Run("router fails if APQ and Safelist are both enabled", func(t *testing.T) {
+		t.Parallel()
 		testenv.FailsOnStartup(t, &testenv.Config{
 			ApqConfig: config.AutomaticPersistedQueriesConfig{Enabled: true},
 			RouterOptions: []core.Option{
@@ -35,6 +36,7 @@ func TestSafelist(t *testing.T) {
 	})
 
 	t.Run("safelist should allow a persisted query to run", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
@@ -55,6 +57,7 @@ func TestSafelist(t *testing.T) {
 	})
 
 	t.Run("safelist should allow a persisted query (run with ID) to run", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
@@ -75,6 +78,7 @@ func TestSafelist(t *testing.T) {
 	})
 
 	t.Run("safelist should reject a query with different spacing from the persisted operation", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
@@ -95,6 +99,7 @@ func TestSafelist(t *testing.T) {
 	})
 
 	t.Run("safelist should block a non persisted query", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			ApqConfig: config.AutomaticPersistedQueriesConfig{
 				Enabled: false,
@@ -118,7 +123,9 @@ func TestSafelist(t *testing.T) {
 	})
 
 	t.Run("log unknown operations", func(t *testing.T) {
+		t.Parallel()
 		t.Run("logs non persisted query but allows them to continue", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
 					Enabled: false,
@@ -153,6 +160,7 @@ func TestSafelist(t *testing.T) {
 		})
 
 		t.Run("logs non persisted query and stops them if safelist set", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
 					Enabled: false,
@@ -187,6 +195,7 @@ func TestSafelist(t *testing.T) {
 		})
 
 		t.Run("doesn't log persisted queries and allows them to continue", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
 					Enabled: false,

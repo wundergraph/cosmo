@@ -56,9 +56,10 @@ jobs:
         working-directory: ./router
         run: go mod download
 
-      - name: Run linters on router-tests
-        uses: ./.github/actions/go-linter
+      - name: Run golangci-lint on router-tests
+        uses: golangci/golangci-lint-action@v7
         with:
+          version: v2.0
           working-directory: ./router-tests
 
       - name: Run linters on router

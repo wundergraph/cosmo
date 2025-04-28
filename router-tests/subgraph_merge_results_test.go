@@ -11,6 +11,7 @@ import (
 func TestSubgraphMergeResults(t *testing.T) {
 	t.Parallel()
 	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{sharedThings(numOfA: 1,numOfB: 1) {a b}}`,
@@ -19,6 +20,7 @@ func TestSubgraphMergeResults(t *testing.T) {
 		})
 	})
 	t.Run("first 1 second 2", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{sharedThings(numOfA: 1,numOfB: 2) {a b}}`,
@@ -27,6 +29,7 @@ func TestSubgraphMergeResults(t *testing.T) {
 		})
 	})
 	t.Run("first 2 second 1", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{sharedThings(numOfA: 1,numOfB: 2) {a b}}`,
@@ -35,6 +38,7 @@ func TestSubgraphMergeResults(t *testing.T) {
 		})
 	})
 	t.Run("incompatible types", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
 				Test1: testenv.SubgraphConfig{

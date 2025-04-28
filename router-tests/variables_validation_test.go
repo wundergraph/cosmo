@@ -17,6 +17,7 @@ func TestInputValidation(t *testing.T) {
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		t.Run("valid input", func(t *testing.T) {
+			t.Parallel()
 			header := http.Header{
 				"Content-Type": []string{"application/json"},
 				"Accept":       []string{"application/json"},
@@ -30,6 +31,7 @@ func TestInputValidation(t *testing.T) {
 			require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, string(data))
 		})
 		t.Run("invalid input", func(t *testing.T) {
+			t.Parallel()
 			header := http.Header{
 				"Content-Type": []string{"application/json"},
 				"Accept":       []string{"application/json"},
@@ -49,6 +51,7 @@ func TestInputValidation(t *testing.T) {
 		},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 		t.Run("invalid input with unexposed error values", func(t *testing.T) {
+			t.Parallel()
 			header := http.Header{
 				"Content-Type": []string{"application/json"},
 				"Accept":       []string{"application/json"},

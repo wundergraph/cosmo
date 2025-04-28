@@ -124,14 +124,15 @@ func TestKafkaEvents(t *testing.T) {
 				oldCount := counter.Load()
 				counter.Add(1)
 
-				if oldCount == 0 {
+				switch oldCount {
+				case 0:
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					require.Equal(t, "Invalid message received", gqlErr[0].Message)
-				} else if oldCount == 1 || oldCount == 3 {
+				case 1, 3:
 					require.NoError(t, errValue)
 					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
-				} else if oldCount == 2 {
+				case 2:
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdatedMyKafka.id'.", gqlErr[0].Message)
@@ -278,11 +279,12 @@ func TestKafkaEvents(t *testing.T) {
 
 				employeeID := gjson.GetBytes(dataValue, "employeeUpdatedMyKafka.id").Int()
 
-				if employeeID == 1 {
+				switch employeeID {
+				case 1:
 					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
-				} else if employeeID == 2 {
+				case 2:
 					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(dataValue))
-				} else {
+				default:
 					t.Errorf("unexpected employeeID %d", employeeID)
 				}
 
@@ -298,11 +300,12 @@ func TestKafkaEvents(t *testing.T) {
 
 				employeeID := gjson.GetBytes(dataValue, "employeeUpdatedMyKafka.id").Int()
 
-				if employeeID == 1 {
+				switch employeeID {
+				case 1:
 					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
-				} else if employeeID == 2 {
+				case 2:
 					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(dataValue))
-				} else {
+				default:
 					t.Errorf("unexpected employeeID %d", employeeID)
 				}
 
@@ -988,14 +991,15 @@ func TestKafkaEvents(t *testing.T) {
 				oldCount := counter.Load()
 				counter.Add(1)
 
-				if oldCount == 0 {
+				switch oldCount {
+				case 0:
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					require.Equal(t, "Invalid message received", gqlErr[0].Message)
-				} else if oldCount == 1 || oldCount == 3 {
+				case 1, 3:
 					require.NoError(t, errValue)
 					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(dataValue))
-				} else if oldCount == 2 {
+				case 2:
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdatedMyKafka.id'.", gqlErr[0].Message)

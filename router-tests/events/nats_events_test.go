@@ -172,14 +172,15 @@ func TestNatsEvents(t *testing.T) {
 				oldCount := counter.Load()
 				defer counter.Add(1)
 
-				if oldCount == 0 {
+				switch oldCount {
+				case 0:
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					require.Equal(t, "Invalid message received", gqlErr[0].Message)
-				} else if oldCount == 1 || oldCount == 3 {
+				case 1, 3:
 					require.NoError(t, errValue)
 					require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
-				} else if oldCount == 2 {
+				case 2:
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.", gqlErr[0].Message)
@@ -434,7 +435,7 @@ func TestNatsEvents(t *testing.T) {
 		})
 
 		t.Run("subscribe with closing channel", func(t *testing.T) {
-
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				EnableNats:               true,
@@ -579,13 +580,14 @@ func TestNatsEvents(t *testing.T) {
 						runes := []rune(string(allData))
 
 						for i := 0; i < len(runes); i++ {
-							if runes[i] == '\r' {
+							switch runes[i] {
+							case '\r':
 								// Validate that this is not a stray \r entry
 								if i+1 >= len(runes) || runes[i+1] != '\n' {
 									assert.Fail(t, "Invalid newline detected: '\\r' not followed by '\\n'")
 								}
 								i++
-							} else if runes[i] == '\n' {
+							case '\n':
 								// Validate that this is not a stray \n entry
 								if i == 0 || runes[i-1] != '\r' {
 									assert.Fail(t, "Invalid newline detected: '\\n' not preceded by '\\r'")
@@ -1670,18 +1672,19 @@ func TestNatsEvents(t *testing.T) {
 					return oldCount == produced.Load()-1
 				}, NatsWaitTimeout, time.Millisecond*100)
 
-				if oldCount == 0 {
+				switch oldCount {
+				case 0:
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					assert.Equal(t, "Invalid message received", gqlErr[0].Message)
-				} else if oldCount == 1 {
+				case 1:
 					assert.NoError(t, errValue)
 					assert.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
-				} else if oldCount == 2 {
+				case 2:
 					var gqlErr graphql.Errors
 					require.ErrorAs(t, errValue, &gqlErr)
 					assert.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.", gqlErr[0].Message)
-				} else if oldCount == 3 {
+				case 3:
 					assert.NoError(t, errValue)
 					assert.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(dataValue))
 				}

@@ -191,6 +191,7 @@ func TestForwardHeaders(t *testing.T) {
 			for _, c := range cases {
 				headerName := c.headerName
 				t.Run(c.testName, func(t *testing.T) {
+					t.Parallel()
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Header: http.Header{
 							headerName: []string{headerValue},
@@ -296,7 +297,7 @@ func TestForwardHeaders(t *testing.T) {
 			for _, c := range cases {
 				c := c
 				t.Run(c.testName, func(t *testing.T) {
-
+					t.Parallel()
 					header := http.Header{
 						c.headerName: []string{headerValue},
 					}
@@ -364,6 +365,7 @@ func TestForwardHeaders(t *testing.T) {
 			for _, c := range cases {
 				c := c
 				t.Run(c.testName, func(t *testing.T) {
+					t.Parallel()
 					header1 := http.Header{
 						c.headerName: []string{headerValue},
 					}
@@ -468,6 +470,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 				log.Println(c.testName, c.headerName, c.headerRename)
 				log.Println(headerName, headerValue)
 				t.Run(c.testName, func(t *testing.T) {
+					t.Parallel()
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Header: http.Header{
 							headerName: []string{headerValue},
@@ -523,7 +526,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 			for _, c := range cases {
 				c := c
 				t.Run(c.testName, func(t *testing.T) {
-
+					t.Parallel()
 					header := http.Header{
 						c.headerName: []string{headerValue},
 					}
@@ -591,6 +594,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 			for _, c := range cases {
 				c := c
 				t.Run(c.testName, func(t *testing.T) {
+					t.Parallel()
 					header1 := http.Header{
 						c.headerName: []string{headerValue},
 					}

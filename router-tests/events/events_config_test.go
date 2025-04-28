@@ -1,10 +1,11 @@
 package events_test
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"testing"
 )
 
 func TestEventsConfig(t *testing.T) {
@@ -13,6 +14,7 @@ func TestEventsConfig(t *testing.T) {
 	}
 
 	t.Run("kafka provider not specified in the router configuration", func(t *testing.T) {
+		t.Parallel()
 		err := testenv.RunWithError(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsJSONTemplate,
 			EnableNats:               true,
@@ -27,6 +29,7 @@ func TestEventsConfig(t *testing.T) {
 	})
 
 	t.Run("nats provider not specified in the router configuration", func(t *testing.T) {
+		t.Parallel()
 		err := testenv.RunWithError(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsJSONTemplate,
 			EnableNats:               false,

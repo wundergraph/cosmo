@@ -775,6 +775,8 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 			for _, prefix := range authenticator1HeaderValuePrefixes {
 				prefix := prefix
 				t.Run("prefix "+prefix, func(t *testing.T) {
+					t.Parallel()
+
 					token, err := authServer1.Token(nil)
 					require.NoError(t, err)
 					header := http.Header{
@@ -804,6 +806,8 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 			for _, prefix := range authenticator2HeaderValuePrefixes {
 				prefix := prefix
 				t.Run("prefix "+prefix, func(t *testing.T) {
+					t.Parallel()
+
 					token, err := authServer2.Token(nil)
 					require.NoError(t, err)
 					header := http.Header{
@@ -875,6 +879,8 @@ func TestAlgorithmMismatch(t *testing.T) {
 	}
 
 	t.Run("should prevent access with invalid algorithm", func(t *testing.T) {
+		t.Parallel()
+
 		// create a crypto for RSA
 		rsaCrypto, err := jwks.NewRSACrypto("", jwkset.AlgRS256, 2048)
 		require.NoError(t, err)

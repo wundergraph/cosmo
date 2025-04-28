@@ -1,0 +1,27 @@
+version: "2"
+linters:
+  enable:
+    - errcheck
+    - paralleltest
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+  settings:
+    errcheck:
+      exclude-functions:
+        - (io.ReadCloser).Close
+        - (*net/http.Server).Close
+        - (net/http.ResponseWriter).Write
+        - (*github.com/gorilla/websocket.Conn).Close
+        - (*compress/gzip.Reader).Close
+        - (io.Closer).Close
+        - (*mime/multipart.Writer).Close
+    paralleltest:
+      ignore-missing: false
+      ignore-missing-subtests: false
+  exclusions:
+    rules:
+      - path: "lifecycle/shutdown_test.go"
+        linters:
+          - paralleltest

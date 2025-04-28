@@ -306,17 +306,8 @@ func TestBlockOperations(t *testing.T) {
 
 				// Positive test
 
-				token, err := authServer.Token(map[string]any{
-					"scope": "read:all",
-				})
-				require.NoError(t, err)
-
-				header := http.Header{
-					"Authorization": []string{"Bearer " + token},
-				}
-
 				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-				err = conn.WriteJSON(&testenv.WebSocketMessage{
+				err := conn.WriteJSON(&testenv.WebSocketMessage{
 					ID:      "1",
 					Type:    "subscribe",
 					Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
@@ -339,12 +330,12 @@ func TestBlockOperations(t *testing.T) {
 
 				// Negative test
 
-				token, err = authServer.Token(map[string]any{
+				token, err := authServer.Token(map[string]any{
 					"scope": "read:block",
 				})
 				require.NoError(t, err)
 
-				header = http.Header{
+				header := http.Header{
 					"Authorization": []string{"Bearer " + token},
 				}
 
@@ -402,17 +393,8 @@ func TestBlockOperations(t *testing.T) {
 
 				// Positive test
 
-				token, err := authServer.Token(map[string]any{
-					"scope": "read:all",
-				})
-				require.NoError(t, err)
-
-				header := http.Header{
-					"Authorization": []string{"Bearer " + token},
-				}
-
 				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-				err = conn.WriteJSON(&testenv.WebSocketMessage{
+				err := conn.WriteJSON(&testenv.WebSocketMessage{
 					ID:      "1",
 					Type:    "subscribe",
 					Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
@@ -435,12 +417,12 @@ func TestBlockOperations(t *testing.T) {
 
 				// Negative test
 
-				token, err = authServer.Token(map[string]any{
+				token, err := authServer.Token(map[string]any{
 					"scope": "read:block",
 				})
 				require.NoError(t, err)
 
-				header = http.Header{
+				header := http.Header{
 					"Authorization": []string{"Bearer " + token},
 				}
 
@@ -470,6 +452,7 @@ func TestBlockOperations(t *testing.T) {
 		t.Parallel()
 
 		t.Run("should allow operations", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.BlockNonPersistedOperations = config.BlockOperationConfiguration{

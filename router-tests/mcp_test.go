@@ -12,9 +12,10 @@ import (
 )
 
 func TestMCP(t *testing.T) {
-
 	t.Run("Discovery", func(t *testing.T) {
+		t.Parallel()
 		t.Run("List default discovery Tools", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				MCP: config.MCPConfiguration{
 					Enabled: true,
@@ -40,6 +41,7 @@ func TestMCP(t *testing.T) {
 		})
 
 		t.Run("List optional discovery tools", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				MCP: config.MCPConfiguration{
 					Enabled: true,
@@ -100,6 +102,7 @@ func TestMCP(t *testing.T) {
 		})
 
 		t.Run("List User Operations", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				MCP: config.MCPConfiguration{
 					Enabled: true,
@@ -120,6 +123,7 @@ func TestMCP(t *testing.T) {
 			})
 
 			t.Run("List user Operations / Static operations of type mutation aren't exposed when excludeMutations is set", func(t *testing.T) {
+				t.Parallel()
 				testenv.Run(t, &testenv.Config{
 					MCP: config.MCPConfiguration{
 						Enabled:          true,
@@ -146,6 +150,7 @@ func TestMCP(t *testing.T) {
 			})
 
 			t.Run("Execute Operation Info", func(t *testing.T) {
+				t.Parallel()
 				testenv.Run(t, &testenv.Config{
 					MCP: config.MCPConfiguration{
 						Enabled:   true,
@@ -177,7 +182,9 @@ func TestMCP(t *testing.T) {
 			})
 
 			t.Run("Execute Query", func(t *testing.T) {
+				t.Parallel()
 				t.Run("Execute operation of type query with valid input", func(t *testing.T) {
+					t.Parallel()
 					testenv.Run(t, &testenv.Config{
 						MCP: config.MCPConfiguration{
 							Enabled: true,
@@ -207,6 +214,7 @@ func TestMCP(t *testing.T) {
 				})
 
 				t.Run("Execute operation of type query with invalid input", func(t *testing.T) {
+					t.Parallel()
 					testenv.Run(t, &testenv.Config{
 						MCP: config.MCPConfiguration{
 							Enabled: true,
@@ -233,7 +241,9 @@ func TestMCP(t *testing.T) {
 			})
 
 			t.Run("Execute Mutation", func(t *testing.T) {
+				t.Parallel()
 				t.Run("Execute operation of type mutation with valid input", func(t *testing.T) {
+					t.Parallel()
 					testenv.Run(t, &testenv.Config{
 						MCP: config.MCPConfiguration{
 							Enabled: true,
@@ -264,7 +274,9 @@ func TestMCP(t *testing.T) {
 			})
 
 			t.Run("Developer Tools", func(t *testing.T) {
+				t.Parallel()
 				t.Run("Execute an arbitrary query", func(t *testing.T) {
+					t.Parallel()
 					testenv.Run(t, &testenv.Config{
 						MCP: config.MCPConfiguration{
 							Enabled:                   true,
@@ -301,6 +313,7 @@ func TestMCP(t *testing.T) {
 				})
 
 				t.Run("Get the full graph schema of the base graph", func(t *testing.T) {
+					t.Parallel()
 					testenv.Run(t, &testenv.Config{
 						MCP: config.MCPConfiguration{
 							Enabled:      true,

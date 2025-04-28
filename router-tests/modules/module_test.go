@@ -16,6 +16,7 @@ import (
 )
 
 func TestModuleSetCustomHeader(t *testing.T) {
+	t.Parallel()
 	cfg := config.Config{
 		Graph: config.Graph{},
 		Modules: map[string]interface{}{
@@ -44,6 +45,7 @@ func TestModuleSetCustomHeader(t *testing.T) {
 }
 
 func TestCustomModuleLogs(t *testing.T) {
+	t.Parallel()
 	cfg := config.Config{
 		Graph: config.Graph{},
 		Modules: map[string]interface{}{

@@ -748,6 +748,7 @@ func TestCacheWarmup(t *testing.T) {
 		})
 
 		t.Run("should correctly also warm the feature flag cache", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{

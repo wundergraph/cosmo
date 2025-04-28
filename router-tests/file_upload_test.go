@@ -22,6 +22,7 @@ func TestSingleFileUpload(t *testing.T) {
 	t.Parallel()
 
 	t.Run("variable name file", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			fileContent := bytes.Repeat([]byte("a"), 1024)
 			files := []testenv.FileUpload{{VariablesPath: "variables.file", FileContent: fileContent}}
@@ -35,6 +36,7 @@ func TestSingleFileUpload(t *testing.T) {
 	})
 
 	t.Run("variable name whatever", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			fileContent := bytes.Repeat([]byte("a"), 1024)
 			files := []testenv.FileUpload{{VariablesPath: "variables.whatever", FileContent: fileContent}}
@@ -48,7 +50,9 @@ func TestSingleFileUpload(t *testing.T) {
 	})
 
 	t.Run("nested file uploads", func(t *testing.T) {
+		t.Parallel()
 		t.Run("nested on a first level - no remap", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 					engineExecutionConfiguration.DisableVariablesRemapping = true
@@ -66,6 +70,7 @@ func TestSingleFileUpload(t *testing.T) {
 		})
 
 		t.Run("nested on a first level - with remap", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 					engineExecutionConfiguration.DisableVariablesRemapping = false
@@ -83,6 +88,7 @@ func TestSingleFileUpload(t *testing.T) {
 		})
 
 		t.Run("nested on a second level - with remap", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 					engineExecutionConfiguration.DisableVariablesRemapping = false
@@ -101,6 +107,7 @@ func TestSingleFileUpload(t *testing.T) {
 		})
 
 		t.Run("nested on a third level - with remap", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 					engineExecutionConfiguration.DisableVariablesRemapping = false
@@ -119,6 +126,7 @@ func TestSingleFileUpload(t *testing.T) {
 		})
 
 		t.Run("nested on a third level - with remap", func(t *testing.T) {
+			t.Parallel()
 			t.Skip("not implemented")
 
 			testenv.Run(t, &testenv.Config{
@@ -145,6 +153,7 @@ func TestSingleFileUploadWithCompression(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Uploading file without compressed body should return 422", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
@@ -173,6 +182,7 @@ func TestSingleFileUploadWithCompression(t *testing.T) {
 	})
 
 	t.Run("Uploading file with compressed body should return 200", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
@@ -313,7 +323,9 @@ func TestMultipleFilesUpload(t *testing.T) {
 	t.Parallel()
 
 	t.Run("variables remapping enabled", func(t *testing.T) {
+		t.Parallel()
 		t.Run("variable name files", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 				files := []testenv.FileUpload{
 					{VariablesPath: "variables.files.0", FileContent: []byte("Contents of first file")},
@@ -330,7 +342,9 @@ func TestMultipleFilesUpload(t *testing.T) {
 		})
 
 		t.Run("list of files", func(t *testing.T) {
+			t.Parallel()
 			t.Run("nested on a second level - with remap", func(t *testing.T) {
+				t.Parallel()
 				testenv.Run(t, &testenv.Config{
 					ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 						engineExecutionConfiguration.DisableVariablesRemapping = false
@@ -352,6 +366,7 @@ func TestMultipleFilesUpload(t *testing.T) {
 			})
 
 			t.Run("in a variables no remap", func(t *testing.T) {
+				t.Parallel()
 				testenv.Run(t, &testenv.Config{
 					ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 						engineExecutionConfiguration.DisableVariablesRemapping = false
@@ -375,7 +390,9 @@ func TestMultipleFilesUpload(t *testing.T) {
 	})
 
 	t.Run("variables remapping disabled", func(t *testing.T) {
+		t.Parallel()
 		t.Run("variable name files", func(t *testing.T) {
+			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 					engineExecutionConfiguration.DisableVariablesRemapping = true
@@ -396,7 +413,9 @@ func TestMultipleFilesUpload(t *testing.T) {
 		})
 
 		t.Run("list of files", func(t *testing.T) {
+			t.Parallel()
 			t.Run("nested on a second level - with remap", func(t *testing.T) {
+				t.Parallel()
 				testenv.Run(t, &testenv.Config{
 					ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 						engineExecutionConfiguration.DisableVariablesRemapping = true
@@ -418,6 +437,7 @@ func TestMultipleFilesUpload(t *testing.T) {
 			})
 
 			t.Run("in a variables no remap", func(t *testing.T) {
+				t.Parallel()
 				testenv.Run(t, &testenv.Config{
 					ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 						engineExecutionConfiguration.DisableVariablesRemapping = true
