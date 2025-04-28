@@ -147,6 +147,10 @@ telemetry:
       exclude_metric_labels: []
       exclude_scope_info: true
 
+      schema_usage:
+        enabled: true
+        include_operation_sha: false
+
 cache_control_policy:
   enabled: true
   value: "max-age=180, public"
