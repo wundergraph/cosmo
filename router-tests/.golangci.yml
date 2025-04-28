@@ -1,12 +1,7 @@
 version: "2"
 linters:
   enable:
-    - errcheck
     - paralleltest
-    - govet
-    - staticcheck
-    - ineffassign
-    - unused
   settings:
     errcheck:
       exclude-functions:
