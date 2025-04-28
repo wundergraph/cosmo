@@ -39,7 +39,6 @@ export function getChecksByFederatedGraphName(
         },
         checks: [],
         checksCountBasedOnDateRange: 0,
-        hasChecks: false,
       };
     }
 
@@ -47,10 +46,9 @@ export function getChecksByFederatedGraphName(
       organizationId: authContext.organizationId,
       featureId: 'breaking-change-retention',
     });
-
-    const maxNumberOfDays = breakingChangeRetention?.limit ?? 7;
+    
     const { dateRange } = validateDateRanges({
-      limit: maxNumberOfDays,
+      limit: breakingChangeRetention?.limit ?? 7,
       dateRange: {
         start: req.startDate,
         end: req.endDate,
@@ -65,7 +63,6 @@ export function getChecksByFederatedGraphName(
         },
         checks: [],
         checksCountBasedOnDateRange: 0,
-        hasChecks: false,
       };
     }
 
@@ -78,7 +75,6 @@ export function getChecksByFederatedGraphName(
         },
         checks: [],
         checksCountBasedOnDateRange: 0,
-        hasChecks: false,
       };
     }
 
@@ -93,19 +89,6 @@ export function getChecksByFederatedGraphName(
       includeSubgraphs,
     });
 
-    let totalChecksCount = 0;
-    // fetch the total checks count, only if the checks count based on the date range is 0
-    // this is to avoid fetching the total checks count when the count based on the date range is not 0
-    // as its only used to determine if the federated graph has checks
-    if (checksData.checksCount === 0) {
-      const now = new Date();
-      totalChecksCount = await subgraphRepo.getChecksCount({
-        federatedGraphTargetId: federatedGraph.targetId,
-        // we are fetching the checks count for the last number of days based on the org limit.
-        startDate: subDays(now, maxNumberOfDays).toISOString(),
-        endDate: now.toISOString(),
-      });
-    }
 
     return {
       response: {
@@ -113,7 +96,6 @@ export function getChecksByFederatedGraphName(
       },
       checks: checksData.checks,
       checksCountBasedOnDateRange: checksData.checksCount,
-      hasChecks: checksData.checksCount > 0 ? true : totalChecksCount > 0,
     };
   });
 }

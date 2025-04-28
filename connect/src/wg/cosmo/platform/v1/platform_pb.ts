@@ -3874,14 +3874,6 @@ export class GetChecksByFederatedGraphNameResponse extends Message<GetChecksByFe
    */
   checksCountBasedOnDateRange = 0;
 
-  /**
-   * this determines that the federated graph has checks
-   * this is for scenarios where the selecetd date ranges return 0 checks
-   *
-   * @generated from field: bool hasChecks = 5;
-   */
-  hasChecks = false;
-
   constructor(data?: PartialMessage<GetChecksByFederatedGraphNameResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3893,7 +3885,6 @@ export class GetChecksByFederatedGraphNameResponse extends Message<GetChecksByFe
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "checks", kind: "message", T: SchemaCheck, repeated: true },
     { no: 3, name: "checksCountBasedOnDateRange", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 5, name: "hasChecks", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChecksByFederatedGraphNameResponse {
