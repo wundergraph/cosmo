@@ -276,7 +276,7 @@ func writeMultipartError(
 	// before, some clients that rely on both CR and LF strictly to parse blocks were broken and not parsing our
 	// multipart chunks correctly. With this fix here (and in a few other places) the clients are now working.
 	resp = append(resp, []byte("\r\n--graphql--")...)
- 
+
 	if _, err := w.Write([]byte(resp)); err != nil {
 		return err
 	}
@@ -312,6 +312,7 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 	case errors.As(err, &httpErr):
 		writeRequestErrors(r, w, httpErr.StatusCode(), requestErrorsFromHttpError(httpErr), requestLogger)
 	case errors.As(err, &poNotFoundErr):
+		w.Header().Set("Cache-Control", "no-cache")
 		newErr := NewHttpGraphqlError("PersistedQueryNotFound", "PERSISTED_QUERY_NOT_FOUND", http.StatusOK)
 		writeRequestErrors(r, w, http.StatusOK, requestErrorsFromHttpError(newErr), requestLogger)
 	case errors.As(err, &reportErr):

@@ -1,16 +1,78 @@
 package integration
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
+
+func TestCacheControl(t *testing.T) {
+	t.Run("Unreachable subgraph causes no-cache", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			CacheControlPolicy: config.CacheControlPolicy{
+				Enabled: true,
+				Value:   "max-age=300",
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Products: testenv.SubgraphConfig{
+					CloseOnStart: true,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id details { forename surname } notes } }`,
+			})
+
+			assert.Equal(t, "no-cache", res.Response.Header.Get("Cache-Control"))
+			assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
+		})
+	})
+
+	t.Run("PERSISTED_QUERY_NOT_FOUND causes no-cache", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			CacheControlPolicy: config.CacheControlPolicy{
+				Enabled: true,
+				Value:   "max-age=300",
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Make request that triggers PERSISTED_QUERY_NOT_FOUND error
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:      "", // Empty query
+				Variables:  json.RawMessage(`{}`),
+				Extensions: json.RawMessage(`{"persistedQuery": {"version": 1, "sha256Hash": "invalid-hash"}}`),
+			})
+
+			require.Contains(t, res.Body, "PERSISTED_QUERY_NOT_FOUND")
+			require.Equal(t, "no-cache", res.Response.Header.Get("Cache-Control"))
+		})
+	})
+
+	t.Run("Erroring subgraph response causes no-cache", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			CacheControlPolicy: config.CacheControlPolicy{
+				Enabled: true,
+				Value:   "max-age=300",
+			},
+			Subgraphs: testenv.SubgraphsConfig{},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employee(id: 1) { id rootFieldThrowsError } }`,
+			})
+
+			assert.Equal(t, "no-cache", res.Response.Header.Get("Cache-Control"))
+			assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'.","extensions":{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"],"extensions":{"code":"ERROR_CODE"}}],"statusCode":200}}],"data":{"employee":{"id":1,"rootFieldThrowsError":null}}}`, res.Body)
+		})
+	})
+}
 
 func TestHeaderPropagation(t *testing.T) {
 	t.Parallel()
@@ -703,6 +765,7 @@ func TestHeaderPropagation(t *testing.T) {
 				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 			})
 		})
+
 		t.Run("set operation can override cache control policies", func(t *testing.T) {
 			t.Parallel()
 			t.Run("global set operation", func(t *testing.T) {
@@ -763,6 +826,23 @@ func TestHeaderPropagation(t *testing.T) {
 					require.Equal(t, "my-fake-value", cc)
 					require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 				})
+			})
+		})
+
+		t.Run("Successful query gets appropriate cache header", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				// Configure a specific cache control policy
+				CacheControlPolicy: config.CacheControlPolicy{
+					Enabled: true,
+					Value:   "max-age=300",
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				require.Equal(t, "max-age=300", res.Response.Header.Get("Cache-Control")) // no-cache because of the error
+				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 			})
 		})
 	})
