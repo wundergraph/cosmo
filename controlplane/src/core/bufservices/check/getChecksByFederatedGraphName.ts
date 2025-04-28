@@ -6,6 +6,7 @@ import {
   GetChecksByFederatedGraphNameRequest,
   GetChecksByFederatedGraphNameResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { subDays } from 'date-fns';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
@@ -47,8 +48,9 @@ export function getChecksByFederatedGraphName(
       featureId: 'breaking-change-retention',
     });
 
+    const maxNumberOfDays = breakingChangeRetention?.limit ?? 7;
     const { dateRange } = validateDateRanges({
-      limit: breakingChangeRetention?.limit ?? 7,
+      limit: maxNumberOfDays,
       dateRange: {
         start: req.startDate,
         end: req.endDate,
@@ -91,7 +93,14 @@ export function getChecksByFederatedGraphName(
       includeSubgraphs,
     });
 
-    const totalChecksCount = await subgraphRepo.getChecksCount({ federatedGraphTargetId: federatedGraph.targetId });
+    const now = new Date();
+    const totalChecksCount = await subgraphRepo.getChecksCount({
+      federatedGraphTargetId: federatedGraph.targetId,
+      federatedGraphId: federatedGraph.id,
+      // we are fetching the checks count for the last number of days based on the org limit.
+      startDate: subDays(now, maxNumberOfDays).toISOString(),
+      endDate: now.toISOString(),
+    });
 
     return {
       response: {
