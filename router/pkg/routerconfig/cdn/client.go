@@ -40,7 +40,6 @@ type Options struct {
 	Logger                     *zap.Logger
 	SignatureKey               string
 	RouterCompatibilityVersion int
-	UseDemoConfig              bool
 }
 
 type Client struct {
@@ -56,7 +55,6 @@ type Client struct {
 	logger                     *zap.Logger
 	hash                       hash.Hash
 	routerCompatibilityVersion int
-	useDemoConfig              bool
 }
 
 type routerConfigNotFoundError struct {
@@ -106,7 +104,6 @@ func NewClient(endpoint string, token string, opts *Options) (routerconfig.Clien
 		httpClient:                 httpclient.NewRetryableHTTPClient(logger),
 		logger:                     opts.Logger,
 		routerCompatibilityVersion: opts.RouterCompatibilityVersion,
-		useDemoConfig:              opts.UseDemoConfig,
 	}
 
 	if opts.SignatureKey != "" {

@@ -17,9 +17,8 @@ import (
 type Option func(*Client)
 
 type Client struct {
-	client        *minio.Client
-	options       *ClientOptions
-	useDemoConfig bool
+	client  *minio.Client
+	options *ClientOptions
 }
 
 type ClientOptions struct {
@@ -31,10 +30,9 @@ type ClientOptions struct {
 	ObjectPath      string
 }
 
-func NewClient(endpoint string, options *ClientOptions, useDemoConfig bool) (routerconfig.Client, error) {
+func NewClient(endpoint string, options *ClientOptions) (routerconfig.Client, error) {
 	client := &Client{
-		options:       options,
-		useDemoConfig: useDemoConfig,
+		options: options,
 	}
 
 	// The providers credential chain is used to allow multiple authentication methods.
