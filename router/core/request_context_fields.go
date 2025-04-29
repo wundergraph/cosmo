@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"net/http"
 	"strconv"
 	"time"
@@ -95,6 +96,7 @@ func RouterAccessLogsFieldHandler(
 	passedErr any,
 	request *http.Request,
 	responseHeader *http.Header,
+	_ *expr.Context,
 ) []zapcore.Field {
 	resFields := make([]zapcore.Field, 0, len(attributes))
 
@@ -112,12 +114,13 @@ func SubgraphAccessLogsFieldHandler(
 	passedErr any,
 	request *http.Request,
 	responseHeader *http.Header,
+	overrideExprContext *expr.Context,
 ) []zapcore.Field {
 	resFields := make([]zapcore.Field, 0, len(attributes))
 
 	reqContext, resFields := processRequestIDField(request, resFields)
 	resFields = processCustomAttributes(attributes, responseHeader, resFields, request, reqContext, passedErr)
-	resFields = processExpressionAttributes(logger, exprAttributes, reqContext, resFields)
+	resFields = processSubgraphExpressionAttributes(logger, exprAttributes, reqContext, resFields, overrideExprContext)
 
 	return resFields
 }
@@ -136,6 +139,30 @@ func processRequestIDField(request *http.Request, resFields []zapcore.Field) (*r
 	}
 
 	return reqContext, resFields
+}
+
+func processSubgraphExpressionAttributes(
+	logger *zap.Logger,
+	exprAttributes []requestlogger.ExpressionAttribute,
+	reqContext *requestContext,
+	resFields []zapcore.Field,
+	overrideExprContext *expr.Context,
+) []zapcore.Field {
+	// If the request context was processed as nil (e.g. :- request was nil in the caller)
+	// do not proceed to process exprAttributes
+	if reqContext == nil {
+		return resFields
+	}
+
+	for _, exprField := range exprAttributes {
+		result, err := expr.ResolveAnyExpression(exprField.Expr, *overrideExprContext)
+		if err != nil {
+			logger.Error("unable to process expression for access logs", zap.String("fieldKey", exprField.Key), zap.Error(err))
+			continue
+		}
+		resFields = append(resFields, NewExpressionLogField(result, exprField.Key, exprField.Default))
+	}
+	return resFields
 }
 
 func processExpressionAttributes(logger *zap.Logger, exprAttributes []requestlogger.ExpressionAttribute, reqContext *requestContext, resFields []zapcore.Field) []zapcore.Field {

@@ -100,15 +100,12 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 	// TODO: Note: This copy still points to the same maps like requestClaims etc
 	exprCopy := reqContext.expressionContext
 	exprCopy.Subgraph = expr.Subgraph{
-		Id:   ds.ID,
-		Name: ds.Name,
-		Trace: expr.SubgraphTrace{
-			// TODO: Decide if we are going to go with map or direct attributes here
-			Attributes: make(map[string]any),
-		},
+		Id:        ds.ID,
+		Name:      ds.Name,
+		Operation: expr.SubgraphOperation{},
 	}
 
-	ctx = context.WithValue(ctx, expr.SubgraphExpressionContextKey{}, exprCopy)
+	ctx = context.WithValue(ctx, expr.SubgraphExpressionContextKey{}, &exprCopy)
 
 	ctx, _ = f.tracer.Start(ctx, "Engine - Fetch",
 		trace.WithAttributes([]attribute.KeyValue{
@@ -161,30 +158,29 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	traceAttrs = append(traceAttrs, commonAttrs...)
 
 	subgraphRequestExpr := expr.GetSubgraphExpressionContext(ctx)
-	if subgraphRequestExpr != nil {
-		subgraphRequestExpr.Subgraph.Error = responseInfo.Err
+	subgraphRequestExpr.Subgraph.Error = responseInfo.Err
 
-		for key, expression := range f.mappedSubgraphExpressions {
-			result, err := expr.ResolveAnyExpression(expression, *subgraphRequestExpr)
-			if err != nil {
-				// If the expression fails, we don't want to add it to the attributes
-				// but not block
-				continue
-			}
+	for key, expression := range f.mappedSubgraphExpressions {
+		exprCtx := *subgraphRequestExpr
+		result, err := expr.ResolveAnyExpression(expression, exprCtx)
+		if err != nil {
+			// If the expression fails, we don't want to add it to the attributes
+			// but not block
+			continue
+		}
 
-			// TODO: Consider asking the user explicitly figuring out the type
-			// will need to test for ptr types also, to optimize
-			if result != nil && result != "" {
-				switch val := result.(type) {
-				case string:
-					traceAttrs = append(traceAttrs, attribute.String(key, val))
-				case *string:
-					traceAttrs = append(traceAttrs, attribute.String(key, *val))
-				case bool:
-					traceAttrs = append(traceAttrs, attribute.Bool(key, val))
-				case *bool:
-					traceAttrs = append(traceAttrs, attribute.Bool(key, *val))
-				}
+		// TODO: Consider asking the user explicitly figuring out the type
+		// will need to test for ptr types also, to optimize
+		if result != nil && result != "" {
+			switch val := result.(type) {
+			case string:
+				traceAttrs = append(traceAttrs, attribute.String(key, val))
+			case *string:
+				traceAttrs = append(traceAttrs, attribute.String(key, *val))
+			case bool:
+				traceAttrs = append(traceAttrs, attribute.Bool(key, val))
+			case *bool:
+				traceAttrs = append(traceAttrs, attribute.Bool(key, *val))
 			}
 		}
 	}
@@ -205,7 +201,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		}
 		path := ds.Name
 		if responseInfo.Request != nil {
-			fields = append(fields, f.accessLogger.RequestFields(responseInfo, fields)...)
+			fields = append(fields, f.accessLogger.RequestFields(responseInfo, subgraphRequestExpr)...)
 			if responseInfo.Request.URL != nil {
 				path = responseInfo.Request.URL.Path
 			}

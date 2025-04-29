@@ -981,11 +981,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			TracePropagators:              s.compositePropagator,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
-			RequestTransportTraceOptions: RequestTransportTraceOptions{
-				// TODO: Change hardcoded to detect using visitor basedg
-				// on if anyone used trace in any expressions
-				Enabled: true,
-			},
+			VisitorManager:                exprManager.VisitorManager,
 		},
 	}
 

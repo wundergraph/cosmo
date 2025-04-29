@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/expr-lang/expr/file"
-	"github.com/wundergraph/cosmo/router/pkg/authentication"
 )
 
 /**
@@ -96,16 +97,125 @@ type RequestAuth struct {
 	Scopes          []string       `expr:"scopes"`
 }
 
-// Subgraph Related
-type Subgraph struct {
-	Name  string        `expr:"name"`
-	Id    string        `expr:"id"`
-	Error error         `expr:"error"`
+type SubgraphOperation struct {
 	Trace SubgraphTrace `expr:"trace"`
 }
 
+type SubgraphConnection struct {
+	Create   CreateSubgraphConnection   `expr:"create"`
+	Acquired AcquiredSubgraphConnection `expr:"acquired"`
+	PutIdle  PutIdleConnection          `expr:"putIdle"`
+}
+
+type SubgraphDNS struct {
+	Start SubgraphDNSStart `expr:"start"`
+	Done  SubgraphDNSDone  `expr:"done"`
+}
+
+type SubgraphDNSStart struct {
+	Time time.Time `expr:"time"`
+	Host string    `expr:"host"`
+}
+
+type SubgraphDNSDone struct {
+	Time      time.Time `expr:"time"`
+	Addresses []string  `expr:"addresses"`
+	Coalesced bool      `expr:"coalesced"`
+	Error     error     `expr:"error"`
+}
+
+type SubgraphTLS struct {
+	Start SubgraphTLSStart `expr:"start"`
+	Done  SubgraphTLSDone  `expr:"done"`
+}
+
+type SubgraphTLSStart struct {
+	Time time.Time `expr:"time"`
+}
+
+type SubgraphTLSDone struct {
+	Time        time.Time `expr:"time"`
+	Complete    bool      `expr:"complete"`
+	CipherSuite string    `expr:"cipherSuite"`
+	DidResume   bool      `expr:"didResume"`
+	Version     string    `expr:"version"`
+	Error       error     `expr:"error"`
+}
+
+type SubgraphDial struct {
+	Start SubgraphConnectStart `expr:"start"`
+	Done  SubgraphConnectDone  `expr:"done"`
+}
+
+type SubgraphConnectStart struct {
+	Time    time.Time `expr:"time"`
+	Network string    `expr:"network"`
+	Address string    `expr:"address"`
+}
+
+type SubgraphConnectDone struct {
+	Time    time.Time `expr:"time"`
+	Network string    `expr:"network"`
+	Address string    `expr:"address"`
+	Error   error     `expr:"error"`
+}
+
+type SubgraphRequest struct {
+	Headers         SubgraphRequestHeaders  `expr:"headers"`
+	Wait100Continue SubgraphWait100Continue `expr:"wait100Continue"`
+	WroteRequest    SubgraphWroteRequest    `expr:"wroteRequest"`
+}
+
+type SubgraphRequestHeaders struct {
+	Time time.Time `expr:"time"`
+}
+
+type SubgraphWait100Continue struct {
+	Time time.Time `expr:"time"`
+}
+
+type SubgraphWroteRequest struct {
+	Time  time.Time `expr:"time"`
+	Error error     `expr:"error"`
+}
+
+type SubgraphResponse struct {
+	FirstByte time.Time `expr:"firstByte"`
+	Continue  time.Time `expr:"continue"`
+}
+
+type AcquiredSubgraphConnection struct {
+	Time     time.Time     `expr:"time"`
+	Reused   bool          `expr:"reused"`
+	WasIdle  bool          `expr:"wasIdle"`
+	IdleTime time.Duration `expr:"idleTime"`
+}
+
+type CreateSubgraphConnection struct {
+	Time     time.Time `expr:"time"`
+	HostPort string    `expr:"hostPort"`
+}
+
+type PutIdleConnection struct {
+	Time  time.Time `expr:"time"`
+	Error error     `expr:"error"`
+}
+
 type SubgraphTrace struct {
-	Attributes map[string]any `expr:"attributes"`
+	Connection SubgraphConnection `expr:"conn"`
+	DNS        SubgraphDNS        `expr:"dns"`
+	TLS        SubgraphTLS        `expr:"tls"`
+	Dial       SubgraphDial       `expr:"dial"`
+	Request    SubgraphRequest    `expr:"request"`
+	Response   SubgraphResponse   `expr:"response"`
+}
+
+// Subgraph Related
+type Subgraph struct {
+	Name      string            `expr:"name"`
+	Id        string            `expr:"id"`
+	Error     error             `expr:"error"`
+	Operation SubgraphOperation `expr:"operation"`
 }
 
 // Get returns the value of the header with the given key. If the header is not present, an empty string is returned.
@@ -171,8 +281,5 @@ func handleExpressionError(err error) error {
 }
 
 func GetSubgraphExpressionContext(ctx context.Context) *Context {
-	if v, ok := ctx.Value(SubgraphExpressionContextKey{}).(Context); ok {
-		return &v
-	}
-	return nil
+	return ctx.Value(SubgraphExpressionContextKey{}).(*Context)
 }

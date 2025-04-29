@@ -1,6 +1,7 @@
 package requestlogger
 
 import (
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
@@ -46,7 +47,7 @@ func NewSubgraphAccessLogger(logger *zap.Logger, opts SubgraphOptions) *Subgraph
 	}
 }
 
-func (h *SubgraphAccessLogger) RequestFields(respInfo *resolve.ResponseInfo, subgraphFields []zap.Field) []zap.Field {
+func (h *SubgraphAccessLogger) RequestFields(respInfo *resolve.ResponseInfo, overrideExprCtx *expr.Context) []zap.Field {
 	if respInfo == nil {
 		return []zap.Field{}
 	}
@@ -56,7 +57,7 @@ func (h *SubgraphAccessLogger) RequestFields(respInfo *resolve.ResponseInfo, sub
 		fields = append(fields, zap.String("url", respInfo.Request.URL.String()))
 	}
 	if h.accessLogger.fieldsHandler != nil {
-		fields = append(fields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, respInfo.Err, respInfo.Request, &respInfo.ResponseHeaders)...)
+		fields = append(fields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, respInfo.Err, respInfo.Request, &respInfo.ResponseHeaders, overrideExprCtx)...)
 	}
 
 	return fields
