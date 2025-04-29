@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"fmt"
+	internalhttpclient "github.com/wundergraph/cosmo/router/internal/httpclient"
 	"io"
 	"net/http"
 	"net/url"
@@ -59,29 +60,37 @@ type sfCacheItem struct {
 }
 
 func NewCustomTransport(
-	logger *zap.Logger,
 	roundTripper http.RoundTripper,
 	retryOptions retrytransport.RetryOptions,
 	metricStore metric.Store,
 	enableSingleFlight bool,
+	options *RequestTransportTraceOptions,
 ) *CustomTransport {
 	ct := &CustomTransport{
 		metricStore: metricStore,
 	}
 
+	// The round trip method is almost always called via the http.Client RoundTripper interface
+	// as a result we cannot pass in the request context logger directly, since this will break the interface
+	// The RoundTripper is also not in the core package so it does not have access to the
+	// getRequestContext function since its private to only the core package
+	// As a workaround we pass in a function that can be used to get the logger from within the round tripper
+	getRequestContextLogger := func(req *http.Request) *zap.Logger {
+		reqContext := getRequestContext(req.Context())
+		return reqContext.Logger()
+	}
+
+	baseRoundTripper := roundTripper
+
+	useTraceRequestTransport := options != nil && (options.LogHooks || options.TraceHooks)
+	if useTraceRequestTransport {
+		baseRoundTripper = internalhttpclient.NewTraceInjectingRoundTripper(roundTripper, options.LogHooks, options.TraceHooks, getRequestContextLogger)
+	}
+
 	if retryOptions.Enabled {
-		// The round trip method is almost always called via the http.Client RoundTripper interface
-		// as a result we cannot pass in the request context logger directly, since this will break the interface
-		// The RoundTripper is also not in the core package so it does not have access to the
-		// getRequestContext function since its private to only the core package
-		// As a workaround we pass in a function that can be used to get the logger from within the round tripper
-		getRequestContextLogger := func(req *http.Request) *zap.Logger {
-			reqContext := getRequestContext(req.Context())
-			return reqContext.Logger()
-		}
-		ct.roundTripper = retrytransport.NewRetryHTTPTransport(roundTripper, retryOptions, getRequestContextLogger)
+		ct.roundTripper = retrytransport.NewRetryHTTPTransport(baseRoundTripper, retryOptions, getRequestContextLogger)
 	} else {
-		ct.roundTripper = roundTripper
+		ct.roundTripper = baseRoundTripper
 	}
 	if enableSingleFlight {
 		ct.sf = make(map[uint64]*sfCacheItem)
@@ -321,6 +330,7 @@ type TransportFactory struct {
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
 	tracePropagators              propagation.TextMapPropagator
+	requestTransportTraceOptions  *RequestTransportTraceOptions
 }
 
 var _ ApiTransportFactory = TransportFactory{}
@@ -335,6 +345,12 @@ type TransportOptions struct {
 	Logger                        *zap.Logger
 	TracerProvider                *sdktrace.TracerProvider
 	TracePropagators              propagation.TextMapPropagator
+	RequestTransportTraceOptions  *RequestTransportTraceOptions
+}
+
+type RequestTransportTraceOptions struct {
+	LogHooks   bool
+	TraceHooks bool
 }
 
 type SubscriptionClientOptions struct {
@@ -352,6 +368,7 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		logger:                        opts.Logger,
 		tracerProvider:                opts.TracerProvider,
 		tracePropagators:              opts.TracePropagators,
+		requestTransportTraceOptions:  opts.RequestTransportTraceOptions,
 	}
 }
 
@@ -391,11 +408,11 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport ht
 		}),
 	)
 	tp := NewCustomTransport(
-		t.logger,
 		traceTransport,
 		t.retryOptions,
 		t.metricStore,
 		enableSingleFlight,
+		t.requestTransportTraceOptions,
 	)
 
 	tp.preHandlers = t.preHandlers

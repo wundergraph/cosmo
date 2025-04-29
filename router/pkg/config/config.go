@@ -9,7 +9,6 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/joho/godotenv"
 
-	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 )
 
@@ -77,6 +76,11 @@ type Tracing struct {
 	TracingGlobalFeatures `yaml:",inline"`
 }
 
+type RequestTransportTrace struct {
+	LogHooks   bool `yaml:"log_hooks" envDefault:"false" env:"TRANSPORT_DEBUG_LOG_HOOKS"`
+	TraceHooks bool `yaml:"trace_hooks" envDefault:"false" env:"TRANSPORT_DEBUG_TRACE_HOOKS"`
+}
+
 type PropagationConfig struct {
 	TraceContext bool `yaml:"trace_context" envDefault:"true"`
 	Jaeger       bool `yaml:"jaeger"`
@@ -133,11 +137,12 @@ type MetricsOTLP struct {
 }
 
 type Telemetry struct {
-	ServiceName        string                  `yaml:"service_name" envDefault:"cosmo-router" env:"TELEMETRY_SERVICE_NAME"`
-	Attributes         []CustomAttribute       `yaml:"attributes"`
-	ResourceAttributes []CustomStaticAttribute `yaml:"resource_attributes"`
-	Tracing            Tracing                 `yaml:"tracing"`
-	Metrics            Metrics                 `yaml:"metrics"`
+	ServiceName           string                  `yaml:"service_name" envDefault:"cosmo-router" env:"TELEMETRY_SERVICE_NAME"`
+	Attributes            []CustomAttribute       `yaml:"attributes"`
+	ResourceAttributes    []CustomStaticAttribute `yaml:"resource_attributes"`
+	Tracing               Tracing                 `yaml:"tracing"`
+	Metrics               Metrics                 `yaml:"metrics"`
+	RequestTransportTrace RequestTransportTrace   `yaml:"request_transport_trace"`
 }
 
 type CORS struct {
@@ -1056,7 +1061,7 @@ func LoadConfig(configFilePath string, envOverride string) (*LoadResult, error) 
 		cfg.Config.SubgraphErrorPropagation.Enabled = true
 		cfg.Config.SubgraphErrorPropagation.PropagateStatusCodes = true
 		cfg.Config.SubgraphErrorPropagation.OmitLocations = false
-		cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields = unique.SliceElements(append(cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields, "code", "stacktrace"))
+		//cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields = unique.SliceElements(append(cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields, "code", "stacktrace"))
 	}
 
 	return cfg, nil
