@@ -600,7 +600,7 @@ telemetry:
         enabled: true
         include_operation_sha: true
 `)
-		c, err := LoadConfig(f, "")
+		c, err := LoadConfig(f)
 		require.NoError(t, err)
 
 		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
@@ -612,7 +612,7 @@ telemetry:
 version: "1"
 `)
 
-		c, err := LoadConfig(f, "")
+		c, err := LoadConfig(f)
 		require.NoError(t, err)
 
 		require.False(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
@@ -621,7 +621,7 @@ version: "1"
 		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_ENABLED", "true")
 		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_INCLUDE_OPERATION_SHA", "true")
 
-		c, err = LoadConfig(f, "")
+		c, err = LoadConfig(f)
 		require.NoError(t, err)
 
 		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
