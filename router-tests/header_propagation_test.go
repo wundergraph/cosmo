@@ -31,7 +31,7 @@ func TestCacheControl(t *testing.T) {
 				Query: `{ employees { id details { forename surname } notes } }`,
 			})
 
-			assert.Equal(t, "no-cache", res.Response.Header.Get("Cache-Control"))
+			assert.Equal(t, "no-store, no-cache, must-revalidate", res.Response.Header.Get("Cache-Control"))
 			assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees'."}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
 		})
 	})
@@ -52,7 +52,7 @@ func TestCacheControl(t *testing.T) {
 			})
 
 			require.Contains(t, res.Body, "PERSISTED_QUERY_NOT_FOUND")
-			require.Equal(t, "no-cache", res.Response.Header.Get("Cache-Control"))
+			require.Equal(t, "no-store, no-cache, must-revalidate", res.Response.Header.Get("Cache-Control"))
 		})
 	})
 
@@ -68,7 +68,7 @@ func TestCacheControl(t *testing.T) {
 				Query: `{ employee(id: 1) { id rootFieldThrowsError } }`,
 			})
 
-			assert.Equal(t, "no-cache", res.Response.Header.Get("Cache-Control"))
+			assert.Equal(t, "no-store, no-cache, must-revalidate", res.Response.Header.Get("Cache-Control"))
 			assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'.","extensions":{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"],"extensions":{"code":"ERROR_CODE"}}],"statusCode":200}}],"data":{"employee":{"id":1,"rootFieldThrowsError":null}}}`, res.Body)
 		})
 	})

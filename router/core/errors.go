@@ -190,7 +190,7 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 		return
 	}
 
-	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 
 	// According to the tests requestContext can be nil (when called from module WriteResponseError)
 	// As such we have coded this condition defensively to be safe
