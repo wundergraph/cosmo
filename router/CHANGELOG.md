@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.204.1](https://github.com/wundergraph/cosmo/compare/router@0.204.0...router@0.204.1) (2025-04-29)
+
+### Bug Fixes
+
+* set cache-control to `no-store` when errors are present, engine v2.0.0-rc.175 ([#1795](https://github.com/wundergraph/cosmo/issues/1795)) ([0cd3162](https://github.com/wundergraph/cosmo/commit/0cd31622667f94074fcacca2b6b8153915fd6767)) (@endigma)
+
 # [0.204.0](https://github.com/wundergraph/cosmo/compare/router@0.203.0...router@0.204.0) (2025-04-29)
 
 ### Features
