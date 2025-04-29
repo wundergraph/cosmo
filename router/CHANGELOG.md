@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.204.0](https://github.com/wundergraph/cosmo/compare/router@0.203.0...router@0.204.0) (2025-04-29)
+
+### Features
+
+* **subscriptions:** user proper frame timeout ([#1820](https://github.com/wundergraph/cosmo/issues/1820)) ([3b540fc](https://github.com/wundergraph/cosmo/commit/3b540fced5cebabcc31cdaf9bddf07b3b5a4932a)) (@StarpTech)
+
 # [0.203.0](https://github.com/wundergraph/cosmo/compare/router@0.202.1...router@0.203.0) (2025-04-25)
 
 ### Features
