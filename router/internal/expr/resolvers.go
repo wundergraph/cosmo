@@ -8,8 +8,8 @@ import (
 
 // ResolveAnyExpression evaluates the expression and returns the result as a any. The exprContext is used to
 // provide the context for the expression evaluation. Not safe for concurrent use.
-func ResolveAnyExpression(vm *vm.Program, ctx Context) (any, error) {
-	r, err := expr.Run(vm, ctx)
+func ResolveAnyExpression(vm *vm.Program, exprCtx Context) (any, error) {
+	r, err := expr.Run(vm, exprCtx)
 	if err != nil {
 		return "", handleExpressionError(err)
 	}
@@ -19,8 +19,8 @@ func ResolveAnyExpression(vm *vm.Program, ctx Context) (any, error) {
 
 // ResolveStringExpression evaluates the expression and returns the result as a string. The exprContext is used to
 // provide the context for the expression evaluation. Not safe for concurrent use.
-func ResolveStringExpression(vm *vm.Program, ctx Context) (string, error) {
-	r, err := expr.Run(vm, ctx)
+func ResolveStringExpression(vm *vm.Program, exprCtx Context) (string, error) {
+	r, err := expr.Run(vm, exprCtx)
 	if err != nil {
 		return "", handleExpressionError(err)
 	}
@@ -35,12 +35,12 @@ func ResolveStringExpression(vm *vm.Program, ctx Context) (string, error) {
 
 // ResolveBoolExpression evaluates the expression and returns the result as a bool. The exprContext is used to
 // provide the context for the expression evaluation. Not safe for concurrent use.
-func ResolveBoolExpression(vm *vm.Program, ctx Context) (bool, error) {
+func ResolveBoolExpression(vm *vm.Program, exprCtx Context) (bool, error) {
 	if vm == nil {
 		return false, nil
 	}
 
-	r, err := expr.Run(vm, ctx)
+	r, err := expr.Run(vm, exprCtx)
 	if err != nil {
 		return false, handleExpressionError(err)
 	}

@@ -915,6 +915,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		httpRouter.Use(requestLogger)
 
 		if s.accessLogsConfig.SubgraphEnabled {
+			subgraphExprAttributes, err := requestlogger.GetAccessLogConfigExpressions(s.accessLogsConfig.SubgraphAttributes, exprManager)
+			if err != nil {
+				return nil, fmt.Errorf("failed building router access log expressions: %w", err)
+			}
+
 			s.accessLogsConfig.SubgraphAttributes = requestlogger.CleanupExpressionAttributes(s.accessLogsConfig.SubgraphAttributes)
 
 			subgraphAccessLogger = requestlogger.NewSubgraphAccessLogger(
@@ -924,6 +929,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 					FieldsHandler:         SubgraphAccessLogsFieldHandler,
 					Fields:                baseLogFields,
 					Attributes:            s.accessLogsConfig.SubgraphAttributes,
+					ExprAttributes:        subgraphExprAttributes,
 				})
 		}
 	}
@@ -975,6 +981,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			TracePropagators:              s.compositePropagator,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
+			RequestTransportTraceOptions: RequestTransportTraceOptions{
+				// TODO: Change hardcoded to detect using visitor basedg
+				// on if anyone used trace in any expressions
+				Enabled: true,
+			},
 		},
 	}
 
@@ -1090,6 +1101,17 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		authorizerOptions.RejectOperationIfUnauthorized = s.authorization.RejectOperationIfUnauthorized
 	}
 
+	hooks, err := NewEngineRequestHooks(
+		gm.metricStore,
+		subgraphAccessLogger,
+		s.tracerProvider,
+		exprManager,
+		s.subgraphTracingOptions.Subgraphs,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create engine request hooks: %w", err)
+	}
+
 	handlerOpts := HandlerOptions{
 		Executor:                               executor,
 		Log:                                    s.logger,
@@ -1101,7 +1123,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
-		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger, s.tracerProvider),
+		EngineLoaderHooks:                           hooks,
 	}
 
 	if s.redisClient != nil {

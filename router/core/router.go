@@ -107,6 +107,15 @@ type (
 		SubgraphMap map[string]*TransportRequestOptions
 	}
 
+	SubgraphTracingEntry struct {
+		Key        string
+		Expression string
+	}
+
+	SubgraphTracingOptions struct {
+		Subgraphs []SubgraphTracingEntry
+	}
+
 	GraphQLMetricsConfig struct {
 		Enabled           bool
 		CollectorEndpoint string
@@ -208,6 +217,7 @@ type (
 		postOriginHandlers              []TransportPostHandler
 		headerRules                     *config.HeaderRules
 		subgraphTransportOptions        *SubgraphTransportOptions
+		subgraphTracingOptions          SubgraphTracingOptions
 		graphqlMetricsConfig            *GraphQLMetricsConfig
 		routerTrafficConfig             *config.RouterTrafficConfiguration
 		batchingConfig                  *BatchingConfig
@@ -1740,6 +1750,12 @@ func WithSubgraphTransportOptions(opts *SubgraphTransportOptions) Option {
 	}
 }
 
+func WithSubgraphTracingOptions(opts SubgraphTracingOptions) Option {
+	return func(r *Router) {
+		r.subgraphTracingOptions = opts
+	}
+}
+
 func WithSubgraphRetryOptions(enabled bool, maxRetryCount int, retryMaxDuration, retryInterval time.Duration) Option {
 	return func(r *Router) {
 		r.retryOptions = retrytransport.RetryOptions{
@@ -1842,6 +1858,23 @@ func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransp
 
 	for k, v := range cfg.Subgraphs {
 		base.SubgraphMap[k] = NewTransportRequestOptions(*v)
+	}
+
+	return base
+}
+
+func NewSubgraphTracingOptions(cfg config.SubgraphTracing) SubgraphTracingOptions {
+	entries := make([]SubgraphTracingEntry, 0, len(cfg.Attributes))
+
+	for _, attribute := range cfg.Attributes {
+		entries = append(entries, SubgraphTracingEntry{
+			Key:        attribute.Key,
+			Expression: attribute.Expression,
+		})
+	}
+
+	base := SubgraphTracingOptions{
+		Subgraphs: entries,
 	}
 
 	return base

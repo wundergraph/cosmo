@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/unique"
 	"os"
 	"time"
 
@@ -9,7 +10,6 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/joho/godotenv"
 
-	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 )
 
@@ -66,6 +66,15 @@ type ResponseTraceHeader struct {
 	HeaderName string `yaml:"header_name" envDefault:"x-wg-trace-id"`
 }
 
+type SubgraphTracingAttribute struct {
+	Key        string `yaml:"key"`
+	Expression string `yaml:"expression"`
+}
+
+type SubgraphTracing struct {
+	Attributes []SubgraphTracingAttribute `yaml:"attributes"`
+}
+
 type Tracing struct {
 	Enabled             bool                `yaml:"enabled" envDefault:"true" env:"TRACING_ENABLED"`
 	SamplingRate        float64             `yaml:"sampling_rate" envDefault:"1" env:"TRACING_SAMPLING_RATE"`
@@ -73,6 +82,7 @@ type Tracing struct {
 	Exporters           []TracingExporter   `yaml:"exporters"`
 	Propagation         PropagationConfig   `yaml:"propagation"`
 	ResponseTraceHeader ResponseTraceHeader `yaml:"response_trace_id"`
+	Subgraph            SubgraphTracing     `yaml:"subgraph"`
 
 	TracingGlobalFeatures `yaml:",inline"`
 }

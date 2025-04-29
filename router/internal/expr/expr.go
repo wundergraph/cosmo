@@ -30,9 +30,12 @@ import (
 const ExprRequestKey = "request"
 const ExprRequestAuthKey = "auth"
 
+type SubgraphExpressionContextKey struct{}
+
 // Context is the context for expressions parser when evaluating dynamic expressions
 type Context struct {
-	Request Request `expr:"request"` // if changing the expr tag, the ExprRequestKey should be updated
+	Request  Request  `expr:"request"` // if changing the expr tag, the ExprRequestKey should be updated
+	Subgraph Subgraph `expr:"subgraph"`
 }
 
 // Request is the context for the request object in expressions. Be aware, that only value receiver methods
@@ -91,6 +94,18 @@ type RequestAuth struct {
 	Type            string         `expr:"type"`
 	Claims          map[string]any `expr:"claims"`
 	Scopes          []string       `expr:"scopes"`
+}
+
+// Subgraph Related
+type Subgraph struct {
+	Name  string        `expr:"name"`
+	Id    string        `expr:"id"`
+	Error error         `expr:"error"`
+	Trace SubgraphTrace `expr:"trace"`
+}
+
+type SubgraphTrace struct {
+	Attributes map[string]any `expr:"attributes"`
 }
 
 // Get returns the value of the header with the given key. If the header is not present, an empty string is returned.
@@ -153,4 +168,11 @@ func handleExpressionError(err error) error {
 	}
 
 	return err
+}
+
+func GetSubgraphExpressionContext(ctx context.Context) *Context {
+	if v, ok := ctx.Value(SubgraphExpressionContextKey{}).(Context); ok {
+		return &v
+	}
+	return nil
 }

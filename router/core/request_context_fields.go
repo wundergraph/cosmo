@@ -106,9 +106,9 @@ func RouterAccessLogsFieldHandler(
 }
 
 func SubgraphAccessLogsFieldHandler(
-	_ *zap.Logger,
+	logger *zap.Logger,
 	attributes []config.CustomAttribute,
-	_ []requestlogger.ExpressionAttribute,
+	exprAttributes []requestlogger.ExpressionAttribute,
 	passedErr any,
 	request *http.Request,
 	responseHeader *http.Header,
@@ -117,6 +117,7 @@ func SubgraphAccessLogsFieldHandler(
 
 	reqContext, resFields := processRequestIDField(request, resFields)
 	resFields = processCustomAttributes(attributes, responseHeader, resFields, request, reqContext, passedErr)
+	resFields = processExpressionAttributes(logger, exprAttributes, reqContext, resFields)
 
 	return resFields
 }

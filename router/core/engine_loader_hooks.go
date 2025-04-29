@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/expr-lang/expr/vm"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
@@ -33,25 +35,42 @@ const EngineLoaderHooksScopeVersion = "0.0.1"
 // engineLoaderHooks implements resolve.LoaderHooks
 // It is used to trace and measure the performance of the engine loader
 type engineLoaderHooks struct {
-	tracer       trace.Tracer
-	metricStore  metric.Store
-	accessLogger *requestlogger.SubgraphAccessLogger
+	tracer                    trace.Tracer
+	metricStore               metric.Store
+	accessLogger              *requestlogger.SubgraphAccessLogger
+	mappedSubgraphExpressions map[string]*vm.Program
 }
 
 type engineLoaderHooksRequestContext struct {
 	startTime time.Time
 }
 
-func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.SubgraphAccessLogger, tracerProvider *sdktrace.TracerProvider) resolve.LoaderHooks {
+func NewEngineRequestHooks(
+	metricStore metric.Store,
+	logger *requestlogger.SubgraphAccessLogger,
+	tracerProvider *sdktrace.TracerProvider,
+	manager *expr.Manager,
+	subgraphTracingAttributes []SubgraphTracingEntry,
+) (resolve.LoaderHooks, error) {
+	mappedSubgraphExpressions := make(map[string]*vm.Program)
+	for _, attr := range subgraphTracingAttributes {
+		expression, err := manager.CompileAnyExpression(attr.Expression)
+		if err != nil {
+			return nil, err
+		}
+		mappedSubgraphExpressions[attr.Key] = expression
+	}
+
 	if tracerProvider != nil {
 		return &engineLoaderHooks{
 			tracer: tracerProvider.Tracer(
 				EngineLoaderHooksScopeName,
 				trace.WithInstrumentationVersion(EngineLoaderHooksScopeVersion),
 			),
-			metricStore:  metricStore,
-			accessLogger: logger,
-		}
+			metricStore:               metricStore,
+			accessLogger:              logger,
+			mappedSubgraphExpressions: mappedSubgraphExpressions,
+		}, nil
 	}
 
 	return &engineLoaderHooks{
@@ -59,13 +78,13 @@ func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.Subgr
 			EngineLoaderHooksScopeName,
 			trace.WithInstrumentationVersion(EngineLoaderHooksScopeVersion),
 		),
-		metricStore:  metricStore,
-		accessLogger: logger,
-	}
+		metricStore:               metricStore,
+		accessLogger:              logger,
+		mappedSubgraphExpressions: mappedSubgraphExpressions,
+	}, nil
 }
 
 func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInfo) context.Context {
-
 	if resolve.IsIntrospectionDataSource(ds.ID) {
 		return ctx
 	}
@@ -76,6 +95,20 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 	if reqContext == nil {
 		return ctx
 	}
+
+	// We follow the expr spec, however trace is a new attribute
+	// TODO: Note: This copy still points to the same maps like requestClaims etc
+	exprCopy := reqContext.expressionContext
+	exprCopy.Subgraph = expr.Subgraph{
+		Id:   ds.ID,
+		Name: ds.Name,
+		Trace: expr.SubgraphTrace{
+			// TODO: Decide if we are going to go with map or direct attributes here
+			Attributes: make(map[string]any),
+		},
+	}
+
+	ctx = context.WithValue(ctx, expr.SubgraphExpressionContextKey{}, exprCopy)
 
 	ctx, _ = f.tracer.Start(ctx, "Engine - Fetch",
 		trace.WithAttributes([]attribute.KeyValue{
@@ -126,6 +159,35 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	traceAttrs = append(traceAttrs, reqContext.telemetry.traceAttrs...)
 	traceAttrs = append(traceAttrs, rotel.WgComponentName.String("engine-loader"))
 	traceAttrs = append(traceAttrs, commonAttrs...)
+
+	subgraphRequestExpr := expr.GetSubgraphExpressionContext(ctx)
+	if subgraphRequestExpr != nil {
+		subgraphRequestExpr.Subgraph.Error = responseInfo.Err
+
+		for key, expression := range f.mappedSubgraphExpressions {
+			result, err := expr.ResolveAnyExpression(expression, *subgraphRequestExpr)
+			if err != nil {
+				// If the expression fails, we don't want to add it to the attributes
+				// but not block
+				continue
+			}
+
+			// TODO: Consider asking the user explicitly figuring out the type
+			// will need to test for ptr types also, to optimize
+			if result != nil && result != "" {
+				switch val := result.(type) {
+				case string:
+					traceAttrs = append(traceAttrs, attribute.String(key, val))
+				case *string:
+					traceAttrs = append(traceAttrs, attribute.String(key, *val))
+				case bool:
+					traceAttrs = append(traceAttrs, attribute.Bool(key, val))
+				case *bool:
+					traceAttrs = append(traceAttrs, attribute.Bool(key, *val))
+				}
+			}
+		}
+	}
 
 	metricAttrs := *reqContext.telemetry.AcquireAttributes()
 	defer reqContext.telemetry.ReleaseAttributes(&metricAttrs)
