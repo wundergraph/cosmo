@@ -804,6 +804,20 @@
             }
           }
         },
+        "request_transport_trace": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "log_hooks": {
+              "type": "boolean",
+              "default": false
+            },
+            "trace_hooks": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
         "tracing": {
           "type": "object",
           "additionalProperties": false,

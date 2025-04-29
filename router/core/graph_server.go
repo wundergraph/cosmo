@@ -977,6 +977,10 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			TracePropagators:              s.compositePropagator,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
+			RequestTransportTraceOptions: &RequestTransportTraceOptions{
+				LogHooks:   s.requestTransportTrace.LogHooks,
+				TraceHooks: s.requestTransportTrace.TraceHooks,
+			},
 		},
 	}
 
