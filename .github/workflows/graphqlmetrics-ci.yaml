@@ -20,7 +20,7 @@ jobs:
     services:
       clickhouse:
         # Docker Hub image
-        image: clickhouse/clickhouse-server:24
+        image: clickhouse/clickhouse-server:24.12
         ports:
           - "8123:8123"
           - "9000:9000"
