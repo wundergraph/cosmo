@@ -612,85 +612,68 @@ func (l *Loader) fieldHasAuthorizationRule(fieldConfiguration *nodev1.FieldConfi
 	return false
 }
 
-func unnestMap[T any, O any](in map[string]T, fn func(T) O) map[string]O {
-	if in == nil {
-		return nil
-	}
-
-	out := make(map[string]O)
-	for k, v := range in {
-		out[k] = fn(v)
-	}
-	return out
-}
-
 func toGRPCConfiguration(config *nodev1.GRPCConfiguration) *grpcdatasource.GRPCConfiguration {
-	if config == nil {
+	if config == nil || config.Mapping == nil {
 		return nil
 	}
 
 	in := config.Mapping
 
-	inputArguments := unnestMap(in.InputArguments, func(v *nodev1.InputArgumentMap) grpcdatasource.InputArgumentMap {
-		return grpcdatasource.InputArgumentMap(v.Mappings)
-	})
+	result := &grpcdatasource.GRPCMapping{
+		Service:          in.Service,
+		QueryRPCs:        make(grpcdatasource.RPCConfigMap),
+		MutationRPCs:     make(grpcdatasource.RPCConfigMap),
+		SubscriptionRPCs: make(grpcdatasource.RPCConfigMap),
+		EntityRPCs:       make(map[string]grpcdatasource.EntityRPCConfig),
+		Fields:           make(map[string]grpcdatasource.FieldMap),
+	}
 
-	queryRPCs := unnestMap(in.QueryRpcs, func(v *nodev1.RPCConfig) grpcdatasource.RPCConfig {
-		return grpcdatasource.RPCConfig{
-			RPC:      v.Rpc,
-			Request:  v.Request,
-			Response: v.Response,
+	for _, operation := range in.OperationMappings {
+		rpcConfig := grpcdatasource.RPCConfig{
+			RPC:      operation.Mapped,
+			Request:  operation.Request,
+			Response: operation.Response,
 		}
-	})
-
-	mutationRPCs := unnestMap(in.MutationRpcs, func(v *nodev1.RPCConfig) grpcdatasource.RPCConfig {
-		return grpcdatasource.RPCConfig{
-			RPC:      v.Rpc,
-			Request:  v.Request,
-			Response: v.Response,
+		switch operation.Type {
+		case nodev1.OperationType_QUERY:
+			result.QueryRPCs[operation.Original] = rpcConfig
+		case nodev1.OperationType_MUTATION:
+			result.MutationRPCs[operation.Original] = rpcConfig
+		case nodev1.OperationType_SUBSCRIPTION:
+			result.SubscriptionRPCs[operation.Original] = rpcConfig
 		}
-	})
+	}
 
-	subscriptionRPCs := unnestMap(in.SubscriptionRpcs, func(v *nodev1.RPCConfig) grpcdatasource.RPCConfig {
-		return grpcdatasource.RPCConfig{
-			RPC:      v.Rpc,
-			Request:  v.Request,
-			Response: v.Response,
-		}
-	})
-
-	entityRPCs := unnestMap(in.EntityRpcs, func(v *nodev1.EntityRPCConfig) grpcdatasource.EntityRPCConfig {
-		return grpcdatasource.EntityRPCConfig{
-			Key: v.Key,
+	for _, entity := range in.EntityMappings {
+		result.EntityRPCs[entity.Key] = grpcdatasource.EntityRPCConfig{
+			Key: entity.Key,
 			RPCConfig: grpcdatasource.RPCConfig{
-				RPC:      v.Rpc,
-				Request:  v.Request,
-				Response: v.Response,
+				RPC:      entity.Rpc,
+				Request:  entity.Request,
+				Response: entity.Response,
 			},
 		}
-	})
+	}
 
-	fields := unnestMap(in.Fields, func(v *nodev1.FieldMap) grpcdatasource.FieldMap {
-		return unnestMap(v.Mappings, func(v *nodev1.FieldMapData) grpcdatasource.FieldMapData {
-			return grpcdatasource.FieldMapData{
-				TargetName:       v.TargetName,
-				ArgumentMappings: grpcdatasource.FieldArgumentMap(v.ArgumentMappings),
+	for _, field := range in.TypeFieldMappings {
+		fieldMap := grpcdatasource.FieldMap{}
+
+		for _, fieldMapping := range field.FieldMappings {
+			fieldMap[fieldMapping.Original] = grpcdatasource.FieldMapData{
+				TargetName:       fieldMapping.Mapped,
+				ArgumentMappings: grpcdatasource.FieldArgumentMap{},
 			}
-		})
-	})
 
-	mapping := &grpcdatasource.GRPCMapping{
-		Services:         in.Services,
-		InputArguments:   inputArguments,
-		QueryRPCs:        queryRPCs,
-		MutationRPCs:     mutationRPCs,
-		SubscriptionRPCs: subscriptionRPCs,
-		EntityRPCs:       entityRPCs,
-		Fields:           fields,
+			for _, argumentMapping := range fieldMapping.ArgumentMappings {
+				fieldMap[fieldMapping.Original].ArgumentMappings[argumentMapping.Original] = argumentMapping.Mapped
+			}
+		}
+
+		result.Fields[field.Type] = fieldMap
 	}
 
 	return &grpcdatasource.GRPCConfiguration{
-		Mapping:     mapping,
+		Mapping:     result,
 		ProtoSchema: config.ProtoSchema,
 	}
 }
