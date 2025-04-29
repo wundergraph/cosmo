@@ -3880,11 +3880,6 @@ export class GetChecksByFederatedGraphNameResponse extends Message<GetChecksByFe
    */
   checksCountBasedOnDateRange = 0;
 
-  /**
-   * @generated from field: int32 totalChecksCount = 4;
-   */
-  totalChecksCount = 0;
-
   constructor(data?: PartialMessage<GetChecksByFederatedGraphNameResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3896,7 +3891,6 @@ export class GetChecksByFederatedGraphNameResponse extends Message<GetChecksByFe
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "checks", kind: "message", T: SchemaCheck, repeated: true },
     { no: 3, name: "checksCountBasedOnDateRange", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 4, name: "totalChecksCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetChecksByFederatedGraphNameResponse {

@@ -1,12 +1,11 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { validate as isValidUuid } from 'uuid';
 import {
   GetChecksByFederatedGraphNameRequest,
   GetChecksByFederatedGraphNameResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { subDays } from 'date-fns';
+import { validate as isValidUuid } from 'uuid';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
@@ -39,7 +38,6 @@ export function getChecksByFederatedGraphName(
         },
         checks: [],
         checksCountBasedOnDateRange: 0,
-        totalChecksCount: 0,
       };
     }
 
@@ -48,9 +46,8 @@ export function getChecksByFederatedGraphName(
       featureId: 'breaking-change-retention',
     });
 
-    const maxNumberOfDays = breakingChangeRetention?.limit ?? 7;
     const { dateRange } = validateDateRanges({
-      limit: maxNumberOfDays,
+      limit: breakingChangeRetention?.limit ?? 7,
       dateRange: {
         start: req.startDate,
         end: req.endDate,
@@ -65,7 +62,6 @@ export function getChecksByFederatedGraphName(
         },
         checks: [],
         checksCountBasedOnDateRange: 0,
-        totalChecksCount: 0,
       };
     }
 
@@ -78,7 +74,6 @@ export function getChecksByFederatedGraphName(
         },
         checks: [],
         checksCountBasedOnDateRange: 0,
-        totalChecksCount: 0,
       };
     }
 
@@ -93,22 +88,12 @@ export function getChecksByFederatedGraphName(
       includeSubgraphs,
     });
 
-    const now = new Date();
-    const totalChecksCount = await subgraphRepo.getChecksCount({
-      federatedGraphTargetId: federatedGraph.targetId,
-      federatedGraphId: federatedGraph.id,
-      // we are fetching the checks count for the last number of days based on the org limit.
-      startDate: subDays(now, maxNumberOfDays).toISOString(),
-      endDate: now.toISOString(),
-    });
-
     return {
       response: {
         code: EnumStatusCode.OK,
       },
       checks: checksData.checks,
       checksCountBasedOnDateRange: checksData.checksCount,
-      totalChecksCount,
     };
   });
 }
