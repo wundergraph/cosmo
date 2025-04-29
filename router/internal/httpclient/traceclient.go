@@ -67,8 +67,8 @@ func (t *TraceInjectingRoundTripper) getClientTrace(context context.Context) *ht
 		GotConn: func(info httptrace.GotConnInfo) {
 			t.trace(time.Now().Format(time.RFC3339Nano), "gotconn.time", context, "")
 			t.trace(info.Reused, "gotconn.reused", context, "")
-			t.trace(info.Reused, "gotconn.wasidle", context, "")
-			t.trace(info.Reused, "gotconn.idletime", context, "")
+			t.trace(info.WasIdle, "gotconn.wasidle", context, "")
+			t.trace(info.IdleTime, "gotconn.idletime", context, "")
 
 			t.log(fmt.Sprintf(`reused: %t, wasIdle: %t, idleTime: %q`, info.Reused, info.WasIdle, info.IdleTime), "GotConn")
 		},
