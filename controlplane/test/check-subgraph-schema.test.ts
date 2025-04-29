@@ -559,7 +559,7 @@ type Department {
     await server.close();
   });
 
-  test('Should run check against a subgraph identified by label when it does not exist', async () => {
+  test('Should run check against a new subgraph that doesnt exist by passing labels to the check', async () => {
     const { client, server } = await SetupTest({ dbname, chClient });
 
     const fedGraphName = genID('fedGraph');
@@ -658,6 +658,89 @@ type Category {
     await server.close();
   });
 
+  test('Should check non-existent subgraph with specific labels and match only the corresponding federated graph', async () => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+
+    // Generate unique IDs and labels for test entities
+    const fedGraph1Name = genID('fedGraph1');
+    const fedGraph2Name = genID('fedGraph2');
+    const subgraph1Name = genID('subgraph1');
+    const subgraph2Name = genID('subgraph2');
+    const nonExistentSubgraphName = genID('nonExistentSubgraph');
+
+    const label1 = genUniqueLabel('label1');
+    const label2 = genUniqueLabel('label2');
+
+    // Create fed graph 1 with label1
+    const fedGraph1Resp = await client.createFederatedGraph({
+      name: fedGraph1Name,
+      namespace: 'default',
+      labelMatchers: [joinLabel(label1)],
+      routingUrl: 'http://localhost:8081',
+    });
+    expect(fedGraph1Resp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create fed graph 2 with label2
+    const fedGraph2Resp = await client.createFederatedGraph({
+      name: fedGraph2Name,
+      namespace: 'default',
+      labelMatchers: [joinLabel(label2)],
+      routingUrl: 'http://localhost:8082',
+    });
+    expect(fedGraph2Resp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create subgraph 1 with label1
+    const subgraph1Resp = await client.createFederatedSubgraph({
+      name: subgraph1Name,
+      namespace: 'default',
+      labels: [label1],
+      routingUrl: 'http://localhost:8091',
+    });
+    expect(subgraph1Resp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create subgraph 2 with label2
+    const subgraph2Resp = await client.createFederatedSubgraph({
+      name: subgraph2Name,
+      namespace: 'default',
+      labels: [label2],
+      routingUrl: 'http://localhost:8092',
+    });
+    expect(subgraph2Resp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Publish schemas for the subgraphs
+    const publishSubgraph1Resp = await client.publishFederatedSubgraph({
+      name: subgraph1Name,
+      namespace: 'default',
+      schema: 'type Query { hello1: String! }',
+    });
+    expect(publishSubgraph1Resp.response?.code).toBe(EnumStatusCode.OK);
+
+    const publishSubgraph2Resp = await client.publishFederatedSubgraph({
+      name: subgraph2Name,
+      namespace: 'default',
+      schema: 'type Query { hello2: String! }',
+    });
+    expect(publishSubgraph2Resp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Run a check against a non-existent subgraph with label1
+    const checkResp = await client.checkSubgraphSchema({
+      subgraphName: nonExistentSubgraphName,
+      namespace: 'default',
+      labels: [label1], // Using label1 should match only fedGraph1
+      schema: Buffer.from('type Query { newField: String! }'),
+    });
+
+    // Verify the check response
+    expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Verify that only fedGraph1 is included in the check
+    expect(checkResp.checkedFederatedGraphs).toHaveLength(1);
+    expect(checkResp.checkedFederatedGraphs[0].name).toBe(fedGraph1Name);
+
+    // Cleanup
+    await server.close();
+  });
+
   test('Should handle composition when one of the subgraphs has an empty schema', async () => {
     const { client, server } = await SetupTest({ dbname, chClient });
 
@@ -719,6 +802,224 @@ type Category {
     expect(checkValidResp.compositionErrors.length).toBe(0);
     expect(checkValidResp.breakingChanges.length).toBe(1);
 
+    await server.close();
+  });
+
+  test('Should handle check with non-existent subgraph and invalid label', async () => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+
+    // Generate unique IDs and labels
+    const fedGraphName = genID('fedGraph');
+    const subgraphName = genID('subgraph');
+    const nonExistentSubgraphName = genID('nonExistentSubgraph');
+    const label = genUniqueLabel('label');
+    const invalidLabel = genUniqueLabel('invalid'); // Valid format but not used in any federated graph
+
+    // Create fed graph with label
+    const fedGraphResp = await client.createFederatedGraph({
+      name: fedGraphName,
+      namespace: 'default',
+      labelMatchers: [joinLabel(label)],
+      routingUrl: 'http://localhost:8081',
+    });
+    expect(fedGraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create subgraph with label
+    const subgraphResp = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: 'default',
+      labels: [label],
+      routingUrl: 'http://localhost:8091',
+    });
+    expect(subgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Publish schema for the subgraph
+    const publishSubgraphResp = await client.publishFederatedSubgraph({
+      name: subgraphName,
+      namespace: 'default',
+      schema: 'type Query { hello: String! }',
+    });
+    expect(publishSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Check non-existent subgraph with invalid label
+    let checkWithInvalidLabelResp = await client.checkSubgraphSchema({
+      subgraphName: nonExistentSubgraphName,
+      namespace: 'default',
+      labels: [{ key: '@#', value: 'test' }], // Using invalid label
+      schema: Buffer.from('type Query { newField: String! }'),
+    });
+
+    expect(checkWithInvalidLabelResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_LABELS);
+
+    checkWithInvalidLabelResp = await client.checkSubgraphSchema({
+      subgraphName: nonExistentSubgraphName,
+      namespace: 'default',
+      labels: [{ key: 'test', value: '@#' }], // Using invalid label
+      schema: Buffer.from('type Query { newField: String! }'),
+    });
+
+    expect(checkWithInvalidLabelResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_LABELS);
+
+    checkWithInvalidLabelResp = await client.checkSubgraphSchema({
+      subgraphName: nonExistentSubgraphName,
+      namespace: 'default',
+      labels: [{ key: '@#', value: '@#' }], // Using invalid label
+      schema: Buffer.from('type Query { newField: String! }'),
+    });
+
+    expect(checkWithInvalidLabelResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_LABELS);
+
+    checkWithInvalidLabelResp = await client.checkSubgraphSchema({
+      subgraphName: nonExistentSubgraphName,
+      namespace: 'default',
+      labels: [{ value: '@#' }], // Using invalid label
+      schema: Buffer.from('type Query { newField: String! }'),
+    });
+
+    expect(checkWithInvalidLabelResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_LABELS);
+
+    checkWithInvalidLabelResp = await client.checkSubgraphSchema({
+      subgraphName: nonExistentSubgraphName,
+      namespace: 'default',
+      labels: [{ key: '@#' }], // Using invalid label
+      schema: Buffer.from('type Query { newField: String! }'),
+    });
+
+    expect(checkWithInvalidLabelResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_LABELS);
+
+    // Cleanup
+    await server.close();
+  });
+
+  test('Should handle check against non existent subgraph with invalid subgraph name', async () => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+
+    // Generate unique IDs and labels
+    const fedGraphName = genID('fedGraph');
+    const subgraphName = genID('subgraph');
+    const invalidSubgraphName = '@#$%'; // Invalid name pattern
+    const label = genUniqueLabel('label');
+
+    // Create fed graph with label
+    const fedGraphResp = await client.createFederatedGraph({
+      name: fedGraphName,
+      namespace: 'default',
+      labelMatchers: [joinLabel(label)],
+      routingUrl: 'http://localhost:8081',
+    });
+    expect(fedGraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create subgraph with label
+    const subgraphResp = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: 'default',
+      labels: [label],
+      routingUrl: 'http://localhost:8091',
+    });
+    expect(subgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Publish schema for the subgraph
+    const publishSubgraphResp = await client.publishFederatedSubgraph({
+      name: subgraphName,
+      namespace: 'default',
+      schema: 'type Query { hello: String! }',
+    });
+    expect(publishSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Check with invalid subgraph name
+    const checkWithInvalidNameResp = await client.checkSubgraphSchema({
+      subgraphName: invalidSubgraphName,
+      namespace: 'default',
+      schema: Buffer.from('type Query { newField: String! }'),
+    });
+
+    // Verify the check response for invalid subgraph name
+    expect(checkWithInvalidNameResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
+
+    // Cleanup
+    await server.close();
+  });
+
+  test('Should test that the labels are ignored when the check is against an existing subgraph', async () => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+
+    // Generate unique IDs and labels
+    const fedGraph1Name = genID('fedGraph1');
+    const fedGraph2Name = genID('fedGraph2');
+    const subgraph1Name = genID('subgraph1');
+    const subgraph2Name = genID('subgraph2');
+    const label1 = genUniqueLabel('label1');
+    const label2 = genUniqueLabel('label2');
+
+    // Create fed graph 1 with label1
+    const fedGraph1Resp = await client.createFederatedGraph({
+      name: fedGraph1Name,
+      namespace: 'default',
+      labelMatchers: [joinLabel(label1)],
+      routingUrl: 'http://localhost:8081',
+    });
+    expect(fedGraph1Resp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create fed graph 2 with label2
+    const fedGraph2Resp = await client.createFederatedGraph({
+      name: fedGraph2Name,
+      namespace: 'default',
+      labelMatchers: [joinLabel(label2)],
+      routingUrl: 'http://localhost:8082',
+    });
+    expect(fedGraph2Resp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create subgraph 1 with label1
+    const subgraph1Resp = await client.createFederatedSubgraph({
+      name: subgraph1Name,
+      namespace: 'default',
+      labels: [label1],
+      routingUrl: 'http://localhost:8091',
+    });
+    expect(subgraph1Resp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create subgraph 2 with label2
+    const subgraph2Resp = await client.createFederatedSubgraph({
+      name: subgraph2Name,
+      namespace: 'default',
+      labels: [label2],
+      routingUrl: 'http://localhost:8092',
+    });
+    expect(subgraph2Resp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Publish schemas for the subgraphs
+    const publishSubgraph1Resp = await client.publishFederatedSubgraph({
+      name: subgraph1Name,
+      namespace: 'default',
+      schema: 'type Query { hello1: String! }',
+    });
+    expect(publishSubgraph1Resp.response?.code).toBe(EnumStatusCode.OK);
+
+    const publishSubgraph2Resp = await client.publishFederatedSubgraph({
+      name: subgraph2Name,
+      namespace: 'default',
+      schema: 'type Query { hello2: String! }',
+    });
+    expect(publishSubgraph2Resp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Check subgraph1 but pass labels of fedgraph2
+    // This tests when we check an existing subgraph (subgraph1) but pass labels that
+    // don't match its original labels. The system should use the original subgraph's
+    // labels for federation matching, ignoring the passed labels parameter.
+    const checkExistingSubgraphWithDifferentLabelsResp = await client.checkSubgraphSchema({
+      subgraphName: subgraph1Name,
+      namespace: 'default',
+      labels: [label2], // Using label2 which matches fedGraph2, but subgraph1 has label1
+      schema: Buffer.from('type Query { updatedField: String! }'),
+    });
+
+    // Verify that only fedGraph1 is checked (which matches subgraph1's actual label)
+    // and not fedGraph2 (which matches the passed label2)
+    expect(checkExistingSubgraphWithDifferentLabelsResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkExistingSubgraphWithDifferentLabelsResp.checkedFederatedGraphs).toHaveLength(1);
+    expect(checkExistingSubgraphWithDifferentLabelsResp.checkedFederatedGraphs[0].name).toBe(fedGraph1Name);
+
+    // Cleanup
     await server.close();
   });
 });
