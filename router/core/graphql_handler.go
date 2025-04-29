@@ -189,7 +189,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if errs := ctx.SubgraphErrors(); errs != nil {
-			w.Header().Set("Cache-Control", "no-cache")
+			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 		}
 
 		// Write contents of buf to the header propagation writer
