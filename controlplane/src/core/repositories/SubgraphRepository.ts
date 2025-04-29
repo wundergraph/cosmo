@@ -859,7 +859,7 @@ export class SubgraphRepository {
     }
 
     const checkIds = await this.db
-      .selectDistinctOn([schemaChecks.id], {
+      .selectDistinct({
         id: schemaChecks.id,
       })
       .from(schemaChecks)
@@ -883,8 +883,7 @@ export class SubgraphRepository {
           gt(schemaChecks.createdAt, new Date(startDate)),
           lt(schemaChecks.createdAt, new Date(endDate)),
         ),
-      )
-      .orderBy(schemaChecks.id);
+      );
 
     // Get the full check details for the selected IDs, ordered by creation date
     const checkList = await this.db
@@ -976,8 +975,8 @@ export class SubgraphRepository {
     includeSubgraphs,
   }: {
     federatedGraphTargetId: string;
-    startDate?: string;
-    endDate?: string;
+    startDate: string;
+    endDate: string;
     includeSubgraphs?: string[];
   }): Promise<number> {
     const subgraphs = await this.listByFederatedGraph({
@@ -989,41 +988,24 @@ export class SubgraphRepository {
       return 0;
     }
 
-    let conditions: SQL<unknown> | undefined;
-
-    if (startDate && endDate) {
-      conditions = and(
-        // We have this or conditions because we want to fetch the checks based on the new schema or the old schema
-        // as we are not doing a data migration for the checks table
-        or(
-          // This is to fetch the checks based on the new schema
-          inArray(
-            schema.schemaCheckSubgraphs.subgraphId,
-            subgraphs.map(({ id }) => id),
-          ),
-          // This is to fetch the checks based on the old schema
-          inArray(
-            schemaChecks.targetId,
-            subgraphs.map(({ targetId }) => targetId),
-          ),
+    const conditions: SQL<unknown> | undefined = and(
+      // We have this or conditions because we want to fetch the checks based on the new schema or the old schema
+      // as we are not doing a data migration for the checks table
+      or(
+        // This is to fetch the checks based on the new schema
+        inArray(
+          schema.schemaCheckSubgraphs.subgraphId,
+          subgraphs.map(({ id }) => id),
         ),
-        gt(schemaChecks.createdAt, new Date(startDate)),
-        lt(schemaChecks.createdAt, new Date(endDate)),
-      );
-    } else {
-      conditions = and(
-        or(
-          inArray(
-            schema.schemaCheckSubgraphs.subgraphId,
-            subgraphs.map(({ id }) => id),
-          ),
-          inArray(
-            schemaChecks.targetId,
-            subgraphs.map(({ targetId }) => targetId),
-          ),
+        // This is to fetch the checks based on the old schema
+        inArray(
+          schemaChecks.targetId,
+          subgraphs.map(({ targetId }) => targetId),
         ),
-      );
-    }
+      ),
+      gt(schemaChecks.createdAt, new Date(startDate)),
+      lt(schemaChecks.createdAt, new Date(endDate)),
+    );
 
     // Use a subquery with distinct check IDs to get the count
     const checks = await this.db
