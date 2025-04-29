@@ -10,6 +10,7 @@ import (
 	"slices"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
+	"google.golang.org/grpc"
 
 	"github.com/buger/jsonparser"
 
@@ -19,6 +20,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
+	grpcdatasource "github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/grpc_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/staticdatasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
@@ -56,6 +58,7 @@ type DefaultFactoryResolver struct {
 
 	httpClient          *http.Client
 	subgraphHTTPClients map[string]*http.Client
+	subgraphGRPCClients map[string]grpc.ClientConnInterface
 
 	factoryLogger abstractlogger.Logger
 }
@@ -387,6 +390,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				},
 				SchemaConfiguration:    schemaConfiguration,
 				CustomScalarTypeFields: customScalarTypeFields,
+				GRPC:                   toGRPCConfiguration(in.CustomGraphql.Grpc),
 			})
 			if err != nil {
 				return nil, fmt.Errorf("error creating custom configuration for data source %s: %w", in.Id, err)
@@ -606,4 +610,87 @@ func (l *Loader) fieldHasAuthorizationRule(fieldConfiguration *nodev1.FieldConfi
 		return true
 	}
 	return false
+}
+
+func unnestMap[T any, O any](in map[string]T, fn func(T) O) map[string]O {
+	if in == nil {
+		return nil
+	}
+
+	out := make(map[string]O)
+	for k, v := range in {
+		out[k] = fn(v)
+	}
+	return out
+}
+
+func toGRPCConfiguration(config *nodev1.GRPCConfiguration) *grpcdatasource.GRPCConfiguration {
+	if config == nil {
+		return nil
+	}
+
+	in := config.Mapping
+
+	inputArguments := unnestMap(in.InputArguments, func(v *nodev1.InputArgumentMap) grpcdatasource.InputArgumentMap {
+		return grpcdatasource.InputArgumentMap(v.Mappings)
+	})
+
+	queryRPCs := unnestMap(in.QueryRpcs, func(v *nodev1.RPCConfig) grpcdatasource.RPCConfig {
+		return grpcdatasource.RPCConfig{
+			RPC:      v.Rpc,
+			Request:  v.Request,
+			Response: v.Response,
+		}
+	})
+
+	mutationRPCs := unnestMap(in.MutationRpcs, func(v *nodev1.RPCConfig) grpcdatasource.RPCConfig {
+		return grpcdatasource.RPCConfig{
+			RPC:      v.Rpc,
+			Request:  v.Request,
+			Response: v.Response,
+		}
+	})
+
+	subscriptionRPCs := unnestMap(in.SubscriptionRpcs, func(v *nodev1.RPCConfig) grpcdatasource.RPCConfig {
+		return grpcdatasource.RPCConfig{
+			RPC:      v.Rpc,
+			Request:  v.Request,
+			Response: v.Response,
+		}
+	})
+
+	entityRPCs := unnestMap(in.EntityRpcs, func(v *nodev1.EntityRPCConfig) grpcdatasource.EntityRPCConfig {
+		return grpcdatasource.EntityRPCConfig{
+			Key: v.Key,
+			RPCConfig: grpcdatasource.RPCConfig{
+				RPC:      v.Rpc,
+				Request:  v.Request,
+				Response: v.Response,
+			},
+		}
+	})
+
+	fields := unnestMap(in.Fields, func(v *nodev1.FieldMap) grpcdatasource.FieldMap {
+		return unnestMap(v.Mappings, func(v *nodev1.FieldMapData) grpcdatasource.FieldMapData {
+			return grpcdatasource.FieldMapData{
+				TargetName:       v.TargetName,
+				ArgumentMappings: grpcdatasource.FieldArgumentMap(v.ArgumentMappings),
+			}
+		})
+	})
+
+	mapping := &grpcdatasource.GRPCMapping{
+		Services:         in.Services,
+		InputArguments:   inputArguments,
+		QueryRPCs:        queryRPCs,
+		MutationRPCs:     mutationRPCs,
+		SubscriptionRPCs: subscriptionRPCs,
+		EntityRPCs:       entityRPCs,
+		Fields:           fields,
+	}
+
+	return &grpcdatasource.GRPCConfiguration{
+		Mapping:     mapping,
+		ProtoSchema: config.ProtoSchema,
+	}
 }

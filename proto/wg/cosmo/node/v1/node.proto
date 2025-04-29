@@ -199,6 +199,64 @@ message DataSourceCustom_GraphQL {
   GraphQLFederationConfiguration federation = 3;
   InternedString upstream_schema = 4;
   repeated SingleTypeField custom_scalar_type_fields = 6;
+  GRPCConfiguration grpc = 7;
+}
+
+message GRPCConfiguration {
+  GRPCMapping mapping = 1;
+  string proto_schema = 2;
+}
+
+message GRPCMapping {
+  // Services maps user-friendly service names to the actual gRPC service names
+  map<string, string> services = 1;
+  // InputArguments maps GraphQL input arguments to the corresponding gRPC input arguments
+  map<string, InputArgumentMap> input_arguments = 2;
+  // QueryRPCs maps GraphQL query fields to the corresponding gRPC RPC configurations
+  map<string, RPCConfig> query_rpcs = 3;
+  // MutationRPCs maps GraphQL mutation fields to the corresponding gRPC RPC configurations
+  map<string, RPCConfig> mutation_rpcs = 4;
+  // SubscriptionRPCs maps GraphQL subscription fields to the corresponding gRPC RPC configurations
+  map<string, RPCConfig> subscription_rpcs = 5;
+  // EntityRPCs defines how GraphQL types are resolved as entities using specific RPCs
+  map<string, EntityRPCConfig> entity_rpcs = 6;
+  // Fields defines the field mappings between GraphQL types and gRPC messages
+  map<string, FieldMap> fields = 7;
+}
+
+// InputArgumentMap is a map of GraphQL input arguments to the corresponding gRPC input arguments
+message InputArgumentMap {
+  map<string, string> mappings = 1;
+}
+
+// RPCConfig defines the configuration for a specific RPC operation
+message RPCConfig {
+  // RPC is the name of the RPC method to call
+  string rpc = 1;
+  // Request is the name of the request message type
+  string request = 2;
+  // Response is the name of the response message type
+  string response = 3;
+}
+
+// EntityRPCConfig defines the configuration for entity lookups
+message EntityRPCConfig {
+  // Key is a list of field names that uniquely identify the entity
+  string key = 1;
+  // RPC configuration for the entity lookup
+  string rpc = 2;
+  string request = 3;
+  string response = 4;
+}
+
+// FieldMap defines the mapping between a GraphQL field and a gRPC field
+message FieldMap {
+  map<string, FieldMapData> mappings = 1;
+}
+
+message FieldMapData {
+  string target_name = 1;
+  map<string, string> argument_mappings = 2;
 }
 
 enum EventType {

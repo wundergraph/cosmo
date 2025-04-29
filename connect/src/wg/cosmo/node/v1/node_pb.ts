@@ -1457,6 +1457,11 @@ export class DataSourceCustom_GraphQL extends Message<DataSourceCustom_GraphQL> 
    */
   customScalarTypeFields: SingleTypeField[] = [];
 
+  /**
+   * @generated from field: wg.cosmo.node.v1.GRPCConfiguration grpc = 7;
+   */
+  grpc?: GRPCConfiguration;
+
   constructor(data?: PartialMessage<DataSourceCustom_GraphQL>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1470,6 +1475,7 @@ export class DataSourceCustom_GraphQL extends Message<DataSourceCustom_GraphQL> 
     { no: 3, name: "federation", kind: "message", T: GraphQLFederationConfiguration },
     { no: 4, name: "upstream_schema", kind: "message", T: InternedString },
     { no: 6, name: "custom_scalar_type_fields", kind: "message", T: SingleTypeField, repeated: true },
+    { no: 7, name: "grpc", kind: "message", T: GRPCConfiguration },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataSourceCustom_GraphQL {
@@ -1486,6 +1492,375 @@ export class DataSourceCustom_GraphQL extends Message<DataSourceCustom_GraphQL> 
 
   static equals(a: DataSourceCustom_GraphQL | PlainMessage<DataSourceCustom_GraphQL> | undefined, b: DataSourceCustom_GraphQL | PlainMessage<DataSourceCustom_GraphQL> | undefined): boolean {
     return proto3.util.equals(DataSourceCustom_GraphQL, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.GRPCConfiguration
+ */
+export class GRPCConfiguration extends Message<GRPCConfiguration> {
+  /**
+   * @generated from field: wg.cosmo.node.v1.GRPCMapping mapping = 1;
+   */
+  mapping?: GRPCMapping;
+
+  /**
+   * @generated from field: string proto_schema = 2;
+   */
+  protoSchema = "";
+
+  constructor(data?: PartialMessage<GRPCConfiguration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.GRPCConfiguration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "mapping", kind: "message", T: GRPCMapping },
+    { no: 2, name: "proto_schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GRPCConfiguration {
+    return new GRPCConfiguration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GRPCConfiguration {
+    return new GRPCConfiguration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GRPCConfiguration {
+    return new GRPCConfiguration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GRPCConfiguration | PlainMessage<GRPCConfiguration> | undefined, b: GRPCConfiguration | PlainMessage<GRPCConfiguration> | undefined): boolean {
+    return proto3.util.equals(GRPCConfiguration, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.GRPCMapping
+ */
+export class GRPCMapping extends Message<GRPCMapping> {
+  /**
+   * Services maps user-friendly service names to the actual gRPC service names
+   *
+   * @generated from field: map<string, string> services = 1;
+   */
+  services: { [key: string]: string } = {};
+
+  /**
+   * InputArguments maps GraphQL input arguments to the corresponding gRPC input arguments
+   *
+   * @generated from field: map<string, wg.cosmo.node.v1.InputArgumentMap> input_arguments = 2;
+   */
+  inputArguments: { [key: string]: InputArgumentMap } = {};
+
+  /**
+   * QueryRPCs maps GraphQL query fields to the corresponding gRPC RPC configurations
+   *
+   * @generated from field: map<string, wg.cosmo.node.v1.RPCConfig> query_rpcs = 3;
+   */
+  queryRpcs: { [key: string]: RPCConfig } = {};
+
+  /**
+   * MutationRPCs maps GraphQL mutation fields to the corresponding gRPC RPC configurations
+   *
+   * @generated from field: map<string, wg.cosmo.node.v1.RPCConfig> mutation_rpcs = 4;
+   */
+  mutationRpcs: { [key: string]: RPCConfig } = {};
+
+  /**
+   * SubscriptionRPCs maps GraphQL subscription fields to the corresponding gRPC RPC configurations
+   *
+   * @generated from field: map<string, wg.cosmo.node.v1.RPCConfig> subscription_rpcs = 5;
+   */
+  subscriptionRpcs: { [key: string]: RPCConfig } = {};
+
+  /**
+   * EntityRPCs defines how GraphQL types are resolved as entities using specific RPCs
+   *
+   * @generated from field: map<string, wg.cosmo.node.v1.EntityRPCConfig> entity_rpcs = 6;
+   */
+  entityRpcs: { [key: string]: EntityRPCConfig } = {};
+
+  /**
+   * Fields defines the field mappings between GraphQL types and gRPC messages
+   *
+   * @generated from field: map<string, wg.cosmo.node.v1.FieldMap> fields = 7;
+   */
+  fields: { [key: string]: FieldMap } = {};
+
+  constructor(data?: PartialMessage<GRPCMapping>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.GRPCMapping";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "services", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 2, name: "input_arguments", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: InputArgumentMap} },
+    { no: 3, name: "query_rpcs", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: RPCConfig} },
+    { no: 4, name: "mutation_rpcs", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: RPCConfig} },
+    { no: 5, name: "subscription_rpcs", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: RPCConfig} },
+    { no: 6, name: "entity_rpcs", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: EntityRPCConfig} },
+    { no: 7, name: "fields", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: FieldMap} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GRPCMapping {
+    return new GRPCMapping().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GRPCMapping {
+    return new GRPCMapping().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GRPCMapping {
+    return new GRPCMapping().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GRPCMapping | PlainMessage<GRPCMapping> | undefined, b: GRPCMapping | PlainMessage<GRPCMapping> | undefined): boolean {
+    return proto3.util.equals(GRPCMapping, a, b);
+  }
+}
+
+/**
+ * InputArgumentMap is a map of GraphQL input arguments to the corresponding gRPC input arguments
+ *
+ * @generated from message wg.cosmo.node.v1.InputArgumentMap
+ */
+export class InputArgumentMap extends Message<InputArgumentMap> {
+  /**
+   * @generated from field: map<string, string> mappings = 1;
+   */
+  mappings: { [key: string]: string } = {};
+
+  constructor(data?: PartialMessage<InputArgumentMap>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.InputArgumentMap";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "mappings", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): InputArgumentMap {
+    return new InputArgumentMap().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): InputArgumentMap {
+    return new InputArgumentMap().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): InputArgumentMap {
+    return new InputArgumentMap().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: InputArgumentMap | PlainMessage<InputArgumentMap> | undefined, b: InputArgumentMap | PlainMessage<InputArgumentMap> | undefined): boolean {
+    return proto3.util.equals(InputArgumentMap, a, b);
+  }
+}
+
+/**
+ * RPCConfig defines the configuration for a specific RPC operation
+ *
+ * @generated from message wg.cosmo.node.v1.RPCConfig
+ */
+export class RPCConfig extends Message<RPCConfig> {
+  /**
+   * RPC is the name of the RPC method to call
+   *
+   * @generated from field: string rpc = 1;
+   */
+  rpc = "";
+
+  /**
+   * Request is the name of the request message type
+   *
+   * @generated from field: string request = 2;
+   */
+  request = "";
+
+  /**
+   * Response is the name of the response message type
+   *
+   * @generated from field: string response = 3;
+   */
+  response = "";
+
+  constructor(data?: PartialMessage<RPCConfig>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.RPCConfig";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "rpc", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "response", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RPCConfig {
+    return new RPCConfig().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RPCConfig {
+    return new RPCConfig().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RPCConfig {
+    return new RPCConfig().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RPCConfig | PlainMessage<RPCConfig> | undefined, b: RPCConfig | PlainMessage<RPCConfig> | undefined): boolean {
+    return proto3.util.equals(RPCConfig, a, b);
+  }
+}
+
+/**
+ * EntityRPCConfig defines the configuration for entity lookups
+ *
+ * @generated from message wg.cosmo.node.v1.EntityRPCConfig
+ */
+export class EntityRPCConfig extends Message<EntityRPCConfig> {
+  /**
+   * Key is a list of field names that uniquely identify the entity
+   *
+   * @generated from field: string key = 1;
+   */
+  key = "";
+
+  /**
+   * RPC configuration for the entity lookup
+   *
+   * @generated from field: string rpc = 2;
+   */
+  rpc = "";
+
+  /**
+   * @generated from field: string request = 3;
+   */
+  request = "";
+
+  /**
+   * @generated from field: string response = 4;
+   */
+  response = "";
+
+  constructor(data?: PartialMessage<EntityRPCConfig>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.EntityRPCConfig";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "rpc", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "response", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EntityRPCConfig {
+    return new EntityRPCConfig().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EntityRPCConfig {
+    return new EntityRPCConfig().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EntityRPCConfig {
+    return new EntityRPCConfig().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EntityRPCConfig | PlainMessage<EntityRPCConfig> | undefined, b: EntityRPCConfig | PlainMessage<EntityRPCConfig> | undefined): boolean {
+    return proto3.util.equals(EntityRPCConfig, a, b);
+  }
+}
+
+/**
+ * FieldMap defines the mapping between a GraphQL field and a gRPC field
+ *
+ * @generated from message wg.cosmo.node.v1.FieldMap
+ */
+export class FieldMap extends Message<FieldMap> {
+  /**
+   * @generated from field: map<string, wg.cosmo.node.v1.FieldMapData> mappings = 1;
+   */
+  mappings: { [key: string]: FieldMapData } = {};
+
+  constructor(data?: PartialMessage<FieldMap>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.FieldMap";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "mappings", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "message", T: FieldMapData} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FieldMap {
+    return new FieldMap().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FieldMap {
+    return new FieldMap().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FieldMap {
+    return new FieldMap().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FieldMap | PlainMessage<FieldMap> | undefined, b: FieldMap | PlainMessage<FieldMap> | undefined): boolean {
+    return proto3.util.equals(FieldMap, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.node.v1.FieldMapData
+ */
+export class FieldMapData extends Message<FieldMapData> {
+  /**
+   * @generated from field: string target_name = 1;
+   */
+  targetName = "";
+
+  /**
+   * @generated from field: map<string, string> argument_mappings = 2;
+   */
+  argumentMappings: { [key: string]: string } = {};
+
+  constructor(data?: PartialMessage<FieldMapData>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.FieldMapData";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "target_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "argument_mappings", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FieldMapData {
+    return new FieldMapData().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FieldMapData {
+    return new FieldMapData().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FieldMapData {
+    return new FieldMapData().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FieldMapData | PlainMessage<FieldMapData> | undefined, b: FieldMapData | PlainMessage<FieldMapData> | undefined): boolean {
+    return proto3.util.equals(FieldMapData, a, b);
   }
 }
 
