@@ -2424,7 +2424,7 @@
           "type": "string",
           "format": "go-duration",
           "description": "The Websocket client ping interval to the subgraph. Defines how often the router will ping the subgraph to signal that the connection is still alive. Timeout needs to be coordinated with the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
-          "default": "10s",
+          "default": "15s",
           "duration": {
             "minimum": "5s"
           }
