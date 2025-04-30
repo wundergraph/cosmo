@@ -115,6 +115,10 @@ telemetry:
         export_timeout: 30s
         path: "/v1/traces"
         headers: {}
+    subgraph:
+      attributes:
+        - key: "wg.tracing.custom.conn.subgraph.hostport"
+          expression: "subgraph.operation.trace.conn.create.hostPort"
 
   # OpenTelemetry Metrics
   metrics:

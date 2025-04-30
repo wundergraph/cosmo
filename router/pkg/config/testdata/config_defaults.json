@@ -15,8 +15,8 @@
       "Subgraph": {
         "Attributes": [
           {
-            "Key": "custom_attribute",
-            "Expression": "custom_expression"
+            "Key": "wg.tracing.custom.conn.subgraph.hostport",
+            "Expression": "subgraph.operation.trace.conn.create.hostPort"
           }
         ]
       },
