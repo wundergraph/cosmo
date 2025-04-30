@@ -120,7 +120,7 @@ func SubgraphAccessLogsFieldHandler(
 
 	reqContext, resFields := processRequestIDField(request, resFields)
 	resFields = processCustomAttributes(attributes, responseHeader, resFields, request, reqContext, passedErr)
-	resFields = processSubgraphExpressionAttributes(logger, exprAttributes, reqContext, resFields, overrideExprContext)
+	resFields = processSubgraphExpressionAttributes(logger, exprAttributes, resFields, overrideExprContext)
 
 	return resFields
 }
@@ -144,16 +144,9 @@ func processRequestIDField(request *http.Request, resFields []zapcore.Field) (*r
 func processSubgraphExpressionAttributes(
 	logger *zap.Logger,
 	exprAttributes []requestlogger.ExpressionAttribute,
-	reqContext *requestContext,
 	resFields []zapcore.Field,
 	overrideExprContext *expr.Context,
 ) []zapcore.Field {
-	// If the request context was processed as nil (e.g. :- request was nil in the caller)
-	// do not proceed to process exprAttributes
-	if reqContext == nil {
-		return resFields
-	}
-
 	for _, exprField := range exprAttributes {
 		result, err := expr.ResolveAnyExpression(exprField.Expr, *overrideExprContext)
 		if err != nil {

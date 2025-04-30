@@ -96,16 +96,14 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 		return ctx
 	}
 
-	// We follow the expr spec, however trace is a new attribute
-	// TODO: Note: This copy still points to the same maps like requestClaims etc
+	// Note: This copy still points to the same maps like requestClaims etc
 	exprCopy := reqContext.expressionContext
 	exprCopy.Subgraph = expr.Subgraph{
 		Id:        ds.ID,
 		Name:      ds.Name,
 		Operation: expr.SubgraphOperation{},
 	}
-
-	ctx = context.WithValue(ctx, expr.SubgraphExpressionContextKey{}, &exprCopy)
+	ctx = expr.SetSubgraphExpressionContext(ctx, &exprCopy)
 
 	ctx, _ = f.tracer.Start(ctx, "Engine - Fetch",
 		trace.WithAttributes([]attribute.KeyValue{
@@ -164,24 +162,16 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		exprCtx := *subgraphRequestExpr
 		result, err := expr.ResolveAnyExpression(expression, exprCtx)
 		if err != nil {
-			// If the expression fails, we don't want to add it to the attributes
-			// but not block
+			// If the expression fails, we don't want to add it to the attributes but also not block
+			reqContext.Logger().Warn(
+				"failed to resolve expression",
+				zap.Error(err),
+				zap.String("key", key),
+			)
 			continue
 		}
-
-		// TODO: Consider asking the user explicitly figuring out the type
-		// will need to test for ptr types also, to optimize
-		if result != nil && result != "" {
-			switch val := result.(type) {
-			case string:
-				traceAttrs = append(traceAttrs, attribute.String(key, val))
-			case *string:
-				traceAttrs = append(traceAttrs, attribute.String(key, *val))
-			case bool:
-				traceAttrs = append(traceAttrs, attribute.Bool(key, val))
-			case *bool:
-				traceAttrs = append(traceAttrs, attribute.Bool(key, *val))
-			}
+		if toAttribute := convertToAttribute(key, result); toAttribute != nil {
+			traceAttrs = append(traceAttrs, *toAttribute)
 		}
 	}
 
@@ -272,4 +262,23 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	}
 
 	span.SetAttributes(traceAttrs...)
+}
+
+func convertToAttribute(key string, val any) *attribute.KeyValue {
+	if val == nil || val == "" {
+		return nil
+	}
+
+	switch v := val.(type) {
+	case string:
+		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.StringValue(v)}
+	case *string:
+		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.StringValue(*v)}
+	case bool:
+		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.BoolValue(v)}
+	case *bool:
+		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.BoolValue(*v)}
+	}
+
+	return nil
 }
