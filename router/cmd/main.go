@@ -195,6 +195,6 @@ func Main() {
 
 	// Start the router supervisor (blocking)
 	if err := rs.Start(); err != nil {
-		baseLogger.Error("Error starting supervisor", zap.Error(err))
+		baseLogger.Error("Could not shutdown router gracefully", zap.Error(err))
 	}
 }
