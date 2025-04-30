@@ -42,17 +42,16 @@ type RouterResources struct {
 
 // RouterSupervisorOpts is a struct for configuring the router supervisor.
 type RouterSupervisorOpts struct {
-	ConfigPath       string
-	SupervisorLogger *zap.Logger
-	BaseLogger       *zap.Logger
-	LifecycleHooks   *LifecycleHooks
+	ConfigPath     string
+	BaseLogger     *zap.Logger
+	LifecycleHooks *LifecycleHooks
 }
 
 // NewRouterSupervisor creates a new RouterSupervisor instance.
 func NewRouterSupervisor(opts *RouterSupervisorOpts) *RouterSupervisor {
 	return &RouterSupervisor{
 		shutdownChan:   make(chan bool),
-		logger:         opts.SupervisorLogger,
+		logger:         opts.BaseLogger.With(zap.String("component", "supervisor")),
 		lifecycleHooks: opts.LifecycleHooks,
 		configPath:     opts.ConfigPath,
 		resources: &RouterResources{
