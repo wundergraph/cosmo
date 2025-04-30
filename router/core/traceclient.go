@@ -134,14 +134,6 @@ func (t *TraceInjectingRoundTripper) getClientTrace(ctx context.Context) *httptr
 	return trace
 }
 
-func (t *TraceInjectingRoundTripper) getErrString(err error) string {
-	errString := "null"
-	if err != nil {
-		errString = fmt.Sprintf("%q", err)
-	}
-	return errString
-}
-
 // Helper to get the cipher suite to follow the standard trace attribute
 func (t *TraceInjectingRoundTripper) getCipherSuiteName(id uint16) string {
 	for _, cs := range tls.CipherSuites() {
