@@ -98,12 +98,9 @@ func Main() {
 	profiler := profile.Start(baseLogger, *cpuProfilePath, *memProfilePath)
 	defer profiler.Finish()
 
-	sl := baseLogger.With(zap.String("component", "supervisor"))
-
 	rs := core.NewRouterSupervisor(&core.RouterSupervisorOpts{
-		SupervisorLogger: sl,
-		BaseLogger:       baseLogger,
-		ConfigPath:       configPath,
+		BaseLogger: baseLogger,
+		ConfigPath: configPath,
 		LifecycleHooks: &core.LifecycleHooks{
 			PreCreate: func(rr *core.RouterResources) error {
 				logLevelAtomic.SetLevel(rr.Config.LogLevel)
@@ -163,7 +160,7 @@ func Main() {
 			Logger:   ll,
 			Path:     configPath,
 			Callback: func() {
-				ll.Debug("Configuration changed, triggering reload")
+				ll.Info("Configuration changed, triggering reload")
 
 				rs.Reload()
 			},
