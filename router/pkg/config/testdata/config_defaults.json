@@ -12,6 +12,14 @@
     "Tracing": {
       "Enabled": true,
       "SamplingRate": 1,
+      "Subgraph": {
+        "Attributes": [
+          {
+            "Key": "custom_attribute",
+            "Expression": "custom_expression"
+          }
+        ]
+      },
       "ParentBasedSampler": true,
       "Exporters": null,
       "Propagation": {

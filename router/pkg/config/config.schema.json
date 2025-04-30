@@ -855,20 +855,6 @@
             }
           }
         },
-        "request_transport_trace": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "log_hooks": {
-              "type": "boolean",
-              "default": false
-            },
-            "trace_hooks": {
-              "type": "boolean",
-              "default": false
-            }
-          }
-        },
         "tracing": {
           "type": "object",
           "additionalProperties": false,
@@ -890,10 +876,10 @@
               "properties": {
                 "attributes": {
                   "type": "array",
-                  "description": "The fields",
+                  "description": "Custom span attributes for subgraphs",
                   "items": {
                     "type": "object",
-                    "description": "The configuration for custom fields. Custom attributes can be created from request headers or context fields. Not every context fields are available at all request life-cycle stages. If a value is a list, the value is JSON encoded for OTLP. For Prometheus, the values are exploded into multiple metrics with unique labels. Keep in mind, that every new custom attribute increases the cardinality.",
+                    "description": "The configuration for custom span attributes for subgraph tracing.",
                     "additionalProperties": false,
                     "required": [
                       "key"
@@ -901,11 +887,11 @@
                     "properties": {
                       "key": {
                         "type": "string",
-                        "description": "The key of the field."
+                        "description": "The key of the trace attribute."
                       },
                       "expression": {
                         "type": "string",
-                        "description": "The expression used to evaluate to extract a value for logging. The expression is specified as a string. Please see https://expr-lang.org/ for more information on constructing expressions."
+                        "description": "The expression used to evaluate to a subgraph trace attribute."
                       }
                     }
                   }
