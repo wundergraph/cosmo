@@ -154,11 +154,12 @@ func (rs *RouterSupervisor) Start() error {
 		if err := rs.startRouter(); err != nil {
 			return fmt.Errorf("%w: failed to start router: %w", ErrStartupFailed, err)
 		}
+
 		rs.logger.Info("Router started")
 
 		shutdown := <-rs.shutdownChan
 
-		rs.logger.Debug("Stopping Router")
+		rs.logger.Debug("Got shutdown signal", zap.Bool("shutdown", shutdown))
 		if err := rs.stopRouter(); err != nil {
 			if errors.Is(err, context.DeadlineExceeded) {
 				rs.logger.Warn("Router shutdown deadline exceeded. Consider increasing the shutdown delay")
