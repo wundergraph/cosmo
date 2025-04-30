@@ -17,7 +17,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/profile"
-	"github.com/wundergraph/cosmo/router/pkg/supervisor"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
 
 	"go.uber.org/zap"
@@ -101,32 +100,12 @@ func Main() {
 
 	sl := baseLogger.With(zap.String("component", "supervisor"))
 
-	rs := supervisor.NewRouterSupervisor(&supervisor.RouterSupervisorOpts{
-		Logger: sl,
-
-		LifecycleHooks: &supervisor.LifecycleHooks{
-			LoadResources: func(rr *supervisor.RouterResources) error {
-				result, err := config.LoadConfig(configPath)
-				if err != nil {
-					return fmt.Errorf("could not load config: %w", err)
-				}
-
-				if result.DefaultLoaded {
-					if configPath == config.DefaultConfigPath {
-						sl.Info("Found default config file. Values in the config file have higher priority than environment variables",
-							zap.String("config_file", config.DefaultConfigPath),
-						)
-					} else {
-						sl.Info(
-							"Config file path provided. Values in the config file have higher priority than environment variables",
-							zap.String("config_file", configPath),
-						)
-					}
-				}
-
-				rr.Config = &result.Config
-				rr.Logger = baseLogger
-
+	rs := core.NewRouterSupervisor(&core.RouterSupervisorOpts{
+		SupervisorLogger: sl,
+		BaseLogger:       baseLogger,
+		ConfigPath:       configPath,
+		LifecycleHooks: &core.LifecycleHooks{
+			PreCreate: func(rr *core.RouterResources) error {
 				logLevelAtomic.SetLevel(rr.Config.LogLevel)
 
 				return nil
