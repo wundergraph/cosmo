@@ -130,9 +130,7 @@ func Main() {
 	{
 		reloadChan := make(chan os.Signal, 1)
 
-		signal.Notify(reloadChan, os.Interrupt,
-			syscall.SIGHUP,
-		)
+		signal.Notify(reloadChan, syscall.SIGHUP)
 
 		go func() {
 			<-reloadChan
