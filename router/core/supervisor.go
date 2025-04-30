@@ -65,7 +65,6 @@ func (rs *RouterSupervisor) createRouter() error {
 	// Don't use the parent context that is canceled by the signal handler
 	routerCtx, routerCancel := context.WithCancel(context.Background())
 
-	// TODO: Test if this actually allows router failure and recovery
 	router, err := newRouter(routerCtx, RouterCreateParams{
 		Config: rs.resources.Config,
 		Logger: rs.resources.Logger,
@@ -101,6 +100,8 @@ func (rs *RouterSupervisor) stopRouter() error {
 	if err := rs.router.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("failed to shutdown router gracefully: %w", err)
 	}
+
+	rs.routerCancel()
 
 	return nil
 }
