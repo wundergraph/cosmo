@@ -6442,9 +6442,9 @@ export class OrganizationGroup extends Message<OrganizationGroup> {
   name = "";
 
   /**
-   * @generated from field: optional string description = 3;
+   * @generated from field: string description = 3;
    */
-  description?: string;
+  description = "";
 
   /**
    * @generated from field: int32 membersCount = 4;
@@ -6466,7 +6466,7 @@ export class OrganizationGroup extends Message<OrganizationGroup> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "groupId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "membersCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 5, name: "rules", kind: "message", T: OrganizationGroupRule, repeated: true },
   ]);
