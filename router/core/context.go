@@ -22,6 +22,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
 	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
@@ -536,7 +537,7 @@ type operationContext struct {
 	persistedOperationCacheHit bool
 	normalizationCacheHit      bool
 
-	typeFieldUsageInfo []*graphqlmetrics.TypeFieldUsageInfo
+	typeFieldUsageInfo graphqlschemausage.TypeFieldMetrics
 	argumentUsageInfo  []*graphqlmetrics.ArgumentUsageInfo
 	inputUsageInfo     []*graphqlmetrics.InputUsageInfo
 

@@ -257,6 +257,12 @@ type MetricOptions struct {
 	EnablePrometheusRouterCache  bool
 	OTLPEngineStatsOptions       EngineStatOptions
 	PrometheusEngineStatsOptions EngineStatOptions
+	PrometheusSchemaFieldUsage   PrometheusSchemaFieldUsage
+}
+
+type PrometheusSchemaFieldUsage struct {
+	Enabled             bool
+	IncludeOperationSha bool
 }
 
 type Config struct {
@@ -823,8 +829,8 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		},
 		WebSocketClientPollTimeout:    300 * time.Millisecond,
 		WebSocketClientConnBufferSize: 1,
-		WebSocketClientReadTimeout:    100 * time.Millisecond,
-		WebSocketClientWriteTimeout:   1 * time.Second,
+		WebSocketClientReadTimeout:    1 * time.Second,
+		WebSocketClientWriteTimeout:   2 * time.Second,
 		// Avoid get in conflict with any test that doesn't expect to handle pings
 		WebSocketClientPingInterval:    30 * time.Second,
 		MaxConcurrentResolvers:         32,
@@ -980,6 +986,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetrics,
 			ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetricLabels,
 			ExcludeScopeInfo:    testConfig.MetricOptions.MetricExclusions.ExcludeScopeInfo,
+			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
+				Enabled:             testConfig.MetricOptions.PrometheusSchemaFieldUsage.Enabled,
+				IncludeOperationSha: testConfig.MetricOptions.PrometheusSchemaFieldUsage.IncludeOperationSha,
+			},
 		}
 	}
 

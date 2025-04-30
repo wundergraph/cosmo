@@ -6,9 +6,7 @@
     "version": {
       "type": "string",
       "description": "The version of the configuration file. This is used to ensure that the configuration file is compatible.",
-      "enum": [
-        "1"
-      ]
+      "enum": ["1"]
     },
     "instance_id": {
       "type": "string",
@@ -39,10 +37,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": [
-              "id",
-              "url"
-            ],
+            "required": ["id", "url"],
             "additionalProperties": false,
             "properties": {
               "id": {
@@ -61,10 +56,7 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": [
-              "id",
-              "urls"
-            ],
+            "required": ["id", "urls"],
             "additionalProperties": false,
             "properties": {
               "id": {
@@ -88,45 +80,39 @@
         },
         "s3": {
           "type": "array",
-          "description": "The S3 configuration. The S3 provider is used to store and retrieve data.",
+          "description": "The configuration for the S3 storage provider. If no access key and secret key are provided, the provider will attempt to retrieve IAM credentials from the EC2 service.",
           "items": {
             "type": "object",
-            "required": [
-              "id",
-              "endpoint",
-              "access_key",
-              "secret_key",
-              "bucket"
-            ],
+            "required": ["id", "bucket", "endpoint"],
             "additionalProperties": false,
             "properties": {
               "id": {
                 "type": "string",
-                "description": "The provider ID. The provider ID is used to identify the provider in the configuration."
+                "description": "The ID of the storage provider. The ID is used to identify the storage provider in the configuration."
               },
               "endpoint": {
                 "type": "string",
-                "description": "The S3 endpoint to use."
+                "description": "The S3 endpoint to connect to. The endpoint is used to connect to the S3 provider. If not set, the default S3 endpoint is used."
               },
               "access_key": {
                 "type": "string",
-                "description": "The S3 access key to use."
+                "description": "The access key of the S3 bucket. The access key ID is used to authenticate with the S3 bucket."
               },
               "secret_key": {
                 "type": "string",
-                "description": "The S3 secret key to use."
+                "description": "The secret key of the S3 bucket. The secret key is used to authenticate with the S3 bucket."
               },
               "bucket": {
                 "type": "string",
-                "description": "The S3 bucket to use."
+                "description": "The name of the S3 bucket. The S3 bucket is used to store the execution config."
               },
               "region": {
                 "type": "string",
-                "description": "The S3 region to use."
+                "description": "The region of the S3 bucket. The region is used to specify the region of the S3 bucket."
               },
               "secure": {
                 "type": "boolean",
-                "description": "Whether to use HTTPS for the S3 connection."
+                "description": "Enable the secure connection. The secure connection is used to establish a secure connection with the S3 bucket."
               }
             }
           }
@@ -136,10 +122,7 @@
           "description": "The file system configuration. The file system provider is used to store and retrieve data from the local file system.",
           "items": {
             "type": "object",
-            "required": [
-              "id",
-              "path"
-            ],
+            "required": ["id", "path"],
             "additionalProperties": false,
             "properties": {
               "id": {
@@ -193,10 +176,7 @@
         },
         "storage": {
           "description": "The storage provider for persisted operation. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the persisted operations.",
-          "required": [
-            "provider_id",
-            "object_prefix"
-          ],
+          "required": ["provider_id", "object_prefix"],
           "properties": {
             "provider_id": {
               "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
@@ -214,9 +194,7 @@
       "type": "object",
       "additionalProperties": false,
       "description": "The configuration for the automatic persisted queries (APQ).",
-      "required": [
-        "enabled"
-      ],
+      "required": ["enabled"],
       "properties": {
         "enabled": {
           "type": "boolean",
@@ -245,10 +223,7 @@
         },
         "storage": {
           "description": "The storage provider for automatic persisted operation. Only one provider can be active. When no provider is specified, the router will use a local in-memory cache for retaining APQ queries",
-          "required": [
-            "provider_id",
-            "object_prefix"
-          ],
+          "required": ["provider_id", "object_prefix"],
           "properties": {
             "provider_id": {
               "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
@@ -274,9 +249,7 @@
               "type": "object",
               "description": "The configuration for the execution config file. The config file is used to load the execution config from the local file system. The file has precedence over the storage provider.",
               "additionalProperties": false,
-              "required": [
-                "path"
-              ],
+              "required": ["path"],
               "dependentSchemas": {
                 "watch_interval": {
                   "properties": {
@@ -315,10 +288,7 @@
           "properties": {
             "storage": {
               "description": "The storage provider for the execution config. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the execution config. Updating the execution config is happening in the background without downtime.",
-              "required": [
-                "provider_id",
-                "object_path"
-              ],
+              "required": ["provider_id", "object_path"],
               "properties": {
                 "provider_id": {
                   "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
@@ -338,9 +308,7 @@
           "properties": {
             "fallback_storage": {
               "description": "The fallback storage provider for the execution config in case the primary one fails.",
-              "required": [
-                "enabled"
-              ],
+              "required": ["enabled"],
               "properties": {
                 "enabled": {
                   "type": "boolean",
@@ -408,9 +376,7 @@
               "type": "object",
               "description": "The configuration for the client authentication. The client authentication is used to authenticate the clients using the provided certificate.",
               "additionalProperties": false,
-              "required": [
-                "cert_file"
-              ],
+              "required": ["cert_file"],
               "properties": {
                 "required": {
                   "type": "boolean",
@@ -433,10 +399,7 @@
             }
           },
           "then": {
-            "required": [
-              "cert_file",
-              "key_file"
-            ]
+            "required": ["cert_file", "key_file"]
           }
         }
       }
@@ -479,9 +442,7 @@
             "allow_list": {
               "type": "array",
               "description": "The names of the headers to forward. The default value is 'Authorization'.",
-              "default": [
-                "Authorization"
-              ],
+              "default": ["Authorization"],
               "items": {
                 "type": "string"
               }
@@ -500,9 +461,7 @@
             "allow_list": {
               "type": "array",
               "description": "The names of the query parameters to forward. The default value is 'Authorization'.",
-              "default": [
-                "Authorization"
-              ],
+              "default": ["Authorization"],
               "items": {
                 "type": "string"
               }
@@ -617,10 +576,7 @@
               "type": "string",
               "default": "redact",
               "description": "The method used to anonymize the IP addresses. The supported methods are 'redact' and 'hash'. The default value is 'redact'. The 'redact' method replaces the IP addresses with the string '[REDACTED]'. The 'hash' method hashes the IP addresses using the SHA-256 algorithm.",
-              "enum": [
-                "redact",
-                "hash"
-              ]
+              "enum": ["redact", "hash"]
             }
           }
         }
@@ -792,10 +748,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "key",
-              "value"
-            ],
+            "required": ["key", "value"],
             "properties": {
               "key": {
                 "type": "string",
@@ -815,9 +768,7 @@
             "type": "object",
             "description": "The configuration for custom attributes. Custom attributes can be created from request headers or static values. Keep in mind, that every new custom attribute increases the cardinality of the pipeline.",
             "additionalProperties": false,
-            "required": [
-              "key"
-            ],
+            "required": ["key"],
             "properties": {
               "key": {
                 "type": "string",
@@ -843,14 +794,10 @@
                 },
                 "oneOf": [
                   {
-                    "required": [
-                      "request_header"
-                    ]
+                    "required": ["request_header"]
                   },
                   {
-                    "required": [
-                      "expression"
-                    ]
+                    "required": ["expression"]
                   }
                 ]
               }
@@ -892,9 +839,7 @@
               "description": "The exporters to use to export the traces. If no exporters are specified, the default Cosmo Cloud exporter is used. If you override, please make sure to include the default exporter.",
               "items": {
                 "type": "object",
-                "required": [
-                  "endpoint"
-                ],
+                "required": ["endpoint"],
                 "additionalProperties": false,
                 "properties": {
                   "disabled": {
@@ -904,10 +849,7 @@
                     "type": "string",
                     "description": "The exporter to use for the traces. The supported exporters are 'http' and 'grpc'.",
                     "default": "http",
-                    "enum": [
-                      "http",
-                      "grpc"
-                    ]
+                    "enum": ["http", "grpc"]
                   },
                   "endpoint": {
                     "type": "string"
@@ -1001,9 +943,7 @@
                 "type": "object",
                 "description": "The configuration for custom attributes. Custom attributes can be created from request headers, static values or context fields. Not every context fields are available at all request life-cycle stages. If a value is a list, the value is JSON encoded for OTLP. For Prometheus, the values are exploded into multiple metrics with unique labels. Keep in mind, that every new custom attribute increases the cardinality.",
                 "additionalProperties": false,
-                "required": [
-                  "key"
-                ],
+                "required": ["key"],
                 "properties": {
                   "key": {
                     "type": "string",
@@ -1085,10 +1025,7 @@
                         "type": "string",
                         "description": "The exporter protocol to use to export metrics. The supported exporters are 'http' and 'grpc'.",
                         "default": "http",
-                        "enum": [
-                          "http",
-                          "grpc"
-                        ]
+                        "enum": ["http", "grpc"]
                       },
                       "endpoint": {
                         "type": "string",
@@ -1110,16 +1047,10 @@
                       "temporality": {
                         "type": "string",
                         "description": "Temporality defines the window that an aggregation is calculated over.",
-                        "enum": [
-                          "delta",
-                          "cumulative"
-                        ]
+                        "enum": ["delta", "cumulative"]
                       }
                     },
-                    "required": [
-                      "exporter",
-                      "endpoint"
-                    ]
+                    "required": ["exporter", "endpoint"]
                   }
                 },
                 "exclude_metrics": {
@@ -1193,6 +1124,22 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Exclude scope info from Prometheus metrics. The default value is false."
+                },
+                "schema_usage": {
+                  "type": "object",
+                  "description": "Configure schema field usage metrics for Prometheus",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable the collection and export of GraphQL schema metrics to Prometheus. The default value is false."
+                    },
+                    "include_operation_sha": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Include the operation SHA256 in the metric labels, this can be an expensive operation. The default value is false."
+                    }
+                  }
                 }
               }
             }
@@ -1212,32 +1159,18 @@
         "allow_origins": {
           "type": "array",
           "description": "The allowed origins. The default value is to allow all origins. The value can be a list of origins or the wildcard '*'.",
-          "default": [
-            "*"
-          ],
+          "default": ["*"],
           "items": {
             "type": "string"
           }
         },
         "allow_methods": {
           "type": "array",
-          "default": [
-            "GET",
-            "POST",
-            "HEAD"
-          ],
+          "default": ["GET", "POST", "HEAD"],
           "description": "The allowed HTTP methods. The default value is to allow the methods 'GET', 'POST', and 'HEAD'.",
           "items": {
             "type": "string",
-            "enum": [
-              "GET",
-              "POST",
-              "HEAD",
-              "PUT",
-              "DELETE",
-              "PATCH",
-              "OPTIONS"
-            ]
+            "enum": ["GET", "POST", "HEAD", "PUT", "DELETE", "PATCH", "OPTIONS"]
           }
         },
         "allow_headers": {
@@ -1347,14 +1280,7 @@
     },
     "log_level": {
       "type": "string",
-      "enum": [
-        "debug",
-        "info",
-        "warning",
-        "error",
-        "fatal",
-        "panic"
-      ],
+      "enum": ["debug", "info", "warning", "error", "fatal", "panic"],
       "description": "The log level. The log level is used to control the verbosity of the logs. The default value is 'info'.",
       "default": "info"
     },
@@ -1579,23 +1505,17 @@
         "enabled": {
           "type": "boolean",
           "description": "Determines whether cache control policy is enabled.",
-          "examples": [
-            true
-          ]
+          "examples": [true]
         },
         "value": {
           "type": "string",
           "description": "Global cache control value.",
-          "examples": [
-            "max-age=180, public"
-          ]
+          "examples": ["max-age=180, public"]
         },
         "subgraphs": {
           "type": "array",
           "description": "Subgraph-specific cache control settings.",
-          "required": [
-            "name"
-          ],
+          "required": ["name"],
           "additionalProperties": false,
           "items": {
             "type": "object",
@@ -1603,24 +1523,18 @@
               "name": {
                 "type": "string",
                 "description": "Name of the subgraph.",
-                "examples": [
-                  "products"
-                ]
+                "examples": ["products"]
               },
               "value": {
                 "type": "string",
                 "description": "Cache control value for the subgraph.",
-                "examples": [
-                  "max-age=60, public"
-                ]
+                "examples": ["max-age=60, public"]
               }
             }
           }
         }
       },
-      "required": [
-        "enabled"
-      ],
+      "required": ["enabled"],
       "additionalProperties": false
     },
     "modules": {
@@ -1684,9 +1598,7 @@
                     "default": "1m"
                   }
                 },
-                "required": [
-                  "url"
-                ]
+                "required": ["url"]
               }
             },
             "header_name": {
@@ -1709,17 +1621,13 @@
                   "type": {
                     "type": "string",
                     "description": "The type of the source. The only currently supported type is 'header'.",
-                    "enum": [
-                      "header"
-                    ]
+                    "enum": ["header"]
                   },
                   "name": {
                     "type": "string",
                     "description": "The name of the header. The header is used to extract the token from the request.",
                     "format": "http-header",
-                    "examples": [
-                      "X-Authorization"
-                    ]
+                    "examples": ["X-Authorization"]
                   },
                   "value_prefixes": {
                     "type": "array",
@@ -1729,10 +1637,7 @@
                     }
                   }
                 },
-                "required": [
-                  "type",
-                  "name"
-                ]
+                "required": ["type", "name"]
               }
             }
           }
@@ -1763,9 +1668,7 @@
         },
         "strategy": {
           "type": "string",
-          "enum": [
-            "simple"
-          ],
+          "enum": ["simple"],
           "description": "The strategy used to enforce the rate limit. The supported strategies are 'simple'."
         },
         "simple_strategy": {
@@ -1804,18 +1707,12 @@
               "description": "Hide the rate limit stats from the response extension. If the value is true, the rate limit stats are not included in the response extension."
             }
           },
-          "required": [
-            "rate",
-            "burst",
-            "period"
-          ]
+          "required": ["rate", "burst", "period"]
         },
         "storage": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "urls"
-          ],
+          "required": ["urls"],
           "properties": {
             "cluster_enabled": {
               "type": "boolean",
@@ -1929,9 +1826,7 @@
               "description": "The ID of the storage provider to use for loading GraphQL operations. Only storage provider of type 'file_system' are supported. The provider must be configured in the storage_providers section."
             }
           },
-          "required": [
-            "provider_id"
-          ]
+          "required": ["provider_id"]
         },
         "graph_name": {
           "type": "string",
@@ -1970,10 +1865,7 @@
               "description": "The NATS configuration. The NATS is used to configure the event-driven federated subscriptions.",
               "items": {
                 "type": "object",
-                "required": [
-                  "id",
-                  "url"
-                ],
+                "required": ["id", "url"],
                 "additionalProperties": false,
                 "properties": {
                   "id": {
@@ -1991,9 +1883,7 @@
                     "oneOf": [
                       {
                         "type": "object",
-                        "required": [
-                          "token"
-                        ],
+                        "required": ["token"],
                         "additionalProperties": false,
                         "properties": {
                           "token": {
@@ -2010,10 +1900,7 @@
                             "type": "object",
                             "description": "Userinfo configuration for the NATS provider.",
                             "additionalProperties": false,
-                            "required": [
-                              "username",
-                              "password"
-                            ],
+                            "required": ["username", "password"],
                             "properties": {
                               "username": {
                                 "type": "string",
@@ -2038,10 +1925,7 @@
               "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "id",
-                  "brokers"
-                ],
+                "required": ["id", "brokers"],
                 "properties": {
                   "id": {
                     "type": "string",
@@ -2077,10 +1961,7 @@
                             "type": "object",
                             "description": "Plain SASL Authentication configuration for the Kafka provider.",
                             "additionalProperties": false,
-                            "required": [
-                              "username",
-                              "password"
-                            ],
+                            "required": ["username", "password"],
                             "properties": {
                               "username": {
                                 "type": "string",
@@ -2133,9 +2014,7 @@
           },
           "oneOf": [
             {
-              "required": [
-                "filesystem"
-              ]
+              "required": ["filesystem"]
             }
           ]
         },
@@ -2536,17 +2415,36 @@
           "description": "Defines the timeout for the websocket read of the WebSocket client implementation. This is used to set the read deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         },
         "websocket_client_write_timeout": {
-            "type": "string",
-            "format": "go-duration",
-            "default": "10s",
-            "description": "Defines the timeout for the websocket write of the WebSocket client implementation. This is used to set the write deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+          "type": "string",
+          "format": "go-duration",
+          "default": "10s",
+          "description": "Defines the timeout for the websocket write of the WebSocket client implementation. This is used to set the write deadline for the connection. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
         },
         "websocket_client_ping_interval": {
           "type": "string",
+          "format": "go-duration",
           "description": "The Websocket client ping interval to the subgraph. Defines how often the router will ping the subgraph to signal that the connection is still alive. Timeout needs to be coordinated with the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
-          "default": "10s",
+          "default": "15s",
           "duration": {
-            "minimum": "10s"
+            "minimum": "5s"
+          }
+        },
+        "websocket_client_ping_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The Websocket client ping timeout to the subgraph. Defines how long the router will wait for a ping response from the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "30s",
+          "duration": {
+            "minimum": "5s"
+          }
+        },
+        "websocket_client_frame_timeout": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The Websocket client frame timeout to the subgraph. Defines how long the router will wait for a frame response from the subgraph. The timeout is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+          "default": "100ms",
+          "duration": {
+            "minimum": "10ms"
           }
         },
         "execution_plan_cache_size": {
@@ -2636,10 +2534,7 @@
         },
         "mode": {
           "type": "string",
-          "enum": [
-            "wrapped",
-            "pass-through"
-          ],
+          "enum": ["wrapped", "pass-through"],
           "default": "wrapped",
           "description": "The mode of error propagation. The supported modes are 'wrapped' (default) and 'pass-through'. The 'wrapped' mode wraps the error in a custom error object to hide internals. The 'pass-through' mode returns the error as is from the Subgraph."
         },
@@ -2663,9 +2558,7 @@
           "items": {
             "type": "string"
           },
-          "default": [
-            "code"
-          ],
+          "default": ["code"],
           "description": "The allowed extension fields. The allowed extension fields are used to specify which fields of the Subgraph errors are allowed to be propagated to the client."
         },
         "omit_locations": {
@@ -2898,9 +2791,7 @@
             "algorithm": {
               "type": "string",
               "description": "The algorithm used to calculate the retry interval. The supported algorithms are 'backoff_jitter'.",
-              "enum": [
-                "backoff_jitter"
-              ]
+              "enum": ["backoff_jitter"]
             },
             "max_attempts": {
               "type": "integer",
@@ -2931,46 +2822,32 @@
       "properties": {
         "op": {
           "type": "string",
-          "enum": [
-            "propagate"
-          ],
-          "examples": [
-            "propagate"
-          ],
+          "enum": ["propagate"],
+          "examples": ["propagate"],
           "description": "The operation to perform on the header. The supported operations are 'propagate'. The 'propagate' operation is used to propagate the header to the subgraphs."
         },
         "matching": {
           "type": "string",
-          "examples": [
-            "(?i)^X-Custom-.*"
-          ],
+          "examples": ["(?i)^X-Custom-.*"],
           "description": "The matching rule for the header. The matching rule is a regular expression that is used to match the header. Can't be used with 'named'."
         },
         "named": {
           "type": "string",
-          "examples": [
-            "X-Test-Header"
-          ],
+          "examples": ["X-Test-Header"],
           "description": "The name of the header to match. Use the canonical version e.g. X-Test-Header. Can't be used with 'matching'."
         },
         "rename": {
           "type": "string",
-          "examples": [
-            "X-Rename-Test-Header"
-          ],
+          "examples": ["X-Rename-Test-Header"],
           "description": "Rename is used to  rename the named or the matching headers. It can be used with either the named or the matching."
         },
         "default": {
           "type": "string",
-          "examples": [
-            "default-value"
-          ],
+          "examples": ["default-value"],
           "description": "The default value of the header in case it is not present in the request."
         }
       },
-      "required": [
-        "op"
-      ]
+      "required": ["op"]
     },
     "traffic_shaping_header_response_rule": {
       "type": "object",
@@ -2979,59 +2856,38 @@
       "properties": {
         "op": {
           "type": "string",
-          "enum": [
-            "propagate"
-          ],
-          "examples": [
-            "propagate"
-          ],
+          "enum": ["propagate"],
+          "examples": ["propagate"],
           "description": "The operation to perform on the header. The supported operations are 'propagate'. The 'propagate' operation is used to propagate the header to the subgraphs."
         },
         "matching": {
           "type": "string",
-          "examples": [
-            "(?i)^X-Custom-.*"
-          ],
+          "examples": ["(?i)^X-Custom-.*"],
           "description": "The matching rule for the header. The matching rule is a regular expression that is used to match the header. Can't be used with 'named'."
         },
         "named": {
           "type": "string",
-          "examples": [
-            "X-Test-Header"
-          ],
+          "examples": ["X-Test-Header"],
           "description": "The name of the header to match. Use the canonical version e.g. X-Test-Header. Can't be used with 'matching'."
         },
         "rename": {
           "type": "string",
-          "examples": [
-            "X-Rename-Test-Header"
-          ],
+          "examples": ["X-Rename-Test-Header"],
           "description": "Rename is used to  rename the named or the matching headers. It can be used with either the named or the matching."
         },
         "default": {
           "type": "string",
-          "examples": [
-            "default-value"
-          ],
+          "examples": ["default-value"],
           "description": "The default value of the header in case it is not present in the request."
         },
         "algorithm": {
           "type": "string",
-          "enum": [
-            "first_write",
-            "last_write",
-            "append"
-          ],
-          "examples": [
-            "first_write"
-          ],
+          "enum": ["first_write", "last_write", "append"],
+          "examples": ["first_write"],
           "description": "The algorith, to use when multiple headers are present. The supported operations are '\"first_write\", \"last_write\", and \"append\". The 'first_write' retains the first value of a given header. The 'last_write' retains the last value of a given header. The 'append' appends all values of a given header."
         }
       },
-      "required": [
-        "op",
-        "algorithm"
-      ]
+      "required": ["op", "algorithm"]
     },
     "set_header_rule": {
       "type": "object",
@@ -3045,16 +2901,12 @@
         },
         "name": {
           "type": "string",
-          "examples": [
-            "X-API-Key"
-          ],
+          "examples": ["X-API-Key"],
           "description": "The name of the header to set."
         },
         "value": {
           "type": "string",
-          "examples": [
-            "My-Secret-Value"
-          ],
+          "examples": ["My-Secret-Value"],
           "description": "The value to set for the header. This can include environment variables."
         },
         "expression": {
@@ -3065,24 +2917,17 @@
           "type": "object",
           "description": "DEPRECATED: Use expression instead. The configuration for the value from. The value from is used to extract a value from a request context and propagate it to subgraphs. This is currently only valid in requests",
           "additionalProperties": false,
-          "required": [
-            "context_field"
-          ],
+          "required": ["context_field"],
           "properties": {
             "context_field": {
               "type": "string",
               "description": "The field name of the context from which to extract the value. The value is only extracted when a context is available otherwise the default value is used.",
-              "enum": [
-                "operation_name"
-              ]
+              "enum": ["operation_name"]
             }
           }
         }
       },
-      "required": [
-        "op",
-        "name"
-      ],
+      "required": ["op", "name"],
       "oneOf": [
         {
           "required": ["value"]
@@ -3102,9 +2947,7 @@
         "type": "object",
         "description": "The configuration for custom fields. Custom attributes can be created from request headers or context fields. Not every context fields are available at all request life-cycle stages. If a value is a list, the value is JSON encoded for OTLP. For Prometheus, the values are exploded into multiple metrics with unique labels. Keep in mind, that every new custom attribute increases the cardinality.",
         "additionalProperties": false,
-        "required": [
-          "key"
-        ],
+        "required": ["key"],
         "properties": {
           "key": {
             "type": "string",

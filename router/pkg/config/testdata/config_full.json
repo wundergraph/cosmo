@@ -70,7 +70,11 @@
         },
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
-        "ExcludeScopeInfo": true
+        "ExcludeScopeInfo": true,
+        "SchemaFieldUsage": {
+          "Enabled": true,
+          "IncludeOperationSha": false
+        }
       }
     }
   },
@@ -616,6 +620,8 @@
     "WebSocketClientReadTimeout": 5000000000,
     "WebSocketClientWriteTimeout": 10000000000,
     "WebSocketClientPingInterval": 10000000000,
+    "WebSocketClientPingTimeout": 30000000000,
+    "WebSocketClientFrameTimeout": 100000000,
     "ExecutionPlanCacheSize": 1024,
     "MinifySubgraphOperations": true,
     "EnablePersistedOperationsCache": true,

@@ -98,6 +98,13 @@ type Prometheus struct {
 	ExcludeMetrics      RegExArray  `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray  `yaml:"exclude_metric_labels,omitempty" env:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
 	ExcludeScopeInfo    bool        `yaml:"exclude_scope_info" envDefault:"false" env:"PROMETHEUS_EXCLUDE_SCOPE_INFO"`
+
+	SchemaFieldUsage PrometheusSchemaFieldUsage `yaml:"schema_usage" envPrefix:"PROMETHEUS_SCHEMA_FIELD_USAGE_"`
+}
+
+type PrometheusSchemaFieldUsage struct {
+	Enabled             bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	IncludeOperationSha bool `yaml:"include_operation_sha" envDefault:"false" env:"INCLUDE_OPERATION_SHA"`
 }
 
 type MetricsOTLPExporter struct {
@@ -340,7 +347,9 @@ type EngineExecutionConfiguration struct {
 	WebSocketClientConnBufferSize                    int                      `envDefault:"128" env:"ENGINE_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE" yaml:"websocket_client_conn_buffer_size,omitempty"`
 	WebSocketClientReadTimeout                       time.Duration            `envDefault:"5s" env:"ENGINE_WEBSOCKET_CLIENT_READ_TIMEOUT" yaml:"websocket_client_read_timeout,omitempty"`
 	WebSocketClientWriteTimeout                      time.Duration            `envDefault:"10s" env:"ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT" yaml:"websocket_client_write_timeout,omitempty"`
-	WebSocketClientPingInterval                      time.Duration            `envDefault:"10s" env:"ENGINE_WEBSOCKET_CLIENT_PING_INTERVAL" yaml:"websocket_client_ping_interval,omitempty"`
+	WebSocketClientPingInterval                      time.Duration            `envDefault:"15s" env:"ENGINE_WEBSOCKET_CLIENT_PING_INTERVAL" yaml:"websocket_client_ping_interval,omitempty"`
+	WebSocketClientPingTimeout                       time.Duration            `envDefault:"30s" env:"ENGINE_WEBSOCKET_CLIENT_PING_TIMEOUT" yaml:"websocket_client_ping_timeout,omitempty"`
+	WebSocketClientFrameTimeout                      time.Duration            `envDefault:"100ms" env:"ENGINE_WEBSOCKET_CLIENT_FRAME_TIMEOUT" yaml:"websocket_client_frame_timeout,omitempty"`
 	ExecutionPlanCacheSize                           int64                    `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
 	MinifySubgraphOperations                         bool                     `envDefault:"true" env:"ENGINE_MINIFY_SUBGRAPH_OPERATIONS" yaml:"minify_subgraph_operations"`
 	EnablePersistedOperationsCache                   bool                     `envDefault:"true" env:"ENGINE_ENABLE_PERSISTED_OPERATIONS_CACHE" yaml:"enable_persisted_operations_cache"`
