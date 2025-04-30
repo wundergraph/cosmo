@@ -1,11 +1,10 @@
-package supervisor
+package core
 
 import (
 	"context"
 	"errors"
 	"fmt"
 
-	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/zap"
 )
@@ -14,9 +13,11 @@ import (
 type RouterSupervisor struct {
 	logger *zap.Logger
 
-	router       *core.Router
+	router       *Router
 	routerCtx    context.Context
 	routerCancel context.CancelFunc
+
+	configPath string
 
 	// Sending to this channel will trigger a graceful shutdown of the router
 	// Sending true will result in a Reload, false will result in a Shutdown
@@ -30,7 +31,7 @@ type RouterSupervisor struct {
 
 // LifecycleHooks is a struct for holding router lifecycle hooks.
 type LifecycleHooks struct {
-	LoadResources func(*RouterResources) error
+	PreCreate func(*RouterResources) error
 }
 
 // RouterResources is a struct for holding resources used by the router.
@@ -41,18 +42,22 @@ type RouterResources struct {
 
 // RouterSupervisorOpts is a struct for configuring the router supervisor.
 type RouterSupervisorOpts struct {
-	ConfigPath     string
-	Logger         *zap.Logger
-	LifecycleHooks *LifecycleHooks
+	ConfigPath       string
+	SupervisorLogger *zap.Logger
+	BaseLogger       *zap.Logger
+	LifecycleHooks   *LifecycleHooks
 }
 
 // NewRouterSupervisor creates a new RouterSupervisor instance.
 func NewRouterSupervisor(opts *RouterSupervisorOpts) *RouterSupervisor {
 	return &RouterSupervisor{
 		shutdownChan:   make(chan bool),
-		logger:         opts.Logger,
+		logger:         opts.SupervisorLogger,
 		lifecycleHooks: opts.LifecycleHooks,
-		resources:      &RouterResources{},
+		configPath:     opts.ConfigPath,
+		resources: &RouterResources{
+			Logger: opts.BaseLogger,
+		},
 	}
 }
 
@@ -62,7 +67,7 @@ func (rs *RouterSupervisor) createRouter() error {
 	routerCtx, routerCancel := context.WithCancel(context.Background())
 
 	// TODO: Test if this actually allows router failure and recovery
-	router, err := newRouter(routerCtx, Params{
+	router, err := newRouter(routerCtx, RouterCreateParams{
 		Config: rs.resources.Config,
 		Logger: rs.resources.Logger,
 	})
@@ -92,6 +97,8 @@ func (rs *RouterSupervisor) stopRouter() error {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), rs.resources.Config.ShutdownDelay)
 	defer cancel()
 
+	rs.logger.Info("Graceful shutdown of router initiated", zap.String("shutdown_delay", rs.resources.Config.ShutdownDelay.String()))
+
 	if err := rs.router.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("failed to shutdown router gracefully: %w", err)
 	}
@@ -99,11 +106,38 @@ func (rs *RouterSupervisor) stopRouter() error {
 	return nil
 }
 
+func (rs *RouterSupervisor) loadResources() error {
+	result, err := config.LoadConfig(rs.configPath)
+	if err != nil {
+		return fmt.Errorf("could not load config: %w", err)
+	}
+
+	if result.DefaultLoaded {
+		if rs.configPath == config.DefaultConfigPath {
+			rs.logger.Info("Found default config file. Values in the config file have higher priority than environment variables",
+				zap.String("config_file", config.DefaultConfigPath),
+			)
+		} else {
+			rs.logger.Info(
+				"Config file path provided. Values in the config file have higher priority than environment variables",
+				zap.String("config_file", rs.configPath),
+			)
+		}
+	}
+
+	rs.resources.Config = &result.Config
+
+	return nil
+}
+
 // Start starts the router supervisor.
 func (rs *RouterSupervisor) Start() error {
 	for {
+		if err := rs.loadResources(); err != nil {
+			return fmt.Errorf("failed to load resources: %w", err)
+		}
 
-		if err := rs.lifecycleHooks.LoadResources(rs.resources); err != nil {
+		if err := rs.lifecycleHooks.PreCreate(rs.resources); err != nil {
 			return fmt.Errorf("failed to load resources: %w", err)
 		}
 
