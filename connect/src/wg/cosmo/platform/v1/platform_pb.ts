@@ -6442,12 +6442,17 @@ export class OrganizationGroup extends Message<OrganizationGroup> {
   name = "";
 
   /**
-   * @generated from field: int32 membersCount = 3;
+   * @generated from field: optional string description = 3;
+   */
+  description?: string;
+
+  /**
+   * @generated from field: int32 membersCount = 4;
    */
   membersCount = 0;
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.OrganizationGroupRule rules = 4;
+   * @generated from field: repeated wg.cosmo.platform.v1.OrganizationGroupRule rules = 5;
    */
   rules: OrganizationGroupRule[] = [];
 
@@ -6461,8 +6466,9 @@ export class OrganizationGroup extends Message<OrganizationGroup> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "groupId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "membersCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 4, name: "rules", kind: "message", T: OrganizationGroupRule, repeated: true },
+    { no: 3, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "membersCount", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "rules", kind: "message", T: OrganizationGroupRule, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OrganizationGroup {
@@ -6491,6 +6497,11 @@ export class CreateOrganizationGroupRequest extends Message<CreateOrganizationGr
    */
   name = "";
 
+  /**
+   * @generated from field: string description = 2;
+   */
+  description = "";
+
   constructor(data?: PartialMessage<CreateOrganizationGroupRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -6500,6 +6511,7 @@ export class CreateOrganizationGroupRequest extends Message<CreateOrganizationGr
   static readonly typeName = "wg.cosmo.platform.v1.CreateOrganizationGroupRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateOrganizationGroupRequest {
@@ -6646,7 +6658,12 @@ export class UpdateOrganizationGroupRequest extends Message<UpdateOrganizationGr
   groupId = "";
 
   /**
-   * @generated from field: repeated wg.cosmo.platform.v1.UpdateOrganizationGroupRequest.GroupRule rules = 2;
+   * @generated from field: string description = 2;
+   */
+  description = "";
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.UpdateOrganizationGroupRequest.GroupRule rules = 3;
    */
   rules: UpdateOrganizationGroupRequest_GroupRule[] = [];
 
@@ -6659,7 +6676,8 @@ export class UpdateOrganizationGroupRequest extends Message<UpdateOrganizationGr
   static readonly typeName = "wg.cosmo.platform.v1.UpdateOrganizationGroupRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "groupId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "rules", kind: "message", T: UpdateOrganizationGroupRequest_GroupRule, repeated: true },
+    { no: 2, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "rules", kind: "message", T: UpdateOrganizationGroupRequest_GroupRule, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateOrganizationGroupRequest {
@@ -6768,6 +6786,11 @@ export class DeleteOrganizationGroupRequest extends Message<DeleteOrganizationGr
    */
   groupId = "";
 
+  /**
+   * @generated from field: optional string toGroupId = 2;
+   */
+  toGroupId?: string;
+
   constructor(data?: PartialMessage<DeleteOrganizationGroupRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -6777,6 +6800,7 @@ export class DeleteOrganizationGroupRequest extends Message<DeleteOrganizationGr
   static readonly typeName = "wg.cosmo.platform.v1.DeleteOrganizationGroupRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "groupId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "toGroupId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteOrganizationGroupRequest {

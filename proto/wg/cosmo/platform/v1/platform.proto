@@ -876,12 +876,14 @@ message OrganizationGroupRule {
 message OrganizationGroup {
   string groupId = 1;
   string name = 2;
-  int32 membersCount = 3;
-  repeated OrganizationGroupRule rules = 4;
+  string description = 3;
+  int32 membersCount = 4;
+  repeated OrganizationGroupRule rules = 5;
 }
 
 message CreateOrganizationGroupRequest {
   string name = 1;
+  string description = 2;
 }
 
 message CreateOrganizationGroupResponse {
@@ -903,7 +905,8 @@ message UpdateOrganizationGroupRequest {
   }
 
   string groupId = 1;
-  repeated GroupRule rules = 2;
+  string description = 2;
+  repeated GroupRule rules = 3;
 }
 
 message UpdateOrganizationGroupResponse {
@@ -912,6 +915,7 @@ message UpdateOrganizationGroupResponse {
 
 message DeleteOrganizationGroupRequest {
   string groupId = 1;
+  optional string toGroupId = 2;
 }
 
 message DeleteOrganizationGroupResponse {

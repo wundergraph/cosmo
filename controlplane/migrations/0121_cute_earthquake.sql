@@ -1,3 +1,4 @@
+CREATE TYPE "public"."organization_role" AS ENUM('organization-admin', 'organization-developer', 'organization-viewer', 'namespace-admin', 'namespace-developer', 'namespace-viewer', 'federated-graph-admin', 'federated-graph-developer', 'federated-graph-viewer');--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "organization_group_members" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_member_id" uuid NOT NULL,
@@ -7,14 +8,15 @@ CREATE TABLE IF NOT EXISTS "organization_group_members" (
 CREATE TABLE IF NOT EXISTS "organization_group_rules" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"group_id" uuid NOT NULL,
-	"role" "member_role" NOT NULL,
-	"resource" text NOT NULL
+	"role" "organization_role" NOT NULL,
+	"resources" text
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "organization_groups" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_id" uuid NOT NULL,
 	"name" text NOT NULL,
+	"description" text NOT NULL,
 	"kc_group_id" text,
 	"kc_mapper_id" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -45,3 +47,5 @@ DO $$ BEGIN
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "organization_group_member_idx" ON "organization_group_members" USING btree ("organization_member_id","group_id");

@@ -55,6 +55,7 @@ export function createOrganizationGroup(
       createdGroup = await orgGroupRepo.create({
         organizationId: authContext.organizationId,
         name: req.name,
+        description: '',
         kcGroupId: createdGroupId,
       });
     } catch (e: unknown) {

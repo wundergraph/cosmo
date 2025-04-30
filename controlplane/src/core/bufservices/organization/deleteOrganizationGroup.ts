@@ -36,6 +36,7 @@ export function deleteOrganizationGroup(
         return {
           response: {
             code: EnumStatusCode.ERR_NOT_FOUND,
+            detail: 'Group not found',
           },
         };
       }

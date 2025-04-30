@@ -3,7 +3,7 @@ import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
 import { NextPageWithLayout } from "@/lib/page";
-import { useQuery } from "@connectrpc/connect-query";
+import { createConnectQueryKey, useQuery } from "@connectrpc/connect-query";
 import {
   ExclamationTriangleIcon,
   UserGroupIcon,
@@ -20,9 +20,30 @@ import { MemberGroupSheet } from "@/components/member-groups/member-group-sheet"
 import { CreateMemberGroupDialog } from "@/components/member-groups/create-member-group-dialog";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableWrapper } from "@/components/ui/table";
 import { MemberGroupRow } from "@/components/member-groups/member-group-row";
+import { useQueryClient } from "@tanstack/react-query";
+import { Toolbar } from "@/components/ui/toolbar";
 
 const GroupsToolbar = () => {
-  return null;
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const queryKey = createConnectQueryKey(getOrganizationGroups);
+
+  return (
+    <Toolbar className="w-auto">
+      <CreateMemberGroupDialog
+        onGroupCreated={async (group) => {
+          await queryClient.refetchQueries({ queryKey, exact: true });
+          await router.replace({
+            pathname: router.pathname,
+            query: {
+              ...router.query,
+              group: group.groupId,
+            },
+          });
+        }}
+      />
+    </Toolbar>
+  );
 }
 
 const GroupsPage: NextPageWithLayout = () => {
@@ -61,16 +82,6 @@ const GroupsPage: NextPageWithLayout = () => {
     });
   };
 
-  const createGroupContent = (
-    <CreateMemberGroupDialog
-      existingGroupNames={groups.map((group) => group.name.toLowerCase())}
-      onGroupCreated={async (group) => {
-        await refetch();
-        openGroup(group);
-      }}
-    />
-  );
-
   return (
     <>
       <MemberGroupSheet
@@ -94,7 +105,12 @@ const GroupsPage: NextPageWithLayout = () => {
           description="No member groups found."
           actions={
             <div className="mt-2">
-              {createGroupContent}
+              <CreateMemberGroupDialog
+                onGroupCreated={async (group) => {
+                  await refetch();
+                  openGroup(group);
+                }}
+              />
             </div>
           }
         />
@@ -103,19 +119,17 @@ const GroupsPage: NextPageWithLayout = () => {
           <DeleteMemberGroupDialog
             open={openDeleteGroupDialog}
             group={selectedGroup}
+            existingGroups={groups}
             onGroupDeleted={refetch}
             onOpenChange={setOpenDeleteGroupDialog}
           />
-
-          <div className="flex flex-col justify-end gap-y-4 md:flex-row md:items-center">
-            {createGroupContent}
-          </div>
 
           <TableWrapper className="max-h-full">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-full">Name</TableHead>
+                  <TableHead className="min-w-64">Name</TableHead>
+                  <TableHead className="w-full">Description</TableHead>
                   <TableHead>Members</TableHead>
                   <TableHead/>
                 </TableRow>

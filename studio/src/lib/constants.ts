@@ -120,18 +120,57 @@ export const graphPruningRules = [
 
 export const roles = [
   {
-    key: "admin",
+    key: "organization-admin",
+    category: "organization",
     displayName: "Admin",
     description: "Blah blah blah admin role description",
   },
   {
-    key: "developer",
-    displayName: "Developer",
+    key: "organization-developer",
+    category: "organization",
+    displayName: "Organization Developer",
     description: "Blah blah blah developer role description",
   },
   {
-    key: "viewer",
-    displayName: "Viewer",
+    key: "organization-viewer",
+    category: "organization",
+    displayName: "Organization Viewer",
+    description: "Blah blah blah viewer role description",
+  },
+  {
+    key: "namespace-admin",
+    category: "namespace",
+    displayName: "Namespace Admin",
+    description: "Blah blah blah admin role description",
+  },
+  {
+    key: "namespace-developer",
+    category: "namespace",
+    displayName: "Namespace Developer",
+    description: "Blah blah blah developer role description",
+  },
+  {
+    key: "namespace-viewer",
+    category: "namespace",
+    displayName: "Namespace Viewer",
+    description: "Blah blah blah viewer role description",
+  },
+  {
+    key: "federated-graph-admin",
+    category: "federated-graph",
+    displayName: "Federated Graph Admin",
+    description: "Blah blah blah admin role description",
+  },
+  {
+    key: "federated-graph-developer",
+    category: "federated-graph",
+    displayName: "Federated Graph Developer",
+    description: "Blah blah blah developer role description",
+  },
+  {
+    key: "federated-graph-viewer",
+    category: "federated-graph",
+    displayName: "Federated Graph Viewer",
     description: "Blah blah blah viewer role description",
   },
 ];

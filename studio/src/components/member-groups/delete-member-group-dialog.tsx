@@ -11,14 +11,16 @@ import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { useToast } from "@/components/ui/use-toast";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 
-export function DeleteMemberGroupDialog({ open, group, onGroupDeleted, onOpenChange }: {
+export function DeleteMemberGroupDialog({ open, group, existingGroups, onGroupDeleted, onOpenChange }: {
   open: boolean;
   group: OrganizationGroup | null;
+  existingGroups: OrganizationGroup[];
   onGroupDeleted(): Promise<unknown>;
   onOpenChange(open: boolean): void;
 }) {
   const { toast } = useToast();
   const { mutate, isPending } = useMutation(deleteOrganizationGroup);
+  const otherGroups = existingGroups.filter((g) => g.groupId !== group?.groupId);
 
   function handleOnOpenChange(open: boolean) {
     if (isPending) {
@@ -92,51 +94,51 @@ export function DeleteMemberGroupDialog({ open, group, onGroupDeleted, onOpenCha
           <DialogTitle>Delete group</DialogTitle>
         </DialogHeader>
 
-        <form
-          className="mt-4 flex flex-col gap-y-3"
-          onSubmit={handleSubmit(onSubmit)}
-        >
-          <div>Are you sure you want to delete this group?</div>
-          {group?.membersCount
-            ? (
-              <>
-                <div></div>
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
-                  Close
-                </Button>
-              </>
-            )
-            : (
+        {group?.membersCount && otherGroups.length === 0 ? (
+          <></>
+        ) : (
+          <form
+            className="mt-4 flex flex-col gap-y-3"
+            onSubmit={handleSubmit(onSubmit)}
+          >
+            <div>Are you sure you want to delete this group?</div>
+
+            {group?.membersCount && (
               <>
                 <div>
-                  Enter <strong>{group?.name}</strong> to confirm you want to delete this group.
+                  Select
                 </div>
-
-                <Input
-                  className="w-full"
-                  type="text"
-                  {...register("name")}
-                  autoFocus
-                  disabled={isPending}
-                />
-
-                {errors.name && (
-                  <div className="px-2 text-xs text-destructive">
-                    {errors.name.message}
-                  </div>
-                )}
-
-                <Button
-                  type="submit"
-                  variant="destructive"
-                  disabled={!isValid || isPending}
-                  isLoading={isPending}
-                >
-                  Delete group
-                </Button>
               </>
             )}
-        </form>
+
+            <div>
+              Enter <strong>{group?.name}</strong> to confirm you want to delete this group.
+            </div>
+
+            <Input
+              className="w-full"
+              type="text"
+              {...register("name")}
+              autoFocus
+              disabled={isPending}
+            />
+
+            {errors.name && (
+              <div className="px-2 text-xs text-destructive">
+                {errors.name.message}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              variant="destructive"
+              disabled={!isValid || isPending}
+              isLoading={isPending}
+            >
+              Delete group
+            </Button>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );

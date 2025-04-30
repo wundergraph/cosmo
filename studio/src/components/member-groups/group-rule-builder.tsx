@@ -2,27 +2,19 @@ import type {
   OrganizationGroupRule,
   GetUserAccessibleResourcesResponse,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { roles } from "@/lib/constants";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { roles as originalRoles } from "@/lib/constants";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
-  DropdownMenuPortal,
+  DropdownMenuPortal, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { useMemo, useState } from "react";
+import { useMemo, useState, createContext, useContext } from "react";
 import { Button } from "@/components/ui/button";
-import { TrashIcon } from "@heroicons/react/24/outline";
+import { TrashIcon, ChevronRightIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import {
   Command,
   CommandEmpty,
@@ -31,7 +23,8 @@ import {
   CommandList,
   CommandGroup,
 } from "@/components/ui/command";
-import { cn } from "@/lib/utils";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { capitalize, cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import useWindowSize from "@/hooks/use-window-size";
 import { CheckIcon } from "@heroicons/react/20/solid";
@@ -42,8 +35,28 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { PopoverContentProps } from "@radix-ui/react-popover";
 
-export function GroupRuleBuilder({ rule, accessibleResources, disabled, onRuleUpdated, onRemoveRule }: {
+type RoleMetadata = (typeof originalRoles)[number];
+type BuilderContextType = {
+  rule: OrganizationGroupRule;
+  roles: RoleMetadata[];
+  categories: string[];
+  rolesByCategory: Partial<Record<string, RoleMetadata[]>>;
+  accessibleResources: GetUserAccessibleResourcesResponse | undefined;
+};
+
+const BuilderContext = createContext<BuilderContextType>({
+  rule: null!, /** hack **/
+  roles: originalRoles,
+  categories: [],
+  rolesByCategory: {},
+  accessibleResources: undefined,
+});
+
+export function GroupRuleBuilder({ roles, rule, accessibleResources, disabled, onRuleUpdated, onRemoveRule }: {
+  roles: RoleMetadata[];
   rule: OrganizationGroupRule;
   accessibleResources: GetUserAccessibleResourcesResponse | undefined;
   disabled: boolean;
@@ -51,303 +64,334 @@ export function GroupRuleBuilder({ rule, accessibleResources, disabled, onRuleUp
   onRemoveRule(): void;
 }) {
   const { isMobile } = useWindowSize();
+  const [isPopoverOpen, setPopoverOpen] = useState(false);
+  const activeRole = originalRoles.find((r) => r.key === rule.role);
 
-  const setOfSelectedResources = new Set(rule.resources.filter((res) => res !== "*"));
-  const selectedRoleInfo = roles.find((role) => role.key === rule.role);
-  const namespaces = accessibleResources?.federatedGraphs.map((fg) => fg.namespace) ?? [];
+  const context = useMemo<BuilderContextType>(() => {
+    const rolesByCategories = Object.groupBy(roles, (r) => r.category);
+    return {
+      rule,
+      roles,
+      categories: Object.keys(rolesByCategories),
+      rolesByCategory: rolesByCategories,
+      accessibleResources,
+    };
+  }, [rule, roles, accessibleResources]);
 
-  function setSelectedRole(role: string) {
-    const newRole = roles.find((r) => r.key === role);
-    if (!newRole) {
-      return;
-    }
+  const onSelectRole = (role: string) => {
+    setPopoverOpen(false);
 
     const newRule = rule.clone();
     newRule.role = role;
     onRuleUpdated(newRule);
+  };
+
+  return (
+    <BuilderContext.Provider value={context}>
+      <div className="grid grid-cols-2 gap-3 justify-start items-start">
+        <div className="gap-y-20">
+          <Popover open={isPopoverOpen} onOpenChange={setPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                disabled={disabled}
+                className="w-full justify-start"
+              >
+                <span className={cn('truncate', !activeRole && 'text-muted-foreground')}>
+                  {activeRole ? (
+                    <span className="flex justify-start items-center gap-x-1">
+                      <span>
+                        {capitalize(activeRole.category).replace('-', ' ')}
+                      </span>
+                      <ChevronRightIcon className="size-3 text-muted-foreground" />
+                      <span className="truncate">{activeRole.displayName}</span>
+                    </span>
+                  ) : "Select a role"}
+                </span>
+              </Button>
+            </PopoverTrigger>
+
+            <HackyPopoverContent
+              className="p-0 w-[calc(100vw-54px)] sm:w-[350px] md:w-[500px]"
+              align="start"
+            >
+              {!isMobile
+                ? <RolesCommand onSelectRole={onSelectRole} />
+                : <RolesAccordion onSelectRole={onSelectRole} />}
+            </HackyPopoverContent>
+          </Popover>
+        </div>
+
+        <div className="flex justify-start items-start gap-x-2">
+          <ResourcesDropdown disabled={disabled} onRuleUpdated={onRuleUpdated} />
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            disabled={disabled}
+            onClick={onRemoveRule}
+          >
+            <TrashIcon className="size-4" />
+          </Button>
+        </div>
+      </div>
+    </BuilderContext.Provider>
+  );
+}
+
+// There is an issue with Radix where having a scrollable area inside a popover, where scrolling the
+// content inside the popover doesn't work. Because of this we are adding `onWheel` and `onTouchMove` to the
+// `PopoverContent` to prevent that component from blocking the scroll.
+//
+// See: https://github.com/radix-ui/primitives/issues/1159
+function HackyPopoverContent(props: Omit<PopoverContentProps, 'onWheel' | 'onTouchMove'>) {
+  return (
+    <PopoverContent
+      onWheel={e => e.stopPropagation()}
+      onTouchMove={e => e.stopPropagation()}
+      {...props}
+    />
+  );
+}
+
+function RolesCommand({ onSelectRole }: { onSelectRole(role: string): void; }) {
+  const [searchValue, setSearchValue] = useState('');
+  const trimmedSearchValue = searchValue.trim().toLowerCase();
+  const { roles, categories, rolesByCategory } = useContext(BuilderContext);
+
+  const [selectedCategory, setSelectedCategory] = useState(categories[0]);
+  const rolesForSelectedCategory = rolesByCategory[selectedCategory] ?? [];
+  const filteredRoles = trimmedSearchValue.length > 0
+    ? roles.filter((r) => Boolean(
+      r.displayName.toLowerCase().includes(trimmedSearchValue) ||
+      r.description?.toLowerCase().includes(trimmedSearchValue)
+    ))
+    : roles;
+
+  return (
+    <Command
+      className="flex"
+      shouldFilter={false}
+      value={trimmedSearchValue.length > 0 ? undefined : selectedCategory}
+      onValueChange={trimmedSearchValue.length > 0 ? undefined : setSelectedCategory}
+    >
+      <div className="w-full">
+        <CommandInput
+          placeholder="Filter by role"
+          onValueChange={setSearchValue}
+        />
+      </div>
+
+      {trimmedSearchValue.length > 0 ? (
+        filteredRoles.length > 0 ? (
+          <CommandList>
+            <CommandGroup heading="Roles">
+              {filteredRoles.map((role) => (
+                <CommandRoleItem
+                  key={`role-${role.key}`}
+                  name={role.displayName}
+                  description={role.description}
+                  onSelect={() => onSelectRole(role.key)}
+                />
+              ))}
+            </CommandGroup>
+          </CommandList>
+        ) : (
+          <div className="p-6 text-center text-muted-foreground text-sm pointer-events-none select-none">
+            No matches for &quot;{searchValue}&quot;.
+          </div>
+        )
+      ) : (
+        <div className="grid grid-cols-2 divide-x">
+          <CommandList cmdk-framer-left="">
+            <CommandGroup heading="Categories">
+              {categories.map((cat) => (
+                <CommandItem
+                  key={`category-${cat}`}
+                  value={cat}
+                  onSelect={() => {}}
+                >
+                  {capitalize(cat.replace('-', ' '))}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+
+          <div cmdk-framer-right="">
+            <Command>
+              <CommandList>
+                <CommandGroup heading="Roles">
+                  {rolesForSelectedCategory.map((role) => (
+                    <CommandRoleItem
+                      key={`role-${role.key}`}
+                      name={role.displayName}
+                      description={role.description}
+                      onSelect={() => onSelectRole(role.key)}
+                    />
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </div>
+        </div>
+      )}
+    </Command>
+  );
+}
+
+function CommandRoleItem({ name, description, onSelect }: {
+  name: string;
+  description?: string;
+  onSelect(): void;
+}) {
+  return (
+    <CommandItem
+      value={name}
+      className="gap-y-1 flex-col justify-start items-start"
+      onSelect={onSelect}
+    >
+      {name}
+      {description && <div className="text-muted-foreground text-sm">{description}</div>}
+    </CommandItem>
+  );
+}
+
+function RolesAccordion({ onSelectRole }: { onSelectRole(role: string): void; }) {
+  const { rolesByCategory } = useContext(BuilderContext);
+  return (
+    <Accordion type="single" collapsible>
+      {Object.entries(rolesByCategory).map(([cat, roles]) => (
+        <AccordionItem key={`category-${cat}`} value={cat}>
+          <AccordionTrigger className="px-2">
+            {capitalize(cat).replace('-', ' ')}
+          </AccordionTrigger>
+
+          <AccordionContent className="px-1">
+            <Command>
+              <CommandList>
+                {roles!.map((role) => (
+                  <CommandRoleItem
+                    key={`role-${role.key}`}
+                    name={role.displayName}
+                    description={role.description}
+                    onSelect={() => onSelectRole(role.key)}
+                  />
+                ))}
+              </CommandList>
+            </Command>
+          </AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
+  );
+}
+
+function ResourcesDropdown({ disabled, onRuleUpdated }: {
+  disabled: boolean;
+  onRuleUpdated(rule: OrganizationGroupRule): void;
+}) {
+  const { rule, accessibleResources } = useContext(BuilderContext);
+  const [searchValue, setSearchValue] = useState<string>();
+
+  const resources = useMemo(() => {
+    let result = [
+      ...(accessibleResources?.federatedGraphs.map((fg) => ({
+        group: 'namespaces',
+        value: fg.namespace,
+        label: fg.namespace,
+      })) ?? []),
+      ...(accessibleResources?.federatedGraphs.map((fg) => ({
+        group: `${fg.namespace} federated graphs`,
+        value: fg.targetId,
+        label: fg.name,
+      })) ?? []),
+      ...(accessibleResources?.subgraphs.map((sg) => ({
+        group: `${sg.namespace} subgraphs`,
+        value: sg.targetId,
+        label: sg.name,
+      })) ?? []),
+    ];
+
+    const q = searchValue?.trim().toLowerCase();
+    if (q) {
+      result = result.filter((item) => item.label.toLowerCase().includes(q));
+    }
+
+    return Object.groupBy(result, (item) => item.group);
+  }, [accessibleResources?.federatedGraphs, accessibleResources?.subgraphs, searchValue]);
+
+  if (!accessibleResources?.response) {
+    return null;
   }
 
-  function toggleResources(resources: string[]) {
-    for (const res of resources) {
-      if (setOfSelectedResources.has(res)) {
-        setOfSelectedResources.delete(res);
-      } else {
-        setOfSelectedResources.add(res);
-      }
+  const toggleResource = (res: string) => {
+    const setOfSelectedResources = new Set(rule.resources);
+    if (setOfSelectedResources.has(res)) {
+      setOfSelectedResources.delete(res);
+    } else {
+      setOfSelectedResources.add(res);
     }
 
     const newRule = rule.clone();
     newRule.resources = Array.from(setOfSelectedResources);
     onRuleUpdated(newRule);
-  }
+  };
 
-  const children = (
-    <>
-      <GroupRuleBuilderCommand
-        uniqueKey="namespaces"
-        isMobile={isMobile}
-        title="Namespace"
-        options={namespaces.map((ns) => ({
-          key: `ns-${ns}`,
-          label: ns,
-          value: `namespace:${ns}`,
-        }))}
-        selectedResources={setOfSelectedResources}
-        toggleResources={toggleResources}
-      />
-
-      <GroupRuleBuilderCommand
-        uniqueKey="federated-graphs"
-        isMobile={isMobile}
-        title="Federated Graph"
-        options={accessibleResources?.federatedGraphs?.map((fg) => ({
-          group: fg.namespace,
-          key: `fg-${fg.targetId}`,
-          label: fg.name,
-          value: `federated-graph:${fg.targetId}`,
-        }))}
-        selectedResources={setOfSelectedResources}
-        toggleResources={toggleResources}
-      />
-
-      <GroupRuleBuilderCommand
-        uniqueKey="subgraphs"
-        isMobile={isMobile}
-        title="Subgraph"
-        options={accessibleResources?.subgraphs?.map((sg) => ({
-          group: sg.namespace,
-          key: `sg-${sg.targetId}`,
-          label: sg.name,
-          value: `subgraph:${sg.targetId}`,
-        }))}
-        selectedResources={setOfSelectedResources}
-        toggleResources={toggleResources}
-      />
-    </>
-  );
+  const onOpenChange = (open: boolean) => {
+    if (open) {
+      setSearchValue('');
+    }
+  };
 
   return (
-    <div className="grid grid-cols-2 gap-3 justify-start items-start">
-      <div className="space-y-2">
-        <Select
-          value={rule.role}
-          onValueChange={setSelectedRole}
+    <Popover onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="link"
+          className="px-0 justify-start grow truncate"
           disabled={disabled}
         >
-          <SelectTrigger className={!selectedRoleInfo ? "text-muted-foreground" : undefined}>
-            <SelectValue aria-label={selectedRoleInfo?.displayName ?? "-"}>
-              {selectedRoleInfo?.displayName ?? "Select a role"}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {roles.map((role) => (
-              <SelectItem key={role.key} value={role.key}>{role.displayName}</SelectItem>
+          <span className="truncate">
+            {rule.resources.length === 0
+              ? "No resources selected"
+              : `${rule.resources.length} resource(s) selected`}
+          </span>
+        </Button>
+      </PopoverTrigger>
+      <HackyPopoverContent className="p-0">
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Filter resources"
+            onValueChange={setSearchValue}
+          />
+          <CommandEmpty className="p-6 text-center text-muted-foreground text-sm pointer-events-none select-none">
+            No resource matches &quot;{searchValue}&quot;
+          </CommandEmpty>
+          <CommandList>
+            {Object.entries(resources).map(([heading, items], index) => (
+              <CommandGroup key={`group-${index}`} heading={heading}>
+                {items?.map((item) => (
+                  <CommandItem
+                    key={`item-${item.value}`} value={item.value}
+                    onSelect={() => toggleResource(item.value)}
+                  >
+                    <div
+                      className={cn(
+                        "mr-2 flex h-4 w-4 items-center justify-center",
+                        rule.resources.includes(item.value) ? "text-primary-foreground" : "[&_svg]:invisible"
+                      )}
+                    >
+                      <CheckIcon className="size-4" />
+                    </div>
+                    <span className="truncate">{item.label}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
             ))}
-          </SelectContent>
-        </Select>
-
-        <div
-          className={cn(
-            "text-sm px-4",
-            !!selectedRoleInfo ? "text-muted-foreground" : "text-destructive"
-          )}
-        >
-          {selectedRoleInfo?.description ?? "A role must be selected"}
-        </div>
-      </div>
-      <div className="flex justify-start items-start gap-x-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="link"
-              className="px-0 justify-start grow truncate"
-              disabled={disabled}
-            >
-              <span className="truncate">
-                {setOfSelectedResources.size === 0
-                  ? "No resources selected"
-                  : `${setOfSelectedResources.size} resource(s) selected`}
-              </span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-72" align={isMobile ? "end" : "start"}>
-            {isMobile
-              ? (
-                <Accordion
-                  type="single"
-                  collapsible
-                  className="max-h-72 overflow-auto w-72"
-                >
-                  {children}
-                </Accordion>
-              )
-              : (<DropdownMenuGroup>{children}</DropdownMenuGroup>)}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="shrink-0"
-          disabled={disabled}
-          onClick={onRemoveRule}
-        >
-          <TrashIcon className="size-4" />
-        </Button>
-      </div>
-    </div>
+          </CommandList>
+        </Command>
+      </HackyPopoverContent>
+    </Popover>
   );
-}
-
-function GroupRuleBuilderCommand({
-  uniqueKey,
-  isMobile,
-  title,
-  options,
-  selectedResources,
-  toggleResources,
-}: {
-  uniqueKey: string;
-  isMobile: boolean;
-  title: string;
-  options?: {
-    group?: string;
-    key: string;
-    label: string;
-    value: string;
-  }[];
-  selectedResources: Set<string>;
-  toggleResources(resources: string[]): void;
-}) {
-  const [searchValue, setSearchValue] = useState<string>();
-  const filteredResources = useMemo(() => options?.filter((opt) =>
-    !searchValue || opt.label.toLowerCase().includes(searchValue.toLowerCase())
-  ) ?? [], [options, searchValue]);
-
-  if (!options?.length) {
-    return null;
-  }
-
-  const groupedFilteredOptions = Object.groupBy(filteredResources, (obj) => obj.group || '');
-
-  const filteredResourcesAsValue = filteredResources.map((opt) => opt.value);
-  const currentSelectedResources = filteredResourcesAsValue.filter((res) => selectedResources.has(res));
-  const unselectedResources = filteredResourcesAsValue.filter((res) => !selectedResources.has(res));
-  const command = (
-    <Command
-      className="w-full min-w-72"
-      filter={(value, search) => value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0}>
-      <div className="relative">
-        <CommandInput
-          placeholder={title}
-          value={searchValue}
-          onValueChange={setSearchValue}
-        />
-      </div>
-      <CommandList>
-        <CommandEmpty>No matching {title.toLowerCase()}</CommandEmpty>
-        {Object.keys(groupedFilteredOptions).map((key) => {
-          const groupChildren = groupedFilteredOptions[key]!;
-          return !key ? (
-            <GroupRuleBuilderCommandList
-              key={`${title}-${key}`}
-              options={groupChildren}
-              selectedResources={selectedResources}
-              toggleResources={toggleResources}
-            />
-          ) : (
-            <CommandGroup key={`${title}-${key}`} heading={key}>
-              <GroupRuleBuilderCommandList
-                options={groupChildren}
-                selectedResources={selectedResources}
-                toggleResources={toggleResources}
-              />
-            </CommandGroup>
-          );
-        })}
-      </CommandList>
-
-      <Separator orientation="horizontal" className="mt-1" />
-      <div className="flex justify-center gap-x-2 pt-1">
-        <Button
-          variant="ghost"
-          className="w-full justify-center text-center"
-          disabled={unselectedResources.length === 0}
-          onClick={() => toggleResources(unselectedResources)}
-        >
-          {unselectedResources.length === 0 ? "Selected All" : "Select All"}
-        </Button>
-
-        {currentSelectedResources.length > 0 && (
-          <>
-            <Separator orientation="vertical" className="h-9" />
-            <Button
-              variant="ghost"
-              className="w-full justify-center text-center"
-              onClick={() => toggleResources(currentSelectedResources)}
-            >
-              Clear Selection
-            </Button>
-          </>
-        )}
-      </div>
-    </Command>
-  );
-
-  return isMobile
-    ? (
-      <AccordionItem value={uniqueKey}>
-        <AccordionTrigger className="p-2">
-          {title}
-          <Badge>{selectedResources.size}</Badge>
-        </AccordionTrigger>
-        <AccordionContent>{command}</AccordionContent>
-      </AccordionItem>
-    )
-    : (
-      <DropdownMenuSub>
-        <DropdownMenuSubTrigger
-          className="gap-1"
-        >
-          <span className="grow truncate">{title}</span>
-          {currentSelectedResources.length > 0 && (
-            <Badge className="text-xs px-2 py-0.5 pointer-events-none shrink-0">
-              {currentSelectedResources.length}
-            </Badge>
-          )}
-        </DropdownMenuSubTrigger>
-        <DropdownMenuPortal>
-          <DropdownMenuSubContent>{command}</DropdownMenuSubContent>
-        </DropdownMenuPortal>
-      </DropdownMenuSub>
-    );
-}
-
-function GroupRuleBuilderCommandList({ options, selectedResources, toggleResources }: {
-  options: {
-    key: string;
-    label: string;
-    value: string;
-  }[];
-  selectedResources: Set<string>;
-  toggleResources(resources: string[]): void;
-}) {
-  return options.map(({ key, label, value }) => {
-      const isChecked = selectedResources.has(value);
-
-      return (
-        <CommandItem key={key} onSelect={() => toggleResources([value])}>
-          <div
-            className={cn(
-              "mr-2 flex h-4 w-4 items-center justify-center",
-              isChecked
-                ? "text-primary-foreground"
-                : "[&_svg]:invisible"
-            )}
-          >
-            <CheckIcon className="size-4" />
-          </div>
-          <span className="truncate">{label}</span>
-        </CommandItem>
-      );
-    });
 }

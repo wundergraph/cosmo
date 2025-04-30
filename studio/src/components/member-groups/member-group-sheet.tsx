@@ -2,7 +2,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { OrganizationGroup, OrganizationGroupRule } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "@radix-ui/react-icons";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { ExclamationTriangleIcon, PencilIcon } from "@heroicons/react/24/outline";
 import { useMutation, useQuery } from "@connectrpc/connect-query";
 import {
   getUserAccessibleResources,
@@ -12,6 +12,9 @@ import { GroupRuleBuilder } from "@/components/member-groups/group-rule-builder"
 import { useState } from "react";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { useToast } from "@/components/ui/use-toast";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { roles } from "@/lib/constants";
 
 export function MemberGroupSheet({ group, onGroupUpdated, onOpenChange }: {
   group?: OrganizationGroup;
@@ -45,10 +48,13 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
 }) {
   const { data } = useQuery(getUserAccessibleResources);
   const [groupRules, setGroupRules] = useState<OrganizationGroupRule[]>([...group.rules]);
+  const [description, setDescription] = useState(group.description || '');
   const { toast } = useToast();
 
   const allRulesHaveRole = groupRules.every((rule) => !!rule.role);
   const { mutate, isPending } = useMutation(updateOrganizationGroup);
+
+  const actualRoles = roles.filter((r) => !groupRules.some((gr) => gr.role === r.key));
 
   const onSaveClick = () => {
     if (!allRulesHaveRole) {
@@ -56,18 +62,7 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
     }
 
     mutate(
-      {
-        groupId: group.groupId,
-        rules: groupRules.map((rule) => {
-          if (rule.resources.length > 0) {
-            return rule;
-          }
-
-          const newRule = rule.clone();
-          newRule.resources = ["*"];
-          return newRule;
-        }),
-      },
+      { groupId: group.groupId, description, rules: groupRules },
       {
         onSuccess(resp) {
           if (resp?.response?.code === EnumStatusCode.OK) {
@@ -97,7 +92,13 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
     <>
       <SheetHeader>
         <SheetTitle>Rules for &quot;{group.name}&quot;</SheetTitle>
-        <SheetDescription>Blah blah blah description</SheetDescription>
+        <SheetDescription className="space-x-2">
+          <span>{description || "No description set"}</span>
+          <EditDescriptionDialog
+            description={description}
+            onUpdate={setDescription}
+          />
+        </SheetDescription>
       </SheetHeader>
 
       <div className="my-6 space-y-3">
@@ -106,6 +107,7 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
             groupRules.map((rule, index) => (
               <GroupRuleBuilder
                 key={`rule-${rule.role}-${index}`}
+                roles={roles.filter((r) => r.key === rule.role || !groupRules.some((gr) => gr.role === r.key))}
                 rule={rule}
                 accessibleResources={data}
                 disabled={isPending}
@@ -123,7 +125,7 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
             ))
           )
           : (
-            <div className="border rounded-lg flex justify-start items-center gap-x-2 px-4 py-3">
+            <div className="border rounded-lg flex justify-start text-sm items-center gap-x-2 px-4 h-9">
               <ExclamationTriangleIcon className="size-4" />
               <span>No rules have been added to this group.</span>
             </div>
@@ -134,7 +136,12 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
           <Button
             variant="link"
             className="gap-x-2"
+            disabled={!actualRoles.length}
             onClick={() => {
+              if (!actualRoles.length) {
+                return;
+              }
+
               setGroupRules([
                 ...groupRules,
                 OrganizationGroupRule.fromJson({}),
@@ -161,5 +168,55 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
         </Button>
       </SheetFooter>
     </>
+  );
+}
+
+function EditDescriptionDialog({ description, onUpdate }: { description: string; onUpdate(description: string): void }) {
+  const [tmpDescription, setTmpDescription] = useState(description);
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="icon-sm" variant="ghost">
+          <PencilIcon className="size-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Update group description</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-1">
+          <Textarea
+            rows={5}
+            maxLength={250}
+            defaultValue={tmpDescription}
+            onChange={(e) => setTmpDescription(e.target.value)}
+          />
+
+          <div className="text-right text-xs">
+            {tmpDescription.length}/250
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="secondary"
+            onClick={() => setOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              onUpdate(tmpDescription.trim());
+              setOpen(false);
+            }}
+          >
+            Apply
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

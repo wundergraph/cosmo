@@ -17,10 +17,11 @@ export function MemberGroupRow({ group, onSelect, onDelete }: {
   return (
     <TableRow>
       <TableCell>
-        <Button variant="link" className="pl-0 h-auto gap-x-2" onClick={onSelect}>
+        <Button variant="link" className="px-0 h-auto gap-x-2 whitespace-nowrap" onClick={onSelect}>
           {group.name}
         </Button>
       </TableCell>
+      <TableCell>{group.description}</TableCell>
       <TableCell>{group.membersCount}</TableCell>
       <TableCell>
         <DropdownMenu>

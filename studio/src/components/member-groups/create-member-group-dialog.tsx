@@ -12,9 +12,9 @@ import { Input } from "@/components/ui/input";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { Textarea } from "@/components/ui/textarea";
 
-export function CreateMemberGroupDialog({ existingGroupNames, onGroupCreated }: {
-  existingGroupNames: string[];
+export function CreateMemberGroupDialog({ onGroupCreated }: {
   onGroupCreated(group: OrganizationGroup): Promise<void>
 }) {
   const { toast } = useToast();
@@ -26,17 +26,11 @@ export function CreateMemberGroupDialog({ existingGroupNames, onGroupCreated }: 
       .string()
       .trim()
       .min(3, { message: "Group name must be a minimum of 3 characters" })
-      .max(50, { message: "Group name must be maximum 50 characters" })
-      .superRefine((arg, ctx) => {
-        if (!existingGroupNames.includes(arg.toLowerCase())) {
-          return;
-        }
-
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `A group with the name ${arg} already exists`
-        });
-      }),
+      .max(50, { message: "Group name must be maximum 50 characters" }),
+    description: z
+      .string()
+      .trim()
+      .max(500, { message: "Description must be a maximum of 500 characters" }),
   });
 
   type CreateGroupInput = z.infer<typeof createGroupInputSchema>;
@@ -54,7 +48,7 @@ export function CreateMemberGroupDialog({ existingGroupNames, onGroupCreated }: 
 
   const onSubmit: SubmitHandler<CreateGroupInput> = (data) => {
     mutate(
-      { name: data.name },
+      { name: data.name, description: data.description },
       {
         async onSuccess(data) {
           if (data.response?.code === EnumStatusCode.OK) {
@@ -104,14 +98,42 @@ export function CreateMemberGroupDialog({ existingGroupNames, onGroupCreated }: 
           onSubmit={handleSubmit(onSubmit)}>
           <div className="flex flex-col gap-y-2">
             <label
-              htmlFor="create-rule-set-name"
-              className="text-sm font-semibold">
-              Name
+              htmlFor="create-group-name"
+              className="text-sm font-semibold"
+            >
+              Name{" "}
+              <span className="text-destructive">*</span>
             </label>
-            <Input id="create-rule-set-name" className="w-full" type="text" {...register("name")} />
+            <Input
+              id="create-group-name"
+              className="w-full"
+              type="text" {...register("name")}
+            />
+
             {errors.name && (
               <span className="px-2 text-xs text-destructive">
                 {errors.name.message}
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-y-2">
+            <label
+              htmlFor="create-group-description"
+              className="text-sm font-semibold"
+            >
+              Description
+            </label>
+            <Textarea
+              id="create-group-description"
+              className="w-full"
+              rows={5}
+              {...register("description")}
+            />
+
+            {errors.description && (
+              <span className="px-2 text-xs text-destructive">
+                {errors.description.message}
               </span>
             )}
           </div>

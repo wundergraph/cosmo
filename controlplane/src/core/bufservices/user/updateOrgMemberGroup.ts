@@ -131,17 +131,6 @@ export function updateOrgMemberGroup(
       }
     }
 
-    // const organizationGroups = await opts.keycloakClient.client.groups.find({
-    //   max: 1,
-    //   search: org.slug,
-    //   realm: opts.keycloakRealm,
-    //   briefRepresentation: false,
-    // });
-    //
-    // if (organizationGroups.length === 0) {
-    //   throw new Error(`Organization group '${org.slug}' not found`);
-    // }
-
     const userGroups = await orgRepo.getOrganizationMemberGroups({
       userID: orgMember.userID,
       organizationID: authContext.organizationId,

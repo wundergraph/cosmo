@@ -1,5 +1,5 @@
 {
-  "id": "6ad4fe0c-b64b-491d-a90c-adc208ab55e7",
+  "id": "e9c21010-9a6c-44a7-b0b7-e701720bb94a",
   "prevId": "1047e67f-16f1-4d7b-bfb6-2031ff10230b",
   "version": "7",
   "dialect": "postgresql",
@@ -3744,7 +3744,29 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "organization_group_member_idx": {
+          "name": "organization_group_member_idx",
+          "columns": [
+            {
+              "expression": "organization_member_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "group_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "organization_group_members_organization_member_id_organization_members_id_fk": {
           "name": "organization_group_members_organization_member_id_organization_members_id_fk",
@@ -3796,16 +3818,16 @@
         },
         "role": {
           "name": "role",
-          "type": "member_role",
+          "type": "organization_role",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
-        "resource": {
-          "name": "resource",
+        "resources": {
+          "name": "resources",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         }
       },
       "indexes": {},
@@ -3847,6 +3869,12 @@
         },
         "name": {
           "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -7752,6 +7780,21 @@
         "admin",
         "developer",
         "viewer"
+      ]
+    },
+    "public.organization_role": {
+      "name": "organization_role",
+      "schema": "public",
+      "values": [
+        "organization-admin",
+        "organization-developer",
+        "organization-viewer",
+        "namespace-admin",
+        "namespace-developer",
+        "namespace-viewer",
+        "federated-graph-admin",
+        "federated-graph-developer",
+        "federated-graph-viewer"
       ]
     },
     "public.playground_script_type": {

@@ -1327,13 +1327,17 @@ export const organizationsMembers = pgTable(
   },
 );
 
-export const organizationRelations = relations(organizations, ({ many }) => ({
-  members: many(organizationsMembers),
-  graphApiTokens: many(graphApiTokens),
-  auditLogs: many(auditLogs),
-}));
-
-export const memberRoleEnum = pgEnum('member_role', ['admin', 'developer', 'viewer'] as const);
+export const organizationRoleEnum = pgEnum('organization_role', [
+  'organization-admin',
+  'organization-developer',
+  'organization-viewer',
+  'namespace-admin',
+  'namespace-developer',
+  'namespace-viewer',
+  'federated-graph-admin',
+  'federated-graph-developer',
+  'federated-graph-viewer',
+] as const);
 
 export const organizationGroups = pgTable('organization_groups', {
   id: uuid('id').notNull().primaryKey().defaultRandom(),
@@ -1343,6 +1347,7 @@ export const organizationGroups = pgTable('organization_groups', {
       onDelete: 'cascade',
     }),
   name: text('name').notNull(),
+  description: text('description').notNull(),
   kcGroupId: text('kc_group_id').unique(),
   kcMapperId: text('kc_mapper_id').unique(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -1355,23 +1360,35 @@ export const organizationGroupRules = pgTable('organization_group_rules', {
     .references(() => organizationGroups.id, {
       onDelete: 'cascade',
     }),
-  role: memberRoleEnum('role').notNull(),
-  resource: text('resource').notNull(),
+  role: organizationRoleEnum('role').notNull(),
+  resources: text('resources'),
 });
 
-export const organizationGroupMembers = pgTable('organization_group_members', {
-  id: uuid('id').notNull().primaryKey().defaultRandom(),
-  organizationMemberId: uuid('organization_member_id')
-    .notNull()
-    .references(() => organizationsMembers.id, {
-      onDelete: 'cascade',
-    }),
-  groupId: uuid('group_id')
-    .notNull()
-    .references(() => organizationGroups.id, {
-      onDelete: 'cascade',
-    }),
-});
+export const organizationGroupMembers = pgTable(
+  'organization_group_members',
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    organizationMemberId: uuid('organization_member_id')
+      .notNull()
+      .references(() => organizationsMembers.id, {
+        onDelete: 'cascade',
+      }),
+    groupId: uuid('group_id')
+      .notNull()
+      .references(() => organizationGroups.id, {
+        onDelete: 'cascade',
+      }),
+  },
+  (t) => ({
+    nameIndex: uniqueIndex('organization_group_member_idx').on(t.organizationMemberId, t.groupId),
+  })
+);
+
+export const organizationRelations = relations(organizations, ({ many }) => ({
+  members: many(organizationsMembers),
+  graphApiTokens: many(graphApiTokens),
+  auditLogs: many(auditLogs),
+}));
 
 export const organizationGroupsRelations = relations(organizationGroups, ({ many }) => ({
   rules: many(organizationGroupRules),
@@ -1391,6 +1408,8 @@ export const organizationGroupMembersRelationships = relations(organizationGroup
     references: [organizationGroups.id],
   }),
 }));
+
+export const memberRoleEnum = pgEnum('member_role', ['admin', 'developer', 'viewer'] as const);
 
 export const organizationMemberRoles = pgTable(
   'organization_member_roles', // omr

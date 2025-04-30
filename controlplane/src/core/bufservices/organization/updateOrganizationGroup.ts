@@ -7,9 +7,9 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { memberRoleEnum } from '../../../db/schema.js';
+import { organizationRoleEnum } from '../../../db/schema.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
-import { MemberRole } from '../../../db/models.js';
+import { OrganizationRole } from '../../../db/models.js';
 
 export function updateOrganizationGroup(
   opts: RouterOptions,
@@ -22,13 +22,13 @@ export function updateOrganizationGroup(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    const ruleSetRepo = new OrganizationGroupRepository(opts.db);
-    const ruleSet = await ruleSetRepo.byId({
+    const orgGroupRepo = new OrganizationGroupRepository(opts.db);
+    const orgGroup = await orgGroupRepo.byId({
       organizationId: authContext.organizationId,
       groupId: req.groupId,
     });
 
-    if (!ruleSet) {
+    if (!orgGroup) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
@@ -38,15 +38,14 @@ export function updateOrganizationGroup(
 
     // Combine resources into a single array of unique values per role
     const allResourcesGroupedByRole = Object.groupBy(req.rules, ({ role }) => role);
-    const resourcesByRole: { role: MemberRole; resources: string[] }[] = [];
+    const resourcesByRole: { role: OrganizationRole; resources: string[] }[] = [];
     for (const key of Object.keys(allResourcesGroupedByRole)) {
-      const role = memberRoleEnum.enumValues.find((r) => r === key.toLowerCase());
-      const groupRules = allResourcesGroupedByRole[key];
-      if (!role || !groupRules?.length) {
-        // Skip this iteration if the role is unknown or there are no rules associated with the role
+      const role = organizationRoleEnum.enumValues.find((r) => r === key.toLowerCase());
+      if (!role) {
         continue;
       }
 
+      const groupRules = allResourcesGroupedByRole[key] ?? [];
       const groupResources = groupRules.flatMap((x) => x.resources);
       resourcesByRole.push({
         role,
@@ -54,7 +53,45 @@ export function updateOrganizationGroup(
       });
     }
 
-    await ruleSetRepo.updateRules({ ruleSetId: req.groupId, rules: resourcesByRole });
+    // Make sure the organization roles exists
+    await opts.keycloakClient.authenticateClient();
+
+    const rolesToAddToGroup = resourcesByRole.map((r) => `${authContext.organizationSlug}:${r.role}`);
+    await Promise.all(rolesToAddToGroup.map(async (roleName) => {
+      if (!await opts.keycloakClient.roleExists({ realm: opts.keycloakRealm, roleName })) {
+        await opts.keycloakClient.createRole({ realm: opts.keycloakRealm, roleName });
+      }
+    }));
+
+    // Swap the Keycloak group's roles
+    // - load all the existing roles existing for the organization
+    // - delete all the role mappings from the target group
+    // - add the target role mappings to the target group
+    const kcOrgRoles = await opts.keycloakClient.client.roles.find({
+      realm: opts.keycloakRealm,
+      search: `${authContext.organizationSlug}:`,
+    });
+
+    const kcOrgRolesPayload = kcOrgRoles.map((r) => ({ id: r.id!, name: r.name! }));
+
+    await opts.keycloakClient.client.groups.delRealmRoleMappings({
+      realm: opts.keycloakRealm,
+      id: orgGroup.kcGroupId!,
+      roles: kcOrgRolesPayload,
+    });
+
+    await opts.keycloakClient.client.groups.addRealmRoleMappings({
+      realm: opts.keycloakRealm,
+      id: orgGroup.kcGroupId!,
+      roles: kcOrgRolesPayload.filter((r) => rolesToAddToGroup.includes(r.name)),
+    });
+
+    // Finally, update the group roles
+    await orgGroupRepo.updateGroup({
+      groupId: orgGroup.id,
+      description: req.description,
+      rules: resourcesByRole,
+    });
 
     return {
       response: {
