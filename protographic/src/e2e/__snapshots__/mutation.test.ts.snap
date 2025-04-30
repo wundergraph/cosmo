@@ -1,0 +1,237 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Mutation Transformation should correctly read GraphQL SDL into intermediate format 1`] = `
+{
+  "messages": [
+    {
+      "fields": [
+        {
+          "name": "name",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "price",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Float",
+            "required": true,
+          },
+        },
+      ],
+      "name": "CreateProductInput",
+    },
+    {
+      "fields": [
+        {
+          "name": "id",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+        {
+          "name": "name",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "price",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Float",
+            "required": true,
+          },
+        },
+      ],
+      "name": "Product",
+    },
+  ],
+  "name": "ProductService",
+  "rpcs": [
+    {
+      "arguments": [
+        {
+          "name": "input",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "CreateProductInput",
+            "required": true,
+          },
+        },
+      ],
+      "kind": "Mutation",
+      "name": "createProduct",
+      "type": {
+        "list": false,
+        "name": "Product",
+        "required": true,
+      },
+    },
+  ],
+}
+`;
+
+exports[`Mutation Transformation should generate correct proto3 ast 1`] = `
+{
+  "mapping": {
+    "entity_mappings": [],
+    "operation_mappings": [
+      {
+        "kind": "Mutation",
+        "mapped": "MutationCreateProduct",
+        "original": "createProduct",
+        "request": "MutationCreateProductRequest",
+        "response": "MutationCreateProductResponse",
+      },
+    ],
+    "service": "ProductService",
+    "type_field_mappings": [
+      {
+        "field_mappings": [
+          {
+            "argument_mappings": [
+              {
+                "mapped": "input",
+                "original": "input",
+              },
+            ],
+            "mapped": "MutationCreateProduct",
+            "original": "createProduct",
+          },
+        ],
+        "type": "Mutation",
+      },
+    ],
+    "version": 1,
+  },
+  "proto": {
+    "messages": [
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "input",
+            "number": 1,
+            "type": "CreateProductInput",
+          },
+        ],
+        "name": "MutationCreateProductRequest",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "create_product",
+            "number": 1,
+            "type": "Product",
+          },
+        ],
+        "name": "MutationCreateProductResponse",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "name",
+            "number": 1,
+            "type": "string",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "price",
+            "number": 2,
+            "type": "float",
+          },
+        ],
+        "name": "CreateProductInput",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "id",
+            "number": 1,
+            "type": "string",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "name",
+            "number": 2,
+            "type": "string",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "price",
+            "number": 3,
+            "type": "float",
+          },
+        ],
+        "name": "Product",
+      },
+    ],
+    "package": "ProductService",
+    "services": [
+      {
+        "name": "ProductService",
+        "rpcs": [
+          {
+            "name": "MutationCreateProduct",
+            "requestType": "MutationCreateProductRequest",
+            "responseType": "MutationCreateProductResponse",
+          },
+        ],
+      },
+    ],
+    "syntax": "proto3",
+  },
+}
+`;
+
+exports[`Mutation Transformation should generate correct proto3 schema 1`] = `
+"syntax = "proto3";
+package ProductService;
+
+service ProductService {
+  rpc MutationCreateProduct(MutationCreateProductRequest) returns (MutationCreateProductResponse) {}
+}
+
+message CreateProductInput {
+  string name = 1;
+  float price = 2;
+}
+
+message MutationCreateProductRequest {
+  CreateProductInput input = 1;
+}
+
+message MutationCreateProductResponse {
+  Product create_product = 1;
+}
+
+message Product {
+  string id = 1;
+  string name = 2;
+  float price = 3;
+}"
+`;

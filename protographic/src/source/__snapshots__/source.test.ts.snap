@@ -1,0 +1,584 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`GraphQL source should correctly read GraphQL SDL into intermediate format 1`] = `
+{
+  "messages": [
+    {
+      "fields": [
+        {
+          "name": "id",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+        {
+          "name": "name",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "price",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Float",
+            "required": true,
+          },
+        },
+      ],
+      "name": "Product",
+    },
+    {
+      "fields": [
+        {
+          "name": "id",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+        {
+          "name": "name",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "location",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+      ],
+      "name": "Storage",
+    },
+    {
+      "fields": [
+        {
+          "name": "id",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+        {
+          "name": "name",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+      ],
+      "name": "User",
+    },
+    {
+      "fields": [
+        {
+          "name": "id",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+        {
+          "name": "name",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "b",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "NestedTypeB",
+            "required": true,
+          },
+        },
+      ],
+      "name": "NestedTypeA",
+    },
+    {
+      "fields": [
+        {
+          "name": "id",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+        {
+          "name": "name",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "c",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "NestedTypeC",
+            "required": true,
+          },
+        },
+      ],
+      "name": "NestedTypeB",
+    },
+    {
+      "fields": [
+        {
+          "name": "id",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+        {
+          "name": "name",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+      ],
+      "name": "NestedTypeC",
+    },
+    {
+      "fields": [
+        {
+          "name": "id",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+        {
+          "name": "name",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "recursiveType",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "RecursiveType",
+            "required": true,
+          },
+        },
+      ],
+      "name": "RecursiveType",
+    },
+    {
+      "fields": [
+        {
+          "name": "id",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+        {
+          "name": "name",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "filterField1",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "filterField2",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+      ],
+      "name": "TypeWithMultipleFilterFields",
+    },
+    {
+      "fields": [
+        {
+          "name": "filterField1",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "filterField2",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+      ],
+      "name": "FilterTypeInput",
+    },
+    {
+      "fields": [
+        {
+          "name": "id",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+        {
+          "name": "name",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+      ],
+      "name": "TypeWithComplexFilterInput",
+    },
+    {
+      "fields": [
+        {
+          "name": "name",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "filterField1",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "filterField2",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "pagination",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Pagination",
+            "required": false,
+          },
+        },
+      ],
+      "name": "FilterType",
+    },
+    {
+      "fields": [
+        {
+          "name": "page",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Int",
+            "required": true,
+          },
+        },
+        {
+          "name": "perPage",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Int",
+            "required": true,
+          },
+        },
+      ],
+      "name": "Pagination",
+    },
+    {
+      "fields": [
+        {
+          "name": "filter",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "FilterType",
+            "required": true,
+          },
+        },
+      ],
+      "name": "ComplexFilterTypeInput",
+    },
+    {
+      "fields": [
+        {
+          "name": "name",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "price",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Float",
+            "required": true,
+          },
+        },
+      ],
+      "name": "CreateProductInput",
+    },
+  ],
+  "name": "ProductService",
+  "rpcs": [
+    {
+      "arguments": [
+        {
+          "name": "representations",
+          "resolved": false,
+          "type": {
+            "list": true,
+            "name": "_Any",
+            "required": true,
+          },
+        },
+      ],
+      "kind": "Query",
+      "name": "_entities",
+      "type": {
+        "list": true,
+        "name": "_Entity",
+        "required": true,
+      },
+    },
+    {
+      "arguments": [],
+      "kind": "Query",
+      "name": "users",
+      "type": {
+        "list": true,
+        "name": "User",
+        "required": true,
+      },
+    },
+    {
+      "arguments": [
+        {
+          "name": "id",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+      ],
+      "kind": "Query",
+      "name": "user",
+      "type": {
+        "list": false,
+        "name": "User",
+        "required": true,
+      },
+    },
+    {
+      "arguments": [
+        {
+          "name": "id",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": false,
+          },
+        },
+      ],
+      "kind": "Query",
+      "name": "userIdOptional",
+      "type": {
+        "list": false,
+        "name": "User",
+        "required": false,
+      },
+    },
+    {
+      "arguments": [],
+      "kind": "Query",
+      "name": "nestedType",
+      "type": {
+        "list": true,
+        "name": "NestedTypeA",
+        "required": true,
+      },
+    },
+    {
+      "arguments": [],
+      "kind": "Query",
+      "name": "recursiveType",
+      "type": {
+        "list": false,
+        "name": "RecursiveType",
+        "required": true,
+      },
+    },
+    {
+      "arguments": [
+        {
+          "name": "filterField1",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "filterField2",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+      ],
+      "kind": "Query",
+      "name": "typeFilterWithArguments",
+      "type": {
+        "list": true,
+        "name": "TypeWithMultipleFilterFields",
+        "required": true,
+      },
+    },
+    {
+      "arguments": [
+        {
+          "name": "filter",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "FilterTypeInput",
+            "required": true,
+          },
+        },
+      ],
+      "kind": "Query",
+      "name": "typeWithMultipleFilterFields",
+      "type": {
+        "list": true,
+        "name": "TypeWithMultipleFilterFields",
+        "required": true,
+      },
+    },
+    {
+      "arguments": [
+        {
+          "name": "filter",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ComplexFilterTypeInput",
+            "required": true,
+          },
+        },
+      ],
+      "kind": "Query",
+      "name": "complexFilterType",
+      "type": {
+        "list": true,
+        "name": "TypeWithComplexFilterInput",
+        "required": true,
+      },
+    },
+    {
+      "arguments": [
+        {
+          "name": "input",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "CreateProductInput",
+            "required": true,
+          },
+        },
+      ],
+      "kind": "Mutation",
+      "name": "createProduct",
+      "type": {
+        "list": false,
+        "name": "Product",
+        "required": true,
+      },
+    },
+  ],
+}
+`;

@@ -1,0 +1,123 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Entity with Multiple Keys Transformation should correctly read GraphQL SDL into intermediate format 1`] = `
+{
+  "messages": [
+    {
+      "fields": [
+        {
+          "name": "id",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+        {
+          "name": "email",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "name",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "age",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Int",
+            "required": false,
+          },
+        },
+      ],
+      "name": "User",
+    },
+  ],
+  "name": "UserService",
+  "rpcs": [],
+}
+`;
+
+exports[`Entity with Multiple Keys Transformation should generate correct proto3 ast 1`] = `
+{
+  "mapping": {
+    "entity_mappings": [],
+    "operation_mappings": [],
+    "service": "UserService",
+    "type_field_mappings": [],
+    "version": 1,
+  },
+  "proto": {
+    "messages": [
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "id",
+            "number": 1,
+            "type": "string",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "email",
+            "number": 2,
+            "type": "string",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "name",
+            "number": 3,
+            "type": "string",
+          },
+          {
+            "isOptional": true,
+            "isRepeated": false,
+            "name": "age",
+            "number": 4,
+            "type": "int32",
+          },
+        ],
+        "name": "User",
+      },
+    ],
+    "package": "UserService",
+    "services": [
+      {
+        "name": "UserService",
+        "rpcs": [],
+      },
+    ],
+    "syntax": "proto3",
+  },
+}
+`;
+
+exports[`Entity with Multiple Keys Transformation should generate correct proto3 schema 1`] = `
+"syntax = "proto3";
+package UserService;
+
+service UserService {
+}
+
+message User {
+  string id = 1;
+  string email = 2;
+  string name = 3;
+  optional int32 age = 4;
+}"
+`;

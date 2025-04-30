@@ -1,0 +1,187 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Entity with Composite Key should correctly read GraphQL SDL into intermediate format 1`] = `
+{
+  "messages": [
+    {
+      "fields": [
+        {
+          "name": "customerId",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+        {
+          "name": "orderId",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+        {
+          "name": "total",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Float",
+            "required": true,
+          },
+        },
+        {
+          "name": "items",
+          "resolved": false,
+          "type": {
+            "list": true,
+            "name": "OrderItem",
+            "required": true,
+          },
+        },
+      ],
+      "name": "Order",
+    },
+    {
+      "fields": [
+        {
+          "name": "productId",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+        {
+          "name": "quantity",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Int",
+            "required": true,
+          },
+        },
+        {
+          "name": "price",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Float",
+            "required": true,
+          },
+        },
+      ],
+      "name": "OrderItem",
+    },
+  ],
+  "name": "OrderService",
+  "rpcs": [],
+}
+`;
+
+exports[`Entity with Composite Key should generate correct proto3 ast 1`] = `
+{
+  "mapping": {
+    "entity_mappings": [],
+    "operation_mappings": [],
+    "service": "OrderService",
+    "type_field_mappings": [],
+    "version": 1,
+  },
+  "proto": {
+    "messages": [
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "customer_id",
+            "number": 1,
+            "type": "string",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "order_id",
+            "number": 2,
+            "type": "string",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "total",
+            "number": 3,
+            "type": "float",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": true,
+            "name": "items",
+            "number": 4,
+            "type": "OrderItem",
+          },
+        ],
+        "name": "Order",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "product_id",
+            "number": 1,
+            "type": "string",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "quantity",
+            "number": 2,
+            "type": "int32",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "price",
+            "number": 3,
+            "type": "float",
+          },
+        ],
+        "name": "OrderItem",
+      },
+    ],
+    "package": "OrderService",
+    "services": [
+      {
+        "name": "OrderService",
+        "rpcs": [],
+      },
+    ],
+    "syntax": "proto3",
+  },
+}
+`;
+
+exports[`Entity with Composite Key should generate correct proto3 schema 1`] = `
+"syntax = "proto3";
+package OrderService;
+
+service OrderService {
+}
+
+message Order {
+  string customer_id = 1;
+  string order_id = 2;
+  float total = 3;
+  repeated OrderItem items = 4;
+}
+
+message OrderItem {
+  string product_id = 1;
+  int32 quantity = 2;
+  float price = 3;
+}"
+`;

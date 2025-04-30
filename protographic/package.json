@@ -1,0 +1,16 @@
+{
+  "name": "protographic",
+  "module": "src/index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/lodash": "^4.17.16"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "graphql": "^16.11.0",
+    "lodash": "^4.17.21"
+  }
+}

@@ -1,0 +1,134 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Entity with Nested Composite Key should correctly read GraphQL SDL into intermediate format 1`] = `
+{
+  "messages": [
+    {
+      "fields": [
+        {
+          "name": "nested",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Nested",
+            "required": true,
+          },
+        },
+        {
+          "name": "name",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "price",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Float",
+            "required": true,
+          },
+        },
+      ],
+      "name": "Order",
+    },
+    {
+      "fields": [
+        {
+          "name": "customerId",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+        {
+          "name": "orderId",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+      ],
+      "name": "Nested",
+    },
+  ],
+  "name": "OrderService",
+  "rpcs": [],
+}
+`;
+
+exports[`Entity with Nested Composite Key should generate correct proto3 ast 1`] = `
+{
+  "mapping": {
+    "entity_mappings": [],
+    "operation_mappings": [],
+    "service": "OrderService",
+    "type_field_mappings": [],
+    "version": 1,
+  },
+  "proto": {
+    "messages": [
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "nested",
+            "number": 1,
+            "type": "Nested",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "name",
+            "number": 2,
+            "type": "string",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "price",
+            "number": 3,
+            "type": "float",
+          },
+        ],
+        "name": "Order",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "customer_id",
+            "number": 1,
+            "type": "string",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "order_id",
+            "number": 2,
+            "type": "string",
+          },
+        ],
+        "name": "Nested",
+      },
+    ],
+    "package": "OrderService",
+    "services": [
+      {
+        "name": "OrderService",
+        "rpcs": [],
+      },
+    ],
+    "syntax": "proto3",
+  },
+}
+`;

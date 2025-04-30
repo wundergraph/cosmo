@@ -1,0 +1,165 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Subscription Transformation should correctly read GraphQL SDL into intermediate format 1`] = `
+{
+  "messages": [
+    {
+      "fields": [
+        {
+          "name": "id",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+        {
+          "name": "name",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "price",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Float",
+            "required": true,
+          },
+        },
+      ],
+      "name": "Product",
+    },
+  ],
+  "name": "ProductService",
+  "rpcs": [
+    {
+      "arguments": [],
+      "kind": "Subscription",
+      "name": "productUpdates",
+      "type": {
+        "list": false,
+        "name": "Product",
+        "required": true,
+      },
+    },
+  ],
+}
+`;
+
+exports[`Subscription Transformation should generate correct proto3 ast 1`] = `
+{
+  "mapping": {
+    "entity_mappings": [],
+    "operation_mappings": [
+      {
+        "kind": "Subscription",
+        "mapped": "SubscriptionProductUpdates",
+        "original": "productUpdates",
+        "request": "SubscriptionProductUpdatesRequest",
+        "response": "SubscriptionProductUpdatesResponse",
+      },
+    ],
+    "service": "ProductService",
+    "type_field_mappings": [
+      {
+        "field_mappings": [
+          {
+            "argument_mappings": [],
+            "mapped": "SubscriptionProductUpdates",
+            "original": "productUpdates",
+          },
+        ],
+        "type": "Subscription",
+      },
+    ],
+    "version": 1,
+  },
+  "proto": {
+    "messages": [
+      {
+        "fields": [],
+        "name": "SubscriptionProductUpdatesRequest",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "product_updates",
+            "number": 1,
+            "type": "Product",
+          },
+        ],
+        "name": "SubscriptionProductUpdatesResponse",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "id",
+            "number": 1,
+            "type": "string",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "name",
+            "number": 2,
+            "type": "string",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "price",
+            "number": 3,
+            "type": "float",
+          },
+        ],
+        "name": "Product",
+      },
+    ],
+    "package": "ProductService",
+    "services": [
+      {
+        "name": "ProductService",
+        "rpcs": [
+          {
+            "name": "SubscriptionProductUpdates",
+            "requestType": "SubscriptionProductUpdatesRequest",
+            "responseType": "SubscriptionProductUpdatesResponse",
+          },
+        ],
+      },
+    ],
+    "syntax": "proto3",
+  },
+}
+`;
+
+exports[`Subscription Transformation should generate correct proto3 schema 1`] = `
+"syntax = "proto3";
+package ProductService;
+
+service ProductService {
+  rpc SubscriptionProductUpdates(SubscriptionProductUpdatesRequest) returns (SubscriptionProductUpdatesResponse) {}
+}
+
+message Product {
+  string id = 1;
+  string name = 2;
+  float price = 3;
+}
+
+message SubscriptionProductUpdatesRequest {}
+
+message SubscriptionProductUpdatesResponse {
+  Product product_updates = 1;
+}"
+`;

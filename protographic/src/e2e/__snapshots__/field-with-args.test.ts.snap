@@ -1,0 +1,271 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Field with Arguments Transformation should correctly read GraphQL SDL into intermediate format 1`] = `
+{
+  "messages": [
+    {
+      "fields": [
+        {
+          "name": "minPrice",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Float",
+            "required": false,
+          },
+        },
+        {
+          "name": "maxPrice",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Float",
+            "required": false,
+          },
+        },
+        {
+          "name": "category",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+      ],
+      "name": "ProductFilterInput",
+    },
+    {
+      "fields": [
+        {
+          "name": "id",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+        {
+          "name": "name",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "price",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Float",
+            "required": true,
+          },
+        },
+        {
+          "name": "category",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+      ],
+      "name": "Product",
+    },
+  ],
+  "name": "ProductService",
+  "rpcs": [
+    {
+      "arguments": [
+        {
+          "name": "filter",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ProductFilterInput",
+            "required": false,
+          },
+        },
+      ],
+      "kind": "Query",
+      "name": "products",
+      "type": {
+        "list": true,
+        "name": "Product",
+        "required": true,
+      },
+    },
+  ],
+}
+`;
+
+exports[`Field with Arguments Transformation should generate correct proto3 ast 1`] = `
+{
+  "mapping": {
+    "entity_mappings": [],
+    "operation_mappings": [
+      {
+        "kind": "Query",
+        "mapped": "QueryProducts",
+        "original": "products",
+        "request": "QueryProductsRequest",
+        "response": "QueryProductsResponse",
+      },
+    ],
+    "service": "ProductService",
+    "type_field_mappings": [
+      {
+        "field_mappings": [
+          {
+            "argument_mappings": [
+              {
+                "mapped": "filter",
+                "original": "filter",
+              },
+            ],
+            "mapped": "QueryProducts",
+            "original": "products",
+          },
+        ],
+        "type": "Query",
+      },
+    ],
+    "version": 1,
+  },
+  "proto": {
+    "messages": [
+      {
+        "fields": [
+          {
+            "isOptional": true,
+            "isRepeated": false,
+            "name": "filter",
+            "number": 1,
+            "type": "ProductFilterInput",
+          },
+        ],
+        "name": "QueryProductsRequest",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": true,
+            "name": "products",
+            "number": 1,
+            "type": "Product",
+          },
+        ],
+        "name": "QueryProductsResponse",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": true,
+            "isRepeated": false,
+            "name": "min_price",
+            "number": 1,
+            "type": "float",
+          },
+          {
+            "isOptional": true,
+            "isRepeated": false,
+            "name": "max_price",
+            "number": 2,
+            "type": "float",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "category",
+            "number": 3,
+            "type": "string",
+          },
+        ],
+        "name": "ProductFilterInput",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "id",
+            "number": 1,
+            "type": "string",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "name",
+            "number": 2,
+            "type": "string",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "price",
+            "number": 3,
+            "type": "float",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "category",
+            "number": 4,
+            "type": "string",
+          },
+        ],
+        "name": "Product",
+      },
+    ],
+    "package": "ProductService",
+    "services": [
+      {
+        "name": "ProductService",
+        "rpcs": [
+          {
+            "name": "QueryProducts",
+            "requestType": "QueryProductsRequest",
+            "responseType": "QueryProductsResponse",
+          },
+        ],
+      },
+    ],
+    "syntax": "proto3",
+  },
+}
+`;
+
+exports[`Field with Arguments Transformation should generate correct proto3 schema 1`] = `
+"syntax = "proto3";
+package ProductService;
+
+service ProductService {
+  rpc QueryProducts(QueryProductsRequest) returns (QueryProductsResponse) {}
+}
+
+message Product {
+  string id = 1;
+  string name = 2;
+  float price = 3;
+  string category = 4;
+}
+
+message ProductFilterInput {
+  optional float min_price = 1;
+  optional float max_price = 2;
+  string category = 3;
+}
+
+message QueryProductsRequest {
+  optional ProductFilterInput filter = 1;
+}
+
+message QueryProductsResponse {
+  repeated Product products = 1;
+}"
+`;

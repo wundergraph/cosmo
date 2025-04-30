@@ -1,0 +1,638 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Query Transformation should correctly read GraphQL SDL into intermediate format 1`] = `
+{
+  "messages": [
+    {
+      "fields": [
+        {
+          "name": "id",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+        {
+          "name": "name",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+      ],
+      "name": "User",
+    },
+    {
+      "fields": [
+        {
+          "name": "name",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "filterField1",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "filterField2",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "pagination",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Pagination",
+            "required": false,
+          },
+        },
+      ],
+      "name": "FilterType",
+    },
+    {
+      "fields": [
+        {
+          "name": "page",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Int",
+            "required": true,
+          },
+        },
+        {
+          "name": "perPage",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Int",
+            "required": true,
+          },
+        },
+      ],
+      "name": "Pagination",
+    },
+    {
+      "fields": [
+        {
+          "name": "filter",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "FilterType",
+            "required": true,
+          },
+        },
+      ],
+      "name": "ComplexFilterTypeInput",
+    },
+    {
+      "fields": [
+        {
+          "name": "name",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "String",
+            "required": true,
+          },
+        },
+        {
+          "name": "price",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "Float",
+            "required": true,
+          },
+        },
+      ],
+      "name": "CreateProductInput",
+    },
+  ],
+  "name": "ProductService",
+  "rpcs": [
+    {
+      "arguments": [],
+      "kind": "Query",
+      "name": "users",
+      "type": {
+        "list": true,
+        "name": "User",
+        "required": true,
+      },
+    },
+    {
+      "arguments": [
+        {
+          "name": "id",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ID",
+            "required": true,
+          },
+        },
+      ],
+      "kind": "Query",
+      "name": "user",
+      "type": {
+        "list": false,
+        "name": "User",
+        "required": false,
+      },
+    },
+    {
+      "arguments": [
+        {
+          "name": "filter",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "ComplexFilterTypeInput",
+            "required": true,
+          },
+        },
+      ],
+      "kind": "Query",
+      "name": "complexFilterType",
+      "type": {
+        "list": true,
+        "name": "TypeWithComplexFilterInput",
+        "required": true,
+      },
+    },
+    {
+      "arguments": [
+        {
+          "name": "input",
+          "resolved": false,
+          "type": {
+            "list": false,
+            "name": "CreateProductInput",
+            "required": true,
+          },
+        },
+      ],
+      "kind": "Mutation",
+      "name": "createUser",
+      "type": {
+        "list": false,
+        "name": "Product",
+        "required": true,
+      },
+    },
+    {
+      "arguments": [],
+      "kind": "Subscription",
+      "name": "subscribeUsers",
+      "type": {
+        "list": false,
+        "name": "User",
+        "required": true,
+      },
+    },
+  ],
+}
+`;
+
+exports[`Query Transformation should generate correct proto3 ast 1`] = `
+{
+  "mapping": {
+    "entity_mappings": [],
+    "operation_mappings": [
+      {
+        "kind": "Query",
+        "mapped": "QueryUsers",
+        "original": "users",
+        "request": "QueryUsersRequest",
+        "response": "QueryUsersResponse",
+      },
+      {
+        "kind": "Query",
+        "mapped": "QueryUser",
+        "original": "user",
+        "request": "QueryUserRequest",
+        "response": "QueryUserResponse",
+      },
+      {
+        "kind": "Query",
+        "mapped": "QueryComplexFilterType",
+        "original": "complexFilterType",
+        "request": "QueryComplexFilterTypeRequest",
+        "response": "QueryComplexFilterTypeResponse",
+      },
+      {
+        "kind": "Mutation",
+        "mapped": "MutationCreateUser",
+        "original": "createUser",
+        "request": "MutationCreateUserRequest",
+        "response": "MutationCreateUserResponse",
+      },
+      {
+        "kind": "Subscription",
+        "mapped": "SubscriptionSubscribeUsers",
+        "original": "subscribeUsers",
+        "request": "SubscriptionSubscribeUsersRequest",
+        "response": "SubscriptionSubscribeUsersResponse",
+      },
+    ],
+    "service": "ProductService",
+    "type_field_mappings": [
+      {
+        "field_mappings": [
+          {
+            "argument_mappings": [],
+            "mapped": "QueryUsers",
+            "original": "users",
+          },
+          {
+            "argument_mappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+            ],
+            "mapped": "QueryUser",
+            "original": "user",
+          },
+          {
+            "argument_mappings": [
+              {
+                "mapped": "filter",
+                "original": "filter",
+              },
+            ],
+            "mapped": "QueryComplexFilterType",
+            "original": "complexFilterType",
+          },
+        ],
+        "type": "Query",
+      },
+      {
+        "field_mappings": [
+          {
+            "argument_mappings": [
+              {
+                "mapped": "input",
+                "original": "input",
+              },
+            ],
+            "mapped": "MutationCreateUser",
+            "original": "createUser",
+          },
+        ],
+        "type": "Mutation",
+      },
+      {
+        "field_mappings": [
+          {
+            "argument_mappings": [],
+            "mapped": "SubscriptionSubscribeUsers",
+            "original": "subscribeUsers",
+          },
+        ],
+        "type": "Subscription",
+      },
+    ],
+    "version": 1,
+  },
+  "proto": {
+    "messages": [
+      {
+        "fields": [],
+        "name": "QueryUsersRequest",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": true,
+            "name": "users",
+            "number": 1,
+            "type": "User",
+          },
+        ],
+        "name": "QueryUsersResponse",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "id",
+            "number": 1,
+            "type": "string",
+          },
+        ],
+        "name": "QueryUserRequest",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": true,
+            "isRepeated": false,
+            "name": "user",
+            "number": 1,
+            "type": "User",
+          },
+        ],
+        "name": "QueryUserResponse",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "filter",
+            "number": 1,
+            "type": "ComplexFilterTypeInput",
+          },
+        ],
+        "name": "QueryComplexFilterTypeRequest",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": true,
+            "name": "complex_filter_type",
+            "number": 1,
+            "type": "TypeWithComplexFilterInput",
+          },
+        ],
+        "name": "QueryComplexFilterTypeResponse",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "input",
+            "number": 1,
+            "type": "CreateProductInput",
+          },
+        ],
+        "name": "MutationCreateUserRequest",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "create_user",
+            "number": 1,
+            "type": "Product",
+          },
+        ],
+        "name": "MutationCreateUserResponse",
+      },
+      {
+        "fields": [],
+        "name": "SubscriptionSubscribeUsersRequest",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "subscribe_users",
+            "number": 1,
+            "type": "User",
+          },
+        ],
+        "name": "SubscriptionSubscribeUsersResponse",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "id",
+            "number": 1,
+            "type": "string",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "name",
+            "number": 2,
+            "type": "string",
+          },
+        ],
+        "name": "User",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "name",
+            "number": 1,
+            "type": "string",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "filter_field_1",
+            "number": 2,
+            "type": "string",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "filter_field_2",
+            "number": 3,
+            "type": "string",
+          },
+          {
+            "isOptional": true,
+            "isRepeated": false,
+            "name": "pagination",
+            "number": 4,
+            "type": "Pagination",
+          },
+        ],
+        "name": "FilterType",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "page",
+            "number": 1,
+            "type": "int32",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "per_page",
+            "number": 2,
+            "type": "int32",
+          },
+        ],
+        "name": "Pagination",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "filter",
+            "number": 1,
+            "type": "FilterType",
+          },
+        ],
+        "name": "ComplexFilterTypeInput",
+      },
+      {
+        "fields": [
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "name",
+            "number": 1,
+            "type": "string",
+          },
+          {
+            "isOptional": false,
+            "isRepeated": false,
+            "name": "price",
+            "number": 2,
+            "type": "float",
+          },
+        ],
+        "name": "CreateProductInput",
+      },
+    ],
+    "package": "ProductService",
+    "services": [
+      {
+        "name": "ProductService",
+        "rpcs": [
+          {
+            "name": "QueryUsers",
+            "requestType": "QueryUsersRequest",
+            "responseType": "QueryUsersResponse",
+          },
+          {
+            "name": "QueryUser",
+            "requestType": "QueryUserRequest",
+            "responseType": "QueryUserResponse",
+          },
+          {
+            "name": "QueryComplexFilterType",
+            "requestType": "QueryComplexFilterTypeRequest",
+            "responseType": "QueryComplexFilterTypeResponse",
+          },
+          {
+            "name": "MutationCreateUser",
+            "requestType": "MutationCreateUserRequest",
+            "responseType": "MutationCreateUserResponse",
+          },
+          {
+            "name": "SubscriptionSubscribeUsers",
+            "requestType": "SubscriptionSubscribeUsersRequest",
+            "responseType": "SubscriptionSubscribeUsersResponse",
+          },
+        ],
+      },
+    ],
+    "syntax": "proto3",
+  },
+}
+`;
+
+exports[`Query Transformation should generate correct proto3 schema 1`] = `
+"syntax = "proto3";
+package ProductService;
+
+service ProductService {
+  rpc QueryUsers(QueryUsersRequest) returns (QueryUsersResponse) {}
+  rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+  rpc QueryComplexFilterType(QueryComplexFilterTypeRequest) returns (QueryComplexFilterTypeResponse) {}
+  rpc MutationCreateUser(MutationCreateUserRequest) returns (MutationCreateUserResponse) {}
+  rpc SubscriptionSubscribeUsers(SubscriptionSubscribeUsersRequest) returns (SubscriptionSubscribeUsersResponse) {}
+}
+
+message ComplexFilterTypeInput {
+  FilterType filter = 1;
+}
+
+message CreateProductInput {
+  string name = 1;
+  float price = 2;
+}
+
+message FilterType {
+  string name = 1;
+  string filter_field_1 = 2;
+  string filter_field_2 = 3;
+  optional Pagination pagination = 4;
+}
+
+message MutationCreateUserRequest {
+  CreateProductInput input = 1;
+}
+
+message MutationCreateUserResponse {
+  Product create_user = 1;
+}
+
+message Pagination {
+  int32 page = 1;
+  int32 per_page = 2;
+}
+
+message QueryComplexFilterTypeRequest {
+  ComplexFilterTypeInput filter = 1;
+}
+
+message QueryComplexFilterTypeResponse {
+  repeated TypeWithComplexFilterInput complex_filter_type = 1;
+}
+
+message QueryUserRequest {
+  string id = 1;
+}
+
+message QueryUserResponse {
+  optional User user = 1;
+}
+
+message QueryUsersRequest {}
+
+message QueryUsersResponse {
+  repeated User users = 1;
+}
+
+message SubscriptionSubscribeUsersRequest {}
+
+message SubscriptionSubscribeUsersResponse {
+  User subscribe_users = 1;
+}
+
+message User {
+  string id = 1;
+  string name = 2;
+}"
+`;
