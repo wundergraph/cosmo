@@ -12,14 +12,6 @@
     "Tracing": {
       "Enabled": true,
       "SamplingRate": 1,
-      "Subgraph": {
-        "Attributes": [
-          {
-            "Key": "wg.tracing.custom.conn.subgraph.hostport",
-            "Expression": "subgraph.operation.trace.conn.create.hostPort"
-          }
-        ]
-      },
       "ParentBasedSampler": true,
       "Exporters": null,
       "Propagation": {
@@ -32,6 +24,9 @@
       "ResponseTraceHeader": {
         "Enabled": false,
         "HeaderName": "x-wg-trace-id"
+      },
+      "Subgraph": {
+        "Attributes": null
       },
       "ExportGraphQLVariables": false,
       "WithNewRoot": false
