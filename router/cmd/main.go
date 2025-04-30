@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -104,7 +105,6 @@ func Main() {
 		LifecycleHooks: &core.LifecycleHooks{
 			PreCreate: func(rr *core.RouterResources) error {
 				logLevelAtomic.SetLevel(rr.Config.LogLevel)
-
 				return nil
 			},
 		},
@@ -195,6 +195,10 @@ func Main() {
 
 	// Start the router supervisor (blocking)
 	if err := rs.Start(); err != nil {
-		baseLogger.Error("Could not shutdown router gracefully", zap.Error(err))
+		if errors.Is(err, core.ErrStartupFailed) {
+			baseLogger.Error("Could not start router", zap.Error(err))
+		} else {
+			baseLogger.Error("Could not shutdown router gracefully", zap.Error(err))
+		}
 	}
 }

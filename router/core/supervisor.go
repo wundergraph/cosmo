@@ -130,25 +130,29 @@ func (rs *RouterSupervisor) loadResources() error {
 	return nil
 }
 
+var (
+	ErrStartupFailed = errors.New("router start error")
+)
+
 // Start starts the router supervisor.
 func (rs *RouterSupervisor) Start() error {
 	for {
 		if err := rs.loadResources(); err != nil {
-			return fmt.Errorf("failed to load resources: %w", err)
+			return fmt.Errorf("%w: failed to load resources: %w", ErrStartupFailed, err)
 		}
 
 		if err := rs.lifecycleHooks.PreCreate(rs.resources); err != nil {
-			return fmt.Errorf("failed to load resources: %w", err)
+			return fmt.Errorf("%w: failed pre create hook: %w", ErrStartupFailed, err)
 		}
 
 		rs.logger.Debug("Creating Router")
 		if err := rs.createRouter(); err != nil {
-			return fmt.Errorf("failed to create router: %w", err)
+			return fmt.Errorf("%w: failed to create router: %w", ErrStartupFailed, err)
 		}
 
 		rs.logger.Debug("Starting Router")
 		if err := rs.startRouter(); err != nil {
-			return fmt.Errorf("failed to start router: %w", err)
+			return fmt.Errorf("%w: failed to start router: %w", ErrStartupFailed, err)
 		}
 		rs.logger.Info("Router started")
 
