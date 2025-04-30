@@ -167,10 +167,10 @@ func (rs *RouterSupervisor) Start() error {
 			return fmt.Errorf("failed to stop router: %w", err)
 		}
 
-		rs.logger.Debug("Router shutdown successfully")
+		rs.logger.Info("Router shutdown successfully")
 
 		if shutdown {
-			rs.logger.Info("Supervisor exiting")
+			rs.logger.Debug("Router exiting")
 			break
 		}
 	}
