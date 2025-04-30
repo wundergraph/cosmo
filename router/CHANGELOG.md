@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.204.2](https://github.com/wundergraph/cosmo/compare/router@0.204.1...router@0.204.2) (2025-04-30)
+
+### Bug Fixes
+
+* evaluate keys using order of target subgraph ([#1822](https://github.com/wundergraph/cosmo/issues/1822)) ([a5b9815](https://github.com/wundergraph/cosmo/commit/a5b9815b2a79cea50fd4540d3ba56c1c94480677)) (@devsergiy)
+* improve error handling in metric flushing methods ([#1819](https://github.com/wundergraph/cosmo/issues/1819)) ([97402d6](https://github.com/wundergraph/cosmo/commit/97402d671ffa9565fca0df2a99095b28d8c8e339)) (@alepane21)
+
 ## [0.204.1](https://github.com/wundergraph/cosmo/compare/router@0.204.0...router@0.204.1) (2025-04-29)
 
 ### Bug Fixes
