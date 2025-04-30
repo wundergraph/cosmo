@@ -366,11 +366,11 @@ func (h *Metrics) Flush(ctx context.Context) error {
 
 	var err error
 
-	if err := h.otlpRequestMetrics.Flush(ctx); err != nil {
-		errors.Join(err, fmt.Errorf("failed to flush otlp metrics: %w", err))
+	if errOtlp := h.otlpRequestMetrics.Flush(ctx); errOtlp != nil {
+		err = errors.Join(err, fmt.Errorf("failed to flush otlp metrics: %w", errOtlp))
 	}
-	if err := h.promRequestMetrics.Flush(ctx); err != nil {
-		errors.Join(err, fmt.Errorf("failed to flush prometheus metrics: %w", err))
+	if errProm := h.promRequestMetrics.Flush(ctx); errProm != nil {
+		err = errors.Join(err, fmt.Errorf("failed to flush prometheus metrics: %w", errProm))
 	}
 
 	return err
@@ -381,8 +381,8 @@ func (h *Metrics) Shutdown(ctx context.Context) error {
 
 	var err error
 
-	if err := h.Flush(ctx); err != nil {
-		errors.Join(err, fmt.Errorf("failed to flush metrics: %w", err))
+	if errFlush := h.Flush(ctx); errFlush != nil {
+		err = errors.Join(err, fmt.Errorf("failed to flush metrics: %w", errFlush))
 	}
 
 	return err
