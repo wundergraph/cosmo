@@ -223,7 +223,7 @@ describe('@external directive tests', () => {
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(1);
       expect(result.warnings[0]).toStrictEqual(
-        requiresDefinedOnNonEntityFieldWarning('NestedOne.field', NOT_APPLICABLE),
+        requiresDefinedOnNonEntityFieldWarning('NestedOne.field', nu.name),
       );
     });
 
