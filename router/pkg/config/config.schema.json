@@ -1804,10 +1804,11 @@
           "description": "Server configuration for the MCP server.",
           "additionalProperties": false,
           "properties": {
-            "port": {
-              "type": "integer",
-              "default": "5025",
-              "description": "The port where the MCP server will listen for requests. The default value is '5025'."
+            "listen_addr": {
+              "type": "string",
+              "description": "The address on which the MCP server listens for incoming requests. The address is specified as a string with the format 'host:port'.",
+              "default": "localhost:5025",
+              "format": "hostname-port"
             }
           }
         },
@@ -1830,8 +1831,8 @@
         },
         "graph_name": {
           "type": "string",
-          "default": "cosmo",
-          "description": "The name of the graph to be used as suffix for the MCP server name. The default value is 'wundergraph-cosmo-graph'."
+          "default": "mygraph",
+          "description": "The name of the graph to be used as suffix for the MCP server name. The default value is 'wundergraph-cosmo-mygraph'."
         },
         "exclude_mutations": {
           "type": "boolean",

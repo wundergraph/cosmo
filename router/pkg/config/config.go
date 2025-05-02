@@ -888,7 +888,7 @@ type MCPConfiguration struct {
 	Enabled                   bool             `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
 	Server                    MCPServer        `yaml:"server,omitempty"`
 	Storage                   MCPStorageConfig `yaml:"storage,omitempty"`
-	GraphName                 string           `yaml:"graph_name" envDefault:"cosmo" env:"MCP_GRAPH_NAME"`
+	GraphName                 string           `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
 	ExcludeMutations          bool             `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
 	EnableArbitraryOperations bool             `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
 	ExposeSchema              bool             `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
@@ -900,7 +900,7 @@ type MCPStorageConfig struct {
 }
 
 type MCPServer struct {
-	Port int `yaml:"port" envDefault:"5025" env:"MCP_SERVER_PORT"`
+	ListenAddr string `yaml:"listen_addr" envDefault:"localhost:5025" env:"MCP_LISTEN_ADDR"`
 }
 
 type Config struct {
