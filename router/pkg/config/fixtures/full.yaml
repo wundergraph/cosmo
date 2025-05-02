@@ -41,7 +41,7 @@ mcp:
   graph_name: cosmo
   router_url: https://cosmo-router.wundergraph.com
   server:
-    port: 5025
+    listen_addr: localhost:5025
   storage:
     provider_id: mcp
 
