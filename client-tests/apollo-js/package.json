@@ -19,6 +19,6 @@
     "graphql-ws": "^6.0.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.2",
-    "vitest": "^2.1.9"
+    "vitest": "^3.1.2"
   }
 }

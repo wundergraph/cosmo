@@ -139,6 +139,6 @@
     "postcss": "8.4.38",
     "prettier-plugin-tailwindcss": "^0.5.6",
     "typescript": "5.5.2",
-    "vitest": "^2.1.9"
+    "vitest": "^3.1.2"
   }
 }
