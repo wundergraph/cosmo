@@ -1831,8 +1831,8 @@
         },
         "graph_name": {
           "type": "string",
-          "default": "cosmo",
-          "description": "The name of the graph to be used as suffix for the MCP server name. The default value is 'wundergraph-cosmo-graph'."
+          "default": "mygraph",
+          "description": "The name of the graph to be used as suffix for the MCP server name. The default value is 'wundergraph-cosmo-mygraph'."
         },
         "exclude_mutations": {
           "type": "boolean",
