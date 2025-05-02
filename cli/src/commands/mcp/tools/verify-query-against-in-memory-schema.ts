@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { buildSchema, parse, validate, GraphQLError } from 'graphql';
+import { parse, validate, GraphQLError } from 'graphql';
 import type { BaseCommandOptions } from '../../../core/types/types.js';
+import { buildSchemaWithoutDirectives } from './utils/schema.js';
 
 /**
  * Registers the verify-query-against-in-memory-schema tool with the MCP server.
@@ -22,7 +23,6 @@ export const registerVerifyQueryAgainstInMemorySchemaTool = ({
     'Verify if a GraphQL query is valid against a local in memory Supergraph or GraphQL SDL.',
     { query: z.string(), schema: z.string() },
     ({ query, schema: schemaString }) => {
-      // Renamed schema to schemaString to avoid conflict
       try {
         let document;
         try {
@@ -33,13 +33,13 @@ export const registerVerifyQueryAgainstInMemorySchemaTool = ({
           };
         }
 
-        // Build the schema from the string
+        // Build the schema from the string, removing all directives
         let schema;
         try {
-          schema = buildSchema(schemaString);
+          schema = buildSchemaWithoutDirectives(schemaString);
         } catch (schemaError: any) {
           return {
-            content: [{ type: 'text', text: `Schema building failed:\n${schemaError.message}` }],
+            content: [{ type: 'text', text: schemaError.message }],
           };
         }
 
