@@ -87,7 +87,7 @@
     "prettier": "^3.5.2",
     "tsx": "^4.17.0",
     "typescript": "5.5.2",
-    "vitest": "^2.1.9"
+    "vitest": "^3.1.2"
   },
   "gitHead": "c37aed755e1b19ed91d30f9b5f7041e15c56901a"
 }
