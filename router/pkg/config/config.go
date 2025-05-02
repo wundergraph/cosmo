@@ -900,7 +900,7 @@ type MCPStorageConfig struct {
 }
 
 type MCPServer struct {
-	Port int `yaml:"port" envDefault:"5025" env:"MCP_SERVER_PORT"`
+	ListenAddr string `yaml:"listen_addr" envDefault:"localhost:5025" env:"MCP_LISTEN_ADDR"`
 }
 
 type Config struct {

@@ -1804,10 +1804,11 @@
           "description": "Server configuration for the MCP server.",
           "additionalProperties": false,
           "properties": {
-            "port": {
-              "type": "integer",
-              "default": "5025",
-              "description": "The port where the MCP server will listen for requests. The default value is '5025'."
+            "listen_addr": {
+              "type": "string",
+              "description": "The address on which the MCP server listens for incoming requests. The address is specified as a string with the format 'host:port'.",
+              "default": "localhost:5025",
+              "format": "hostname-port"
             }
           }
         },
