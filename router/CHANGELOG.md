@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.205.0](https://github.com/wundergraph/cosmo/compare/router@0.204.2...router@0.205.0) (2025-05-02)
+
+### Features
+
+* expose mcp listen addr for full flexibility ([#1825](https://github.com/wundergraph/cosmo/issues/1825)) ([4a7447a](https://github.com/wundergraph/cosmo/commit/4a7447a64646aa484bc2039ae323bafd967bddb5)) (@StarpTech)
+
 ## [0.204.2](https://github.com/wundergraph/cosmo/compare/router@0.204.1...router@0.204.2) (2025-04-30)
 
 ### Bug Fixes
