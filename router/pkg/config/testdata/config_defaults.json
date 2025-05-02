@@ -114,7 +114,7 @@
     "Storage": {
       "ProviderID": ""
     },
-    "GraphName": "cosmo",
+    "GraphName": "mygraph",
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
