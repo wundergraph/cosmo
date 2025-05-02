@@ -5,24 +5,33 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
-	"github.com/ory/dockertest/v3"
-	"github.com/twmb/franz-go/pkg/kgo"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
 
-type KafkaData struct {
-	Client   *kgo.Client
-	Brokers  []string
-	Resource *dockertest.Resource
+type NatParams struct {
+	Opts []nats.Option
+	Url  string
 }
 
 type NatsData struct {
 	Connections []*nats.Conn
+	Params      []*NatParams
 }
 
 func setupNatsClients(t testing.TB) (*NatsData, error) {
 	natsData := &NatsData{}
 	for range demoNatsProviders {
+		param := &NatParams{
+			Url: nats.DefaultURL,
+			Opts: []nats.Option{
+				nats.MaxReconnects(10),
+				nats.ReconnectWait(1 * time.Second),
+				nats.Timeout(5 * time.Second),
+				nats.ErrorHandler(func(conn *nats.Conn, subscription *nats.Subscription, err error) {
+					t.Log(err)
+				}),
+			},
+		}
 		natsConnection, err := nats.Connect(
 			nats.DefaultURL,
 			nats.MaxReconnects(10),
@@ -35,6 +44,8 @@ func setupNatsClients(t testing.TB) (*NatsData, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		natsData.Params = append(natsData.Params, param)
 		natsData.Connections = append(natsData.Connections, natsConnection)
 	}
 	return natsData, nil
@@ -65,6 +76,13 @@ func addPubSubPrefixToEngineConfiguration(engineConfig *nodev1.EngineConfigurati
 					prefixedTopics = append(prefixedTopics, getPubSubName(subject))
 				}
 				customEvents.Kafka[kafkaConfig].Topics = prefixedTopics
+			}
+			for redisConfig := range customEvents.Redis {
+				var prefixedChannels []string
+				for _, channel := range customEvents.Redis[redisConfig].Channels {
+					prefixedChannels = append(prefixedChannels, getPubSubName(channel))
+				}
+				customEvents.Redis[redisConfig].Channels = prefixedChannels
 			}
 		}
 	}

@@ -40,7 +40,6 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 	"github.com/twmb/franz-go/pkg/kadm"
@@ -53,8 +52,6 @@ import (
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 	"google.golang.org/protobuf/encoding/protojson"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/pubsub_datasource"
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
 	"github.com/wundergraph/cosmo/router/core"
@@ -72,6 +69,7 @@ const (
 	natsDefaultSourceName = "default"
 	myNatsProviderID      = "my-nats"
 	myKafkaProviderID     = "my-kafka"
+	myRedisProviderID     = "my-redis"
 )
 
 var (
@@ -83,8 +81,11 @@ var (
 	ConfigWithEdfsKafkaJSONTemplate string
 	//go:embed testdata/configWithEdfsNats.json
 	ConfigWithEdfsNatsJSONTemplate string
-	demoNatsProviders              = []string{natsDefaultSourceName, myNatsProviderID}
-	demoKafkaProviders             = []string{myKafkaProviderID}
+	//go:embed testdata/configWithEdfsRedis.json
+	ConfigWithEdfsRedisJSONTemplate string
+	demoNatsProviders               = []string{natsDefaultSourceName, myNatsProviderID}
+	demoKafkaProviders              = []string{myKafkaProviderID}
+	demoRedisProviders              = []string{myRedisProviderID}
 )
 
 func init() {
@@ -314,6 +315,7 @@ type Config struct {
 	UseVersionedGraph                  bool
 	NoShutdownTestServer               bool
 	MCP                                config.MCPConfiguration
+	EnableRedis                        bool
 }
 
 type CacheMetricsAssertions struct {
@@ -364,6 +366,8 @@ type MCPConfig struct {
 	Port    int
 }
 
+var redisHost = "redis://localhost:6379"
+
 func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	t.Helper()
 
@@ -394,6 +398,11 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			t.Fatalf("could not setup nats clients: %s", err.Error())
 		}
 		natsSetup = s
+	}
+
+	var enableRedis bool
+	if cfg.EnableRedis {
+		enableRedis = true
 	}
 
 	if cfg.AssertCacheMetrics != nil {
@@ -732,6 +741,10 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		e.NatsConnectionMyNats = natsSetup.Connections[1]
 	}
 
+	if enableRedis {
+		e.RedisHosts = []string{redisHost}
+	}
+
 	if routerConfig.FeatureFlagConfigs != nil {
 		myFF, ok := routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName["myff"]
 		if ok {
@@ -855,7 +868,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 	natsEventSources := make([]config.NatsEventSource, len(demoNatsProviders))
 	kafkaEventSources := make([]config.KafkaEventSource, len(demoKafkaProviders))
-
+	redisEventSources := make([]config.RedisEventSource, len(demoRedisProviders))
 	if natsData != nil {
 		for _, sourceName := range demoNatsProviders {
 			natsEventSources = append(natsEventSources, config.NatsEventSource{
@@ -870,11 +883,20 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			Brokers: testConfig.KafkaSeeds,
 		})
 	}
+	if testConfig.EnableRedis {
+		for _, sourceName := range demoRedisProviders {
+			redisEventSources = append(redisEventSources, config.RedisEventSource{
+				ID:   sourceName,
+				URLs: []string{redisHost},
+			})
+		}
+	}
 
 	eventsConfiguration := config.EventsConfiguration{
 		Providers: config.EventProviders{
 			Nats:  natsEventSources,
 			Kafka: kafkaEventSources,
+			Redis: redisEventSources,
 		},
 	}
 	if testConfig.ModifyEventsConfiguration != nil {
@@ -1175,6 +1197,7 @@ type Environment struct {
 	NatsData              *NatsData
 	NatsConnectionDefault *nats.Conn
 	NatsConnectionMyNats  *nats.Conn
+	RedisHosts            []string
 	SubgraphRequestCount  *SubgraphRequestCount
 	KafkaAdminClient      *kadm.Client
 	KafkaClient           *kgo.Client
@@ -1202,6 +1225,10 @@ func GetPubSubNameFn(prefix string) func(name string) string {
 // Using this method avoid conflicts between tests running in parallel.
 func (e *Environment) GetPubSubName(name string) string {
 	return e.getPubSubName(name)
+}
+
+func (e *Environment) GetKafkaSeeds() []string {
+	return e.cfg.KafkaSeeds
 }
 
 func (e *Environment) RouterConfigVersionMain() string {
@@ -1761,8 +1788,14 @@ func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, query u
 	})
 	require.NoError(e.t, err)
 	var ack WebSocketMessage
-	err = conn.ReadJSON(&ack)
-	require.NoError(e.t, err)
+	_, payload, err := conn.ReadMessage()
+	if err != nil {
+		require.NoError(e.t, err)
+	}
+	if err := json.Unmarshal(payload, &ack); err != nil {
+		e.t.Logf("Failed to decode WebSocket message. Raw payload: %s", string(payload))
+		require.NoError(e.t, err)
+	}
 	require.Equal(e.t, "connection_ack", ack.Type)
 	return conn
 }
@@ -2123,7 +2156,14 @@ func WSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
 			return err
 		}
 
-		err = conn.ReadJSON(v)
+		_, payload, err := conn.ReadMessage()
+		if err != nil {
+			require.NoError(t, err)
+		}
+		if err := json.Unmarshal(payload, &v); err != nil {
+			t.Logf("Failed to decode WebSocket message. Raw payload: %s", string(payload))
+			require.NoError(t, err)
+		}
 
 		// Reset the deadline to prevent future operations from timing out
 		if resetErr := conn.SetReadDeadline(time.Time{}); resetErr != nil {
@@ -2239,16 +2279,19 @@ func WSWriteJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) 
 func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, natsData *NatsData, pubSubName func(string) string) *subgraphs.SubgraphOptions {
 	if natsData == nil {
 		return &subgraphs.SubgraphOptions{
-			NatsPubSubByProviderID: map[string]pubsub_datasource.NatsPubSub{},
+			NatsPubSubByProviderID: map[string]pubsubNats.AdapterInterface{},
 			GetPubSubName:          pubSubName,
 		}
 	}
-	natsPubSubByProviderID := make(map[string]pubsub_datasource.NatsPubSub, len(demoNatsProviders))
+	natsPubSubByProviderID := make(map[string]pubsubNats.AdapterInterface, len(demoNatsProviders))
 	for _, sourceName := range demoNatsProviders {
-		js, err := jetstream.New(natsData.Connections[0])
+		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr")
 		require.NoError(t, err)
-
-		natsPubSubByProviderID[sourceName] = pubsubNats.NewConnector(logger, natsData.Connections[0], js, "hostname", "listenaddr").New(ctx)
+		require.NoError(t, adapter.Startup(ctx))
+		t.Cleanup(func() {
+			require.NoError(t, adapter.Shutdown(context.Background()))
+		})
+		natsPubSubByProviderID[sourceName] = adapter
 	}
 
 	return &subgraphs.SubgraphOptions{

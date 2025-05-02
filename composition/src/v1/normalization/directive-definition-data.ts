@@ -26,6 +26,8 @@ import {
   SPECIFIED_BY_DEFINITION,
   SUBSCRIPTION_FILTER_DEFINITION,
   TAG_DEFINITION,
+  EDFS_REDIS_PUBLISH_DEFINITION,
+  EDFS_REDIS_SUBSCRIBE_DEFINITION,
 } from '../utils/constants';
 import { stringToNamedTypeNode } from '../../ast/utils';
 import { DEFAULT_DEPRECATION_REASON, Kind } from 'graphql';
@@ -92,6 +94,10 @@ import {
   TOPICS,
   UNION_UPPER,
   URL_LOWER,
+  CHANNEL,
+  CHANNELS,
+  EDFS_REDIS_PUBLISH,
+  EDFS_REDIS_SUBSCRIBE,
 } from '../../utils/string-constants';
 
 export const AUTHENTICATED_DEFINITION_DATA: DirectiveDefinitionData = {
@@ -331,6 +337,70 @@ export const KAFKA_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
   node: EDFS_KAFKA_SUBSCRIBE_DEFINITION,
   optionalArgumentNames: new Set<string>([PROVIDER_ID]),
   requiredArgumentNames: new Set<string>([TOPICS]),
+};
+
+export const REDIS_PUBLISH_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+    [
+      CHANNEL,
+      {
+        name: CHANNEL,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+      },
+    ],
+    [
+      PROVIDER_ID,
+      {
+        name: PROVIDER_ID,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+        defaultValue: {
+          kind: Kind.STRING,
+          value: DEFAULT_EDFS_PROVIDER_ID,
+        },
+      },
+    ],
+  ]),
+  isRepeatable: false,
+  locations: new Set<string>([FIELD_DEFINITION_UPPER]),
+  name: EDFS_REDIS_PUBLISH,
+  node: EDFS_REDIS_PUBLISH_DEFINITION,
+  optionalArgumentNames: new Set<string>([PROVIDER_ID]),
+  requiredArgumentNames: new Set<string>([CHANNEL]),
+};
+
+export const REDIS_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+    [
+      CHANNELS,
+      {
+        name: CHANNELS,
+        typeNode: {
+          kind: Kind.NON_NULL_TYPE,
+          type: {
+            kind: Kind.LIST_TYPE,
+            type: REQUIRED_STRING_TYPE_NODE,
+          },
+        },
+      },
+    ],
+    [
+      PROVIDER_ID,
+      {
+        name: PROVIDER_ID,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+        defaultValue: {
+          kind: Kind.STRING,
+          value: DEFAULT_EDFS_PROVIDER_ID,
+        },
+      },
+    ],
+  ]),
+  isRepeatable: false,
+  locations: new Set<string>([FIELD_DEFINITION_UPPER]),
+  name: EDFS_REDIS_SUBSCRIBE,
+  node: EDFS_REDIS_SUBSCRIBE_DEFINITION,
+  optionalArgumentNames: new Set<string>([PROVIDER_ID]),
+  requiredArgumentNames: new Set<string>([CHANNELS]),
 };
 
 export const NATS_PUBLISH_DEFINITION_DATA: DirectiveDefinitionData = {
@@ -668,3 +738,32 @@ export const TAG_DEFINITION_DATA: DirectiveDefinitionData = {
   optionalArgumentNames: new Set<string>(),
   requiredArgumentNames: new Set<string>([NAME]),
 };
+
+export const DIRECTIVE_DEFINITION_DATA_BY_DIRECTIVE_NAME = new Map<string, DirectiveDefinitionData>([
+  [AUTHENTICATED, AUTHENTICATED_DEFINITION_DATA],
+  [COMPOSE_DIRECTIVE, COMPOSE_DIRECTIVE_DEFINITION_DATA],
+  [CONFIGURE_CHILD_DESCRIPTIONS, CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION_DATA],
+  [CONFIGURE_DESCRIPTION, CONFIGURE_DESCRIPTION_DEFINITION_DATA],
+  [DEPRECATED, DEPRECATED_DEFINITION_DATA],
+  [EDFS_KAFKA_PUBLISH, KAFKA_PUBLISH_DEFINITION_DATA],
+  [EDFS_KAFKA_SUBSCRIBE, KAFKA_SUBSCRIBE_DEFINITION_DATA],
+  [EDFS_NATS_PUBLISH, NATS_PUBLISH_DEFINITION_DATA],
+  [EDFS_NATS_REQUEST, NATS_REQUEST_DEFINITION_DATA],
+  [EDFS_NATS_SUBSCRIBE, NATS_SUBSCRIBE_DEFINITION_DATA],
+  [EDFS_REDIS_PUBLISH, REDIS_PUBLISH_DEFINITION_DATA],
+  [EDFS_REDIS_SUBSCRIBE, REDIS_SUBSCRIBE_DEFINITION_DATA],
+  [EXTENDS, EXTENDS_DEFINITION_DATA],
+  [EXTERNAL, EXTERNAL_DEFINITION_DATA],
+  [INACCESSIBLE, INACCESSIBLE_DEFINITION_DATA],
+  [INTERFACE_OBJECT, INTERFACE_OBJECT_DEFINITION_DATA],
+  [KEY, KEY_DEFINITION_DATA],
+  [LINK, LINK_DEFINITION_DATA],
+  [OVERRIDE, OVERRIDE_DEFINITION_DATA],
+  [PROVIDES, PROVIDES_DEFINITION_DATA],
+  [REQUIRES, REQUIRES_DEFINITION_DATA],
+  [REQUIRES_SCOPES, REQUIRES_SCOPES_DEFINITION_DATA],
+  [SHAREABLE, SHAREABLE_DEFINITION_DATA],
+  [SPECIFIED_BY, SPECIFIED_BY_DEFINITION_DATA],
+  [SUBSCRIPTION_FILTER, SUBSCRIPTION_FILTER_DEFINITION_DATA],
+  [TAG, TAG_DEFINITION_DATA],
+]);
