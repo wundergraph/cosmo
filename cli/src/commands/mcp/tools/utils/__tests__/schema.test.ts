@@ -70,4 +70,15 @@ type User {
     // Compare the actual cleaned schema with expected schema
     expect(cleanedSchemaString.trim()).toBe(expectedSchema.trim());
   });
+  it('should throw an error for an invalid schema', () => {
+    const invalidSchema = `
+      type Query {
+        invalidField: NonExistentType
+      }
+    `;
+
+    expect(() => buildSchemaWithoutDirectives(invalidSchema)).toThrowError(
+      'Failed to parse schema: Unknown type: "NonExistentType".',
+    );
+  });
 });

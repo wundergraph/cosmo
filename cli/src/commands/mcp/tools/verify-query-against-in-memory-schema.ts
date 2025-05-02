@@ -39,7 +39,7 @@ export const registerVerifyQueryAgainstInMemorySchemaTool = ({
           schema = buildSchemaWithoutDirectives(schemaString);
         } catch (schemaError: any) {
           return {
-            content: [{ type: 'text', text: `Schema building failed:\n${schemaError.message}` }],
+            content: [{ type: 'text', text: schemaError.message }],
           };
         }
 
