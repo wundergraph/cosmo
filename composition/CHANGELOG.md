@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.39.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.39.0...@wundergraph/composition@0.39.1) (2025-05-02)
+
+### Bug Fixes
+
+* vite vulnerability ([#1823](https://github.com/wundergraph/cosmo/issues/1823)) ([05d5300](https://github.com/wundergraph/cosmo/commit/05d53004612958fe1dab2c292ec89ac4ac686b61)) (@JivusAyrus)
+
 # [0.39.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.38.1...@wundergraph/composition@0.39.0) (2025-04-15)
 
 ### Features
