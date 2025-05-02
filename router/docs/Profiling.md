@@ -99,3 +99,14 @@ You can also run a profile for an amount of time (for example, 5 seconds), by ru
 ```
 go tool pprof ‘http://localhost:6060/debug/pprof/profile?seconds=5’
 ```
+
+### Pyroscope Integration
+
+You can integrate the router with Pyroscope by providing the following configuration in environment variables:
+
+- PYROSCOPE_ENABLED - Whether the integration is enabled
+- PYROSCOPE_SERVICE_NAME - The name of the service (default: "router")
+- PYROSCOPE_SERVER_ADDRESS - The address to the Pyroscope server
+- PYROSCOPE_TAGS - A map of tags to apply to the profiles
+- PYROSCOPE_BASIC_AUTH_USER
+- PYROSCOPE_BASIC_AUTH_PASSWORD

@@ -1,0 +1,15 @@
+dependencies:
+- name: router
+  repository: file://../../../helm/cosmo/charts/router
+  version: 0.10.1
+- name: accounts
+  repository: ""
+  version: ^0
+- name: chat
+  repository: ""
+  version: ^0
+- name: products
+  repository: ""
+  version: ^0
+digest: sha256:6e596bfef0a94c8bc470378727498f50e8a96928a3e3939067a8b9d14e4ef7de
+generated: "2025-04-17T10:54:50.290991-04:00"

@@ -1,0 +1,61 @@
+routerConfigName: benchmarks-config
+
+router:
+  fullnameOverride: benchmarks-router
+  image:
+    repository: router
+
+  extraEnvVars:
+    - name: GOMEMLIMIT
+      value: "450MiB"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 500Mi
+
+  configuration:
+    # We don't need a graphApiToken for the benchmarks, we are using a static config
+    graphApiToken: ""
+
+accounts:
+  fullnameOverride: accounts-service
+
+  image:
+    repository: accounts
+
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+chat:
+  fullnameOverride: chat-service
+
+  image:
+    repository: chat
+
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+products:
+  fullnameOverride: products-service
+
+  image:
+    repository: products
+
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi

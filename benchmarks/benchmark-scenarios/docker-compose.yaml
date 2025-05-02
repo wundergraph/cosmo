@@ -1,0 +1,104 @@
+name: 'cosmo-benchmarks'
+services:
+  accounts:
+    build:
+      context: ../benchmark-services
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: accounts
+    environment:
+      SERVICE_NAME: accounts
+    networks:
+      - benchmarker
+    ports:
+      - '4004:4004'
+
+  products:
+    build:
+      context: ../benchmark-services
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: products
+    environment:
+      SERVICE_NAME: products
+    networks:
+      - benchmarker
+    ports:
+      - '4005:4004'
+
+  chat:
+    build:
+      context: ../benchmark-services
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: chat
+    environment:
+      SERVICE_NAME: chat
+    networks:
+      - benchmarker
+    ports:
+      - '4006:4004'
+
+  router:
+    image: ghcr.io/wundergraph/cosmo/router:${DC_ROUTER_VERSION:-latest}
+    environment:
+      LOG_LEVEL: info
+      CORS_ALLOW_CREDENTIALS: true
+      LISTEN_ADDR: '0.0.0.0:3002'
+      ROUTER_CONFIG_PATH: /router.json
+    restart: on-failure
+    volumes:
+      # Mount the example config from the repo into the working dir of the router binary location
+      # In order apply changes to the config, you need to restart the router container
+      # docker compose -f docker-compose.full.yml --profile router restart router
+      - ../benchmark-services/demo.config.yaml:/config.yaml
+      - ../benchmark-services/config.json:/router.json
+    depends_on:
+      - accounts
+      - products
+      - chat
+      - pyroscope
+      - grafana
+    links:
+      - accounts
+      - products
+      - chat
+      - pyroscope
+      - grafana
+    networks:
+      - benchmarker
+    ports:
+      - '3002:3002'
+
+  pyroscope:
+    image: grafana/pyroscope:latest
+    ports:
+      - 4040:4040
+    networks:
+      - benchmarker
+
+  grafana:
+    image: grafana/grafana:11.3.1
+    ports:
+      - '9300:3000'
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning
+    container_name: grafana
+    restart: unless-stopped
+    networks:
+      - benchmarker
+    environment:
+      - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=true
+      - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource,grafana-pyroscope-app
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-changeme}
+
+# This network is shared between this file and docker-compose.yml to
+# allow the demo subgraphs to communicate with the rest of the infra-networks:
+networks:
+  benchmarker:
+    driver: bridge
+
+volumes:
+  grafana-storage:

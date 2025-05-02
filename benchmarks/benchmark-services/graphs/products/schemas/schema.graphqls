@@ -1,0 +1,27 @@
+extend schema
+@link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
+
+
+scalar Time
+
+
+type Product @shareable @key(fields: "id") {
+    id: ID!
+    name: String!
+    sku: String!
+    price: Float!
+    description: String
+    imageUrl: String
+    createdAt: Time!
+    updatedAt: Time!
+}
+
+type Query {
+    products: [Product!]!
+    product(id: ID!): Product!
+}
+
+
+type Mutation {
+    createProduct(name: String!, sku: String!, price: Float!, description: String, imageUrl: String): Product!
+}

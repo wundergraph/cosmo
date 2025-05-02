@@ -65,6 +65,7 @@ require (
 	github.com/dgraph-io/ristretto/v2 v2.1.0
 	github.com/expr-lang/expr v1.17.0
 	github.com/goccy/go-json v0.10.3
+	github.com/grafana/pyroscope-go v1.2.1
 	github.com/iancoleman/strcase v0.3.0
 	github.com/klauspost/compress v1.17.9
 	github.com/mark3labs/mcp-go v0.23.0
@@ -103,6 +104,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/grafana/pyroscope-go/godeltaprof v0.1.8 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect

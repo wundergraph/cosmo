@@ -5,10 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/dustin/go-humanize"
-	"github.com/goccy/go-yaml"
-	"github.com/santhosh-tekuri/jsonschema/v6"
-	"golang.org/x/text/message"
 	"io/fs"
 	"log"
 	"net"
@@ -19,6 +15,11 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/dustin/go-humanize"
+	"github.com/goccy/go-yaml"
+	"github.com/santhosh-tekuri/jsonschema/v6"
+	"golang.org/x/text/message"
 )
 
 const (

@@ -1,0 +1,14 @@
+version: 1
+subgraphs:
+  - name: accounts
+    routing_url: http://accounts-service:4004/graphql
+    schema:
+      file: ./graphs/accounts/schemas/schema.graphqls
+  - name: chat
+    routing_url: http://chat-service:4004/graphql
+    schema:
+      file: ./graphs/chat/schemas/schema.graphqls
+  - name: products
+    routing_url: http://products-service:4004/graphql
+    schema:
+      file: ./graphs/products/schemas/schema.graphqls

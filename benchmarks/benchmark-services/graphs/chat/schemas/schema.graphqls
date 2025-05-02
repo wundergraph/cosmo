@@ -1,0 +1,43 @@
+extend schema
+@link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
+
+scalar Time
+
+type User @shareable @key(fields: "id", resolvable: false) {
+    id: ID! @external
+}
+
+type ChatMessage {
+    id: ID!
+    message: String!
+    createdAt: Time!
+    sender: User! @provides(fields: "id")
+}
+
+type Product @shareable @key(fields: "id", resolvable: false) {
+    id: ID! @external
+}
+
+
+type ChatRoom {
+    id: ID!
+    name: String!
+    product: Product! @provides(fields: "id")
+    messages: [ChatMessage!]!
+    users: [User!]! @provides(fields: "id")
+}
+
+
+type Query {
+    chatRooms: [ChatRoom!]!
+    chatMessages(roomId: ID!): [ChatMessage!]!
+}
+
+type Mutation {
+    createChatRoom(name: String!): ChatRoom!
+    sendMessage(roomID: ID!, senderId: ID!, message: String!): ChatMessage!
+}
+
+type Subscription {
+    chatMessages(roomId: ID!): ChatMessage!
+}
