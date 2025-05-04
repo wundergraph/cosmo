@@ -35,6 +35,10 @@ import (
 	integration "github.com/wundergraph/cosmo/router-tests"
 )
 
+const (
+	defaultExposedScopedMetricsCount = 2
+)
+
 func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 	t.Parallel()
 
@@ -514,7 +518,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			err := metricReader.Collect(context.Background(), &rm)
 
 			require.NoError(t, err)
-			require.Len(t, rm.ScopeMetrics, 2)
+			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
 
 			cacheScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
 			require.NotNil(t, cacheScope)
@@ -892,7 +896,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			err = metricReader.Collect(context.Background(), &rm)
 
 			require.NoError(t, err)
-			require.Len(t, rm.ScopeMetrics, 2)
+			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
 
 			cacheScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
 			require.NotNil(t, cacheScope)
@@ -1234,7 +1238,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			err := metricReader.Collect(context.Background(), &rm)
 
 			require.NoError(t, err)
-			require.Len(t, rm.ScopeMetrics, 2)
+			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
 
 			cacheScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
 			require.NotNil(t, cacheScope)
@@ -1578,7 +1582,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			err := metricReader.Collect(context.Background(), &rm)
 
 			require.NoError(t, err)
-			require.Len(t, rm.ScopeMetrics, 2)
+			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
 
 			cacheScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
 			require.NotNil(t, cacheScope)
@@ -1943,7 +1947,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			err := metricReader.Collect(context.Background(), &rm)
 
 			require.NoError(t, err)
-			require.Len(t, rm.ScopeMetrics, 2)
+			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
 
 			cacheScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
 			require.NotNil(t, cacheScope)
@@ -2554,7 +2558,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 			err := metricReader.Collect(context.Background(), &rm)
 			require.NoError(t, err)
 
-			require.Len(t, rm.ScopeMetrics, 2)
+			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
 
 			// Runtime metrics
 
@@ -3560,17 +3564,19 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
 
-			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
-			require.Equal(t, 6, len(rm.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			scopeMetric := getScopeMetricsByName(t, rm, "")
+			require.Len(t, scopeMetric.Metrics, 6)
 
-			metricdatatest.AssertEqual(t, httpRequestsMetric, rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestDurationMetric, rm.ScopeMetrics[0].Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, requestContentLengthMetric, rm.ScopeMetrics[0].Metrics[2], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, responseContentLengthMetric, rm.ScopeMetrics[0].Metrics[3], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestInFlightMetric, rm.ScopeMetrics[0].Metrics[4], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, rm.ScopeMetrics[0].Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
 			// make a second request and assert that we're now hitting the validation cache
 
@@ -3986,8 +3992,9 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
 
-			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
-			require.Equal(t, 6, len(rm.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+			scopeMetric := getScopeMetricsByName(t, rm, "")
+			require.Len(t, scopeMetric.Metrics, 6)
 		})
 	})
 
@@ -4669,17 +4676,19 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
 
-			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
-			require.Equal(t, 6, len(rm.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			scopeMetric := getScopeMetricsByName(t, rm, "")
+			require.Len(t, scopeMetric.Metrics, 6)
 
-			metricdatatest.AssertEqual(t, httpRequestsMetric, rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestDurationMetric, rm.ScopeMetrics[0].Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, requestContentLengthMetric, rm.ScopeMetrics[0].Metrics[2], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, responseContentLengthMetric, rm.ScopeMetrics[0].Metrics[3], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestInFlightMetric, rm.ScopeMetrics[0].Metrics[4], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, rm.ScopeMetrics[0].Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
 			// make a second request and assert that we're now hitting the validation cache
 
@@ -4995,17 +5004,19 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
 
-			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
-			require.Equal(t, 6, len(rm.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			scopeMetric := getScopeMetricsByName(t, rm, "")
+			require.Len(t, scopeMetric.Metrics, 6)
 
-			metricdatatest.AssertEqual(t, httpRequestsMetric, rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestDurationMetric, rm.ScopeMetrics[0].Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, requestContentLengthMetric, rm.ScopeMetrics[0].Metrics[2], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, responseContentLengthMetric, rm.ScopeMetrics[0].Metrics[3], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestInFlightMetric, rm.ScopeMetrics[0].Metrics[4], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, rm.ScopeMetrics[0].Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
 
@@ -5307,17 +5318,19 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
 
-			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
-			require.Equal(t, 6, len(rm.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			scopeMetric := getScopeMetricsByName(t, rm, "")
+			require.Len(t, scopeMetric.Metrics, 6)
 
-			metricdatatest.AssertEqual(t, httpRequestsMetric, rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestDurationMetric, rm.ScopeMetrics[0].Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, requestContentLengthMetric, rm.ScopeMetrics[0].Metrics[2], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, responseContentLengthMetric, rm.ScopeMetrics[0].Metrics[3], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestInFlightMetric, rm.ScopeMetrics[0].Metrics[4], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, rm.ScopeMetrics[0].Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
 
@@ -5711,16 +5724,18 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
 
-			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
-			require.Equal(t, 6, len(rm.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, httpRequestsMetric, rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestDurationMetric, rm.ScopeMetrics[0].Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, requestContentLengthMetric, rm.ScopeMetrics[0].Metrics[2], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, responseContentLengthMetric, rm.ScopeMetrics[0].Metrics[3], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestInFlightMetric, rm.ScopeMetrics[0].Metrics[4], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, rm.ScopeMetrics[0].Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			scopeMetric := getScopeMetricsByName(t, rm, "")
+			require.Len(t, scopeMetric.Metrics, 6)
+
+			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
 
@@ -6111,17 +6126,19 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
 
-			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
-			require.Equal(t, 6, len(rm.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			scopeMetric := getScopeMetricsByName(t, rm, "")
+			require.Len(t, scopeMetric.Metrics, 6)
 
-			metricdatatest.AssertEqual(t, httpRequestsMetric, rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestDurationMetric, rm.ScopeMetrics[0].Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, requestContentLengthMetric, rm.ScopeMetrics[0].Metrics[2], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, responseContentLengthMetric, rm.ScopeMetrics[0].Metrics[3], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestInFlightMetric, rm.ScopeMetrics[0].Metrics[4], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, rm.ScopeMetrics[0].Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
 
@@ -6475,17 +6492,19 @@ func TestFlakyTelemetry(t *testing.T) {
 				},
 			}
 
-			require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
-			require.Equal(t, 6, len(rm.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			scopeMetric := getScopeMetricsByName(t, rm, "")
+			require.Len(t, scopeMetric.Metrics, 6)
 
-			metricdatatest.AssertEqual(t, httpRequestsMetric, rm.ScopeMetrics[0].Metrics[0], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestDurationMetric, rm.ScopeMetrics[0].Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, requestContentLengthMetric, rm.ScopeMetrics[0].Metrics[2], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, responseContentLengthMetric, rm.ScopeMetrics[0].Metrics[3], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestInFlightMetric, rm.ScopeMetrics[0].Metrics[4], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, rm.ScopeMetrics[0].Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
 
@@ -7234,23 +7253,24 @@ func TestFlakyTelemetry(t *testing.T) {
 			err := metricReaderFull.Collect(context.Background(), &rmFull)
 			require.NoError(t, err)
 
-			require.Equal(t, 1, len(rmFull.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rmFull.ScopeMetrics))
-			require.Equal(t, 6, len(rmFull.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rmFull.ScopeMetrics[0].Metrics))
+			scopeMetrics := getScopeMetricsByName(t, rmFull, "")
+			require.Len(t, rmFull.ScopeMetrics, defaultExposedScopedMetricsCount)
+			require.Len(t, scopeMetrics.Metrics, 6)
 
-			require.Equal(t, "router.http.requests", rmFull.ScopeMetrics[0].Metrics[0].Name)
-			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[0], otel.WgClientName.String("unknown")))
-			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[0], otel.WgOperationName.String("")))
+			require.Equal(t, "router.http.requests", scopeMetrics.Metrics[0].Name)
+			require.True(t, metricdatatest.AssertHasAttributes(t, scopeMetrics.Metrics[0], otel.WgClientName.String("unknown")))
+			require.True(t, metricdatatest.AssertHasAttributes(t, scopeMetrics.Metrics[0], otel.WgOperationName.String("")))
 
-			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[1], otel.WgClientName.String("unknown")))
-			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[1], otel.WgOperationName.String("")))
+			require.True(t, metricdatatest.AssertHasAttributes(t, scopeMetrics.Metrics[1], otel.WgClientName.String("unknown")))
+			require.True(t, metricdatatest.AssertHasAttributes(t, scopeMetrics.Metrics[1], otel.WgOperationName.String("")))
 
-			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[2], otel.WgClientName.String("unknown")))
-			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[2], otel.WgOperationName.String("")))
+			require.True(t, metricdatatest.AssertHasAttributes(t, scopeMetrics.Metrics[2], otel.WgClientName.String("unknown")))
+			require.True(t, metricdatatest.AssertHasAttributes(t, scopeMetrics.Metrics[2], otel.WgOperationName.String("")))
 
-			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[3], otel.WgClientName.String("unknown")))
-			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[3], otel.WgOperationName.String("")))
+			require.True(t, metricdatatest.AssertHasAttributes(t, scopeMetrics.Metrics[3], otel.WgClientName.String("unknown")))
+			require.True(t, metricdatatest.AssertHasAttributes(t, scopeMetrics.Metrics[3], otel.WgOperationName.String("")))
 
-			require.True(t, metricdatatest.AssertHasAttributes(t, rmFull.ScopeMetrics[0].Metrics[4], otel.WgClientName.String("unknown")))
+			require.True(t, metricdatatest.AssertHasAttributes(t, scopeMetrics.Metrics[4], otel.WgClientName.String("unknown")))
 		})
 
 		metricReaderFiltered := metric.NewManualReader()
@@ -7277,17 +7297,20 @@ func TestFlakyTelemetry(t *testing.T) {
 			err := metricReaderFiltered.Collect(context.Background(), &rmFiltered)
 			require.NoError(t, err)
 
-			require.Equal(t, 1, len(rmFiltered.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rmFiltered.ScopeMetrics))
-			require.Equal(t, 5, len(rmFiltered.ScopeMetrics[0].Metrics), "expected 6 Metrics, got %d", len(rmFiltered.ScopeMetrics[0].Metrics))
+			rmFilteredScopeMetrics := getScopeMetricsByName(t, rmFiltered, "")
+			rmFullScopeMetrics := getScopeMetricsByName(t, rmFull, "")
+
+			require.Len(t, rmFiltered.ScopeMetrics, defaultExposedScopedMetricsCount)
+			require.Len(t, rmFilteredScopeMetrics.Metrics, 5)
 
 			// Check if the excluded attributes are not present in the Resource
 			// The first metric completely excluded, the second one should be the first in filtered
-			require.NotEqual(t, rmFull.ScopeMetrics[0].Metrics[0].Name, rmFiltered.ScopeMetrics[0].Metrics[0].Name)
-			require.Equal(t, rmFull.ScopeMetrics[0].Metrics[1].Name, rmFiltered.ScopeMetrics[0].Metrics[0].Name)
+			require.NotEqual(t, rmFullScopeMetrics.Metrics[0].Name, rmFilteredScopeMetrics.Metrics[0].Name)
+			require.Equal(t, rmFullScopeMetrics.Metrics[1].Name, rmFilteredScopeMetrics.Metrics[0].Name)
 
 			// All other metrics should have fewer attributes in the filtered set compared to the full one
 
-			rdFiltered, ok := rmFiltered.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[float64])
+			rdFiltered, ok := rmFilteredScopeMetrics.Metrics[0].Data.(metricdata.Histogram[float64])
 			require.True(t, ok)
 
 			integration.AssertAttributeNotInSet(t, rdFiltered.DataPoints[0].Attributes, otel.WgClientName.String("unknown"))
@@ -7295,7 +7318,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			integration.AssertAttributeNotInSet(t, rdFiltered.DataPoints[0].Attributes, otel.WgOperationName.String(""))
 			integration.AssertAttributeNotInSet(t, rdFiltered.DataPoints[1].Attributes, otel.WgOperationName.String(""))
 
-			rclFiltered, ok := rmFiltered.ScopeMetrics[0].Metrics[1].Data.(metricdata.Sum[int64])
+			rclFiltered, ok := rmFilteredScopeMetrics.Metrics[1].Data.(metricdata.Sum[int64])
 			require.True(t, ok)
 
 			integration.AssertAttributeNotInSet(t, rclFiltered.DataPoints[0].Attributes, otel.WgClientName.String("unknown"))
@@ -7303,7 +7326,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			integration.AssertAttributeNotInSet(t, rclFiltered.DataPoints[0].Attributes, otel.WgOperationName.String(""))
 			integration.AssertAttributeNotInSet(t, rclFiltered.DataPoints[1].Attributes, otel.WgOperationName.String(""))
 
-			resClFiltered, ok := rmFiltered.ScopeMetrics[0].Metrics[2].Data.(metricdata.Sum[int64])
+			resClFiltered, ok := rmFilteredScopeMetrics.Metrics[2].Data.(metricdata.Sum[int64])
 			require.True(t, ok)
 
 			integration.AssertAttributeNotInSet(t, resClFiltered.DataPoints[0].Attributes, otel.WgClientName.String("unknown"))
@@ -7393,8 +7416,10 @@ func TestFlakyTelemetry(t *testing.T) {
 				err := metricReader.Collect(context.Background(), &rm)
 				require.NoError(t, err)
 
-				require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
-				require.Equal(t, 7, len(rm.ScopeMetrics[0].Metrics), "expected 7 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+				require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+
+				scopeMetric := getScopeMetricsByName(t, rm, "")
+				require.Len(t, scopeMetric.Metrics, 7)
 
 				httpRequestsMetric := metricdata.Metrics{
 					Name:        "router.http.requests",
@@ -7853,7 +7878,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				}
 
-				metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+				metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 			})
 		})
 
@@ -7942,8 +7967,10 @@ func TestFlakyTelemetry(t *testing.T) {
 				err := metricReader.Collect(context.Background(), &rm)
 				require.NoError(t, err)
 
-				require.Equal(t, 1, len(rm.ScopeMetrics), "expected 1 ScopeMetrics, got %d", len(rm.ScopeMetrics))
-				require.Equal(t, 7, len(rm.ScopeMetrics[0].Metrics), "expected 7 Metrics, got %d", len(rm.ScopeMetrics[0].Metrics))
+				require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+
+				scopeMetric := getScopeMetricsByName(t, rm, "")
+				require.Len(t, scopeMetric.Metrics, 7)
 
 				httpRequestsMetric := metricdata.Metrics{
 					Name:        "router.http.requests",
@@ -8402,7 +8429,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				}
 
-				metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+				metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 			})
 		})
 
@@ -8452,7 +8479,8 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				found := false
 
-				for _, point := range rm.ScopeMetrics[0].Metrics[1].Data.(metricdata.Sum[int64]).DataPoints {
+				scopeMetric := getScopeMetricsByName(t, rm, "")
+				for _, point := range scopeMetric.Metrics[1].Data.(metricdata.Sum[int64]).DataPoints {
 
 					require.Equal(t, int64(1), point.Value)
 
@@ -8782,11 +8810,13 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.NoError(t, err)
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
+				scopeMetric := getScopeMetricsByName(t, rm, "")
+
 				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
-				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
-				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
-				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+				require.Greater(t, len(scopeMetric.Metrics), 0)
+				require.IsType(t, metricdata.Sum[int64]{}, scopeMetric.Metrics[0].Data)
+				data2 := scopeMetric.Metrics[0].Data.(metricdata.Sum[int64])
 				atts := data2.DataPoints[0].Attributes
 				val, ok := atts.Value(attribute.Key(claimKey))
 				require.True(t, ok)
@@ -8827,11 +8857,13 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.NoError(t, err)
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
+				scopeMetric := getScopeMetricsByName(t, rm, "")
+
 				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
-				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
-				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
-				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+				require.Greater(t, len(scopeMetric.Metrics), 0)
+				require.IsType(t, metricdata.Sum[int64]{}, scopeMetric.Metrics[0].Data)
+				data2 := scopeMetric.Metrics[0].Data.(metricdata.Sum[int64])
 				atts := data2.DataPoints[0].Attributes
 				_, ok := atts.Value(attribute.Key(claimKey))
 				require.False(t, ok)
@@ -8871,11 +8903,13 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.NoError(t, err)
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
+				scopeMetric := getScopeMetricsByName(t, rm, "")
+
 				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
-				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
-				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
-				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+				require.Greater(t, len(scopeMetric.Metrics), 0)
+				require.IsType(t, metricdata.Sum[int64]{}, scopeMetric.Metrics[0].Data)
+				data2 := scopeMetric.Metrics[0].Data.(metricdata.Sum[int64])
 				atts := data2.DataPoints[0].Attributes
 				ok := atts.HasValue(attribute.Key(claimKey))
 				require.False(t, ok)
@@ -8971,11 +9005,13 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
+				scopeMetric := getScopeMetricsByName(t, rm, "")
+
 				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
-				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
-				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
-				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+				require.Greater(t, len(scopeMetric.Metrics), 0)
+				require.IsType(t, metricdata.Sum[int64]{}, scopeMetric.Metrics[0].Data)
+				data2 := scopeMetric.Metrics[0].Data.(metricdata.Sum[int64])
 				atts := data2.DataPoints[0].Attributes
 				val, ok := atts.Value(attribute.Key(claimKeyWithAuth))
 				require.True(t, ok)
@@ -9026,11 +9062,13 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
+				scopeMetric := getScopeMetricsByName(t, rm, "")
+
 				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
-				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
-				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
-				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+				require.Greater(t, len(scopeMetric.Metrics), 0)
+				require.IsType(t, metricdata.Sum[int64]{}, scopeMetric.Metrics[0].Data)
+				data2 := scopeMetric.Metrics[0].Data.(metricdata.Sum[int64])
 				atts := data2.DataPoints[0].Attributes
 				_, ok := atts.Value(attribute.Key(claimKey))
 				require.False(t, ok)
@@ -9079,11 +9117,13 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
+				scopeMetric := getScopeMetricsByName(t, rm, "")
+
 				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
-				require.Greater(t, len(rm.ScopeMetrics[0].Metrics), 0)
-				require.IsType(t, metricdata.Sum[int64]{}, rm.ScopeMetrics[0].Metrics[0].Data)
-				data2 := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64])
+				require.Greater(t, len(scopeMetric.Metrics), 0)
+				require.IsType(t, metricdata.Sum[int64]{}, scopeMetric.Metrics[0].Data)
+				data2 := scopeMetric.Metrics[0].Data.(metricdata.Sum[int64])
 				atts := data2.DataPoints[0].Attributes
 				ok := atts.HasValue(attribute.Key(claimKey))
 				require.False(t, ok)
@@ -9113,4 +9153,17 @@ func TestFlakyTelemetry(t *testing.T) {
 		})
 	})
 
+}
+
+func getScopeMetricsByName(t *testing.T, rm metricdata.ResourceMetrics, name string) metricdata.ScopeMetrics {
+	if name == "" {
+		name = "cosmo.router"
+	}
+	for _, scopeMetric := range rm.ScopeMetrics {
+		if scopeMetric.Scope.Name == name {
+			return scopeMetric
+		}
+	}
+	require.Fail(t, "did not find")
+	return metricdata.ScopeMetrics{}
 }
