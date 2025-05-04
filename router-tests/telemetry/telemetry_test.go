@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	defaultExposedScopedMetricsCount = 2
+	defaultExposedScopedMetricsCount = 1
 )
 
 func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
