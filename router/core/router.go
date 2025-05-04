@@ -916,12 +916,16 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			}
 		}
 
+		logFields := []zap.Field{
+			zap.String("storage_provider_id", r.mcp.Storage.ProviderID),
+		}
+
 		// Initialize the MCP server with the resolved operations directory
 		mcpOpts := []func(*mcpserver.Options){
 			mcpserver.WithGraphName(r.mcp.GraphName),
 			mcpserver.WithOperationsDir(operationsDir),
-			mcpserver.WithPort(r.mcp.Server.Port),
-			mcpserver.WithLogger(r.logger),
+			mcpserver.WithListenAddr(r.mcp.Server.ListenAddr),
+			mcpserver.WithLogger(r.logger.With(logFields...)),
 			mcpserver.WithExcludeMutations(r.mcp.ExcludeMutations),
 			mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
 			mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
@@ -951,18 +955,6 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 
 		r.mcpServer = mcpss
-
-		logFields := []zap.Field{
-			zap.Int("port", r.mcp.Server.Port),
-			zap.String("operations_dir", operationsDir),
-			zap.String("graph_name", r.mcp.GraphName),
-			zap.Bool("exclude_mutations", r.mcp.ExcludeMutations),
-			zap.String("storage_provider_id", r.mcp.Storage.ProviderID),
-			zap.Bool("enable_arbitrary_operations", r.mcp.EnableArbitraryOperations),
-			zap.Bool("expose_schema", r.mcp.ExposeSchema),
-		}
-
-		r.logger.Info("MCP server started", logFields...)
 	}
 
 	if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
