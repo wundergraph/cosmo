@@ -3566,7 +3566,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			scopeMetric := getScopeMetricsByName(t, rm, "")
+			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, 6)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
@@ -3993,7 +3993,8 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
-			scopeMetric := getScopeMetricsByName(t, rm, "")
+
+			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, 6)
 		})
 	})
@@ -4678,7 +4679,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			scopeMetric := getScopeMetricsByName(t, rm, "")
+			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, 6)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
@@ -5006,7 +5007,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			scopeMetric := getScopeMetricsByName(t, rm, "")
+			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, 6)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
@@ -5320,7 +5321,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			scopeMetric := getScopeMetricsByName(t, rm, "")
+			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, 6)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
@@ -5726,7 +5727,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			scopeMetric := getScopeMetricsByName(t, rm, "")
+			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, 6)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
@@ -6128,7 +6129,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			scopeMetric := getScopeMetricsByName(t, rm, "")
+			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, 6)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
@@ -6494,7 +6495,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			scopeMetric := getScopeMetricsByName(t, rm, "")
+			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, 6)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
@@ -7253,7 +7254,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			err := metricReaderFull.Collect(context.Background(), &rmFull)
 			require.NoError(t, err)
 
-			scopeMetrics := getScopeMetricsByName(t, rmFull, "")
+			scopeMetrics := *integration.GetMetricScopeByName(rmFull.ScopeMetrics, "cosmo.router")
 			require.Len(t, rmFull.ScopeMetrics, defaultExposedScopedMetricsCount)
 			require.Len(t, scopeMetrics.Metrics, 6)
 
@@ -7297,8 +7298,9 @@ func TestFlakyTelemetry(t *testing.T) {
 			err := metricReaderFiltered.Collect(context.Background(), &rmFiltered)
 			require.NoError(t, err)
 
-			rmFilteredScopeMetrics := getScopeMetricsByName(t, rmFiltered, "")
-			rmFullScopeMetrics := getScopeMetricsByName(t, rmFull, "")
+			rmFilteredScopeMetrics := *integration.GetMetricScopeByName(rmFiltered.ScopeMetrics, "cosmo.router")
+
+			rmFullScopeMetrics := *integration.GetMetricScopeByName(rmFull.ScopeMetrics, "cosmo.router")
 
 			require.Len(t, rmFiltered.ScopeMetrics, defaultExposedScopedMetricsCount)
 			require.Len(t, rmFilteredScopeMetrics.Metrics, 5)
@@ -7418,7 +7420,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-				scopeMetric := getScopeMetricsByName(t, rm, "")
+				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 				require.Len(t, scopeMetric.Metrics, 7)
 
 				httpRequestsMetric := metricdata.Metrics{
@@ -7969,7 +7971,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-				scopeMetric := getScopeMetricsByName(t, rm, "")
+				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 				require.Len(t, scopeMetric.Metrics, 7)
 
 				httpRequestsMetric := metricdata.Metrics{
@@ -8479,7 +8481,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				found := false
 
-				scopeMetric := getScopeMetricsByName(t, rm, "")
+				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 				for _, point := range scopeMetric.Metrics[1].Data.(metricdata.Sum[int64]).DataPoints {
 
 					require.Equal(t, int64(1), point.Value)
@@ -8810,7 +8812,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.NoError(t, err)
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
-				scopeMetric := getScopeMetricsByName(t, rm, "")
+				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 
 				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
@@ -8857,7 +8859,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.NoError(t, err)
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
-				scopeMetric := getScopeMetricsByName(t, rm, "")
+				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 
 				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
@@ -8903,7 +8905,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.NoError(t, err)
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
-				scopeMetric := getScopeMetricsByName(t, rm, "")
+				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 
 				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
@@ -9005,7 +9007,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
-				scopeMetric := getScopeMetricsByName(t, rm, "")
+				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 
 				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
@@ -9062,7 +9064,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
-				scopeMetric := getScopeMetricsByName(t, rm, "")
+				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 
 				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
@@ -9117,7 +9119,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
-				scopeMetric := getScopeMetricsByName(t, rm, "")
+				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 
 				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
@@ -9153,17 +9155,4 @@ func TestFlakyTelemetry(t *testing.T) {
 		})
 	})
 
-}
-
-func getScopeMetricsByName(t *testing.T, rm metricdata.ResourceMetrics, name string) metricdata.ScopeMetrics {
-	if name == "" {
-		name = "cosmo.router"
-	}
-	for _, scopeMetric := range rm.ScopeMetrics {
-		if scopeMetric.Scope.Name == name {
-			return scopeMetric
-		}
-	}
-	require.Fail(t, "did not find")
-	return metricdata.ScopeMetrics{}
 }
