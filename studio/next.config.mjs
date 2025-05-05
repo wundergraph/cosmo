@@ -122,6 +122,14 @@ const config = {
         source: "/(.*)",
         headers: [
           {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "X-Frame-Options",
+            value: "DENY",
+          },
+          {
             key: debugCSP
               ? "Content-Security-Policy-Report-Only"
               : "Content-Security-Policy",
