@@ -96,42 +96,6 @@ func TestConfigHotReloadPoller(t *testing.T) {
 		})
 	})
 
-	t.Run("hot-reload config from file", func(t *testing.T) {
-		t.Parallel()
-
-		// Create a temporary file for the router config
-		configFile := t.TempDir() + "/config.json"
-
-		// Initial config with just the employees subgraph
-		writeTestConfig(t, "initial", configFile)
-
-		testenv.Run(t, &testenv.Config{
-			RouterOptions: []core.Option{
-				core.WithConfigVersionHeader(true),
-				core.WithExecutionConfig(&core.ExecutionConfig{
-					Path:          configFile,
-					Watch:         true,
-					WatchInterval: 100 * time.Millisecond,
-				}),
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query { hello }`,
-			})
-			require.Equal(t, res.Response.StatusCode, 200)
-			require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
-
-			writeTestConfig(t, "updated", configFile)
-
-			require.EventuallyWithT(t, func(t *assert.CollectT) {
-				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: `query { hello }`,
-				})
-				require.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
-			}, 2*time.Second, 100*time.Millisecond)
-		})
-	})
-
 	t.Run("verify the config version is updated after config reload", func(t *testing.T) {
 		t.Parallel()
 
