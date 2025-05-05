@@ -21,7 +21,7 @@ func GetAccessLogConfigExpressions(attributes []config.CustomAttribute, exprMana
 			continue
 		}
 
-		err, returnType := exprManager.ValidateAnyExpression(sAttribute.ValueFrom.Expression)
+		returnType, err := exprManager.ValidateAnyExpression(sAttribute.ValueFrom.Expression)
 
 		if err != nil {
 			return nil, fmt.Errorf("failed when validating log expressions: %w", err)

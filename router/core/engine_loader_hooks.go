@@ -85,7 +85,7 @@ func NewEngineRequestHooks(
 func processExpressions(subgraphTracingAttributes []ExpressionAttribute, exprManager *expr.Manager) (map[string]*vm.Program, error) {
 	mappedSubgraphExpressions := make(map[string]*vm.Program)
 	for _, attr := range subgraphTracingAttributes {
-		err, returnType := exprManager.ValidateAnyExpression(attr.Expression)
+		returnType, err := exprManager.ValidateAnyExpression(attr.Expression)
 		if err != nil {
 			return nil, err
 		}

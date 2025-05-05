@@ -73,10 +73,10 @@ func mergeOptions(typeOption expr.Option, visitors []ast.Visitor) []expr.Option 
 // ValidateAnyExpression compiles the expression to ensure that the expression itself is valid but more
 // importantly it checks if the return type is not nil and is an allowed return type
 // this allows us to ensure that nil and return types such as func or channels are not returned
-func (c *Manager) ValidateAnyExpression(s string) (error, *reflect.Kind) {
+func (c *Manager) ValidateAnyExpression(s string) (*reflect.Kind, error) {
 	tree, err := parser.Parse(s)
 	if err != nil {
-		return handleExpressionError(err), nil
+		return nil, handleExpressionError(err)
 	}
 
 	// Check if the expression is just a nil literal
@@ -91,15 +91,15 @@ func (c *Manager) ValidateAnyExpression(s string) (error, *reflect.Kind) {
 
 	expectedType, err := checker.Check(tree, config)
 	if err != nil {
-		return handleExpressionError(err), nil
+		return nil, handleExpressionError(err)
 	}
 
 	// Disallowed types
 	kind := expectedType.Kind()
 	switch kind {
 	case reflect.Invalid, reflect.Chan, reflect.Func:
-		return handleExpressionError(fmt.Errorf("disallowed type: %s", expectedType.String())), nil
+		return nil, handleExpressionError(fmt.Errorf("disallowed type: %s", expectedType.String()))
 	}
 
-	return nil, &kind
+	return &kind, nil
 }
