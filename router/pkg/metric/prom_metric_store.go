@@ -2,7 +2,8 @@ package metric
 
 import (
 	"context"
-
+	"errors"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -14,11 +15,16 @@ const (
 	cosmoRouterPrometheusMeterVersion = "0.0.1"
 )
 
+const (
+	operationRouterInfo = "router.info"
+)
+
 type PromMetricStore struct {
-	meter         otelmetric.Meter
-	meterProvider *metric.MeterProvider
-	logger        *zap.Logger
-	measurements  *Measurements
+	meter                   otelmetric.Meter
+	meterProvider           *metric.MeterProvider
+	logger                  *zap.Logger
+	measurements            *Measurements
+	instrumentRegistrations []otelmetric.Registration
 }
 
 func NewPromMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider) (Provider, error) {
@@ -43,6 +49,18 @@ func NewPromMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider)
 	return m, nil
 }
 
+func (h *PromMetricStore) DeregisterRegisteredInstruments() error {
+	var err error
+
+	for _, reg := range h.instrumentRegistrations {
+		if regErr := reg.Unregister(); regErr != nil {
+			err = errors.Join(regErr)
+		}
+	}
+
+	return err
+}
+
 func (h *PromMetricStore) MeasureInFlight(ctx context.Context, opts ...otelmetric.AddOption) func() {
 	if c, ok := h.measurements.upDownCounters[InFlightRequestsUpDownCounter]; ok {
 		c.Add(ctx, 1, opts...)
@@ -56,6 +74,12 @@ func (h *PromMetricStore) MeasureInFlight(ctx context.Context, opts ...otelmetri
 }
 
 func (h *PromMetricStore) MeasureRequestCount(ctx context.Context, opts ...otelmetric.AddOption) {
+	if c, ok := h.measurements.counters[RequestCounter]; ok {
+		c.Add(ctx, 1, opts...)
+	}
+}
+
+func (h *PromMetricStore) RegisterObservable(ctx context.Context, opts ...otelmetric.AddOption) {
 	if c, ok := h.measurements.counters[RequestCounter]; ok {
 		c.Add(ctx, 1, opts...)
 	}
@@ -89,6 +113,32 @@ func (h *PromMetricStore) MeasureOperationPlanningTime(ctx context.Context, plan
 	if c, ok := h.measurements.histograms[OperationPlanningTime]; ok {
 		c.Record(ctx, planningTime, opts...)
 	}
+}
+
+func (h *PromMetricStore) RecordRouterInfo(routerConfigVersion string, featureFlag string, routerVersion string) error {
+	attrKeyValues := []attribute.KeyValue{
+		otel.WgRouterConfigVersion.String(routerConfigVersion),
+		otel.WgRouterVersion.String(routerVersion),
+	}
+	if featureFlag != "" {
+		attrKeyValues = append(attrKeyValues, otel.WgFeatureFlag.String(featureFlag))
+	}
+
+	gauge, err := h.meter.Int64ObservableGauge(operationRouterInfo, otelmetric.WithDescription("Router configuration info."))
+	if err != nil {
+		return err
+	}
+
+	rc, err := h.meter.RegisterCallback(func(_ context.Context, o otelmetric.Observer) error {
+		o.ObserveInt64(gauge, 1, otelmetric.WithAttributes(attrKeyValues...))
+		return nil
+	}, gauge)
+	if err != nil {
+		return err
+	}
+
+	h.instrumentRegistrations = append(h.instrumentRegistrations, rc)
+	return nil
 }
 
 func (h *PromMetricStore) MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, opts ...otelmetric.AddOption) {

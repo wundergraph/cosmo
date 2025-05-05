@@ -2,6 +2,9 @@ package metric
 
 import (
 	"context"
+	"errors"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"go.opentelemetry.io/otel/attribute"
 
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -14,11 +17,11 @@ const (
 )
 
 type OtlpMetricStore struct {
-	meter         otelmetric.Meter
-	meterProvider *metric.MeterProvider
-	logger        *zap.Logger
-
-	measurements *Measurements
+	meter                   otelmetric.Meter
+	meterProvider           *metric.MeterProvider
+	logger                  *zap.Logger
+	measurements            *Measurements
+	instrumentRegistrations []otelmetric.Registration
 }
 
 func NewOtlpMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider) (Provider, error) {
@@ -43,6 +46,18 @@ func NewOtlpMetricStore(logger *zap.Logger, meterProvider *metric.MeterProvider)
 	return m, nil
 }
 
+func (h *OtlpMetricStore) DeregisterRegisteredInstruments() error {
+	var err error
+
+	for _, reg := range h.instrumentRegistrations {
+		if regErr := reg.Unregister(); regErr != nil {
+			err = errors.Join(regErr)
+		}
+	}
+
+	return err
+}
+
 func (h *OtlpMetricStore) MeasureInFlight(ctx context.Context, opts ...otelmetric.AddOption) func() {
 
 	if c, ok := h.measurements.upDownCounters[InFlightRequestsUpDownCounter]; ok {
@@ -54,6 +69,32 @@ func (h *OtlpMetricStore) MeasureInFlight(ctx context.Context, opts ...otelmetri
 			c.Add(ctx, -1, opts...)
 		}
 	}
+}
+
+func (h *OtlpMetricStore) RecordRouterInfo(routerConfigVersion string, featureFlag string, routerVersion string) error {
+	attrKeyValues := []attribute.KeyValue{
+		otel.WgRouterConfigVersion.String(routerConfigVersion),
+		otel.WgRouterVersion.String(routerVersion),
+	}
+	if featureFlag != "" {
+		attrKeyValues = append(attrKeyValues, otel.WgFeatureFlag.String(featureFlag))
+	}
+
+	gauge, err := h.meter.Int64ObservableGauge(operationRouterInfo, otelmetric.WithDescription("Router configuration info."))
+	if err != nil {
+		return err
+	}
+
+	rc, err := h.meter.RegisterCallback(func(_ context.Context, o otelmetric.Observer) error {
+		o.ObserveInt64(gauge, 1, otelmetric.WithAttributes(attrKeyValues...))
+		return nil
+	}, gauge)
+	if err != nil {
+		return err
+	}
+
+	h.instrumentRegistrations = append(h.instrumentRegistrations, rc)
+	return nil
 }
 
 func (h *OtlpMetricStore) MeasureRequestCount(ctx context.Context, opts ...otelmetric.AddOption) {

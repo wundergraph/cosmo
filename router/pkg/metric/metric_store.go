@@ -117,6 +117,8 @@ type (
 		MeasureRequestError(ctx context.Context, opts ...otelmetric.AddOption)
 		MeasureOperationPlanningTime(ctx context.Context, planningTime float64, opts ...otelmetric.RecordOption)
 		MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, opts ...otelmetric.AddOption)
+		RecordRouterInfo(routerConfigVersion, featureFlag, routerVersion string) error
+		DeregisterRegisteredInstruments() error
 		Flush(ctx context.Context) error
 	}
 
@@ -131,6 +133,7 @@ type (
 		MeasureRequestError(ctx context.Context, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
 		MeasureOperationPlanningTime(ctx context.Context, planningTime time.Duration, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption)
+		RecordRouterInfo(routerConfigVersion, featureFlag, routerVersion string)
 		Flush(ctx context.Context) error
 		Shutdown(ctx context.Context) error
 	}
@@ -346,6 +349,11 @@ func (h *Metrics) MeasureOperationPlanningTime(ctx context.Context, planningTime
 	h.otlpRequestMetrics.MeasureOperationPlanningTime(ctx, elapsedTime, opts...)
 }
 
+func (h *Metrics) RecordRouterInfo(routerConfigVersion, ffFlag, routerVersion string) {
+	h.promRequestMetrics.RecordRouterInfo(routerConfigVersion, ffFlag, routerVersion)
+	h.otlpRequestMetrics.RecordRouterInfo(routerConfigVersion, ffFlag, routerVersion)
+}
+
 func (h *Metrics) MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, sliceAttr []attribute.KeyValue, opt otelmetric.AddOption) {
 	opts := []otelmetric.AddOption{h.baseAttributesOpt, opt}
 
@@ -384,6 +392,9 @@ func (h *Metrics) Shutdown(ctx context.Context) error {
 	if errFlush := h.Flush(ctx); errFlush != nil {
 		err = errors.Join(err, fmt.Errorf("failed to flush metrics: %w", errFlush))
 	}
+
+	h.promRequestMetrics.DeregisterRegisteredInstruments()
+	h.otlpRequestMetrics.DeregisterRegisteredInstruments()
 
 	return err
 }

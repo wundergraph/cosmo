@@ -36,7 +36,8 @@ import (
 )
 
 const (
-	defaultExposedScopedMetricsCount = 2
+	defaultExposedScopedMetricsCount = 1
+	defaultMetricsCount              = 7
 )
 
 func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
@@ -3535,6 +3536,31 @@ func TestFlakyTelemetry(t *testing.T) {
 				},
 			}
 
+			routerInfoMetric := metricdata.Metrics{
+				Name:        "router.info",
+				Description: "Router configuration info.",
+				Unit:        "",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgRouterConfigVersion.String("cf65a60a-3bea-4244-8921-9dc693e34e60"),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgFeatureFlag.String("myff"),
+								otel.WgRouterConfigVersion.String("9cb300b5-8ef3-4114-a4b9-9c30a2653704"),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+					},
+				},
+			}
+
 			want := metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
 					Name:      "cosmo.router",
@@ -3547,6 +3573,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					requestContentLengthMetric,
 					responseContentLengthMetric,
 					requestInFlightMetric,
+					routerInfoMetric,
 					operationPlanningTimeMetric,
 				},
 			}
@@ -3567,7 +3594,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
 			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-			require.Len(t, scopeMetric.Metrics, 6)
+			require.Len(t, scopeMetric.Metrics, defaultMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
@@ -3577,6 +3604,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
 			// make a second request and assert that we're now hitting the validation cache
 
@@ -3995,7 +4023,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
 			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-			require.Len(t, scopeMetric.Metrics, 6)
+			require.Len(t, scopeMetric.Metrics, defaultMetricsCount)
 		})
 	})
 
@@ -4648,6 +4676,31 @@ func TestFlakyTelemetry(t *testing.T) {
 				},
 			}
 
+			routerInfoMetric := metricdata.Metrics{
+				Name:        "router.info",
+				Description: "Router configuration info.",
+				Unit:        "",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgRouterConfigVersion.String("cf65a60a-3bea-4244-8921-9dc693e34e60"),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgFeatureFlag.String("myff"),
+								otel.WgRouterConfigVersion.String("9cb300b5-8ef3-4114-a4b9-9c30a2653704"),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+					},
+				},
+			}
+
 			want := metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
 					Name:      "cosmo.router",
@@ -4660,6 +4713,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					requestContentLengthMetric,
 					responseContentLengthMetric,
 					requestInFlightMetric,
+					routerInfoMetric,
 					operationPlanningTimeMetric,
 				},
 			}
@@ -4680,7 +4734,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
 			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-			require.Len(t, scopeMetric.Metrics, 6)
+			require.Len(t, scopeMetric.Metrics, defaultMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
@@ -4690,6 +4744,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, routerInfoMetric, rm.ScopeMetrics[0].Metrics[6], metricdatatest.IgnoreTimestamp())
 
 			// make a second request and assert that we're now hitting the validation cache
 
@@ -4976,6 +5031,31 @@ func TestFlakyTelemetry(t *testing.T) {
 				},
 			}
 
+			routerInfoMetric := metricdata.Metrics{
+				Name:        "router.info",
+				Description: "Router configuration info.",
+				Unit:        "",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgRouterConfigVersion.String("cf65a60a-3bea-4244-8921-9dc693e34e60"),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgFeatureFlag.String("myff"),
+								otel.WgRouterConfigVersion.String("9cb300b5-8ef3-4114-a4b9-9c30a2653704"),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+					},
+				},
+			}
+
 			want := metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
 					Name:      "cosmo.router",
@@ -4988,6 +5068,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					requestContentLengthMetric,
 					responseContentLengthMetric,
 					requestInFlightMetric,
+					routerInfoMetric,
 					operationPlanningTimeMetric,
 				},
 			}
@@ -5008,7 +5089,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
 			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-			require.Len(t, scopeMetric.Metrics, 6)
+			require.Len(t, scopeMetric.Metrics, defaultMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
@@ -5018,6 +5099,8 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
 		})
 	})
 
@@ -5290,6 +5373,31 @@ func TestFlakyTelemetry(t *testing.T) {
 				},
 			}
 
+			routerInfoMetric := metricdata.Metrics{
+				Name:        "router.info",
+				Description: "Router configuration info.",
+				Unit:        "",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgRouterConfigVersion.String("cf65a60a-3bea-4244-8921-9dc693e34e60"),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgFeatureFlag.String("myff"),
+								otel.WgRouterConfigVersion.String("9cb300b5-8ef3-4114-a4b9-9c30a2653704"),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+					},
+				},
+			}
+
 			want := metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
 					Name:      "cosmo.router",
@@ -5302,6 +5410,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					requestContentLengthMetric,
 					responseContentLengthMetric,
 					requestInFlightMetric,
+					routerInfoMetric,
 					operationPlanningTimeMetric,
 				},
 			}
@@ -5322,7 +5431,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
 			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-			require.Len(t, scopeMetric.Metrics, 6)
+			require.Len(t, scopeMetric.Metrics, defaultMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
@@ -5332,6 +5441,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
 
@@ -5695,6 +5805,31 @@ func TestFlakyTelemetry(t *testing.T) {
 				},
 			}
 
+			routerInfoMetric := metricdata.Metrics{
+				Name:        "router.info",
+				Description: "Router configuration info.",
+				Unit:        "",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgRouterConfigVersion.String("cf65a60a-3bea-4244-8921-9dc693e34e60"),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgFeatureFlag.String("myff"),
+								otel.WgRouterConfigVersion.String("9cb300b5-8ef3-4114-a4b9-9c30a2653704"),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+					},
+				},
+			}
+
 			want := metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
 					Name:      "cosmo.router",
@@ -5707,6 +5842,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					requestContentLengthMetric,
 					responseContentLengthMetric,
 					requestInFlightMetric,
+					routerInfoMetric,
 					operationPlanningTimeMetric,
 				},
 			}
@@ -5728,7 +5864,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
 			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-			require.Len(t, scopeMetric.Metrics, 6)
+			require.Len(t, scopeMetric.Metrics, defaultMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
@@ -5737,6 +5873,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
 
@@ -6097,6 +6234,31 @@ func TestFlakyTelemetry(t *testing.T) {
 				},
 			}
 
+			routerInfoMetric := metricdata.Metrics{
+				Name:        "router.info",
+				Description: "Router configuration info.",
+				Unit:        "",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgRouterConfigVersion.String("cf65a60a-3bea-4244-8921-9dc693e34e60"),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgFeatureFlag.String("myff"),
+								otel.WgRouterConfigVersion.String("9cb300b5-8ef3-4114-a4b9-9c30a2653704"),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+					},
+				},
+			}
+
 			want := metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
 					Name:      "cosmo.router",
@@ -6109,6 +6271,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					requestContentLengthMetric,
 					responseContentLengthMetric,
 					requestInFlightMetric,
+					routerInfoMetric,
 					operationPlanningTimeMetric,
 				},
 			}
@@ -6130,7 +6293,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
 			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-			require.Len(t, scopeMetric.Metrics, 6)
+			require.Len(t, scopeMetric.Metrics, defaultMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
@@ -6140,6 +6303,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
 
@@ -6477,6 +6641,31 @@ func TestFlakyTelemetry(t *testing.T) {
 				},
 			}
 
+			routerInfoMetric := metricdata.Metrics{
+				Name:        "router.info",
+				Description: "Router configuration info.",
+				Unit:        "",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgRouterConfigVersion.String("cf65a60a-3bea-4244-8921-9dc693e34e60"),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgFeatureFlag.String("myff"),
+								otel.WgRouterConfigVersion.String("9cb300b5-8ef3-4114-a4b9-9c30a2653704"),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+					},
+				},
+			}
+
 			want := metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
 					Name:      "cosmo.router",
@@ -6489,6 +6678,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					requestContentLengthMetric,
 					responseContentLengthMetric,
 					requestInFlightMetric,
+					routerInfoMetric,
 					operationPlanningTimeMetric,
 				},
 			}
@@ -6496,7 +6686,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
 			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-			require.Len(t, scopeMetric.Metrics, 6)
+			require.Len(t, scopeMetric.Metrics, defaultMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
@@ -6506,6 +6696,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
 
@@ -7256,7 +7447,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			scopeMetrics := *integration.GetMetricScopeByName(rmFull.ScopeMetrics, "cosmo.router")
 			require.Len(t, rmFull.ScopeMetrics, defaultExposedScopedMetricsCount)
-			require.Len(t, scopeMetrics.Metrics, 6)
+			require.Len(t, scopeMetrics.Metrics, defaultMetricsCount)
 
 			require.Equal(t, "router.http.requests", scopeMetrics.Metrics[0].Name)
 			require.True(t, metricdatatest.AssertHasAttributes(t, scopeMetrics.Metrics[0], otel.WgClientName.String("unknown")))
@@ -7303,7 +7494,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			rmFullScopeMetrics := *integration.GetMetricScopeByName(rmFull.ScopeMetrics, "cosmo.router")
 
 			require.Len(t, rmFiltered.ScopeMetrics, defaultExposedScopedMetricsCount)
-			require.Len(t, rmFilteredScopeMetrics.Metrics, 5)
+			require.Len(t, rmFilteredScopeMetrics.Metrics, 6)
 
 			// Check if the excluded attributes are not present in the Resource
 			// The first metric completely excluded, the second one should be the first in filtered
@@ -7421,7 +7612,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
 				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-				require.Len(t, scopeMetric.Metrics, 7)
+				require.Len(t, scopeMetric.Metrics, defaultMetricsCount+1)
 
 				httpRequestsMetric := metricdata.Metrics{
 					Name:        "router.http.requests",
@@ -7863,6 +8054,31 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				}
 
+				routerInfoMetric := metricdata.Metrics{
+					Name:        "router.info",
+					Description: "Router configuration info.",
+					Unit:        "",
+					Data: metricdata.Gauge[int64]{
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Value: 1,
+								Attributes: attribute.NewSet(
+									otel.WgRouterConfigVersion.String("cf65a60a-3bea-4244-8921-9dc693e34e60"),
+									otel.WgRouterVersion.String("dev"),
+								),
+							},
+							{
+								Value: 1,
+								Attributes: attribute.NewSet(
+									otel.WgFeatureFlag.String("myff"),
+									otel.WgRouterConfigVersion.String("9cb300b5-8ef3-4114-a4b9-9c30a2653704"),
+									otel.WgRouterVersion.String("dev"),
+								),
+							},
+						},
+					},
+				}
+
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      "cosmo.router",
@@ -7875,6 +8091,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						requestContentLengthMetric,
 						responseContentLengthMetric,
 						requestInFlightMetric,
+						routerInfoMetric,
 						operationPlanningTimeMetric,
 						failedRequestsMetric,
 					},
@@ -7972,7 +8189,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
 				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-				require.Len(t, scopeMetric.Metrics, 7)
+				require.Len(t, scopeMetric.Metrics, defaultMetricsCount+1)
 
 				httpRequestsMetric := metricdata.Metrics{
 					Name:        "router.http.requests",
@@ -8414,6 +8631,31 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				}
 
+				routerInfoMetric := metricdata.Metrics{
+					Name:        "router.info",
+					Description: "Router configuration info.",
+					Unit:        "",
+					Data: metricdata.Gauge[int64]{
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Value: 1,
+								Attributes: attribute.NewSet(
+									otel.WgRouterConfigVersion.String("cf65a60a-3bea-4244-8921-9dc693e34e60"),
+									otel.WgRouterVersion.String("dev"),
+								),
+							},
+							{
+								Value: 1,
+								Attributes: attribute.NewSet(
+									otel.WgFeatureFlag.String("myff"),
+									otel.WgRouterConfigVersion.String("9cb300b5-8ef3-4114-a4b9-9c30a2653704"),
+									otel.WgRouterVersion.String("dev"),
+								),
+							},
+						},
+					},
+				}
+
 				want := metricdata.ScopeMetrics{
 					Scope: instrumentation.Scope{
 						Name:      "cosmo.router",
@@ -8426,6 +8668,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						requestContentLengthMetric,
 						responseContentLengthMetric,
 						requestInFlightMetric,
+						routerInfoMetric,
 						operationPlanningTimeMetric,
 						failedRequestsMetric,
 					},
@@ -9172,19 +9415,14 @@ func TestFlakyTelemetry(t *testing.T) {
 			err := metricReader.Collect(context.Background(), &rm)
 			require.NoError(t, err)
 
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.language", "go"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
-			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
-
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.info")
-			require.Len(t, scopeMetric.Metrics, 2)
+			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			require.Len(t, scopeMetric.Metrics, defaultMetricsCount)
 
-			base := scopeMetric.Metrics[0]
-			routerConfigVersionEntryBase := metricdata.Metrics{
+			routerInfoMetric := metricdata.Metrics{
 				Name:        "router.info",
-				Description: "Router Info stats for base",
+				Description: "Router configuration info.",
 				Unit:        "",
 				Data: metricdata.Gauge[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
@@ -9195,30 +9433,19 @@ func TestFlakyTelemetry(t *testing.T) {
 								otel.WgRouterVersion.String("dev"),
 							),
 						},
-					},
-				},
-			}
-			metricdatatest.AssertEqual(t, routerConfigVersionEntryBase, base, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
-			featureFlag := scopeMetric.Metrics[1]
-			routerConfigVersionEntryFf := metricdata.Metrics{
-				Name:        "router.info",
-				Description: "Router Info stats for myff",
-				Unit:        "",
-				Data: metricdata.Gauge[int64]{
-					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Value: 1,
 							Attributes: attribute.NewSet(
-								otel.WgRouterConfigVersion.String("9cb300b5-8ef3-4114-a4b9-9c30a2653704"),
 								otel.WgFeatureFlag.String("myff"),
+								otel.WgRouterConfigVersion.String("9cb300b5-8ef3-4114-a4b9-9c30a2653704"),
 								otel.WgRouterVersion.String("dev"),
 							),
 						},
 					},
 				},
 			}
-			metricdatatest.AssertEqual(t, routerConfigVersionEntryFf, featureFlag, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
 

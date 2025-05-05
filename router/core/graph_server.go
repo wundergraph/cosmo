@@ -96,8 +96,6 @@ type (
 		runtimeMetrics          *rmetric.RuntimeMetrics
 		otlpEngineMetrics       *rmetric.EngineMetrics
 		prometheusEngineMetrics *rmetric.EngineMetrics
-		oltpRouterInfoMetrics   *rmetric.RouterInfoMetrics
-		promRouterInfoMetrics   *rmetric.RouterInfoMetrics
 		hostName                string
 		routerListenAddr        string
 	}
@@ -229,25 +227,6 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, gm.mux, featureFlagConfigMap)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
-	}
-
-	if s.metricConfig.IsEnabled() {
-		promStore, oltpStore, err := rmetric.InitPromAndOltpMetricRouterInfoStores(
-			s.logger,
-			s.promMeterProvider,
-			s.otlpMeterProvider,
-			[]attribute.KeyValue{
-				otel.WgRouterVersion.String(Version),
-			},
-			s.baseRouterConfigVersion,
-			routerConfig.FeatureFlagConfigs,
-			r.metricConfig,
-		)
-		if err != nil {
-			return nil, err
-		}
-		s.promRouterInfoMetrics = promStore
-		s.oltpRouterInfoMetrics = oltpStore
 	}
 
 	wrapper, err := gzhttp.NewWrapper(
@@ -740,6 +719,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		}
 
 		gm.metricStore = m
+
+		gm.metricStore.RecordRouterInfo(routerConfigVersion, featureFlagName, Version)
 	}
 
 	subgraphs, err := configureSubgraphOverwrites(
@@ -1420,17 +1401,6 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 
 	if s.prometheusEngineMetrics != nil {
 		if err := s.prometheusEngineMetrics.Shutdown(); err != nil {
-			finalErr = errors.Join(finalErr, err)
-		}
-	}
-
-	if s.promRouterInfoMetrics != nil {
-		if err := s.promRouterInfoMetrics.Shutdown(); err != nil {
-			finalErr = errors.Join(finalErr, err)
-		}
-	}
-	if s.oltpRouterInfoMetrics != nil {
-		if err := s.oltpRouterInfoMetrics.Shutdown(); err != nil {
 			finalErr = errors.Join(finalErr, err)
 		}
 	}
