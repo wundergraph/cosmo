@@ -8,7 +8,7 @@ import {
   LintIssue,
   ProposalSubgraph,
   SchemaChange,
-  VCSContext
+  VCSContext,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { and, eq, inArray, sql } from 'drizzle-orm';
