@@ -36,7 +36,7 @@ import (
 )
 
 const (
-	defaultExposedScopedMetricsCount = 1
+	defaultExposedScopedMetricsCount = 2
 )
 
 func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
@@ -9152,6 +9152,73 @@ func TestFlakyTelemetry(t *testing.T) {
 			})
 			expectedErr := errors.New("failed to build base mux: custom attribute error, unable to compile 'extraclaim' with expression 'TEST request.auth.claims.extraclaim': line 1, column 5: unexpected token Identifier(\"request\")")
 			assert.ErrorAs(t, err, &expectedErr)
+		})
+	})
+
+	t.Run("Should include cosmo router info metrics", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			rm := metricdata.ResourceMetrics{}
+			err := metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			require.Contains(t, rm.Resource.Attributes(), attribute.String("telemetry.sdk.language", "go"))
+			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
+			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
+
+			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+
+			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.info")
+			require.Len(t, scopeMetric.Metrics, 2)
+
+			base := scopeMetric.Metrics[0]
+			routerConfigVersionEntryBase := metricdata.Metrics{
+				Name:        "router.info",
+				Description: "Router Info stats for base",
+				Unit:        "",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgRouterConfigVersion.String("cf65a60a-3bea-4244-8921-9dc693e34e60"),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+					},
+				},
+			}
+			metricdatatest.AssertEqual(t, routerConfigVersionEntryBase, base, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+			featureFlag := scopeMetric.Metrics[1]
+			routerConfigVersionEntryFf := metricdata.Metrics{
+				Name:        "router.info",
+				Description: "Router Info stats for myff",
+				Unit:        "",
+				Data: metricdata.Gauge[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Value: 1,
+							Attributes: attribute.NewSet(
+								otel.WgRouterConfigVersion.String("9cb300b5-8ef3-4114-a4b9-9c30a2653704"),
+								otel.WgFeatureFlag.String("myff"),
+								otel.WgRouterVersion.String("dev"),
+							),
+						},
+					},
+				},
+			}
+			metricdatatest.AssertEqual(t, routerConfigVersionEntryFf, featureFlag, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
 

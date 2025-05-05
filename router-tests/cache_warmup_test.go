@@ -838,7 +838,7 @@ func TestCacheWarmup(t *testing.T) {
 			err := metricReader.Collect(context.Background(), &rm)
 
 			require.NoError(t, err)
-			require.Len(t, rm.ScopeMetrics, 2)
+			require.Len(t, rm.ScopeMetrics, 3)
 
 			metricScope := GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.NotNil(t, metricScope)
