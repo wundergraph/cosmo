@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/http/httptrace"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -22,7 +21,6 @@ type TraceInjectingRoundTripper struct {
 	logHooks         bool
 	traceHooks       bool
 	attrMap          map[string][]any
-	mu               sync.Mutex
 	logger           *zap.Logger
 	getRequestLogger requestLoggerGetter
 }
