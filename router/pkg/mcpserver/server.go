@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -52,8 +51,8 @@ type Options struct {
 	GraphName string
 	// OperationsDir is the directory where GraphQL operations are stored
 	OperationsDir string
-	// Server contains server configuration options
-	Server ServerOptions
+	// ListenAddr is the address where the server should listen
+	ListenAddr string
 	// Enabled determines whether the MCP server should be started
 	Enabled bool
 	// Logger is the logger to be used
@@ -68,23 +67,16 @@ type Options struct {
 	ExposeSchema bool
 }
 
-// ServerOptions represents the server-specific configuration options
-type ServerOptions struct {
-	// Port is the port where the SSE server should listen
-	Port int
-}
-
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
 type GraphQLSchemaServer struct {
 	server                    *server.MCPServer
 	graphName                 string
 	operationsDir             string
-	port                      int
+	listenAddr                string
 	logger                    *zap.Logger
 	httpClient                *http.Client
 	requestTimeout            time.Duration
 	routerGraphQLEndpoint     string
-	httpServer                *http.Server
 	sseServer                 *server.SSEServer
 	excludeMutations          bool
 	enableArbitraryOperations bool
@@ -175,11 +167,9 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 
 	// Default options
 	options := &Options{
-		GraphName:     "graph",
-		OperationsDir: "operations",
-		Server: ServerOptions{
-			Port: 5025,
-		},
+		GraphName:      "graph",
+		OperationsDir:  "operations",
+		ListenAddr:     "0.0.0.0:5025",
 		Enabled:        false,
 		Logger:         zap.NewNop(),
 		RequestTimeout: 30 * time.Second,
@@ -210,7 +200,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		server:                    mcpServer,
 		graphName:                 options.GraphName,
 		operationsDir:             options.OperationsDir,
-		port:                      options.Server.Port,
+		listenAddr:                options.ListenAddr,
 		logger:                    options.Logger,
 		httpClient:                httpClient,
 		requestTimeout:            options.RequestTimeout,
@@ -237,10 +227,10 @@ func WithOperationsDir(operationsDir string) func(*Options) {
 	}
 }
 
-// WithPort sets just the port
-func WithPort(port int) func(*Options) {
+// WithListenAddr sets the listen address
+func WithListenAddr(listenAddr string) func(*Options) {
 	return func(o *Options) {
-		o.Server.Port = port
+		o.ListenAddr = listenAddr
 	}
 }
 
@@ -272,44 +262,47 @@ func WithExposeSchema(exposeSchema bool) func(*Options) {
 }
 
 // ServeSSE starts the server with SSE transport
-func (s *GraphQLSchemaServer) ServeSSE() (*server.SSEServer, *http.Server, error) {
-	listenAddr := "localhost:" + strconv.Itoa(s.port)
-
-	// Create HTTP server with timeouts
-	httpServer := &http.Server{
-		Addr:         listenAddr,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  30 * time.Second,
-	}
-
+func (s *GraphQLSchemaServer) ServeSSE() (*server.SSEServer, error) {
 	sseServer := server.NewSSEServer(s.server,
-		server.WithBaseURL(fmt.Sprintf("http://%s", listenAddr)),
-		server.WithHTTPServer(httpServer),
+		// Only HTTP transport is supported for now, no TLS
+		server.WithBaseURL(fmt.Sprintf("http://%s", s.listenAddr)),
 		server.WithSSEEndpoint("/mcp"),
 		server.WithSSEContextFunc(authFromRequest),
 	)
 
+	logger := []zap.Field{
+		zap.String("listen_addr", s.listenAddr),
+		zap.String("path", "/mcp"),
+		zap.String("operations_dir", s.operationsDir),
+		zap.String("graph_name", s.graphName),
+		zap.Bool("exclude_mutations", s.excludeMutations),
+		zap.Bool("enable_arbitrary_operations", s.enableArbitraryOperations),
+		zap.Bool("expose_schema", s.exposeSchema),
+	}
+
+	s.logger.Info("MCP server started", logger...)
+
 	go func() {
-		err := sseServer.Start(listenAddr)
+		defer s.logger.Info("MCP server stopped")
+
+		err := sseServer.Start(s.listenAddr)
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.logger.Error("failed to start SSE server", zap.Error(err))
 		}
 	}()
 
-	return sseServer, httpServer, nil
+	return sseServer, nil
 }
 
 // Start loads operations and starts the server
 func (s *GraphQLSchemaServer) Start() error {
 
-	sseServer, httpServer, err := s.ServeSSE()
+	sseServer, err := s.ServeSSE()
 	if err != nil {
 		return fmt.Errorf("failed to create SSE server: %w", err)
 	}
 
 	s.sseServer = sseServer
-	s.httpServer = httpServer
 
 	return nil
 }
@@ -339,10 +332,6 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document) error {
 
 // Stop gracefully shuts down the MCP server
 func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
-	if s.httpServer == nil {
-		return nil
-	}
-
 	s.logger.Debug("shutting down MCP server")
 
 	// Create a shutdown context with timeout
