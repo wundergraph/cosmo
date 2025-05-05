@@ -107,13 +107,13 @@ type (
 		SubgraphMap map[string]*TransportRequestOptions
 	}
 
-	SubgraphTracingEntry struct {
+	ExpressionAttribute struct {
 		Key        string
 		Expression string
 	}
 
 	SubgraphTracingOptions struct {
-		Subgraphs []SubgraphTracingEntry
+		ExpressionAttributes []ExpressionAttribute
 	}
 
 	GraphQLMetricsConfig struct {
@@ -1864,17 +1864,17 @@ func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransp
 }
 
 func NewSubgraphTracingOptions(cfg config.SubgraphTracing) SubgraphTracingOptions {
-	entries := make([]SubgraphTracingEntry, 0, len(cfg.Attributes))
+	entries := make([]ExpressionAttribute, 0, len(cfg.Attributes))
 
 	for _, attribute := range cfg.Attributes {
-		entries = append(entries, SubgraphTracingEntry{
+		entries = append(entries, ExpressionAttribute{
 			Key:        attribute.Key,
 			Expression: attribute.Expression,
 		})
 	}
 
 	base := SubgraphTracingOptions{
-		Subgraphs: entries,
+		ExpressionAttributes: entries,
 	}
 
 	return base

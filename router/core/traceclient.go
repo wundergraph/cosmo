@@ -34,40 +34,46 @@ func (t *TraceInjectingRoundTripper) getClientTrace(ctx context.Context) *httptr
 	trace := &httptrace.ClientTrace{
 		GetConn: func(hostPort string) {
 			eC := expr.GetSubgraphExpressionContext(ctx)
-			create := &eC.Subgraph.Operation.Trace.Connection.Create
-			create.Time = time.Now()
-			create.HostPort = hostPort
+			eC.Subgraph.Operation.Trace.ConnectionCreate = &expr.CreateSubgraphConnection{
+				Time:     time.Now(),
+				HostPort: hostPort,
+			}
 		},
 		GotConn: func(info httptrace.GotConnInfo) {
 			eC := expr.GetSubgraphExpressionContext(ctx)
-			acquired := &eC.Subgraph.Operation.Trace.Connection.Acquired
-			acquired.Time = time.Now()
-			acquired.Reused = info.Reused
-			acquired.WasIdle = info.WasIdle
-			acquired.IdleTime = info.IdleTime
+			eC.Subgraph.Operation.Trace.ConnectionAcquired = &expr.AcquiredSubgraphConnection{
+				Time:     time.Now(),
+				Reused:   info.Reused,
+				WasIdle:  info.WasIdle,
+				IdleTime: info.IdleTime,
+			}
 		},
 		PutIdleConn: func(err error) {
 			eC := expr.GetSubgraphExpressionContext(ctx)
-			putIdle := &eC.Subgraph.Operation.Trace.Connection.PutIdle
-			putIdle.Time = time.Now()
-			putIdle.Error = err
+			eC.Subgraph.Operation.Trace.ConnectionPutIdle = &expr.PutIdleConnection{
+				Time:  time.Now(),
+				Error: &ExprWrapError{Err: err},
+			}
 		},
 		GotFirstResponseByte: func() {
 			eC := expr.GetSubgraphExpressionContext(ctx)
-			response := &eC.Subgraph.Operation.Trace.Response
-			response.FirstByte = time.Now()
+			eC.Subgraph.Operation.Trace.FirstByte = &expr.SubgraphFirstByte{
+				Time: time.Now(),
+			}
 		},
 		Got100Continue: func() {
 			eC := expr.GetSubgraphExpressionContext(ctx)
-			response := &eC.Subgraph.Operation.Trace.Response
-			response.Continue = time.Now()
+			eC.Subgraph.Operation.Trace.Continue100 = &expr.SubgraphContinue100{
+				Time: time.Now(),
+			}
 		},
 		Got1xxResponse: nil,
 		DNSStart: func(dnsStartInfo httptrace.DNSStartInfo) {
 			eC := expr.GetSubgraphExpressionContext(ctx)
-			dnsStart := &eC.Subgraph.Operation.Trace.DNS.Start
-			dnsStart.Time = time.Now()
-			dnsStart.Host = dnsStartInfo.Host
+			eC.Subgraph.Operation.Trace.DNSStart = &expr.SubgraphDNSStart{
+				Time: time.Now(),
+				Host: dnsStartInfo.Host,
+			}
 		},
 		DNSDone: func(dnsDoneInfo httptrace.DNSDoneInfo) {
 			eC := expr.GetSubgraphExpressionContext(ctx)
@@ -77,58 +83,66 @@ func (t *TraceInjectingRoundTripper) getClientTrace(ctx context.Context) *httptr
 				addresses[i] = addr.String()
 			}
 
-			dnsDone := &eC.Subgraph.Operation.Trace.DNS.Done
-			dnsDone.Time = time.Now()
-			dnsDone.Addresses = addresses
-			dnsDone.Coalesced = dnsDoneInfo.Coalesced
-			dnsDone.Error = dnsDoneInfo.Err
+			eC.Subgraph.Operation.Trace.DNSDone = &expr.SubgraphDNSDone{
+				Time:      time.Now(),
+				Addresses: addresses,
+				Coalesced: dnsDoneInfo.Coalesced,
+				Error:     &ExprWrapError{Err: dnsDoneInfo.Err},
+			}
 		},
 		ConnectStart: func(network, addr string) {
 			eC := expr.GetSubgraphExpressionContext(ctx)
-			connectStart := &eC.Subgraph.Operation.Trace.Dial.Start
-			connectStart.Time = time.Now()
-			connectStart.Network = network
-			connectStart.Address = addr
+			eC.Subgraph.Operation.Trace.DialStart = &expr.SubgraphDialStart{
+				Time:    time.Now(),
+				Network: network,
+				Address: addr,
+			}
 		},
 		ConnectDone: func(network, addr string, err error) {
 			eC := expr.GetSubgraphExpressionContext(ctx)
-			connectDone := &eC.Subgraph.Operation.Trace.Dial.Done
-			connectDone.Time = time.Now()
-			connectDone.Network = network
-			connectDone.Address = addr
-			connectDone.Error = err
+			eC.Subgraph.Operation.Trace.DialDone = &expr.SubgraphDialDone{
+				Time:    time.Now(),
+				Network: network,
+				Address: addr,
+				Error:   &ExprWrapError{Err: err},
+			}
 		},
 		TLSHandshakeStart: func() {
 			eC := expr.GetSubgraphExpressionContext(ctx)
-			tlsStart := &eC.Subgraph.Operation.Trace.TLS.Start
-			tlsStart.Time = time.Now()
+			eC.Subgraph.Operation.Trace.TLSStart = &expr.SubgraphTLSStart{
+				Time: time.Now(),
+			}
 		},
 		TLSHandshakeDone: func(connectionState tls.ConnectionState, err error) {
 			eC := expr.GetSubgraphExpressionContext(ctx)
-			tlsDone := &eC.Subgraph.Operation.Trace.TLS.Done
-			tlsDone.Time = time.Now()
-			tlsDone.Complete = connectionState.HandshakeComplete
-			tlsDone.CipherSuite = t.getCipherSuiteName(connectionState.CipherSuite)
-			tlsDone.DidResume = connectionState.DidResume
-			tlsDone.Version = tls.VersionName(connectionState.Version)
-			tlsDone.Error = err
+			eC.Subgraph.Operation.Trace.TLSDone = &expr.SubgraphTLSDone{
+				Time:        time.Now(),
+				Complete:    connectionState.HandshakeComplete,
+				CipherSuite: t.getCipherSuiteName(connectionState.CipherSuite),
+				DidResume:   connectionState.DidResume,
+				Version:     tls.VersionName(connectionState.Version),
+				Error:       &ExprWrapError{Err: err},
+			}
 		},
 		WroteHeaderField: nil,
 		WroteHeaders: func() {
 			eC := expr.GetSubgraphExpressionContext(ctx)
-			headers := &eC.Subgraph.Operation.Trace.Request.Headers
-			headers.Time = time.Now()
+			eC.Subgraph.Operation.Trace.WroteHeaders = &expr.SubgraphWroteHeaders{
+				Time: time.Now(),
+			}
 		},
 		Wait100Continue: func() {
 			eC := expr.GetSubgraphExpressionContext(ctx)
-			wait100 := &eC.Subgraph.Operation.Trace.Request.Wait100Continue
-			wait100.Time = time.Now()
+			eC.Subgraph.Operation.Trace.Wait100Continue = &expr.SubgraphWait100Continue{
+				Time: time.Now(),
+			}
 		},
 		WroteRequest: func(wroteRequestInfo httptrace.WroteRequestInfo) {
 			eC := expr.GetSubgraphExpressionContext(ctx)
-			wroteRequest := &eC.Subgraph.Operation.Trace.Request.WroteRequest
-			wroteRequest.Time = time.Now()
-			wroteRequest.Error = wroteRequestInfo.Err
+			eC.Subgraph.Operation.Trace.WroteRequest = &expr.SubgraphWroteRequest{
+				Time:  time.Now(),
+				Error: &ExprWrapError{Err: wroteRequestInfo.Err},
+			}
 		},
 	}
 	return trace

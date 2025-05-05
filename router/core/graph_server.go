@@ -1102,7 +1102,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		subgraphAccessLogger,
 		s.tracerProvider,
 		exprManager,
-		s.subgraphTracingOptions.Subgraphs,
+		s.subgraphTracingOptions.ExpressionAttributes,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create engine request hooks: %w", err)

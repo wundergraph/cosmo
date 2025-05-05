@@ -45,7 +45,7 @@ func NewExpressionLogField(val any, key string, defaultValue any) zap.Field {
 		val = &assertVal
 	}
 
-	if v := val; v != "" {
+	if v := val; v != "" && v != nil {
 		return zap.Any(key, v)
 	} else if defaultValue != "" {
 		return zap.Any(key, defaultValue)

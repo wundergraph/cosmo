@@ -101,17 +101,6 @@ type SubgraphOperation struct {
 	Trace SubgraphTrace `expr:"trace"`
 }
 
-type SubgraphConnection struct {
-	Create   CreateSubgraphConnection   `expr:"create"`
-	Acquired AcquiredSubgraphConnection `expr:"acquired"`
-	PutIdle  PutIdleConnection          `expr:"putIdle"`
-}
-
-type SubgraphDNS struct {
-	Start SubgraphDNSStart `expr:"start"`
-	Done  SubgraphDNSDone  `expr:"done"`
-}
-
 type SubgraphDNSStart struct {
 	Time time.Time `expr:"time"`
 	Host string    `expr:"host"`
@@ -122,11 +111,6 @@ type SubgraphDNSDone struct {
 	Addresses []string  `expr:"addresses"`
 	Coalesced bool      `expr:"coalesced"`
 	Error     error     `expr:"error"`
-}
-
-type SubgraphTLS struct {
-	Start SubgraphTLSStart `expr:"start"`
-	Done  SubgraphTLSDone  `expr:"done"`
 }
 
 type SubgraphTLSStart struct {
@@ -142,31 +126,20 @@ type SubgraphTLSDone struct {
 	Error       error     `expr:"error"`
 }
 
-type SubgraphDial struct {
-	Start SubgraphConnectStart `expr:"start"`
-	Done  SubgraphConnectDone  `expr:"done"`
-}
-
-type SubgraphConnectStart struct {
+type SubgraphDialStart struct {
 	Time    time.Time `expr:"time"`
 	Network string    `expr:"network"`
 	Address string    `expr:"address"`
 }
 
-type SubgraphConnectDone struct {
+type SubgraphDialDone struct {
 	Time    time.Time `expr:"time"`
 	Network string    `expr:"network"`
 	Address string    `expr:"address"`
 	Error   error     `expr:"error"`
 }
 
-type SubgraphRequest struct {
-	Headers         SubgraphRequestHeaders  `expr:"headers"`
-	Wait100Continue SubgraphWait100Continue `expr:"wait100Continue"`
-	WroteRequest    SubgraphWroteRequest    `expr:"wroteRequest"`
-}
-
-type SubgraphRequestHeaders struct {
+type SubgraphWroteHeaders struct {
 	Time time.Time `expr:"time"`
 }
 
@@ -179,9 +152,12 @@ type SubgraphWroteRequest struct {
 	Error error     `expr:"error"`
 }
 
-type SubgraphResponse struct {
-	FirstByte time.Time `expr:"firstByte"`
-	Continue  time.Time `expr:"continue"`
+type SubgraphFirstByte struct {
+	Time time.Time `expr:"time"`
+}
+
+type SubgraphContinue100 struct {
+	Time time.Time `expr:"time"`
 }
 
 type AcquiredSubgraphConnection struct {
@@ -202,12 +178,20 @@ type PutIdleConnection struct {
 }
 
 type SubgraphTrace struct {
-	Connection SubgraphConnection `expr:"conn"`
-	DNS        SubgraphDNS        `expr:"dns"`
-	TLS        SubgraphTLS        `expr:"tls"`
-	Dial       SubgraphDial       `expr:"dial"`
-	Request    SubgraphRequest    `expr:"request"`
-	Response   SubgraphResponse   `expr:"response"`
+	ConnectionCreate   *CreateSubgraphConnection   `expr:"connCreate"`
+	ConnectionAcquired *AcquiredSubgraphConnection `expr:"connAcquired"`
+	ConnectionPutIdle  *PutIdleConnection          `expr:"connPutIdle"`
+	DNSStart           *SubgraphDNSStart           `expr:"dnsStart"`
+	DNSDone            *SubgraphDNSDone            `expr:"dnsDone"`
+	TLSStart           *SubgraphTLSStart           `expr:"tlsStart"`
+	TLSDone            *SubgraphTLSDone            `expr:"tlsDone"`
+	DialStart          *SubgraphDialStart          `expr:"dialStart"`
+	DialDone           *SubgraphDialDone           `expr:"dialDone"`
+	WroteHeaders       *SubgraphWroteHeaders       `expr:"wroteHeaders"`
+	Wait100Continue    *SubgraphWait100Continue    `expr:"wait100Continue"`
+	WroteRequest       *SubgraphWroteRequest       `expr:"wroteRequest"`
+	FirstByte          *SubgraphFirstByte          `expr:"firstByte"`
+	Continue100        *SubgraphContinue100        `expr:"continue100"`
 }
 
 // Subgraph Related

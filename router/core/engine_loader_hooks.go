@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
+	"slices"
+	"time"
+
 	"github.com/expr-lang/expr/vm"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
@@ -19,8 +23,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-	"slices"
-	"time"
 )
 
 var (
@@ -49,16 +51,12 @@ func NewEngineRequestHooks(
 	metricStore metric.Store,
 	logger *requestlogger.SubgraphAccessLogger,
 	tracerProvider *sdktrace.TracerProvider,
-	manager *expr.Manager,
-	subgraphTracingAttributes []SubgraphTracingEntry,
+	exprManager *expr.Manager,
+	subgraphTracingAttributes []ExpressionAttribute,
 ) (resolve.LoaderHooks, error) {
-	mappedSubgraphExpressions := make(map[string]*vm.Program)
-	for _, attr := range subgraphTracingAttributes {
-		expression, err := manager.CompileAnyExpression(attr.Expression)
-		if err != nil {
-			return nil, err
-		}
-		mappedSubgraphExpressions[attr.Key] = expression
+	mappedSubgraphExpressions, err := processExpressions(subgraphTracingAttributes, exprManager)
+	if err != nil {
+		return nil, err
 	}
 
 	if tracerProvider != nil {
@@ -82,6 +80,34 @@ func NewEngineRequestHooks(
 		accessLogger:              logger,
 		mappedSubgraphExpressions: mappedSubgraphExpressions,
 	}, nil
+}
+
+func processExpressions(subgraphTracingAttributes []ExpressionAttribute, exprManager *expr.Manager) (map[string]*vm.Program, error) {
+	mappedSubgraphExpressions := make(map[string]*vm.Program)
+	for _, attr := range subgraphTracingAttributes {
+		err, returnType := exprManager.ValidateAnyExpression(attr.Expression)
+		if err != nil {
+			return nil, err
+		}
+		if returnType == nil {
+			return nil, errors.New("disallowed nil")
+		}
+		// We don't want to allow user to specify these return types for expressions
+		// at this moment
+		switch *returnType {
+		case reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128, reflect.Interface,
+			reflect.Map, reflect.Slice, reflect.Struct, reflect.UnsafePointer:
+			return nil, fmt.Errorf("disallowed type: %s", *returnType)
+		}
+
+		expression, err := exprManager.CompileAnyExpression(attr.Expression)
+		if err != nil {
+			return nil, err
+		}
+		mappedSubgraphExpressions[attr.Key] = expression
+	}
+
+	return mappedSubgraphExpressions, nil
 }
 
 func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInfo) context.Context {
@@ -156,13 +182,13 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	traceAttrs = append(traceAttrs, commonAttrs...)
 
 	subgraphRequestExpr := expr.GetSubgraphExpressionContext(ctx)
-	subgraphRequestExpr.Subgraph.Error = responseInfo.Err
+	subgraphRequestExpr.Subgraph.Error = &ExprWrapError{Err: responseInfo.Err}
 
 	for key, expression := range f.mappedSubgraphExpressions {
 		exprCtx := *subgraphRequestExpr
 		result, err := expr.ResolveAnyExpression(expression, exprCtx)
+		// If the expression fails, we don't want to add it to the attributes but also not block
 		if err != nil {
-			// If the expression fails, we don't want to add it to the attributes but also not block
 			reqContext.Logger().Warn(
 				"failed to resolve expression",
 				zap.Error(err),
@@ -265,20 +291,41 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 }
 
 func convertToAttribute(key string, val any) *attribute.KeyValue {
-	if val == nil || val == "" {
+	if val == nil {
 		return nil
 	}
 
 	switch v := val.(type) {
-	case string:
-		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.StringValue(v)}
-	case *string:
-		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.StringValue(*v)}
-	case bool:
-		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.BoolValue(v)}
-	case *bool:
-		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.BoolValue(*v)}
+	case int, *int:
+		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.IntValue(unwrapPtr[int](v))}
+	case int64, *int64:
+		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.Int64Value(unwrapPtr[int64](v))}
+	case float64, *float64:
+		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.Float64Value(unwrapPtr[float64](v))}
+	case string, *string:
+		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.StringValue(unwrapPtr[string](v))}
+	case bool, *bool:
+		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.BoolValue(unwrapPtr[bool](v))}
+	case []bool, *[]bool:
+		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.BoolSliceValue(unwrapPtr[[]bool](v))}
+	case []int64, *[]int64:
+		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.Int64SliceValue(unwrapPtr[[]int64](v))}
+	case []float64, *[]float64:
+		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.Float64SliceValue(unwrapPtr[[]float64](v))}
+	case []string, *[]string:
+		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.StringSliceValue(unwrapPtr[[]string](v))}
+	default:
+		return &attribute.KeyValue{Key: attribute.Key(key), Value: attribute.StringValue(fmt.Sprintf("%v", v))}
 	}
+}
 
-	return nil
+func unwrapPtr[T any](v any) T {
+	if ptr, ok := v.(*T); ok {
+		if ptr == nil {
+			var zero T
+			return zero
+		}
+		return *ptr
+	}
+	return v.(T)
 }
