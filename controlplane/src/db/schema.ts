@@ -811,6 +811,7 @@ export const schemaCheckSubgraphs = pgTable(
     namespaceId: uuid('namespace_id').references(() => namespaces.id, {
       onDelete: 'cascade',
     }),
+    labels: text('labels').array(),
   },
   (t) => {
     return {

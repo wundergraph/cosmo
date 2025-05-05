@@ -271,6 +271,7 @@ export function checkSubgraphSchema(
         isDeleted: !!req.delete,
         isNew: !subgraph,
         namespaceId: namespace.id,
+        labels: subgraph ? undefined : req.labels,
       },
     });
 

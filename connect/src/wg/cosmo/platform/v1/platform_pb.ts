@@ -3829,6 +3829,11 @@ export class SchemaCheck_CheckedSubgraph extends Message<SchemaCheck_CheckedSubg
    */
   isNew = false;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.Label labels = 6;
+   */
+  labels: Label[] = [];
+
   constructor(data?: PartialMessage<SchemaCheck_CheckedSubgraph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3842,6 +3847,7 @@ export class SchemaCheck_CheckedSubgraph extends Message<SchemaCheck_CheckedSubg
     { no: 3, name: "subgraphId", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "isDeleted", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 5, name: "isNew", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "labels", kind: "message", T: Label, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck_CheckedSubgraph {
