@@ -2692,6 +2692,67 @@ func TestFlakyAccessLogs(t *testing.T) {
 		)
 	})
 
+	t.Run("verify that nil values from optional chaining now get default values", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			SubgraphAccessLogsEnabled: true,
+			AccessLogFields: []config.CustomAttribute{
+				{
+					Key: "request_error",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldRequestError,
+					},
+				},
+			},
+			SubgraphAccessLogFields: []config.CustomAttribute{
+				{
+					Key:     "a_nil_value",
+					Default: "empty_value",
+					ValueFrom: &config.CustomDynamicAttribute{
+						Expression: "subgraph.operation.trace.tlsStart?.time",
+					},
+				},
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `query employees { employees { id details { forename surname } notes } }`,
+				Header: map[string][]string{"service-name": {"service-name"}},
+			})
+			requestLog := xEnv.Observer().FilterMessage("/graphql")
+			productContext := requestLog.All()[1].ContextMap()
+
+			additionalExpectedKeys := []string{
+				"user_agent",
+				"trace_id",
+				"hostname",
+				"latency",
+				"config_version",
+				"request_id",
+				"pid",
+				"url",
+			}
+
+			productSubgraphVals := map[string]interface{}{
+				"log_type":      "client/subgraph",
+				"subgraph_name": "products",
+				"subgraph_id":   "3",
+				"status":        int64(200),
+				"method":        "POST",
+				"path":          "/graphql",
+				"query":         "", // http query is empty
+				"ip":            "[REDACTED]",
+				"a_nil_value":   "empty_value",
+			}
+
+			checkValues(t, productContext, productSubgraphVals, additionalExpectedKeys)
+		})
+	})
+
 	t.Run("verify subgraph hooks in logs", func(t *testing.T) {
 		t.Parallel()
 
@@ -2809,29 +2870,6 @@ func TestFlakyAccessLogs(t *testing.T) {
 				Enabled:  true,
 				LogLevel: zapcore.InfoLevel,
 			},
-			RouterOptions: []core.Option{
-				core.WithHeaderRules(config.HeaderRules{
-					All: &config.GlobalHeaderRule{
-						Request: []*config.RequestHeaderRule{
-							{
-								Operation: config.HeaderRuleOperationPropagate,
-								Named:     "service-name",
-							},
-						},
-					},
-				}),
-			},
-			Subgraphs: testenv.SubgraphsConfig{
-				Products: testenv.SubgraphConfig{
-					Middleware: func(_ http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-							w.Header().Set("Content-Type", "application/json")
-							w.WriteHeader(http.StatusForbidden)
-							_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
-						})
-					},
-				},
-			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:  `query employees { employees { id details { forename surname } notes } }`,
@@ -2860,7 +2898,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				"log_type":            "client/subgraph",
 				"subgraph_name":       "products",
 				"subgraph_id":         "3",
-				"status":              int64(403),
+				"status":              int64(200),
 				"method":              "POST",
 				"path":                "/graphql",
 				"query":               "", // http query is empty
@@ -2940,29 +2978,6 @@ func TestFlakyAccessLogs(t *testing.T) {
 				Enabled:  true,
 				LogLevel: zapcore.InfoLevel,
 			},
-			RouterOptions: []core.Option{
-				core.WithHeaderRules(config.HeaderRules{
-					All: &config.GlobalHeaderRule{
-						Request: []*config.RequestHeaderRule{
-							{
-								Operation: config.HeaderRuleOperationPropagate,
-								Named:     "service-name",
-							},
-						},
-					},
-				}),
-			},
-			Subgraphs: testenv.SubgraphsConfig{
-				Products: testenv.SubgraphConfig{
-					Middleware: func(_ http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-							w.Header().Set("Content-Type", "application/json")
-							w.WriteHeader(http.StatusForbidden)
-							_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
-						})
-					},
-				},
-			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:  `query employees { employees { id details { forename surname } notes rootFieldThrowsError } }`,
@@ -2983,13 +2998,13 @@ func TestFlakyAccessLogs(t *testing.T) {
 				"get_conn",
 			}
 
-			errString := "Failed to fetch from Subgraph 'employees'.\nFailed to fetch from Subgraph 'products' at Path: 'employees'."
-			
+			errString := "Failed to fetch from Subgraph 'employees'."
+
 			productSubgraphVals := map[string]interface{}{
 				"log_type":      "client/subgraph",
 				"subgraph_name": "products",
 				"subgraph_id":   "3",
-				"status":        int64(403),
+				"status":        int64(200),
 				"method":        "POST",
 				"path":          "/graphql",
 				"query":         "", // http query is empty

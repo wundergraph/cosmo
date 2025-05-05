@@ -265,7 +265,12 @@ func handleExpressionError(err error) error {
 }
 
 func GetSubgraphExpressionContext(ctx context.Context) *Context {
-	return ctx.Value(SubgraphExpressionContextKey{}).(*Context)
+	value := ctx.Value(SubgraphExpressionContextKey{})
+	// Return no-op context if the subgraph context key was never set
+	if value == nil {
+		return &Context{}
+	}
+	return value.(*Context)
 }
 
 func SetSubgraphExpressionContext(ctx context.Context, exprCtx *Context) context.Context {

@@ -9114,3 +9114,229 @@ func TestFlakyTelemetry(t *testing.T) {
 	})
 
 }
+
+func TestTelemetryExpressions(t *testing.T) {
+	t.Parallel()
+
+	t.Run("verify expression is correctly evaluated", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			MetricReader:  metricReader,
+			SubgraphTracingOptions: &core.SubgraphTracingOptions{
+				ExpressionAttributes: []core.ExpressionAttribute{
+					{
+						Key:        "get_conn",
+						Expression: "subgraph.operation.trace.connCreate?.hostPort ?? 'default'",
+					},
+					{
+						Key:        "got_conn",
+						Expression: "subgraph.operation.trace.connAcquired?.wasIdle ?? 'default'",
+					},
+					{
+						Key:        "put_idle_conn",
+						Expression: "subgraph.operation.trace.connPutIdle?.time ?? 'default'",
+					},
+					{
+						Key:        "got_first_response_byte",
+						Expression: "subgraph.operation.trace.firstByte?.time ?? 'default'",
+					},
+					{
+						Key:        "got_100_continue",
+						Expression: "subgraph.operation.trace.continue100?.time ?? 'default'",
+					},
+					{
+						Key:        "dns_start",
+						Expression: "subgraph.operation.trace.dnsStart?.host ?? 'default'",
+					},
+					{
+						Key:        "dns_done",
+						Expression: "subgraph.operation.trace.dnsDone?.addresses ?? 'default'",
+					},
+					{
+						Key:        "connect_start",
+						Expression: "subgraph.operation.trace.dialStart?.network ?? 'default'",
+					},
+					{
+						Key:        "connect_done",
+						Expression: "subgraph.operation.trace.dialDone?.network ?? 'default'",
+					},
+					{
+						Key:        "tls_handshake_start",
+						Expression: "subgraph.operation.trace.tlsStart?.time ?? 'default'",
+					},
+					{
+						Key:        "tls_handshake_done",
+						Expression: "subgraph.operation.trace.tlsDone?.complete ?? 'default'",
+					},
+					{
+						Key:        "wrote_headers",
+						Expression: "subgraph.operation.trace.wroteHeaders?.time ?? 'default'",
+					},
+					{
+						Key:        "wait_100_continue",
+						Expression: "subgraph.operation.trace.wait100Continue?.time ?? 'default'",
+					},
+					{
+						Key:        "wrote_request",
+						Expression: "subgraph.operation.trace.wroteRequest?.time ?? 'default'",
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `query employees { employees { id details { forename surname } notes } }`,
+				Header: map[string][]string{"service-name": {"service-name"}},
+			})
+
+			sn := exporter.GetSpans().Snapshots()
+			engineFetchSpan := sn[6]
+			require.Equal(t, "Engine - Fetch", engineFetchSpan.Name())
+			require.Equal(t, trace.SpanKindInternal, engineFetchSpan.SpanKind())
+
+			attributes := engineFetchSpan.Attributes()
+			exprAttributes := attributes[14:]
+
+			require.Len(t, exprAttributes, 14)
+
+			getConnAttr := findAttr(exprAttributes, "get_conn")
+			hostPortAttr := getConnAttr.Value.AsString()
+			require.Contains(t, hostPortAttr, "127.0.0.1:")
+
+			gotConnAttr := findAttr(exprAttributes, "got_conn")
+			require.False(t, gotConnAttr.Value.AsBool())
+
+			putIdleConnAttr := findAttr(exprAttributes, "put_idle_conn")
+			validateTime(t, putIdleConnAttr.Value.AsString())
+
+			firstByteAttr := findAttr(exprAttributes, "got_first_response_byte")
+			validateTime(t, firstByteAttr.Value.AsString())
+
+			continue100Attr := findAttr(exprAttributes, "got_100_continue")
+			continue100Time := continue100Attr.Value.AsString()
+			require.Equal(t, continue100Time, "default")
+
+			dnsStartAttr := findAttr(exprAttributes, "dns_start")
+			require.Equal(t, dnsStartAttr.Value.AsString(), "default")
+
+			dnsDoneAttr := findAttr(exprAttributes, "dns_done")
+			require.Equal(t, dnsDoneAttr.Value.AsString(), "default")
+
+			connectStartAttr := findAttr(exprAttributes, "connect_start")
+			require.Equal(t, "tcp", connectStartAttr.Value.AsString())
+
+			connectDoneAttr := findAttr(exprAttributes, "connect_done")
+			require.Equal(t, "tcp", connectDoneAttr.Value.AsString())
+
+			tlsStartAttr := findAttr(exprAttributes, "tls_handshake_start")
+			require.Equal(t, tlsStartAttr.Value.AsString(), "default")
+
+			tlsDoneAttr := findAttr(exprAttributes, "tls_handshake_done")
+			require.Equal(t, tlsDoneAttr.Value.AsString(), "default")
+
+			wroteHeadersAttr := findAttr(exprAttributes, "wrote_headers")
+			validateTime(t, wroteHeadersAttr.Value.AsString())
+
+			wait100ContinueAttr := findAttr(exprAttributes, "wait_100_continue")
+			require.Equal(t, wait100ContinueAttr.Value.AsString(), "default")
+
+			wroteRequestAttr := findAttr(exprAttributes, "wrote_request")
+			validateTime(t, wroteRequestAttr.Value.AsString())
+		})
+	})
+
+	t.Run("verify nil values not being stored", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			MetricReader:  metricReader,
+			SubgraphTracingOptions: &core.SubgraphTracingOptions{
+				ExpressionAttributes: []core.ExpressionAttribute{
+					{
+						Key:        "tls_start",
+						Expression: "subgraph.operation.trace.tlsStart?.time",
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `query employees { employees { id details { forename surname } notes } }`,
+				Header: map[string][]string{"service-name": {"service-name"}},
+			})
+
+			sn := exporter.GetSpans().Snapshots()
+			engineFetchSpan := sn[6]
+			require.Equal(t, "Engine - Fetch", engineFetchSpan.Name())
+			require.Equal(t, trace.SpanKindInternal, engineFetchSpan.SpanKind())
+
+			attributes := engineFetchSpan.Attributes()
+			exprAttributes := attributes[0:]
+
+			attr := findAttr(exprAttributes, "tls_start")
+			require.False(t, attr.Valid())
+		})
+	})
+
+	t.Run("verify a time becoming a string because we Stringify any non base types", func(t *testing.T) {
+		t.Parallel()
+		metricReader := metric.NewManualReader()
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			MetricReader:  metricReader,
+			SubgraphTracingOptions: &core.SubgraphTracingOptions{
+				ExpressionAttributes: []core.ExpressionAttribute{
+					{
+						Key:        "wrote_headers",
+						Expression: "subgraph.operation.trace.wroteHeaders?.time",
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `query employees { employees { id details { forename surname } notes } }`,
+				Header: map[string][]string{"service-name": {"service-name"}},
+			})
+
+			sn := exporter.GetSpans().Snapshots()
+			engineFetchSpan := sn[6]
+			require.Equal(t, "Engine - Fetch", engineFetchSpan.Name())
+			require.Equal(t, trace.SpanKindInternal, engineFetchSpan.SpanKind())
+
+			attributes := engineFetchSpan.Attributes()
+			exprAttributes := attributes[14:]
+
+			wroteHeadersAttr := findAttr(exprAttributes, "wrote_headers")
+			wroteHeadersTime := wroteHeadersAttr.Value.AsString()
+			require.NotEmpty(t, wroteHeadersTime)
+		})
+	})
+}
+
+func validateTime(t *testing.T, wroteHeadersTime string) {
+	parts := strings.Split(wroteHeadersTime, " ")
+	parsed, err := time.Parse("2006-01-02", parts[0])
+	if err != nil {
+		require.Fail(t, "failed to parse time", err)
+	}
+
+	baseYear := time.Time{}.Year()
+	require.NotEqual(t, parsed.Year(), baseYear)
+}
+
+// findAttr finds an attribute by its key in the given slice of attributes
+func findAttr(attributes []attribute.KeyValue, key string) attribute.KeyValue {
+	for _, attr := range attributes {
+		if attr.Key == attribute.Key(key) {
+			return attr
+		}
+	}
+	return attribute.KeyValue{}
+}

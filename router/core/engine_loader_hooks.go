@@ -95,8 +95,7 @@ func processExpressions(subgraphTracingAttributes []ExpressionAttribute, exprMan
 		// We don't want to allow user to specify these return types for expressions
 		// at this moment
 		switch *returnType {
-		case reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128, reflect.Interface,
-			reflect.Map, reflect.Slice, reflect.Struct, reflect.UnsafePointer:
+		case reflect.Complex64, reflect.Complex128, reflect.Map, reflect.UnsafePointer:
 			return nil, fmt.Errorf("disallowed type: %s", *returnType)
 		}
 
@@ -291,6 +290,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 }
 
 func convertToAttribute(key string, val any) *attribute.KeyValue {
+	// We ignore nil values for now
 	if val == nil {
 		return nil
 	}

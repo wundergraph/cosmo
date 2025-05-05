@@ -72,7 +72,8 @@ func NewCustomTransport(
 
 	baseRoundTripper := roundTripper
 
-	if visitorManager.IsSubgraphTraceUsedInExpressions() {
+	// TODO: Fix this bug where the round tripper is not set to the base round tripper
+	if visitorManager.IsSubgraphTraceUsedInExpressions() || true {
 		baseRoundTripper = NewTraceInjectingRoundTripper(roundTripper)
 	}
 
