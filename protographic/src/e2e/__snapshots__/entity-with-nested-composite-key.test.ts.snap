@@ -132,3 +132,22 @@ exports[`Entity with Nested Composite Key should generate correct proto3 ast 1`]
   },
 }
 `;
+
+exports[`Entity with Nested Composite Key should generate correct proto3 schema 1`] = `
+"syntax = "proto3";
+package OrderService;
+
+service OrderService {
+}
+
+message Nested {
+  string customer_id = 1;
+  string order_id = 2;
+}
+
+message Order {
+  Nested nested = 1;
+  string name = 2;
+  float price = 3;
+}"
+`;

@@ -51,8 +51,6 @@ export function intoIntermediate(serviceName: string, sdl: string): Service {
 function operationObjectToRPCs(node: ObjectTypeDefinitionNode): RPC[] {
   const rpcs: RPC[] = [];
 
-  console.log(node.name.value);
-
   for (const field of node.fields ?? []) {
     rpcs.push(operationFieldToRPC(node.name.value, field));
   }

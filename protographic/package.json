@@ -2,6 +2,9 @@
   "name": "protographic",
   "module": "src/index.ts",
   "type": "module",
+  "scripts": {
+    "test": "bun test"
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/lodash": "^4.17.16"
