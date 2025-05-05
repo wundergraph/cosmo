@@ -323,7 +323,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 }
 
 func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig) (http.HandlerFunc, error) {
-	if len(featureFlagConfigs) == 0 {
+	if len(featureFlagConfigs) >= 0 {
 		return baseMux.ServeHTTP, nil
 	}
 
@@ -952,6 +952,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		subgraphTippers[subgraph] = subgraphTransport
 	}
 
+	// We want to compile this before creating the executor, since it relies on a visitor group
+	mappedSubgraphExpressions, err := ProcessEngineHookExpressions(s.subgraphTracingOptions.ExpressionAttributes, exprManager)
+	if err != nil {
+		return nil, err
+	}
+
 	ecb := &ExecutorConfigurationBuilder{
 		introspection:    s.introspection,
 		baseURL:          s.baseURL,
@@ -1097,17 +1103,6 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		authorizerOptions.RejectOperationIfUnauthorized = s.authorization.RejectOperationIfUnauthorized
 	}
 
-	hooks, err := NewEngineRequestHooks(
-		gm.metricStore,
-		subgraphAccessLogger,
-		s.tracerProvider,
-		exprManager,
-		s.subgraphTracingOptions.ExpressionAttributes,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create engine request hooks: %w", err)
-	}
-
 	handlerOpts := HandlerOptions{
 		Executor:                               executor,
 		Log:                                    s.logger,
@@ -1119,7 +1114,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		TracerProvider:                              s.tracerProvider,
 		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
 		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
-		EngineLoaderHooks:                           hooks,
+		EngineLoaderHooks:                           NewEngineRequestHooks(gm.metricStore, subgraphAccessLogger, s.tracerProvider, mappedSubgraphExpressions),
 	}
 
 	if s.redisClient != nil {

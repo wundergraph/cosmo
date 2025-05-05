@@ -47,18 +47,7 @@ type engineLoaderHooksRequestContext struct {
 	startTime time.Time
 }
 
-func NewEngineRequestHooks(
-	metricStore metric.Store,
-	logger *requestlogger.SubgraphAccessLogger,
-	tracerProvider *sdktrace.TracerProvider,
-	exprManager *expr.Manager,
-	subgraphTracingAttributes []ExpressionAttribute,
-) (resolve.LoaderHooks, error) {
-	mappedSubgraphExpressions, err := processExpressions(subgraphTracingAttributes, exprManager)
-	if err != nil {
-		return nil, err
-	}
-
+func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.SubgraphAccessLogger, tracerProvider *sdktrace.TracerProvider, expressions map[string]*vm.Program) resolve.LoaderHooks {
 	if tracerProvider != nil {
 		return &engineLoaderHooks{
 			tracer: tracerProvider.Tracer(
@@ -67,8 +56,8 @@ func NewEngineRequestHooks(
 			),
 			metricStore:               metricStore,
 			accessLogger:              logger,
-			mappedSubgraphExpressions: mappedSubgraphExpressions,
-		}, nil
+			mappedSubgraphExpressions: expressions,
+		}
 	}
 
 	return &engineLoaderHooks{
@@ -78,12 +67,13 @@ func NewEngineRequestHooks(
 		),
 		metricStore:               metricStore,
 		accessLogger:              logger,
-		mappedSubgraphExpressions: mappedSubgraphExpressions,
-	}, nil
+		mappedSubgraphExpressions: expressions,
+	}
 }
 
-func processExpressions(subgraphTracingAttributes []ExpressionAttribute, exprManager *expr.Manager) (map[string]*vm.Program, error) {
+func ProcessEngineHookExpressions(subgraphTracingAttributes []ExpressionAttribute, exprManager *expr.Manager) (map[string]*vm.Program, error) {
 	mappedSubgraphExpressions := make(map[string]*vm.Program)
+
 	for _, attr := range subgraphTracingAttributes {
 		returnType, err := exprManager.ValidateAnyExpression(attr.Expression)
 		if err != nil {
@@ -121,14 +111,8 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 		return ctx
 	}
 
-	// Note: This copy still points to the same maps like requestClaims etc
-	exprCopy := reqContext.expressionContext
-	exprCopy.Subgraph = expr.Subgraph{
-		Id:        ds.ID,
-		Name:      ds.Name,
-		Operation: expr.SubgraphOperation{},
-	}
-	ctx = expr.SetSubgraphExpressionContext(ctx, &exprCopy)
+	ctx = InitSubgraphTraceContext(ctx)
+	//ctx = expr.SetSubgraphExpressionContext(ctx, &exprCopy)
 
 	ctx, _ = f.tracer.Start(ctx, "Engine - Fetch",
 		trace.WithAttributes([]attribute.KeyValue{
@@ -180,11 +164,19 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	traceAttrs = append(traceAttrs, rotel.WgComponentName.String("engine-loader"))
 	traceAttrs = append(traceAttrs, commonAttrs...)
 
-	subgraphRequestExpr := expr.GetSubgraphExpressionContext(ctx)
-	subgraphRequestExpr.Subgraph.Error = &ExprWrapError{Err: responseInfo.Err}
+	fromTrace := GetSubgraphTraceFromContext(ctx)
+
+	// Note: This copy still points to the same maps like requestClaims etc
+	exprCtx := reqContext.expressionContext
+	exprCtx.Subgraph = expr.Subgraph{
+		Id:        ds.ID,
+		Name:      ds.Name,
+		Operation: expr.SubgraphOperation{},
+	}
+	exprCtx.Subgraph.Operation.Trace = *ConvertToExprTrace(fromTrace)
+	exprCtx.Subgraph.Error = &ExprWrapError{Err: responseInfo.Err}
 
 	for key, expression := range f.mappedSubgraphExpressions {
-		exprCtx := *subgraphRequestExpr
 		result, err := expr.ResolveAnyExpression(expression, exprCtx)
 		// If the expression fails, we don't want to add it to the attributes but also not block
 		if err != nil {
@@ -216,7 +208,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		}
 		path := ds.Name
 		if responseInfo.Request != nil {
-			fields = append(fields, f.accessLogger.RequestFields(responseInfo, subgraphRequestExpr)...)
+			fields = append(fields, f.accessLogger.RequestFields(responseInfo, &exprCtx)...)
 			if responseInfo.Request.URL != nil {
 				path = responseInfo.Request.URL.Path
 			}

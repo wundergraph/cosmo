@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
 
 	"github.com/expr-lang/expr/file"
 )
@@ -98,7 +99,7 @@ type RequestAuth struct {
 }
 
 type SubgraphOperation struct {
-	Trace SubgraphTrace `expr:"trace"`
+	Trace OperationTrace `expr:"trace"`
 }
 
 type SubgraphDNSStart struct {
@@ -177,7 +178,7 @@ type PutIdleConnection struct {
 	Error error     `expr:"error"`
 }
 
-type SubgraphTrace struct {
+type OperationTrace struct {
 	ConnectionCreate   *CreateSubgraphConnection   `expr:"connCreate"`
 	ConnectionAcquired *AcquiredSubgraphConnection `expr:"connAcquired"`
 	ConnectionPutIdle  *PutIdleConnection          `expr:"connPutIdle"`
@@ -262,17 +263,4 @@ func handleExpressionError(err error) error {
 	}
 
 	return err
-}
-
-func GetSubgraphExpressionContext(ctx context.Context) *Context {
-	value := ctx.Value(SubgraphExpressionContextKey{})
-	// Return no-op context if the subgraph context key was never set
-	if value == nil {
-		return &Context{}
-	}
-	return value.(*Context)
-}
-
-func SetSubgraphExpressionContext(ctx context.Context, exprCtx *Context) context.Context {
-	return context.WithValue(ctx, SubgraphExpressionContextKey{}, exprCtx)
 }
