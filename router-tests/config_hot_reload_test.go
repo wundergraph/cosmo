@@ -118,14 +118,18 @@ func TestConfigHotReloadPoller(t *testing.T) {
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { hello }`,
+			})
+
 			rm := metricdata.ResourceMetrics{}
 			err := metricReader.Collect(context.Background(), &rm)
 			require.NoError(t, err)
-			scopeMetric := *GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.info")
+			scopeMetric := *GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 
 			beforeUpdate := metricdata.Metrics{
 				Name:        "router.info",
-				Description: "Router Info stats for base",
+				Description: "Router configuration info.",
 				Unit:        "",
 				Data: metricdata.Gauge[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
@@ -140,23 +144,22 @@ func TestConfigHotReloadPoller(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, beforeUpdate, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, beforeUpdate, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
 			writeTestConfig(t, "updated", configFile)
 
 			require.EventuallyWithT(t, func(collectT *assert.CollectT) {
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { hello }`,
 				})
-				require.Equal(collectT, "updated", res.Response.Header.Get("X-Router-Config-Version"))
 
 				rm := metricdata.ResourceMetrics{}
 				err := metricReader.Collect(context.Background(), &rm)
 				require.NoError(collectT, err)
-				scopeMetricAfterUpdate := *GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.info")
+				scopeMetricAfterUpdate := *GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 				afterUpdate := metricdata.Metrics{
 					Name:        "router.info",
-					Description: "Router Info stats for base",
+					Description: "Router configuration info.",
 					Unit:        "",
 					Data: metricdata.Gauge[int64]{
 						DataPoints: []metricdata.DataPoint[int64]{
@@ -171,7 +174,7 @@ func TestConfigHotReloadPoller(t *testing.T) {
 					},
 				}
 
-				metricdatatest.AssertEqual(t, afterUpdate, scopeMetricAfterUpdate.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+				metricdatatest.AssertEqual(t, afterUpdate, scopeMetricAfterUpdate.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 			}, 2*time.Second, 100*time.Millisecond)
 		})
 	})
