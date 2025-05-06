@@ -29,7 +29,7 @@ const introspectionQuery = `query IntrospectionQuery {
       name
       description
       locations
-      args {
+      args(includeDeprecated: true) {
         ...InputValue
       }
     }
@@ -43,7 +43,7 @@ fragment FullType on __Type {
   fields(includeDeprecated: true) {
     name
     description
-    args {
+    args(includeDeprecated: true) {
       ...InputValue
     }
     type {
@@ -52,7 +52,7 @@ fragment FullType on __Type {
     isDeprecated
     deprecationReason
   }
-  inputFields {
+  inputFields(includeDeprecated: true) {
     ...InputValue
   }
   interfaces {
@@ -76,6 +76,8 @@ fragment InputValue on __InputValue {
     ...TypeRef
   }
   defaultValue
+  isDeprecated
+  deprecationReason
 }
 
 fragment TypeRef on __Type {
