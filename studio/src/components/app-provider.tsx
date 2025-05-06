@@ -11,6 +11,7 @@ import { useRouter } from "next/router";
 import { ReactNode, createContext, useEffect, useState } from "react";
 import { useCookieOrganization } from "@/hooks/use-cookie-organization";
 import { setUser as setSentryUser } from "@sentry/nextjs";
+import { OrganizationRole } from "@/lib/constants";
 
 const queryClient = new QueryClient();
 const sessionQueryClient = new QueryClient();
@@ -41,7 +42,14 @@ export interface Organization {
   slug: string;
   plan?: string;
   creatorUserId?: string;
-  roles: string[];
+  groups: {
+    groupId: string;
+    name: string;
+    rules: {
+      role: OrganizationRole;
+      resources: string[];
+    }[];
+  }[];
   createdAt: string;
   features: {
     id: string;

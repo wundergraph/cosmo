@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 
 export function GroupRow({ group, rbac, onSelect, onDelete }: {
   group: OrganizationGroup;
@@ -15,28 +16,35 @@ export function GroupRow({ group, rbac, onSelect, onDelete }: {
   onSelect(showMembers: boolean): void;
   onDelete(): void;
 }) {
+  const checkUserAccess = useCheckUserAccess();
+  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] });
+
   return (
     <TableRow>
       <TableCell>
-        <Button
-          variant="link"
-          className="px-0 h-auto gap-x-2 whitespace-nowrap"
-          onClick={() => onSelect(false)}
-        >
-          {group.name}
-        </Button>
+        {isAdminOrDeveloper ? (
+          <Button
+            variant="link"
+            className="px-0 h-auto gap-x-2 whitespace-nowrap"
+            onClick={() => onSelect(false)}
+          >
+            {group.name}
+          </Button>
+        ) : group.name}
       </TableCell>
       <TableCell>{group.description}</TableCell>
       <TableCell className="text-center">
-        <Button
-          variant="link"
-          className="h-auto gap-x-2 whitespace-nowrap"
-          onClick={() => onSelect(true)}
-        >
-          {group.membersCount}
-        </Button>
+        {isAdminOrDeveloper ? (
+          <Button
+            variant="link"
+            className="h-auto gap-x-2 whitespace-nowrap"
+            onClick={() => onSelect(true)}
+          >
+            {group.membersCount}
+          </Button>
+        ) : group.membersCount}
       </TableCell>
-      {rbac && (
+      {rbac && isAdminOrDeveloper && (
         <TableCell>
         <DropdownMenu>
           <div className="flex justify-center">

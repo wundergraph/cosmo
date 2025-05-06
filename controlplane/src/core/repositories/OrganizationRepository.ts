@@ -530,11 +530,11 @@ export class OrganizationRepository {
     return userRoles.map((role) => role.role);
   }
 
-  public getOrganizationMemberGroups(input: {
+  public async getOrganizationMemberGroups(input: {
     userID: string;
     organizationID: string;
   }): Promise<OrganizationMemberGroupDTO[]> {
-    return this.db
+    const groups = await this.db
       .select({
         groupId: schema.organizationGroups.id,
         name: schema.organizationGroups.name,
@@ -553,6 +553,25 @@ export class OrganizationRepository {
         ),
       )
       .execute();
+
+    return Promise.all(groups.map(async (group) => {
+      const rules = await this.db
+        .select({
+          role: schema.organizationGroupRules.role,
+          resources: schema.organizationGroupRules.resources,
+        })
+        .from(schema.organizationGroupRules)
+        .where(eq(schema.organizationGroupRules.groupId, group.groupId))
+        .execute();
+
+      return {
+        ...group,
+        rules: rules.map(({ role, resources }) => ({
+          role,
+          resources: resources?.split(',') ?? [],
+        })),
+      };
+    }));
   }
 
   /**

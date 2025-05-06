@@ -1,4 +1,3 @@
-import { UserContext } from "@/components/app-provider";
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { formatDateTime } from "@/lib/format-date";
@@ -16,7 +15,6 @@ import { useRouter } from "next/router";
 import {
   Dispatch,
   SetStateAction,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -39,10 +37,9 @@ import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
 import { TitleLayout } from "./title-layout";
 import { FaGripfire } from "react-icons/fa";
-import {
-  DocumentPlusIcon,
-  UserGroupIcon,
-} from "@heroicons/react/24/outline";
+import { UserGroupIcon } from "@heroicons/react/24/outline";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
+import { useUser } from "@/hooks/use-user";
 
 export const StarBanner = ({
   isDisabled,
@@ -120,8 +117,9 @@ export const OrganizationBanner = () => {
 
 export const DashboardLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
-  const user = useContext(UserContext);
+  const user = useUser();
   const organizationSlug = router.query.organizationSlug as string;
+  const checkUserAccess = useCheckUserAccess();
 
   const [isStarBannerDisabled, setIsStarBannerDisabled] = useState(true);
   const [isStarBannerDisabledOnClient, setDisableStarBanner] = useLocalStorage(
@@ -132,6 +130,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
     setIsStarBannerDisabled(isStarBannerDisabledOnClient === "true");
   }, [isStarBannerDisabledOnClient]);
 
+  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] });
   const isOrganizationDeactivated = !!user?.currentOrganization.deactivation;
   const isOrganizationPendingDeletion = !!user?.currentOrganization?.deletion;
 
@@ -223,15 +222,19 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
       title: "Audit log",
       href: basePath + "/audit-log",
       icon: <AiOutlineAudit className="size-4" />,
+      separator: !isAdminOrDeveloper,
     });
 
-    navigation.push(
-      {
+    if (isAdminOrDeveloper) {
+      navigation.push({
         title: "Settings",
         href: basePath + "/settings",
         icon: <PiGear className="size-4" />,
         separator: true,
-      },
+      });
+    }
+
+    navigation.push(
       {
         title: "Account",
       },
@@ -252,6 +255,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
     organizationSlug,
     plans.data?.plans?.length,
     user?.currentOrganization.slug,
+    isAdminOrDeveloper,
   ]);
 
   return (

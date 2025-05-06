@@ -92,6 +92,7 @@ import { RestoreOrganization } from "@/components/settings/restore-organization"
 const OrganizationDetails = () => {
   const user = useContext(UserContext);
   const router = useRouter();
+  const isAdmin = useIsAdmin();
   const sessionQueryClient = useContext(SessionClientContext);
 
   const schema = z.object({
@@ -208,10 +209,7 @@ const OrganizationDetails = () => {
           className="ml-auto"
           isLoading={isPending}
           type="submit"
-          disabled={
-            !form.formState.isValid ||
-            !user?.currentOrganization.roles.includes("admin")
-          }
+          disabled={!form.formState.isValid || !isAdmin}
         >
           Save
         </Button>
@@ -499,6 +497,7 @@ const OpenIDConnectProvider = ({
   const [open, setOpen] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   const [mode, setMode] = useState(currentMode);
+  const isAdmin = useIsAdmin();
 
   const { mutate, isPending, data } = useMutation(createOIDCProvider);
   const { mutate: deleteOidcProvider } = useMutation(deleteOIDCProvider);
@@ -623,11 +622,7 @@ const OpenIDConnectProvider = ({
                   refetchProviderData={refetch}
                 />
                 <AlertDialog
-                  open={
-                    user?.currentOrganization.roles.includes("admin")
-                      ? alertOpen
-                      : false
-                  }
+                  open={isAdmin && alertOpen}
                   onOpenChange={setAlertOpen}
                 >
                   <AlertDialogTrigger asChild>
@@ -635,9 +630,7 @@ const OpenIDConnectProvider = ({
                       className="md:ml-auto"
                       type="submit"
                       variant="destructive"
-                      disabled={
-                        !user?.currentOrganization.roles.includes("admin")
-                      }
+                      disabled={!isAdmin}
                     >
                       Disconnect
                     </Button>

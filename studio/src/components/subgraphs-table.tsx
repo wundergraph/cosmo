@@ -64,6 +64,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "./ui/use-toast";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 
 export const Empty = ({
   graph,
@@ -170,11 +171,10 @@ export const AddSubgraphUsersContent = ({
 }) => {
   const user = useUser();
   const rbac = useFeature("rbac");
-  const isAdmin = user?.currentOrganization.roles.includes("admin");
-  const { mutate: addMember, isPending: addingMember } =
-    useMutation(addSubgraphMember);
-  const { mutate: removeMember, isPending: removingMember } =
-    useMutation(removeSubgraphMember);
+  const isAdmin = useIsAdmin();
+
+  const { mutate: addMember, isPending: addingMember } = useMutation(addSubgraphMember);
+  const { mutate: removeMember, isPending: removingMember } = useMutation(removeSubgraphMember);
 
   const [isOpen, setIsOpen] = useState(false);
 
@@ -356,7 +356,7 @@ const AddSubgraphUsers = ({
 }) => {
   const [open, setOpen] = useState(false);
   const user = useUser();
-  const isAdmin = user?.currentOrganization.roles.includes("admin");
+  const isAdmin = useIsAdmin();
   const { data } = useQuery(getOrganizationMembers);
 
   const { data: subgraphMembersData, refetch } = useQuery(

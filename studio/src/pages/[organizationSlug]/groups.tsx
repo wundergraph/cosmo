@@ -24,6 +24,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Toolbar } from "@/components/ui/toolbar";
 import { useFeature } from "@/hooks/use-feature";
 import { GroupMembersSheet } from "@/components/member-groups/group-members-sheet";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 
 const GroupsToolbar = () => {
   const router = useRouter();
@@ -49,9 +50,11 @@ const GroupsToolbar = () => {
 }
 
 const GroupsPage: NextPageWithLayout = () => {
-  const router = useRouter();
+  const router = useRouter()
+  const checkUserAccess = useCheckUserAccess();
   const rbac = useFeature("rbac");
 
+  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] });
   const [selectedGroup, setSelectedGroup] = useState<OrganizationGroup | null>(null);
   const [openDeleteGroupDialog, setOpenDeleteGroupDialog] = useState(false);
 
@@ -149,7 +152,7 @@ const GroupsPage: NextPageWithLayout = () => {
                     <TableHead className="min-w-64">Name</TableHead>
                     <TableHead className="w-full">Description</TableHead>
                     <TableHead>Members</TableHead>
-                    {rbac?.enabled && <TableHead/>}
+                    {rbac?.enabled && isAdminOrDeveloper && <TableHead/>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>

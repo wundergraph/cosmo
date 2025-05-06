@@ -1,4 +1,3 @@
-import { UserContext } from "@/components/app-provider";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
@@ -44,7 +43,6 @@ import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
-import { checkUserAccess } from "@/lib/utils";
 import {
   EllipsisVerticalIcon,
   ExclamationTriangleIcon,
@@ -69,12 +67,13 @@ import Link from "next/link";
 import {
   Dispatch,
   SetStateAction,
-  useContext,
   useEffect,
   useState,
 } from "react";
 import { FiCheck, FiCopy } from "react-icons/fi";
 import { z } from "zod";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 
 const CreateAPIKeyDialog = ({
   existingApiKeys,
@@ -95,7 +94,7 @@ const CreateAPIKeyDialog = ({
   const { data: permissionsData } = useQuery(getUserAccessiblePermissions);
   const federatedGraphs = data?.federatedGraphs || [];
   const subgraphs = data?.subgraphs || [];
-  const isAdmin = user?.currentOrganization.roles.includes("admin");
+  const isAdmin = useIsAdmin();
 
   const expiresOptions = ["Never", "30 days", "6 months", "1 year"];
   const expiresOptionsMappingToEnum: {
@@ -729,7 +728,7 @@ export const Empty = ({
   setOpen: Dispatch<SetStateAction<boolean>>;
   refetch: () => void;
 }) => {
-  const user = useContext(UserContext);
+  const checkUserAccess = useCheckUserAccess();
 
   return (
     <EmptyState
@@ -750,10 +749,7 @@ export const Empty = ({
       }
       actions={
         <div className="mt-2">
-          {checkUserAccess({
-            rolesToBe: ["admin", "developer"],
-            userRoles: user?.currentOrganization.roles || [],
-          }) && (
+          {checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] }) && (
             <CreateAPIKey
               apiKey={apiKey}
               existingApiKeys={[]}
@@ -800,8 +796,10 @@ export const CreateAPIKey = ({
 };
 
 const APIKeysPage: NextPageWithLayout = () => {
-  const user = useContext(UserContext);
+  const checkUserAccess = useCheckUserAccess();
   const { data, isLoading, error, refetch } = useQuery(getAPIKeys);
+
+  const isUserOrAdmin = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer" ]});
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [apiKey, setApiKey] = useState<string | undefined>();
@@ -870,10 +868,7 @@ const APIKeysPage: NextPageWithLayout = () => {
               </p>
             </div>
             <div>
-              {checkUserAccess({
-                rolesToBe: ["admin", "developer"],
-                userRoles: user?.currentOrganization.roles || [],
-              }) && (
+              {isUserOrAdmin && (
                 <CreateAPIKey
                   apiKey={apiKey}
                   existingApiKeys={apiKeys.map((k) => k.name)}
@@ -885,19 +880,15 @@ const APIKeysPage: NextPageWithLayout = () => {
               )}
             </div>
           </div>
-          {deleteApiKeyName &&
-            checkUserAccess({
-              rolesToBe: ["admin", "developer"],
-              userRoles: user?.currentOrganization.roles || [],
-            }) && (
-              <DeleteAPIKeyDialog
-                apiKeyName={deleteApiKeyName}
-                refresh={refetch}
-                open={openDeleteDialog}
-                setOpen={setOpenDeleteDialog}
-                setDeleteApiKeyName={setDeleteApiKeyName}
-              />
-            )}
+          {deleteApiKeyName && isUserOrAdmin && (
+            <DeleteAPIKeyDialog
+              apiKeyName={deleteApiKeyName}
+              refresh={refetch}
+              open={openDeleteDialog}
+              setOpen={setOpenDeleteDialog}
+              setDeleteApiKeyName={setDeleteApiKeyName}
+            />
+          )}
           <TableWrapper>
             <Table>
               <TableHeader>
@@ -907,10 +898,7 @@ const APIKeysPage: NextPageWithLayout = () => {
                   <TableHead>Expires At</TableHead>
                   <TableHead>Created At</TableHead>
                   <TableHead>Last Used At</TableHead>
-                  {checkUserAccess({
-                    rolesToBe: ["admin", "developer"],
-                    userRoles: user?.currentOrganization.roles || [],
-                  }) && (
+                  {isUserOrAdmin && (
                     <TableHead className="flex items-center justify-center" />
                   )}
                 </TableRow>
@@ -937,10 +925,7 @@ const APIKeysPage: NextPageWithLayout = () => {
                             ? formatDateTime(new Date(lastUsedAt))
                             : "Never"}
                         </TableCell>
-                        {checkUserAccess({
-                          rolesToBe: ["admin", "developer"],
-                          userRoles: user?.currentOrganization.roles || [],
-                        }) && (
+                        {isUserOrAdmin && (
                           <TableCell>
                             <DropdownMenu>
                               <div className="flex justify-center">

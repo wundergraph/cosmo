@@ -36,7 +36,7 @@ import { useFeature } from "@/hooks/use-feature";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { useUser } from "@/hooks/use-user";
 import { NextPageWithLayout } from "@/lib/page";
-import { cn, getHighestPriorityRole } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import {
   createConnectQueryKey,
   useMutation,
@@ -66,6 +66,7 @@ import { useDebounce } from "use-debounce";
 import { z } from "zod";
 import { usePaginationParams } from "@/hooks/use-pagination-params";
 import { UpdateMemberGroupDialog } from "@/components/members/update-member-group-dialog";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 
 const emailInputSchema = z.object({
   email: z.string().email(),
@@ -290,7 +291,7 @@ const MemberCard = ({
 
 const PendingInvitations = () => {
   const user = useUser();
-  const isAdmin = user?.currentOrganization.roles.includes("admin") ?? false;
+  const isAdmin = useIsAdmin();
 
   const { pageSize, offset, pageNumber, search } = usePaginationParams();
 
@@ -363,7 +364,7 @@ const PendingInvitations = () => {
 
 const AcceptedMembers = () => {
   const user = useUser();
-  const isAdmin = user?.currentOrganization.roles.includes("admin") ?? false;
+  const isAdmin = useIsAdmin();
   const [selectedMember, setSelectedMember] = useState<OrgMember | undefined>();
 
   const { pageSize, offset, pageNumber, search } = usePaginationParams();
@@ -451,7 +452,7 @@ const MembersToolbar = () => {
   const usersFeature = useFeature("users");
   const user = useUser();
   const organizationSlug = user?.currentOrganization.slug;
-  const isAdmin = user?.currentOrganization.roles.includes("admin") ?? false;
+  const isAdmin = useIsAdmin();
   const client = useQueryClient();
 
   const { pageSize, offset, search } = usePaginationParams();

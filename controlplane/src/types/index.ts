@@ -1,6 +1,6 @@
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
-import { GraphPruningRuleEnum, LintRuleEnum, ProposalMatch } from '../db/models.js';
+import { GraphPruningRuleEnum, LintRuleEnum, OrganizationRole, ProposalMatch } from '../db/models.js';
 
 export type FeatureIds =
   | 'users'
@@ -262,6 +262,10 @@ export interface OrganizationMemberGroupDTO {
   groupId: string;
   name: string;
   kcGroupId: string | null;
+  rules: {
+    role: OrganizationRole;
+    resources: string[];
+  }[];
 }
 
 export interface OrganizationMemberDTO {

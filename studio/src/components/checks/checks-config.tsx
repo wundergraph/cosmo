@@ -18,6 +18,7 @@ import {
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 import { useState, useEffect } from "react";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 
 const TimeframeDropdown = ({
   onChange,
@@ -73,12 +74,15 @@ export const ChecksConfig = ({
   namespace: string;
   data: GetNamespaceChecksConfigurationResponse;
 }) => {
+  const checkUserAccess = useCheckUserAccess();
   const [timeframeInDays, setTimeframeInDays] = useState(data.timeframeInDays);
   useEffect(() => setTimeframeInDays(data.timeframeInDays), [data.timeframeInDays]);
 
   const { mutate, isPending } = useMutation(updateNamespaceChecksConfig);
 
   const { toast } = useToast();
+
+  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] });
 
   return (
     <div className="space-y-6 rounded-lg border p-6">
@@ -92,6 +96,7 @@ export const ChecksConfig = ({
 
         <Button
           isLoading={isPending}
+          disabled={!isAdminOrDeveloper}
           onClick={() => {
             mutate(
               { namespace, timeframeInDays, },
@@ -117,7 +122,7 @@ export const ChecksConfig = ({
             );
           }}
         >
-          Save
+          Apply
         </Button>
       </div>
 
@@ -144,7 +149,7 @@ export const ChecksConfig = ({
                 value={`${timeframeInDays}`}
                 limit={data.timeframeLimitInDays}
                 onChange={setTimeframeInDays}
-                disabled={isPending}
+                disabled={isPending || !isAdminOrDeveloper}
               />
             </div>
           </div>

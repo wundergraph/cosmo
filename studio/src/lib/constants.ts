@@ -174,3 +174,5 @@ export const roles = [
     description: "Blah blah blah viewer role description",
   },
 ];
+
+export type OrganizationRole = typeof roles[number]["key"];

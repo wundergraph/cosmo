@@ -10,7 +10,6 @@ import { useFeature } from "@/hooks/use-feature";
 import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
-import { checkUserAccess } from "@/lib/utils";
 import { useMutation, useQuery } from "@connectrpc/connect-query";
 import {
   ExclamationTriangleIcon,
@@ -24,10 +23,12 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
+import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 
 const CacheWarmerPage: NextPageWithLayout = () => {
   const router = useRouter();
   const user = useUser();
+  const checkUserAccess = useCheckUserAccess();
   const namespace = router.query.namespace as string;
   const cacheWarmerFeature = useFeature("cache-warmer");
   const { mutate } = useMutation(configureCacheWarmer);
@@ -111,10 +112,7 @@ const CacheWarmerPage: NextPageWithLayout = () => {
             checked={cacheWarmerEnabled}
             disabled={
               !cacheWarmerFeature?.enabled ||
-              !checkUserAccess({
-                rolesToBe: ["admin", "developer"],
-                userRoles: user?.currentOrganization.roles || [],
-              })
+              !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
             }
             onCheckedChange={(checked) => {
               setCacheWarmerEnabled(checked);
