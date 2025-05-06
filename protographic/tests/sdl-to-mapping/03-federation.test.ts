@@ -20,24 +20,74 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'ProductService');
 
-    // Check entity mappings
-    expect(mapping.entityMappings).toHaveLength(1);
-
-    const productEntity = mapping.entityMappings[0];
-    expect(productEntity.typeName).toBe('Product');
-    expect(productEntity.kind).toBe('entity');
-    expect(productEntity.key).toBe('id');
-    expect(productEntity.rpc).toBe('LookupProductById');
-    expect(productEntity.request).toBe('LookupProductByIdRequest');
-    expect(productEntity.response).toBe('LookupProductByIdResponse');
-
-    // Check operation mappings
-    expect(mapping.operationMappings).toHaveLength(2);
-
-    // Check type field mappings
-    const productType = mapping.typeFieldMappings.find((m) => m.type === 'Product');
-    expect(productType).toBeDefined();
-    expect(productType?.fieldMappings).toHaveLength(3);
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "entityMappings": [
+          {
+            "key": "id",
+            "kind": "entity",
+            "request": "LookupProductByIdRequest",
+            "response": "LookupProductByIdResponse",
+            "rpc": "LookupProductById",
+            "typeName": "Product",
+          },
+        ],
+        "operationMappings": [
+          {
+            "mapped": "QueryProduct",
+            "original": "product",
+            "request": "QueryProductRequest",
+            "response": "QueryProductResponse",
+          },
+          {
+            "mapped": "QueryProducts",
+            "original": "products",
+            "request": "QueryProductsRequest",
+            "response": "QueryProductsResponse",
+          },
+        ],
+        "service": "ProductService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "id",
+                    "original": "id",
+                  },
+                ],
+                "mapped": "product",
+                "original": "product",
+              },
+              {
+                "mapped": "products",
+                "original": "products",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "mapped": "price",
+                "original": "price",
+              },
+            ],
+            "type": "Product",
+          },
+        ],
+        "version": 1,
+      }
+    `);
   });
 
   it('maps multiple entities with @key directive', () => {
@@ -67,32 +117,129 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'ECommerceService');
 
-    // Check entity mappings
-    expect(mapping.entityMappings).toHaveLength(2);
-
-    // User entity
-    const userEntity = mapping.entityMappings.find((e) => e.typeName === 'User');
-    expect(userEntity).toBeDefined();
-    expect(userEntity?.key).toBe('id');
-    expect(userEntity?.rpc).toBe('LookupUserById');
-
-    // Order entity
-    const orderEntity = mapping.entityMappings.find((e) => e.typeName === 'Order');
-    expect(orderEntity).toBeDefined();
-    expect(orderEntity?.key).toBe('id');
-    expect(orderEntity?.rpc).toBe('LookupOrderById');
-
-    // Check operation mappings
-    expect(mapping.operationMappings).toHaveLength(4);
-
-    // Check type field mappings
-    const userType = mapping.typeFieldMappings.find((m) => m.type === 'User');
-    expect(userType).toBeDefined();
-    expect(userType?.fieldMappings).toHaveLength(3);
-
-    const orderType = mapping.typeFieldMappings.find((m) => m.type === 'Order');
-    expect(orderType).toBeDefined();
-    expect(orderType?.fieldMappings).toHaveLength(4);
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "entityMappings": [
+          {
+            "key": "id",
+            "kind": "entity",
+            "request": "LookupUserByIdRequest",
+            "response": "LookupUserByIdResponse",
+            "rpc": "LookupUserById",
+            "typeName": "User",
+          },
+          {
+            "key": "id",
+            "kind": "entity",
+            "request": "LookupOrderByIdRequest",
+            "response": "LookupOrderByIdResponse",
+            "rpc": "LookupOrderById",
+            "typeName": "Order",
+          },
+        ],
+        "operationMappings": [
+          {
+            "mapped": "QueryUser",
+            "original": "user",
+            "request": "QueryUserRequest",
+            "response": "QueryUserResponse",
+          },
+          {
+            "mapped": "QueryUsers",
+            "original": "users",
+            "request": "QueryUsersRequest",
+            "response": "QueryUsersResponse",
+          },
+          {
+            "mapped": "QueryOrder",
+            "original": "order",
+            "request": "QueryOrderRequest",
+            "response": "QueryOrderResponse",
+          },
+          {
+            "mapped": "QueryOrders",
+            "original": "orders",
+            "request": "QueryOrdersRequest",
+            "response": "QueryOrdersResponse",
+          },
+        ],
+        "service": "ECommerceService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "id",
+                    "original": "id",
+                  },
+                ],
+                "mapped": "user",
+                "original": "user",
+              },
+              {
+                "mapped": "users",
+                "original": "users",
+              },
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "id",
+                    "original": "id",
+                  },
+                ],
+                "mapped": "order",
+                "original": "order",
+              },
+              {
+                "mapped": "orders",
+                "original": "orders",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "mapped": "email",
+                "original": "email",
+              },
+            ],
+            "type": "User",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "user",
+                "original": "user",
+              },
+              {
+                "mapped": "total",
+                "original": "total",
+              },
+              {
+                "mapped": "date",
+                "original": "date",
+              },
+            ],
+            "type": "Order",
+          },
+        ],
+        "version": 1,
+      }
+    `);
   });
 
   it('maps federation service with _entities query', () => {
@@ -122,23 +269,83 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'InventoryService');
 
-    // Check entity mappings
-    expect(mapping.entityMappings).toHaveLength(2);
-
-    // Product entity
-    const productEntity = mapping.entityMappings.find((e) => e.typeName === 'Product');
-    expect(productEntity).toBeDefined();
-    expect(productEntity?.key).toBe('id');
-
-    // Storage entity
-    const storageEntity = mapping.entityMappings.find((e) => e.typeName === 'Storage');
-    expect(storageEntity).toBeDefined();
-    expect(storageEntity?.key).toBe('id');
-
-    // Check regular operation mappings (should not include _entities)
-    const regularOps = mapping.operationMappings.filter((op) => !op.original.startsWith('_'));
-    expect(regularOps).toHaveLength(1);
-    expect(regularOps[0].original).toBe('products');
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "entityMappings": [
+          {
+            "key": "id",
+            "kind": "entity",
+            "request": "LookupProductByIdRequest",
+            "response": "LookupProductByIdResponse",
+            "rpc": "LookupProductById",
+            "typeName": "Product",
+          },
+          {
+            "key": "id",
+            "kind": "entity",
+            "request": "LookupStorageByIdRequest",
+            "response": "LookupStorageByIdResponse",
+            "rpc": "LookupStorageById",
+            "typeName": "Storage",
+          },
+        ],
+        "operationMappings": [
+          {
+            "mapped": "QueryProducts",
+            "original": "products",
+            "request": "QueryProductsRequest",
+            "response": "QueryProductsResponse",
+          },
+        ],
+        "service": "InventoryService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "mapped": "products",
+                "original": "products",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "mapped": "price",
+                "original": "price",
+              },
+            ],
+            "type": "Product",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "mapped": "location",
+                "original": "location",
+              },
+            ],
+            "type": "Storage",
+          },
+        ],
+        "version": 1,
+      }
+    `);
   });
 
   it('maps complex federation schema with multiple types', () => {
@@ -180,37 +387,157 @@ describe('GraphQL Federation to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'ProductCatalogService');
 
-    // Check entity mappings
-    expect(mapping.entityMappings).toHaveLength(3);
-
-    // Product entity (should have multiple keys)
-    const productEntity = mapping.entityMappings.find((e) => e.typeName === 'Product');
-    expect(productEntity).toBeDefined();
-    // Our implementation currently only uses the first key, but it works
-    expect(productEntity?.key).toBe('id');
-
-    // Review entity
-    const reviewEntity = mapping.entityMappings.find((e) => e.typeName === 'Review');
-    expect(reviewEntity).toBeDefined();
-    expect(reviewEntity?.key).toBe('id');
-
-    // User entity
-    const userEntity = mapping.entityMappings.find((e) => e.typeName === 'User');
-    expect(userEntity).toBeDefined();
-    expect(userEntity?.key).toBe('id');
-
-    // Check regular operation mappings
-    const regularOps = mapping.operationMappings.filter((op) => !op.original.startsWith('_'));
-    expect(regularOps).toHaveLength(3);
-
-    // Check Product type field mappings
-    const productType = mapping.typeFieldMappings.find((m) => m.type === 'Product');
-    expect(productType).toBeDefined();
-    expect(productType?.fieldMappings.length).toBeGreaterThan(3);
-
-    // Check Review type field mappings
-    const reviewType = mapping.typeFieldMappings.find((m) => m.type === 'Review');
-    expect(reviewType).toBeDefined();
-    expect(reviewType?.fieldMappings.length).toBeGreaterThan(3);
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "entityMappings": [
+          {
+            "key": "id",
+            "kind": "entity",
+            "request": "LookupUserByIdRequest",
+            "response": "LookupUserByIdResponse",
+            "rpc": "LookupUserById",
+            "typeName": "User",
+          },
+          {
+            "key": "id",
+            "kind": "entity",
+            "request": "LookupReviewByIdRequest",
+            "response": "LookupReviewByIdResponse",
+            "rpc": "LookupReviewById",
+            "typeName": "Review",
+          },
+          {
+            "key": "id",
+            "kind": "entity",
+            "request": "LookupProductByIdRequest",
+            "response": "LookupProductByIdResponse",
+            "rpc": "LookupProductById",
+            "typeName": "Product",
+          },
+        ],
+        "operationMappings": [
+          {
+            "mapped": "QueryProduct",
+            "original": "product",
+            "request": "QueryProductRequest",
+            "response": "QueryProductResponse",
+          },
+          {
+            "mapped": "QueryTopProducts",
+            "original": "topProducts",
+            "request": "QueryTopProductsRequest",
+            "response": "QueryTopProductsResponse",
+          },
+          {
+            "mapped": "QueryReview",
+            "original": "review",
+            "request": "QueryReviewRequest",
+            "response": "QueryReviewResponse",
+          },
+        ],
+        "service": "ProductCatalogService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "id",
+                    "original": "id",
+                  },
+                ],
+                "mapped": "product",
+                "original": "product",
+              },
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "first",
+                    "original": "first",
+                  },
+                ],
+                "mapped": "top_products",
+                "original": "topProducts",
+              },
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "id",
+                    "original": "id",
+                  },
+                ],
+                "mapped": "review",
+                "original": "review",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+            ],
+            "type": "User",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "text",
+                "original": "text",
+              },
+              {
+                "mapped": "rating",
+                "original": "rating",
+              },
+              {
+                "mapped": "product",
+                "original": "product",
+              },
+              {
+                "mapped": "user",
+                "original": "user",
+              },
+            ],
+            "type": "Review",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "upc",
+                "original": "upc",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "mapped": "price",
+                "original": "price",
+              },
+              {
+                "mapped": "reviews",
+                "original": "reviews",
+              },
+            ],
+            "type": "Product",
+          },
+        ],
+        "version": 1,
+      }
+    `);
   });
 });

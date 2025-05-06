@@ -24,31 +24,89 @@ describe('Complex GraphQL Types to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'UserService');
 
-    // Check enum mappings
-    expect(mapping.enumMappings).toHaveLength(1);
-    const roleEnum = mapping.enumMappings[0];
-    expect(roleEnum.type).toBe('UserRole');
-    expect(roleEnum.values).toHaveLength(3);
-
-    // Check enum values
-    const adminValue = roleEnum.values.find((v) => v.original === 'ADMIN');
-    const userValue = roleEnum.values.find((v) => v.original === 'USER');
-    const guestValue = roleEnum.values.find((v) => v.original === 'GUEST');
-
-    expect(adminValue).toBeDefined();
-    expect(userValue).toBeDefined();
-    expect(guestValue).toBeDefined();
-
-    expect(adminValue?.mapped).toBe('USERROLE_ADMIN');
-    expect(userValue?.mapped).toBe('USERROLE_USER');
-    expect(guestValue?.mapped).toBe('USERROLE_GUEST');
-
-    // Check query with enum argument
-    const queryType = mapping.typeFieldMappings.find((m) => m.type === 'Query');
-    const usersByRoleField = queryType?.fieldMappings.find((f) => f.original === 'usersByRole');
-    expect(usersByRoleField).toBeDefined();
-    expect(usersByRoleField?.argumentMappings).toHaveLength(1);
-    expect(usersByRoleField?.argumentMappings[0].original).toBe('role');
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "enumMappings": [
+          {
+            "type": "UserRole",
+            "values": [
+              {
+                "mapped": "USERROLE_ADMIN",
+                "original": "ADMIN",
+              },
+              {
+                "mapped": "USERROLE_USER",
+                "original": "USER",
+              },
+              {
+                "mapped": "USERROLE_GUEST",
+                "original": "GUEST",
+              },
+            ],
+          },
+        ],
+        "operationMappings": [
+          {
+            "mapped": "QueryUser",
+            "original": "user",
+            "request": "QueryUserRequest",
+            "response": "QueryUserResponse",
+          },
+          {
+            "mapped": "QueryUsersByRole",
+            "original": "usersByRole",
+            "request": "QueryUsersByRoleRequest",
+            "response": "QueryUsersByRoleResponse",
+          },
+        ],
+        "service": "UserService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "id",
+                    "original": "id",
+                  },
+                ],
+                "mapped": "user",
+                "original": "user",
+              },
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "role",
+                    "original": "role",
+                  },
+                ],
+                "mapped": "users_by_role",
+                "original": "usersByRole",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "mapped": "role",
+                "original": "role",
+              },
+            ],
+            "type": "User",
+          },
+        ],
+        "version": 1,
+      }
+    `);
   });
 
   it('maps interface types and implementations', () => {
@@ -87,27 +145,127 @@ describe('Complex GraphQL Types to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'StarWarsService');
 
-    // Check operation mappings
-    expect(mapping.operationMappings).toHaveLength(4);
-
-    // Check type field mappings
-    const humanType = mapping.typeFieldMappings.find((m) => m.type === 'Human');
-    const droidType = mapping.typeFieldMappings.find((m) => m.type === 'Droid');
-
-    expect(humanType).toBeDefined();
-    expect(droidType).toBeDefined();
-
-    // Check Human fields
-    expect(humanType?.fieldMappings).toHaveLength(4);
-    const homePlanetField = humanType?.fieldMappings.find((f) => f.original === 'homePlanet');
-    expect(homePlanetField).toBeDefined();
-    expect(homePlanetField?.mapped).toBe('home_planet');
-
-    // Check Droid fields
-    expect(droidType?.fieldMappings).toHaveLength(4);
-    const primaryFunctionField = droidType?.fieldMappings.find((f) => f.original === 'primaryFunction');
-    expect(primaryFunctionField).toBeDefined();
-    expect(primaryFunctionField?.mapped).toBe('primary_function');
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "operationMappings": [
+          {
+            "mapped": "QueryNode",
+            "original": "node",
+            "request": "QueryNodeRequest",
+            "response": "QueryNodeResponse",
+          },
+          {
+            "mapped": "QueryCharacter",
+            "original": "character",
+            "request": "QueryCharacterRequest",
+            "response": "QueryCharacterResponse",
+          },
+          {
+            "mapped": "QueryHuman",
+            "original": "human",
+            "request": "QueryHumanRequest",
+            "response": "QueryHumanResponse",
+          },
+          {
+            "mapped": "QueryDroid",
+            "original": "droid",
+            "request": "QueryDroidRequest",
+            "response": "QueryDroidResponse",
+          },
+        ],
+        "service": "StarWarsService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "id",
+                    "original": "id",
+                  },
+                ],
+                "mapped": "node",
+                "original": "node",
+              },
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "id",
+                    "original": "id",
+                  },
+                ],
+                "mapped": "character",
+                "original": "character",
+              },
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "id",
+                    "original": "id",
+                  },
+                ],
+                "mapped": "human",
+                "original": "human",
+              },
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "id",
+                    "original": "id",
+                  },
+                ],
+                "mapped": "droid",
+                "original": "droid",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "mapped": "friend_ids",
+                "original": "friendIds",
+              },
+              {
+                "mapped": "home_planet",
+                "original": "homePlanet",
+              },
+            ],
+            "type": "Human",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "mapped": "friend_ids",
+                "original": "friendIds",
+              },
+              {
+                "mapped": "primary_function",
+                "original": "primaryFunction",
+              },
+            ],
+            "type": "Droid",
+          },
+        ],
+        "version": 1,
+      }
+    `);
   });
 
   it('maps union types correctly', () => {
@@ -134,18 +292,75 @@ describe('Complex GraphQL Types to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'ContentService');
 
-    // Check operation mappings
-    expect(mapping.operationMappings).toHaveLength(1);
-
-    // Check type field mappings for union member types
-    const photoType = mapping.typeFieldMappings.find((m) => m.type === 'Photo');
-    const postType = mapping.typeFieldMappings.find((m) => m.type === 'Post');
-
-    expect(photoType).toBeDefined();
-    expect(postType).toBeDefined();
-
-    expect(photoType?.fieldMappings).toHaveLength(4);
-    expect(postType?.fieldMappings).toHaveLength(3);
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "operationMappings": [
+          {
+            "mapped": "QuerySearch",
+            "original": "search",
+            "request": "QuerySearchRequest",
+            "response": "QuerySearchResponse",
+          },
+        ],
+        "service": "ContentService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "term",
+                    "original": "term",
+                  },
+                ],
+                "mapped": "search",
+                "original": "search",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "url",
+                "original": "url",
+              },
+              {
+                "mapped": "width",
+                "original": "width",
+              },
+              {
+                "mapped": "height",
+                "original": "height",
+              },
+            ],
+            "type": "Photo",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "title",
+                "original": "title",
+              },
+              {
+                "mapped": "content",
+                "original": "content",
+              },
+            ],
+            "type": "Post",
+          },
+        ],
+        "version": 1,
+      }
+    `);
   });
 
   it('maps input types with nested fields', () => {
@@ -177,51 +392,95 @@ describe('Complex GraphQL Types to Proto Mapping', () => {
 
     const mapping = compileGraphQLToMapping(sdl, 'ProductService');
 
-    // Check operation mappings
-    expect(mapping.operationMappings).toHaveLength(1);
-
-    // Check query field mappings with complex input
-    const queryType = mapping.typeFieldMappings.find((m) => m.type === 'Query');
-    const productsField = queryType?.fieldMappings.find((f) => f.original === 'products');
-
-    expect(productsField).toBeDefined();
-    expect(productsField?.argumentMappings).toHaveLength(1);
-    expect(productsField?.argumentMappings[0].original).toBe('filter');
-    expect(productsField?.argumentMappings[0].mapped).toBe('filter');
-
-    // Check product type mappings
-    const productType = mapping.typeFieldMappings.find((m) => m.type === 'Product');
-    expect(productType).toBeDefined();
-    expect(productType?.fieldMappings).toHaveLength(4);
-
-    // Check input type mappings
-    const paginationInput = mapping.typeFieldMappings.find((m) => m.type === 'PaginationInput');
-    expect(paginationInput).toBeDefined();
-    expect(paginationInput?.fieldMappings).toHaveLength(2);
-
-    // Check pagination input fields
-    const pageField = paginationInput?.fieldMappings.find((f) => f.original === 'page');
-    const limitField = paginationInput?.fieldMappings.find((f) => f.original === 'limit');
-    expect(pageField).toBeDefined();
-    expect(limitField).toBeDefined();
-    expect(pageField?.mapped).toBe('page');
-    expect(limitField?.mapped).toBe('limit');
-
-    // Check product filter input type
-    const productFilterInput = mapping.typeFieldMappings.find((m) => m.type === 'ProductFilterInput');
-    expect(productFilterInput).toBeDefined();
-    expect(productFilterInput?.fieldMappings).toHaveLength(5);
-
-    // Check product filter fields
-    const nameField = productFilterInput?.fieldMappings.find((f) => f.original === 'name');
-    const minPriceField = productFilterInput?.fieldMappings.find((f) => f.original === 'minPrice');
-    const paginationField = productFilterInput?.fieldMappings.find((f) => f.original === 'pagination');
-
-    expect(nameField).toBeDefined();
-    expect(minPriceField).toBeDefined();
-    expect(paginationField).toBeDefined();
-
-    expect(minPriceField?.mapped).toBe('min_price');
-    expect(paginationField?.mapped).toBe('pagination');
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "operationMappings": [
+          {
+            "mapped": "QueryProducts",
+            "original": "products",
+            "request": "QueryProductsRequest",
+            "response": "QueryProductsResponse",
+          },
+        ],
+        "service": "ProductService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "argumentMappings": [
+                  {
+                    "mapped": "filter",
+                    "original": "filter",
+                  },
+                ],
+                "mapped": "products",
+                "original": "products",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "page",
+                "original": "page",
+              },
+              {
+                "mapped": "limit",
+                "original": "limit",
+              },
+            ],
+            "type": "PaginationInput",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "mapped": "min_price",
+                "original": "minPrice",
+              },
+              {
+                "mapped": "max_price",
+                "original": "maxPrice",
+              },
+              {
+                "mapped": "categories",
+                "original": "categories",
+              },
+              {
+                "mapped": "pagination",
+                "original": "pagination",
+              },
+            ],
+            "type": "ProductFilterInput",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "mapped": "price",
+                "original": "price",
+              },
+              {
+                "mapped": "category",
+                "original": "category",
+              },
+            ],
+            "type": "Product",
+          },
+        ],
+        "version": 1,
+      }
+    `);
   });
 });
