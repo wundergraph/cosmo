@@ -152,6 +152,42 @@ func TestTraceClient(t *testing.T) {
 		require.False(t, clientTrace.DialDone[0].Time.IsZero())
 	})
 
+	t.Run("verify ConnectDone concurrent", func(t *testing.T) {
+		t.Parallel()
+		ctx, trace := setupTest()
+
+		const numGoroutines = 10
+		done := make(chan struct{})
+
+		for i := 0; i < numGoroutines; i++ {
+			go func(i int) {
+				network := fmt.Sprintf("tcp%d", i)
+				addr := fmt.Sprintf("192.168.1.%d:80", i)
+				err := fmt.Errorf("connection error %d", i)
+				trace.ConnectDone(network, addr, err)
+				done <- struct{}{}
+			}(i)
+		}
+
+		// Wait for all goroutines to complete
+		for i := 0; i < numGoroutines; i++ {
+			<-done
+		}
+
+		clientTrace := GetClientTraceFromContext(ctx)
+		require.Len(t, clientTrace.DialDone, numGoroutines)
+
+		// Verify all entries were recorded
+		seen := make(map[string]bool)
+		for _, dial := range clientTrace.DialDone {
+			key := fmt.Sprintf("%s-%s", dial.Network, dial.Address)
+			require.False(t, seen[key], "duplicate dial entry found")
+			seen[key] = true
+			require.False(t, dial.Time.IsZero())
+			require.Contains(t, dial.Error.Error(), "connection error")
+		}
+	})
+
 	t.Run("verify TLSHandshakeStart", func(t *testing.T) {
 		t.Parallel()
 		ctx, trace := setupTest()
